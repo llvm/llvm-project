@@ -14,7 +14,7 @@ define amdgpu_ps void @global_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (f64) from %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load syncscope("wavefront") monotonic (f64) from %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2.atomicrmw.start:
@@ -62,7 +62,7 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX90A-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (f64) from %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load syncscope("wavefront") monotonic (f64) from %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2.atomicrmw.start:

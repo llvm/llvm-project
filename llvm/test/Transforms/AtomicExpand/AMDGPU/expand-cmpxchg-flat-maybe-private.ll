@@ -15,7 +15,7 @@ define { i16, i1 } @cmpxchg_flat_agent_i16(ptr %ptr, i16 %val, i16 %swap) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label %[[PARTWORD_CMPXCHG_LOOP:.*]]
 ; CHECK:       [[PARTWORD_CMPXCHG_LOOP]]:
@@ -46,7 +46,7 @@ define { i16, i1 } @cmpxchg_flat_agent_i16_align4(ptr %ptr, i16 %val, i16 %swap)
 ; CHECK-SAME: ptr [[PTR:%.*]], i16 [[VAL:%.*]], i16 [[SWAP:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[SWAP]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[VAL]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], -65536
 ; CHECK-NEXT:    br label %[[PARTWORD_CMPXCHG_LOOP:.*]]
 ; CHECK:       [[PARTWORD_CMPXCHG_LOOP]]:
@@ -149,7 +149,7 @@ define { i16, i1 } @cmpxchg_flat_agent_i16__noprivate(ptr %ptr, i16 %val, i16 %s
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[VAL]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label %[[PARTWORD_CMPXCHG_LOOP:.*]]
 ; CHECK:       [[PARTWORD_CMPXCHG_LOOP]]:

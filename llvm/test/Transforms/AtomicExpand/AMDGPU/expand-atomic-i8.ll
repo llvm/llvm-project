@@ -13,7 +13,7 @@ define i8 @test_atomicrmw_xchg_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -37,7 +37,7 @@ define i8 @test_atomicrmw_xchg_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -67,7 +67,7 @@ define i8 @test_atomicrmw_add_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -93,7 +93,7 @@ define i8 @test_atomicrmw_add_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -125,7 +125,7 @@ define i8 @test_atomicrmw_add_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -151,7 +151,7 @@ define i8 @test_atomicrmw_add_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -175,7 +175,7 @@ define i8 @test_atomicrmw_add_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 define i8 @test_atomicrmw_add_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_add_i8_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -206,7 +206,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -232,7 +232,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -265,7 +265,7 @@ define i8 @test_atomicrmw_and_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -309,7 +309,7 @@ define i8 @test_atomicrmw_nand_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -336,7 +336,7 @@ define i8 @test_atomicrmw_nand_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -369,7 +369,7 @@ define i8 @test_atomicrmw_or_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) {
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -412,7 +412,7 @@ define i8 @test_atomicrmw_xor_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -453,7 +453,7 @@ define i8 @test_atomicrmw_max_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -481,7 +481,7 @@ define i8 @test_atomicrmw_max_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -515,7 +515,7 @@ define i8 @test_atomicrmw_min_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -543,7 +543,7 @@ define i8 @test_atomicrmw_min_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -577,7 +577,7 @@ define i8 @test_atomicrmw_umax_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -605,7 +605,7 @@ define i8 @test_atomicrmw_umax_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -639,7 +639,7 @@ define i8 @test_atomicrmw_umin_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -667,7 +667,7 @@ define i8 @test_atomicrmw_umin_i8_global_agent(ptr addrspace(1) %ptr, i8 %value)
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -706,7 +706,7 @@ define i8 @test_cmpxchg_i8_global_agent(ptr addrspace(1) %out, i8 %in, i8 %old) 
 ; GCN-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
 ; GCN-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; GCN-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; GCN:       partword.cmpxchg.loop:
@@ -741,7 +741,7 @@ define i8 @test_cmpxchg_i8_global_agent(ptr addrspace(1) %out, i8 %in, i8 %old) 
 ; R600-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[TMP2]]
 ; R600-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
 ; R600-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[TMP2]]
-; R600-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; R600-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; R600:       partword.cmpxchg.loop:
@@ -783,7 +783,7 @@ define i8 @test_cmpxchg_i8_local_align2(ptr addrspace(3) %out, i8 %in, i8 %old) 
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -821,7 +821,7 @@ define i8 @test_atomicrmw_inc_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -850,7 +850,7 @@ define i8 @test_atomicrmw_inc_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -885,7 +885,7 @@ define i8 @test_atomicrmw_inc_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -914,7 +914,7 @@ define i8 @test_atomicrmw_inc_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -942,7 +942,7 @@ define i8 @test_atomicrmw_inc_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 
 define i8 @test_atomicrmw_inc_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i8_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -973,7 +973,7 @@ define i8 @test_atomicrmw_inc_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1007,7 +1007,7 @@ define i8 @test_atomicrmw_inc_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1035,7 +1035,7 @@ define i8 @test_atomicrmw_inc_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) 
 
 define i8 @test_atomicrmw_inc_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i8_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1067,7 +1067,7 @@ define i8 @test_atomicrmw_inc_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1096,7 +1096,7 @@ define i8 @test_atomicrmw_inc_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1131,7 +1131,7 @@ define i8 @test_atomicrmw_inc_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1160,7 +1160,7 @@ define i8 @test_atomicrmw_inc_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1188,7 +1188,7 @@ define i8 @test_atomicrmw_inc_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 
 define i8 @test_atomicrmw_inc_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i8_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1220,7 +1220,7 @@ define i8 @test_atomicrmw_dec_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1251,7 +1251,7 @@ define i8 @test_atomicrmw_dec_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1288,7 +1288,7 @@ define i8 @test_atomicrmw_dec_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1319,7 +1319,7 @@ define i8 @test_atomicrmw_dec_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1349,7 +1349,7 @@ define i8 @test_atomicrmw_dec_i8_global_agent_align2(ptr addrspace(1) %ptr, i8 %
 
 define i8 @test_atomicrmw_dec_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i8_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1382,7 +1382,7 @@ define i8 @test_atomicrmw_dec_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1418,7 +1418,7 @@ define i8 @test_atomicrmw_dec_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1448,7 +1448,7 @@ define i8 @test_atomicrmw_dec_i8_local_align2(ptr addrspace(3) %ptr, i8 %value) 
 
 define i8 @test_atomicrmw_dec_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i8_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1482,7 +1482,7 @@ define i8 @test_atomicrmw_dec_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1513,7 +1513,7 @@ define i8 @test_atomicrmw_dec_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1550,7 +1550,7 @@ define i8 @test_atomicrmw_dec_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1581,7 +1581,7 @@ define i8 @test_atomicrmw_dec_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1611,7 +1611,7 @@ define i8 @test_atomicrmw_dec_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 
 define i8 @test_atomicrmw_dec_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i8_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1646,7 +1646,7 @@ define i8 @test_atomicrmw_xchg_i8_buffer_fat_agent(ptr addrspace(7) %ptr, i8 %va
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(7) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1668,7 +1668,7 @@ define i8 @test_atomicrmw_xchg_i8_buffer_fat_agent(ptr addrspace(7) %ptr, i8 %va
 define i8 @test_atomicrmw_xchg_i8_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_i8_buffer_fat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(7) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1696,7 +1696,7 @@ define i8 @test_atomicrmw_add_i8_buffer_fat_agent(ptr addrspace(7) %ptr, i8 %val
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(7) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1720,7 +1720,7 @@ define i8 @test_atomicrmw_add_i8_buffer_fat_agent(ptr addrspace(7) %ptr, i8 %val
 define i8 @test_atomicrmw_add_i8_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_add_i8_buffer_fat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(7) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1751,7 +1751,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_remote_memory(ptr addrs
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1777,7 +1777,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_remote_memory(ptr addrs
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1809,7 +1809,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory(ptr
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1835,7 +1835,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory(ptr
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1867,7 +1867,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory__am
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1893,7 +1893,7 @@ define i8 @test_atomicrmw_sub_i8_global_agent__amdgpu_no_fine_grained_memory__am
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1923,7 +1923,7 @@ define i8 @test_atomicrmw_usub_cond_i8_global_agent(ptr addrspace(1) %ptr, i8 %v
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1952,7 +1952,7 @@ define i8 @test_atomicrmw_usub_cond_i8_global_agent(ptr addrspace(1) %ptr, i8 %v
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1987,7 +1987,7 @@ define i8 @test_atomicrmw_usub_cond_i8_global_agent_align2(ptr addrspace(1) %ptr
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2016,7 +2016,7 @@ define i8 @test_atomicrmw_usub_cond_i8_global_agent_align2(ptr addrspace(1) %ptr
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2044,7 +2044,7 @@ define i8 @test_atomicrmw_usub_cond_i8_global_agent_align2(ptr addrspace(1) %ptr
 
 define i8 @test_atomicrmw_usub_cond_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2075,7 +2075,7 @@ define i8 @test_atomicrmw_usub_cond_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2109,7 +2109,7 @@ define i8 @test_atomicrmw_usub_cond_i8_local_align2(ptr addrspace(3) %ptr, i8 %v
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2137,7 +2137,7 @@ define i8 @test_atomicrmw_usub_cond_i8_local_align2(ptr addrspace(3) %ptr, i8 %v
 
 define i8 @test_atomicrmw_usub_cond_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2169,7 +2169,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2198,7 +2198,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2233,7 +2233,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2262,7 +2262,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2291,7 +2291,7 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 
 define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i8_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2323,7 +2323,7 @@ define i8 @test_atomicrmw_usub_sat_i8_global_agent(ptr addrspace(1) %ptr, i8 %va
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2350,7 +2350,7 @@ define i8 @test_atomicrmw_usub_sat_i8_global_agent(ptr addrspace(1) %ptr, i8 %va
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2383,7 +2383,7 @@ define i8 @test_atomicrmw_usub_sat_i8_global_agent_align2(ptr addrspace(1) %ptr,
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2410,7 +2410,7 @@ define i8 @test_atomicrmw_usub_sat_i8_global_agent_align2(ptr addrspace(1) %ptr,
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2436,7 +2436,7 @@ define i8 @test_atomicrmw_usub_sat_i8_global_agent_align2(ptr addrspace(1) %ptr,
 
 define i8 @test_atomicrmw_usub_sat_i8_global_agent_align4(ptr addrspace(1) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2465,7 +2465,7 @@ define i8 @test_atomicrmw_usub_sat_i8_local(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2497,7 +2497,7 @@ define i8 @test_atomicrmw_usub_sat_i8_local_align2(ptr addrspace(3) %ptr, i8 %va
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2523,7 +2523,7 @@ define i8 @test_atomicrmw_usub_sat_i8_local_align2(ptr addrspace(3) %ptr, i8 %va
 
 define i8 @test_atomicrmw_usub_sat_i8_local_align4(ptr addrspace(3) %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2553,7 +2553,7 @@ define i8 @test_atomicrmw_usub_sat_i8_flat_agent(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2580,7 +2580,7 @@ define i8 @test_atomicrmw_usub_sat_i8_flat_agent(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2613,7 +2613,7 @@ define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2640,7 +2640,7 @@ define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; R600-NEXT:    [[MASK:%.*]] = shl i32 255, [[TMP2]]
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; R600-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; R600-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; R600:       atomicrmw.start:
 ; R600-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2666,7 +2666,7 @@ define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 
 define i8 @test_atomicrmw_usub_sat_i8_flat_agent_align4(ptr %ptr, i8 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i8_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

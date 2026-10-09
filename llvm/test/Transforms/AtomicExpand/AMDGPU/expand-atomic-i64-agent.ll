@@ -112,7 +112,7 @@ define i64 @test_atomicrmw_add_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -126,7 +126,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -140,7 +140,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -154,7 +154,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -173,7 +173,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -187,7 +187,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_sub_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -250,7 +250,7 @@ define i64 @test_atomicrmw_sub_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -264,7 +264,7 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -278,7 +278,7 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -292,7 +292,7 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -311,7 +311,7 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -325,7 +325,7 @@ define i64 @test_atomicrmw_and_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_and_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -388,7 +388,7 @@ define i64 @test_atomicrmw_and_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_nand_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -408,7 +408,7 @@ define i64 @test_atomicrmw_nand_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -428,7 +428,7 @@ define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory(
 define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -448,7 +448,7 @@ define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_remote_memory(ptr ad
 define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -473,7 +473,7 @@ define i64 @test_atomicrmw_nand_i64_global_agent__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -487,7 +487,7 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -501,7 +501,7 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -515,7 +515,7 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -534,7 +534,7 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -548,7 +548,7 @@ define i64 @test_atomicrmw_or_i64_global_agent(ptr addrspace(1) %ptr, i64 %value
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_or_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -611,7 +611,7 @@ define i64 @test_atomicrmw_or_i64_global_agent__amdgpu_no_fine_grained_memory__a
 define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -625,7 +625,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -639,7 +639,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -653,7 +653,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -672,7 +672,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -686,7 +686,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_xor_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -749,7 +749,7 @@ define i64 @test_atomicrmw_xor_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -764,7 +764,7 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -779,7 +779,7 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -794,7 +794,7 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -814,7 +814,7 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -829,7 +829,7 @@ define i64 @test_atomicrmw_max_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_max_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -893,7 +893,7 @@ define i64 @test_atomicrmw_max_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -908,7 +908,7 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -923,7 +923,7 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -938,7 +938,7 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -958,7 +958,7 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -973,7 +973,7 @@ define i64 @test_atomicrmw_min_i64_global_agent(ptr addrspace(1) %ptr, i64 %valu
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_min_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1037,7 +1037,7 @@ define i64 @test_atomicrmw_min_i64_global_agent__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1052,7 +1052,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1067,7 +1067,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1082,7 +1082,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1102,7 +1102,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1117,7 +1117,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_umax_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1181,7 +1181,7 @@ define i64 @test_atomicrmw_umax_i64_global_agent__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1196,7 +1196,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1211,7 +1211,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1226,7 +1226,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1246,7 +1246,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1261,7 +1261,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent(ptr addrspace(1) %ptr, i64 %val
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_umin_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1325,7 +1325,7 @@ define i64 @test_atomicrmw_umin_i64_global_agent__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1341,7 +1341,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1357,7 +1357,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1373,7 +1373,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1394,7 +1394,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1410,7 +1410,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1475,7 +1475,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_agent__amdgpu_no_fine_grained_me
 define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; GFX803-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1493,7 +1493,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX906-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1511,7 +1511,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX908-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1529,7 +1529,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX90A-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1552,7 +1552,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX10-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1570,7 +1570,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent(ptr addrspace(1) %ptr, i64
 ;
 ; GFX11-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1637,7 +1637,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_agent__amdgpu_no_fine_grained_me
 define i64 @test_atomicrmw_usub_cond_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1658,7 +1658,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_agent(ptr addrspace(1) %ptr, i64
 define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1679,7 +1679,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_me
 define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1700,7 +1700,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_remote_memory(p
 define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1726,7 +1726,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_agent__amdgpu_no_fine_grained_me
 define i64 @test_atomicrmw_usub_sat_i64_global_agent(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1745,7 +1745,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_agent(ptr addrspace(1) %ptr, i64 
 define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1764,7 +1764,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_mem
 define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1783,7 +1783,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_remote_memory(pt
 define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

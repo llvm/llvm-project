@@ -8,4 +8,4 @@ define i8 @test_initial_load(ptr %ptr, i8 %value) {
   ret i8 %res
 }
 ; CHECK-LABEL: @test_initial_load
-; CHECK-NEXT:    %1 = load i8, ptr %ptr, align 1
+; CHECK-NEXT:    %1 = load atomic i8, ptr %ptr monotonic, align 1

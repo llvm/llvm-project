@@ -112,7 +112,7 @@ define i32 @test_atomicrmw_add_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_sub_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_sub_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -166,7 +166,7 @@ define i32 @test_atomicrmw_sub_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_and_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_and_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -220,7 +220,7 @@ define i32 @test_atomicrmw_and_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_nand_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_nand_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -240,7 +240,7 @@ define i32 @test_atomicrmw_nand_i32_global_system(ptr addrspace(1) %ptr, i32 %va
 define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -260,7 +260,7 @@ define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory
 define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -280,7 +280,7 @@ define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_remote_memory(ptr a
 define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -305,7 +305,7 @@ define i32 @test_atomicrmw_nand_i32_global_system__amdgpu_no_fine_grained_memory
 define i32 @test_atomicrmw_or_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_or_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -359,7 +359,7 @@ define i32 @test_atomicrmw_or_i32_global_system__amdgpu_no_fine_grained_memory__
 define i32 @test_atomicrmw_xor_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_xor_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -413,7 +413,7 @@ define i32 @test_atomicrmw_xor_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_max_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_max_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -468,7 +468,7 @@ define i32 @test_atomicrmw_max_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_min_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_min_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -523,7 +523,7 @@ define i32 @test_atomicrmw_min_i32_global_system__amdgpu_no_fine_grained_memory_
 define i32 @test_atomicrmw_umax_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_umax_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -578,7 +578,7 @@ define i32 @test_atomicrmw_umax_i32_global_system__amdgpu_no_fine_grained_memory
 define i32 @test_atomicrmw_umin_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_umin_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -633,7 +633,7 @@ define i32 @test_atomicrmw_umin_i32_global_system__amdgpu_no_fine_grained_memory
 define i32 @test_atomicrmw_uinc_wrap_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_uinc_wrap_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -689,7 +689,7 @@ define i32 @test_atomicrmw_uinc_wrap_i32_global_system__amdgpu_no_fine_grained_m
 define i32 @test_atomicrmw_udec_wrap_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_udec_wrap_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -747,7 +747,7 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_system__amdgpu_no_fine_grained_m
 define i32 @test_atomicrmw_usub_cond_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -768,7 +768,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system(ptr addrspace(1) %ptr, i3
 define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -784,7 +784,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -800,7 +800,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -816,7 +816,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -832,7 +832,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -848,7 +848,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -864,7 +864,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX11-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -890,7 +890,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -906,7 +906,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -922,7 +922,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -938,7 +938,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -954,7 +954,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -970,7 +970,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -986,7 +986,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ;
 ; GFX11-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1012,7 +1012,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_remote_memory(
 define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1028,7 +1028,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1044,7 +1044,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1060,7 +1060,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1076,7 +1076,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1092,7 +1092,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1108,7 +1108,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 ;
 ; GFX11-LABEL: define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1139,7 +1139,7 @@ define i32 @test_atomicrmw_usub_cond_i32_global_system__amdgpu_no_fine_grained_m
 define i32 @test_atomicrmw_usub_sat_i32_global_system(ptr addrspace(1) %ptr, i32 %value) {
 ; COMMON-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1158,7 +1158,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system(ptr addrspace(1) %ptr, i32
 define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1172,7 +1172,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1186,7 +1186,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1200,7 +1200,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1214,7 +1214,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1248,7 +1248,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1262,7 +1262,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(p
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1276,7 +1276,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(p
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1290,7 +1290,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(p
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1304,7 +1304,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(p
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1338,7 +1338,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_remote_memory(p
 define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i32 %value) {
 ; GFX803-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1352,7 +1352,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX906-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1366,7 +1366,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX908-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1380,7 +1380,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX90A-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1394,7 +1394,7 @@ define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_me
 ;
 ; GFX942-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) {
-; GFX942-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

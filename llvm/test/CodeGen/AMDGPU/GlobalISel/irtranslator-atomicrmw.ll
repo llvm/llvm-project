@@ -24,7 +24,7 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[COPY]](p3) :: (load (f32) from %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(f32) = G_LOAD [[COPY]](p3) :: (load monotonic (f32) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
@@ -75,7 +75,7 @@ define <2 x half> @test_atomicrmw_fsub_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load monotonic (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
@@ -111,7 +111,7 @@ define <2 x half> @test_atomicrmw_fmin_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load monotonic (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
@@ -147,7 +147,7 @@ define <2 x half> @test_atomicrmw_fmax_vector(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 1.000000e+00
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[C]](f16), [[C]](f16)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load (<2 x f16>) from %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x f16>) = G_LOAD [[COPY]](p3) :: (load monotonic (<2 x f16>) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:

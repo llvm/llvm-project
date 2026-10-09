@@ -1905,14 +1905,13 @@ define amdgpu_kernel void @global_atomic_fadd_f64_noret_pat_agent_safe(ptr addrs
 ; GFX90A-LABEL: global_atomic_fadd_f64_noret_pat_agent_safe:
 ; GFX90A:       ; %bb.0: ; %main_body
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, 0
+; GFX90A-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], s[4:5], s[4:5] op_sel:[0,1]
+; GFX90A-NEXT:    global_load_dwordx2 v[2:3], v4, s[0:1] glc
 ; GFX90A-NEXT:  .LBB43_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[0:1], v[2:3], 4.0
 ; GFX90A-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -2244,7 +2243,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent_safe(ptr %ptr) {
 ; GFX90A-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
-; GFX90A-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GFX90A-NEXT:    flat_load_dwordx2 v[2:3], v[0:1] glc
 ; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-NEXT:  .LBB50_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1

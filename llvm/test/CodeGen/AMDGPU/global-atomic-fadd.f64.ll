@@ -36,7 +36,7 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
-  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:av_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY6]], 0, 0, implicit $exec :: (load (s64) from %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:av_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY6]], 0, 0, implicit $exec :: (load syncscope("wavefront") monotonic (s64) from %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1.atomicrmw.start:

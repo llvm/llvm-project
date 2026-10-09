@@ -4,7 +4,7 @@
 
 define float @test_atomicrmw_fmax_f32_flat(ptr %ptr, float %value) {
 ; GCN-LABEL: @test_atomicrmw_fmax_f32_flat(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -25,7 +25,7 @@ define float @test_atomicrmw_fmax_f32_flat(ptr %ptr, float %value) {
 
 define float @test_atomicrmw_fmax_f32_global(ptr addrspace(1) %ptr, float %value) {
 ; GCN-LABEL: @test_atomicrmw_fmax_f32_global(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -62,7 +62,7 @@ define half @test_atomicrmw_fmax_f16_flat(ptr %ptr, half %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -98,7 +98,7 @@ define half @test_atomicrmw_fmax_f16_global(ptr addrspace(1) %ptr, half %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -127,7 +127,7 @@ define half @test_atomicrmw_fmax_f16_global(ptr addrspace(1) %ptr, half %value) 
 
 define half @test_atomicrmw_fmax_f16_global_align4(ptr addrspace(1) %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fmax_f16_global_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -159,7 +159,7 @@ define half @test_atomicrmw_fmax_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GCN-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -197,7 +197,7 @@ define double @test_atomicrmw_fmax_f64_flat(ptr %ptr, double %value) {
 ; GCN-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GCN:       atomicrmw.global:
-; GCN-NEXT:    [[TMP3:%.*]] = load double, ptr [[PTR]], align 8
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP8:%.*]], [[ATOMICRMW_START]] ]
@@ -223,7 +223,7 @@ define double @test_atomicrmw_fmax_f64_flat(ptr %ptr, double %value) {
 
 define double @test_atomicrmw_fmax_f64_flat__noprivate(ptr %ptr, double %value) {
 ; GCN-LABEL: @test_atomicrmw_fmax_f64_flat__noprivate(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -244,7 +244,7 @@ define double @test_atomicrmw_fmax_f64_flat__noprivate(ptr %ptr, double %value) 
 
 define double @test_atomicrmw_fmax_f64_global(ptr addrspace(1) %ptr, double %value) {
 ; GCN-LABEL: @test_atomicrmw_fmax_f64_global(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -274,11 +274,11 @@ define double @test_atomicrmw_fmax_f64_local(ptr addrspace(3) %ptr, double %valu
 
 define double @test_atomicrmw_fmax_f64_global_strictfp(ptr addrspace(1) %ptr, double %value) strictfp {
 ; GCN-LABEL: @test_atomicrmw_fmax_f64_global_strictfp(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"fpexcept.strict") #[[ATTR4:[0-9]+]]
+; GCN-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8

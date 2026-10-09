@@ -1211,7 +1211,14 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O3-LABEL: store_atomic_vec4_float_align:
 ; CHECK-SSE4-O3:       # %bb.0:
 ; CHECK-SSE4-O3-NEXT:    pushq %rbx
-; CHECK-SSE4-O3-NEXT:    movdqa (%rdi), %xmm1
+; CHECK-SSE4-O3-NEXT:    xorl %eax, %eax
+; CHECK-SSE4-O3-NEXT:    xorl %edx, %edx
+; CHECK-SSE4-O3-NEXT:    xorl %ecx, %ecx
+; CHECK-SSE4-O3-NEXT:    xorl %ebx, %ebx
+; CHECK-SSE4-O3-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-SSE4-O3-NEXT:    movq %rdx, %xmm2
+; CHECK-SSE4-O3-NEXT:    movq %rax, %xmm1
+; CHECK-SSE4-O3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; CHECK-SSE4-O3-NEXT:    pextrq $1, %xmm0, %rcx
 ; CHECK-SSE4-O3-NEXT:    movq %xmm0, %rbx
 ; CHECK-SSE4-O3-NEXT:    .p2align 4
@@ -1249,7 +1256,15 @@ define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
 ; CHECK-SSE4-O0-NEXT:    pushq %rbx
 ; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE4-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-SSE4-O0-NEXT:    movaps (%rdi), %xmm0
+; CHECK-SSE4-O0-NEXT:    xorl %eax, %eax
+; CHECK-SSE4-O0-NEXT:    movl %eax, %ebx
+; CHECK-SSE4-O0-NEXT:    movq %rbx, %rax
+; CHECK-SSE4-O0-NEXT:    movq %rbx, %rdx
+; CHECK-SSE4-O0-NEXT:    movq %rbx, %rcx
+; CHECK-SSE4-O0-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-SSE4-O0-NEXT:    movq %rdx, %xmm1
+; CHECK-SSE4-O0-NEXT:    movq %rax, %xmm0
+; CHECK-SSE4-O0-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-SSE4-O0-NEXT:  .LBB41_1: # %atomicrmw.start
 ; CHECK-SSE4-O0-NEXT:    # =>This Inner Loop Header: Depth=1

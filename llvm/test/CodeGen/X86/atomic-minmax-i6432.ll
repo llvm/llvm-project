@@ -9,8 +9,11 @@ define i64 @atomic_max_i64() nounwind {
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
-; LINUX-NEXT:    movl sc64+4, %edx
-; LINUX-NEXT:    movl sc64, %eax
+; LINUX-NEXT:    subl $12, %esp
+; LINUX-NEXT:    fildll sc64
+; LINUX-NEXT:    fistpll (%esp)
+; LINUX-NEXT:    movl (%esp), %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LINUX-NEXT:    movl $5, %esi
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB0_1: # %atomicrmw.start
@@ -25,6 +28,7 @@ define i64 @atomic_max_i64() nounwind {
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB0_1
 ; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
+; LINUX-NEXT:    addl $12, %esp
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
@@ -34,12 +38,15 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
+; PIC-NEXT:    subl $8, %esp
 ; PIC-NEXT:    calll L0$pb
 ; PIC-NEXT:  L0$pb:
 ; PIC-NEXT:    popl %eax
 ; PIC-NEXT:    movl L_sc64$non_lazy_ptr-L0$pb(%eax), %esi
-; PIC-NEXT:    movl (%esi), %eax
-; PIC-NEXT:    movl 4(%esi), %edx
+; PIC-NEXT:    fildll (%esi)
+; PIC-NEXT:    fistpll (%esp)
+; PIC-NEXT:    movl (%esp), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; PIC-NEXT:    movl $5, %edi
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB0_1: ## %atomicrmw.start
@@ -54,6 +61,7 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB0_1
 ; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
+; PIC-NEXT:    addl $8, %esp
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -67,8 +75,11 @@ define i64 @atomic_min_i64() nounwind {
 ; LINUX-LABEL: atomic_min_i64:
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
-; LINUX-NEXT:    movl sc64+4, %edx
-; LINUX-NEXT:    movl sc64, %eax
+; LINUX-NEXT:    subl $8, %esp
+; LINUX-NEXT:    fildll sc64
+; LINUX-NEXT:    fistpll (%esp)
+; LINUX-NEXT:    movl (%esp), %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB1_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -82,6 +93,7 @@ define i64 @atomic_min_i64() nounwind {
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB1_1
 ; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
+; LINUX-NEXT:    addl $8, %esp
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
@@ -89,12 +101,15 @@ define i64 @atomic_min_i64() nounwind {
 ; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %esi
+; PIC-NEXT:    subl $12, %esp
 ; PIC-NEXT:    calll L1$pb
 ; PIC-NEXT:  L1$pb:
 ; PIC-NEXT:    popl %eax
 ; PIC-NEXT:    movl L_sc64$non_lazy_ptr-L1$pb(%eax), %esi
-; PIC-NEXT:    movl (%esi), %eax
-; PIC-NEXT:    movl 4(%esi), %edx
+; PIC-NEXT:    fildll (%esi)
+; PIC-NEXT:    fistpll (%esp)
+; PIC-NEXT:    movl (%esp), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB1_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -108,6 +123,7 @@ define i64 @atomic_min_i64() nounwind {
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB1_1
 ; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
+; PIC-NEXT:    addl $12, %esp
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
@@ -121,8 +137,11 @@ define i64 @atomic_umax_i64() nounwind {
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
-; LINUX-NEXT:    movl sc64+4, %edx
-; LINUX-NEXT:    movl sc64, %eax
+; LINUX-NEXT:    subl $12, %esp
+; LINUX-NEXT:    fildll sc64
+; LINUX-NEXT:    fistpll (%esp)
+; LINUX-NEXT:    movl (%esp), %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LINUX-NEXT:    movl $7, %esi
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB2_1: # %atomicrmw.start
@@ -137,6 +156,7 @@ define i64 @atomic_umax_i64() nounwind {
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB2_1
 ; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
+; LINUX-NEXT:    addl $12, %esp
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
@@ -146,12 +166,15 @@ define i64 @atomic_umax_i64() nounwind {
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
+; PIC-NEXT:    subl $8, %esp
 ; PIC-NEXT:    calll L2$pb
 ; PIC-NEXT:  L2$pb:
 ; PIC-NEXT:    popl %eax
 ; PIC-NEXT:    movl L_sc64$non_lazy_ptr-L2$pb(%eax), %esi
-; PIC-NEXT:    movl (%esi), %eax
-; PIC-NEXT:    movl 4(%esi), %edx
+; PIC-NEXT:    fildll (%esi)
+; PIC-NEXT:    fistpll (%esp)
+; PIC-NEXT:    movl (%esp), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; PIC-NEXT:    movl $7, %edi
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB2_1: ## %atomicrmw.start
@@ -166,6 +189,7 @@ define i64 @atomic_umax_i64() nounwind {
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB2_1
 ; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
+; PIC-NEXT:    addl $8, %esp
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx
@@ -179,8 +203,11 @@ define i64 @atomic_umin_i64() nounwind {
 ; LINUX-LABEL: atomic_umin_i64:
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
-; LINUX-NEXT:    movl sc64+4, %edx
-; LINUX-NEXT:    movl sc64, %eax
+; LINUX-NEXT:    subl $8, %esp
+; LINUX-NEXT:    fildll sc64
+; LINUX-NEXT:    fistpll (%esp)
+; LINUX-NEXT:    movl (%esp), %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -194,6 +221,7 @@ define i64 @atomic_umin_i64() nounwind {
 ; LINUX-NEXT:    lock cmpxchg8b sc64
 ; LINUX-NEXT:    jne .LBB3_1
 ; LINUX-NEXT:  # %bb.2: # %atomicrmw.end
+; LINUX-NEXT:    addl $8, %esp
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
 ;
@@ -201,12 +229,15 @@ define i64 @atomic_umin_i64() nounwind {
 ; PIC:       ## %bb.0: ## %entry
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %esi
+; PIC-NEXT:    subl $12, %esp
 ; PIC-NEXT:    calll L3$pb
 ; PIC-NEXT:  L3$pb:
 ; PIC-NEXT:    popl %eax
 ; PIC-NEXT:    movl L_sc64$non_lazy_ptr-L3$pb(%eax), %esi
-; PIC-NEXT:    movl (%esi), %eax
-; PIC-NEXT:    movl 4(%esi), %edx
+; PIC-NEXT:    fildll (%esi)
+; PIC-NEXT:    fistpll (%esp)
+; PIC-NEXT:    movl (%esp), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB3_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -220,6 +251,7 @@ define i64 @atomic_umin_i64() nounwind {
 ; PIC-NEXT:    lock cmpxchg8b (%esi)
 ; PIC-NEXT:    jne LBB3_1
 ; PIC-NEXT:  ## %bb.2: ## %atomicrmw.end
+; PIC-NEXT:    addl $12, %esp
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %ebx
 ; PIC-NEXT:    retl
@@ -235,9 +267,12 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; LINUX:       # %bb.0: # %entry
 ; LINUX-NEXT:    pushl %ebx
 ; LINUX-NEXT:    pushl %esi
+; LINUX-NEXT:    subl $12, %esp
 ; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; LINUX-NEXT:    movl id+4, %edx
-; LINUX-NEXT:    movl id, %eax
+; LINUX-NEXT:    fildll id
+; LINUX-NEXT:    fistpll (%esp)
+; LINUX-NEXT:    movl (%esp), %eax
+; LINUX-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LINUX-NEXT:    .p2align 4
 ; LINUX-NEXT:  .LBB4_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -252,6 +287,7 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; LINUX-NEXT:    adcl $0, %edx
 ; LINUX-NEXT:    movl %eax, (%esi)
 ; LINUX-NEXT:    movl %edx, 4(%esi)
+; LINUX-NEXT:    addl $12, %esp
 ; LINUX-NEXT:    popl %esi
 ; LINUX-NEXT:    popl %ebx
 ; LINUX-NEXT:    retl
@@ -261,12 +297,15 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; PIC-NEXT:    pushl %ebx
 ; PIC-NEXT:    pushl %edi
 ; PIC-NEXT:    pushl %esi
+; PIC-NEXT:    subl $8, %esp
 ; PIC-NEXT:    calll L4$pb
 ; PIC-NEXT:  L4$pb:
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; PIC-NEXT:    movl _id-L4$pb+4(%edi), %edx
-; PIC-NEXT:    movl _id-L4$pb(%edi), %eax
+; PIC-NEXT:    fildll _id-L4$pb(%edi)
+; PIC-NEXT:    fistpll (%esp)
+; PIC-NEXT:    movl (%esp), %eax
+; PIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; PIC-NEXT:    .p2align 4
 ; PIC-NEXT:  LBB4_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -281,6 +320,7 @@ define void @tf_bug(ptr %ptr) nounwind {
 ; PIC-NEXT:    adcl $0, %edx
 ; PIC-NEXT:    movl %eax, (%esi)
 ; PIC-NEXT:    movl %edx, 4(%esi)
+; PIC-NEXT:    addl $8, %esp
 ; PIC-NEXT:    popl %esi
 ; PIC-NEXT:    popl %edi
 ; PIC-NEXT:    popl %ebx

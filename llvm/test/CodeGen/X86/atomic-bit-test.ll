@@ -101,11 +101,17 @@ entry:
 define i64 @bts63() nounwind {
 ; X86-LABEL: bts63:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
-; X86-NEXT:    movl v64+4, %edx
-; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    fildll v64
+; X86-NEXT:    fistpll (%esp)
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -117,8 +123,10 @@ define i64 @bts63() nounwind {
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bts63:
@@ -225,11 +233,17 @@ entry:
 define i64 @btc63() nounwind {
 ; X86-LABEL: btc63:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
-; X86-NEXT:    movl v64+4, %edx
-; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    fildll v64
+; X86-NEXT:    fistpll (%esp)
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB9_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -241,8 +255,10 @@ define i64 @btc63() nounwind {
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btc63:
@@ -353,13 +369,19 @@ entry:
 define i64 @btr63() nounwind {
 ; X86-LABEL: btr63:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl $2147483647, %esi # imm = 0x7FFFFFFF
 ; X86-NEXT:    movl $-1, %edi
-; X86-NEXT:    movl v64+4, %edx
-; X86-NEXT:    movl v64, %eax
+; X86-NEXT:    fildll v64
+; X86-NEXT:    fistpll (%esp)
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB14_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -374,9 +396,11 @@ define i64 @btr63() nounwind {
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    andl %edi, %eax
 ; X86-NEXT:    andl %esi, %edx
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btr63:

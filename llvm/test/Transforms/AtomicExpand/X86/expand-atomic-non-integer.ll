@@ -632,10 +632,11 @@ define void @store_i128_volatile_syncscope(ptr %p, i128 %x) {
 ;
 ; CX16-LABEL: define void @store_i128_volatile_syncscope(
 ; CX16-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) #[[ATTR0]] {
-; CX16-NEXT:    [[TMP1:%.*]] = load volatile i128, ptr [[P]], align 16
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[P]], i128 0, i128 0 syncscope("singlethread") monotonic monotonic, align 16
+; CX16-NEXT:    [[LOADED1:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
 ; CX16-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CX16:       [[ATOMICRMW_START]]:
-; CX16-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
+; CX16-NEXT:    [[LOADED:%.*]] = phi i128 [ [[LOADED1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg volatile ptr [[P]], i128 [[LOADED]], i128 [[X]] syncscope("singlethread") seq_cst seq_cst, align 16
 ; CX16-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1
 ; CX16-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0
@@ -660,6 +661,11 @@ define void @store_atomic_vec2_ptr_align(ptr %x, <2 x ptr> %v) nounwind {
 ; CHECK32-NEXT:    store atomic <2 x ptr> [[V]], ptr [[X]] release, align 16
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @store_atomic_vec2_ptr_align(
+; CX16-SAME: ptr [[X:%.*]], <2 x ptr> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    store atomic <2 x ptr> [[V]], ptr [[X]] release, align 16
+; CX16-NEXT:    ret void
+;
   store atomic <2 x ptr> %v, ptr %x release, align 16
   ret void
 }
@@ -681,6 +687,11 @@ define void @store_atomic_vec4_ptr270_align(ptr %x, <4 x ptr addrspace(270)> %v)
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @store_atomic_vec4_ptr270_align(
+; CX16-SAME: ptr [[X:%.*]], <4 x ptr addrspace(270)> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    store atomic <4 x ptr addrspace(270)> [[V]], ptr [[X]] release, align 16
+; CX16-NEXT:    ret void
+;
   store atomic <4 x ptr addrspace(270)> %v, ptr %x release, align 16
   ret void
 }
@@ -691,6 +702,11 @@ define void @store_atomic_vec2_i16(ptr %x, <2 x i16> %v) nounwind {
 ; CHECK-NEXT:    store atomic <2 x i16> [[V]], ptr [[X]] release, align 8
 ; CHECK-NEXT:    ret void
 ;
+; CX16-LABEL: define void @store_atomic_vec2_i16(
+; CX16-SAME: ptr [[X:%.*]], <2 x i16> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    store atomic <2 x i16> [[V]], ptr [[X]] release, align 8
+; CX16-NEXT:    ret void
+;
   store atomic <2 x i16> %v, ptr %x release, align 8
   ret void
 }
@@ -700,6 +716,11 @@ define void @store_atomic_vec2_half(ptr %x, <2 x half> %v) nounwind {
 ; CHECK-SAME: ptr [[X:%.*]], <2 x half> [[V:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    store atomic <2 x half> [[V]], ptr [[X]] release, align 8
 ; CHECK-NEXT:    ret void
+;
+; CX16-LABEL: define void @store_atomic_vec2_half(
+; CX16-SAME: ptr [[X:%.*]], <2 x half> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    store atomic <2 x half> [[V]], ptr [[X]] release, align 8
+; CX16-NEXT:    ret void
 ;
   store atomic <2 x half> %v, ptr %x release, align 8
   ret void
@@ -721,6 +742,24 @@ define void @store_atomic_vec4_i32(ptr %x, <4 x i32> %v) nounwind {
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @store_atomic_vec4_i32(
+; CX16-SAME: ptr [[X:%.*]], <4 x i32> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i128 0, i128 0 monotonic monotonic, align 16
+; CX16-NEXT:    [[LOADED1:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i128 [[LOADED1]] to <4 x i32>
+; CX16-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CX16:       [[ATOMICRMW_START]]:
+; CX16-NEXT:    [[LOADED:%.*]] = phi <4 x i32> [ [[TMP2]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[ATOMICRMW_START]] ]
+; CX16-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[V]] to i128
+; CX16-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[LOADED]] to i128
+; CX16-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[X]], i128 [[TMP4]], i128 [[TMP3]] release monotonic, align 16
+; CX16-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+; CX16-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+; CX16-NEXT:    [[TMP6]] = bitcast i128 [[NEWLOADED]] to <4 x i32>
+; CX16-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CX16:       [[ATOMICRMW_END]]:
+; CX16-NEXT:    ret void
+;
   store atomic <4 x i32> %v, ptr %x release, align 16
   ret void
 }
@@ -740,6 +779,24 @@ define void @store_atomic_vec4_float(ptr %x, <4 x float> %v) nounwind {
 ; CHECK32-NEXT:    call void @__atomic_store(i32 16, ptr [[X]], ptr [[TMP1]], i32 3)
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret void
+;
+; CX16-LABEL: define void @store_atomic_vec4_float(
+; CX16-SAME: ptr [[X:%.*]], <4 x float> [[V:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i128 0, i128 0 monotonic monotonic, align 16
+; CX16-NEXT:    [[LOADED1:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i128 [[LOADED1]] to <4 x float>
+; CX16-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CX16:       [[ATOMICRMW_START]]:
+; CX16-NEXT:    [[LOADED:%.*]] = phi <4 x float> [ [[TMP2]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[ATOMICRMW_START]] ]
+; CX16-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[V]] to i128
+; CX16-NEXT:    [[TMP4:%.*]] = bitcast <4 x float> [[LOADED]] to i128
+; CX16-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[X]], i128 [[TMP4]], i128 [[TMP3]] release monotonic, align 16
+; CX16-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+; CX16-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+; CX16-NEXT:    [[TMP6]] = bitcast i128 [[NEWLOADED]] to <4 x float>
+; CX16-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CX16:       [[ATOMICRMW_END]]:
+; CX16-NEXT:    ret void
 ;
   store atomic <4 x float> %v, ptr %x release, align 16
   ret void

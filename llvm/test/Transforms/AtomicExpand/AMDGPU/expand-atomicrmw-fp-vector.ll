@@ -10,7 +10,7 @@
 define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent_align4(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; GFX900-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent_align4(
 ; GFX900-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX900-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX900-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX900-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX900:       atomicrmw.start:
 ; GFX900-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -27,7 +27,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent_align4(ptr addrspace(1
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent_align4(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -54,7 +54,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent_align4(ptr addrspace(1
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent_align4(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX900-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent_align4(
 ; GFX900-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX900-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX900-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX900-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX900:       atomicrmw.start:
 ; GFX900-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -71,7 +71,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent_align4(ptr addrspac
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent_align4(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -98,7 +98,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent_align4(ptr addrspac
 define <4 x half> @test_atomicrmw_fadd_v4f16_global_agent_align8(ptr addrspace(1) %ptr, <4 x half> %value) {
 ; CHECK-LABEL: define <4 x half> @test_atomicrmw_fadd_v4f16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -120,7 +120,7 @@ define <4 x half> @test_atomicrmw_fadd_v4f16_global_agent_align8(ptr addrspace(1
 define <4 x bfloat> @test_atomicrmw_fadd_v4bf16_global_agent_align8(ptr addrspace(1) %ptr, <4 x bfloat> %value) {
 ; CHECK-LABEL: define <4 x bfloat> @test_atomicrmw_fadd_v4bf16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x bfloat>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -142,7 +142,7 @@ define <4 x bfloat> @test_atomicrmw_fadd_v4bf16_global_agent_align8(ptr addrspac
 define <2 x float> @test_atomicrmw_fadd_v2f32_global_agent_align8(ptr addrspace(1) %ptr, <2 x float> %value) {
 ; CHECK-LABEL: define <2 x float> @test_atomicrmw_fadd_v2f32_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x float> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -168,7 +168,7 @@ define <2 x float> @test_atomicrmw_fadd_v2f32_global_agent_align8(ptr addrspace(
 define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent_align4(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CHECK-LABEL: define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -190,7 +190,7 @@ define <2 x half> @test_atomicrmw_fsub_v2f16_global_agent_align4(ptr addrspace(1
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent_align4(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CHECK-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -212,7 +212,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent_align4(ptr addrspac
 define <4 x half> @test_atomicrmw_fsub_v4f16_global_agent_align8(ptr addrspace(1) %ptr, <4 x half> %value) {
 ; CHECK-LABEL: define <4 x half> @test_atomicrmw_fsub_v4f16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -234,7 +234,7 @@ define <4 x half> @test_atomicrmw_fsub_v4f16_global_agent_align8(ptr addrspace(1
 define <4 x bfloat> @test_atomicrmw_fsub_v4bf16_global_agent_align8(ptr addrspace(1) %ptr, <4 x bfloat> %value) {
 ; CHECK-LABEL: define <4 x bfloat> @test_atomicrmw_fsub_v4bf16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x bfloat>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -256,7 +256,7 @@ define <4 x bfloat> @test_atomicrmw_fsub_v4bf16_global_agent_align8(ptr addrspac
 define <2 x float> @test_atomicrmw_fsub_v2f32_global_agent_align8(ptr addrspace(1) %ptr, <2 x float> %value) {
 ; CHECK-LABEL: define <2 x float> @test_atomicrmw_fsub_v2f32_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x float> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -282,7 +282,7 @@ define <2 x float> @test_atomicrmw_fsub_v2f32_global_agent_align8(ptr addrspace(
 define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent_align4(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CHECK-LABEL: define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -304,7 +304,7 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_global_agent_align4(ptr addrspace(1
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent_align4(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CHECK-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -326,7 +326,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent_align4(ptr addrspac
 define <4 x half> @test_atomicrmw_fmin_v4f16_global_agent_align8(ptr addrspace(1) %ptr, <4 x half> %value) {
 ; CHECK-LABEL: define <4 x half> @test_atomicrmw_fmin_v4f16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -348,7 +348,7 @@ define <4 x half> @test_atomicrmw_fmin_v4f16_global_agent_align8(ptr addrspace(1
 define <4 x bfloat> @test_atomicrmw_fmin_v4bf16_global_agent_align8(ptr addrspace(1) %ptr, <4 x bfloat> %value) {
 ; CHECK-LABEL: define <4 x bfloat> @test_atomicrmw_fmin_v4bf16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x bfloat>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -370,7 +370,7 @@ define <4 x bfloat> @test_atomicrmw_fmin_v4bf16_global_agent_align8(ptr addrspac
 define <2 x float> @test_atomicrmw_fmin_v2f32_global_agent_align8(ptr addrspace(1) %ptr, <2 x float> %value) {
 ; CHECK-LABEL: define <2 x float> @test_atomicrmw_fmin_v2f32_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x float> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -396,7 +396,7 @@ define <2 x float> @test_atomicrmw_fmin_v2f32_global_agent_align8(ptr addrspace(
 define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent_align4(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CHECK-LABEL: define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -418,7 +418,7 @@ define <2 x half> @test_atomicrmw_fmax_v2f16_global_agent_align4(ptr addrspace(1
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent_align4(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CHECK-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent_align4(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -440,7 +440,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent_align4(ptr addrspac
 define <4 x half> @test_atomicrmw_fmax_v4f16_global_agent_align8(ptr addrspace(1) %ptr, <4 x half> %value) {
 ; CHECK-LABEL: define <4 x half> @test_atomicrmw_fmax_v4f16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x half> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x half>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -462,7 +462,7 @@ define <4 x half> @test_atomicrmw_fmax_v4f16_global_agent_align8(ptr addrspace(1
 define <4 x bfloat> @test_atomicrmw_fmax_v4bf16_global_agent_align8(ptr addrspace(1) %ptr, <4 x bfloat> %value) {
 ; CHECK-LABEL: define <4 x bfloat> @test_atomicrmw_fmax_v4bf16_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <4 x bfloat> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x bfloat>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -484,7 +484,7 @@ define <4 x bfloat> @test_atomicrmw_fmax_v4bf16_global_agent_align8(ptr addrspac
 define <2 x float> @test_atomicrmw_fmax_v2f32_global_agent_align8(ptr addrspace(1) %ptr, <2 x float> %value) {
 ; CHECK-LABEL: define <2 x float> @test_atomicrmw_fmax_v2f32_global_agent_align8(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x float> [[VALUE:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <2 x float>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x float> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]

@@ -4,7 +4,7 @@
 
 define i32 @test_atomicrmw_nand_i32_flat(ptr %ptr, i32 %value) {
 ; CHECK-LABEL: @test_atomicrmw_nand_i32_flat(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -23,7 +23,7 @@ define i32 @test_atomicrmw_nand_i32_flat(ptr %ptr, i32 %value) {
 
 define i32 @test_atomicrmw_nand_i32_global(ptr addrspace(1) %ptr, i32 %value) {
 ; CHECK-LABEL: @test_atomicrmw_nand_i32_global(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -42,7 +42,7 @@ define i32 @test_atomicrmw_nand_i32_global(ptr addrspace(1) %ptr, i32 %value) {
 
 define i32 @test_atomicrmw_nand_i32_local(ptr addrspace(3) %ptr, i32 %value) {
 ; CHECK-LABEL: @test_atomicrmw_nand_i32_local(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

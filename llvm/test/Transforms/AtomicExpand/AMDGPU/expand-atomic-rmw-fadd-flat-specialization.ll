@@ -6,7 +6,7 @@
 
 define float @syncscope_system(ptr %addr, float %val) {
 ; GFX908-LABEL: @syncscope_system(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -76,7 +76,7 @@ define float @syncscope_system(ptr %addr, float %val) {
 
 define float @syncscope_workgroup_rtn(ptr %addr, float %val) {
 ; GFX908-LABEL: @syncscope_workgroup_rtn(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] syncscope("workgroup") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -224,7 +224,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 
 define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-LABEL: @no_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] syncscope("workgroup") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -240,7 +240,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @no_unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] syncscope("workgroup") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -260,7 +260,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX1100-LABEL: @no_unsafe(
-; GFX1100-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 4
+; GFX1100-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] syncscope("workgroup") monotonic, align 4
 ; GFX1100-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX1100:       atomicrmw.start:
 ; GFX1100-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -296,7 +296,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 
 define float @flat_atomicrmw_fadd_f32__align32(ptr %addr, float %val) {
 ; GFX908-LABEL: @flat_atomicrmw_fadd_f32__align32(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[ADDR:%.*]], align 32
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[ADDR:%.*]] monotonic, align 32
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]

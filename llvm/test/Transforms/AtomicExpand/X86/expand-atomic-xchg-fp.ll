@@ -3,7 +3,7 @@
 
 define double @atomic_xchg_f64(ptr %ptr) nounwind {
 ; CHECK-LABEL: @atomic_xchg_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -21,7 +21,7 @@ define double @atomic_xchg_f64(ptr %ptr) nounwind {
 
 define double @atomic_xchg_f64_as1(ptr addrspace(1) %ptr) nounwind {
 ; CHECK-LABEL: @atomic_xchg_f64_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -39,7 +39,7 @@ define double @atomic_xchg_f64_as1(ptr addrspace(1) %ptr) nounwind {
 
 define double @atomic_xchg_f64_preserve_md(ptr %ptr) nounwind {
 ; CHECK-LABEL: @atomic_xchg_f64_preserve_md(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr [[PTR:%.*]] monotonic, align 8, !mmra [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

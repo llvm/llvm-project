@@ -17,14 +17,13 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrsp
 ; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    global_load_dword v1, v2, s[4:5] glc
 ; GCN-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-NEXT:    v_add_f32_e32 v3, s8, v4
 ; GCN-NEXT:    global_atomic_cmpswap v1, v2, v[3:4], s[4:5] glc
