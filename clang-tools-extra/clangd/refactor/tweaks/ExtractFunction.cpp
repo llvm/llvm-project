@@ -1215,18 +1215,23 @@ bool createParameters(NewFunction &ExtractedFunc,
         // sizeof/alignof/typeof (or similar) on it.
         if (DeclInfo.HasUnsafeTypeQueryUseInZone)
           return false;
-        // A variable-length array's bound (at any nesting depth, e.g.
-        // the inner dimension of `int A[2][N]`) is an arbitrary
-        // expression that's typically just some other variable's name
-        // -- but that variable isn't necessarily (and often isn't) also
-        // a parameter of the extracted function, and even if it is, a
-        // mutated one would itself have been turned into a pointer,
-        // which the bound expression can't account for either way.
-        // Bail out rather than risk printing a parameter type that
-        // references a name meaningless (or absent) in the new scope.
-        if (TypeInfo->isVariablyModifiedType())
+        QualType Decayed = Context.getArrayDecayedType(TypeInfo);
+        // The array's own outermost dimension is never a problem, VLA
+        // or not: once decayed, it no longer appears in the type at
+        // all (`int A[N]` decays to plain `int *A`). An inner
+        // dimension that's still variable-length (e.g. the `N` in
+        // `int A[2][N]`, which decays to `int (*A)[N]`) is the actual
+        // hazard: its bound is an arbitrary expression, typically just
+        // some other variable's name, that isn't necessarily (and
+        // often isn't) also a parameter of the extracted function, and
+        // even if it is, a mutated one would itself have been turned
+        // into a pointer, which the bound expression can't account for
+        // either way. Bail out rather than risk printing a parameter
+        // type that references a name meaningless (or absent) in the
+        // new scope.
+        if (Decayed->getPointeeType()->isVariablyModifiedType())
           return false;
-        TypeInfo = Context.getArrayDecayedType(TypeInfo);
+        TypeInfo = Decayed;
         Kind = ParamPassKind::Value;
       } else {
         // Bail out rather than rewrite a use whose location (or, for a

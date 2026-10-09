@@ -1231,14 +1231,28 @@ TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
             "fail: Too complex to extract.");
 }
 
-TEST_F(ExtractFunctionTest, CFileRejectVariableLengthArray) {
-  // A VLA's bound is an arbitrary expression -- typically another
-  // variable's name -- that isn't necessarily (and here isn't at all)
-  // itself a parameter of the extracted function, and even printing it
-  // via the usual array-decay path would reference a name meaningless
-  // in the new scope. Here the VLA bound isn't even at the top level
-  // (it's the inner dimension of a 2D array), exercising that
-  // `isVariablyModifiedType()` catches it regardless of nesting depth.
+TEST_F(ExtractFunctionTest, CFileAllowSingleDimensionVariableLengthArray) {
+  // A VLA's own outermost dimension is never a problem: once decayed,
+  // it no longer appears in the parameter type at all (`int A[N]`
+  // decays to plain `int *A`, not something that needs to mention `N`).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo(int N) {
+         int A[N];
+         [[A[0] = 1;]]
+    })cpp"),
+              HasSubstr("extracted(int *A)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMultiDimensionVariableLengthArray) {
+  // Unlike the single-dimension case, an inner dimension that's still
+  // variable-length after decaying the outer one (`int A[2][N]` decays
+  // to `int (*A)[N]`) is a real hazard: `N` is an arbitrary expression,
+  // typically another variable's name, that isn't necessarily (and
+  // here isn't at all) itself a parameter of the extracted function,
+  // and even printing it would reference a name meaningless in the new
+  // scope.
   FileName = "a.c";
   Context = File;
   EXPECT_EQ(apply(R"cpp(
@@ -1247,6 +1261,21 @@ TEST_F(ExtractFunctionTest, CFileRejectVariableLengthArray) {
          [[A[0][0] = 1;]]
     })cpp"),
             "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CXXVariableLengthArrayByReference) {
+  // In C++ (where clang also supports VLAs as a GNU extension), this
+  // isn't a problem at all: an unmutated array always stays a
+  // reference there (see ConstParametersScalarsByValue's array case),
+  // never decaying to a pointer, so there's no separate parameter that
+  // needs to agree with the array's own bound.
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo(int N) {
+         int A[2][N];
+         [[A[0][0] = 1;]]
+    })cpp"),
+              HasSubstr("extracted(int (&A)[2][N])"));
 }
 
 } // namespace
