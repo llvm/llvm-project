@@ -77,6 +77,10 @@ public:
     Tool.mapVirtualFile(FilePath, Content);
   }
 
+  void setInvocationWrapper(InvocationWrapper Wrapper) override {
+    Tool.setInvocationWrapper(std::move(Wrapper));
+  }
+
   /// Returns the file manager used in the tool.
   ///
   /// The file manager is shared between all translation units.

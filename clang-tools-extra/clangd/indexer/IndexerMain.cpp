@@ -26,6 +26,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -183,28 +184,21 @@ int main(int argc, const char **argv) {
   Mangler->SystemIncludeExtractor = clang::clangd::getSystemIncludeExtractor(
       static_cast<llvm::ArrayRef<std::string>>(
           clang::clangd::QueryDriverGlobs));
+  Executor->get()->setInvocationWrapper(
+      [ContextProvider = std::move(ContextProvider)](
+          const clang::tooling::CompileCommand &Cmd,
+          llvm::function_ref<bool()> Invoke) {
+        // Cmd.Filename may be relative to the compile command's directory.
+        llvm::SmallString<256> AbsFile(Cmd.Filename);
+        llvm::sys::path::make_absolute(Cmd.Directory, AbsFile);
+        clang::clangd::WithContext WithCfg(ContextProvider(AbsFile));
+        return Invoke();
+      });
   auto Err = Executor->get()->execute(
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::ArgumentsAdjuster(
-          [Mangler = std::move(Mangler),
-           ContextProvider = std::move(ContextProvider)](
-              const std::vector<std::string> &Args, llvm::StringRef File) {
-            // FIXME: If File is relative, it's relative to the compile
-            // command's "directory", not our CWD, but ToolExecutor doesn't
-            // expose "directory" here. We don't have enough information to
-            // correctly determine the absolute path, so we don't apply the
-            // config for relative paths. See
-            // indexer-clangd-config-relative-path.test.
-            // FIXME: WithCfg only lives for this ArgumentsAdjuster call, so
-            // it's visible to Mangler below but not to the parse that follows.
-            // That's harmless today since clangd-indexer doesn't consult
-            // config during the parse, but a real fix would need libTooling
-            // changes to keep the context alive for the whole invocation.
-            std::optional<clang::clangd::WithContext> WithCfg;
-            if (llvm::sys::path::is_absolute(File)) {
-              WithCfg.emplace(ContextProvider(File));
-            }
-
+          [Mangler = std::move(Mangler)](const std::vector<std::string> &Args,
+                                         llvm::StringRef File) {
             clang::tooling::CompileCommand Cmd;
             Cmd.CommandLine = Args;
             Mangler->operator()(Cmd, File);
