@@ -2520,7 +2520,8 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       unsigned LessLessLength = Lexer::getTokenPrefixLength(
           TokLoc, /*CharNo=*/2, PP.getSourceManager(), getLangOpts());
 
-      SourceLocation LessLessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      SourceLocation LessLessLoc =
+          PP.SplitToken(TokLoc, LessLessLength, tok::lessless);
       Token LessLess = Tok;
       LessLess.setLocation(LessLessLoc);
       LessLess.setKind(tok::lessless);

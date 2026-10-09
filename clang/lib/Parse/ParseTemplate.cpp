@@ -1005,7 +1005,7 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
   // Annotate the source buffer to indicate that we split the token after the
   // '>'. This allows us to properly find the end of, and extract the spelling
   // of, the '>' token later.
-  RAngleLoc = PP.SplitToken(TokLoc, GreaterLength);
+  RAngleLoc = PP.SplitToken(TokLoc, GreaterLength, tok::greater);
 
   // Strip the initial '>' from the token.
   bool CachingTokens = PP.IsPreviousCachedToken(Tok);
@@ -1028,7 +1028,8 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
   // (eg, the fifth token in 'A<B>>>' should re-lex as '>', not '>>').
   SourceLocation AfterGreaterLoc = TokLoc.getLocWithOffset(GreaterLength);
   if (PreventMergeWithNextToken)
-    AfterGreaterLoc = PP.SplitToken(AfterGreaterLoc, Tok.getLength());
+    AfterGreaterLoc =
+        PP.SplitToken(AfterGreaterLoc, Tok.getLength(), RemainingToken);
   Tok.setLocation(AfterGreaterLoc);
 
   // Update the token cache to match what we just did if necessary.
