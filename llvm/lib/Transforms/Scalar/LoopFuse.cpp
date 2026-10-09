@@ -45,7 +45,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFuse.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -54,6 +57,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
@@ -66,6 +70,7 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <list>
+#include <tuple>
 
 using namespace llvm;
 
@@ -86,7 +91,8 @@ STATISTIC(NonEqualTripCount, "Loop trip counts are not the same");
 STATISTIC(
     NonEmptyPreheader,
     "Loop has a non-empty preheader with instructions that cannot be moved");
-STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
+STATISTIC(InsufficientReuse,
+          "Fusion has insufficient cross-loop reused values");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
 STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
                              "instructions that cannot be moved");
@@ -104,6 +110,15 @@ static cl::opt<uint32_t> FusionPeelMaxCount(
     cl::desc("Max number of iterations to be peeled from a loop, such that "
              "fusion can take place"));
 
+static cl::opt<unsigned> FusionMinReusedValues(
+    "loop-fusion-min-reused-values", cl::Hidden, cl::init(1),
+    cl::desc("Minimum number of distinct values reused across fused loops"));
+
+static cl::opt<bool> FusionDisableCostModel(
+    "loop-fusion-disable-cost-model", cl::Hidden, cl::init(false),
+    cl::desc("Do not apply cost model when deciding whether "
+             "to fuse loops"));
+
 #ifndef NDEBUG
 static cl::opt<bool>
     VerboseFusionDebugging("loop-fusion-verbose-debug",
@@ -112,6 +127,9 @@ static cl::opt<bool>
 #endif
 
 namespace {
+
+using ReusedValueSet = SmallPtrSet<const Instruction *, 4>;
+
 /// This class is used to represent a candidate for loop fusion. When it is
 /// constructed, it checks the conditions for loop fusion to ensure that it
 /// represents a valid candidate. It caches several parts of a loop that are
@@ -557,6 +575,7 @@ private:
   LoopInfo &LI;
   DominatorTree &DT;
   DependenceInfo &DI;
+  AAResults &AA;
   ScalarEvolution &SE;
   PostDominatorTree &PDT;
   OptimizationRemarkEmitter &ORE;
@@ -564,12 +583,12 @@ private:
   const TargetTransformInfo &TTI;
 
 public:
-  LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI,
+  LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI, AAResults &AA,
             ScalarEvolution &SE, PostDominatorTree &PDT,
             OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
             const TargetTransformInfo &TTI)
       : LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy), LI(LI),
-        DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
+        DT(DT), DI(DI), AA(AA), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
 
   /// This is the main entry point for loop fusion. It will traverse the
   /// specified function and collect candidate loops to fuse, starting at the
@@ -677,13 +696,10 @@ private:
   }
 
   /// Determine if it is beneficial to fuse two loops.
-  ///
-  /// For now, this method simply returns true because we want to fuse as much
-  /// as possible (primarily to test the pass). This method will evolve, over
-  /// time, to add heuristics for profitability of fusion.
-  bool isBeneficialFusion(const FusionCandidate &FC0,
-                          const FusionCandidate &FC1) {
-    return true;
+  bool isBeneficialFusion(unsigned ReusedValueCount) const {
+    if (FusionDisableCostModel)
+      return true;
+    return ReusedValueCount >= FusionMinReusedValues;
   }
 
   /// Computes the integer difference in trip counts:
@@ -923,7 +939,8 @@ private:
 
         // Check the dependencies across the loops and do not fuse if it would
         // violate them.
-        if (!dependencesAllowFusion(FC0, FC1)) {
+        ReusedValueSet ReusedValues;
+        if (!dependencesAllowFusion(FC0, FC1, &ReusedValues)) {
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
@@ -959,15 +976,16 @@ private:
           }
         }
 
-        bool BeneficialToFuse = isBeneficialFusion(FC0, FC1);
+        unsigned ReusedValueCount = ReusedValues.size();
+        bool BeneficialToFuse = isBeneficialFusion(ReusedValueCount);
         LLVM_DEBUG(dbgs() << "\tFusion appears to be "
                           << (BeneficialToFuse ? "" : "un") << "profitable!\n");
         if (!BeneficialToFuse) {
-          ++FusionNotBeneficial;
-          reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "FusionNotBeneficial", "Fusion is not beneficial");
+          ++InsufficientReuse;
+          reportFusionInsufficientReuse(FC0, FC1, ReusedValueCount);
           continue;
         }
+
         // All analysis has completed and has determined that fusion is legal
         // and profitable. At this point, start transforming the code and
         // perform fusion.
@@ -1183,11 +1201,99 @@ private:
     return true;
   }
 
+  using AffineLoadKey = std::tuple<const SCEV *, const SCEV *>;
+
+  std::optional<AffineLoadKey> getAffineLoadKey(const FusionCandidate &FC,
+                                                Instruction &I) {
+    auto *Load = dyn_cast<LoadInst>(&I);
+    if (!Load)
+      return std::nullopt;
+
+    const auto *AR =
+        dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Load->getPointerOperand()));
+    if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
+      return std::nullopt;
+
+    return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
+  }
+
+  /// Return true if \p A is known to execute before \p B in an iteration of
+  /// \p L. Keep accesses in nested loops conservative.
+  bool isKnownBefore(const Instruction *A, const Instruction *B,
+                     const Loop *L) const {
+    return LI.getLoopFor(A->getParent()) == L &&
+           LI.getLoopFor(B->getParent()) == L && DT.dominates(A, B);
+  }
+
+  /// Return true if a write between the corresponding loads may overwrite
+  /// either loaded memory location.
+  bool hasInterveningWrite(BatchAAResults &BAA, const LoadInst &Load0,
+                           const LoadInst &Load1, const FusionCandidate &FC0,
+                           const FusionCandidate &FC1) const {
+    MemoryLocation Loc0 = MemoryLocation::get(&Load0);
+    MemoryLocation Loc1 = MemoryLocation::get(&Load1);
+    auto MayModify = [&](Instruction *Write) {
+      return isModSet(BAA.getModRefInfo(Write, Loc0)) ||
+             isModSet(BAA.getModRefInfo(Write, Loc1));
+    };
+
+    for (Instruction *Write : FC0.MemWrites)
+      if (!isKnownBefore(Write, &Load0, FC0.L) && MayModify(Write))
+        return true;
+    for (Instruction *Write : FC1.MemWrites)
+      if (!isKnownBefore(&Load1, Write, FC1.L) && MayModify(Write))
+        return true;
+    return false;
+  }
+
+  /// Collect distinct read-read addresses reused at corresponding iterations.
+  ///
+  /// This uses exact affine SCEV equality rather than adding a potentially
+  /// expensive read-read DependenceAnalysis query for every load pair.
+  void collectReadReadReuse(const FusionCandidate &FC0,
+                            const FusionCandidate &FC1,
+                            ReusedValueSet &ReusedValues) {
+    if (ReusedValues.size() >= FusionMinReusedValues)
+      return;
+
+    BatchAAResults BAA(AA);
+    SmallDenseMap<AffineLoadKey, Instruction *, 8> LoadAccesses0;
+    for (Instruction *ReadL0 : FC0.MemReads) {
+      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC0, *ReadL0);
+      if (!Key)
+        continue;
+
+      LoadAccesses0.try_emplace(*Key, ReadL0);
+    }
+
+    for (Instruction *ReadL1 : FC1.MemReads) {
+      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC1, *ReadL1);
+      if (!Key)
+        continue;
+
+      Instruction *MatchingLoad = LoadAccesses0.lookup(*Key);
+      if (!MatchingLoad)
+        continue;
+
+      auto *Load0 = cast<LoadInst>(MatchingLoad);
+      auto *Load1 = cast<LoadInst>(ReadL1);
+      if (hasInterveningWrite(BAA, *Load0, *Load1, FC0, FC1))
+        continue;
+
+      ReusedValues.insert(MatchingLoad);
+      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via "
+                        << *MatchingLoad << "\n");
+      if (ReusedValues.size() >= FusionMinReusedValues)
+        return;
+    }
+  }
+
   /// Return true if the dependences between @p I0 (in @p L0) and @p I1 (in
   /// @p L1) allow loop fusion of @p L0 and @p L1.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
                               const FusionCandidate &FC1, Instruction &I0,
-                              Instruction &I1) {
+                              Instruction &I1,
+                              ReusedValueSet *ReusedValues = nullptr) {
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << "\n");
@@ -1240,6 +1346,14 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
+    unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+
+    if (ReusedValues && !DepResult->isConfused() && DepResult->isFlow() &&
+        CurDir == Dependence::DVEntry::EQ) {
+      ReusedValues->insert(&I0);
+      LLVM_DEBUG(dbgs() << "Same-iteration reuse via " << I0 << "\n");
+    }
+
     if (DepResult->isScalar(CurLoopLevel, true)) {
       if (DepResult->isInput() || DepResult->isOutput()) {
         LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
@@ -1255,7 +1369,6 @@ private:
       //     A[i] = ...;
       //   for (i)
       //     A[i] += ...;
-      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
       if (!(CurDir & Dependence::DVEntry::GT) &&
           !(CurDir & Dependence::DVEntry::LT)) {
         LLVM_DEBUG(dbgs() << "Safe to fuse same-iteration scalar dependence\n");
@@ -1266,8 +1379,6 @@ private:
           dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
       return false;
     }
-
-    unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
 
     // Check if the direction vector does not include greater direction. In
     // that case, the dependency is not a backward loop-carried and is legal
@@ -1291,7 +1402,8 @@ private:
 
   /// Perform a dependence check and return if @p FC0 and @p FC1 can be fused.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
-                              const FusionCandidate &FC1) {
+                              const FusionCandidate &FC1,
+                              ReusedValueSet *ReusedValues) {
     LLVM_DEBUG(dbgs() << "Check if " << FC0 << " can be fused with " << FC1
                       << "\n");
     assert(FC0.L->getLoopDepth() == FC1.L->getLoopDepth());
@@ -1313,7 +1425,8 @@ private:
           return false;
         }
       for (Instruction *ReadL1 : FC1.MemReads)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1)) {
+        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1,
+                                    ReusedValues)) {
           return false;
         }
     }
@@ -1325,6 +1438,9 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
+
+    if (ReusedValues && !FusionDisableCostModel)
+      collectReadReadReuse(FC0, FC1, *ReusedValues);
 
     return true;
   }
@@ -1735,6 +1851,23 @@ private:
         << RemarkMsg);
   }
 
+  void reportFusionInsufficientReuse(const FusionCandidate &FC0,
+                                     const FusionCandidate &FC1,
+                                     unsigned ReusedValueCount) {
+    assert(ReusedValueCount < FusionMinReusedValues &&
+           "Expected insufficient reuse");
+
+    using namespace ore;
+    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "InsufficientReuse",
+                                      FC0.L->getStartLoc(), FC0.Preheader)
+             << "[" << FC0.Preheader->getParent()->getName()
+             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
+             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
+             << ": found " << NV("ReusedValueCount", ReusedValueCount)
+             << " cross-loop reused values; configured minimum is "
+             << NV("MinimumReusedValues", unsigned(FusionMinReusedValues)));
+  }
+
   /// Fuse two guarded fusion candidates, creating a new fused loop.
   ///
   /// Fusing guarded loops is handled much the same way as fusing non-guarded
@@ -1914,6 +2047,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &DI = AM.getResult<DependenceAnalysis>(F);
+  auto &AA = AM.getResult<AAManager>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -1936,7 +2070,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
+  LoopFuser LF(LI, DT, DI, AA, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();
