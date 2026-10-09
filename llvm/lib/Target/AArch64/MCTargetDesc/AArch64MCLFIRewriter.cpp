@@ -23,14 +23,9 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-    LFIGuardElim("aarch64-lfi-guard-elim", cl::Hidden,
-                 cl::desc("Enable the LFI guard elimination optimization"),
-                 cl::init(true));
 
 namespace llvm::AArch64 {
 struct LFIVariantEntry {
@@ -298,13 +293,13 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
-void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
   if (Guard)
     return;
 
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
-  if (DeferredLRGuard && LastSTI) {
+  if (DeferredLRGuard && LastSTI && !Symbol->isTemporary()) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }
@@ -342,7 +337,7 @@ void AArch64MCLFIRewriter::emitAddMask(MCRegister Dest, MCRegister Src,
                                        const MCSubtargetInfo &STI) {
   // If x28 already holds the guarded value of Src, this guard is redundant and
   // can be skipped.
-  if (LFIGuardElim && Dest == LFIAddrReg && ActiveGuardReg == Src)
+  if (CLOpts.lfi_guard_elim && Dest == LFIAddrReg && ActiveGuardReg == Src)
     return;
 
   // add Dest, LFIBaseReg, W(Src), uxtw

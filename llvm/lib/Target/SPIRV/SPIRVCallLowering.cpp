@@ -205,6 +205,13 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Use the recorded pointee type for declarations.
+  if (F.isDeclaration())
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVPointerType(
+          ElemTy, MIRBuilder,
+          addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
+
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
   return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
@@ -266,9 +273,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
       if (Arg.hasName())
         buildOpName(VRegs[i][0], Arg.getName(), MIRBuilder);
-      if (isPointerTyOrWrapper(Arg.getType())) {
+      if (isPointerTyOrWrapper(Arg.getType()) && !ST->isShader()) {
         auto DerefBytes = static_cast<unsigned>(Arg.getDereferenceableBytes());
-        if (DerefBytes != 0)
+        if (DerefBytes != 0 && ST->isAtLeastSPIRVVer(VersionTuple(1, 1)))
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
@@ -278,7 +285,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (!ST->isShader()) {
+      if (ST->isKernel()) {
         if (Arg.hasAttribute(Attribute::ReadOnly)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
@@ -306,6 +313,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         if (Arg.hasAttribute(Attribute::NoAlias)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoAlias);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasNoCaptureAttr()) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoCapture);
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
@@ -400,6 +413,21 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
+  if (!ST->isShader()) {
+    if (F.hasRetAttribute(Attribute::ZExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+    if (F.hasRetAttribute(Attribute::SExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+  }
+
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
@@ -430,6 +458,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                       SPIRV::Decoration::ReferencedIndirectlyINTEL, {});
     }
   }
+
+  if (MDNode *FuncMD = F.getMetadata("spirv.Decorations"))
+    buildOpSpirvDecorations(FuncVReg, MIRBuilder, FuncMD, *ST);
 
   return true;
 }

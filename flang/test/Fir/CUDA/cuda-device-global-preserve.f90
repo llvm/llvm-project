@@ -9,7 +9,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
   func.func @_QMrhsPkernel(%arg0: !fir.ref<f64>) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
     %c1 = arith.constant 1 : index
     %0 = fir.address_of(@_QMiso_c_bindingECc_alert) : !fir.ref<!fir.char<1>>
-    %1 = fir.declare %0 typeparams %c1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMiso_c_bindingECc_alert"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
+    %1 = fir.declare %0 typeparams %c1 uniq_name("_QMiso_c_bindingECc_alert") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
     return
   }
   gpu.module @cuda_device_mod {

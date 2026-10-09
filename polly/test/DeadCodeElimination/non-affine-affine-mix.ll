@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine '-passes=polly-custom<dce;ast>' -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine '-passes=polly-custom<dce;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 1024; i++)
