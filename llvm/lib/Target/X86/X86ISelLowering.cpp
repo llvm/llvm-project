@@ -52733,9 +52733,60 @@ static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
   return FPOpcode;
 }
 
+/// Return true if \p V is a tree of single-use vector logic ops over vector
+/// compares of scalar FP values, like the ones convertIntLogicToFPLogic
+/// creates. \p V becomes an operand of new vector logic, from whose extract of
+/// element 0 SimplifyDemandedVectorElts should still reach every compare within
+/// the recursion limit: otherwise the X86ISD::CMPM mask compares are not
+/// scalarized and are widened to 512 bits without AVX512VL.
+static bool isConvertedFPLogic(SDValue V, unsigned Depth) {
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+  if (V.getOpcode() == ISD::SETCC)
+    return V.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR &&
+           V.getOperand(0).getValueType().isFloatingPoint();
+  if (!ISD::isBitwiseLogicOp(V.getOpcode()) || !V.hasOneUse())
+    return false;
+  return isConvertedFPLogic(V.getOperand(0), Depth + 1) &&
+         isConvertedFPLogic(V.getOperand(1), Depth + 1);
+}
+
+/// If the single-use i1 value \p Op is a scalar FP compare that can be done as
+/// a vector compare, or element 0 of FP compares that were already converted to
+/// vector logic, return the vXi1 type it can be computed in. Otherwise return
+/// an invalid type.
+static MVT getFPLogicBoolVecVT(SDValue Op, const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+  SDValue Vec, LHS;
+  ISD::CondCode CC;
+  if (!Op.hasOneUse())
+    return MVT();
+  if (sd_match(Op, m_ExtractElt(m_Value(Vec), m_Zero())))
+    return isConvertedFPLogic(Vec, /*Depth=*/1) ? Vec.getSimpleValueType()
+                                                : MVT();
+  if (!sd_match(Op, m_SetCC(CC, m_Value(LHS), m_Value())))
+    return MVT();
+
+  // v8f16 compares are only legal with AVX512VL.
+  EVT FPVT = LHS.getValueType();
+  if (!((Subtarget.hasSSE1() && FPVT == MVT::f32) ||
+        (Subtarget.hasSSE2() && FPVT == MVT::f64) ||
+        (Subtarget.hasFP16() && Subtarget.hasVLX() && FPVT == MVT::f16)))
+    return MVT();
+
+  // The vector ISA for FP predicates is incomplete before AVX, so converting
+  // COMIS* to CMPS* may not be a win before AVX.
+  if (!Subtarget.hasAVX() && !cheapX86FSETCC_SSE(CC))
+    return MVT();
+
+  return MVT::getVectorVT(MVT::i1, 128 / FPVT.getSizeInBits());
+}
+
 /// If both input operands of a logic op are being cast from floating-point
 /// types or FP compares, try to convert this into a floating-point logic node
-/// to avoid unnecessary moves from SSE to integer registers.
+/// to avoid unnecessary moves from SSE to integer registers. FP compares that
+/// were already converted can be extended, and for a nested logic op of the
+/// same kind, one of its FP compares can be paired with the other operand.
 static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
                                         SDValue N0, SDValue N1,
                                         SelectionDAG &DAG,
@@ -52744,8 +52795,55 @@ static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
   assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
          "Unexpected bit opcode");
 
-  if (!((N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) ||
-        (N0.getOpcode() == ISD::SETCC && N1.getOpcode() == ISD::SETCC)))
+  using namespace SDPatternMatch;
+  if (VT == MVT::i1) {
+    // Convert scalar FP compares and logic to vector compares (COMIS* to
+    // CMPS*) and vector logic, or add to vector logic that was already
+    // converted:
+    // logic (setcc N00, N01), (setcc N10, N11) -->
+    // extelt (logic (setcc (s2v N00), (s2v N01)),
+    //               (setcc (s2v N10), (s2v N11))), 0
+    // logic (extelt V, 0), (setcc N10, N11) -->
+    // extelt (logic V, (setcc (s2v N10), (s2v N11))), 0
+    auto GetBoolVec = [&](SDValue Op, MVT BoolVecVT) {
+      if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT)
+        return Op.getOperand(0);
+      SDValue LHS = Op.getOperand(0);
+      SDValue RHS = Op.getOperand(1);
+      MVT VecVT = BoolVecVT.changeVectorElementType(LHS.getSimpleValueType());
+      return DAG.getSetCC(DL, BoolVecVT,
+                          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, LHS),
+                          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, RHS),
+                          cast<CondCodeSDNode>(Op.getOperand(2))->get());
+    };
+    auto ConvertPair = [&](SDValue A, SDValue B) {
+      MVT BoolVecVT = getFPLogicBoolVecVT(A, Subtarget);
+      if (!BoolVecVT.isVector() ||
+          BoolVecVT != getFPLogicBoolVecVT(B, Subtarget))
+        return SDValue();
+      SDValue Logic = DAG.getNode(Opc, DL, BoolVecVT, GetBoolVec(A, BoolVecVT),
+                                  GetBoolVec(B, BoolVecVT));
+      return DAG.getExtractVectorElt(DL, VT, Logic, 0);
+    };
+    if (SDValue FPLogic = ConvertPair(N0, N1))
+      return FPLogic;
+
+    // Look through one level of a single-use inner logic op to pair up FP
+    // compares that it separates, e.g. by an integer compare:
+    // logic (logic X, Y), Z --> logic (logic X, Z), Y
+    SDValue X, Y;
+    for (auto [Inner, Z] : {std::pair(N0, N1), std::pair(N1, N0)}) {
+      if (!sd_match(Inner, m_OneUse(m_BinOp(Opc, m_Value(X), m_Value(Y)))))
+        continue;
+      if (SDValue FPLogic = ConvertPair(X, Z))
+        return DAG.getNode(Opc, DL, VT, FPLogic, Y);
+      if (SDValue FPLogic = ConvertPair(Y, Z))
+        return DAG.getNode(Opc, DL, VT, FPLogic, X);
+    }
+  }
+
+  if (N0.getOpcode() != ISD::BITCAST || N1.getOpcode() != ISD::BITCAST ||
+      DCI.isBeforeLegalizeOps())
     return SDValue();
 
   SDValue N00 = N0.getOperand(0);
@@ -52759,43 +52857,9 @@ static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
                               (Subtarget.hasFP16() && N00Type == MVT::f16)))
     return SDValue();
 
-  if (N0.getOpcode() == ISD::BITCAST && !DCI.isBeforeLegalizeOps()) {
-    unsigned FPOpcode = convertIntLogicToFPLogicOpcode(Opc);
-    SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
-    return DAG.getBitcast(VT, FPLogic);
-  }
-
-  if (VT != MVT::i1 || N0.getOpcode() != ISD::SETCC || !N0.hasOneUse() ||
-      !N1.hasOneUse())
-    return SDValue();
-
-  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
-
-  // The vector ISA for FP predicates is incomplete before AVX, so converting
-  // COMIS* to CMPS* may not be a win before AVX.
-  if (!Subtarget.hasAVX() &&
-      !(cheapX86FSETCC_SSE(CC0) && cheapX86FSETCC_SSE(CC1)))
-    return SDValue();
-
-  // Convert scalar FP compares and logic to vector compares (COMIS* to CMPS*)
-  // and vector logic:
-  // logic (setcc N00, N01), (setcc N10, N11) -->
-  // extelt (logic (setcc (s2v N00), (s2v N01)), setcc (s2v N10), (s2v N11))), 0
-  unsigned NumElts = 128 / N00Type.getSizeInBits();
-  EVT VecVT = EVT::getVectorVT(*DAG.getContext(), N00Type, NumElts);
-  EVT BoolVecVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
-  SDValue ZeroIndex = DAG.getVectorIdxConstant(0, DL);
-  SDValue N01 = N0.getOperand(1);
-  SDValue N11 = N1.getOperand(1);
-  SDValue Vec00 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, N00);
-  SDValue Vec01 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, N01);
-  SDValue Vec10 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, N10);
-  SDValue Vec11 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, N11);
-  SDValue Setcc0 = DAG.getSetCC(DL, BoolVecVT, Vec00, Vec01, CC0);
-  SDValue Setcc1 = DAG.getSetCC(DL, BoolVecVT, Vec10, Vec11, CC1);
-  SDValue Logic = DAG.getNode(Opc, DL, BoolVecVT, Setcc0, Setcc1);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Logic, ZeroIndex);
+  unsigned FPOpcode = convertIntLogicToFPLogicOpcode(Opc);
+  SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
+  return DAG.getBitcast(VT, FPLogic);
 }
 
 // Attempt to fold BITOP(MOVMSK(X),MOVMSK(Y)) -> MOVMSK(BITOP(X,Y))
