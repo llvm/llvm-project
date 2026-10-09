@@ -57,18 +57,18 @@
 typedef _Float16 v2f16 __attribute__((ext_vector_type(2)));
 
 // CIR-LABEL: @_Z20test_atomic_fmax_f32u22__amdgpu_buffer_rsrc_tfii
-// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.atomic.fmax" {{.*}} -> !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.atomic.fmax" {{.*}} : (!cir.float, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !cir.float
 // LLVM: define{{.*}} float @_Z20test_atomic_fmax_f32u22__amdgpu_buffer_rsrc_tfii
-// LLVM: call{{.*}} float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float {{.*}})
+// LLVM: call{{.*}} float @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f32(float %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 0)
 __device__ float test_atomic_fmax_f32(__amdgpu_buffer_rsrc_t rsrc, float x, int offset,
                                      int soffset) {
   return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(x, rsrc, offset, soffset, 0);
 }
 
 // CIR-LABEL: @_Z20test_atomic_fmax_f64u22__amdgpu_buffer_rsrc_tdii
-// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.atomic.fmax" {{.*}} -> !cir.double
+// CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.atomic.fmax" {{.*}} : (!cir.double, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !cir.double
 // LLVM: define{{.*}} double @_Z20test_atomic_fmax_f64u22__amdgpu_buffer_rsrc_tdii
-// LLVM: call{{.*}} double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double {{.*}})
+// LLVM: call{{.*}} double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %{{.*}}, ptr addrspace(8) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 0)
 __device__ double test_atomic_fmax_f64(__amdgpu_buffer_rsrc_t rsrc, double x, int offset,
                                       int soffset) {
   return __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(x, rsrc, offset, soffset, 0);
