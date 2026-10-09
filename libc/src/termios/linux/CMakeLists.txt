@@ -164,6 +164,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tcgetwinsize
+  SRCS
+    tcgetwinsize.cpp
+  HDRS
+    ../tcgetwinsize.h
+  DEPENDS
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.types.struct_winsize
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   tcsetwinsize
   SRCS
     tcsetwinsize.cpp

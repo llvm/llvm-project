@@ -88,6 +88,13 @@ functions:
       - type: int
       - type: int
       - type: struct termios *
+  - name: tcgetwinsize
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct winsize *
   - name: tcsetwinsize
     standards:
       - posix
@@ -95,4 +102,3 @@ functions:
     arguments:
       - type: int
       - type: const struct winsize *
-
