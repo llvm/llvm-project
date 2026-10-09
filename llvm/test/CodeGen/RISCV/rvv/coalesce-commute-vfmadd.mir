@@ -22,8 +22,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = PseudoVLE32_V_M1 $noreg, [[COPY]], 4 /* vl */, 5 /* e32 */, 3 /* ta, ma */
-  ; CHECK-NEXT:   [[PseudoVLE32_V_M1_:%[0-9]+]]:vr = nofpexcept PseudoVFMADD_VV_M1_E32 [[PseudoVLE32_V_M1_]], [[COPY2]], [[COPY1]], 7 /* frm=dyn */, 4 /* vl */, 5 /* e32 */, 3 /* ta, ma */, implicit $frm
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY [[PseudoVLE32_V_M1_]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = nofpexcept PseudoVFMACC_VV_M1_E32 [[COPY1]], [[COPY2]], [[PseudoVLE32_V_M1_]], 7 /* frm=dyn */, 4 /* vl */, 5 /* e32 */, 3 /* ta, ma */, implicit $frm
   ; CHECK-NEXT:   BNE [[COPY]], $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
