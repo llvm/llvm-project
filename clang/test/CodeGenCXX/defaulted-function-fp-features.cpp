@@ -9,6 +9,8 @@
 // CHECK-DAG: define {{.*}} @_ZeqRK14TemplateTargetIdES2_({{.*}}) [[NORMAL_ATTRS]]
 // CHECK-DAG: define {{.*}} @_ZeqRK14TemplateTargetIfES2_({{.*}}) [[NORMAL_ATTRS]]
 // CHECK-DAG: define {{.*}} @_ZeqRK20StrictTemplateTargetIdES2_({{.*}}) [[STRICT_ATTRS]]
+// CHECK-DAG: define {{.*}} @_ZNK23OutOfLineTemplateTargetIdEeqERKS0_({{.*}}) [[NORMAL_ATTRS]]
+// CHECK-DAG: define {{.*}} @_ZNK29StrictOutOfLineTemplateTargetIdEeqERKS0_({{.*}}) [[STRICT_ATTRS]]
 
 // --- NON-STRICT DECLARATIONS (at top of file, default FP is non-strict) ---
 
@@ -40,6 +42,13 @@ bool test_template_non_strict(TemplateTarget<double> a, TemplateTarget<double> b
   return a == b;
 }
 
+template <typename T>
+struct OutOfLineTemplateTarget {
+  T d;
+  bool operator==(const OutOfLineTemplateTarget &) const;
+};
+template <typename T>
+bool OutOfLineTemplateTarget<T>::operator==(const OutOfLineTemplateTarget &) const = default;
 
 // --- STRICT CONTEXT (pragmas enabled) ---
 #pragma STDC FENV_ACCESS ON
@@ -60,6 +69,10 @@ bool test_template_strict(TemplateTarget<float> a, TemplateTarget<float> b) {
   return a == b;
 }
 
+bool test_out_of_line_non_strict(OutOfLineTemplateTarget<double> a,
+                                 OutOfLineTemplateTarget<double> b) {
+  return a == b;
+}
 // Strict declarations (must get strictfp)
 
 struct StrictTarget {
@@ -85,6 +98,13 @@ struct StrictTemplateTarget {
   friend bool operator==(const StrictTemplateTarget&, const StrictTemplateTarget&) = default;
 };
 
+template <typename T>
+struct StrictOutOfLineTemplateTarget {
+  T d;
+  bool operator==(const StrictOutOfLineTemplateTarget &) const;
+};
+template <typename T>
+bool StrictOutOfLineTemplateTarget<T>::operator==(const StrictOutOfLineTemplateTarget &) const = default;
 
 // --- NON-STRICT CONTEXT AGAIN ---
 #pragma STDC FENV_ACCESS OFF
@@ -95,6 +115,10 @@ bool test_strict_template_non_strict(StrictTemplateTarget<double> a, StrictTempl
   return a == b;
 }
 
+bool test_strict_out_of_line_non_strict(StrictOutOfLineTemplateTarget<double> a,
+                                        StrictOutOfLineTemplateTarget<double> b) {
+  return a == b;
+}
 
 // CHECK-DAG: attributes [[STRICT_ATTRS]] = { {{.*}}strictfp{{.*}} }
 // CHECK-DAG: attributes [[NORMAL_ATTRS]] = { {{.*}} }

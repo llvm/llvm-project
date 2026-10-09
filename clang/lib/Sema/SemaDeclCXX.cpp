@@ -9049,20 +9049,25 @@ static void lookupOperatorsForDefaultedComparison(Sema &Self, Scope *S,
   }
 }
 
+static void captureDefaultedComparisonLookups(Sema &Self, Scope *S,
+                                              FunctionDecl *FD) {
+  UnresolvedSet<32> Operators;
+  lookupOperatorsForDefaultedComparison(Self, S, Operators,
+                                        FD->getOverloadedOperator());
+  // An empty set also records that lookup has already been performed.
+  FD->setDefaultedOrDeletedInfo(
+      FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+          Self.Context, Operators.pairs(), Self.CurFPFeatureOverrides()));
+}
+
 bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
                                               DefaultedComparisonKind DCK) {
   assert(DCK != DefaultedComparisonKind::None && "not a defaulted comparison");
 
   // Perform any unqualified lookups we're going to need to default this
   // function.
-  if (S) {
-    UnresolvedSet<32> Operators;
-    lookupOperatorsForDefaultedComparison(*this, S, Operators,
-                                          FD->getOverloadedOperator());
-    FD->setDefaultedOrDeletedInfo(
-        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-            Context, Operators.pairs(), CurFPFeatureOverrides()));
-  }
+  if (S && !FD->getDefaultedOrDeletedInfo())
+    captureDefaultedComparisonLookups(*this, S, FD);
 
   // C++2a [class.compare.default]p1:
   //   A defaulted comparison operator function for some class C shall be a
@@ -9261,7 +9266,17 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   DefaultedComparisonInfo Info =
       DefaultedComparisonAnalyzer(*this, RD, FD, DCK).visit();
 
-  bool First = FD == FD->getCanonicalDecl();
+  // Function-body instantiation of an out-of-class definition updates a
+  // declaration in place. Use the written definition for these checks.
+  // In-class friends can acquire previous declarations during instantiation,
+  // so retain their instantiated redeclaration chain.
+  const FunctionDecl *DeclAsWritten = FD;
+  if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern()) {
+    const FunctionDecl *Definition = Pattern->getDefinition();
+    if (Definition && !isa<CXXRecordDecl>(Definition->getLexicalDeclContext()))
+      DeclAsWritten = Definition;
+  }
+  bool First = DeclAsWritten == DeclAsWritten->getCanonicalDecl();
 
   if (!First) {
     if (Info.Deleted) {
@@ -9278,13 +9293,13 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
           .visit();
       return true;
     }
-    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+    if (isa<CXXRecordDecl>(DeclAsWritten->getLexicalDeclContext())) {
       // C++20 [class.compare.default]p1:
       //   [...] A definition of a comparison operator as defaulted that appears
       //   in a class shall be the first declaration of that function.
       Diag(FD->getLocation(), diag::err_non_first_default_compare_in_class)
           << (int)DCK;
-      Diag(FD->getCanonicalDecl()->getLocation(),
+      Diag(DeclAsWritten->getCanonicalDecl()->getLocation(),
            diag::note_previous_declaration);
       return true;
     }
@@ -18976,7 +18991,7 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
   Fn->setDeletedAsWritten(true, Message);
 }
 
-void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
+void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc, Scope *S) {
   if (!Dcl || Dcl->isInvalidDecl())
     return;
 
@@ -19019,6 +19034,12 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   FD->setExplicitlyDefaulted();
   FD->setDefaultLoc(DefaultLoc);
 
+  // Save out-of-class comparison lookup while its function-body scope is
+  // available, even if checking and synthesis must wait for instantiation.
+  // In-class comparisons still perform lookup when the class is complete.
+  if (S && DefKind.isComparison() && !FD->getDefaultedOrDeletedInfo())
+    captureDefaultedComparisonLookups(*this, S, FD);
+
   // Defer checking functions that are defaulted in a dependent context.
   if (FD->isDependentContext())
     return;
@@ -19051,7 +19072,8 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
 
   // Only allocate DefaultedOrDeletedFunctionInfo if we actually have
   // non-default FP features to stash. This avoids memory overhead for
-  // the vast majority of defaulted functions.
+  // the vast majority of defaulted functions. Scoped comparisons have already
+  // saved these features along with their unqualified lookups.
   if (!FD->getDefaultedOrDeletedInfo() &&
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
@@ -19060,7 +19082,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   }
 
   if (DefKind.isComparison()) {
-    if (CheckExplicitlyDefaultedComparison(nullptr, FD, DefKind.asComparison()))
+    if (CheckExplicitlyDefaultedComparison(S, FD, DefKind.asComparison()))
       FD->setInvalidDecl();
     else
       DefineDefaultedComparison(DefaultLoc, FD, DefKind.asComparison());
@@ -19094,14 +19116,15 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+void Sema::SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc,
+                               FnBodyKind BodyKind,
                                StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
     SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
-    SetDeclDefaulted(D, Loc);
+    SetDeclDefaulted(D, Loc, S);
     break;
   case FnBodyKind::Other:
     llvm_unreachable(
