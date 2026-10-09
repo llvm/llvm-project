@@ -442,12 +442,23 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
 
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
 /// coerced value back out.  Builds on emitCoercionToMemory, adding the final
-/// load of the destination-typed view.
+/// load of the destination-typed view.  A pointer that only changes address
+/// space is cast instead.
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::Block *slotBlock, const mlir::DataLayout &dl,
                          SmallPtrSetImpl<mlir::Operation *> &createdOps,
                          unsigned offset) {
+  auto srcPtrTy = dyn_cast<cir::PointerType>(src.getType());
+  auto dstPtrTy = dyn_cast<cir::PointerType>(dstTy);
+  if (!offset && srcPtrTy && dstPtrTy &&
+      srcPtrTy.getPointee() == dstPtrTy.getPointee()) {
+    auto cast = cir::CastOp::create(builder, loc, dstTy,
+                                    cir::CastKind::address_space, src);
+    createdOps.insert(cast);
+    return cast;
+  }
+
   mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
                                              slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);

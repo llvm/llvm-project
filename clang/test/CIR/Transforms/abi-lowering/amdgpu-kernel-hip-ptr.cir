@@ -1,0 +1,53 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// Under HIP a generic pointer kernel argument is passed as a global pointer.
+// The HIP flag comes from the module's lowering_lang_options.
+
+!s32i = !cir.int<s, 32>
+!rec_PtrWrap = !cir.struct<"PtrWrap" {data !cir.ptr<!s32i>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.lowering_lang_options = #cir.lowering_lang_options<
+    exceptions = false, threadsafe_statics = true, cuda = true,
+    cuda_is_device = true, hip = true, gpu_rdc = false, openmp = false,
+    openmp_is_target_device = false, clang_abi_compat = 17>
+} {
+
+  // The kernel casts the incoming global pointer back to generic before the
+  // body's spill reads it.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) {
+    %0 = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
+    cir.store %arg0, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_ptr(%[[ARG:[^:]+]]: !cir.ptr<!s32i, target_address_space(1)>){{.*}}cc(amdgpu_kernel)
+  // CHECK-NEXT:   %[[GEN:.*]] = cir.cast address_space %[[ARG]] : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i>
+  // CHECK:        cir.store %[[GEN]], %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+  // A pointer already outside the generic address space is left alone.
+  cir.func @kernel_global_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>)
+      cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_global_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>){{.*}}cc(amdgpu_kernel)
+  // CHECK-NOT:    cir.cast
+
+  // A struct holding only a pointer is unwrapped to it, then coerced.
+  cir.func @kernel_ptr_wrap(%arg0: !rec_PtrWrap) cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_ptr_wrap(%{{.*}}: !cir.ptr<{{.*}}, target_address_space(1)>){{.*}}cc(amdgpu_kernel)
+
+  // Only kernels are coerced.
+  cir.func @device_ptr(%arg0: !cir.ptr<!s32i>) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @device_ptr(%arg0: !cir.ptr<!s32i>)
+}

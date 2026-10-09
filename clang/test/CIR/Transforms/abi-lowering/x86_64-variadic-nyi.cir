@@ -44,7 +44,7 @@ module attributes {
   cir.func @indirect_nyi(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
                          %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!i96>) {
     %v = cir.load %arg2 : !cir.ptr<!i96>, !i96
-    // CHECK: :[[@LINE+1]]:10: error: 'cir.call' op x86_64 calling-convention lowering not yet implemented for type '!cir.int<s, 96>'
+    // CHECK: :[[@LINE+1]]:10: error: 'cir.call' op calling-convention lowering not yet implemented for type '!cir.int<s, 96>'
     %0 = cir.call %arg0(%arg1, %v)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !i96) -> !s32i
     cir.return
