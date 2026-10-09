@@ -244,6 +244,10 @@ def cooperative_threading: FF<"cooperative-threading">,
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 
+def max_function_body_size: JJ<"max-function-body-size=">,
+  HelpText<"Maximum size of the relocation functions the linker synthesizes (for testing)">,
+  Flags<[HelpHidden]>;
+
 def no_growable_memory: FF<"no-growable-memory">,
   HelpText<"Set maximum size of the linear memory to its initial size">;
 
