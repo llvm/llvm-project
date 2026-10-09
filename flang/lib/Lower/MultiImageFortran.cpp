@@ -556,10 +556,11 @@ void Fortran::lower::genEventPostStatement(
     if (coref->stat().has_value())
       TODO(loc, "event post: event variable with STAT= specifier.");
     if (coref->team().has_value())
-      TODO(loc,
-           "event post: event variable with TEAM= and TEAM_NUMBER= specifier.");
+      TODO(loc, "event post: event variable image selector with TEAM= or "
+                "TEAM_NUMBER= specifier.");
     if (coref->notify().has_value())
-      TODO(loc, "event post: event variable with NOTIFY= specifier.");
+      mlir::emitError(loc,
+                      "event post: NOTIFY= specifier forbidden in event post.");
   }
 
   mif::EventPostOp::create(builder, loc, event, cosubscripts, statAddr,

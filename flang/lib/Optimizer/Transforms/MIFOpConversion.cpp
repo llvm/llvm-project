@@ -546,9 +546,9 @@ getInitialTeamIndex(fir::FirOpBuilder &builder, mlir::Location loc,
   return index;
 }
 
-static fir::CallOp genPrifSyncCall(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, mlir::Value stat,
-                                   mlir::Value errmsg) {
+static fir::CallOp genPrifSyncAllCall(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value stat,
+                                      mlir::Value errmsg) {
   mlir::Type errmsgTy = getPRIFErrmsgType(builder);
   mlir::FunctionType ftype = mlir::FunctionType::get(
       builder.getContext(),
@@ -814,7 +814,7 @@ struct MIFSyncAllOpConversion : public mlir::OpRewritePattern<mif::SyncAllOp> {
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
     fir::CallOp callOp =
-        genPrifSyncCall(builder, loc, op.getStat(), op.getErrmsg());
+        genPrifSyncAllCall(builder, loc, op.getStat(), op.getErrmsg());
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -1266,6 +1266,7 @@ struct MIFAllocCoarrayOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    mlir::Type i32Ty = builder.getI32Type();
     mlir::Type i64Ty = builder.getI64Type();
     mlir::Type ptrTy = getBuiltinCptrType(builder, loc);
     mlir::Type refTy = builder.getRefType(builder.getNoneType());
@@ -1323,10 +1324,19 @@ struct MIFAllocCoarrayOpConversion
     llvm::SmallVector<mlir::Value> args2{fir::runtime::createArguments(
         builder, loc, sbaFunc.getFunctionType(), op.getBox(), allocMem)};
     fir::CallOp::create(builder, loc, sbaFunc, args2);
-    if (mlir::isa<fir::RecordType>(
-            fir::getFortranElementType(op.getBox().getType()))) {
+    mlir::Type boxTy = op.getBox().getType();
+    if (mlir::isa<fir::RecordType>(fir::getFortranElementType(boxTy)) ||
+        fir::isPolymorphicType(boxTy)) {
       fir::runtime::genDerivedTypeInitialize(builder, loc, op.getBox());
-      genPrifSyncCall(builder, loc, op.getStat(), op.getErrmsg());
+      // prif_allocate_coarray already synchronizes after allocation,
+      // but we additionally need to synchronize after initialization
+      // to prevent images from racing to observe uninitialized coarray
+      // data on other images.
+      // TODO: We really should only do this for a coarray ALLOCATE statement.
+      //       Post-init synchronization for nonallocatable save coarrays can
+      //       and should easily be factored into a single synchronization at
+      //       startup.
+      genPrifSyncAllCall(builder, loc, op.getStat(), op.getErrmsg());
     }
     rewriter.replaceOp(op, callOp);
     return mlir::success();
