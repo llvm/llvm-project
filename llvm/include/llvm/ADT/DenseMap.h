@@ -1132,11 +1132,10 @@ private:
     const unsigned NumBuckets = getNumBuckets();
     UsedT *U = getUsed();
     const UsedT *OtherU = other.getUsed();
-    std::memcpy(U, OtherU,
-                llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
+    std::copy(OtherU, OtherU + llvm::densemap::detail::usedWords(NumBuckets),
+              U);
     if constexpr (densemap::detail::isRelocatableBucket<BucketT>) {
-      memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
-             NumBuckets * sizeof(BucketT));
+      std::copy(OtherBuckets, OtherBuckets + NumBuckets, Buckets);
     } else {
       llvm::densemap::detail::forEachUsed(U, NumBuckets, [&](unsigned I) {
         ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
