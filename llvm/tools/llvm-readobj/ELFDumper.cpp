@@ -809,7 +809,14 @@ private:
   void printStackSizeEntry(uint64_t Size,
                            ArrayRef<std::string> FuncNames) override;
   void printCallGraphRelocation(const CallGraphFunc<ELFT> &Func,
-                                const Elf_Shdr &SymTab);
+                                const Elf_Shdr &RelSec, const Elf_Shdr &SymTab);
+  // Returns the names of the functions at the address that the relocation for
+  // Func resolves to. Sym is the symbol of the relocation, and only functions
+  // in its section are looked up.
+  SmallVector<std::string>
+  getCallGraphTargetNames(const CallGraphFunc<ELFT> &Func,
+                          const Elf_Shdr &RelSec, const Elf_Shdr &SymTab,
+                          const Elf_Sym &Sym);
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
   void printMipsPLT(const MipsGOTParser<ELFT> &Parser) override;
@@ -8398,8 +8405,52 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
+SmallVector<std::string> LLVMELFDumper<ELFT>::getCallGraphTargetNames(
+    const CallGraphFunc<ELFT> &Func, const Elf_Shdr &RelSec,
+    const Elf_Shdr &SymTab, const Elf_Sym &Sym) {
+  const Relocation<ELFT> &R = *Func.Reloc;
+  Expected<const Elf_Shdr *> SymSecOrErr =
+      this->Obj.getSection(Sym, &SymTab, this->getShndxTable(&SymTab));
+  if (!SymSecOrErr) {
+    this->reportUniqueWarning(
+        "unable to get the section of symbol with index " + Twine(R.Symbol) +
+        ": " + toString(SymSecOrErr.takeError()));
+    return {};
+  }
+  // Only a symbol defined in a section, e.g. not an undefined one, has an
+  // address to look up.
+  if (!*SymSecOrErr)
+    return {};
+
+  auto [IsSupported, Resolve] = getRelocationResolver(this->ObjF);
+  if (!IsSupported || !IsSupported(R.Type)) {
+    this->reportUniqueWarning(
+        formatv("{0} contains an unsupported relocation at offset {1:x+}: {2}",
+                this->describe(RelSec), R.Offset,
+                this->Obj.getRelocationTypeName(R.Type)));
+    return {};
+  }
+  // Pass the value stored in the field only for a relocation without an
+  // explicit addend. Some resolvers, like ARM's, expect one of them to be 0.
+  uint64_t Addr = Resolve(R.Type, R.Offset, Sym.st_value,
+                          R.Addend ? 0 : Func.FieldValue, R.Addend.value_or(0));
+  // Truncate the result to the width of an address field.
+  Addr = static_cast<typename ELFT::uint>(Addr);
+  // Clear the Thumb bit, as for Address.
+  if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
+    Addr &= ~1;
+
+  SmallVector<std::string> Names;
+  for (uint32_t Index :
+       this->getSymbolIndexesForFunctionAddress(Addr, *SymSecOrErr))
+    Names.push_back(this->getStaticSymbolName(Index));
+  return Names;
+}
+
+template <class ELFT>
 void LLVMELFDumper<ELFT>::printCallGraphRelocation(
-    const CallGraphFunc<ELFT> &Func, const Elf_Shdr &SymTab) {
+    const CallGraphFunc<ELFT> &Func, const Elf_Shdr &RelSec,
+    const Elf_Shdr &SymTab) {
   const Relocation<ELFT> &R = *Func.Reloc;
   // Print the symbol name exactly as recorded in st_name. RelSymbol::Name is
   // not used because it is demangled with --demangle, and is made up from the
@@ -8416,6 +8467,12 @@ void LLVMELFDumper<ELFT>::printCallGraphRelocation(
       SymbolName = *NameOrErr;
     else
       this->reportUniqueWarning(NameOrErr.takeError());
+
+    // As with Address, Names comes before the Relocation object.
+    SmallVector<std::string> Names =
+        getCallGraphTargetNames(Func, RelSec, SymTab, *Sym);
+    if (!Names.empty())
+      W.printList("Names", Names);
   }
 
   DictScope D(W, "Relocation");
@@ -8497,7 +8554,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
     auto PrintFunc = [&](const CallGraphFunc<ELFT> &Func) {
       if (Func.Reloc) {
-        printCallGraphRelocation(Func, *RelocSymTab);
+        printCallGraphRelocation(Func, *CGRelSection, *RelocSymTab);
         return;
       }
       // Without a relocation, the function is identified by the value stored
