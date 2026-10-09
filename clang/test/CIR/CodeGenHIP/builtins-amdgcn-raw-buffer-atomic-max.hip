@@ -52,9 +52,6 @@
 // between CIR (no flags) and classic codegen ('contract').
 
 #define __device__ __attribute__((device))
-#define global __attribute__((address_space(1)))
-
-typedef _Float16 v2f16 __attribute__((ext_vector_type(2)));
 
 // CIR-LABEL: @_Z20test_atomic_fmax_f32u22__amdgpu_buffer_rsrc_tfii
 // CIR: cir.call_llvm_intrinsic "amdgcn.raw.ptr.buffer.atomic.fmax" {{.*}} : (!cir.float, !cir.ptr<!void, target_address_space(8)>, !s32i, !s32i, !s32i) -> !cir.float

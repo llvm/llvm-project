@@ -52,7 +52,6 @@
 // between CIR (no flags) and classic codegen ('contract').
 
 #define __device__ __attribute__((device))
-#define global __attribute__((address_space(1)))
 
 typedef _Float16 v2f16 __attribute__((ext_vector_type(2)));
 
