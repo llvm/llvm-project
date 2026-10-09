@@ -1649,6 +1649,14 @@ bool TargetLowering::SimplifyDemandedBits(
                              Known2, TLO, Depth + 1))
       return true;
 
+    // Retry the RHS with the demand reduced by the unchanged LHS.
+    APInt RHSDemandedBits = ~Known2.Zero & DemandedBits;
+    if (RHSDemandedBits != DemandedBits) {
+      if (SimplifyDemandedBits(Op1, RHSDemandedBits, DemandedElts, Known, TLO,
+                               Depth + 1))
+        return true;
+    }
+
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
     if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
@@ -1696,6 +1704,16 @@ bool TargetLowering::SimplifyDemandedBits(
                              Known2, TLO, Depth + 1)) {
       Op->dropFlags(SDNodeFlags::Disjoint);
       return true;
+    }
+
+    // Retry the RHS with the demand reduced by the unchanged LHS.
+    APInt RHSDemandedBits = ~Known2.One & DemandedBits;
+    if (RHSDemandedBits != DemandedBits) {
+      if (SimplifyDemandedBits(Op1, RHSDemandedBits, DemandedElts, Known, TLO,
+                               Depth + 1)) {
+        Op->dropFlags(SDNodeFlags::Disjoint);
+        return true;
+      }
     }
 
     // If all of the demanded bits are known zero on one side, return the other.

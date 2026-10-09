@@ -967,3 +967,49 @@ define amdgpu_kernel void @s_or_i1(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c
   store i1 %or, ptr addrspace(1) %out
   ret void
 }
+
+; Propagate demanded bits from the LHS to simplify the RHS.
+
+define i32 @s_or_hidden_bits_rhs(i32 inreg %x, i32 inreg %y) {
+; GFX6-LABEL: s_or_hidden_bits_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_lshr_b32 s4, s17, 24
+; GFX6-NEXT:    s_orn2_b32 s4, s16, s4
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: s_or_hidden_bits_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_lshr_b32 s4, s17, 24
+; GFX8-NEXT:    s_orn2_b32 s4, s16, s4
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %shift = lshr i32 %y, 24
+  %bounded = xor i32 %shift, -1
+  %inner = and i32 %x, 255
+  %result = or i32 %bounded, %inner
+  ret i32 %result
+}
+
+define i32 @v_or_hidden_bits_rhs(i32 %x, i32 %y) {
+; GFX6-LABEL: v_or_hidden_bits_rhs:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
+; GFX6-NEXT:    v_bfi_b32 v0, v1, v0, -1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_or_hidden_bits_rhs:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
+; GFX8-NEXT:    v_bfi_b32 v0, v1, v0, -1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %shift = lshr i32 %y, 24
+  %bounded = xor i32 %shift, -1
+  %inner = and i32 %x, 255
+  %result = or i32 %bounded, %inner
+  ret i32 %result
+}
