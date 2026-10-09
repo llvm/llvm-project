@@ -325,6 +325,9 @@ public:
 
 ModulePass *createWebAssemblyMCLowerPreLegacyPass();
 
+FunctionPass *createWebAssemblyStackTaggingPass();
+ModulePass *createWebAssemblyGlobalsTaggingPass();
+
 // PassRegistry initialization declarations.
 void initializeWebAssemblyOptimizeReturnedLegacyPass(PassRegistry &);
 void initializeWebAssemblyRefTypeMem2LocalLegacyPass(PassRegistry &);
@@ -358,6 +361,8 @@ void initializeWebAssemblyReplacePhysRegsLegacyPass(PassRegistry &);
 void initializeWebAssemblySetP2AlignOperandsLegacyPass(PassRegistry &);
 void initializeWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
     PassRegistry &);
+void initializeWebAssemblyStackTaggingPass(PassRegistry &);
+void initializeWebAssemblyGlobalsTaggingPass(PassRegistry &);
 
 namespace WebAssembly {
 enum TargetIndex {
