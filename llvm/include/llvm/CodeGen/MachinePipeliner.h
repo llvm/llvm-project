@@ -62,9 +62,6 @@ class LiveIntervals;
 class NodeSet;
 class SMSchedule;
 
-extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
-extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
-
 /// Software pipelining policy for a loop, which a target can customize by
 /// implementing TargetSubtargetInfo::overridePipelinerPolicy.
 struct MachinePipelinerPolicy {
@@ -198,8 +195,10 @@ struct LoopCarriedEdges {
   LLVM_ABI void modifySUnits(std::vector<SUnit> &SUnits,
                              const TargetInstrInfo *TII);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_ABI void dump(SUnit *SU, const TargetRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI) const;
+#endif
 };
 
 /// This class provides APIs to retrieve edges from/to an SUnit node, with a
@@ -367,16 +366,7 @@ public:
                     MachineOptimizationRemarkEmitter *ORE, MachineLoop &L,
                     LiveIntervals &lis, const RegisterClassInfo &rci,
                     unsigned II, TargetInstrInfo::PipelinerLoopInfo *PLI,
-                    AliasAnalysis *AA)
-      : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
-        RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-        Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
-    initPolicy();
-    MF.getSubtarget().getSMSMutations(Mutations);
-    if (SwpEnableCopyToPhi)
-      Mutations.push_back(std::make_unique<CopyToPhiMutation>());
-    BAA.enableCrossIterationMode();
-  }
+                    AliasAnalysis *AA);
 
   void schedule() override;
   void finishBlock() override;
@@ -617,9 +607,9 @@ public:
 
   iterator begin() { return Nodes.begin(); }
   iterator end() { return Nodes.end(); }
-  LLVM_ABI void print(raw_ostream &os) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_ABI void print(raw_ostream &os) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
@@ -678,18 +668,8 @@ private:
 #endif
 
 public:
-  ResourceManager(const TargetSubtargetInfo *ST, ScheduleDAGInstrs *DAG)
-      : STI(ST), SM(ST->getSchedModel()), ST(ST), TII(ST->getInstrInfo()),
-        DAG(DAG), UseDFA(ST->useDFAforSMS()),
-        ProcResourceMasks(SM.getNumProcResourceKinds(), 0),
-        IssueWidth(SM.IssueWidth) {
-    initProcResourceVectors(SM, ProcResourceMasks);
-    if (IssueWidth <= 0)
-      // If IssueWidth is not specified, set a sufficiently large value
-      IssueWidth = 100;
-    if (SwpForceIssueWidth > 0)
-      IssueWidth = SwpForceIssueWidth;
-  }
+  LLVM_ABI ResourceManager(const TargetSubtargetInfo *ST,
+                           ScheduleDAGInstrs *DAG);
 
   LLVM_ABI void initProcResourceVectors(const MCSchedModel &SM,
                                         SmallVectorImpl<uint64_t> &Masks);

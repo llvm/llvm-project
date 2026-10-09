@@ -443,7 +443,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   PtrTy = PointerType::getUnqual(*C);
   Type *VoidTy = Type::getVoidTy(*C);
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   Int64Ty = IRB.getInt64Ty();
   Int32Ty = IRB.getInt32Ty();
   Int16Ty = IRB.getInt16Ty();
@@ -775,7 +775,12 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
-  // noipa doesn't affect linkage, so it is ignored when deciding on a comdat.
+  // sancov_pcs parallels the other arrays, so they must be retained or
+  // discarded together. Put them in F's comdat to tie them to F for linker GC
+  // benefit. Outside ELF (nodeduplicate), a new comdat for an interposable F
+  // could prevail over a strong definition (COFF: the weak external becomes a
+  // COMDAT definition; Wasm: comdats deduplicate first). noipa doesn't affect
+  // symbol resolution.
   if (TargetTriple.supportsCOMDAT() &&
       (F.hasComdat() || TargetTriple.isOSBinFormatELF() ||
        !F.isInterposable(/*CheckNoIPA=*/false)))
@@ -784,15 +789,8 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedValue()));
 
-  // sancov_pcs parallels the other metadata section(s). Optimizers (e.g.
-  // GlobalOpt/ConstantMerge) may not discard sancov_pcs and the other
-  // section(s) as a unit, so we conservatively retain all unconditionally in
-  // the compiler.
-  //
-  // With comdat (COFF/ELF), the linker can guarantee the associated sections
-  // will be retained or discarded as a unit, so llvm.compiler.used is
-  // sufficient. Otherwise, conservatively make all of them retained by the
-  // linker.
+  // Optimizers (e.g. GlobalOpt/ConstantMerge) may not discard the arrays as a
+  // unit, so retain them in the compiler; without a comdat, in the linker too.
   if (Array->hasComdat())
     GlobalsToAppendToCompilerUsed.push_back(Array);
   else

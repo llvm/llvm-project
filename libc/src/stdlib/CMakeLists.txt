@@ -115,8 +115,18 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  strfromf128
+  SRCS
+    strfromf128.cpp
+  HDRS
+    strfromf128.h
+  DEPENDS
+    .str_from_util
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -127,8 +137,7 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(
@@ -139,8 +148,7 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
-    libc.src.__support.CPP.limits
-    libc.src.__support.printf_core.error_mapper
+    libc.hdr.types.size_t
 )
 
 add_header_library(
@@ -148,11 +156,17 @@ add_header_library(
   HDRS
     str_from_util.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.printf_core.converter
     libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.printf_core.writer
     libc.src.__support.str_to_integer
-    libc.src.__support.CPP.type_traits
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -872,4 +886,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
-
