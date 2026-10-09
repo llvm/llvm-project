@@ -35,10 +35,10 @@ subroutine none_shared()
 
     !$omp parallel num_threads(1) default(none) shared(ivar)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = arith.divsi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) / 2
         print '(A24,I6)', 'none_shared', var(1)
     !$omp end parallel
@@ -58,10 +58,10 @@ subroutine none_private()
     !$omp parallel num_threads(1) default(none) private(ivar) shared(pointee)
         ! CHECK: omp.parallel
         ivar = loc(pointee)
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = arith.addi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) + 2
         print '(A24,I6)', 'none_private', var(1)
     !$omp end parallel
@@ -80,10 +80,10 @@ subroutine none_firstprivate()
 
     !$omp parallel num_threads(1) default(none) firstprivate(ivar)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = arith.muli
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) * 2
         print '(A24,I6)', 'none_firstprivate', var(1)
     !$omp end parallel
@@ -102,10 +102,10 @@ subroutine private_shared()
 
     !$omp parallel num_threads(1) default(private) shared(ivar)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = math.ipowi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) ** 2
         print '(A24,I6)', 'private_shared', var(1)
     !$omp end parallel
@@ -124,10 +124,10 @@ subroutine private_firstprivate()
 
     !$omp parallel num_threads(1) default(private) firstprivate(ivar)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = arith.subi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) - 2
         print '(A24,I6)', 'private_firstprivate', var(1)
     !$omp end parallel
@@ -146,10 +146,10 @@ subroutine firstprivate_shared()
 
     !$omp parallel num_threads(1) default(firstprivate) shared(ivar)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = arith.divsi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         var(1) = var(1) / 2
         print '(A24,I6)', 'firstprivate_shared', var(1)
     !$omp end parallel
@@ -168,10 +168,10 @@ subroutine firstprivate_private()
 
     !$omp parallel num_threads(1) default(firstprivate) private(ivar) shared(pointee)
         ! CHECK: omp.parallel
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ! CHECK:   {{.*}} = math.ipowi
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-        ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
+        ! CHECK:   fir.box_set_addr {{.*}} to {{.*}} : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<{{.*}}>>>
         ivar = loc(pointee)
         var(1) = var(1) ** 2
         print '(A24,I6)', 'firstprivate_private', var(1)
