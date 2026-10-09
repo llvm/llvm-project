@@ -119,6 +119,13 @@ features cannot lower the translation-unit ABI level;
   for homogeneous aggregate classification.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
 
+- On Windows targets using the Microsoft record layout, `#pragma pack` no longer
+  reduces the alignment of fields of vector type (e.g. `__m128`) or of x87
+  80-bit `long double` (with `-mlong-double-80`), including when such fields
+  are nested in structs or arrays. This matches MSVC and fixes misaligned
+  accesses to these fields. `__attribute__((packed))` on the field or the
+  enclosing record still reduces the alignment. (#GH208256)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
