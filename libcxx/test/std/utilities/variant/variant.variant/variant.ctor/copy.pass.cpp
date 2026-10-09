@@ -51,16 +51,15 @@ struct NTCopy {
 
 static_assert(!std::is_trivially_copy_constructible<NTCopy>::value, "");
 static_assert(std::is_copy_constructible<NTCopy>::value, "");
+static_assert(!std::is_nothrow_copy_constructible_v<NTCopy>);
 
 struct NoThrowNTCopy {
-  constexpr NoThrowNTCopy(int v) : value(v) {}
-  NoThrowNTCopy(const NoThrowNTCopy& that) noexcept : value(that.value) {}
-  NoThrowNTCopy(NoThrowNTCopy&&) = delete;
-  int value;
+  NoThrowNTCopy(const NoThrowNTCopy&) noexcept;
 };
 
-static_assert(!std::is_trivially_copy_constructible<NoThrowNTCopy>::value, "");
-static_assert(std::is_copy_constructible<NoThrowNTCopy>::value, "");
+static_assert(!std::is_trivially_copy_constructible_v<NoThrowNTCopy>);
+static_assert(std::is_copy_constructible_v<NoThrowNTCopy>);
+static_assert(std::is_nothrow_copy_constructible_v<NoThrowNTCopy>);
 
 struct TCopy {
   constexpr TCopy(int v) : value(v) {}
@@ -70,6 +69,7 @@ struct TCopy {
 };
 
 static_assert(std::is_trivially_copy_constructible<TCopy>::value, "");
+static_assert(std::is_nothrow_copy_constructible_v<TCopy>);
 
 struct TCopyNTMove {
   constexpr TCopyNTMove(int v) : value(v) {}
@@ -79,6 +79,11 @@ struct TCopyNTMove {
 };
 
 static_assert(std::is_trivially_copy_constructible<TCopyNTMove>::value, "");
+
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, long>>);
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, TCopy>>);
+static_assert(!std::is_nothrow_copy_constructible_v<std::variant<int, NTCopy>>);
+static_assert(std::is_nothrow_copy_constructible_v<std::variant<int, NoThrowNTCopy>>);
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct MakeEmptyT {
@@ -108,28 +113,6 @@ void makeEmpty(Variant& v) {
   }
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
-
-constexpr void test_copy_noexcept() {
-  {
-    using V = std::variant<int, long>;
-    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
-  }
-  {
-    using V = std::variant<int, TCopy>;
-    static_assert(std::is_nothrow_copy_constructible<TCopy>::value, "");
-    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
-  }
-  {
-    using V = std::variant<int, NTCopy>;
-    static_assert(!std::is_nothrow_copy_constructible<NTCopy>::value, "");
-    static_assert(!std::is_nothrow_copy_constructible<V>::value, "");
-  }
-  {
-    using V = std::variant<int, NoThrowNTCopy>;
-    static_assert(std::is_nothrow_copy_constructible<NoThrowNTCopy>::value, "");
-    static_assert(std::is_nothrow_copy_constructible<V>::value, "");
-  }
-}
 
 constexpr void test_copy_ctor_sfinae() {
   {
@@ -300,7 +283,6 @@ TEST_CONSTEXPR_CXX20 void test_constexpr_copy_ctor_non_trivial() {
 void non_constexpr_test() { test_copy_ctor_valueless_by_exception(); }
 
 constexpr bool cxx17_constexpr_test() {
-  test_copy_noexcept();
   test_copy_ctor_sfinae();
   test_constexpr_copy_ctor_trivial();
 
