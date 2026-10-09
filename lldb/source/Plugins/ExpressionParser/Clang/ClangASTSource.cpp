@@ -686,8 +686,7 @@ void ClangASTSource::FillNamespaceMap(
     // disambiguation for function calls are handled separately in
     // SearchFunctionsInSymbolContexts.
     const bool find_root_namespaces =
-        context.m_decl_context &&
-        context.m_decl_context->shouldUseQualifiedLookup();
+        context.m_decl_context && IsInQualifiedLookup(context.m_decl_context);
     found_namespace_decl = symbol_file->FindNamespace(
         name, namespace_decl, /* only root namespaces */ find_root_namespaces);
 
