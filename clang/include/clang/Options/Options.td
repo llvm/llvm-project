@@ -854,7 +854,7 @@ def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C inputs">;
 def O : Joined<["-"], "O">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
-def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
+def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
@@ -3557,6 +3557,9 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
+  Visibility<[CC1Option]>, Group<Action_Group>,
+  HelpText<"Build ASTs and then emit ClangIR bytecode">;
 /// ClangIR-specific options - END
 
 def flto_EQ : Joined<["-"], "flto=">,
@@ -3815,6 +3818,16 @@ defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Validate the system headers that a module depends on when loading the module">,
   NegFlag<SetFalse, [], []>>, Group<i_Group>;
+defm modules_validate_directory_dependencies
+    : BoolOption<"f", "modules-validate-directory-dependencies",
+                 HeaderSearchOpts<"ModulesValidateDirectoryDependencies">,
+                 DefaultFalse,
+                 PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                         "Treat an implicitly built module as out of date if "
+                         "a directory it depends on the listing of, such as "
+                         "an umbrella directory, changed after it was built">,
+                 NegFlag<SetFalse, [], []>>,
+      Group<i_Group>;
 def fno_modules_validate_textual_header_includes :
   Flag<["-"], "fno-modules-validate-textual-header-includes">,
   Group<f_Group>, Flags<[]>, Visibility<[ClangOption, CC1Option]>,
@@ -6279,7 +6292,7 @@ HelpText<"Not emit the visibility attribute for asm in AIX OS or give all symbol
 defm backchain : BoolMOption<"backchain",
   CodeGenOpts<"Backchain">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link stack frames through backchain on System Z">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option, FlangOption]>>;
 
 defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   CodeGenOpts<"ZOSPPA1Name">, DefaultTrue,

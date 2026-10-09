@@ -124,6 +124,7 @@ struct MissingFeatures {
   static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
+  static bool coroAwaitFullExprCleanups() { return false; }
   static bool coroOutsideFrameMD() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
@@ -253,7 +254,6 @@ struct MissingFeatures {
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
-  static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
