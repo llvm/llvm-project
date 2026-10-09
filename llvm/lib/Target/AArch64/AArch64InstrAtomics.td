@@ -497,7 +497,7 @@ multiclass AtomicFetchHintPatterns<string Inst, string Op> {
 // SelectionDAG lowers SUB to ADD with a negated value and AND to CLR with a
 // complemented value. Hinted atomics use SelectionDAG, so separate SUB/AND
 // patterns are not needed here (unlike the GlobalISel patterns below).
-let Predicates = [HasLSE], AddedComplexity = 15 in {
+let Predicates = [HasLSE], AddedComplexity = 1 in {
   defm : AtomicFetchHintPatterns<"LDADD", "atomic_load_add">;
   defm : AtomicFetchHintPatterns<"LDSET", "atomic_load_or">;
   defm : AtomicFetchHintPatterns<"LDEOR", "atomic_load_xor">;

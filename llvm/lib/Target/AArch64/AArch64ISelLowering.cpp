@@ -34107,10 +34107,9 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
       return true;
   }
-  if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst)) {
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
     if (getMemCacheHintMetadata(*RMW))
       return true;
-  }
 
   return false;
 }
