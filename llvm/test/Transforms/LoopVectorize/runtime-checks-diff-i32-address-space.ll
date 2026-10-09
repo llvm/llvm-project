@@ -3,9 +3,9 @@
 
 target datalayout = "e-p:64:64-p1:32:32-i64:64-n32:64"
 
-; With IC=2 and stride=0x80000000 (2^31), IC * stride is 2^32, which wraps
-; to 0 when truncated to i32. The generated check needs i33 to represent its
-; threshold.
+; With IC=2 and stride=0x80000000 (2^31), IC * stride is 2^32, which wraps to 0
+; when truncated to i32. Test that we either don't use diff checks (current
+; behavior) or perform computation in wider type.
 define void @test_wrap_i32_address_space(ptr addrspace(1) %a, ptr addrspace(1) %b, i32 %n) {
 ; CHECK-LABEL: define void @test_wrap_i32_address_space(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], i32 [[N:%.*]]) {
@@ -34,9 +34,7 @@ loop:
   %iv.ext = zext i32 %iv to i64
   %offset = mul i64 %iv.ext, u0x80000000
   ; I believe this produces a poison that becomes UB when dereferenced, but even
-  ; for UB input we can't `assert` and have to produce something. Ensure that
-  ; DIFF_CHECK above (even if constant-foldable to false) is done in a type that
-  ; can represent IC x ConstantStride.
+  ; for UB input we can't `assert` and have to produce something.
   %gep.a = getelementptr inbounds i8, ptr addrspace(1) %a, i64 %offset
   %l = load i8, ptr addrspace(1) %gep.a
   %add = add i8 %l, 1
