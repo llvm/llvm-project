@@ -44,6 +44,22 @@ struct InstructionTemplate {
     VariableValues.assign(NewVariableValues.begin(), NewVariableValues.end());
   }
 
+  void setAliasConstraintForVariable(unsigned CurrVarIdx,
+                                     unsigned ForbiddenVarIdx) {
+    assert(AliasConstraintForVariables.size() > CurrVarIdx &&
+           "Variable index out of bounds");
+    assert(AliasConstraintForVariables.size() > ForbiddenVarIdx &&
+           "Variable index out of bounds");
+    AliasConstraintForVariables[CurrVarIdx].set(ForbiddenVarIdx);
+    AliasConstraintForVariables[ForbiddenVarIdx].set(CurrVarIdx);
+  }
+  const BitVector &getAliasConstraintForVariable(unsigned VarIdx) const {
+    assert(AliasConstraintForVariables.size() > VarIdx &&
+           "Variable index out of bounds");
+    return AliasConstraintForVariables[VarIdx];
+  }
+
+
   // Builds an MCInst from this InstructionTemplate setting its operands
   // to the corresponding variable values. Precondition: All VariableValues must
   // be set.
@@ -52,6 +68,11 @@ struct InstructionTemplate {
 private:
   const Instruction *Instr;
   SmallVector<MCOperand, 4> VariableValues;
+  // For each variable index holds the BitVector, where set bit for some index
+  // indicate that aliasing between them is forbidden, and clear bit indicates
+  // allowed aliasing.
+  SmallVector<BitVector, 4> AliasConstraintForVariables;
+
 };
 
 enum class ExecutionMode : uint8_t {
