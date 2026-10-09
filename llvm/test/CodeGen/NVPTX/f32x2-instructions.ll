@@ -2487,29 +2487,37 @@ define <2 x float> @test_maxnum(<2 x float> %a, <2 x float> %b) #0 {
 define <2 x float> @test_copysign(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-NOF32X2-LABEL: test_copysign(
 ; CHECK-NOF32X2:       {
-; CHECK-NOF32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<11>;
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_copysign_param_1];
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_copysign_param_0];
-; CHECK-NOF32X2-NEXT:    copysign.f32 %r5, %r4, %r2;
-; CHECK-NOF32X2-NEXT:    copysign.f32 %r6, %r3, %r1;
-; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-NOF32X2-NEXT:    xor.b32 %r5, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    and.b32 %r6, %r5, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r7, %r2, %r6;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r8, %r1, %r3;
+; CHECK-NOF32X2-NEXT:    and.b32 %r9, %r8, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r10, %r1, %r9;
+; CHECK-NOF32X2-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r7};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
 ; CHECK-F32X2-LABEL: test_copysign(
 ; CHECK-F32X2:       {
-; CHECK-F32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-F32X2-NEXT:    .reg .b32 %r<11>;
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_copysign_param_1];
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_param_0];
-; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
-; CHECK-F32X2-NEXT:    copysign.f32 %r5, %r4, %r2;
-; CHECK-F32X2-NEXT:    copysign.f32 %r6, %r3, %r1;
-; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r6, %r5};
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
+; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
+; CHECK-F32X2-NEXT:    xor.b32 %r5, %r4, %r2;
+; CHECK-F32X2-NEXT:    and.b32 %r6, %r5, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r7, %r4, %r6;
+; CHECK-F32X2-NEXT:    xor.b32 %r8, %r3, %r1;
+; CHECK-F32X2-NEXT:    and.b32 %r9, %r8, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r10, %r3, %r9;
+; CHECK-F32X2-NEXT:    st.param::func.v2.b32 [func_retval0], {%r10, %r7};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.copysign(<2 x float> %a, <2 x float> %b)
   ret <2 x float> %r
@@ -2562,33 +2570,41 @@ define <2 x float> @test_copysign_f64(<2 x float> %a, <2 x double> %b) #0 {
 define <2 x double> @test_copysign_extended(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-NOF32X2-LABEL: test_copysign_extended(
 ; CHECK-NOF32X2:       {
-; CHECK-NOF32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOF32X2-NEXT:    .reg .b32 %r<11>;
 ; CHECK-NOF32X2-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-NOF32X2-EMPTY:
 ; CHECK-NOF32X2-NEXT:  // %bb.0:
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_copysign_extended_param_1];
 ; CHECK-NOF32X2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_copysign_extended_param_0];
-; CHECK-NOF32X2-NEXT:    copysign.f32 %r5, %r3, %r1;
-; CHECK-NOF32X2-NEXT:    copysign.f32 %r6, %r4, %r2;
-; CHECK-NOF32X2-NEXT:    cvt.f64.f32 %rd1, %r6;
-; CHECK-NOF32X2-NEXT:    cvt.f64.f32 %rd2, %r5;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r5, %r1, %r3;
+; CHECK-NOF32X2-NEXT:    and.b32 %r6, %r5, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r7, %r1, %r6;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r8, %r2, %r4;
+; CHECK-NOF32X2-NEXT:    and.b32 %r9, %r8, -2147483648;
+; CHECK-NOF32X2-NEXT:    xor.b32 %r10, %r2, %r9;
+; CHECK-NOF32X2-NEXT:    cvt.f64.f32 %rd1, %r10;
+; CHECK-NOF32X2-NEXT:    cvt.f64.f32 %rd2, %r7;
 ; CHECK-NOF32X2-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd1};
 ; CHECK-NOF32X2-NEXT:    ret;
 ;
 ; CHECK-F32X2-LABEL: test_copysign_extended(
 ; CHECK-F32X2:       {
-; CHECK-F32X2-NEXT:    .reg .b32 %r<7>;
+; CHECK-F32X2-NEXT:    .reg .b32 %r<11>;
 ; CHECK-F32X2-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-F32X2-EMPTY:
 ; CHECK-F32X2-NEXT:  // %bb.0:
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd2, [test_copysign_extended_param_1];
 ; CHECK-F32X2-NEXT:    ld.param::func.b64 %rd1, [test_copysign_extended_param_0];
-; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd1;
-; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd2;
-; CHECK-F32X2-NEXT:    copysign.f32 %r5, %r3, %r1;
-; CHECK-F32X2-NEXT:    copysign.f32 %r6, %r4, %r2;
-; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd3, %r6;
-; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd4, %r5;
+; CHECK-F32X2-NEXT:    mov.b64 {%r1, %r2}, %rd2;
+; CHECK-F32X2-NEXT:    mov.b64 {%r3, %r4}, %rd1;
+; CHECK-F32X2-NEXT:    xor.b32 %r5, %r3, %r1;
+; CHECK-F32X2-NEXT:    and.b32 %r6, %r5, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r7, %r3, %r6;
+; CHECK-F32X2-NEXT:    xor.b32 %r8, %r4, %r2;
+; CHECK-F32X2-NEXT:    and.b32 %r9, %r8, -2147483648;
+; CHECK-F32X2-NEXT:    xor.b32 %r10, %r4, %r9;
+; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd3, %r10;
+; CHECK-F32X2-NEXT:    cvt.f64.f32 %rd4, %r7;
 ; CHECK-F32X2-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd3};
 ; CHECK-F32X2-NEXT:    ret;
   %r = call <2 x float> @llvm.copysign(<2 x float> %a, <2 x float> %b)

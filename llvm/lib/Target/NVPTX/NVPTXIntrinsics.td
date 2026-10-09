@@ -2235,21 +2235,6 @@ defm ABS : F_ABS<"f32", F32RT, support_ftz = true>;
 defm ABS : F_ABS<"f64", F64RT, support_ftz = false>;
 
 //
-// copysign
-//
-
-def fcopysign_nvptx : SDNode<"NVPTXISD::FCOPYSIGN", SDTFPBinOp>;
-
-foreach t = [F32RT, F64RT] in {
-  def COPYSIGN_ # !toupper(t.PtxType) :
-      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RegOrImm:$src0, t.RegOrImm:$src1),
-                    "copysign." # t.PtxType>;
-  def : Pat<(t.Ty (fcopysign_nvptx t.Ty:$src1, t.Ty:$src0)),
-            (!cast<Instruction>("COPYSIGN_" # !toupper(t.PtxType))
-              reg_or_fpimm:$src0, reg_or_fpimm:$src1)>;
-}
-
-//
 // Neg bf16, bf16x2
 //
 

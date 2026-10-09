@@ -2258,11 +2258,6 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
 
-  // Native copysign instructions require matching f32 or f64 operands.
-  if ((VT == MVT::f32 || VT == MVT::f64) && SrcVT == VT)
-    return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
-
-  // There is no native copysign, so expand to bitwise operations.
   MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
   MVT SrcIntVT = MVT::getIntegerVT(SrcVT.getSizeInBits());
   SDValue Mag = DAG.getBitcast(IntVT, In1);
