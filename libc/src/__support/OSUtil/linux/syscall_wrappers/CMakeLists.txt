@@ -1622,3 +1622,23 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  exit
+  HDRS
+    exit.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  exit_group
+  HDRS
+    exit_group.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
