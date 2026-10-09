@@ -27,6 +27,7 @@
 #include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/State.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -528,14 +529,15 @@ void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   // read thread can exit. Tear it down before the debuggee is destroyed.
   StopStdioForwarding();
 
+  bool started = m_session_data && m_session_data->m_initial_stop_received;
   ProcessDebugger::OnExitProcess(exit_code);
 
   // No signal involved.  It is just an exit event.
   WaitStatus wait_status(WaitStatus::Exit, exit_code);
-  SetExitStatus(wait_status, true);
+  SetExitStatus(wait_status, started);
 
   // Notify the native delegate.
-  SetState(eStateExited, true);
+  SetState(eStateExited, started);
 }
 
 void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -689,7 +691,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     m_pending_halt = false;
     ThreadStopInfo signal_info;
     signal_info.reason = StopReason::eStopReasonSignal;
-    signal_info.signo = 19; // SIGSTOP on POSIX
+    signal_info.signo =
+        UnixSignals::CreateForHost()->GetSignalNumberFromName("SIGSTOP");
 
     // Halt all threads at the kernel level.
     {
@@ -960,7 +963,10 @@ NativeProcessWindows::Manager::Attach(
   return std::move(process_up);
 }
 
-NativeProcessWindows::~NativeProcessWindows() { StopStdioForwarding(); }
+NativeProcessWindows::~NativeProcessWindows() {
+  EndDebugSession();
+  StopStdioForwarding();
+}
 
 void NativeProcessWindows::StartStdioForwarding() {
   if (!m_pty || !m_pty->IsConnected())
@@ -979,8 +985,16 @@ void NativeProcessWindows::StopStdioForwarding() {
   if (!m_stdio_communication.HasConnection())
     return;
 
+  m_stdio_communication.SynchronizeWithReadThread();
+
   if (m_pty)
     m_pty->Close();
+
+  // Close() cancels the read pending on the pipe, but one that the read thread
+  // is about to start would only return at its 5s timeout: EOF cannot come
+  // while the inferior is held at its exit debug event. Wake the thread so that
+  // it sees the closed PTY right away.
+  m_stdio_communication.InterruptRead();
 
   if (m_stdio_communication.ReadThreadIsRunning())
     m_stdio_communication.JoinReadThread();

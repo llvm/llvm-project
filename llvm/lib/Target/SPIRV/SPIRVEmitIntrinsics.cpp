@@ -755,9 +755,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByUsersDeep(
 // specification rules
 static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
-  if ((DemangledName.starts_with("__spirv_ocl_printf(") ||
-       DemangledName.starts_with("printf(")) &&
-      OpIdx == 0)
+  // OpenCL.std printf takes its format string as a pointer to i8. Match the
+  // bare builtin name, as lowering does, to also cover unmangled `printf`.
+  if (OpIdx == 0 && SPIRV::lookupBuiltinNameHelper(DemangledName) == "printf")
     return IntegerType::getInt8Ty(CalledF->getContext());
   return nullptr;
 }
@@ -1050,6 +1050,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
         {"to_global", 0},
         {"to_local", 0},
         {"to_private", 0},
+        {"__to_global", 0},
+        {"__to_local", 0},
+        {"__to_private", 0},
         {"__spirv_GenericCastToPtr_ToGlobal", 0},
         {"__spirv_GenericCastToPtr_ToLocal", 0},
         {"__spirv_GenericCastToPtr_ToPrivate", 0},
