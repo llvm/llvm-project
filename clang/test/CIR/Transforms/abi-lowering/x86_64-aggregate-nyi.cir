@@ -17,7 +17,7 @@
                padding = {!cir.array<!u8i x 32>}>
 !rec_UVec3x384 =
     !cir.union<"UVec3x384" {data !cir.vector<3 x !cir.float>, data !cir.array<!s8i x 33>},
-               padding = {!cir.array<!u8i x 36>}>
+               padding = {!cir.array<!u8i x 32>}>
 !rec_UVecInArr =
     !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
                             data !cir.array<!s8i x 33>},
@@ -96,8 +96,7 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
-  // A three-float vector is 96 bits in CIR but classifies at 128, so it
-  // reaches SSEUP too.
+  // A three-float vector's 96 bits classify at 128, so it reaches SSEUP too.
   cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) {
     cir.return
   }
@@ -159,18 +158,17 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
 
-  // An element narrower than a byte is rounded up to its storage container by
-  // clang but not by the classifier, so the two would size the vector
-  // differently.  Classic passes this one in an xmm register from its 128-bit
-  // width, where the classifier would read 32 bits and coerce to an integer.
+  // A _BitInt element narrower than a byte takes a byte in CIR but its own
+  // width in an LLVM vector, so CIR and LLVM would lay the vector out
+  // differently.
   cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
 
-  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
-  // two would size this vector differently for the same reason.
+  // An x87 long double element takes 128 bits in CIR but 80 in an LLVM
+  // vector, so the two would lay this vector out differently too.
   cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
     cir.return
   }

@@ -213,10 +213,12 @@ static bool needsArgAttrUpdate(const FunctionClassification &fc) {
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
 /// llvm.signext / llvm.zeroext on Extend args, adds the pointer attributes
-/// for Indirect args, and drops llvm.noundef from a coerced Direct arg that
-/// passes undefined bits.  Preserves any other existing arg attributes on
-/// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
-/// each arg slot.
+/// for Indirect args in place of llvm.nofpclass, drops llvm.noundef from a
+/// coerced Direct arg that passes undefined bits, gives each field of a
+/// Direct+canFlatten argument the argument's attributes, and gives each field
+/// of an Expand argument an empty dict.  Direct and Extend slots keep their
+/// other existing attributes.  \p origArgTypes provides the pre-rewrite type
+/// for each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
@@ -231,14 +233,19 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
     mlir::DictionaryAttr existing = builder.getDictionaryAttr({});
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
+    if (ac.kind == ArgKind::Direct && ac.coercedType &&
+        isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType, dl)) {
+      mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
+      existing = attrs.getDictionary(ctx);
+    }
     if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
-      // Direct + canFlatten: one empty attribute dict per flattened field; the
-      // flattened scalar arguments carry no special ABI attributes.
-      newArgAttrs.append(flatTy.getNumElements(),
-                         builder.getDictionaryAttr({}));
+      // Direct + canFlatten: as in classic CodeGen, each flattened field
+      // carries the attributes of the argument it came from.
+      newArgAttrs.append(flatTy.getNumElements(), existing);
     } else if (ac.kind == ArgKind::Expand) {
-      // Push one empty attribute dict per expanded field; the flattened
-      // scalar arguments carry no special ABI attributes.
+      // An expanded record has no attributes classic CodeGen would copy to its
+      // fields, so each field gets an empty dict.
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
@@ -250,13 +257,15 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
       // Indirect lowering hands the callee a pointer.  llvm.align and
-      // llvm.noundef describe that pointer, not the bytes it points to.
-      // Without byval the pointer points to the caller's own object.  With
-      // byval the backend copies the pointee on the caller's side of the call,
-      // so the callee gets an object of its own even when the pointer points
-      // to the caller's own object.
+      // llvm.noundef describe that pointer, not the bytes it points to, and
+      // llvm.nofpclass, which describes the value, does not apply to a
+      // pointer.  Without byval the pointer points to the caller's own object.
+      // With byval the backend copies the pointee on the caller's side of the
+      // call, so the callee gets an object of its own even when the pointer
+      // points to the caller's own object.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
+      attrs.erase(mlir::LLVM::LLVMDialect::getNoFPClassAttrName());
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
@@ -281,12 +290,6 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                   builder.getI64IntegerAttr(
                       dl.getTypeSize(pointeeTy).getFixedValue()));
       }
-      newArgAttrs.push_back(attrs.getDictionary(ctx));
-    } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
-               isCoercionWiderThanMemory(origArgTypes[oldIdx], ac.coercedType,
-                                         dl)) {
-      mlir::NamedAttrList attrs(existing);
-      attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
@@ -2091,8 +2094,8 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
   if (tyAlign > 8)
     bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
 
-  uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
-  uint64_t stride = (tySize + 7) & ~UINT64_C(7);
+  uint64_t stride =
+      llvm::alignTo(cir::getTypeAllocSize(f.dl, f.resultTy), UINT64_C(8));
   mlir::Value strideVal = b.getSignedInt(f.loc, stride, 32);
   mlir::Value next = b.createPtrStride(f.loc, bytePtr, strideVal);
   b.createStore(f.loc, next, overflowP);

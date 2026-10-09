@@ -11,6 +11,9 @@
 !rec_FF = !cir.struct<"FF" {data !cir.float, data !cir.float}>
 !rec_F3 = !cir.struct<"F3" {data !cir.float, data !cir.float, data !cir.float}>
 !rec_UFloats = !cir.union<"UFloats" {data !cir.array<!cir.float x 2>, data !cir.array<!cir.float x 2>}>
+!rec_SF3 = !cir.struct<"SF3" {data !cir.vector<3 x !cir.float>}>
+!rec_AF3 = !cir.struct<"AF3" {data !cir.array<!cir.vector<3 x !cir.float> x 1>}>
+!rec_A2F3 = !cir.struct<"A2F3" {data !cir.array<!cir.vector<3 x !cir.float> x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -130,6 +133,31 @@ module attributes {
   // CHECK: cir.func{{.*}} @call_vbool24(%arg0: !u32i) -> !u32i
   // CHECK: cir.call @vbool24(%{{.+}}) : (!u32i) -> !u32i
 
+  // A record holding only the vector, directly or in a one-element array, has
+  // the vector's 16-byte alloc size, so it passes as the vector.
+  cir.func @take_sf3(%arg0: !rec_SF3) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_sf3(%arg0: !cir.vector<3 x !cir.float>)
+
+  cir.func @take_af3(%arg0: !rec_AF3) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_af3(%arg0: !cir.vector<3 x !cir.float>)
+
+  // Two elements take 32 bytes, and an array wider than 128 bits stays in
+  // registers only when it holds a single element that wide, so this goes to
+  // memory even with AVX.
+  cir.func @take_a2f3(%arg0: !rec_A2F3) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_a2f3(%arg0: !cir.ptr<!rec_A2F3> {llvm.align = 16 : i64, llvm.byval = !rec_A2F3, llvm.noundef})
+  // AVX: cir.func{{.*}} @take_a2f3(%arg0: !cir.ptr<!rec_A2F3> {llvm.align = 16 : i64, llvm.byval = !rec_A2F3, llvm.noundef})
+  // AVX512: cir.func{{.*}} @take_a2f3(%arg0: !cir.ptr<!rec_A2F3> {llvm.align = 16 : i64, llvm.byval = !rec_A2F3, llvm.noundef})
+
   cir.func @call_v128(%arg0: !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float> {
     %0 = cir.call @v128(%arg0) : (!cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
     cir.return %0 : !cir.vector<4 x !cir.float>
@@ -151,3 +179,6 @@ module attributes {
 // LLVM: define noundef i8 @vbool4(i8 noundef %{{[^,)]+}})
 // LLVM: define i32 @vbool24(i32 %{{[^,)]+}})
 // LLVM: call i32 @vbool24(i32 %{{[^,)]+}})
+// LLVM: define void @take_sf3(<3 x float> %{{[^,)]+}})
+// LLVM: define void @take_af3(<3 x float> %{{[^,)]+}})
+// LLVM: define void @take_a2f3(ptr noundef byval(%struct.A2F3) align 16 %{{[^,)]+}})
