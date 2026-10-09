@@ -519,12 +519,11 @@ static bool isSplat(ArrayRef<Value *> VL, const APInt &DemandedElts) {
   return Splat != nullptr;
 }
 
-InstructionCost
-NVPTXTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                             ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                             ArrayRef<const Value *> Args,
-                             const Instruction *CxtI, TTI::VectorInstrContext VIC) const {
+InstructionCost NVPTXTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   InstructionCost Cost = BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind,
                                                Mask, Index, SubTp, Args, CxtI);
 
