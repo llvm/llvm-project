@@ -11,6 +11,7 @@
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -19,6 +20,7 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <optional>
 
 namespace llvm {
 
@@ -147,6 +149,23 @@ template <typename T> struct DenseMapInfo<sampleprof::Hashable<T>> {
 };
 
 namespace sampleprof {
+
+// Walk a `perf report -D` dump of PERF_RECORD_SAMPLE data-access events.
+// PERF_RECORD_MMAP2, FORK and COMM exec lines keep \p Binary's per-process
+// mappings current. \p OnSample receives the load IP, the preferred ELF VA
+// when the data address is in this binary, the raw data address, whether an
+// address in this binary's mapping could not be resolved, and whether this
+// sample's process has a mapping of this binary. The preferred VA is nullopt
+// for heap, stack, and other DSOs. With \p PIDFilter, samples of other
+// processes are skipped. \p OtherLoadedFiles, if given, receives the path of
+// every other file mapped executable, in any process.
+Error forEachCanonicalDataAccessSample(
+    ProfiledBinary *Binary, StringRef DataAccessPerfTraceFile,
+    std::optional<int32_t> PIDFilter,
+    function_ref<void(uint64_t IP, std::optional<uint64_t> CanonicalDataAddr,
+                      uint64_t RawDataAddr, bool Unresolved, bool MappedPID)>
+        OnSample,
+    StringSet<> *OtherLoadedFiles = nullptr);
 
 struct PerfSample {
   // LBR stack recorded in FIFO order.
@@ -598,6 +617,8 @@ public:
   // PerfReaderBase (superclass).
   static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
                                         MMapEvent &MMap);
+  // Parse a PERF_RECORD_MMAP or PERF_RECORD_MMAP2 line of any binary.
+  static bool extractMMapEvent(StringRef Line, MMapEvent &MMap);
 
   // Generate perf script from perf data
   static InputFile convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,

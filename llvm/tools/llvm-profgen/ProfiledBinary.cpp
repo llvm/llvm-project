@@ -182,9 +182,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
-      SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc,
-                                               FunctionId(CallerName));
+      SizeContext = SizeContext->getOrCreateChildContext(
+          CallsiteLoc, FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);
@@ -252,6 +251,8 @@ void ProfiledBinary::load(StringRef TripleStr) {
     exitWithError("not a valid ELF/COFF image", Path);
 
   auto *Obj = cast<ObjectFile>(&ExeBinary);
+  if (const auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj))
+    IsETExec = ELFObj->getEType() == ELF::ET_EXEC;
   if (!TripleStr.empty())
     TheTriple = Triple(TripleStr);
   else
@@ -268,11 +269,11 @@ void ProfiledBinary::load(StringRef TripleStr) {
   // For shared libraries, read build ID to filter perfscript addresses
   // in [buildid:]addr format. Main executables (including PIE) use empty
   // FilterBuildID since their addresses have no buildid prefix.
-  // Both PIE executables and shared libraries are ET_DYN, but only PIE
-  // executables have a PT_INTERP program header.
+  // Both PIE executables and shared libraries are ET_DYN. A PIE has DF_1_PIE
+  // or PT_INTERP; a shared library has neither.
   file_magic Magic;
   if (auto EC = identify_magic(Path, Magic);
-      !EC && Magic == file_magic::elf_shared_object && !HasInterp) {
+      !EC && Magic == file_magic::elf_shared_object && !IsPIE) {
     auto BID = object::getBuildID(Obj);
     if (!BID.empty())
       FilterBuildID = llvm::toHex(BID, /*LowerCase=*/true);
@@ -378,10 +379,17 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                       StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
   bool SeenFirstLoadableSegment = false;
+  bool SeenInterp = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
-      HasInterp = true;
+      SeenInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
+      PreferredImageStart =
+          std::min<uint64_t>(PreferredImageStart, Phdr.p_vaddr);
+      PreferredImageEnd =
+          std::max<uint64_t>(PreferredImageEnd, Phdr.p_vaddr + Phdr.p_memsz);
+      LoadPhdrInfo.push_back(
+          {Phdr.p_offset, Phdr.p_filesz, Phdr.p_memsz, Phdr.p_vaddr});
       if (!SeenFirstLoadableSegment) {
         // Derive the preferred address corresponding to file offset zero
         // without assuming a page size.
@@ -391,48 +399,274 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
       if (Phdr.p_flags & ELF::PF_X) {
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
         TextSegmentOffsets.push_back(Phdr.p_offset);
-      } else {
-        PhdrInfo Info;
-        Info.FileOffset = Phdr.p_offset;
-        Info.FileSz = Phdr.p_filesz;
-        Info.VirtualAddr = Phdr.p_vaddr;
-        NonTextPhdrInfo.push_back(Info);
       }
     }
+  }
+  // A dynamic PIE built before binutils 2.32 has PT_INTERP and no DF_1_PIE.
+  // A static PIE has DF_1_PIE and no PT_INTERP. Either signal is enough.
+  if (SeenInterp)
+    IsPIE = true;
+  if (auto DynOrErr = Obj.dynamicEntries()) {
+    for (const typename ELFT::Dyn &Dyn : *DynOrErr)
+      if (Dyn.d_tag == ELF::DT_FLAGS_1 && (Dyn.d_un.d_val & ELF::DF_1_PIE))
+        IsPIE = true;
+  } else {
+    // Classification can still use PT_INTERP. Do not abort the tool.
+    consumeError(DynOrErr.takeError());
   }
 
   if (PreferredTextSegmentAddresses.empty())
     exitWithError("no executable segment found", FileName);
 }
 
-uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
-  uint64_t FileOffset = 0;
-  auto MMapIter = NonTextMMapEvents.lower_bound(Address);
-  if (MMapIter == NonTextMMapEvents.end())
-    return Address; // No non-text mmap event found, return the address as is.
+bool ProfiledBinary::isPreferredLoadAddress(uint64_t ElfVA) const {
+  return llvm::any_of(LoadPhdrInfo, [&](const PhdrInfo &P) {
+    return P.MemSz <= UINT64_MAX - P.VirtualAddr && P.VirtualAddr <= ElfVA &&
+           ElfVA < P.VirtualAddr + P.MemSz;
+  });
+}
 
-  const auto &MMapEvent = MMapIter->second;
+static std::optional<uint64_t> checkedAdd(uint64_t LHS, uint64_t RHS) {
+  if (RHS > UINT64_MAX - LHS)
+    return std::nullopt;
+  return LHS + RHS;
+}
 
-  // If the address is within the non-text mmap event, calculate its file
-  // offset in the binary.
-  if (MMapEvent.Address <= Address &&
-      Address < MMapEvent.Address + MMapEvent.Size)
-    FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
+void ProfiledBinary::eraseDataMMapRange(ProcessImage &Image, uint64_t Start,
+                                        uint64_t End) {
+  // A process maps only a few segments of this binary, so a linear scan is
+  // enough. An mmap that sticks out of [Start, End) on the left or right
+  // keeps that part; the right part starts further into the file.
+  SmallVector<MMapEvent, 2> Remains;
+  for (auto It = Image.DataMMaps.begin(); It != Image.DataMMaps.end();) {
+    const MMapEvent &Old = It->second;
+    std::optional<uint64_t> OldEnd = checkedAdd(Old.Address, Old.Size);
+    if (!OldEnd) {
+      It = Image.DataMMaps.erase(It);
+      continue;
+    }
+    if (isNonOverlappingAddressInterval({Old.Address, *OldEnd}, {Start, End})) {
+      ++It;
+      continue;
+    }
+    if (Old.Address < Start) {
+      MMapEvent Left = Old;
+      Left.Size = Start - Old.Address;
+      Remains.push_back(Left);
+    }
+    if (End < *OldEnd) {
+      MMapEvent Right = Old;
+      Right.Address = End;
+      Right.Size = *OldEnd - End;
+      if (std::optional<uint64_t> Offset =
+              checkedAdd(Old.Offset, End - Old.Address)) {
+        Right.Offset = *Offset;
+        Remains.push_back(Right);
+      }
+    }
+    It = Image.DataMMaps.erase(It);
+  }
+  for (const MMapEvent &Event : Remains)
+    Image.DataMMaps[Event.Address] = Event;
+}
 
-  // If the address is not within the non-text mmap event, return the address
-  // as is.
-  if (FileOffset == 0)
-    return Address;
+std::optional<AddressRange>
+ProfiledBinary::getSlidImageRange(const ProcessImage &Image) const {
+  if (!Image.Slide)
+    return std::nullopt;
+  std::optional<uint64_t> Start = checkedAdd(PreferredImageStart, *Image.Slide);
+  std::optional<uint64_t> End = checkedAdd(PreferredImageEnd, *Image.Slide);
+  if (!Start || !End || *Start >= *End)
+    return std::nullopt;
+  return AddressRange(*Start, *End);
+}
 
-  for (const auto &PhdrInfo : NonTextPhdrInfo) {
-    // Find the program section that contains the file offset and map the
-    // file offset to the virtual address.
-    if (PhdrInfo.FileOffset <= FileOffset &&
-        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz)
-      return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
+void ProfiledBinary::pruneDataMMapsToSlidImage(ProcessImage &Image) {
+  std::optional<AddressRange> Range = getSlidImageRange(Image);
+  if (!Range)
+    return;
+  uint64_t Start = Range->first;
+  uint64_t End = Range->second;
+  if (Start != 0)
+    eraseDataMMapRange(Image, 0, Start);
+  if (End != UINT64_MAX)
+    eraseDataMMapRange(Image, End, UINT64_MAX);
+}
+
+void ProfiledBinary::addMMapNonTextEvent(const MMapEvent &Event) {
+  std::optional<uint64_t> End = checkedAdd(Event.Address, Event.Size);
+  if (!End)
+    return;
+  ProcessImage &Image = ImageByPID[Event.PID];
+  if (Image.Dropped)
+    Image = ProcessImage();
+  eraseDataMMapRange(Image, Event.Address, *End);
+  Image.DataMMaps[Event.Address] = Event;
+}
+
+void ProfiledBinary::addMMapTextEvent(const MMapEvent &Event) {
+  std::optional<uint64_t> End = checkedAdd(Event.Address, Event.Size);
+  if (!End)
+    return;
+  ProcessImage &Image = ImageByPID[Event.PID];
+  if (Image.Dropped)
+    Image = ProcessImage();
+  eraseDataMMapRange(Image, Event.Address, *End);
+  // Only the mmap holding the first executable segment gives the slide. The
+  // runtime address of file offset 0 minus its preferred address is the same
+  // base PerfScriptReader::updateBinaryAddress uses for text.
+  uint64_t TextOffset = getTextSegmentOffset();
+  if (TextOffset < Event.Offset || TextOffset - Event.Offset >= Event.Size)
+    return;
+  if (Event.Address < Event.Offset)
+    return;
+  uint64_t RuntimeBase = Event.Address - Event.Offset;
+  if (RuntimeBase < getPreferredBaseAddress())
+    return;
+  Image.Slide = RuntimeBase - getPreferredBaseAddress();
+  if (!getSlidImageRange(Image)) {
+    Image.Slide.reset();
+    return;
+  }
+  // A new slide (dlopen at another address) must not keep the previous
+  // image's data mmaps.
+  pruneDataMMapsToSlidImage(Image);
+}
+
+void ProfiledBinary::mapOtherFile(const MMapEvent &Event) {
+  std::optional<uint64_t> End = checkedAdd(Event.Address, Event.Size);
+  if (!End)
+    return;
+  auto It = ImageByPID.find(Event.PID);
+  if (It == ImageByPID.end()) {
+    // A fixed-address executable cannot coexist with another file over its
+    // preferred image. Remember that this PID is not an imageless ET_EXEC.
+    if (IsETExec &&
+        !isNonOverlappingAddressInterval(
+            {PreferredImageStart, PreferredImageEnd}, {Event.Address, *End}))
+      dropImage(Event.PID);
+    return;
+  }
+  ProcessImage &Image = It->second;
+  // The slide covers the whole image, including BSS and data mmaps the new
+  // file did not overlap. Drop them together so a leftover mmap cannot
+  // canonicalize a sample after dlclose.
+  std::optional<AddressRange> ImageRange = getSlidImageRange(Image);
+  if (ImageRange &&
+      !isNonOverlappingAddressInterval(*ImageRange, {Event.Address, *End})) {
+    dropImage(Event.PID);
+    return;
+  }
+  eraseDataMMapRange(Image, Event.Address, *End);
+}
+
+void ProfiledBinary::dropImage(int64_t PID) {
+  ProcessImage &Image = ImageByPID[PID];
+  Image.Slide.reset();
+  Image.DataMMaps.clear();
+  Image.Dropped = true;
+}
+
+void ProfiledBinary::forkImage(int64_t ChildPID, int64_t ParentPID) {
+  // A new thread is reported as a fork within the same process.
+  if (ChildPID == ParentPID)
+    return;
+  auto It = ImageByPID.find(ParentPID);
+  if (It == ImageByPID.end()) {
+    dropImage(ChildPID);
+    return;
+  }
+  // Copy first: inserting the child may grow the map and invalidate It.
+  ProcessImage Copy = It->second;
+  ImageByPID[ChildPID] = std::move(Copy);
+}
+
+bool ProfiledBinary::hasMappedImage(std::optional<int32_t> PID) const {
+  auto IsMapped = [](const ProcessImage &Image) {
+    return !Image.Dropped && (Image.Slide || !Image.DataMMaps.empty());
+  };
+  if (PID) {
+    auto It = ImageByPID.find(*PID);
+    return It != ImageByPID.end() && IsMapped(It->second);
+  }
+  for (const auto &Entry : ImageByPID)
+    if (IsMapped(Entry.second))
+      return true;
+  return false;
+}
+
+std::optional<uint64_t>
+ProfiledBinary::tryCanonicalizeNonTextAddress(uint64_t Address, int64_t PID,
+                                              bool *Unresolved) const {
+  if (Unresolved)
+    *Unresolved = false;
+  auto It = ImageByPID.find(PID);
+  if (It == ImageByPID.end()) {
+    // ET_EXEC samples already use the preferred VA, including when some other
+    // PID has a mapping and this PID's mmap records are absent. A relocated
+    // PIE address is outside every preferred PT_LOAD and stays unmatched.
+    if (IsETExec && isPreferredLoadAddress(Address))
+      return Address;
+    return std::nullopt;
+  }
+  const ProcessImage &Image = It->second;
+  if (Image.Dropped)
+    return std::nullopt;
+
+  // Subtract the process's load slide. This is the only way to place BSS,
+  // which has no file-backed mmap. The result must land in a PT_LOAD, so
+  // addresses in other objects, the heap or the stack miss.
+  if (Image.Slide) {
+    if (Address < *Image.Slide)
+      return std::nullopt;
+    uint64_t PreferredAddress = Address - *Image.Slide;
+    if (isPreferredLoadAddress(PreferredAddress))
+      return PreferredAddress;
+    if (Unresolved && PreferredImageStart <= PreferredAddress &&
+        PreferredAddress < PreferredImageEnd)
+      *Unresolved = true;
   }
 
-  return Address;
+  // Otherwise, map a file-backed address through the process's data mmap
+  // that contains it and the PT_LOAD with that file offset. This is the only
+  // path when the dump has no text mmap for this process.
+  auto MMapIter = Image.DataMMaps.lower_bound(Address);
+  if (MMapIter == Image.DataMMaps.end())
+    return std::nullopt;
+  const MMapEvent &Event = MMapIter->second;
+  std::optional<uint64_t> EventEnd = checkedAdd(Event.Address, Event.Size);
+  if (!EventEnd || Address >= *EventEnd)
+    return std::nullopt;
+  std::optional<uint64_t> FileOffset =
+      checkedAdd(Event.Offset, Address - Event.Address);
+  if (!FileOffset)
+    return std::nullopt;
+  // File-backed ranges of consecutive PT_LOADs do not overlap. p_memsz does:
+  // lld's RELRO segment rounds memsz up, and the next segment's p_offset sits
+  // inside that window. Match file bytes first, then a BSS tail that no file
+  // range claimed.
+  auto Match = [&](bool BSSTail) -> std::optional<uint64_t> {
+    for (const PhdrInfo &P : LoadPhdrInfo) {
+      std::optional<uint64_t> Lo =
+          checkedAdd(P.FileOffset, BSSTail ? P.FileSz : 0);
+      std::optional<uint64_t> Hi =
+          checkedAdd(P.FileOffset, BSSTail ? P.MemSz : P.FileSz);
+      if (!Lo || !Hi || *Lo >= *Hi || *FileOffset < *Lo || *FileOffset >= *Hi)
+        continue;
+      std::optional<uint64_t> VA =
+          checkedAdd(P.VirtualAddr, *FileOffset - P.FileOffset);
+      if (VA)
+        return *VA;
+    }
+    return std::nullopt;
+  };
+  if (std::optional<uint64_t> VA = Match(false))
+    return *VA;
+  if (std::optional<uint64_t> VA = Match(true))
+    return *VA;
+  if (Unresolved)
+    *Unresolved = true;
+  return std::nullopt;
 }
 
 void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,

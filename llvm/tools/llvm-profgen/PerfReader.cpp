@@ -15,6 +15,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -382,75 +383,219 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
   return PerfReader;
 }
 
-Error PerfReaderBase::parseDataAccessPerfTraces(
-    StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
-  // A perf_record_sample line is like
-  // . 1282514022939813 0x87b0 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002):
-  // 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3fb0
-  constexpr static StringRef DataAccessSamplePattern =
-      "PERF_RECORD_SAMPLE\\([A-Za-z]+, 0x[0-9a-fA-F]+\\): "
-      "([0-9]+)\\/[0-9]+: 0x([0-9a-fA-F]+) period: [0-9]+ addr: "
-      "0x([0-9a-fA-F]+)";
+// A perf_record_sample line is like
+// . 1282514022939813 0x87b0 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002):
+// 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3fb0
+// Split out the PID, load IP and data address. This is a hand-written match
+// because llvm::Regex dominates the run time on large dumps.
+static bool splitDataAccessSample(StringRef Line, StringRef &PID, StringRef &IP,
+                                  StringRef &DataAddress) {
+  Line = Line.substr(Line.find("PERF_RECORD_SAMPLE("));
+  if (!Line.consume_front("PERF_RECORD_SAMPLE("))
+    return false;
+  // Consume a non-empty run of characters that satisfy Pred.
+  auto Run = [&Line](function_ref<bool(char)> Pred, StringRef &Out) {
+    Out = Line.take_while(Pred);
+    Line = Line.drop_front(Out.size());
+    return !Out.empty();
+  };
+  StringRef Skip;
+  auto Hex = [&Line, &Run](StringRef &Out) {
+    Line.consume_front("0x");
+    return Run(isHexDigit, Out);
+  };
+  return Run(isAlpha, Skip) && Line.consume_front(", ") && Hex(Skip) &&
+         Line.consume_front("): ") && Run(isDigit, PID) &&
+         Line.consume_front("/") && Run(isDigit, Skip) &&
+         Line.consume_front(": ") && Hex(IP) &&
+         Line.consume_front(" period: ") && Run(isDigit, Skip) &&
+         Line.consume_front(" addr: ") && Hex(DataAddress);
+}
 
-  llvm::Regex LogRegex(DataAccessSamplePattern);
+// A fork line is like
+// 9293504316102292 0x5cc0 [0x30]: PERF_RECORD_FORK(1169845:1169845):
+// (1169843:1169843)
+// with the child's pid:tid first and the parent's second.
+static bool splitForkEvent(StringRef Line, int64_t &ChildPID,
+                           int64_t &ParentPID) {
+  Line = Line.substr(Line.find("PERF_RECORD_FORK("));
+  if (!Line.consume_front("PERF_RECORD_FORK("))
+    return false;
+  StringRef Child = Line.take_while(isDigit);
+  size_t Pos = Line.find("):(");
+  if (Pos == StringRef::npos)
+    return false;
+  StringRef Parent = Line.drop_front(Pos + 3).take_while(isDigit);
+  return !Child.getAsInteger(10, ChildPID) &&
+         !Parent.getAsInteger(10, ParentPID);
+}
 
+Error forEachCanonicalDataAccessSample(
+    ProfiledBinary *Binary, StringRef DataAccessPerfTraceFile,
+    std::optional<int32_t> PIDFilter,
+    function_ref<void(uint64_t IP, std::optional<uint64_t> CanonicalDataAddr,
+                      uint64_t RawDataAddr, bool Unresolved, bool MappedPID)>
+        OnSample,
+    StringSet<> *OtherLoadedFiles) {
   auto BufferOrErr = MemoryBuffer::getFile(DataAccessPerfTraceFile);
   std::error_code EC = BufferOrErr.getError();
   if (EC)
-    return make_error<StringError>("Failed to open perf trace file: " +
-                                       DataAccessPerfTraceFile,
-                                   inconvertibleErrorCode());
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed to open perf trace file: " +
+                                 DataAccessPerfTraceFile);
 
-  assert(!SampleCounters.empty() && "Sample counters should not be empty!");
-  SampleCounter &Counter = SampleCounters.begin()->second;
+  // SampleLines and Matched are counted before --pid filtering, so a filter
+  // that drops every sample is reported as such, not as a dump this parser
+  // cannot read. Accepted and AcceptedZero count the samples that pass it.
+  uint64_t SampleLines = 0;
+  uint64_t Matched = 0;
+  uint64_t Accepted = 0;
+  uint64_t AcceptedZero = 0;
+
   line_iterator LineIt(*BufferOrErr.get(), true);
-
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
 
-    MMapEvent MMap;
-    if (Line.contains("PERF_RECORD_MMAP2")) {
+    // The dump is in event order, so each mapping applies to the samples that
+    // follow it. Data mappings resolve file-backed addresses; the text mapping
+    // gives the load slide, which also covers BSS. Every process is tracked,
+    // even with --pid, so that a selected child can start from its parent's
+    // mappings.
+    if (Line.contains("PERF_RECORD_MMAP2 ") ||
+        Line.contains("PERF_RECORD_MMAP ")) {
+      MMapEvent MMap;
       if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
-        if (!MMap.MemProtectionFlag.contains("x")) {
-          if (Error E = Binary->addMMapNonTextEvent(MMap)) {
-            return E;
-          }
-        }
+        if (MMap.MemProtectionFlag.contains("x"))
+          Binary->addMMapTextEvent(MMap);
+        else
+          Binary->addMMapNonTextEvent(MMap);
+        continue;
+      }
+      // Another file's mapping. //anon and names like [heap] are not files.
+      if (PerfScriptReader::extractMMapEvent(Line, MMap) &&
+          (MMap.BinaryPath.starts_with("/") ||
+           sys::path::is_absolute(MMap.BinaryPath)) &&
+          !MMap.BinaryPath.starts_with("//")) {
+        Binary->mapOtherFile(MMap);
+        if (OtherLoadedFiles && MMap.MemProtectionFlag.contains("x"))
+          OtherLoadedFiles->insert(MMap.BinaryPath);
       }
       continue;
     }
 
-    SmallVector<StringRef> Fields;
-    if (LogRegex.match(Line, &Fields)) {
-      int32_t PID = 0;
-      if (Fields[1].getAsInteger(10, PID))
-        return make_error<StringError>(
-            "Failed to parse PID from perf trace line: " + Line,
-            inconvertibleErrorCode());
-
-      if (PIDFilter.has_value() && *PIDFilter != PID) {
-        continue;
-      }
-
-      uint64_t DataAddress = 0;
-      if (Fields[3].getAsInteger(16, DataAddress))
-        return make_error<StringError>(
-            "Failed to parse data address from perf trace line: " + Line,
-            inconvertibleErrorCode());
-      // Out of all the memory access events, the vtable accesses are used to
-      // construct type profiles. We assume that this is under the Itanium
-      // C++ ABI so we can use `_ZTV` prefix to identify vtable.
-      StringRef DataSymbol = Binary->symbolizeDataAddress(
-          Binary->CanonicalizeNonTextAddress(DataAddress));
-      if (DataSymbol.starts_with("_ZTV")) {
-        uint64_t IP = 0;
-        Fields[2].getAsInteger(16, IP);
-        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
-                                      DataSymbol, 1);
-      }
+    if (Line.contains("PERF_RECORD_FORK(")) {
+      int64_t ChildPID = 0, ParentPID = 0;
+      if (splitForkEvent(Line, ChildPID, ParentPID))
+        Binary->forkImage(ChildPID, ParentPID);
+      continue;
     }
+
+    // An exec line is like
+    // 9293504315187559 0x4660 [0x28]: PERF_RECORD_COMM exec: a:1169843/1169843
+    // The kernel reports it before mapping the new image.
+    if (Line.contains("PERF_RECORD_COMM exec:")) {
+      int64_t PID = 0;
+      if (!Line.rsplit(':').second.split('/').first.getAsInteger(10, PID))
+        Binary->dropImage(PID);
+      continue;
+    }
+
+    if (!Line.contains("PERF_RECORD_SAMPLE"))
+      continue;
+    ++SampleLines;
+
+    StringRef PIDField, IPField, DataAddressField;
+    if (!splitDataAccessSample(Line, PIDField, IPField, DataAddressField))
+      continue;
+    ++Matched;
+
+    int32_t PID = 0;
+    if (PIDField.getAsInteger(10, PID))
+      return createStringError(inconvertibleErrorCode(),
+                               "Failed to parse PID from perf trace line: " +
+                                   Line);
+    if (PIDFilter && *PIDFilter != PID)
+      continue;
+
+    uint64_t IP = 0;
+    if (IPField.getAsInteger(16, IP))
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Failed to parse load IP from perf trace line: " + Line);
+
+    uint64_t DataAddress = 0;
+    if (DataAddressField.getAsInteger(16, DataAddress))
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Failed to parse data address from perf trace line: " + Line);
+    // Kernel and some user samples carry no data address.
+    ++Accepted;
+    if (DataAddress == 0) {
+      ++AcceptedZero;
+      continue;
+    }
+
+    bool Unresolved = false;
+    std::optional<uint64_t> CanonicalDataAddr =
+        Binary->tryCanonicalizeNonTextAddress(DataAddress, PID, &Unresolved);
+    // A preferred-VA hit from a process with no mmap is not evidence that
+    // this process mapped the binary.
+    OnSample(IP, CanonicalDataAddr, DataAddress,
+             Unresolved && !CanonicalDataAddr, Binary->hasMappedImage(PID));
   }
+
+  // No sample records, or records that never parse, are not evidence that
+  // every object in the binary is cold.
+  if (SampleLines == 0)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "No PERF_RECORD_SAMPLE line found in data-access trace: " +
+            DataAccessPerfTraceFile);
+  if (Matched == 0)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "No PERF_RECORD_SAMPLE line matches a data-access sample from "
+        "perf report -D: " +
+            DataAccessPerfTraceFile);
+  // A --pid that selects nothing would otherwise give an all-cold profile.
+  if (PIDFilter && Matched > 0 && Accepted == 0)
+    return createStringError(inconvertibleErrorCode(),
+                             "None of the " + Twine(Matched) +
+                                 " data-access samples in " +
+                                 DataAccessPerfTraceFile + " has PID " +
+                                 Twine(*PIDFilter) + " from --pid");
+  if (AcceptedZero == Accepted)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "All " + Twine(Accepted) +
+            " matched data-access samples have a zero data address");
   return Error::success();
+}
+
+Error PerfReaderBase::parseDataAccessPerfTraces(
+    StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
+  assert(!SampleCounters.empty() && "Sample counters should not be empty!");
+  SampleCounter &Counter = SampleCounters.begin()->second;
+
+  // Out of all the memory access events, the vtable accesses are used to
+  // construct type profiles. We assume that this is under the Itanium
+  // C++ ABI so we can use `_ZTV` prefix to identify vtable.
+  auto RecordVTable = [&](uint64_t IP,
+                          std::optional<uint64_t> CanonicalDataAddr,
+                          uint64_t RawDataAddr, bool, bool) {
+    // An address that does not map into this binary is symbolized as is: an
+    // ET_EXEC sample already uses the preferred VA even when the dump's mmaps
+    // do not match a PT_LOAD. DAP drops such samples instead.
+    uint64_t DataAddr = CanonicalDataAddr.value_or(RawDataAddr);
+    StringRef DataSymbol = Binary->symbolizeDataAddress(DataAddr);
+    if (!DataSymbol.starts_with("_ZTV"))
+      return;
+    Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
+                                  DataSymbol, 1);
+  };
+
+  return forEachCanonicalDataAccessSample(Binary, DataAccessPerfTraceFile,
+                                          PIDFilter, RecordVTable);
 }
 
 InputFile
@@ -571,9 +716,13 @@ static StringRef filename(StringRef Path, bool UseBackSlash) {
   StringRef FileName = llvm::sys::path::filename(Path, PathStyle);
 
   // In case this file use \r\n as newline.
-  if (UseBackSlash && FileName.back() == '\r')
-    return FileName.drop_back();
+  if (UseBackSlash && !FileName.empty() && FileName.back() == '\r')
+    FileName = FileName.drop_back();
 
+  // The kernel appends this when the inode was unlinked or replaced. The
+  // basename would otherwise miss this binary and the mmap would be treated
+  // as a foreign unload.
+  FileName.consume_back(" (deleted)");
   return FileName;
 }
 
@@ -1168,6 +1317,21 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   if (!Binary->isKernel() && !Line.contains(Binary->getName()) &&
       !ShowMmapEvents)
     return false;
+  if (!extractMMapEvent(Line, MMap))
+    return false;
+  if (ShowMmapEvents) {
+    outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "
+           << format("0x%" PRIx64 ":", MMap.Address) << " \n";
+  }
+
+  StringRef BinaryName = filename(MMap.BinaryPath, Binary->isCOFF());
+  if (Binary->isKernel()) {
+    return Binary->isKernelImageName(BinaryName);
+  }
+  return Binary->getName() == BinaryName;
+}
+
+bool PerfScriptReader::extractMMapEvent(StringRef Line, MMapEvent &MMap) {
   // Parse a MMap2 line like:
   //  PERF_RECORD_MMAP2 2113428/2113428: [0x7fd4efb57000(0x204000) @ 0
   //  08:04 19532229 3585508847]: r-xp /usr/lib64/libdl-2.17.so
@@ -1207,7 +1371,7 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
     Regex RegMmap(MMapPattern);
     R = RegMmap.match(Line, &Fields);
   } else
-    llvm_unreachable("unexpected MMAP event entry");
+    return false;
 
   if (!R) {
     std::string WarningMsg = "Cannot parse mmap event: " + Line.str() + " \n";
@@ -1222,16 +1386,7 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
   MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
   MMap.BinaryPath = Fields[BINARY_PATH];
-  if (ShowMmapEvents) {
-    outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "
-           << format("0x%" PRIx64 ":", MMap.Address) << " \n";
-  }
-
-  StringRef BinaryName = filename(MMap.BinaryPath, Binary->isCOFF());
-  if (Binary->isKernel()) {
-    return Binary->isKernelImageName(BinaryName);
-  }
-  return Binary->getName() == BinaryName;
+  return true;
 }
 
 void PerfScriptReader::parseMMapEvent(TraceStream &TraceIt) {

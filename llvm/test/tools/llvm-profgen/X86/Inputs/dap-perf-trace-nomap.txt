@@ -1,0 +1,6 @@
+## ET_EXEC vtable dump. The only mmap does not cover the data VA and does not
+## match a PT_LOAD, so tryCanonicalizeNonTextAddress returns nullopt. The
+## vtable consumer must still symbolize the preferred address.
+0 0x7b98 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00000000(0x1000) @ 0xffff000 08:01 527501 0]: r-xp /path/to/dap.bin
+0 0x10 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3f70
+0 0x20 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x2608ac period: 233 addr: 0x3b3fb0

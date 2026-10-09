@@ -312,21 +312,51 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   StringSet<> NameStrings;
 
-  // MMap events for PT_LOAD segments without 'x' memory protection flag.
-  std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+  // Where this binary's image is in one process.
+  struct ProcessImage {
+    // Runtime minus preferred address, from the text mmap. The image moves as
+    // one unit, so this is also the slide of its data and BSS.
+    std::optional<uint64_t> Slide;
+    // Mmaps without the 'x' flag, keyed by start address, highest first, so
+    // lower_bound(Address) is the mmap that starts at or below Address. They
+    // never overlap: a new mmap first erases the range it covers.
+    std::map<uint64_t, MMapEvent, std::greater<uint64_t>> DataMMaps;
+    // This PID used to have an image, but exec, PID reuse, or another file
+    // replaced it. Keep this tombstone distinct from a PID whose mmap records
+    // were never present.
+    bool Dropped = false;
+  };
+  DenseMap<int64_t, ProcessImage> ImageByPID;
+
+  // Remove [Start, End) from the data mmaps of \p Image, keeping the parts of
+  // partly covered mmaps outside it.
+  void eraseDataMMapRange(ProcessImage &Image, uint64_t Start, uint64_t End);
+
+  // Drop data mmaps that lie outside the image described by Slide.
+  void pruneDataMMapsToSlidImage(ProcessImage &Image);
+
+  // Return the runtime range of the preferred image after applying its slide.
+  // Invalid or overflowing ranges have no value.
+  std::optional<AddressRange>
+  getSlidImageRange(const ProcessImage &Image) const;
+
+  // Preferred address range of all PT_LOAD segments, including BSS.
+  uint64_t PreferredImageStart = UINT64_MAX;
+  uint64_t PreferredImageEnd = 0;
 
   // Deduplicated address ranges mapped for the profiled binary.
   llvm::AddressRanges MMapRanges;
 
-  // Records the file offset, file size and virtual address of program headers.
+  // Records the file offset, file size, memory size and virtual address of
+  // PT_LOAD program headers. MemSz includes anonymous tails such as BSS.
   struct PhdrInfo {
     uint64_t FileOffset;
     uint64_t FileSz;
+    uint64_t MemSz;
     uint64_t VirtualAddr;
   };
 
-  // Program header information for non-text PT_LOAD segments.
-  SmallVector<PhdrInfo> NonTextPhdrInfo;
+  SmallVector<PhdrInfo> LoadPhdrInfo;
 
   // A collection of functions to print disassembly for.
   StringSet<> DisassembleFunctionSet;
@@ -353,10 +383,14 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
-  // Whether the binary has a PT_INTERP program header (PIE executables do,
-  // true shared libraries don't). Used to distinguish PIE from .so since
-  // both are ET_DYN.
-  bool HasInterp = false;
+  // ET_DYN is a PIE when DT_FLAGS_1 has DF_1_PIE (including a static PIE) or
+  // the image has PT_INTERP (a dynamic PIE, including ones built before
+  // DF_1_PIE existed). A shared library has neither.
+  bool IsPIE = false;
+
+  // Preferred-address samples without mmap records are only valid for
+  // fixed-address ELF executables.
+  bool IsETExec = false;
 
   // Build ID used to filter perfscript addresses in [buildid:]addr format.
   // For shared libraries, set to the binary's build ID.
@@ -380,6 +414,9 @@ class ProfiledBinary {
                                         StringRef FileName);
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
+
+  // True if \p ElfVA is in a PT_LOAD of this binary.
+  bool isPreferredLoadAddress(uint64_t ElfVA) const;
 
   // Return true if pseudo probe in Obj is usable.
   bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
@@ -449,6 +486,7 @@ public:
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   const Triple &getTriple() const { return TheTriple; }
   const object::Binary &getBinary() const { return *OBinary.getBinary(); }
+  bool isPIE() const { return IsPIE; }
   uint64_t getBaseAddress() const { return BaseAddress; }
   void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
@@ -707,32 +745,38 @@ public:
     return false;
   }
 
-  Error addMMapNonTextEvent(MMapEvent Event) {
-    // Given the mmap events of the profiled binary, the virtual address
-    // intervals of mmaps most often doesn't overlap with each other. The
-    // implementation validates so, and runtime data address is mapped to
-    // a mmap event using look-up. With this implementation, data addresses
-    // from dynamic shared libraries (not the profiled binary) are not mapped or
-    // symbolized. To map runtime address to binary address in case of
-    // overlapping mmap events, the implementation could store all the mmap
-    // events in a vector and in the order they are added and reverse iterate
-    // the vector to find the mmap events. We opt'ed for the non-overlapping
-    // implementation for simplicity.
-    for (const auto &ExistingMMap : NonTextMMapEvents) {
-      if (isNonOverlappingAddressInterval(
-              {ExistingMMap.second.Address,
-               ExistingMMap.second.Address + ExistingMMap.second.Size},
-              {Event.Address, Event.Address + Event.Size})) {
-        continue;
-      }
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Non-text mmap event overlaps with existing event at address: %lx",
-          Event.Address);
-    }
-    NonTextMMapEvents[Event.Address] = Event;
-    return Error::success();
-  }
+  // The following track this binary's image per process for data-access
+  // samples. A later mapping replaces the part of any earlier one it
+  // overlaps, as mmap(MAP_FIXED) and mprotect do: the loader first reserves
+  // the whole image with one mapping at file offset 0 and then maps each
+  // segment over it, and RELRO later remaps part of a data segment read-only.
+
+  // Record a data mmap of this binary.
+  void addMMapNonTextEvent(const MMapEvent &Event);
+
+  // Record a text mmap of this binary. The one holding the first executable
+  // segment gives the load slide PerfScriptReader::updateBinaryAddress
+  // computes. A later one replaces it, e.g. after dlclose and dlopen.
+  void addMMapTextEvent(const MMapEvent &Event);
+
+  // Another file was mapped by \p Event. perf records no
+  // munmap. Overlap with the slid image drops that process's whole image,
+  // including data mmaps the new mapping did not cover. Anonymous mappings
+  // cannot be told apart from this binary's own BSS and are ignored by the
+  // caller.
+  void mapOtherFile(const MMapEvent &Event);
+
+  // A forked child starts with the parent's mappings, and perf records no
+  // mmap events for it. A reused PID starts with none.
+  void forkImage(int64_t ChildPID, int64_t ParentPID);
+
+  // exec replaces the process image. Keep a tombstone so a later preferred
+  // address is not mistaken for an ET_EXEC sample whose mmap was never seen.
+  void dropImage(int64_t PID);
+
+  // Return whether this binary has a usable mapping for the selected process,
+  // or for any process when \p PID is not set.
+  bool hasMappedImage(std::optional<int32_t> PID = std::nullopt) const;
 
   // Record a half-open MMAP range while coalescing duplicate and overlapping
   // events.
@@ -750,11 +794,15 @@ public:
     return MMapRanges.contains(VAddr);
   }
 
-  // Given a non-text runtime address, canonicalize it to the virtual address in
-  // the binary.
+  // Map a runtime data address of process \p PID to this binary's preferred
+  // ELF VA. Returns nullopt when the address is not data of this binary.
+  // \p Unresolved is set when the address is in this binary's mapped image
+  // but cannot be mapped to a PT_LOAD.
   // TODO: Consider unifying the canonicalization of text and non-text addresses
   // in the ProfiledBinary class.
-  uint64_t CanonicalizeNonTextAddress(uint64_t Address);
+  std::optional<uint64_t>
+  tryCanonicalizeNonTextAddress(uint64_t Address, int64_t PID,
+                                bool *Unresolved = nullptr) const;
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 

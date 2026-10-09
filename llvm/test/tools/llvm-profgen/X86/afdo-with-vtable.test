@@ -25,3 +25,13 @@ CHECK-NEXT:  }
 CHECK-NEXT:  No inlined callsites in this function
 
 PSEUDOERR: Symbolizing vtables from data access profiles is not yet supported for context-sensitive perf traces or when pseudo-probe based mapping is enabled.
+
+## Only an r-xp mmap is present, so the data VA is outside every mapping.
+## The preferred VA must still be symbolized.
+RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-perftrace=%p/Inputs/dap-perf-trace-nomap.txt \
+RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
+RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.nomap.afdo
+RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.nomap.afdo 2>&1 | FileCheck %s --check-prefix=NOMAP
+
+NOMAP:    3: vtables: _ZTV8Derived1:1
+NOMAP:    5.1: vtables: _ZTVN12_GLOBAL__N_18Derived2E:1

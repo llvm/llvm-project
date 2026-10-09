@@ -39,6 +39,9 @@ DataAccessProfData::getProfileRecord(const SymbolHandleRef SymbolID) const {
       assert(
           std::get<StringRef>(SymbolID).empty() &&
           "Name canonicalization only fails when stringified string is empty.");
+      // operator bool() leaves an error unchecked. Consume it so an unnamed
+      // global does not abort memprof-use on an assertions build.
+      consumeError(NameOrErr.takeError());
       return std::nullopt;
     }
     Key = *NameOrErr;
@@ -56,7 +59,12 @@ DataAccessProfData::getProfileRecord(const SymbolHandleRef SymbolID) const {
 bool DataAccessProfData::isKnownColdSymbol(const SymbolHandleRef SymID) const {
   if (std::holds_alternative<uint64_t>(SymID))
     return KnownColdHashes.contains(std::get<uint64_t>(SymID));
-  return KnownColdSymbols.contains(std::get<StringRef>(SymID));
+  auto NameOrErr = getCanonicalName(std::get<StringRef>(SymID));
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    return false;
+  }
+  return KnownColdSymbols.contains(*NameOrErr);
 }
 
 Error DataAccessProfData::setDataAccessProfile(SymbolHandleRef Symbol,

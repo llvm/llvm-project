@@ -123,7 +123,7 @@ MemProf profiles guide the layout of static data (e.g., global variables, consta
 
 This feature uses a hybrid approach:
 
-1. **Symbolizable Data:** Data with external or local linkage (tracked by the symbol table) is partitioned based on data access profiles collected via instrumentation ([PR](https://github.com/llvm/llvm-project/pull/142884)) or hardware performance counters (e.g., Intel PEBS events such as `MEM_INST_RETIRED.ALL_LOADS`).
+1. **Symbolizable Data:** Data with external or local linkage (tracked by the symbol table) is partitioned based on data access profiles collected via instrumentation ([PR](https://github.com/llvm/llvm-project/pull/142884)) or hardware performance counters (e.g., Intel PEBS or AMD IBS).
 2. **Module-Internal Data:** Data not tracked by the symbol table (e.g., jump tables, constant pools, internal globals) has its hotness inferred from standard PGO code execution profiles.
 
 To enable this feature, pass the following flags to the compiler:
@@ -131,9 +131,37 @@ To enable this feature, pass the following flags to the compiler:
 - `-fpartition-static-data-sections`: Instructs the compiler to generate `.hot` and `.unlikely` section prefixes for hot and cold static data respectively in the relocatable object files.
 - `-Wl,-z,keep-data-section-prefix`: This flag is currently only supported in LLD. It informs the linker that `.data.rel.ro.hot` and `.data.rel.ro.unlikely` are relro sections (rather than only recognizing `.data.rel.ro`). LLD allows multiple relro segments, but not all loaders (particularly glibc) properly support multiple relro segments. This flag ensures a single relro segment to ensure maximum compatibility. Additionally, it makes LLD keep the data section suffixes (hot/unlikely) as otherwise they will get merged together into the standard data sections.
 
+**Hardware samples.** Any `perf record -d` dump that carries a data address
+works, including Intel PEBS and AMD IBS. Dump it with `perf report -D` and
+convert with `llvm-profgen --memprof-dap`.
+
 ```bash
-clang++ -fmemory-profile-use=memprof.memprofdata -fpartition-static-data-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix -O2 source.cpp -o optimized_app
+# AMD IBS. Intel PEBS is the same flow with a PEBS load event.
+perf record -e 'ibs_op/cnt_ctl=0/pp' -c 50021 -d --buildid-mmap \
+  -o perf.data -- ./app
+# Intel PEBS (cpu_core / P-cores on hybrid CPUs):
+# perf record -e mem_inst_retired.all_loads:upp -c 10007 -d --buildid-mmap \
+#   -o perf.data -- ./app
+
+perf report -D -i perf.data > perf-dump.txt
+llvm-profgen --binary=./app --data-access-perftrace=perf-dump.txt \
+  --memprof-dap -o dap.profdata
+clang++ -fmemory-profile-use=dap.profdata -fpartition-static-data-sections \
+  -fdata-sections -fuse-ld=lld -Wl,-z,keep-data-section-prefix \
+  -O2 source.cpp -o optimized_app
 ```
+
+Limitations of the hardware-sample flow:
+
+- String literals are found through their `.L.str` symbols. The assembler
+  drops most of these and linkers discard the rest by default. Build the
+  profiled binary with `-Wa,-L -Wl,--discard-none`, or few or no string
+  literals appear in the profile. Section prefixes for string
+  literals are controlled by `-memprof-annotate-string-literal-section-prefix`.
+- In a shared library's profile, an unsampled exported variable is not
+  known-cold if another file mapped in the dump defines it, because an
+  executable's copy relocation moves all its accesses there. If a mapped file
+  cannot be read, no exported variable is known-cold.
 
 The optimized layout clusters hot static data, improving dTLB and cache efficiency.
 
