@@ -1125,8 +1125,13 @@ bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
     // __has_include(__has_include))
     if (CurPPLexer->ParsingFilename)
       LexUnexpandedToken(FilenameTok);
-    else
-      CurPPLexer->LexIncludeFilename(FilenameTok);
+    else {
+      CurLexerCallback = CLK_HeaderNameLexer;
+      if (AllowMacroExpansion)
+        Lex(FilenameTok);
+      else
+        LexUnexpandedToken(FilenameTok);
+    }
   } else {
     Lex(FilenameTok);
   }

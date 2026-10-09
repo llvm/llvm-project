@@ -130,7 +130,7 @@ public:
   // Misc. lexing methods.
 
   /// Lex a token, producing a header-name token if possible.
-  void LexIncludeFilename(Token &FilenameTok);
+  virtual bool LexIncludeFilename(Token &FilenameTok) = 0;
 
   /// Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.
