@@ -205,7 +205,7 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
-  // Declarations have no body; use the type parsed from the mangled name.
+  // Use the recorded pointee type for declarations.
   if (F.isDeclaration())
     if (Type *ElemTy = GR->findDeducedElementType(Arg))
       return GR->getOrCreateSPIRVPointerType(

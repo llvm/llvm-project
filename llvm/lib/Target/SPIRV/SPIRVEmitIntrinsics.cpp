@@ -2394,6 +2394,12 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
   if (DemangledName.empty() && !HaveTypes)
     return;
 
+  auto Set =
+      TM.getSubtarget<SPIRVSubtarget>(*CalledF).getPreferredInstructionSet();
+  // Do not reparse rejected declaration types with the builtin parser.
+  bool ParseBuiltinTypes =
+      !DemangledName.empty() &&
+      (!CalledF->isDeclaration() || SPIRV::isBuiltin(DemangledName, Set));
   for (unsigned OpIdx = 0; OpIdx < CI->arg_size(); OpIdx++) {
     Value *ArgOperand = CI->getArgOperand(OpIdx);
     if (!isPointerTy(ArgOperand->getType()))
@@ -2411,14 +2417,9 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
 
     Type *ExpectedType =
         OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
-    // Do not reparse rejected declaration types with the builtin parser.
-    if (!ExpectedType && !DemangledName.empty()) {
-      auto Set = TM.getSubtarget<SPIRVSubtarget>(*CalledF)
-                     .getPreferredInstructionSet();
-      if (!CalledF->isDeclaration() || SPIRV::isBuiltin(DemangledName, Set))
-        ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
-            DemangledName, OpIdx, I->getContext());
-    }
+    if (!ExpectedType && ParseBuiltinTypes)
+      ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
+          DemangledName, OpIdx, I->getContext());
     if (!ExpectedType || ExpectedType->isVoidTy())
       continue;
 
@@ -3664,6 +3665,7 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
       }
     }
   }
+  FDeclPtrTys.clear();
 }
 
 GetElementPtrInst *SPIRVEmitIntrinsicsImpl::simplifyZeroLengthArrayGepInst(
@@ -3987,15 +3989,12 @@ static Type *parseDeclPtrElemType(StringRef TypeStr, LLVMContext &Ctx) {
   Type *ElemTy = parseBasicTypeName(TypeStr, Ctx);
   if (!ElemTy || ElemTy->isVoidTy() || ElemTy->isIntegerTy(1))
     return nullptr;
-  if (ElemTy->isIntegerTy(64))
-    TypeStr.consume_front(" long"); // "[unsigned] long long"
   ScalarName = ScalarName.drop_back(TypeStr.size());
   // OpenCL aliases such as uint can also name C++ classes.
   if (!StringSwitch<bool>(ScalarName)
            .Cases({"char", "signed char", "unsigned char", "short",
-                   "unsigned short", "int", "unsigned int", "long",
-                   "unsigned long", "long long", "unsigned long long",
-                   "_Float16", "float", "double"},
+                   "unsigned short", "int", "unsigned int", "_Float16", "float",
+                   "double"},
                   true)
            .Default(false) ||
       (!TypeStr.empty() && !TypeStr.starts_with(" ")))
@@ -4053,6 +4052,8 @@ void SPIRVEmitIntrinsicsImpl::parseFunDeclarations(Module &M) {
                        StringRef(DemangledName).contains('<') ||
                        TypeStrs.size() != F.arg_size()))
       continue;
+    bool AllowLongVectors =
+        ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
     for (unsigned Idx : Idxs) {
       if (Idx >= TypeStrs.size())
         continue;
@@ -4064,8 +4065,6 @@ void SPIRVEmitIntrinsicsImpl::parseFunDeclarations(Module &M) {
           ElemTy->isTargetExtTy())
         continue;
       if (!IsBuiltin) {
-        bool AllowLongVectors =
-            ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
         ElemTy = normalizeType(ElemTy, AllowLongVectors);
         if (!AllowLongVectors && isLongVectorEXT(ElemTy))
           continue;

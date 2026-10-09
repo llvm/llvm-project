@@ -5,7 +5,6 @@
 ; CHECK-DAG: OpName %[[#Char:]] "_Z4takePa"
 ; CHECK-DAG: OpName %[[#Short:]] "_Z4takePs"
 ; CHECK-DAG: OpName %[[#Double:]] "_Z4takePd"
-; CHECK-DAG: OpName %[[#LongLong:]] "_Z4takePx"
 ; CHECK-DAG: OpName %[[#Qual:]] "_Z4takePVri"
 ; CHECK-DAG: OpName %[[#Half:]] "_Z4takePDF16_"
 ; CHECK-DAG: %[[#Void:]] = OpTypeVoid
@@ -18,9 +17,6 @@
 ; CHECK-DAG: %[[#DoubleTy:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#DoublePtr:]] = OpTypePointer CrossWorkgroup %[[#DoubleTy]]
 ; CHECK-DAG: %[[#DoubleFn:]] = OpTypeFunction %[[#Void]] %[[#DoublePtr]]
-; CHECK-DAG: %[[#LongLongTy:]] = OpTypeInt 64 0
-; CHECK-DAG: %[[#LongLongPtr:]] = OpTypePointer CrossWorkgroup %[[#LongLongTy]]
-; CHECK-DAG: %[[#LongLongFn:]] = OpTypeFunction %[[#Void]] %[[#LongLongPtr]]
 ; CHECK-DAG: %[[#QualTy:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#QualPtr:]] = OpTypePointer CrossWorkgroup %[[#QualTy]]
 ; CHECK-DAG: %[[#QualFn:]] = OpTypeFunction %[[#Void]] %[[#QualPtr]]
@@ -31,14 +27,12 @@
 ; CHECK: %[[#Char]] = OpFunction %[[#Void]] None %[[#CharFn]]
 ; CHECK: %[[#Short]] = OpFunction %[[#Void]] None %[[#ShortFn]]
 ; CHECK: %[[#Double]] = OpFunction %[[#Void]] None %[[#DoubleFn]]
-; CHECK: %[[#LongLong]] = OpFunction %[[#Void]] None %[[#LongLongFn]]
 ; CHECK: %[[#Qual]] = OpFunction %[[#Void]] None %[[#QualFn]]
 ; CHECK: %[[#Half]] = OpFunction %[[#Void]] None %[[#HalfFn]]
 
 declare spir_func void @_Z4takePa(ptr addrspace(1))
 declare spir_func void @_Z4takePs(ptr addrspace(1))
 declare spir_func void @_Z4takePd(ptr addrspace(1))
-declare spir_func void @_Z4takePx(ptr addrspace(1))
 declare spir_func void @_Z4takePVri(ptr addrspace(1))
 declare spir_func void @_Z4takePDF16_(ptr addrspace(1))
 
@@ -46,7 +40,6 @@ define spir_kernel void @test(ptr addrspace(1) %p) {
   call spir_func void @_Z4takePa(ptr addrspace(1) %p)
   call spir_func void @_Z4takePs(ptr addrspace(1) %p)
   call spir_func void @_Z4takePd(ptr addrspace(1) %p)
-  call spir_func void @_Z4takePx(ptr addrspace(1) %p)
   call spir_func void @_Z4takePVri(ptr addrspace(1) %p)
   call spir_func void @_Z4takePDF16_(ptr addrspace(1) %p)
   ret void
