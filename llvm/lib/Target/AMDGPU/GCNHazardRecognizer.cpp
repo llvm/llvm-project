@@ -632,6 +632,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
       checkMAILdStHazards(MI) > 0)
     return HazardType;
 
+  if (ST.hasPermlaneForwardingHazard() && isPermlane(*MI) &&
+      checkPermlaneHazards(MI) > 0)
+    return HazardType;
+
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
     return HazardType;
 
@@ -787,7 +791,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
 
-  if (ST.hasGFX950Insts() && isPermlane(*MI))
+  if (ST.hasPermlaneForwardingHazard() && isPermlane(*MI))
     return std::max(WaitStates, checkPermlaneHazards(MI));
 
   return WaitStates;
@@ -977,22 +981,27 @@ static unsigned countUnexecutedTerminators(const MachineBasicBlock &Pred,
 
 // Wait states \p MI adds to a distance. Inline asm may be empty, so it adds
 // none, which is the worst case.
-static unsigned getCountedWaitStates(const MachineInstr &MI) {
-  return MI.isInlineAsm() ? 0 : SIInstrInfo::getNumWaitStates(MI);
+static unsigned
+getCountedWaitStates(const MachineInstr &MI,
+                     GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates) {
+  return MI.isInlineAsm() ? 0 : GetNumWaitStates(MI);
 }
 
 namespace {
 
-// Answers GCNHazardRecognizer::getMaxWindowDeficit, which documents the result,
-// by walking the CFG backwards from the instruction being checked. That needs
-// the instruction in its final place, so hazard recognizer mode only. Each
-// object answers one query.
+// Answers GCNHazardRecognizer::getMax*WindowDeficit, which documents the
+// result, by walking the CFG backwards from the instruction being checked,
+// counting distances with GetNumWaitStates. That needs the instruction in its
+// final place, so hazard recognizer mode only. Each object answers one query.
 class WindowDeficitSearch {
 public:
   WindowDeficitSearch(
       function_ref<std::optional<int>(const MachineInstr &)> WindowFor,
-      int MaxWindow)
-      : WindowFor(WindowFor), MaxWindow(MaxWindow) {}
+      int MaxWindow,
+      GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates =
+          SIInstrInfo::getNumWaitStates)
+      : WindowFor(WindowFor), GetNumWaitStates(GetNumWaitStates),
+        MaxWindow(MaxWindow) {}
 
   int run(const MachineInstr &MI);
 
@@ -1012,6 +1021,7 @@ private:
   void scan(Arrival A);
 
   const function_ref<std::optional<int>(const MachineInstr &)> WindowFor;
+  const GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates;
   const int MaxWindow;
   int Deficit = 0;
   // Pending[D] holds the arrivals at distance D, and Best the smallest distance
@@ -1063,7 +1073,7 @@ void WindowDeficitSearch::scan(Arrival A) {
       Deficit = std::max(Deficit, *Window - Distance);
     }
 
-    Distance += getCountedWaitStates(*I);
+    Distance += getCountedWaitStates(*I, GetNumWaitStates);
 
     if (Distance >= MaxWindow)
       return;
@@ -1077,7 +1087,7 @@ void WindowDeficitSearch::scan(Arrival A) {
     int Executed = 0;
     for (; Start != End && Start->isTerminator(); ++Start) {
       assert(!WindowFor(*Start) && "terminators must not ask for a window");
-      Executed += getCountedWaitStates(*Start);
+      Executed += getCountedWaitStates(*Start, GetNumWaitStates);
     }
 
     arrive(Pred, Start, Distance + Executed);
@@ -1171,7 +1181,8 @@ int GCNHazardRecognizer::getMaxWindowDeficit(int MaxWindow,
       }
     }
 
-    Distance += MI ? getCountedWaitStates(*MI) : 1;
+    Distance +=
+        MI ? getCountedWaitStates(*MI, SIInstrInfo::getNumWaitStates) : 1;
 
     if (Distance >= MaxWindow)
       break;
@@ -1211,33 +1222,36 @@ int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard,
   return getWaitStatesSince(IsHazard, Limit, SIInstrInfo::getNumWaitStates);
 }
 
-int GCNHazardRecognizer::getWaitStatesSinceVALU(IsHazardFn IsHazard,
-                                                int Limit) const {
+int GCNHazardRecognizer::getMaxVALUWindowDeficit(int MaxWindow,
+                                                 WindowForFn WindowFor) const {
   if (isHazardRecognizerMode()) {
     auto GetVALUWaitStates = [](const MachineInstr &MI) -> unsigned {
       return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) ? 1 : 0;
     };
-    return getWaitStatesSince(IsHazard, Limit, GetVALUWaitStates);
+    return WindowDeficitSearch(WindowFor, MaxWindow, GetVALUWaitStates)
+        .run(*CurrCycleInstr);
   }
 
-  // EmittedVALUInstrs is capped at MaxVALULookAhead, so a Limit beyond that
+  // EmittedVALUInstrs is capped at MaxVALULookAhead, so a MaxWindow beyond that
   // window could miss a hazard. Keep the cap in sync with the wait-state
   // tables.
-  assert(Limit <= (int)MaxVALULookAhead &&
-         "Limit exceeds the EmittedVALUInstrs lookahead window");
+  assert(MaxWindow <= static_cast<int>(MaxVALULookAhead) &&
+         "MaxWindow exceeds the EmittedVALUInstrs lookahead window");
   int WaitStates = 0;
   for (MachineInstr *MI : EmittedVALUInstrs) {
     if (MI) {
-      if (IsHazard(*MI))
-        return WaitStates;
+      if (std::optional<int> Window = WindowFor(*MI)) {
+        assert(*Window >= 0 && *Window <= MaxWindow && "window out of bounds");
+        return *Window - WaitStates;
+      }
     }
 
     ++WaitStates;
 
-    if (WaitStates >= Limit)
+    if (WaitStates >= MaxWindow)
       break;
   }
-  return std::numeric_limits<int>::max();
+  return 0;
 }
 
 int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
@@ -2791,47 +2805,24 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // numbers, which depends on the category of the first WMMA.
   const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17, 2};
   const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16, 1};
-  unsigned Category = 0;
+  const bool IsWMMA = TII->isXDLWMMA(*MI);
+  const bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
+  ArrayRef<int> RequiredWaitStates =
+      IsWMMA ? ArrayRef<int>(WMMAWaitStates) : ArrayRef<int>(VALUWaitStates);
+  const int MaxWaitStates =
+      IsWMMA ? (IsLowestRateWMMA ? 17 : 9) : (IsLowestRateWMMA ? 16 : 8);
 
-  auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
+  auto WindowFor = [=](const MachineInstr &I) -> std::optional<int> {
     if (!TII->isXDLWMMA(I))
-      return false;
-
-    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
-    return hasWMMAToWMMARegOverlap(I, *MI);
+      return std::nullopt;
+    if (IsWMMA ? !hasWMMAToWMMARegOverlap(I, *MI)
+               : !hasWMMAToVALURegOverlap(I, *MI))
+      return std::nullopt;
+    return RequiredWaitStates[getWMMAHazardInstInCategory(I, TII, TSchedModel,
+                                                          ST)];
   };
 
-  auto IsVALUHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
-    if (!TII->isXDLWMMA(I))
-      return false;
-
-    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
-    return hasWMMAToVALURegOverlap(I, *MI);
-  };
-
-  int WaitStatesNeeded = -1;
-  int ExistingVALUs = 0; // Existing number of VALU ops in between.
-  bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
-
-  // getWaitStatesSinceVALU checks for a hazard between instruction 'I' and
-  // 'MI':
-  // - If a hazard exists: returns the number of VALUs in between and sets
-  //   'Category' via IsWMMAHazardFn/IsVALUHazardFn for instruction 'I'.
-  // - If no hazard exists: returns INT_MAX, making WaitStatesNeeded negative,
-  //   so no V_NOP insertion is needed.
-  if (TII->isXDLWMMA(*MI)) {
-    // Maximum of MMAWaitStates.
-    const int WMMAWaitsLimit = IsLowestRateWMMA ? 17 : 9;
-    ExistingVALUs = getWaitStatesSinceVALU(IsWMMAHazardFn, WMMAWaitsLimit);
-    WaitStatesNeeded = WMMAWaitStates[Category] - ExistingVALUs;
-  } else { // Must be a co-executable VALU.
-           // Maximum of VALUWaitStates.
-    const int VALUWaitsLimit = IsLowestRateWMMA ? 16 : 8;
-    ExistingVALUs = getWaitStatesSinceVALU(IsVALUHazardFn, VALUWaitsLimit);
-    WaitStatesNeeded = VALUWaitStates[Category] - ExistingVALUs;
-  }
-
-  return WaitStatesNeeded;
+  return getMaxVALUWindowDeficit(MaxWaitStates, WindowFor);
 }
 
 bool GCNHazardRecognizer::hasWMMAToWMMARegOverlap(

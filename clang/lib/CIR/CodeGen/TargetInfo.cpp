@@ -7,43 +7,10 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
-
-bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
-                                           QualType t) {
-  const auto *rd = t->getAsRecordDecl();
-  if (!rd)
-    return false;
-
-  // If this is a C++ record, check the bases first.
-  if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
-    if (cxxrd->isDynamicClass())
-      return false;
-
-    for (const auto &i : cxxrd->bases())
-      if (!isEmptyRecordForLayout(context, i.getType()))
-        return false;
-  }
-
-  for (const auto *i : rd->fields())
-    if (!isEmptyFieldForLayout(context, i))
-      return false;
-
-  return true;
-}
-
-bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
-                                          const FieldDecl *fd) {
-  if (fd->isZeroLengthBitField())
-    return true;
-
-  if (fd->isUnnamedBitField())
-    return false;
-
-  return isEmptyRecordForLayout(context, fd->getType());
-}
 
 bool clang::CIRGen::isEmptyRecordForABI(const ASTContext &context, QualType t) {
   const auto *rd = t->getAsRecordDecl();
@@ -134,13 +101,16 @@ public:
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     if (auto func = mlir::dyn_cast<cir::FuncOp>(global)) {
-      if (requiresAMDGPUProtectedVisibility(decl, func.getGlobalVisibility())) {
+      if (CodeGenUtils::requiresAMDGPUProtectedVisibility(
+              decl,
+              func.getGlobalVisibility() == cir::VisibilityKind::Hidden)) {
         func.setGlobalVisibility(cir::VisibilityKind::Protected);
         func.setDSOLocal(true);
       }
       setAMDGPUTargetFunctionAttributes(decl, func, cgm);
     } else if (auto gv = mlir::dyn_cast<cir::GlobalOp>(global)) {
-      if (requiresAMDGPUProtectedVisibility(decl, gv.getGlobalVisibility())) {
+      if (CodeGenUtils::requiresAMDGPUProtectedVisibility(
+              decl, gv.getGlobalVisibility() == cir::VisibilityKind::Hidden)) {
         gv.setGlobalVisibility(cir::VisibilityKind::Protected);
         gv.setDSOLocal(true);
       }

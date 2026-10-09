@@ -16,7 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
