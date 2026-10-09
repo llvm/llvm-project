@@ -7825,6 +7825,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Constructor:
       handleConstructorAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_Copy:
+    S.AddCopyAttr(D, AL, AL.getArgAsExpr(0));
+    break;
   case ParsedAttr::AT_Deprecated:
     handleDeprecatedAttr(S, D, AL);
     break;
@@ -8576,6 +8579,263 @@ static void checkAMDGPUReqdWorkGroupSize(Sema &S, Decl *D) {
            diag::err_attribute_amdgpu_flat_work_group_size_mismatch);
     D->setInvalidDecl();
   }
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        Expr *E) {
+  return E;
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        unsigned Value) {
+  return IntegerLiteral::Create(Context, llvm::APInt(32, Value),
+                                Context.UnsignedIntTy, Loc);
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        ParamIdx Index) {
+  return createCopyAttrArgument(Context, Loc, Index.getSourceIndex());
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        StringRef Value) {
+  return StringLiteral::Create(
+      Context, Value, StringLiteralKind::Ordinary, false,
+      Context.getStringLiteralArrayType(Context.CharTy, Value.size()), Loc);
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        const IdentifierInfo *II) {
+  return new (Context) IdentifierLoc(Loc, const_cast<IdentifierInfo *>(II));
+}
+
+static ArgsUnion createCopyAttrArgument(ASTContext &Context, SourceLocation Loc,
+                                        FunctionDecl *FD) {
+  return DeclRefExpr::Create(Context, NestedNameSpecifierLoc(),
+                             SourceLocation(), FD, false, Loc, FD->getType(),
+                             VK_LValue);
+}
+
+#define WANT_DECL_COPY_LOGIC
+#include "clang/Sema/AttrParsedAttrImpl.inc"
+#undef WANT_DECL_COPY_LOGIC
+
+static bool isCopyableAttr(const Attr *A) {
+  // copy propagates GNU declaration attributes, not implicit attributes or
+  // attributes from other vendors. In particular, an implicit BuiltinAttr must
+  // not turn the destination into a different builtin function.
+  if (A->isImplicit() || (!A->isGNUAttribute() && !A->isGNUScope()))
+    return false;
+
+  switch (A->getKind()) {
+  case attr::Alias:
+  case attr::AlwaysInline:
+  case attr::Copy:
+  case attr::Deprecated:
+  case attr::DLLExport:
+  case attr::DLLImport:
+  case attr::GNUInline:
+  case attr::IFunc:
+  case attr::NoInline:
+  case attr::SelectAny:
+  case attr::TargetClones:
+  case attr::Visibility:
+  case attr::Weak:
+  case attr::WeakRef:
+    return false;
+  default:
+    return ParsedAttrInfo::get(*A).IsKnownToGCC;
+  }
+}
+
+void Sema::AddCopyAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
+                       bool TypeAttrsOnly) {
+  if (E->isTypeDependent() || E->isValueDependent()) {
+    auto *A = ::new (Context) CopyAttr(Context, CI, E);
+    A->setImplicit(TypeAttrsOnly);
+    D->addAttr(A);
+    return;
+  }
+
+  Expr *SourceExpr = E->IgnoreParenCasts();
+  if (const auto *UO = dyn_cast<UnaryOperator>(SourceExpr);
+      UO && (UO->getOpcode() == UO_AddrOf || UO->getOpcode() == UO_Deref))
+    SourceExpr = UO->getSubExpr()->IgnoreParenCasts();
+
+  const Decl *Source = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(SourceExpr))
+    Source = DRE->getDecl();
+  else if (const auto *ME = dyn_cast<MemberExpr>(SourceExpr))
+    Source = ME->getMemberDecl();
+
+  // Attributes are processed before a new function or variable declaration is
+  // linked into its redeclaration chain.
+  const auto *SourceVD = dyn_cast_or_null<ValueDecl>(Source);
+  const auto *DestVD = dyn_cast<ValueDecl>(D);
+  bool IsRedeclaration =
+      SourceVD && DestVD && SourceVD->getDeclName() == DestVD->getDeclName() &&
+      SourceVD->getDeclContext()->Equals(DestVD->getDeclContext()) &&
+      Context.hasSameType(SourceVD->getType(), DestVD->getType());
+  // Nested block scopes share a DeclContext, but can declare distinct local
+  // variables with the same name and type.
+  if (const auto *VD = dyn_cast_or_null<VarDecl>(Source))
+    IsRedeclaration &= !VD->isLocalVarDecl();
+  if (Source && (Source->getCanonicalDecl() == D->getCanonicalDecl() ||
+                 IsRedeclaration)) {
+    Diag(CI.getLoc(), diag::warn_attribute_copy_self);
+    return;
+  }
+
+  if (Source && !isa<FunctionDecl, VarDecl, FieldDecl>(Source)) {
+    Diag(E->getExprLoc(), diag::err_attribute_copy_invalid_argument);
+    return;
+  }
+
+  if (isa<StringLiteral>(SourceExpr->IgnoreParenCasts()) ||
+      (!Source && E->getType()->isArithmeticType() &&
+       E->isEvaluatable(Context)) ||
+      E->getType() == Context.OverloadTy) {
+    Diag(E->getExprLoc(), diag::err_attribute_copy_invalid_argument);
+    return;
+  }
+
+  QualType Ty = E->getType();
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(Source))
+    Ty = FD->getType();
+  if (Source && isa<FunctionDecl>(D) != isa<FunctionDecl>(Source) &&
+      isa<FunctionDecl, VarDecl, FieldDecl>(D)) {
+    Diag(CI.getLoc(), diag::warn_attribute_copy_kind);
+    return;
+  }
+
+  SmallVector<const Decl *, 4> Sources;
+  SmallVector<const Attr *, 8> SourceAttrs;
+  if (Source)
+    Sources.push_back(Source->getMostRecentDecl());
+
+  // Keep typedef attributes as well as attributes on the underlying tag. Do
+  // not canonicalize Ty before walking it: that would discard typedefs.
+  bool SawPointer = false;
+  bool HasCallingConventionAttr = false;
+  while (true) {
+    if (const auto *TT = dyn_cast<TypedefType>(Ty.getTypePtr()))
+      Sources.push_back(TT->getDecl());
+    if (const auto *AT = dyn_cast<AttributedType>(Ty.getTypePtr())) {
+      if (const Attr *A = AT->getAttr()) {
+        SourceAttrs.push_back(A);
+        HasCallingConventionAttr |= AT->isCallingConv();
+      }
+    }
+    QualType Next = Ty.getSingleStepDesugaredType(Context);
+    if (Next != Ty) {
+      Ty = Next;
+    } else if (!SawPointer && Ty->isPointerType()) {
+      Ty = Ty->getPointeeType();
+      SawPointer = true;
+    } else {
+      break;
+    }
+  }
+  // Naming a pointer to a class template specialization need not instantiate
+  // it, but its attributes may depend on its template arguments.
+  if (Ty->getAsCXXRecordDecl())
+    isCompleteType(CI.getLoc(), Ty);
+  if (const auto *TT = Ty->getAs<TagType>())
+    Sources.push_back(TT->getDecl()->getMostRecentDecl());
+
+  AttributeFactory Factory;
+  ParsedAttributes Copied(Factory);
+  // Some function attributes are represented only in the function type's
+  // extended information, without an Attr or AttributedType node.
+  if (const auto *FT = Ty->getAs<FunctionType>()) {
+    auto Add = [&](StringRef Name, MutableArrayRef<ArgsUnion> Args = {}) {
+      Copied.addNew(&Context.Idents.get(Name), CI.getRange(), {}, Args.data(),
+                    Args.size(), AttributeCommonInfo::Form::GNU());
+    };
+    FunctionType::ExtInfo EI = FT->getExtInfo();
+    // Substituting a template type argument can discard the AttributedType
+    // sugar while retaining the calling convention in the canonical type.
+    if (!HasCallingConventionAttr) {
+      switch (EI.getCC()) {
+      case CC_X86StdCall:
+      case CC_X86FastCall:
+      case CC_X86ThisCall:
+      case CC_Win64:
+      case CC_X86_64SysV:
+      case CC_X86RegCall:
+        Add(FunctionType::getNameForCallConv(EI.getCC()));
+        break;
+      case CC_AAPCS:
+      case CC_AAPCS_VFP: {
+        ArgsUnion Arg = createCopyAttrArgument(
+            Context, CI.getLoc(), FunctionType::getNameForCallConv(EI.getCC()));
+        Add("pcs", Arg);
+        break;
+      }
+      default:
+        break;
+      }
+    }
+    if (EI.getNoReturn())
+      Add("noreturn");
+    if (EI.getNoCallerSavedRegs())
+      Add("no_caller_saved_registers");
+    if (EI.getNoCfCheck())
+      Add("nocf_check");
+    if (EI.getHasRegParm()) {
+      ArgsUnion Arg =
+          createCopyAttrArgument(Context, CI.getLoc(), EI.getRegParm());
+      Add("regparm", Arg);
+    }
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FT))
+      if (FPT->getExceptionSpecType() == EST_NoThrow)
+        Add("nothrow");
+  }
+  for (const Decl *From : Sources) {
+    // A type expression can refer to the very type being declared.
+    if (From->getCanonicalDecl() == D->getCanonicalDecl()) {
+      Diag(CI.getLoc(), diag::warn_attribute_copy_self);
+      continue;
+    }
+    SourceAttrs.append(From->attr_begin(), From->attr_end());
+  }
+  for (const Attr *A : SourceAttrs) {
+    if (!isCopyableAttr(A))
+      continue;
+
+    ArgsVector Args;
+    if (const auto *AA = dyn_cast<AlignedAttr>(A)) {
+      if (AA->isAlignmentExpr() && AA->getAlignmentExpr())
+        Args.push_back(AA->getAlignmentExpr());
+    } else if (!getAttributeCopyArgs(Context, A, CI.getLoc(), Args)) {
+      continue;
+    }
+
+    Copied.addNew(&Context.Idents.get(A->getSpelling()), CI.getRange(),
+                  AttributeScopeInfo(A->getScopeName(), CI.getLoc()),
+                  Args.data(), Args.size(), A->getForm());
+  }
+  ParsedAttributesView DeclAttrs;
+  bool CopiedType = false;
+  for (ParsedAttr &AL : Copied) {
+    if (ProcessCopiedTypeAttribute(D, AL))
+      CopiedType = true;
+    else if (!TypeAttrsOnly)
+      DeclAttrs.addAtEnd(&AL);
+  }
+  // Template instantiation rebuilds types from their written TypeSourceInfo,
+  // which does not contain attributes introduced by copy. An implicit copy
+  // attribute replays only the type attributes: declaration attributes are
+  // already expanded and will be instantiated normally.
+  if (CopiedType && D->isTemplated()) {
+    auto *A = ::new (Context) CopyAttr(Context, CI, E);
+    A->setImplicit(true);
+    D->addAttr(A);
+  }
+  // The enclosing attribute list may still contain attributes needed by a
+  // group check (for example, alias after weakref and copy).
+  for (const ParsedAttr &AL : DeclAttrs)
+    ProcessDeclAttribute(*this, D, AL, ProcessDeclAttributeOptions());
 }
 
 void Sema::ProcessDeclAttributeList(

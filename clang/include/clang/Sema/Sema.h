@@ -5050,6 +5050,10 @@ public:
   /// treat a reference type as valid.
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
+  void AddCopyAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
+                   bool TypeAttrsOnly = false);
+  bool ProcessCopiedTypeAttribute(Decl *D, ParsedAttr &AL);
+
   /// AddAssumeAlignedAttr - Adds an assume_aligned attribute to a particular
   /// declaration.
   void AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,

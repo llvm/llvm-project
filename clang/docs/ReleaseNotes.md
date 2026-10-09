@@ -321,6 +321,10 @@ features cannot lower the translation-unit ABI level;
 
 ### Attribute Changes in Clang
 
+- Clang now supports `__attribute__((copy(expression)))` and
+  `[[gnu::copy(expression)]]` for copying GNU declaration attributes from
+  another function, variable, or type.
+
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`

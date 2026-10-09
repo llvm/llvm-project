@@ -8477,6 +8477,54 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   return true;
 }
 
+bool Sema::ProcessCopiedTypeAttribute(Decl *D, ParsedAttr &AL) {
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_NoThrow:
+    if (!getLangOpts().CPlusPlus)
+      return false;
+    [[fallthrough]];
+  FUNCTION_TYPE_ATTRS_CASELIST:
+    break;
+  default:
+    return false;
+  }
+
+  QualType T;
+  if (auto *VD = dyn_cast<ValueDecl>(D))
+    T = VD->getType();
+  else if (auto *TD = dyn_cast<TypedefNameDecl>(D))
+    T = TD->getUnderlyingType();
+  else
+    return false;
+
+  if (checkCommonAttributeFeatures(D, AL))
+    return true;
+
+  // Reuse the function type attribute checks, including calling convention
+  // conflicts and restrictions on variadic functions. No declarator chunks
+  // need to be processed: the destination's type has already been built.
+  AttributeFactory Factory;
+  DeclSpec DS(Factory);
+  Declarator Declarator(DS, ParsedAttributesView::none(),
+                        DeclaratorContext::TypeName);
+  TypeProcessingState State(*this, Declarator);
+  CUDAFunctionTarget CFT = CUDAFunctionTarget::Host;
+  if (getLangOpts().CUDA)
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      CFT = CUDA().IdentifyTarget(FD);
+  if (!handleFunctionTypeAttr(State, AL, T, CFT))
+    diagnoseBadTypeAttribute(*this, AL, T);
+  else if (!AL.isInvalid()) {
+    if (auto *VD = dyn_cast<ValueDecl>(D))
+      VD->setType(T);
+    else {
+      auto *TD = cast<TypedefNameDecl>(D);
+      TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), T);
+    }
+  }
+  return true;
+}
+
 bool Sema::hasExplicitCallingConv(QualType T) {
   const AttributedType *AT;
 

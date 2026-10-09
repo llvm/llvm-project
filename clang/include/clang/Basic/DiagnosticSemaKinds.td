@@ -4056,6 +4056,15 @@ def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
+def err_attribute_copy_invalid_argument : Error<
+  "'copy' attribute requires an expression referring to a function, variable, "
+  "or type">;
+def warn_attribute_copy_kind : Warning<
+  "'copy' attribute ignored on a declaration of a different kind than its "
+  "argument">, InGroup<IgnoredAttributes>;
+def warn_attribute_copy_self : Warning<
+  "'copy' attribute ignored on a declaration referring to itself">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_non_character_array : Warning<
   "%0%select{ attribute|}1 only applies to fields or variables of character "
   "array type; type is %2">, InGroup<IgnoredAttributes>;
