@@ -39,22 +39,21 @@ public:
                               LIBC_NAMESPACE::exp2bf16(neg_zero));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        inf, LIBC_NAMESPACE::exp2bf16(max_normal), FE_OVERFLOW);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2bf16(max_normal),
+                                FE_OVERFLOW);
     EXPECT_MATH_ERRNO(ERANGE);
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        inf, LIBC_NAMESPACE::exp2bf16(bfloat16(128.0f)), FE_OVERFLOW);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2bf16(bfloat16(128.0f)),
+                                FE_OVERFLOW);
     EXPECT_MATH_ERRNO(ERANGE);
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        zero, LIBC_NAMESPACE::exp2bf16(neg_max_normal),
-        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::exp2bf16(neg_max_normal),
+                                FE_UNDERFLOW | FE_INEXACT);
     EXPECT_MATH_ERRNO(ERANGE);
 
-    EXPECT_FP_EQ_WITH_EXCEPTION(
-        zero, LIBC_NAMESPACE::exp2bf16(bfloat16(-134.0f)),
-        FE_UNDERFLOW | FE_INEXACT);
+    EXPECT_FP_EQ_WITH_EXCEPTION(zero,
+                                LIBC_NAMESPACE::exp2bf16(bfloat16(-134.0f)),
+                                FE_UNDERFLOW | FE_INEXACT);
     EXPECT_MATH_ERRNO(ERANGE);
   }
 };
