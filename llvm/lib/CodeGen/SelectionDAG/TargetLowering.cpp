@@ -11448,6 +11448,7 @@ SDValue TargetLowering::expandGetActiveLaneMask(SDNode *N,
                                 DL, OpVT);
   End = DAG.getNode(ISD::USUBSAT, DL, OpVT, End, Start);
   End = DAG.getNode(ISD::UMIN, DL, OpVT, End, Max);
+  End = DAG.getZExtOrTrunc(End, DL, StepVector.getValueType().getScalarType());
 
   // cmp <0, 1, 2, 3...>, End
   SDValue EndV = DAG.getSplat(StepVector.getValueType(), DL, End);
