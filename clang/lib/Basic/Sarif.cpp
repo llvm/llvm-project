@@ -411,7 +411,7 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
   if (!Result.Properties.empty()) {
     json::Object Properties;
     for (const auto &[Key, Value] : Result.Properties)
-      Properties[Key] = Value;
+      Properties[Key.str()] = Value;
     Ret["properties"] = std::move(Properties);
   }
 

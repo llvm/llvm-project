@@ -1,5 +1,5 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' -sarif-export=%t.sarif -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
+// RUN: not clang-tidy %t-input.cpp -checks='-*,google-explicit-constructor,cppcoreguidelines-explicit-constructor,clang-diagnostic-missing-prototypes,clang-diagnostic-zero-length-array' --warnings-as-errors='clang-diagnostic-missing-prototypes,google-explicit-constructor' -sarif-export=%t.sarif -- -Wmissing-prototypes -Wzero-length-array > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
 #define X(n) void n ## n() {}
@@ -22,7 +22,7 @@ struct Foo {
 //CHECK-MESSAGES: -input.cpp:4:7: warning: zero size arrays are an extension [clang-diagnostic-zero-length-array]
 //CHECK-MESSAGES: -input.cpp:6:11: error: unknown type name 'x' [clang-diagnostic-error]
 //CHECK-MESSAGES: -input.cpp:8:3: error: a type specifier is required for all declarations [clang-diagnostic-error]
-//CHECK-MESSAGES: -input.cpp:9:3: error: single-argument constructors must be marked explicit to avoid unintentional implicit conversions [google-explicit-constructor,-warnings-as-errors]
+//CHECK-MESSAGES: -input.cpp:9:3: error: single-argument constructors must be marked explicit to avoid unintentional implicit conversions [cppcoreguidelines-explicit-constructor,google-explicit-constructor,-warnings-as-errors]
 
 //CHECK-SARIF: {
 //CHECK-SARIF-NEXT:   "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
@@ -242,7 +242,10 @@ struct Foo {
 //CHECK-SARIF-NEXT:           "message": {
 //CHECK-SARIF-NEXT:             "text": "single-argument constructors must be marked explicit to avoid unintentional implicit conversions"
 //CHECK-SARIF-NEXT:           },
-//CHECK-SARIF-NEXT:           "ruleId": "google-explicit-constructor",
+//CHECK-SARIF-NEXT:           "properties": {
+//CHECK-SARIF-NEXT:             "enabledAliases": "google-explicit-constructor"
+//CHECK-SARIF-NEXT:           },
+//CHECK-SARIF-NEXT:           "ruleId": "cppcoreguidelines-explicit-constructor",
 //CHECK-SARIF-NEXT:           "ruleIndex": 3
 //CHECK-SARIF-NEXT:         }
 //CHECK-SARIF-NEXT:       ],
@@ -298,8 +301,8 @@ struct Foo {
 //CHECK-SARIF-NEXT:               "fullDescription": {
 //CHECK-SARIF-NEXT:                 "text": ""
 //CHECK-SARIF-NEXT:               },
-//CHECK-SARIF-NEXT:               "id": "google-explicit-constructor",
-//CHECK-SARIF-NEXT:               "name": "google-explicit-constructor"
+//CHECK-SARIF-NEXT:               "id": "cppcoreguidelines-explicit-constructor",
+//CHECK-SARIF-NEXT:               "name": "cppcoreguidelines-explicit-constructor"
 //CHECK-SARIF-NEXT:             }
 //CHECK-SARIF-NEXT:           ],
 //CHECK-SARIF-NEXT:           "version": "{{.*}}"
