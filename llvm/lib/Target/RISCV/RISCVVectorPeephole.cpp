@@ -68,7 +68,8 @@ private:
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
-  void eraseInstrAndUndefDebugUses(MachineInstr &MI) const;
+  static void eraseInstrAndUndefDebugUses(MachineInstr &MI,
+                                          MachineRegisterInfo *MRI);
 };
 
 class RISCVVectorPeepholeLegacy : public MachineFunctionPass {
@@ -330,7 +331,7 @@ Register RISCVVectorPeepholeImpl::lookThruCopies(
 /// Erase an instruction whose result does not survive, undefining its debug
 /// uses before removing the definition.
 void RISCVVectorPeepholeImpl::eraseInstrAndUndefDebugUses(
-    MachineInstr &MI) const {
+    MachineInstr &MI, MachineRegisterInfo *MRI) {
   MRI->markUsesInDebugValueAsUndef(MI.getOperand(0).getReg());
   MI.eraseFromParent();
 }
@@ -817,7 +818,7 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   // Cleanup all the COPYs on True's value. We have to manually do this because
   // sometimes sinking True causes these COPY to be invalid (use before define).
   for (MachineInstr *TrueCopy : TrueCopies)
-    eraseInstrAndUndefDebugUses(*TrueCopy);
+    eraseInstrAndUndefDebugUses(*TrueCopy, MRI);
 
   return true;
 }
@@ -963,9 +964,9 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     MRI->clearKillFlags(MaskReg);
     MI.eraseFromParent();
     // The comparison is about to be erased.
-    eraseInstrAndUndefDebugUses(Cmp);
+    eraseInstrAndUndefDebugUses(Cmp, MRI);
     for (MachineInstr *CmpCopy : CmpCopies)
-      eraseInstrAndUndefDebugUses(*CmpCopy);
+      eraseInstrAndUndefDebugUses(*CmpCopy, MRI);
 
     return true;
   }
