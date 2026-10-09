@@ -36,6 +36,7 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/uninitialized_multidimensional_algorithms.h>
 #include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
 #include <__type_traits/add_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
@@ -738,17 +739,28 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
 
   // Returns the number of bytes required to store a control block followed by the given number
   // of elements of _Tp, with the whole storage being aligned to a multiple of _Tp's alignment.
+  //
+  // Throws std::bad_array_new_length if that number of bytes is not representable as a size_t.
   _LIBCPP_HIDE_FROM_ABI static constexpr size_t __bytes_for(size_t __elements) {
+    constexpr size_t __align = alignof(__unbounded_array_control_block);
+
     // When there's 0 elements, the control block alone is enough since it holds one element.
     // Otherwise, we allocate one fewer element than requested because the control block already
-    // holds one. Also, we use the bitwise formula below to ensure that we allocate enough bytes
-    // for the whole allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
+    // holds one.
+    size_t __bytes = sizeof(__unbounded_array_control_block);
+    if (__elements != 0) {
+      if (__builtin_mul_overflow(__elements - 1, sizeof(_Tp), &__bytes) ||
+          __builtin_add_overflow(__bytes, sizeof(__unbounded_array_control_block), &__bytes))
+        std::__throw_bad_array_new_length();
+    }
+
+    // We use the bitwise formula below to ensure that we allocate enough bytes for the whole
+    // allocation to be a multiple of _Tp's alignment. That formula is taken from [1].
     //
     // [1]: https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding
-    size_t __bytes           = __elements == 0 ? sizeof(__unbounded_array_control_block)
-                                               : (__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
-    constexpr size_t __align = alignof(__unbounded_array_control_block);
-    return (__bytes + __align - 1) & ~(__align - 1);
+    if (__builtin_add_overflow(__bytes, __align - 1, &__bytes))
+      std::__throw_bad_array_new_length();
+    return __bytes & ~(__align - 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL

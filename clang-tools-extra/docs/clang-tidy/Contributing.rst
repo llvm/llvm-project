@@ -442,7 +442,7 @@ Documenting your check
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The ``add_new_check.py`` script creates entries in the
-`release notes <https://clang.llvm.org/extra/ReleaseNotes.html>`_, the list of
+:doc:`release notes </ReleaseNotes>`, the list of
 
 checks and a new file for the check documentation itself. It is recommended
 that you have a concise summary of what your check does in a single sentence

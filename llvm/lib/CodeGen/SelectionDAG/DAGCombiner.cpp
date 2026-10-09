@@ -31924,14 +31924,14 @@ SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getRecipEstimateDivEnabled(VT, MF);
+  const Function &F = DAG.getMachineFunction().getFunction();
+  int Enabled = TLI.getRecipEstimateDivEnabled(VT, F);
   if (Enabled == TLI.ReciprocalEstimate::Disabled)
     return SDValue();
 
   // Estimates may be explicitly enabled for this type with a custom number of
   // refinement steps.
-  int Iterations = TLI.getDivRefinementSteps(VT, MF);
+  int Iterations = TLI.getDivRefinementSteps(VT, F);
   if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
     AddToWorklist(Est.getNode());
 
@@ -32062,14 +32062,14 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal,
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getRecipEstimateSqrtEnabled(VT, MF);
+  const Function &F = DAG.getMachineFunction().getFunction();
+  int Enabled = TLI.getRecipEstimateSqrtEnabled(VT, F);
   if (Enabled == TLI.ReciprocalEstimate::Disabled)
     return SDValue();
 
   // Estimates may be explicitly enabled for this type with a custom number of
   // refinement steps.
-  int Iterations = TLI.getSqrtRefinementSteps(VT, MF);
+  int Iterations = TLI.getSqrtRefinementSteps(VT, F);
 
   bool UseOneConstNR = false;
   if (SDValue Est =

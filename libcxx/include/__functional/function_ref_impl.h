@@ -106,7 +106,10 @@ public:
     using _Dn = remove_cv_t<_Tp>;
     if constexpr (__statically_callable<_Dn, __arg_t<_ArgTypes>...>) {
       __call_ = [](__storage_t, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
-        return _Dn::operator()(std::forward<__arg_t<_ArgTypes>>(__args)...);
+        if constexpr (is_void_v<_Rp>)
+          _Dn::operator()(std::forward<__arg_t<_ArgTypes>>(__args)...);
+        else
+          return _Dn::operator()(std::forward<__arg_t<_ArgTypes>>(__args)...);
       };
     } else {
       __storage_ = __storage_t(std::addressof(__obj)),

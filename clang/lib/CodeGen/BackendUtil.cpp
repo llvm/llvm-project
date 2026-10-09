@@ -419,7 +419,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
   }
 
-  Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
+  if (CodeGenOpts.SplitMachineFunctions)
+    Options.FunctionSplitting = llvm::FunctionSplittingMode::All;
   Options.EnableStaticDataPartitioning =
       CodeGenOpts.PartitionStaticDataSections;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
@@ -444,7 +445,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
   Options.ObjectFilenameForDebug =
       CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
-  Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
   Options.VecLib =
@@ -1234,9 +1234,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
-        !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
-        CI.getVirtualFileSystemPtr());
+        *TM, *TheModule, *OS, DwoOS, CGFT, !CodeGenOpts.VerifyModule,
+        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });

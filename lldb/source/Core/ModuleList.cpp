@@ -35,7 +35,6 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -85,11 +84,6 @@ ModuleListProperties::ModuleListProperties() {
                                            [this] { UpdateSymlinkMappings(); });
 
   llvm::SmallString<128> path;
-  if (clang::driver::Driver::getDefaultModuleCachePath(path)) {
-    lldbassert(SetClangModulesCachePath(FileSpec(path)));
-  }
-
-  path.clear();
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
     llvm::sys::path::append(path, "IndexCache");

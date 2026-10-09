@@ -172,7 +172,7 @@ define half @fadd_f16_global_ftz_no_md(ptr addrspace(1) %addr, half %val) #1 {
 ; STRICT:       {
 ; STRICT-NEXT:    .reg .pred %p<2>;
 ; STRICT-NEXT:    .reg .b16 %rs<4>;
-; STRICT-NEXT:    .reg .b32 %r<15>;
+; STRICT-NEXT:    .reg .b32 %r<14>;
 ; STRICT-NEXT:    .reg .b64 %rd<3>;
 ; STRICT-EMPTY:
 ; STRICT-NEXT:  // %bb.0:
@@ -182,26 +182,25 @@ define half @fadd_f16_global_ftz_no_md(ptr addrspace(1) %addr, half %val) #1 {
 ; STRICT-NEXT:    cvt.u32.u64 %r4, %rd2;
 ; STRICT-NEXT:    and.b32 %r5, %r4, 3;
 ; STRICT-NEXT:    shl.b32 %r1, %r5, 3;
-; STRICT-NEXT:    mov.b32 %r6, 65535;
-; STRICT-NEXT:    shl.b32 %r7, %r6, %r1;
-; STRICT-NEXT:    not.b32 %r2, %r7;
-; STRICT-NEXT:    ld.relaxed.sys.global.b32 %r14, [%rd1];
+; STRICT-NEXT:    shl.b32 %r6, 65535, %r1;
+; STRICT-NEXT:    not.b32 %r2, %r6;
+; STRICT-NEXT:    ld.relaxed.sys.global.b32 %r13, [%rd1];
 ; STRICT-NEXT:  $L__BB6_1: // %atomicrmw.start
 ; STRICT-NEXT:    // =>This Inner Loop Header: Depth=1
-; STRICT-NEXT:    shr.u32 %r8, %r14, %r1;
-; STRICT-NEXT:    cvt.u16.u32 %rs2, %r8;
+; STRICT-NEXT:    shr.u32 %r7, %r13, %r1;
+; STRICT-NEXT:    cvt.u16.u32 %rs2, %r7;
 ; STRICT-NEXT:    add.rn.ftz.f16 %rs3, %rs2, %rs1;
-; STRICT-NEXT:    cvt.u32.u16 %r9, %rs3;
-; STRICT-NEXT:    shl.b32 %r10, %r9, %r1;
-; STRICT-NEXT:    and.b32 %r11, %r14, %r2;
-; STRICT-NEXT:    or.b32 %r12, %r11, %r10;
-; STRICT-NEXT:    atom.relaxed.sys.global.cas.b32 %r3, [%rd1], %r14, %r12;
-; STRICT-NEXT:    setp.ne.b32 %p1, %r3, %r14;
-; STRICT-NEXT:    mov.b32 %r14, %r3;
+; STRICT-NEXT:    cvt.u32.u16 %r8, %rs3;
+; STRICT-NEXT:    shl.b32 %r9, %r8, %r1;
+; STRICT-NEXT:    and.b32 %r10, %r13, %r2;
+; STRICT-NEXT:    or.b32 %r11, %r10, %r9;
+; STRICT-NEXT:    atom.relaxed.sys.global.cas.b32 %r3, [%rd1], %r13, %r11;
+; STRICT-NEXT:    setp.ne.b32 %p1, %r3, %r13;
+; STRICT-NEXT:    mov.b32 %r13, %r3;
 ; STRICT-NEXT:    @%p1 bra $L__BB6_1;
 ; STRICT-NEXT:  // %bb.2: // %atomicrmw.end
-; STRICT-NEXT:    shr.u32 %r13, %r3, %r1;
-; STRICT-NEXT:    st.param::func.b16 [func_retval0], %r13;
+; STRICT-NEXT:    shr.u32 %r12, %r3, %r1;
+; STRICT-NEXT:    st.param::func.b16 [func_retval0], %r12;
 ; STRICT-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: fadd_f16_global_ftz_no_md(

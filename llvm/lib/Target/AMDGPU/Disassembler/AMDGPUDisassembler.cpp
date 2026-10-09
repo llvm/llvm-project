@@ -2992,15 +2992,16 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
 
-    // Reserved unless both wave sizes are supported.
-    if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
-        STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
-      PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
-                      KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
-    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
+    // Reserved for GFX9
+    if (isGFX9() &&
+        (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
       return createReservedKDBitsError(
           KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
+          amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
+    }
+    if (isGFX10Plus()) {
+      PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
+                      KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
     if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
@@ -3057,8 +3058,7 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptor(
   // accurately produce .amdhsa_next_free_vgpr, and they appear in the wrong
   // order. Workaround this by first looking up .amdhsa_wavefront_size32 here
   // when required.
-  if (STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
-      STI.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
+  if (isGFX10Plus()) {
     uint16_t KernelCodeProperties =
         support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
                                 llvm::endianness::little);

@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT:   [[LHIMux:%[0-9]+]]:grx32bit = LHIMux 1
   ; CHECK-NEXT:   [[LHIMux1:%[0-9]+]]:grx32bit = LHIMux 0
   ; CHECK-NEXT:   CHIMux [[LHIMux1]], 0, implicit-def $cc
-  ; CHECK-NEXT:   BRC 14, 6, %bb.2, implicit killed $cc
+  ; CHECK-NEXT:   BRC 14, 6, %bb.2, implicit $cc
   ; CHECK-NEXT:   J %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

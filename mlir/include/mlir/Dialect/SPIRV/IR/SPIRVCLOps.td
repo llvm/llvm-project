@@ -85,7 +85,7 @@ class SPIRV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for OpenCL binary ops.
 class SPIRV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
+  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoMemoryEffect], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$x,
@@ -583,6 +583,30 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLFClampOp : SPIRV_CLTernaryArithmeticOp<"fclamp", 95, SPIRV_Float> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval). The resulting value is poison if
+    minval > maxval.
+
+    Result Type, x, minval and maxval must be floating-point or
+    vector(2,3,4,8,16) of floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.fclamp %x, %min, %max : f32
+    %1 = spirv.CL.fclamp %x, %min, %max : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLFdimOp : SPIRV_CLBinaryArithmeticOp<"fdim", 24, SPIRV_Float> {
   let summary = "Compute the positive difference between x and y.";
 
@@ -674,7 +698,7 @@ def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
+def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = [{
     Compute the correctly rounded floating-point representation of the sum
     of c with the infinitely precise product of a and b. Rounding of
@@ -826,7 +850,7 @@ def SPIRV_CLLog1pOp : SPIRV_CLUnaryArithmeticOp<"log1p", 40, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float> {
+def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Returns the linear blend of x & y implemented as: x + (y - x) * a";
 
   let description = [{
@@ -1035,6 +1059,56 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
     ```mlir
     %2 = spirv.CL.s_abs %0 : i32
     %3 = spirv.CL.s_abs %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSClampOp : SPIRV_CLTernaryArithmeticOp<"s_clamp", 149, SPIRV_Integer> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval), where x, minval and maxval are
+    interpreted as signed integers. The resulting value is poison if
+    minval > maxval.
+
+    Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
+    of integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.s_clamp %x, %min, %max : i32
+    %1 = spirv.CL.s_clamp %x, %min, %max : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLUClampOp : SPIRV_CLTernaryArithmeticOp<"u_clamp", 150, SPIRV_Integer> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval), where x, minval and maxval are
+    interpreted as unsigned integers. The resulting value is poison if
+    minval > maxval.
+
+    Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
+    of integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.u_clamp %x, %min, %max : i32
+    %1 = spirv.CL.u_clamp %x, %min, %max : vector<3xi16>
     ```
   }];
 }

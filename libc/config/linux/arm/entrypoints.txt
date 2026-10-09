@@ -213,6 +213,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.tmpfile
 
+    # sys/inotify.h entrypoints
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_init1
+    libc.src.sys.inotify.inotify_rm_watch
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 

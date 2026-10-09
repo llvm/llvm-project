@@ -943,7 +943,7 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
 
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-    const VPDominatorTree &VPDT,
+    OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -1003,8 +1003,12 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
+  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT)) {
+    reportVectorizationFailure(
+        "Failed to sink or hoist user of first-order recurrence",
+        "CannotSinkHoistFORUser", ORE, &OrigLoop);
     return false;
+  }
 
   // Skip renaming resume phi recipes, if any header phi has been removed.
   if (range_size(HeaderVPBB->phis()) !=

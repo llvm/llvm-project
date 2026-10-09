@@ -62,7 +62,7 @@ body:             |
   ; COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; COALESCE-NEXT:   S_BITCMP0_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
-  ; COALESCE-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
+  ; COALESCE-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT: bb.1:
   ; COALESCE-NEXT:   successors: %bb.3(0x80000000)
@@ -100,7 +100,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
   ; GFX908-COALESCE-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; GFX908-COALESCE-NEXT:   S_BITCMP0_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
-  ; GFX908-COALESCE-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit killed $scc
+  ; GFX908-COALESCE-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; GFX908-COALESCE-NEXT: {{  $}}
   ; GFX908-COALESCE-NEXT: bb.1:
   ; GFX908-COALESCE-NEXT:   successors: %bb.3(0x80000000)

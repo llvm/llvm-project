@@ -18,8 +18,15 @@
 
 #include <cstdint>
 
+namespace llvm {
+class Triple;
+} // namespace llvm
+
 namespace clang {
+class Decl;
 class FunctionDecl;
+class QualType;
+class TargetInfo;
 } // namespace clang
 
 namespace clang::CodeGenUtils {
@@ -52,6 +59,27 @@ ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
 /// the logic in Sema.
 /// TODO: Make this return false for SISD builtins.
 bool hasExtraNeonArgument(unsigned BuiltinID);
+
+/// Helper method to check if the underlying ABI is AAPCS
+bool isAAPCS(const TargetInfo &TargetInfo);
+
+//===----------------------------------------------------------------------===//
+// AMDGPU
+//===----------------------------------------------------------------------===//
+
+/// Returns whether \p D must be given protected visibility on AMDGPU.
+/// \p HasHiddenVisibility is whether the emitted global currently has hidden
+/// visibility.
+bool requiresAMDGPUProtectedVisibility(const Decl *D, bool HasHiddenVisibility);
+
+//===----------------------------------------------------------------------===//
+// SPIR-V
+//===----------------------------------------------------------------------===//
+
+/// Return true if a SPIR(-V) null pointer of type \p QT must be materialized
+/// as an addrspacecast from a generic null pointer, as the null bit pattern in
+/// non-generic address spaces is unspecified.
+bool spirNullPointerNeedsGenericCast(QualType QT, const llvm::Triple &Triple);
 
 } // namespace clang::CodeGenUtils
 

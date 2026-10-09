@@ -337,39 +337,70 @@ define <2 x half> @test_fdiv(<2 x half> %a, <2 x half> %b) #0 {
 ; -- convert back to f16.
 ; -- merge into f16x2 and return it.
 define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
-; CHECK-LABEL: test_frem(
-; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<3>;
-; CHECK-NEXT:    .reg .b16 %rs<7>;
-; CHECK-NEXT:    .reg .b32 %r<18>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r2, [test_frem_param_1];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_frem_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    cvt.f32.f16 %r3, %rs2;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    cvt.f32.f16 %r4, %rs4;
-; CHECK-NEXT:    div.rn.f32 %r5, %r4, %r3;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
-; CHECK-NEXT:    neg.f32 %r7, %r6;
-; CHECK-NEXT:    fma.rn.f32 %r8, %r7, %r3, %r4;
-; CHECK-NEXT:    testp.infinite.f32 %p1, %r3;
-; CHECK-NEXT:    selp.f32 %r9, %r4, %r8, %p1;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs5, %r9;
-; CHECK-NEXT:    cvt.f32.f16 %r10, %rs1;
-; CHECK-NEXT:    cvt.f32.f16 %r11, %rs3;
-; CHECK-NEXT:    div.rn.f32 %r12, %r11, %r10;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r13, %r12;
-; CHECK-NEXT:    neg.f32 %r14, %r13;
-; CHECK-NEXT:    fma.rn.f32 %r15, %r14, %r10, %r11;
-; CHECK-NEXT:    testp.infinite.f32 %p2, %r10;
-; CHECK-NEXT:    selp.f32 %r16, %r11, %r15, %p2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs6, %r16;
-; CHECK-NEXT:    mov.b32 %r17, {%rs6, %rs5};
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
-; CHECK-NEXT:    ret;
-  %r = frem <2 x half> %a, %b
+; CHECK-F16-LABEL: test_frem(
+; CHECK-F16:       {
+; CHECK-F16-NEXT:    .reg .b16 %rs<13>;
+; CHECK-F16-NEXT:    .reg .b32 %r<9>;
+; CHECK-F16-EMPTY:
+; CHECK-F16-NEXT:  // %bb.0:
+; CHECK-F16-NEXT:    ld.param.b32 %r2, [test_frem_param_1];
+; CHECK-F16-NEXT:    ld.param.b32 %r1, [test_frem_param_0];
+; CHECK-F16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-F16-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
+; CHECK-F16-NEXT:    cvt.f32.f16 %r3, %rs3;
+; CHECK-F16-NEXT:    cvt.f32.f16 %r4, %rs1;
+; CHECK-F16-NEXT:    div.rn.f32 %r5, %r4, %r3;
+; CHECK-F16-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; CHECK-F16-NEXT:    cvt.rzi.f16.f16 %rs6, %rs5;
+; CHECK-F16-NEXT:    xor.b16 %rs7, %rs6, -32768;
+; CHECK-F16-NEXT:    fma.rn.f16 %rs8, %rs7, %rs3, %rs1;
+; CHECK-F16-NEXT:    cvt.f32.f16 %r6, %rs4;
+; CHECK-F16-NEXT:    cvt.f32.f16 %r7, %rs2;
+; CHECK-F16-NEXT:    div.rn.f32 %r8, %r7, %r6;
+; CHECK-F16-NEXT:    cvt.rn.f16.f32 %rs9, %r8;
+; CHECK-F16-NEXT:    cvt.rzi.f16.f16 %rs10, %rs9;
+; CHECK-F16-NEXT:    xor.b16 %rs11, %rs10, -32768;
+; CHECK-F16-NEXT:    fma.rn.f16 %rs12, %rs11, %rs4, %rs2;
+; CHECK-F16-NEXT:    st.param.v2.b16 [func_retval0], {%rs8, %rs12};
+; CHECK-F16-NEXT:    ret;
+;
+; CHECK-NOF16-LABEL: test_frem(
+; CHECK-NOF16:       {
+; CHECK-NOF16-NEXT:    .reg .b16 %rs<13>;
+; CHECK-NOF16-NEXT:    .reg .b32 %r<10>;
+; CHECK-NOF16-NEXT:    .reg .b64 %rd<9>;
+; CHECK-NOF16-EMPTY:
+; CHECK-NOF16-NEXT:  // %bb.0:
+; CHECK-NOF16-NEXT:    ld.param.b32 %r2, [test_frem_param_1];
+; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_frem_param_0];
+; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NOF16-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %r3, %rs3;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %r4, %rs1;
+; CHECK-NOF16-NEXT:    div.rn.f32 %r5, %r4, %r3;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs5, %r5;
+; CHECK-NOF16-NEXT:    cvt.rzi.f16.f16 %rs6, %rs5;
+; CHECK-NOF16-NEXT:    xor.b16 %rs7, %rs6, -32768;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd1, %rs7;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd2, %rs1;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd3, %rs3;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd4, %rd1, %rd3, %rd2;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs8, %rd4;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %r6, %rs4;
+; CHECK-NOF16-NEXT:    cvt.f32.f16 %r7, %rs2;
+; CHECK-NOF16-NEXT:    div.rn.f32 %r8, %r7, %r6;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs9, %r8;
+; CHECK-NOF16-NEXT:    cvt.rzi.f16.f16 %rs10, %rs9;
+; CHECK-NOF16-NEXT:    xor.b16 %rs11, %rs10, -32768;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd5, %rs11;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd6, %rs2;
+; CHECK-NOF16-NEXT:    cvt.f64.f16 %rd7, %rs4;
+; CHECK-NOF16-NEXT:    fma.rn.f64 %rd8, %rd5, %rd7, %rd6;
+; CHECK-NOF16-NEXT:    cvt.rn.f16.f64 %rs12, %rd8;
+; CHECK-NOF16-NEXT:    mov.b32 %r9, {%rs8, %rs12};
+; CHECK-NOF16-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NOF16-NEXT:    ret;
+  %r = frem afn <2 x half> %a, %b
   ret <2 x half> %r
 }
 

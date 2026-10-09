@@ -1165,14 +1165,13 @@ void CIRGenFunction::emitNonNullArgCheck(RValue rv, QualType argType,
   cgm.errorNYI("non-null arg check is NYI");
 }
 
-static cir::CIRCallOpInterface
-emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
-               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
-               cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
-               const mlir::NamedAttrList &attrs,
-               llvm::ArrayRef<mlir::NamedAttrList> argAttrs,
-               const mlir::NamedAttrList &retAttrs) {
+static cir::CIRCallOpInterface emitCallLikeOp(
+    CIRGenFunction &cgf, mlir::Location callLoc, cir::FuncType indirectFuncTy,
+    mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
+    const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
+    const mlir::NamedAttrList &attrs,
+    llvm::ArrayRef<mlir::NamedAttrList> argAttrs,
+    const mlir::NamedAttrList &retAttrs, cir::CallingConv callingConv) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
@@ -1181,13 +1180,12 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
 
   cir::CallOp op;
   if (indirectFuncTy) {
-    // TODO(cir): Set calling convention for indirect calls.
-    assert(!cir::MissingFeatures::opCallCallConv());
     op = builder.createIndirectCallOp(callLoc, indirectFuncVal, indirectFuncTy,
-                                      cirCallArgs, attrs, argAttrs, retAttrs);
+                                      cirCallArgs, attrs, argAttrs, retAttrs,
+                                      callingConv);
   } else {
     op = builder.createCallOp(callLoc, directFuncOp, cirCallArgs, attrs,
-                              argAttrs, retAttrs);
+                              argAttrs, retAttrs, callingConv);
   }
 
   return op;
@@ -1341,12 +1339,19 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (auto calleeFuncOp = dyn_cast<cir::FuncOp>(calleePtr))
     funcName = calleeFuncOp.getName();
 
-  assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
   cir::CallingConv callingConv;
   cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
                              attrs, argAttrs, retAttrs, callingConv,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
+
+  // TODO(cir): Classic CodeGen redirects calls to OpenCL kernels to a
+  // non-kernel stub (__clang_ocl_kern_imp_*), since kernel calling conventions
+  // do not permit calls.
+  if (callingConv == cir::CallingConv::SpirKernel ||
+      callingConv == cir::CallingConv::AMDGPUKernel ||
+      callingConv == cir::CallingConv::PTXKernel)
+    cgm.errorNYI(loc, "emitCall: call to kernel function");
 
   auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
     if (auto fnOp = dyn_cast<cir::FuncOp>(op))
@@ -1405,9 +1410,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
 
   mlir::Location callLoc = loc;
-  cir::CIRCallOpInterface theCall =
-      emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, isInvoke, attrs, argAttrs, retAttrs);
+  cir::CIRCallOpInterface theCall = emitCallLikeOp(
+      *this, loc, indirectFuncTy, indirectFuncVal, directFuncOp, cirCallArgs,
+      isInvoke, attrs, argAttrs, retAttrs, callingConv);
 
   if (callOp)
     *callOp = theCall;

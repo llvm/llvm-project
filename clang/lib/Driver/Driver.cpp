@@ -4452,8 +4452,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_emit_cir))
+    if (Args.hasArg(options::OPT_emit_cir)) {
+      // Like -emit-llvm, -c selects the binary form; bare -emit-cir and
+      // -emit-cir -S keep emitting text.
+      if (Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S))
+        return C.MakeAction<CompileJobAction>(Input, types::TY_CIRBC);
       return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
+    }
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))

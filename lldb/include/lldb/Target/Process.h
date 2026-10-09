@@ -375,6 +375,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class Target;
   friend class ThreadList;
   friend class MemoryCache;
+  friend class ThreadPlanSingleThreadTimeout;
 
 public:
   /// Broadcaster event bits definitions.

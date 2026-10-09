@@ -42,6 +42,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -66,6 +67,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
@@ -653,6 +655,11 @@ void TypeSystemClang::Initialize() {
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
       GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
       DebuggerInitialize);
+
+  llvm::SmallString<128> path;
+  if (clang::driver::Driver::getDefaultModuleCachePath(path))
+    ModuleList::GetGlobalModuleListProperties().SetClangModulesCachePath(
+        FileSpec(path));
 }
 
 void TypeSystemClang::Terminate() {

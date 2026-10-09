@@ -748,6 +748,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_inotify
+  ../libc/include/sys/inotify.yaml
+  sys/inotify.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_inotify_macros
+    .llvm-libc-types.struct_inotify_event
+    .stdint
+)
+
+add_header_macro(
   sys_ipc
   ../libc/include/sys/ipc.yaml
   sys/ipc.h

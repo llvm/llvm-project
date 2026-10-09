@@ -29,7 +29,7 @@ body:             |
 # CHECK:   bb.3:
 # CHECK-NEXT:     %2:sreg_32_xm0 = IMPLICIT_DEF
 # CHECK-NEXT:     %3:sreg_32_xm0 = COPY %4
-# CHECK-NEXT:     S_NOP 0, implicit killed %3
+# CHECK-NEXT:     S_NOP 0, implicit %3
 
 
 ################################################################################
@@ -67,7 +67,7 @@ body:             |
 # CHECK:   bb.3:
 # CHECK-NEXT:     %3:sreg_32_xm0 = IMPLICIT_DEF
 # CHECK-NEXT:     %2:sreg_32_xm0 = COPY %4
-# CHECK-NEXT:     S_NOP 0, implicit killed %2
+# CHECK-NEXT:     S_NOP 0, implicit %2
 
 
 # The following test crashes in phi-elimination hooks.

@@ -923,17 +923,26 @@ private:
   AdjacentBlocks Preds;
   AdjacentBlocks Succs;
 
+  /// The kind of noreturn element a block contains.
+  enum class NoReturnKind : unsigned {
+    None,
+    /// A function call attributed as 'analyzer_noreturn'.
+    AnalyzerOnly,
+    /// A function call or implicit destructor attributed as 'noreturn'.
+    Real
+  };
+
   /// This bit is set when the basic block contains a function call
-  /// or implicit destructor that is attributed as 'noreturn'. In that case,
-  /// control cannot technically ever proceed past this block. All such blocks
-  /// will have a single immediate successor: the exit block. This allows them
-  /// to be easily reached from the exit block and using this bit quickly
-  /// recognized without scanning the contents of the block.
+  /// or implicit destructor that is attributed as 'noreturn' or
+  /// 'analyzer_noreturn'. In that case, control cannot technically ever
+  /// proceed past this block. All such blocks will have a single immediate
+  /// successor: the exit block. This allows them to be easily reached from the
+  /// exit block and using this bit quickly recognized without scanning the
+  /// contents of the block.
   ///
-  /// Optimization Note: This bit could be profitably folded with Terminator's
+  /// Optimization Note: These bits could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned HasNoReturnElement : 1;
+  NoReturnKind NoReturn : 2;
 
   /// The parent CFG that owns this CFGBlock.
   CFG *Parent;
@@ -941,7 +950,7 @@ private:
 public:
   explicit CFGBlock(unsigned blockid, BumpVectorContext &C, CFG *parent)
       : Elements(C), Terminator(nullptr), BlockID(blockid), Preds(C, 1),
-        Succs(C, 1), HasNoReturnElement(false), Parent(parent) {}
+        Succs(C, 1), NoReturn(NoReturnKind::None), Parent(parent) {}
 
   // Statement iterators
   using iterator = ElementList::iterator;
@@ -1123,7 +1132,12 @@ public:
   void setTerminator(CFGTerminator Term) { Terminator = Term; }
   void setLabel(Stmt *Statement) { Label = Statement; }
   void setLoopTarget(const Stmt *loopTarget) { LoopTarget = loopTarget; }
-  void setHasNoReturnElement() { HasNoReturnElement = true; }
+  /// Mark the block as ending in a noreturn element.
+  void setHasNoReturnElement(bool AnalyzerOnly = false) {
+    assert(NoReturn == NoReturnKind::None &&
+           "block already has a noreturn element");
+    NoReturn = AnalyzerOnly ? NoReturnKind::AnalyzerOnly : NoReturnKind::Real;
+  }
 
   /// Returns true if the block would eventually end with a sink (a noreturn
   /// node).
@@ -1149,7 +1163,17 @@ public:
   Stmt *getLabel() { return Label; }
   const Stmt *getLabel() const { return Label; }
 
-  bool hasNoReturnElement() const { return HasNoReturnElement; }
+  /// Returns true if the block has a noreturn element, whether it is a real
+  /// 'noreturn' or an 'analyzer_noreturn'.
+  bool hasNoReturnElement() const { return NoReturn != NoReturnKind::None; }
+
+  /// Returns true if the block ends in an 'analyzer_noreturn' call (as opposed
+  /// to a real 'noreturn' one). Most analyses treat the two indistinguishably
+  /// (see hasNoReturnElement). This is for clients that need to tell them
+  /// apart (e.g., -Wunreachable-code).
+  bool hasOnlyAnalyzerNoReturnElement() const {
+    return NoReturn == NoReturnKind::AnalyzerOnly;
+  }
 
   unsigned getBlockID() const { return BlockID; }
 

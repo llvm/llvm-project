@@ -644,8 +644,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .minScalar(0, s32)
       // The magnitude of a half is at most 65504, so with Zfh use fcvt.w[u].h
-      // and extend the i32 result. Without Zfh, use the libcalls.
-      .libcallFor(!ST.hasStdExtZfh(), {{s64, f16}})
+      // and extend the i32 result. Otherwise promote the half source to float
+      // (via fcvt.s.h with Zfhmin, __extendhfsf2 without) and use the float
+      // conversion. On RV32, exclude i64 results here so that they get
+      // narrowed to i32 first.
+      .widenScalarIf(
+          [=, &ST](const LegalityQuery &Query) {
+            return Query.Types[1] == f16 && !ST.hasStdExtZfh() &&
+                   (ST.is64Bit() || Query.Types[0] == s32);
+          },
+          changeTo(1, s32))
+      .libcallFor(!ST.hasStdExtZfhmin(), {{s64, f16}})
       .narrowScalarFor({{s64, f16}}, changeTo(0, s32))
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.

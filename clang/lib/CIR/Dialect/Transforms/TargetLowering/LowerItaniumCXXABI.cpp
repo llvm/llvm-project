@@ -705,6 +705,8 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
                                     /*resType=*/cir::VoidType(),
                                     /*operands=*/mlir::ValueRange{});
@@ -738,6 +740,9 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 
   mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
+
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
 
   mlir::Value castedPtr = cir::CallOp::create(builder, loc, dynCastFuncRef,
                                               voidPtrTy, dynCastFuncArgs)

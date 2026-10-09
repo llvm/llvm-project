@@ -66,7 +66,10 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       X86 Partial Reduction
-; CHECK-NEXT:       Expand indirectbr instructions
+; CHECK-NEXT:       Cycle Info Analysis 
+; CHECK-NEXT:       Lazy Branch Probability Analysis 
+; CHECK-NEXT:       Lazy Block Frequency Analysis 
+; CHECK-NEXT:       Expand indirectbr instructions 
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
