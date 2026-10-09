@@ -37,6 +37,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <deque>
+#include <list>
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
@@ -839,6 +840,12 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
   unsigned BitWidth = DemandedBits.getBitWidth();
   KnownBits LHSKnown, RHSKnown;
   switch (Op.getOpcode()) {
+  case ISD::Constant: {
+    const APInt &Value = Op->getAsAPIntVal();
+    if (!Value.isZero() && (Value & DemandedBits).isZero())
+      return DAG.getConstant(0, SDLoc(Op), VT);
+    break;
+  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -11869,10 +11876,10 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
 
     // Load the whole vector and avoid masking off the top bits as it makes
     // the codegen worse.
-    SDValue Load =
-        DAG.getExtLoad(ISD::EXTLOAD, SL, LoadVT, Chain, BasePTR,
-                       LD->getPointerInfo(), SrcIntVT, LD->getBaseAlign(),
-                       LD->getMemOperand()->getFlags(), LD->getAAInfo());
+    SDValue Load = DAG.getExtLoad(
+        ISD::EXTLOAD, SL, LoadVT, Chain, BasePTR, LD->getPointerInfo(),
+        SrcIntVT, LD->getBaseAlign(), LD->getMemOperand()->getFlags(),
+        LD->getMMOMetadataForSubAccess());
 
     SmallVector<SDValue, 8> Vals;
     for (unsigned Idx = 0; Idx < NumElem; ++Idx) {
@@ -11907,7 +11914,8 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
     SDValue ScalarLoad = DAG.getExtLoad(
         ExtType, SL, DstEltVT, Chain, BasePTR,
         LD->getPointerInfo().getWithOffset(Idx * Stride), SrcEltVT,
-        LD->getBaseAlign(), LD->getMemOperand()->getFlags(), LD->getAAInfo());
+        LD->getBaseAlign(), LD->getMemOperand()->getFlags(),
+        LD->getMMOMetadataForSubAccess());
 
     BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, TypeSize::getFixed(Stride));
 
@@ -11969,7 +11977,7 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
 
     return DAG.getStore(Chain, SL, CurrVal, BasePtr, ST->getPointerInfo(),
                         ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
-                        ST->getAAInfo());
+                        ST->getMMOMetadataForSubAccess());
   }
 
   // Store Stride in bytes
@@ -11988,7 +11996,7 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
     SDValue Store = DAG.getTruncStore(
         Chain, SL, Elt, Ptr, ST->getPointerInfo().getWithOffset(Idx * Stride),
         MemSclVT, ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
-        ST->getAAInfo());
+        ST->getMMOMetadataForSubAccess());
 
     Stores.push_back(Store);
   }
@@ -12053,7 +12061,8 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
       // Load one integer register's worth from the original location.
       SDValue Load = DAG.getLoad(
           RegVT, dl, Chain, Ptr, LD->getPointerInfo().getWithOffset(Offset),
-          LD->getBaseAlign(), LD->getMemOperand()->getFlags(), LD->getAAInfo());
+          LD->getBaseAlign(), LD->getMemOperand()->getFlags(),
+          LD->getMMOMetadataForSubAccess());
       // Follow the load with a store to the stack slot.  Remember the store.
       Stores.push_back(DAG.getStore(
           Load.getValue(1), dl, Load, StackPtr,
@@ -12071,7 +12080,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
     SDValue Load = DAG.getExtLoad(
         ISD::EXTLOAD, dl, RegVT, Chain, Ptr,
         LD->getPointerInfo().getWithOffset(Offset), MemVT, LD->getBaseAlign(),
-        LD->getMemOperand()->getFlags(), LD->getAAInfo());
+        LD->getMemOperand()->getFlags(), LD->getMMOMetadataForSubAccess());
     // Follow the load with a store to the stack slot.  Remember the store.
     // On big-endian machines this requires a truncating store to ensure
     // that the bits end up in the right place.
@@ -12114,23 +12123,23 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
   if (DAG.getDataLayout().isLittleEndian()) {
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr, LD->getPointerInfo(),
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        LD->getMMOMetadataForSubAccess());
 
     Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        LD->getMMOMetadataForSubAccess());
   } else {
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr, LD->getPointerInfo(),
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        LD->getMMOMetadataForSubAccess());
 
     Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
-                        LD->getAAInfo());
+                        LD->getMMOMetadataForSubAccess());
   }
 
   // aggregate the two parts
@@ -12171,7 +12180,8 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
       // FIXME: Does not handle truncating floating point stores!
       SDValue Result = DAG.getNode(ISD::BITCAST, dl, intVT, Val);
       Result = DAG.getStore(Chain, dl, Result, Ptr, ST->getPointerInfo(),
-                            Alignment, ST->getMemOperand()->getFlags());
+                            Alignment, ST->getMemOperand()->getFlags(),
+                            ST->getMMOMetadataForSubAccess());
       return Result;
     }
     // Do a (aligned) store to a stack slot, then copy from the stack slot
@@ -12207,10 +12217,10 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
           RegVT, dl, Store, StackPtr,
           MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset));
       // Store it to the final location.  Remember the store.
-      Stores.push_back(DAG.getStore(Load.getValue(1), dl, Load, Ptr,
-                                    ST->getPointerInfo().getWithOffset(Offset),
-                                    ST->getBaseAlign(),
-                                    ST->getMemOperand()->getFlags()));
+      Stores.push_back(DAG.getStore(
+          Load.getValue(1), dl, Load, Ptr,
+          ST->getPointerInfo().getWithOffset(Offset), ST->getBaseAlign(),
+          ST->getMemOperand()->getFlags(), ST->getMMOMetadataForSubAccess()));
       // Increment the pointers.
       Offset += RegBytes;
       StackPtr = DAG.getObjectPtrOffset(dl, StackPtr, StackPtrIncrement);
@@ -12228,10 +12238,11 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
         ISD::EXTLOAD, dl, RegVT, Store, StackPtr,
         MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset), LoadMemVT);
 
-    Stores.push_back(DAG.getTruncStore(
-        Load.getValue(1), dl, Load, Ptr,
-        ST->getPointerInfo().getWithOffset(Offset), LoadMemVT,
-        ST->getBaseAlign(), ST->getMemOperand()->getFlags(), ST->getAAInfo()));
+    Stores.push_back(
+        DAG.getTruncStore(Load.getValue(1), dl, Load, Ptr,
+                          ST->getPointerInfo().getWithOffset(Offset), LoadMemVT,
+                          ST->getBaseAlign(), ST->getMemOperand()->getFlags(),
+                          ST->getMMOMetadataForSubAccess()));
     // The order of the stores doesn't matter - say it with a TokenFactor.
     SDValue Result = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);
     return Result;
@@ -12260,16 +12271,16 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
 
   // Store the two parts
   SDValue Store1, Store2;
-  Store1 = DAG.getTruncStore(Chain, dl,
-                             DAG.getDataLayout().isLittleEndian() ? Lo : Hi,
-                             Ptr, ST->getPointerInfo(), NewStoredVT, Alignment,
-                             ST->getMemOperand()->getFlags());
+  Store1 = DAG.getTruncStore(
+      Chain, dl, DAG.getDataLayout().isLittleEndian() ? Lo : Hi, Ptr,
+      ST->getPointerInfo(), NewStoredVT, Alignment,
+      ST->getMemOperand()->getFlags(), ST->getMMOMetadataForSubAccess());
 
   Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(IncrementSize));
   Store2 = DAG.getTruncStore(
       Chain, dl, DAG.getDataLayout().isLittleEndian() ? Hi : Lo, Ptr,
       ST->getPointerInfo().getWithOffset(IncrementSize), NewStoredVT, Alignment,
-      ST->getMemOperand()->getFlags(), ST->getAAInfo());
+      ST->getMemOperand()->getFlags(), ST->getMMOMetadataForSubAccess());
 
   SDValue Result =
       DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store1, Store2);
@@ -12374,6 +12385,13 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
          "Converting bits to bytes lost precision");
   assert(SubVecVT.getVectorElementType() == EltVT &&
          "Sub-vector must be a vector with matching element type");
+
+  // An out-of-range index only makes the vector operation return poison, but
+  // a load/store through the pointer computed below would be immediate UB, so
+  // freeze the index before clamping it into range.
+  if (!DAG.isGuaranteedNotToBePoison(Index))
+    Index = DAG.getFreeze(Index);
+
   Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl,
                                   SubVecVT.getVectorElementCount());
 
@@ -14492,13 +14510,13 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),
-                          OriginalLoad->getAAInfo());
+                          OriginalLoad->getMMOMetadataForSubAccess());
     DAG.makeEquivalentMemoryOrdering(OriginalLoad, Load);
   } else {
     // The result type is narrower or the same width as the vector element
     Load = DAG.getLoad(VecEltVT, DL, OriginalLoad->getChain(), NewPtr, MPI,
                        Alignment, OriginalLoad->getMemOperand()->getFlags(),
-                       OriginalLoad->getAAInfo());
+                       OriginalLoad->getMMOMetadataForSubAccess());
     DAG.makeEquivalentMemoryOrdering(OriginalLoad, Load);
     if (ResultVT.bitsLT(VecEltVT))
       Load = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, Load);

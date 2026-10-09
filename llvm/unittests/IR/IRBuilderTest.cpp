@@ -606,24 +606,6 @@ TEST_F(IRBuilderTest, GetIntTy) {
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
 }
 
-TEST_F(IRBuilderTest, CreateBitPreservingCastChainByteTypes) {
-  M->setDataLayout("e-p:64:64");
-  IRBuilder<> Builder(BB);
-  const DataLayout &DL = M->getDataLayout();
-  Type *PtrTy = PointerType::getUnqual(Ctx);
-  Type *ByteVecTy = VectorType::get(Type::getByteNTy(Ctx, 32), 2,
-                                    /*Scalable=*/false);
-  Value *ByteVec = Builder.CreateLoad(ByteVecTy, Constant::getNullValue(PtrTy));
-  Value *Ptr = Builder.CreateLoad(PtrTy, Constant::getNullValue(PtrTy));
-  Value *ToPtr = Builder.CreateBitPreservingCastChain(DL, ByteVec, PtrTy);
-  ASSERT_TRUE(isa<IntToPtrInst>(ToPtr));
-  EXPECT_TRUE(isa<BitCastInst>(cast<IntToPtrInst>(ToPtr)->getOperand(0)));
-  Value *ToByteVec = Builder.CreateBitPreservingCastChain(DL, Ptr, ByteVecTy);
-  ASSERT_EQ(ToByteVec->getType(), ByteVecTy);
-  ASSERT_TRUE(isa<BitCastInst>(ToByteVec));
-  EXPECT_TRUE(isa<PtrToIntInst>(cast<BitCastInst>(ToByteVec)->getOperand(0)));
-}
-
 TEST_F(IRBuilderTest, UnaryOperators) {
   IRBuilder<NoFolder> Builder(BB);
   Value *V = Builder.CreateLoad(GV->getValueType(), GV);
@@ -1285,7 +1267,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(*M);
   Builder.SetInsertPoint(Br);
   EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
   auto Call1 = Builder.CreateCall(Callee, {});
@@ -1402,10 +1384,10 @@ TEST_F(IRBuilderTest, CTAD) {
   };
   InstSimplifyFolder Folder(M->getDataLayout());
 
-  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  IRBuilder Builder1(*M, Folder, TestInserter());
   static_assert(std::is_same_v<decltype(Builder1),
                                IRBuilder<InstSimplifyFolder, TestInserter>>);
-  IRBuilder Builder2(Ctx);
+  IRBuilder Builder2(*M);
   static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
   IRBuilder Builder3(BB, Folder);
   static_assert(
@@ -1415,10 +1397,10 @@ TEST_F(IRBuilderTest, CTAD) {
   // The block BB is empty, so don't test this one.
   // IRBuilder Builder5(BB->getTerminator());
   // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
-  IRBuilder Builder6(BB, BB->end(), Folder);
+  IRBuilder Builder6(BB->end(), Folder);
   static_assert(
       std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
-  IRBuilder Builder7(BB, BB->end());
+  IRBuilder Builder7(BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 

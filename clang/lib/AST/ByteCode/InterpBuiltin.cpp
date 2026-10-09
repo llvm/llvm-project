@@ -14,6 +14,8 @@
 #include "InterpHelpers.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
@@ -323,7 +325,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
   QualType ElemTy = getElemType(A);
   // Different element types shouldn't happen, but with casts they can.
-  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)))
+  if (!S.getASTContext().hasSameUnqualifiedType(ElemTy, getElemType(B)) ||
+      !S.getContext().canClassify(ElemTy))
     return false;
 
   PrimType ElemT = *S.getContext().classify(ElemTy);
@@ -1315,6 +1318,22 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   }
   assert(FirstArgT == PT_Ptr);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  // Null pointers are always aligned. Preserve null pointers for
+  // align_up/align_down and return true for is_aligned.
+  if (Ptr.isZero()) {
+    if (BuiltinOp == Builtin::BI__builtin_is_aligned) {
+      S.Stk.push<Boolean>(true);
+      return true;
+    }
+
+    assert(BuiltinOp == Builtin::BI__builtin_align_up ||
+           BuiltinOp == Builtin::BI__builtin_align_down);
+
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer()) {
     S.FFDiag(Call->getArg(0), diag::note_constexpr_alignment_compute)
         << Alignment;
@@ -1438,7 +1457,9 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer() || Ptr.isOpaquePointer()) {
     CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getRootVarDecl())
+    if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
+      BaseAlignment = Ptr.getDeclDesc()->computeAlignForDynamicAlloc(ASTCtx);
+    else if (const auto *VD = Ptr.getRootVarDecl())
       BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
