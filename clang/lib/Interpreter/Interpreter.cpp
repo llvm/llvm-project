@@ -288,17 +288,18 @@ IncrementalCompilerBuilder::create(std::string TT,
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
-  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back(TT.c_str());
   Argv.push_back("-fvisibility=default");
 #endif
   llvm::append_range(Argv, UserArgs);
 
-  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
@@ -350,6 +351,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
+
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -506,6 +510,9 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
     return std::move(E);
 
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
+
   Interp->DeviceCI = std::move(DCI);
 
   auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
@@ -603,6 +610,10 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

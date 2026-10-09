@@ -71,14 +71,28 @@ def int_dx_resource_store_rawbuffer
 // Atomic read-modify-write on a UAV resource element. Emitted by
 // DXILResourceAccess from an `atomicrmw` on a `dx.resource.getpointer` result,
 // and lowered by DXILOpLowering to the DXIL `AtomicBinOp` op (78).
-// Args: handle, AtomicBinOpCode, coord0 (index), coord1 (offset or poison),
-//       new value. Returns the original value.
+// Args: handle, AtomicBinOpCode, coord0, coord1, coord2, new value. Returns
+//       the original value. Buffer accesses use coord0 as the element index and
+//       coord1 as the byte offset into a struct, while texture accesses use one
+//       coordinate per texture dimension. Unused coordinates are poison.
 def int_dx_resource_atomic_binop
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+           LLVMMatchType<0>]>;
+
+// Atomic compare-exchange on a UAV resource element. Emitted by
+// DXILResourceAccess from a `cmpxchg` on a `dx.resource.getpointer` result,
+// and lowered by DXILOpLowering to the DXIL `AtomicCompareExchange` op (79).
+// Args: handle, coord0, coord1, coord2, compare value, new value. Returns
+//       the original value. Buffer accesses use coord0 as the element index and
+//       coord1 as the byte offset into a struct, while texture accesses use one
+//       coordinate per texture dimension. Unused coordinates are poison.
+def int_dx_resource_atomic_compare_exchange
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty],
           [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-           LLVMMatchType<0>],
-          [IntrArgMemOnly]>;
+           LLVMMatchType<0>, LLVMMatchType<0>]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
 // function name. The total size of the return should always be 128 bits.
 def int_dx_resource_load_cbufferrow_8
@@ -288,6 +302,7 @@ def int_dx_wave_product : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>
 def int_dx_wave_uproduct : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_is_first_lane : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrConvergent]>;
 def int_dx_wave_readlane : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
+def int_dx_wave_readlane_first : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_get_lane_count
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrConvergent]>;
 def int_dx_wave_prefix_sum : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
@@ -330,6 +345,13 @@ def int_dx_group_memory_barrier
 
 def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_barrier_by_memory_type
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>;
+
+def int_dx_barrier_by_memory_handle
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty],
+                            [IntrConvergent]>;
 
 def int_dx_load_input
     : DefaultAttrsIntrinsic<

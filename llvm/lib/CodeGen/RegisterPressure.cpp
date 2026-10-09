@@ -472,9 +472,12 @@ class RegisterOperandsCollector {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperand(*OperI);
 
-    // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    // An instruction can have overlapping defs where only some carry the dead
+    // flag, for example a dead super-register def alongside a live sub-register
+    // def. A register unit is dead if any def covering it is dead, so subtract
+    // the dead defs from the live defs.
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   void collectInstrLanes(const MachineInstr &MI) const {
@@ -626,6 +629,36 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
     const LiveInterval &LI = LIS.getInterval(VReg);
     if (LI.segments.back().end == Pos.getDeadSlot())
       MI.addRegisterDead(VReg, TRI, /*AddIfNotFound=*/false);
+  }
+}
+
+void RegisterOperands::restoreLivenessFlags(MachineInstr &MI,
+                                            const TargetRegisterInfo &TRI,
+                                            const MachineRegisterInfo &MRI,
+                                            const LiveIntervals &LIS,
+                                            bool TrackLaneMasks,
+                                            ArrayRef<Register> OnlyRegs) {
+  assert(!MI.isDebugInstr() && "No flags to restore on debug instructions");
+  // Clear potentially-stale read-undef flags. They are re-added below for the
+  // lanes that are still dead.
+  bool HasClearedDef = false;
+  for (MachineOperand &MO : MI.all_defs()) {
+    if (!OnlyRegs.empty() && (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
+                              !llvm::is_contained(OnlyRegs, MO.getReg())))
+      continue;
+    MO.setIsUndef(false);
+    HasClearedDef = true;
+  }
+  if (!HasClearedDef)
+    return;
+  RegisterOperands RegOpers;
+  RegOpers.collect(MI, TRI, MRI, TrackLaneMasks, /*IgnoreDead=*/false);
+  if (TrackLaneMasks) {
+    // Adjust liveness and add missing dead+read-undef flags.
+    RegOpers.adjustLaneLiveness(LIS, MRI, MI);
+  } else {
+    // Adjust for missing dead-def flags.
+    RegOpers.detectDeadDefs(MI, LIS, MRI);
   }
 }
 

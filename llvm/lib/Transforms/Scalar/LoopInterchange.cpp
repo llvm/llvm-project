@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -48,6 +49,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <cassert>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -56,16 +58,6 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-interchange"
 
 STATISTIC(LoopsInterchanged, "Number of loops interchanged");
-
-static cl::opt<int> LoopInterchangeCostThreshold(
-    "loop-interchange-threshold", cl::init(0), cl::Hidden,
-    cl::desc("Interchange if you gain more than this number"));
-
-static cl::opt<unsigned int> MaxMemInstrRatio(
-    "loop-interchange-max-mem-instr-ratio", cl::init(4), cl::Hidden,
-    cl::desc("Maximum number of load/store instructions squared in relation to "
-             "the total number of instructions. Higher value may lead to more "
-             "interchanges at the cost of compile-time"));
 
 namespace {
 
@@ -91,16 +83,6 @@ enum class RuleTy {
 
 } // end anonymous namespace
 
-// Minimum loop depth supported.
-static cl::opt<unsigned int> MinLoopNestDepth(
-    "loop-interchange-min-loop-nest-depth", cl::init(2), cl::Hidden,
-    cl::desc("Minimum depth of loop nest considered for the transform"));
-
-// Maximum loop depth supported.
-static cl::opt<unsigned int> MaxLoopNestDepth(
-    "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
-    cl::desc("Maximum depth of loop nest considered for the transform"));
-
 // We prefer cache cost to vectorization by default.
 static cl::list<RuleTy> Profitabilities(
     "loop-interchange-profitabilities", cl::MiscFlags::CommaSeparated,
@@ -118,11 +100,6 @@ static cl::list<RuleTy> Profitabilities(
                clEnumValN(RuleTy::Ignore, "ignore",
                           "Ignore profitability, force interchange (does not "
                           "work with other options)")));
-
-// Support for the inner-loop reduction pattern.
-static cl::opt<bool> EnableReduction2Memory(
-    "loop-interchange-reduction-to-mem", cl::init(false), cl::Hidden,
-    cl::desc("Support for the inner-loop reduction pattern."));
 
 #ifndef NDEBUG
 static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
@@ -167,7 +144,8 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 }
 #endif
 
-static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
+static bool populateDependencyMatrix(const ScalarOptions &Opts,
+                                     CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
                                      OptimizationRemarkEmitter *ORE) {
@@ -203,7 +181,9 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   unsigned NumMemInstr = MemInstr.size();
   LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
+  if (static_cast<uint64_t>(Opts.loop_interchange_max_mem_instr_ratio) *
+          NumInsts <
+      static_cast<uint64_t>(NumMemInstr) * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
@@ -414,21 +394,26 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
+static bool hasSupportedLoopDepth(const ScalarOptions &Opts,
+                                  ArrayRef<Loop *> LoopList,
                                   OptimizationRemarkEmitter &ORE) {
   unsigned LoopNestDepth = LoopList.size();
-  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
+  if (LoopNestDepth < Opts.loop_interchange_min_loop_nest_depth ||
+      LoopNestDepth > Opts.loop_interchange_max_loop_nest_depth) {
     LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
-                      << ", the supported range is [" << MinLoopNestDepth
-                      << ", " << MaxLoopNestDepth << "].\n");
+                      << ", the supported range is ["
+                      << Opts.loop_interchange_min_loop_nest_depth << ", "
+                      << Opts.loop_interchange_max_loop_nest_depth << "].\n");
     Loop *OuterLoop = LoopList.front();
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
                                       OuterLoop->getStartLoc(),
                                       OuterLoop->getHeader())
              << "Unsupported depth of loop nest, the supported range is ["
-             << std::to_string(MinLoopNestDepth) << ", "
-             << std::to_string(MaxLoopNestDepth) << "].\n";
+             << std::to_string(Opts.loop_interchange_min_loop_nest_depth)
+             << ", "
+             << std::to_string(Opts.loop_interchange_max_loop_nest_depth)
+             << "].\n";
     });
     return false;
   }
@@ -460,9 +445,11 @@ namespace {
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
 class LoopInterchangeLegality {
 public:
-  LoopInterchangeLegality(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                          OptimizationRemarkEmitter *ORE, DominatorTree *DT)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), DT(DT), ORE(ORE) {}
+  LoopInterchangeLegality(const ScalarOptions &Opts, Loop *Outer, Loop *Inner,
+                          ScalarEvolution *SE, OptimizationRemarkEmitter *ORE,
+                          DominatorTree *DT)
+      : Opts(Opts), OuterLoop(Outer), InnerLoop(Inner), SE(SE), DT(DT),
+        ORE(ORE) {}
 
   /// Check if the loops can be interchanged.
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -539,6 +526,7 @@ private:
   bool isInnerReduction(Loop *L, PHINode *Phi,
                         SmallVectorImpl<Instruction *> &HasNoWrapInsts);
 
+  const ScalarOptions &Opts;
   Loop *OuterLoop;
   Loop *InnerLoop;
 
@@ -598,9 +586,10 @@ public:
 /// loop.
 class LoopInterchangeProfitability {
 public:
-  LoopInterchangeProfitability(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
+  LoopInterchangeProfitability(const ScalarOptions &Opts, Loop *Outer,
+                               Loop *Inner, ScalarEvolution *SE,
                                OptimizationRemarkEmitter *ORE)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
+      : Opts(Opts), OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
 
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
@@ -615,6 +604,7 @@ private:
   std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
                                                    unsigned OuterLoopId,
                                                    CharMatrix &DepMatrix);
+  const ScalarOptions &Opts;
   Loop *OuterLoop;
   Loop *InnerLoop;
 
@@ -658,6 +648,7 @@ private:
 };
 
 struct LoopInterchange {
+  const ScalarOptions &Opts;
   ScalarEvolution *SE = nullptr;
   LoopInfo *LI = nullptr;
   DependenceInfo *DI = nullptr;
@@ -670,7 +661,8 @@ struct LoopInterchange {
   LoopInterchange(ScalarEvolution *SE, LoopInfo *LI, DependenceInfo *DI,
                   DominatorTree *DT, LoopStandardAnalysisResults *AR,
                   OptimizationRemarkEmitter *ORE)
-      : SE(SE), LI(LI), DI(DI), DT(DT), AR(AR), ORE(ORE) {}
+      : Opts(ScalarOptions::Global), SE(SE), LI(LI), DI(DI), DT(DT), AR(AR),
+        ORE(ORE) {}
 
   bool run(Loop *L) {
     if (L->getParentLoop())
@@ -728,7 +720,7 @@ struct LoopInterchange {
     bool Changed = false;
     for (SmallVector<Loop *, 8> &LoopList : LoopLists) {
       // Ensure minimum depth of the loop nest to do the interchange.
-      if (!hasSupportedLoopDepth(LoopList, *ORE))
+      if (!hasSupportedLoopDepth(Opts, LoopList, *ORE))
         continue;
       // Ensure computable loop nest.
       if (!isComputableLoopNest(&AR->SE, LoopList)) {
@@ -750,7 +742,7 @@ struct LoopInterchange {
     bool Changed = false;
 
     // Ensure proper loop nest depth.
-    assert(hasSupportedLoopDepth(LoopList, *ORE) &&
+    assert(hasSupportedLoopDepth(Opts, LoopList, *ORE) &&
            "Unsupported depth of loop nest.");
 
     unsigned LoopNestDepth = LoopList.size();
@@ -766,7 +758,7 @@ struct LoopInterchange {
 
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
-    if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
+    if (!populateDependencyMatrix(Opts, DependencyMatrix, LoopNestDepth,
                                   OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
@@ -813,7 +805,7 @@ struct LoopInterchange {
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE, DT);
+    LoopInterchangeLegality LIL(Opts, OuterLoop, InnerLoop, SE, ORE, DT);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Cannot prove legality, not interchanging loops '"
                         << OuterLoop->getName() << "' and '"
@@ -823,7 +815,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops '" << OuterLoop->getName() << "' and '"
                       << InnerLoop->getName()
                       << "' are legal to interchange\n");
-    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
+    LoopInterchangeProfitability LIP(Opts, OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
                           DependencyMatrix, CCM)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops '" << OuterLoop->getName()
@@ -1432,7 +1424,7 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
       } else {
         if (OuterInnerReductions.count(&PHI)) {
           LLVM_DEBUG(dbgs() << "Found a reduction across the outer loop.\n");
-        } else if (EnableReduction2Memory &&
+        } else if (Opts.loop_interchange_reduction_to_mem &&
                    isInnerReduction(CurLoop, &PHI, HasNoWrapReductions)) {
           LLVM_DEBUG(dbgs() << "Found a reduction in the inner loop: \n"
                             << PHI << '\n');
@@ -1952,7 +1944,7 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
   // reordering if number of bad orders is more than good.
   int Cost = getInstrOrderCost();
   LLVM_DEBUG(dbgs() << "Cost = " << Cost << "\n");
-  if (Cost < 0 && Cost < LoopInterchangeCostThreshold)
+  if (Cost < 0 && Cost < Opts.loop_interchange_threshold)
     return std::optional<bool>(true);
 
   return std::nullopt;
@@ -2203,7 +2195,7 @@ void LoopInterchangeTransform::reduction2Memory() {
 
   LoopInterchangeLegality::InnerReduction SR = InnerReductions[0];
   BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
-  IRBuilder<> Builder(InnerLoopHeader, InnerLoopHeader->getFirstNonPHIIt());
+  IRBuilder<> Builder(InnerLoopHeader->getFirstNonPHIIt());
 
   // Check if it's the first iteration.
   LLVMContext &Context = InnerLoopHeader->getContext();

@@ -1992,7 +1992,7 @@ let TargetPrefix = "riscv" in {
       DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, llvm_anyvector_ty,
                              LLVMMatchType<1>,
-                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                              llvm_anyint_ty, LLVMMatchType<2>],
                             [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 4;
@@ -2009,7 +2009,7 @@ let TargetPrefix = "riscv" in {
       let VLOperand = 2;
     }
 
-    // Input: (maskedoff, vector_in, mask, vl, policy)
+    // Input: (passthru, vector_in, mask, vl, policy)
     def "int_riscv_" # NAME # "_mask" :
       DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, llvm_anyvector_ty,
@@ -2086,6 +2086,36 @@ class RVPBinaryIntrinsic
   def int_riscv_psshl  : RVPShiftIntrinsic;
   def int_riscv_psshlr : RVPShiftIntrinsic;
 
+  // Packed Shift.
+  def int_riscv_psll   : RVPShiftIntrinsic;
+  def int_riscv_psrl   : RVPShiftIntrinsic;
+  def int_riscv_psra   : RVPShiftIntrinsic;
+
+  // Packed Widening Shifts.
+  class RVPWideningShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pwsll : RVPWideningShiftIntrinsic;
+  def int_riscv_pwsla : RVPWideningShiftIntrinsic;
+
+  // Packed Narrowing Shifts.
+  class RVPNarrowingShiftIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [llvm_anyvector_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pnsrl  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsra  : RVPNarrowingShiftIntrinsic;
+  def int_riscv_pnsrar : RVPNarrowingShiftIntrinsic;
+
+  // Packed Saturation.
+  class RVPSaturationIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
+  def int_riscv_psati  : RVPSaturationIntrinsic;
+  def int_riscv_pusati : RVPSaturationIntrinsic;
+
   // Packed Exchanged Addition and Subtraction.
   def int_riscv_pas  : RVPBinaryIntrinsic;
   def int_riscv_psa  : RVPBinaryIntrinsic;
@@ -2121,12 +2151,20 @@ class RVPBinaryIntrinsic
   def int_riscv_pzext_h : RVPExtIntrinsic;
 
   // Packed Multiply High.
-  def int_riscv_pmulh    : RVPBinaryIntrinsic;
   def int_riscv_pmulhr   : RVPBinaryIntrinsic;
-  def int_riscv_pmulhu   : RVPBinaryIntrinsic;
   def int_riscv_pmulhru  : RVPBinaryIntrinsic;
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
+
+  // Scalar Multiply High. On RV32 these map to the M-extension mulh
+  // instructions and the P-extension mulhr instructions.
+  class RVPScalarMulHighIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mulhr_i32   : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
 
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;
@@ -2135,6 +2173,87 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhraccu  : RVPTernaryIntrinsic;
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
+
+  // Packed Multiply High Accumulate.
+  // The result and first two operands have the same vector type; the third
+  // operand's elements are half as wide, with twice the element count. For
+  // the .b forms the third operand holds bytes, for the .w forms it holds
+  // halfwords.
+  def int_riscv_pmhacc_b0
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhacc_b1
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhaccsu_b0
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhaccsu_b1
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhacc_h0
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhacc_h1
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhaccsu_h0
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmhaccsu_h1
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>, LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  // Packed Multiply High Parts. The packed forms multiply the full-width
+  // element of rs1 by one byte (b0/b1) or one halfword (h0/h1) of each
+  // element of rs2, so rs2's elements are half the size of the result's.
+  class RVPMulHighPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmulh_b0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_b1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_b0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_b1 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_h0   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulh_h1   : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_h0 : RVPMulHighPartsIntrinsic;
+  def int_riscv_pmulhsu_h1 : RVPMulHighPartsIntrinsic;
+
+  // Packed "Q-format" Multiply with Widening Accumulate.
+  class RVPQFormatWideningAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_v2i32_ty],
+                              [llvm_v2i32_ty, llvm_v2i16_ty, llvm_v2i16_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmqwacc_i32x2  : RVPQFormatWideningAccIntrinsic;
+  def int_riscv_pmqrwacc_i32x2 : RVPQFormatWideningAccIntrinsic;
+
+  // The scalar forms keep a single product of the full-width rs1 and one
+  // halfword of rs2: <2 x i16> pairs with i32.
+  class RVPScalarMulHighPartsIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mulh_h0   : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulh_h1   : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulhsu_h0 : RVPScalarMulHighPartsIntrinsic;
+  def int_riscv_mulhsu_h1 : RVPScalarMulHighPartsIntrinsic;
 
   // Packed Multiplication with Horizontal Addition.
   class RVPHorizontalMulIntrinsic

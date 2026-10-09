@@ -933,6 +933,8 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
     return Triple::ARMSubArch_v9_6a;
   case ARM::ArchKind::ARMV9_7A:
     return Triple::ARMSubArch_v9_7a;
+  case ARM::ArchKind::ARMV9_8A:
+    return Triple::ARMSubArch_v9_8a;
   case ARM::ArchKind::ARMV8R:
     return Triple::ARMSubArch_v8r;
   case ARM::ArchKind::ARMV8MBaseline:
@@ -2518,19 +2520,21 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
-static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T) {
+static FloatABI::ABIType getARMDefaultFloatABI(const Triple &T,
+                                               StringRef ABIName) {
   Triple::EnvironmentType Env = T.getEnvironment();
   bool IsHard =
       Env == Triple::GNUEABIHF || Env == Triple::GNUEABIHFT64 ||
       Env == Triple::MuslEABIHF || Env == Triple::EABIHF ||
       (T.isOSBinFormatMachO() && T.getSubArch() == Triple::ARMSubArch_v7em) ||
-      T.isOSWindows() || ARM::computeTargetABI(T, "") == ARM::ARM_ABI_AAPCS16;
+      T.isOSWindows() ||
+      ARM::computeTargetABI(T, ABIName) == ARM::ARM_ABI_AAPCS16;
   return IsHard ? FloatABI::Hard : FloatABI::Soft;
 }
 
-FloatABI::ABIType Triple::getDefaultFloatABI() const {
+FloatABI::ABIType Triple::getDefaultFloatABI(StringRef ABIName) const {
   if (isARM() || isThumb())
-    return getARMDefaultFloatABI(*this);
+    return getARMDefaultFloatABI(*this, ABIName);
 
   // MIPS defaults to hard float, except on FreeBSD which uses soft float.
   if (isMIPS())
@@ -2543,6 +2547,8 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
+ThreadModel Triple::getDefaultThreadModel() const { return ThreadModel::POSIX; }
+
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
   case loongarch64:
@@ -2550,13 +2556,17 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case riscv64:
   case riscv32be:
   case riscv64be:
-  case sparc:
-  case sparcel:
   case sparcv9:
   case systemz:
   case ve:
   case wasm32:
   case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case sparc:
+  case sparcel:
+    // GCC uses IEEE double for bare-metal and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == RTEMS)
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
   case ppcle:

@@ -143,8 +143,9 @@ void AllocationPlacementPass::runOnOperation() {
   if (func.empty())
     return;
 
-  // Start from the policy recorded on the module. A pass option overrides it
-  // only where it was set explicitly.
+  // Start from the policy in effect for the function, which is its own if it
+  // has one (device procedures do) and the module one otherwise. A pass option
+  // overrides it only where it was set explicitly.
   fir::AllocationPolicy basePolicy = fir::getAllocationPolicy(func);
   fir::overrideIfExplicitlySet(basePolicy.stackArrays, stackArrays);
   fir::overrideIfExplicitlySet(basePolicy.smallArrayThresholdBytes,
@@ -199,6 +200,7 @@ void AllocationPlacementPass::runOnOperation() {
 
     fir::AllocationInfo info;
     info.op = op;
+    info.context = op;
     info.isCurrentlyOnStack = static_cast<bool>(alloca);
     info.isTemporary = isTemporaryAllocation(op);
     info.isDynamic =
