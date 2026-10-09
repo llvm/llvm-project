@@ -12,6 +12,7 @@
 
 #include "L0Kernel.h"
 #include "L0Device.h"
+#include "L0Plugin.h"
 #include "L0Program.h"
 
 namespace llvm::omp::target::plugin {
@@ -40,16 +41,6 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
     KernelPR.Width = (std::max)(KernelPR.Width, 2 * KernelPR.SIMDWidth);
   }
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
-
-  // Query and cache argument sizes if extension is available.
-  auto &Context = L0Device.getL0Context();
-  if (KernelPR.NumKernelArgs > 0 && Context.zexKernelGetArgumentSize) {
-    KernelPR.ArgSizes = std::make_unique<uint32_t[]>(KernelPR.NumKernelArgs);
-    for (uint32_t I = 0; I < KernelPR.NumKernelArgs; I++) {
-      CALL_ZE_RET_ERROR(Context.zexKernelGetArgumentSize, zeKernel, I,
-                        &KernelPR.ArgSizes[I]);
-    }
-  }
 
   return Plugin::success();
 }
@@ -99,24 +90,27 @@ ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &L0Device,
   KEnv.GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
   auto DeviceId = L0Device.getDeviceId();
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY,
-       KEnv.GroupSizes.groupSizeZ);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
-       KEnv.GroupCounts.groupCountZ);
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Team sizes = {"
+                    << KEnv.GroupSizes.groupSizeX << ", "
+                    << KEnv.GroupSizes.groupSizeY << ", "
+                    << KEnv.GroupSizes.groupSizeZ << "}";
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Number of teams = {"
+                    << KEnv.GroupCounts.groupCountX << ", "
+                    << KEnv.GroupCounts.groupCountY << ", "
+                    << KEnv.GroupCounts.groupCountZ << "}";
 
   return KEnv.GroupSizes;
 }
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &L0Device,
+                                   LevelZeroPluginContextTy &UserCtx,
                                    L0LaunchEnvTy &KEnv) const {
   // Set Kernel Indirect flags.
   ze_kernel_indirect_access_flags_t Flags = 0;
   Flags |= L0Device.getMemAllocator(TARGET_ALLOC_HOST).getIndirectFlags();
   Flags |= L0Device.getMemAllocator(TARGET_ALLOC_DEVICE).getIndirectFlags();
+  // Allocations made through a liboffload context live in its own allocators.
+  Flags |= UserCtx.getIndirectFlags();
 
   if (KEnv.KernelPR.IndirectAccessFlags != Flags) {
     // Combine with common access flags.
@@ -145,8 +139,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto zeKernel = getZeKernel();
   auto DeviceId = L0Device.getDeviceId();
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
-       DPxPTR(zeKernel));
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Launching kernel "
+                    << zeKernel << "...";
 
   auto *IdStr = L0Device.getZeIdCStr();
   bool IsCooperative = LaunchArgs.Flags.Cooperative;
@@ -188,9 +182,10 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
           TotalGroupCount, MaxCooperativeGroupCount);
     }
 
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Cooperative kernel validated: using %u groups (max: %u)\n",
-         TotalGroupCount, MaxCooperativeGroupCount);
+    ODBG(OLDT_Kernel) << "Device " << DeviceId
+                      << ": Cooperative kernel validated: using "
+                      << TotalGroupCount
+                      << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
   // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
@@ -202,14 +197,15 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         "expected by the kernel (%u)",
         LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
 
-  if (auto Err = setIndirectFlags(L0Device, KEnv))
+  assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
+  if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))
     return Err;
 
   // The next call should unlock the KernelLock internally.
   if (auto Err = Queue->launchKernel(zeKernel, KEnv))
     return Err;
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
+  ODBG(OLDT_Kernel) << "Device " << DeviceId << ": Submitted kernel "
+                    << zeKernel << " to device " << IdStr;
 
   return Plugin::success();
 }

@@ -20,7 +20,7 @@ void __throw_bad_alloc_shim();
 
 #ifndef _LIBCPP_ASSERT_SHIM
 #  error _LIBCPP_ASSERT_SHIM should be defined
-#  define _LIBCPP_ASSERT_SHIM
+#  define _LIBCPP_ASSERT_SHIM // make the file parseable
 #endif
 
 enum class on_failure {
@@ -113,7 +113,7 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size) _THROW_BAD_ALLOC { return
 
 [[gnu::weak]] void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
 
-#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#if _LIBCPP_HAS_ALIGNED_ALLOCATION
 
 template <on_failure failure_mode>
 static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) {
@@ -215,4 +215,4 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignmen
 [[gnu::weak]] void operator delete[](void* ptr, size_t, std::align_val_t alignment) noexcept {
   ::operator delete[](ptr, alignment);
 }
-#endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#endif // _LIBCPP_HAS_ALIGNED_ALLOCATION

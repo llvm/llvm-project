@@ -5,7 +5,7 @@
 # to get slot index. This test is to emulate the case when DBG_VALUE's
 # previous instruction is DBG_LABEL in LiveDebugVariables pass.
 #
-# RUN: llc -run-pass=livedebugvars -run-pass=virtregrewriter -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvars -run-pass=virt-reg-rewriter -o - %s | FileCheck %s
 
 --- |
   target triple = "x86_64-unknown-linux-gnu"

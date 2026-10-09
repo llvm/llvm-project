@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx908 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX908
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx90a | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX90A
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx942 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX942
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1030 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX10,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1100 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX11,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX12,RDNA
-// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s --check-prefixes=CHECK,RECORDS45,GFX1250
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.08-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX908
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.0a-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX90A
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu9.42-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX9,GFX942
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu10.30-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX10,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu11.00-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX11,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu12.01-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS32,GFX12,RDNA
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=arch=amdgpu12.50-amd-amdhsa | FileCheck %s --check-prefixes=CHECK,RECORDS45,GFX1250
 
 // CHECK: #[[$MMRA_TAG:.+]] = #llvm.mmra_tag<"amdgpu-synchronize-as":"local">
 
@@ -93,7 +93,7 @@ func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], off
   // CHECK-DAG: %[[maxVals:.*]] = llvm.mul %[[size0]], %[[stride0]]
   // CHECK-DAG: %[[byteSize:.*]] = llvm.mlir.constant(4 : i64) : i64
   // CHECK-DAG: %[[numRecords:.*]] = llvm.mul %[[maxVals]], %[[byteSize]]
-  // CHECK-DAG: %[[zeroOff:.*]] = llvm.mlir.constant(0 : index) : i64
+  // CHECK-DAG: %[[zeroOff:.*]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK-DAG: %[[strideArg:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)

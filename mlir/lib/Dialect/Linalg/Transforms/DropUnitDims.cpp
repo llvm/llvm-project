@@ -963,6 +963,14 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
       return rewriter.notifyMatchFailure(
           contractionOp, "ops with user-defined maps are not supported");
     }
+    // linalg.matmul is the only target op with a `cast` attribute.
+    if constexpr ((std::is_same_v<FromOpTy, MatmulOp> ||
+                   std::is_same_v<FromOpTy, BatchMatmulOp>) &&
+                  !std::is_same_v<ToOpTy, MatmulOp>) {
+      if (contractionOp.getCast() != TypeFn::cast_signed)
+        return rewriter.notifyMatchFailure(
+            contractionOp, "target op cannot represent a non-signed cast");
+    }
 
     auto loc = contractionOp.getLoc();
     auto inputs = contractionOp.getDpsInputs();
@@ -988,14 +996,28 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     SmallVector<Type, 1> collapsedResultTy;
     if (isa<RankedTensorType>(collapsedInit.getType()))
       collapsedResultTy.push_back(collapsedInit.getType());
-    auto collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
-                                      ValueRange{collapsedLhs, collapsedRhs},
-                                      ValueRange{collapsedInit});
-    for (auto attr : contractionOp->getAttrs()) {
+    ToOpTy collapsedOp;
+    if constexpr (std::is_same_v<FromOpTy, BatchMatmulOp> &&
+                  std::is_same_v<ToOpTy, MatmulOp>) {
+      if (TypeFnAttr castAttr = contractionOp.getCastAttr()) {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit}, castAttr);
+      } else {
+        collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                     ValueRange{collapsedLhs, collapsedRhs},
+                                     ValueRange{collapsedInit});
+      }
+    } else {
+      collapsedOp = ToOpTy::create(rewriter, loc, collapsedResultTy,
+                                   ValueRange{collapsedLhs, collapsedRhs},
+                                   ValueRange{collapsedInit});
+    }
+    for (auto attr : contractionOp->getDiscardableAttrDictionary()) {
       if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
           attr.getName() == "indexing_maps")
         continue;
-      collapsedOp->setAttr(attr.getName(), attr.getValue());
+      collapsedOp->setDiscardableAttr(attr.getName(), attr.getValue());
     }
 
     auto results = contractionOp.getResults();

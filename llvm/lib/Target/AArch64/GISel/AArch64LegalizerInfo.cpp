@@ -341,7 +341,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{i32, i32}, {i64, i32}})
       .clampScalar(0, s32, s64)
       .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0);
+      .widenScalarToNextPow2(0)
+      .lower();
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{i32, i32}, {i32, i64}, {i64, i64}})
@@ -595,7 +596,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                    Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
                    Query.Types[0].getSizeInBits() > 32;
           },
-          changeTo(0, s32))
+          changeTo(0, i32))
       // TODO: Use BITCAST for v2i8, v2i16 after G_TRUNC gets sorted out
       .bitcastIf(typeInSet(0, {v4s8}),
                  [=](const LegalityQuery &Query) {
@@ -1128,6 +1129,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isVector() != Query.Types[1].isVector();
       })
+      // moreElementsToNextPow2 cannot pad the source to match, so lower
+      .lowerIf([=](const LegalityQuery &Query) {
+        LLT DstTy = Query.Types[0];
+        LLT SrcTy = Query.Types[1];
+        if (!DstTy.isFixedVector() || !SrcTy.isFixedVector())
+          return false;
+        unsigned MoreElts = 1u << Log2_32_Ceil(DstTy.getNumElements());
+        return SrcTy.getNumElements() * MoreElts % DstTy.getNumElements() != 0;
+      })
       .moreElementsToNextPow2(0)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
@@ -1180,6 +1190,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
     getActionDefinitionsBuilder(Op)
         .widenScalarToNextPow2(LitTyIdx, 8)
+        // Above s64 lowered shifts narrow back to a merge and never terminate
+        .lowerIf([=](const LegalityQuery &Q) {
+          const LLT BigTy = Q.Types[BigTyIdx];
+          return BigTy.isScalar() && !isPowerOf2_32(BigTy.getSizeInBits()) &&
+                 BigTy.getSizeInBits() < 64;
+        })
         .widenScalarToNextPow2(BigTyIdx, 32)
         .clampScalar(LitTyIdx, s8, s64)
         .clampScalar(BigTyIdx, s32, s128)
@@ -1967,14 +1983,6 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return true;
   }
-  case Intrinsic::aarch64_neon_smax:
-    return LowerBinOp(TargetOpcode::G_SMAX);
-  case Intrinsic::aarch64_neon_smin:
-    return LowerBinOp(TargetOpcode::G_SMIN);
-  case Intrinsic::aarch64_neon_umax:
-    return LowerBinOp(TargetOpcode::G_UMAX);
-  case Intrinsic::aarch64_neon_umin:
-    return LowerBinOp(TargetOpcode::G_UMIN);
   case Intrinsic::aarch64_neon_fmax:
     return LowerBinOp(TargetOpcode::G_FMAXIMUM);
   case Intrinsic::aarch64_neon_fmin:

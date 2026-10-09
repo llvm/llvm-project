@@ -1216,6 +1216,17 @@ void CompileUnit::cloneDieAttrExpression(
 
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
+    if (Op.isError()) {
+      // The operation could not be decoded, so neither it nor anything after
+      // it can be located. Its end offset is the offset it started at, so the
+      // slice copied below would be empty and the rest of the expression
+      // would be silently dropped. Preserve the remaining bytes instead.
+      warn("cannot decode a DW_OP, copying the rest of the expression "
+           "unmodified.");
+      StringRef Bytes = InputExpression.getData().substr(OpOffset);
+      OutputExpression.append(Bytes.begin(), Bytes.end());
+      return;
+    }
     auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
     // operands. Thus far we only support 2.
@@ -1285,7 +1296,11 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
+        uint64_t LinkedAddress =
+            SA->Address +
+            getContainingFile()
+                .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
+                .value_or(VarAddressAdjustment.value_or(0));
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1322,7 +1337,10 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + VarAddressAdjustment.value_or(0);
+              SA->Address +
+              getContainingFile()
+                  .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
+                  .value_or(VarAddressAdjustment.value_or(0));
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(

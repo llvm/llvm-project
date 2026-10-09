@@ -8,7 +8,10 @@
 // UnsafeBufferUsageAnalysis is a noop analysis.
 //
 // UnsafeBufferUsageAnalysisResult is a map from EntityIds to
-// EntityPointerLevelSets
+// EntityPointerLevelSets.
+//
+// UnsafeBufferReachableAnalysisResult is a flat set of EntityPointerLevels
+// reachable from unsafe buffer usage.
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
@@ -19,11 +22,14 @@
 #include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlowAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Analyses/TypeConstrainedPointers/TypeConstrainedPointers.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "clang/ScalableStaticAnalysis/Analyses/VirtualMethodFamily/VirtualMethodFamily.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/SummaryAnalysis.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -98,7 +104,7 @@ json::Object serializeUnsafeBufferReachableAnalysisResult(
   json::Object Result;
 
   Result[UnsafeBufferReachableAnalysisResultName] =
-      entityPointerLevelMapToJSON(R.Reachables, IdToJSON);
+      entityPointerLevelSetToJSON(R.Reachables, IdToJSON);
   return Result;
 }
 
@@ -113,7 +119,7 @@ deserializeUnsafeBufferReachableAnalysisResult(
         Obj, "an object with a key %s",
         UnsafeBufferReachableAnalysisResultName.data());
 
-  auto Reachables = entityPointerLevelMapFromJSON(*Content, IdFromJSON);
+  auto Reachables = entityPointerLevelSetFromJSON(*Content, IdFromJSON);
 
   if (!Reachables)
     return Reachables.takeError();
@@ -139,70 +145,48 @@ JSONFormat::AnalysisResultRegistry::Add<UnsafeBufferReachableAnalysisResult>
 ///    the pointer flow graph (provided by `PointerFlowAnalysisResult`), it is
 ///    also unsafe.
 /// 3. **C3 (Constrained):** Type-constrained entities are NOT unsafe.
+/// 4. **C4 (Family):** If a parameter or return slot of a virtual method is
+///    unsafe at some pointer level, so is every slot of its override family
+///    (provided by `VirtualMethodFamilyAnalysisResult`) at that level, because
+///    a virtual call can dispatch to any of the overrides.
 class UnsafeBufferReachableAnalysis
-    : public DerivedAnalysis<UnsafeBufferReachableAnalysisResult,
-                             PointerFlowAnalysisResult,
-                             TypeConstrainedPointersAnalysisResult,
-                             UnsafeBufferUsageAnalysisResult> {
+    : public DerivedAnalysis<
+          UnsafeBufferReachableAnalysisResult, PointerFlowAnalysisResult,
+          TypeConstrainedPointersAnalysisResult,
+          UnsafeBufferUsageAnalysisResult, VirtualMethodFamilyAnalysisResult> {
 
-  /// BoundsPropagationGraph adds bounds propagation semantics to the
-  /// pointer-flow graph, which represents the set of static pointer assignment
-  /// sites collected from the source code. Consider the following example:
-  ///
-  /// void f(int ***p, int **q) {
-  ///   *p = q;
-  ///   (**p)[5] = 0;
-  /// }
-  ///
-  /// There is one static pointer assignment thus one pointer-flow edge: (p, 2)
-  /// -> (q, 1). In terms of bounds propagation, this assignment implies that if
-  /// 'p' at pointer level 2 requires bounds, 'q' at pointer level 1 must also
-  /// have them. Furthermore, this relationship propagates to deeper indirection
-  /// levels: if 'p' at level 3 requires bounds, so does 'q' at level 2.
-  ///
-  /// In the example above, `(**p)` requires bounds (due to the array index),
-  /// and therefore `*q` must require bounds as well.
-  ///
-  /// To generalize the idea, the BoundsPropagationGraph is defined as a super
-  /// graph of the input pointer-flow graph by:
-  ///
-  ///   For each edge (src, i) -> (dest, j) in the pointer-flow graph, the
-  ///   BoundsPropagationGraph has a finite set of edges
-  ///   {(src, i + d) -> (dest, j + d) | 0 <= d < UB}, where UB is an upper
-  ///   bound based on the maximum pointer level the pointer type can have.
   struct BoundsPropagationGraph {
-  private:
     EdgeSet PointerFlows;
-
-  public:
-    BoundsPropagationGraph(EdgeSet PointerFlows)
-        : PointerFlows(std::move(PointerFlows)) {}
 
     /// Returns the EntityPointerLevelSet that are reachable from \p Src by
     /// one edge in the BoundsPropagationGraph.
     EntityPointerLevelSet getDestNodes(const EntityPointerLevel &Src) const {
-      unsigned SrcPtrLv = Src.getPointerLevel();
-      EntityPointerLevelSet Result;
-
-      for (unsigned P = 1; P <= SrcPtrLv; ++P) {
-        auto I = PointerFlows.find(buildEntityPointerLevel(Src.getEntity(), P));
-
-        if (I != PointerFlows.end()) {
-          unsigned Delta = SrcPtrLv - P;
-          for (const auto &EPL : I->second)
-            Result.insert(buildEntityPointerLevel(
-                EPL.getEntity(), EPL.getPointerLevel() + Delta));
-        }
-      }
-      return Result;
+      auto I = PointerFlows.find(Src);
+      if (I == PointerFlows.end())
+        return {};
+      return I->second;
     }
   };
 
   std::map<EntityId, BoundsPropagationGraph> BPG;
 
+  /// Maps each virtual method slot to the ID of its override family.
+  const llvm::DenseMap<EntityId, EntityId> *FamilyOf = nullptr;
+
+  /// The slots of each override family, excluding type-constrained ones.
+  llvm::DenseMap<EntityId, llvm::SmallVector<EntityId, 2>> FamilyMembers;
+
   // Use pointers for efficiency. EPLs are in tree-based containers that only
   // grow. So pointers to them are stable.
   using EPLPtr = const EntityPointerLevel *;
+
+  // Insert `EPL` into `Reachables`, and add it to `Worklist` if it is new:
+  void insertReachable(const EntityPointerLevel &EPL,
+                       std::vector<EPLPtr> &WorkList) {
+    auto [It, Inserted] = getResult().Reachables.insert(EPL);
+    if (Inserted)
+      WorkList.push_back(&*It);
+  }
 
   // Find all outgoing edges from `EPL` in the `Graph`, insert their
   // destination nodes into `Reachables`, and add newly discovered nodes to
@@ -212,30 +196,41 @@ class UnsafeBufferReachableAnalysis
     for (auto &[Id, SubGraph] : BPG) {
       auto R = SubGraph.getDestNodes(*EPL);
 
-      for (const auto &Dst : R) {
-        auto [It, Inserted] = getResult().Reachables[Id].insert(Dst);
-        if (Inserted)
-          WorkList.push_back(&*It);
-      }
+      for (const auto &Dst : R)
+        insertReachable(Dst, WorkList);
     }
   }
 
+  // Insert the slots of the override family of `EPL` at the pointer level of
+  // `EPL` into `Reachables`, and add newly discovered nodes to `Worklist`:
+  void updateReachablesWithFamily(EPLPtr EPL, std::vector<EPLPtr> &WorkList) {
+    auto FamilyIt = FamilyOf->find(EPL->getEntity());
+    if (FamilyIt == FamilyOf->end())
+      return;
+    auto MembersIt = FamilyMembers.find(FamilyIt->second);
+    if (MembersIt == FamilyMembers.end())
+      return;
+    for (EntityId Member : MembersIt->second)
+      insertReachable(buildEntityPointerLevel(Member, EPL->getPointerLevel()),
+                      WorkList);
+  }
+
   // Expand the initial set of C1 pointers in `getResult().Reachables` by
-  // computing and appending all reachable pointers, satisfying both C1 and C2.
+  // computing and appending all reachable pointers, satisfying C1, C2 and C4.
   void computeReachableUnsafePointers() {
     auto &Reachables = getResult().Reachables;
     // Simple DFS:
     std::vector<EPLPtr> Worklist;
 
-    for (auto &[Id, EPLs] : Reachables)
-      for (auto &EPL : EPLs)
-        Worklist.push_back(&EPL);
+    for (auto &EPL : Reachables)
+      Worklist.push_back(&EPL);
 
     while (!Worklist.empty()) {
       EPLPtr Node = Worklist.back();
       Worklist.pop_back();
 
       updateReachablesWithOutgoings(Node, Worklist);
+      updateReachablesWithFamily(Node, Worklist);
     }
   }
 
@@ -243,7 +238,8 @@ public:
   llvm::Error
   initialize(const PointerFlowAnalysisResult &PtrFlowGraph,
              const TypeConstrainedPointersAnalysisResult &TypeConstraints,
-             const UnsafeBufferUsageAnalysisResult &UnsafePtrs) override {
+             const UnsafeBufferUsageAnalysisResult &UnsafePtrs,
+             const VirtualMethodFamilyAnalysisResult &Families) override {
     auto HasNoTypeConstraint =
         [&TypeConstraints](const EntityPointerLevel &EPL) {
           return !TypeConstraints.contains(EPL.getEntity());
@@ -265,24 +261,29 @@ public:
                                        FilteredDstRange.end());
       }
       if (!FilteredSubGraph.empty())
-        BPG.try_emplace(Id, std::move(FilteredSubGraph));
+        BPG.try_emplace(Id,
+                        BoundsPropagationGraph{std::move(FilteredSubGraph)});
     }
 
     // Filter out type-constrained pointers from `UnsafePtrs`:
     for (auto &[Contributor, EPLs] : UnsafePtrs) {
       auto FilteredRange = llvm::make_filter_range(EPLs, HasNoTypeConstraint);
 
-      if (!FilteredRange.empty())
-        getResult().Reachables[Contributor].insert(FilteredRange.begin(),
-                                                   FilteredRange.end());
+      getResult().Reachables.insert(FilteredRange.begin(), FilteredRange.end());
     }
+
+    // Filter out type-constrained slots from the override families:
+    FamilyOf = &Families.RetAndParamData;
+    for (auto [Slot, FamilyId] : Families.RetAndParamData)
+      if (!TypeConstraints.contains(Slot))
+        FamilyMembers[FamilyId].push_back(Slot);
     return llvm::Error::success();
   }
 
   llvm::Expected<bool> step() override {
     // Compute the reachable EPLs from the C1 unsafe pointers over the
-    // pointer-flow graph; both are already C3-filtered, so the result
-    // satisfies C1, C2, and C3.
+    // pointer-flow graph and the override families; all three are already
+    // C3-filtered, so the result satisfies C1, C2, C3, and C4.
     computeReachableUnsafePointers();
     // This is not an iterative algorithm so stop iteration by retruning false:
     return false;
@@ -291,7 +292,8 @@ public:
 
 AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
     RegisterUnsafeBufferReachableAnalysis(
-        "Reachable pointers from unsafe buffer usage in pointer flow graph");
+        "Reachable pointers from unsafe buffer usage in pointer flow graph, "
+        "family-closed across virtual method overrides");
 
 } // namespace
 

@@ -5584,6 +5584,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // Add space in attribute like `(* ASYNC_REG = "TRUE" *)`.
     if (Left.endsSequence(tok::star, tok::l_paren) && Right.is(tok::identifier))
       return true;
+    // Add space in the dist list like `x dist {100 := 1};`.
+    if (Right.is(tok::colon) &&
+        (Right.TokenText == ":=" || Right.TokenText == ":/")) {
+      return true;
+    }
     // Add space before drive strength like in `wire (strong1, pull0)`.
     if (Right.is(tok::l_paren) && Right.is(TT_VerilogStrength))
       return true;
@@ -6233,6 +6238,17 @@ bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
     return true;
   }
 
+  // SLS_Inline and SLS_All may keep short lambdas inline, so the break is
+  // decided later in ContinuationIndenter::mustBreak().
+  if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace) &&
+      IsFunctionArgument(Right)) {
+    const auto SLS = Style.AllowShortLambdasOnASingleLine;
+    if (SLS == FormatStyle::SLS_None ||
+        (SLS == FormatStyle::SLS_Empty && !Right.Children.empty())) {
+      return true;
+    }
+  }
+
   // Put multiple Java annotation on a new line.
   if ((Style.isJava() || Style.isJavaScript()) &&
       Left.is(TT_LeadingJavaAnnotation) &&
@@ -6722,6 +6738,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
+  }
+
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
   }
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;

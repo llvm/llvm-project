@@ -10,14 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_NATIVEDYLIBMANAGER_H
-#define ORC_RT_NATIVEDYLIBMANAGER_H
+#ifndef ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
+#define ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
 
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
-#include "orc-rt/bedrock/sps-ci/NativeDylibManagerSPSCI.h"
-
-#include <optional>
+#include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/support/SymbolLookupSet.h"
 
 namespace orc_rt {
 
@@ -30,9 +29,6 @@ class Session;
 /// from load().
 class NativeDylibManager : public Service {
 public:
-  enum LookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
-  using SymbolLookupSet = std::vector<std::pair<std::string, LookupFlags>>;
-
   /// Create a NativeDylibManager, adding associated symbols to the given
   /// SimpleSymbolTable (typically the BootstrapInfo table).
   static Expected<std::unique_ptr<NativeDylibManager>>
@@ -73,7 +69,7 @@ public:
   /// (nullptr) address. This matches the resolve semantics of
   /// llvm::orc::rt_bootstrap::SimpleExecutorDylibManager.
   using OnLookupCompleteFn =
-      move_only_function<void(Expected<std::vector<std::optional<void *>>>)>;
+      move_only_function<void(Expected<SymbolLookupResult>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
               SymbolLookupSet Symbols);
 
@@ -89,4 +85,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_NATIVEDYLIBMANAGER_H
+#endif // ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H

@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INPROCESSCONTROLLERACCESS_H
-#define ORC_RT_INPROCESSCONTROLLERACCESS_H
+#ifndef ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
+#define ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
-#include "orc-rt/bedrock/Error.h"
+#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/WrapperFunction.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <mutex>
 #include <unordered_map>
@@ -33,8 +33,8 @@ public:
   /// and InProcessControllerAccess without relying on anything but C ABI.
   /// Must be kept in-sync with the corresponding struct in InProcessEPC.
   struct Connection {
-    void (*Retain)(Connection *C) = nullptr;
-    void (*Release)(Connection *C) = nullptr;
+    void (*Retain)(Connection *C) noexcept = nullptr;
+    void (*Release)(Connection *C) noexcept = nullptr;
     void (*Disconnect)(Connection *C) = nullptr;
     int (*EnterMessageScope)(Connection *C) = nullptr;
     void (*LeaveMessageScope)(Connection *C) = nullptr;
@@ -94,7 +94,7 @@ public:
                                                BootstrapInfoAccess *BCA)>;
 
   /// Create an InProcessControllerAccess instance.
-  InProcessControllerAccess(Session &S, OnConnectFn OnConnect)
+  InProcessControllerAccess(Session &S, OnConnectFn OnConnect) noexcept
       : Session::ControllerAccess(S), OnConnect(std::move(OnConnect)) {}
 
   InProcessControllerAccess(const InProcessControllerAccess &) = delete;
@@ -142,4 +142,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_INPROCESSCONTROLLERACCESS_H
+#endif // ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H

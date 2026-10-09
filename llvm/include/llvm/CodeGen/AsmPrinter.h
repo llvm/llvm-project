@@ -39,6 +39,7 @@ namespace llvm {
 class AddrLabelMap;
 class AsmPrinterHandler;
 class BasicBlock;
+class BasicBlockSectionsProfileReader;
 class BlockAddress;
 class Constant;
 class ConstantArray;
@@ -56,7 +57,10 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineBlockHashInfoResult;
 class MachineConstantPoolValue;
+class MachineBranchProbabilityInfo;
 class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
@@ -110,6 +114,9 @@ public:
 
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI = nullptr;
+
+  /// The pointer size in bytes for the default address space
+  unsigned PointerSize = 0;
 
   /// This is a pointer to the current MachineDominatorTree.
   MachineDominatorTree *MDT = nullptr;
@@ -177,6 +184,12 @@ public:
   std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
   std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
   std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
+  std::function<MachineBranchProbabilityInfo *(MachineFunction &)> GetMBPI;
+  std::function<MachineBlockFrequencyInfo *(MachineFunction &)> GetMBFI;
+  std::function<MachineBlockHashInfoResult *(MachineFunction &)> GetMBHI;
+  /// Returns the basic block sections profile reader if available, nullptr
+  /// otherwise.
+  std::function<BasicBlockSectionsProfileReader *(MachineFunction &)> GetBBSPR;
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;
@@ -352,8 +365,8 @@ public:
   /// Return information about data layout.
   const DataLayout &getDataLayout() const;
 
-  /// Return the pointer size from the TargetMachine
-  unsigned getPointerSize() const;
+  /// Return the pointer size in bytes from the target triple.
+  unsigned getPointerSize() const { return PointerSize; }
 
   /// Return information about subtarget.
   const MCSubtargetInfo &getSubtargetInfo() const;

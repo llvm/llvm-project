@@ -29,13 +29,12 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
-                                       cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableCostPerUse("riscv-cost-per-use", cl::init(true),
+                                      cl::Hidden);
 static cl::opt<bool>
-    DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
-                         cl::init(false),
-                         cl::desc("Disable two address hints for register "
-                                  "allocation"));
+    EnableRegAllocHints("riscv-regalloc-hints", cl::Hidden, cl::init(true),
+                        cl::desc("Enable two address hints for register "
+                                 "allocation"));
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
@@ -120,14 +119,13 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 }
 
-const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForOperand(
-    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
   const RISCVSubtarget &STI = MRI.getMF().getSubtarget<RISCVSubtarget>();
 
-  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
+  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg);
   if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB,
-                                    STI.is64Bit());
+    return getRegClassForTypeOnBank(MRI.getType(Reg), *RB, STI.is64Bit());
 
   if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB)) {
     return getAllocatableClass(RC);
@@ -986,7 +984,7 @@ RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
   // Set CostPerUse to 1 only when optimizing for size and RVC exists.
   return MF.getFunction().hasOptSize() &&
                  MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
-                 !DisableCostPerUse
+                 EnableCostPerUse
              ? 1
              : 0;
 }
@@ -1000,7 +998,7 @@ float RISCVRegisterInfo::getSpillWeightScaleFactor(
 // instruction.
 bool RISCVRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -1024,7 +1022,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Verify it's valid and available
       if (RISCV::GPRRegClass.contains(TargetReg) &&
           is_contained(Order, TargetReg))
-        Hints.push_back(TargetReg.id());
+        Hints.insert(TargetReg.id());
     }
 
     // Second priority: Try to find consecutive register pairs in the allocation
@@ -1041,14 +1039,14 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Don't provide hints that are paired to a reserved register.
       MCRegister Paired = PhysReg + (IsOdd ? -1 : 1);
       if (WantOdd == IsOdd && !MRI->isReserved(Paired))
-        Hints.push_back(PhysReg);
+        Hints.insert(PhysReg);
     }
   }
 
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
-  if (!VRM || DisableRegAllocHints)
+  if (!VRM || !EnableRegAllocHints)
     return BaseImplRetVal;
 
   // Add any two address hints after any copy hints.
@@ -1063,7 +1061,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     // physical register is even (or vice versa), we should not add the hint.
     if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg)) &&
         !MO.getSubReg() && !VRRegMO.getSubReg()) {
-      if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+      if (!MRI->isReserved(PhysReg) && !Hints.contains(PhysReg))
         TwoAddrHints.insert(PhysReg);
     }
   };
@@ -1191,7 +1189,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   for (MCPhysReg OrderReg : Order)
     if (TwoAddrHints.count(OrderReg))
-      Hints.push_back(OrderReg);
+      Hints.insert(OrderReg);
 
   return BaseImplRetVal;
 }

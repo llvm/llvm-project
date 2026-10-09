@@ -1435,6 +1435,45 @@ func.func @no_fold_transfer_write_in_bounds_scalable(%m: memref<4xf32>, %v: vect
 
 // -----
 
+// `-1 + 4 <= 8` holds, but `in_bounds` covers the starting point too, so this
+// must not fold.
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_negative_index
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<8xf32>, vector<4xf32>
+func.func @no_fold_transfer_read_in_bounds_negative_index(%m: memref<8xf32>, %p: f32) -> vector<4xf32> {
+  %c-1 = arith.constant -1 : index
+  %v = vector.transfer_read %m[%c-1], %p : memref<8xf32>, vector<4xf32>
+  return %v : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @no_fold_transfer_write_in_bounds_negative_index
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : vector<4xf32>, memref<8xf32>
+func.func @no_fold_transfer_write_in_bounds_negative_index(%m: memref<8xf32>, %v: vector<4xf32>) {
+  %c-1 = arith.constant -1 : index
+  vector.transfer_write %v, %m[%c-1] : vector<4xf32>, memref<8xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @no_fold_transfer_read_in_bounds_index_overflow
+//       CHECK:   vector.transfer_read
+//   CHECK-NOT:   in_bounds
+//       CHECK:   : memref<8xf32>, vector<4xf32>
+func.func @no_fold_transfer_read_in_bounds_index_overflow(%m: memref<8xf32>, %p: f32) -> vector<4xf32> {
+  %c = arith.constant 9223372036854775807 : index
+  %v = vector.transfer_read %m[%c], %p : memref<8xf32>, vector<4xf32>
+  return %v : vector<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
@@ -1981,6 +2020,31 @@ func.func @negative_store_to_load_tensor(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// Same as @store_to_load_tensor, but the read is under vector.mask: its
+// masked-off lanes get the padding value, so it must not fold to the stored
+// vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_region_masked_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   return %[[R]] : vector<1x4xf32>
+func.func @negative_store_to_load_tensor_region_masked_read(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> vector<1x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_to_load_tensor_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>, %[[V0:.*]]: vector<4x2xf32>)
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x2xf32> to vector<6x4x2xf32>
@@ -1995,6 +2059,27 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
   %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
   permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
     tensor<4x4xf32>, vector<4x2x6xf32>
+  return %0 : vector<4x2x6xf32>
+}
+
+// -----
+
+// Same as above, but the read is under vector.mask: its masked-off lanes get
+// the padding value, so it must not become a broadcast of the stored vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_broadcast_region_masked
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//   CHECK-NOT:   vector.broadcast
+//       CHECK:   return %[[R]] : vector<4x2x6xf32>
+func.func @negative_store_to_load_tensor_broadcast_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<4x2xf32>, %mask : vector<4x2xi1>) -> vector<4x2x6xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds = [true, true]} :
+    vector<4x2xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
+  permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
+    tensor<4x4xf32>, vector<4x2x6xf32> } : vector<4x2xi1> -> vector<4x2x6xf32>
   return %0 : vector<4x2x6xf32>
 }
 
@@ -2186,6 +2271,32 @@ func.func @negative_dead_store_tensor(%arg0 : tensor<4x4xf32>,
   %x = arith.addf %0, %0 : vector<1x4xf32>
   %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
+  return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
+// Same as @dead_store_tensor, but the last write is under vector.mask: it does
+// not overwrite the masked-off lanes, so the first write must be kept.
+// CHECK-LABEL: func @negative_dead_store_tensor_region_masked
+//   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C2]], %[[C0]]
+//       CHECK:   %[[VTW:.*]] = vector.mask %{{.*}} { vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func.func @negative_dead_store_tensor_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> tensor<4x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w2 = vector.mask %mask { vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32> } : vector<1x4xi1> -> tensor<4x4xf32>
   return %w2 : tensor<4x4xf32>
 }
 
@@ -3463,9 +3574,13 @@ func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4x
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask(
+// +---------------------------------------------------------------------------
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
-func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3480,9 +3595,9 @@ func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_scalable(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[4]xi1> {
-func.func @fold_shape_cast_with_mask_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
+func.func @fold_shape_cast_with_mask_trailing_unit_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
 // CHECK-NOT: vector.shape_cast
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
@@ -3498,9 +3613,9 @@ func.func @fold_shape_cast_with_mask_scalable(%arg0: tensor<1x?xf32>) -> vector<
 // -----
 
 // Check that scalable "1" (i.e. [1]) is not folded
-// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable_one(
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_trailing_unit_scalable_one(
 // CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[1]xi1> {
-func.func @fold_shape_cast_with_mask_scalable_one(%arg0: tensor<1x?xf32>) -> vector<1x[1]xi1>{
+func.func @fold_shape_cast_with_mask_trailing_unit_scalable_one(%arg0: tensor<1x?xf32>) -> vector<1x[1]xi1>{
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
 // CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]] : vector<1x[1]xi1>
@@ -3514,13 +3629,80 @@ func.func @fold_shape_cast_with_mask_scalable_one(%arg0: tensor<1x?xf32>) -> vec
 
 // -----
 
-// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1> {
-func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
+// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1> {
+func.func @fold_shape_cast_with_constant_mask_trailing_unit() -> vector<4xi1>{
 // CHECK-NOT: vector.shape_cast
-// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [1] : vector<4xi1>
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
 // CHECK:           return %[[VAL_0]] : vector<4xi1>
-  %1 = vector.constant_mask [1, 1, 1] : vector<4x1x1xi1>
+  %1 = vector.constant_mask [3, 1, 1] : vector<4x1x1xi1>
   %2 = vector.shape_cast %1 : vector<4x1x1xi1> to vector<4xi1>
+  return %2 : vector<4xi1>
+}
+
+// -----
+
+// +---------------------------------------------------------------------------
+// Tests for ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit(
+// CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<4x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit(%arg0: tensor<1x?xf32>) -> vector<4x1xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:     %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<4x1xi1>
+// CHECK:     return %[[VAL_3]] : vector<4x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x4x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x4x1xi1> to vector<4x1xi1>
+  return %2 : vector<4x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_scalable(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<[4]x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_scalable(%arg0: tensor<1x?xf32>) -> vector<[4]x1xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:     %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<[4]x1xi1>
+// CHECK:     return %[[VAL_3]] : vector<[4]x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x[4]x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x[4]x1xi1> to vector<[4]x1xi1>
+  return %2 : vector<[4]x1xi1>
+}
+
+// -----
+
+// Check that scalable "1" (i.e. [1]) is not folded
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_leading_unit_scalable_one(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<[1]x1xi1> {
+func.func @fold_shape_cast_with_mask_leading_unit_scalable_one(%arg0: tensor<1x?xf32>) -> vector<[1]x1xi1>{
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_2]], %[[VAL_1]] : vector<[1]x1xi1>
+// CHECK:           return %[[VAL_3]] : vector<[1]x1xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %dim, %c1 : vector<1x[1]x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x[1]x1xi1> to vector<[1]x1xi1>
+  return %2 : vector<[1]x1xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1> {
+func.func @fold_shape_cast_with_constant_mask_leading_unit() -> vector<4xi1>{
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [3] : vector<4xi1>
+// CHECK:           return %[[VAL_0]] : vector<4xi1>
+  %1 = vector.constant_mask [1, 1, 3] : vector<1x1x4xi1>
+  %2 = vector.shape_cast %1 : vector<1x1x4xi1> to vector<4xi1>
   return %2 : vector<4xi1>
 }
 
@@ -3842,7 +4024,7 @@ func.func @from_elements_f64_to_i64_conversion() -> vector<6xi64> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<0> : vector<1xi8>
 // CHECK-NEXT:    return %[[CST]] : vector<1xi8>
 func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
-  %cst = llvm.mlir.constant(0: i1) : i8
+  %cst = llvm.mlir.constant(0: i8) : i8
   %v = vector.from_elements %cst : vector<1xi8>
   return %v : vector<1xi8>
 }
@@ -3853,9 +4035,9 @@ func.func @from_elements_i1_to_i8_conversion() -> vector<1xi8> {
 // CHECK-NEXT:    %[[CST:.*]] = arith.constant dense<[0, 1, 42]> : vector<3xi64>
 // CHECK-NEXT:    return %[[CST]] : vector<3xi64>
 func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
-  %cst0 = llvm.mlir.constant(0 : index) : i64
-  %cst1 = llvm.mlir.constant(1 : index) : i64
-  %cst42 = llvm.mlir.constant(42 : index) : i64
+  %cst0 = llvm.mlir.constant(0 : i64) : i64
+  %cst1 = llvm.mlir.constant(1 : i64) : i64
+  %cst42 = llvm.mlir.constant(42 : i64) : i64
   %v = vector.from_elements %cst0, %cst1, %cst42 : vector<3xi64>
   return %v : vector<3xi64>
 }
