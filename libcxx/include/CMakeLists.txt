@@ -1337,6 +1337,7 @@ set(files
   __cxx03/__fwd/functional.h
   __cxx03/__fwd/ios.h
   __cxx03/__fwd/istream.h
+  __cxx03/__fwd/mbstate_t.h
   __cxx03/__fwd/memory.h
   __cxx03/__fwd/ostream.h
   __cxx03/__fwd/pair.h
