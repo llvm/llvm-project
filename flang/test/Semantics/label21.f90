@@ -76,3 +76,30 @@ subroutine outer_ends_last_in_omp(a, n, m)
 600 continue
   !$omp end parallel
 end subroutine
+
+! An infinite labeled DO loop has no DO variable, so a terminating statement in
+! another block did not even cause an error: the loop was silently dropped.
+
+subroutine infinite_ends_inside_acc(a, i)
+  integer :: i
+  real :: a(1)
+  !ERROR: Label '700' is not in DO loop scope
+  do 700
+  !$acc parallel
+  i = i + 1
+700 continue
+  a(1) = 0.0
+  !$acc end parallel
+end subroutine
+
+subroutine infinite_ends_inside_omp(a, i)
+  integer :: i
+  real :: a(1)
+  !ERROR: Label '800' is not in DO loop scope
+  do 800
+  !$omp parallel
+  i = i + 1
+800 continue
+  a(1) = 0.0
+  !$omp end parallel
+end subroutine
