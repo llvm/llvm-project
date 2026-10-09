@@ -4992,6 +4992,38 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
                                   {}, VIC);
 }
 
+TargetTransformInfo::VectorInstrContext
+AArch64TTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || !ST->isNeonAvailable() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || isa<ExtractElementInst>(*SplatIt))
+    return VectorInstrContext::None;
+
+  // The indexed (by element) FMLA/FMLS take the splatted operand from a lane of
+  // a vector register, see isProfitableToSinkOperands().
+  Type *ScalarTy = (*SplatIt)->getType();
+  if (!ScalarTy->isFloatTy() && !ScalarTy->isDoubleTy() &&
+      !(ScalarTy->isHalfTy() && ST->hasFullFP16()))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  if (all_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+        return UserOp.Opcode == Instruction::FMul && UserOp.IsFused;
+      }))
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
+}
+
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
@@ -7282,6 +7314,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
   // A subvector extract can be implemented with a NEON/SVE ext (or trivial
   // extract, if from lane 0) for 128-bit NEON vectors or legal SVE vectors.
