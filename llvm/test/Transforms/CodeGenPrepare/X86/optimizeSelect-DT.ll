@@ -10,8 +10,8 @@ define i1 @PR41004(i32 %x, i32 %y, i32 %t1) {
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[T0:%.*]] = icmp eq i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[T0]], i32 [[REM]], i32 0
-; CHECK-NEXT:    [[NEG:%.*]] = add i32 [[T1:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NEG]], [[MUL]]
+; CHECK-NEXT:    [[MATH:%.*]] = add i32 [[T1:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MATH]], [[MUL]]
 ; CHECK-NEXT:    br label [[IF:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[T1]], 0
