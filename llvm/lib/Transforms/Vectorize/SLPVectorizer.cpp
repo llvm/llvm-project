@@ -21061,6 +21061,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
+          // Split roots keep their operands in the combined sub-nodes, so there
+          // is no single operand to take the context hint from.
+          if (E.State == TreeEntry::SplitVectorize)
+            break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
           break;
@@ -31078,11 +31082,23 @@ class HorizontalReduction {
     }
   }
 
+  /// \returns true if the disjoint flag of the reduction ops is kept for the
+  /// emitted ops.
+  bool keepDisjoint() const {
+    if (getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
+                           ReducedVals.front().front()->getType()))
+      return false;
+    return all_of(make_second_range(NarrowedLeafShifts),
+                  [](const NarrowedLeafInfo &L) { return L.Disjoint; });
+  }
+
   /// Creates reduction operation with the current opcode with the IR flags
-  /// from \p ReductionOps, dropping nuw/nsw flags.
-  static Value *createOp(IRBuilderBase &Builder, RecurKind RdxKind, Value *LHS,
-                         Value *RHS, const Twine &Name,
-                         const ReductionOpsListType &ReductionOps) {
+  /// from \p ReductionOps, dropping nuw/nsw flags, and disjoint flag if \p
+  /// KeepDisjoint is false.
+  static Value *createOpWithFlags(IRBuilderBase &Builder, RecurKind RdxKind,
+                                  Value *LHS, Value *RHS, const Twine &Name,
+                                  const ReductionOpsListType &ReductionOps,
+                                  bool KeepDisjoint) {
     bool UseSelect = ReductionOps.size() == 2 ||
                      // Logical or/and.
                      (ReductionOps.size() == 1 &&
@@ -31101,7 +31117,18 @@ class HorizontalReduction {
       }
     }
     propagateIRFlags(Op, ReductionOps[0], nullptr, /*IncludeWrapFlags=*/false);
+    if (!KeepDisjoint && match(Op, m_DisjointOr(m_Value(), m_Value())))
+      cast<PossiblyDisjointInst>(Op)->setIsDisjoint(false);
     return Op;
+  }
+
+  /// Creates reduction operation with the current opcode with the IR flags
+  /// from \p ReductionOps, dropping nuw/nsw flags.
+  Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
+                  Value *RHS, const Twine &Name,
+                  const ReductionOpsListType &ReductionOps) const {
+    return createOpWithFlags(Builder, Kind, LHS, RHS, Name, ReductionOps,
+                             keepDisjoint());
   }
 
 public:
@@ -31800,11 +31827,15 @@ public:
               Ignorable.insert(I);
               NarrowedChainInsts.push_back(I);
             }
+          const bool AllDisjoint =
+              all_of(make_isa_range<PossiblyDisjointInst>(ChainInsts),
+                     [](PossiblyDisjointInst *I) { return I->isDisjoint(); });
           SmallVector<Value *> NewCandidates;
           for (const auto &[Cand, Leaves] :
                zip(ReducedValsCandidates, AllLeaves)) {
             SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
-            for (const NarrowedLeafInfo &L : Leaves) {
+            for (NarrowedLeafInfo &L : Leaves) {
+              L.Disjoint = AllDisjoint;
               NarrowedLeafShifts.try_emplace(L.V, L);
               NewCandidates.push_back(L.V);
               ReducedValsToOps[L.V].append(RdxOps);
@@ -32450,8 +32481,8 @@ public:
         VAcc->addIncoming(InitVec, B);
       }
       Builder.SetInsertPoint(Root);
-      Value *VAdd =
-          createOp(Builder, RdxKind, VAcc, Vec, "slprdx.acc", ReductionOps);
+      Value *VAdd = createOpWithFlags(Builder, RdxKind, VAcc, Vec, "slprdx.acc",
+                                      ReductionOps, /*KeepDisjoint=*/true);
       // The accumulation is on the loop-carried chain: do not let it be
       // contracted into an FMA with the reduced multiplication, which would
       // lengthen the chain.

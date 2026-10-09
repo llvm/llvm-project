@@ -649,8 +649,6 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
       if (F.getReturnType()->isDoubleTy()) {
         switch (ID) {
         case Intrinsic::cos:
-        case Intrinsic::exp:
-        case Intrinsic::exp2:
         case Intrinsic::log:
         case Intrinsic::log10:
         case Intrinsic::log2:

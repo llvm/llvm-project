@@ -4066,7 +4066,7 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
   });
   converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
-    const uint64_t size = type.getRowNum() * type.getColumnNum();
+    const uint64_t size = type.getNumRows() * type.getNumColumns();
     const mlir::Type elemTy = converter.convertType(type.getElementType());
     return mlir::VectorType::get(size, elemTy);
   });
@@ -5345,11 +5345,10 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
 }
 
 /// Computes the column-major flat index (columnIdx * numRows) + rowIdx.
-static mlir::Value computeMatrixFlatIndex(mlir::ConversionPatternRewriter &rewriter,
-                                          mlir::Location loc,
-                                          cir::MatrixType matrixTy,
-                                          mlir::Value rowIdx,
-                                          mlir::Value columnIdx) {
+static mlir::Value
+computeMatrixFlatIndex(mlir::ConversionPatternRewriter &rewriter,
+                       mlir::Location loc, cir::MatrixType matrixTy,
+                       mlir::Value rowIdx, mlir::Value columnIdx) {
   rowIdx = createIntCast(rewriter, rowIdx, rewriter.getI64Type(), false);
   columnIdx = createIntCast(rewriter, columnIdx, rewriter.getI64Type(), false);
   mlir::Type indexTy = rowIdx.getType();
@@ -5393,8 +5392,8 @@ mlir::LogicalResult CIRToLLVMMatrixColumnMajorLoadOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorLoadOp>(
       op, resultTy, adaptor.getValue(), adaptor.getStride(),
       rewriter.getBoolAttr(op.getIsVolatile()),
-      rewriter.getI32IntegerAttr(resultMatrixTy.getRowNum()),
-      rewriter.getI32IntegerAttr(resultMatrixTy.getColumnNum()));
+      rewriter.getI32IntegerAttr(resultMatrixTy.getNumRows()),
+      rewriter.getI32IntegerAttr(resultMatrixTy.getNumColumns()));
   return mlir::success();
 }
 
@@ -5405,8 +5404,8 @@ mlir::LogicalResult CIRToLLVMMatrixColumnMajorStoreOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixColumnMajorStoreOp>(
       op, adaptor.getMatrix(), adaptor.getValue(), adaptor.getStride(),
       rewriter.getBoolAttr(op.getIsVolatile()),
-      rewriter.getI32IntegerAttr(matrixTy.getRowNum()),
-      rewriter.getI32IntegerAttr(matrixTy.getColumnNum()));
+      rewriter.getI32IntegerAttr(matrixTy.getNumRows()),
+      rewriter.getI32IntegerAttr(matrixTy.getNumColumns()));
   return mlir::success();
 }
 
@@ -5416,8 +5415,8 @@ mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
   cir::MatrixType resultMatrixTy = op.getValue().getType();
   mlir::Type resultTy = typeConverter->convertType(resultMatrixTy);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixTransposeOp>(
-      op, resultTy, adaptor.getValue(), resultMatrixTy.getRowNum(),
-      resultMatrixTy.getColumnNum());
+      op, resultTy, adaptor.getValue(), resultMatrixTy.getNumRows(),
+      resultMatrixTy.getNumColumns());
   return mlir::success();
 }
 

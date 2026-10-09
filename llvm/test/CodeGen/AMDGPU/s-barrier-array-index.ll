@@ -13,7 +13,7 @@ define amdgpu_kernel void @signal_var_const_idx() {
 ; SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-NEXT:    s_mov_b32 m0, 33
+; SDAG-NEXT:    s_mov_b32 m0, 3
 ; SDAG-NEXT:    s_barrier_signal m0
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -23,7 +23,7 @@ define amdgpu_kernel void @signal_var_const_idx() {
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    s_barrier_signal 33
+; GISEL-NEXT:    s_barrier_signal 3
 ; GISEL-NEXT:    s_endpgm
   %bar = getelementptr [4 x target("amdgcn.named.barrier", 0)], ptr addrspace(15) @bars, i32 0, i32 2
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %bar, i32 0)
@@ -39,11 +39,10 @@ define amdgpu_kernel void @init_dynamic_idx(i32 %idx, i32 %cnt) {
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    s_lshl_b32 s0, s0, 4
+; SDAG-NEXT:    s_add_co_i32 s0, s0, 1
 ; SDAG-NEXT:    s_and_b32 s1, s1, 63
-; SDAG-NEXT:    s_or_b32 s0, s0, 1
+; SDAG-NEXT:    s_and_b32 s0, s0, 63
 ; SDAG-NEXT:    s_lshl_b32 s1, s1, 16
-; SDAG-NEXT:    s_and_b32 s0, s0, 49
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_or_b32 m0, s1, s0
 ; SDAG-NEXT:    s_barrier_init m0
@@ -57,11 +56,10 @@ define amdgpu_kernel void @init_dynamic_idx(i32 %idx, i32 %cnt) {
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_lshl_b32 s0, s0, 4
-; GISEL-NEXT:    s_and_b32 s1, s1, 63
 ; GISEL-NEXT:    s_add_co_u32 s0, 1, s0
-; GISEL-NEXT:    s_lshl_b32 s1, s1, 16
+; GISEL-NEXT:    s_and_b32 s1, s1, 63
 ; GISEL-NEXT:    s_and_b32 s0, s0, 63
+; GISEL-NEXT:    s_lshl_b32 s1, s1, 16
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_or_b32 m0, s0, s1
 ; GISEL-NEXT:    s_barrier_init m0
@@ -80,10 +78,9 @@ define amdgpu_kernel void @join_dynamic_idx(i32 %idx) {
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    s_lshl_b32 s0, s0, 4
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG-NEXT:    s_or_b32 s0, s0, 1
-; SDAG-NEXT:    s_and_b32 m0, s0, 49
+; SDAG-NEXT:    s_add_co_i32 s0, s0, 1
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_and_b32 m0, s0, 63
 ; SDAG-NEXT:    s_barrier_join m0
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -95,9 +92,8 @@ define amdgpu_kernel void @join_dynamic_idx(i32 %idx) {
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_lshl_b32 s0, s0, 4
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_add_co_u32 s0, 1, s0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 m0, s0, 63
 ; GISEL-NEXT:    s_barrier_join m0
 ; GISEL-NEXT:    s_endpgm
@@ -115,13 +111,11 @@ define amdgpu_kernel void @get_state_dynamic_idx(ptr addrspace(1) %out, i32 %idx
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    s_lshl_b32 s2, s2, 4
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG-NEXT:    s_or_b32 s2, s2, 1
-; SDAG-NEXT:    s_and_b32 m0, s2, 49
+; SDAG-NEXT:    s_add_co_i32 s2, s2, 1
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
+; SDAG-NEXT:    s_and_b32 m0, s2, 63
 ; SDAG-NEXT:    s_get_barrier_state s2, m0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; SDAG-NEXT:    s_endpgm
@@ -135,13 +129,11 @@ define amdgpu_kernel void @get_state_dynamic_idx(ptr addrspace(1) %out, i32 %idx
 ; GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_lshl_b32 s2, s2, 4
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_add_co_u32 s2, 1, s2
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GISEL-NEXT:    s_and_b32 m0, s2, 63
 ; GISEL-NEXT:    s_get_barrier_state s2, m0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GISEL-NEXT:    s_endpgm
