@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86RegisterBankInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
@@ -123,6 +125,9 @@ private:
                        MachineFunction &MF) const;
   bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
+
+  bool selectVaStartSysVList(MachineInstr &I, MachineRegisterInfo &MRI,
+                             MachineFunction &MF) const;
 
   ComplexRendererFns selectAddr(MachineOperand &Root) const;
 
@@ -493,6 +498,13 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectMulDivRem(I, MRI, MF);
   case TargetOpcode::G_SELECT:
     return selectSelect(I, MRI, MF);
+  case TargetOpcode::G_VASTART:
+    // As mentioned in X86CallLowering.cpp only 64bit Linux with C calling
+    // convention for now.
+    return (MF.getFunction().getCallingConv() == CallingConv::C &&
+            STI.isTargetLinux() && STI.is64Bit())
+               ? selectVaStartSysVList(I, MRI, MF)
+               : false;
   }
 
   return false;
@@ -536,62 +548,62 @@ unsigned X86InstructionSelector::getLoadStoreOp(const LLT &Ty,
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV32rm : X86::MOV32mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSSZrm_alt :
-                       HasAVX    ? X86::VMOVSSrm_alt :
-                                   X86::MOVSSrm_alt)
-                    : (HasAVX512 ? X86::VMOVSSZmr :
-                       HasAVX    ? X86::VMOVSSmr :
-                                   X86::MOVSSmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSSZrm_alt
+                       : HasAVX  ? X86::VMOVSSrm_alt
+                                 : X86::MOVSSrm_alt)
+                    : (HasAVX512 ? X86::VMOVSSZmr
+                       : HasAVX  ? X86::VMOVSSmr
+                                 : X86::MOVSSmr);
     if (X86::PSRRegBankID == RB.getID())
       return Isload ? X86::LD_Fp32m : X86::ST_Fp32m;
   } else if (Ty == LLT::scalar(64)) {
     if (X86::GPRRegBankID == RB.getID())
       return Isload ? X86::MOV64rm : X86::MOV64mr;
     if (X86::VECRRegBankID == RB.getID())
-      return Isload ? (HasAVX512 ? X86::VMOVSDZrm_alt :
-                       HasAVX    ? X86::VMOVSDrm_alt :
-                                   X86::MOVSDrm_alt)
-                    : (HasAVX512 ? X86::VMOVSDZmr :
-                       HasAVX    ? X86::VMOVSDmr :
-                                   X86::MOVSDmr);
+      return Isload ? (HasAVX512 ? X86::VMOVSDZrm_alt
+                       : HasAVX  ? X86::VMOVSDrm_alt
+                                 : X86::MOVSDrm_alt)
+                    : (HasAVX512 ? X86::VMOVSDZmr
+                       : HasAVX  ? X86::VMOVSDmr
+                                 : X86::MOVSDmr);
     if (X86::PSRRegBankID == RB.getID())
       return Isload ? X86::LD_Fp64m : X86::ST_Fp64m;
   } else if (Ty == LLT::scalar(80)) {
     return Isload ? X86::LD_Fp80m : X86::ST_FpP80m;
   } else if (Ty.isVector() && Ty.getSizeInBits() == 128) {
     if (Alignment >= Align(16))
-      return Isload ? (HasVLX ? X86::VMOVAPSZ128rm
-                              : HasAVX512
-                                    ? X86::VMOVAPSZ128rm_NOVLX
-                                    : HasAVX ? X86::VMOVAPSrm : X86::MOVAPSrm)
-                    : (HasVLX ? X86::VMOVAPSZ128mr
-                              : HasAVX512
-                                    ? X86::VMOVAPSZ128mr_NOVLX
-                                    : HasAVX ? X86::VMOVAPSmr : X86::MOVAPSmr);
+      return Isload ? (HasVLX      ? X86::VMOVAPSZ128rm
+                       : HasAVX512 ? X86::VMOVAPSZ128rm_NOVLX
+                       : HasAVX    ? X86::VMOVAPSrm
+                                   : X86::MOVAPSrm)
+                    : (HasVLX      ? X86::VMOVAPSZ128mr
+                       : HasAVX512 ? X86::VMOVAPSZ128mr_NOVLX
+                       : HasAVX    ? X86::VMOVAPSmr
+                                   : X86::MOVAPSmr);
     else
-      return Isload ? (HasVLX ? X86::VMOVUPSZ128rm
-                              : HasAVX512
-                                    ? X86::VMOVUPSZ128rm_NOVLX
-                                    : HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm)
-                    : (HasVLX ? X86::VMOVUPSZ128mr
-                              : HasAVX512
-                                    ? X86::VMOVUPSZ128mr_NOVLX
-                                    : HasAVX ? X86::VMOVUPSmr : X86::MOVUPSmr);
+      return Isload ? (HasVLX      ? X86::VMOVUPSZ128rm
+                       : HasAVX512 ? X86::VMOVUPSZ128rm_NOVLX
+                       : HasAVX    ? X86::VMOVUPSrm
+                                   : X86::MOVUPSrm)
+                    : (HasVLX      ? X86::VMOVUPSZ128mr
+                       : HasAVX512 ? X86::VMOVUPSZ128mr_NOVLX
+                       : HasAVX    ? X86::VMOVUPSmr
+                                   : X86::MOVUPSmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 256) {
     if (Alignment >= Align(32))
-      return Isload ? (HasVLX ? X86::VMOVAPSZ256rm
-                              : HasAVX512 ? X86::VMOVAPSZ256rm_NOVLX
-                                          : X86::VMOVAPSYrm)
-                    : (HasVLX ? X86::VMOVAPSZ256mr
-                              : HasAVX512 ? X86::VMOVAPSZ256mr_NOVLX
-                                          : X86::VMOVAPSYmr);
+      return Isload ? (HasVLX      ? X86::VMOVAPSZ256rm
+                       : HasAVX512 ? X86::VMOVAPSZ256rm_NOVLX
+                                   : X86::VMOVAPSYrm)
+                    : (HasVLX      ? X86::VMOVAPSZ256mr
+                       : HasAVX512 ? X86::VMOVAPSZ256mr_NOVLX
+                                   : X86::VMOVAPSYmr);
     else
-      return Isload ? (HasVLX ? X86::VMOVUPSZ256rm
-                              : HasAVX512 ? X86::VMOVUPSZ256rm_NOVLX
-                                          : X86::VMOVUPSYrm)
-                    : (HasVLX ? X86::VMOVUPSZ256mr
-                              : HasAVX512 ? X86::VMOVUPSZ256mr_NOVLX
-                                          : X86::VMOVUPSYmr);
+      return Isload ? (HasVLX      ? X86::VMOVUPSZ256rm
+                       : HasAVX512 ? X86::VMOVUPSZ256rm_NOVLX
+                                   : X86::VMOVUPSYrm)
+                    : (HasVLX      ? X86::VMOVUPSZ256mr
+                       : HasAVX512 ? X86::VMOVUPSZ256mr_NOVLX
+                                   : X86::VMOVUPSYmr);
   } else if (Ty.isVector() && Ty.getSizeInBits() == 512) {
     if (Alignment >= Align(64))
       return Isload ? X86::VMOVAPSZrm : X86::VMOVAPSZmr;
@@ -742,8 +754,9 @@ bool X86InstructionSelector::selectFrameIndexOrGep(MachineInstr &I,
                                                    MachineFunction &MF) const {
   unsigned Opc = I.getOpcode();
 
-  assert((Opc == TargetOpcode::G_FRAME_INDEX || Opc == TargetOpcode::G_PTR_ADD) &&
-         "unexpected instruction");
+  assert(
+      (Opc == TargetOpcode::G_FRAME_INDEX || Opc == TargetOpcode::G_PTR_ADD) &&
+      "unexpected instruction");
 
   const Register DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -1085,8 +1098,10 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
            .addReg(LHS)
            .addReg(RHS);
 
-  MachineInstr &SetInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                   TII.get(X86::SETCCr), I.getOperand(0).getReg()).addImm(CC);
+  MachineInstr &SetInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr),
+               I.getOperand(0).getReg())
+           .addImm(CC);
 
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
@@ -1160,9 +1175,11 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     Register FlagReg1 = MRI.createVirtualRegister(&X86::GR8RegClass);
     Register FlagReg2 = MRI.createVirtualRegister(&X86::GR8RegClass);
     MachineInstr &Set1 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(X86::SETCCr), FlagReg1).addImm(SETFOpc[0]);
+                                  TII.get(X86::SETCCr), FlagReg1)
+                              .addImm(SETFOpc[0]);
     MachineInstr &Set2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                  TII.get(X86::SETCCr), FlagReg2).addImm(SETFOpc[1]);
+                                  TII.get(X86::SETCCr), FlagReg2)
+                              .addImm(SETFOpc[1]);
     MachineInstr &Set3 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                   TII.get(SETFOpc[2]), ResultReg)
                               .addReg(FlagReg1)
@@ -1190,8 +1207,9 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
            .addReg(LhsReg)
            .addReg(RhsReg);
 
-  MachineInstr &Set =
-      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr), ResultReg).addImm(CC);
+  MachineInstr &Set = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                               TII.get(X86::SETCCr), ResultReg)
+                           .addImm(CC);
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(Set, TII, TRI, RBI);
   I.eraseFromParent();
@@ -1505,8 +1523,9 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::selectUnmergeValues(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) {
+bool X86InstructionSelector::selectUnmergeValues(MachineInstr &I,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineFunction &MF) {
   assert((I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES) &&
          "unexpected instruction");
 
@@ -1530,8 +1549,9 @@ bool X86InstructionSelector::selectUnmergeValues(
   return true;
 }
 
-bool X86InstructionSelector::selectMergeValues(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) {
+bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
+                                               MachineRegisterInfo &MRI,
+                                               MachineFunction &MF) {
   assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES ||
           I.getOpcode() == TargetOpcode::G_CONCAT_VECTORS) &&
          "unexpected instruction");
@@ -1579,6 +1599,88 @@ bool X86InstructionSelector::selectMergeValues(
   return true;
 }
 
+bool X86InstructionSelector::selectVaStartSysVList(MachineInstr &I,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineFunction &MF) const {
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  // x86_64 SystemV va_list structure (Figure 3.34):
+  // typedef struct {
+  //   unsigned gp_offset;
+  //   unsigned fp_offset;
+  //   void *overflow_arg_area;
+  //   void *reg_save_area;
+  // }
+
+  // Offset of general purpose args in bytes, the value should range from 0
+  // to 48.
+  unsigned GPOffset = FuncInfo->getVarArgsGPOffset();
+  assert(GPOffset <= 48 && "GPOffset out of range");
+
+  // Offset of fp args in bytes, this should range 48 to 176.
+  unsigned FPOffset = FuncInfo->getVarArgsFPOffset();
+  assert(FPOffset >= 48 && FPOffset <= 176 && "FPOffset out of range");
+
+  // Frame index for the overflow arg area.
+  int OverflowIndex = FuncInfo->getVarArgsFrameIndex();
+  // Frame index for the register save area.
+  int RegSaveFrameIndex = FuncInfo->getRegSaveFrameIndex();
+
+  // Move the GP offset to the first 4 bytes.
+  addDirectMem(
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32mi)),
+      I.getOperand(0).getReg())
+      .addImm(GPOffset);
+
+  // Move the FP offset after the GP.
+  addRegOffset(
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32mi)),
+      I.getOperand(0).getReg(), false, 4)
+      .addImm(FPOffset);
+
+  // Move the overflow area to offset of 8.
+  Register OverflowPtr = MRI.createVirtualRegister(&X86::GR64RegClass);
+  MachineInstr &OverflowLeaInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                           TII.get(X86::LEA64r), OverflowPtr)
+                                       .addFrameIndex(OverflowIndex)
+                                       .addImm(1)
+                                       .addReg(0)
+                                       .addImm(0)
+                                       .addReg(0);
+
+  constrainSelectedInstRegOperands(OverflowLeaInst, TII, TRI, RBI);
+
+  MachineInstr &OverflowMovInst =
+      *addRegOffset(
+           BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV64mr)),
+           I.getOperand(0).getReg(), false, 8)
+           .addReg(OverflowPtr);
+
+  constrainSelectedInstRegOperands(OverflowMovInst, TII, TRI, RBI);
+
+  // Move the register save area to the last 8 bytes.
+  Register RegSavePtr = MRI.createVirtualRegister(&X86::GR64RegClass);
+  MachineInstr &RegSaveLeaInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                          TII.get(X86::LEA64r), RegSavePtr)
+                                      .addFrameIndex(RegSaveFrameIndex)
+                                      .addImm(1)
+                                      .addReg(0)
+                                      .addImm(0)
+                                      .addReg(0);
+
+  constrainSelectedInstRegOperands(RegSaveLeaInst, TII, TRI, RBI);
+
+  MachineInstr &RegSaveMovInst =
+      *addRegOffset(
+           BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV64mr)),
+           I.getOperand(0).getReg(), false, 16)
+           .addReg(RegSavePtr);
+
+  constrainSelectedInstRegOperands(RegSaveMovInst, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
+}
+
 bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
                                               MachineRegisterInfo &MRI,
                                               MachineFunction &MF) const {
@@ -1592,7 +1694,8 @@ bool X86InstructionSelector::selectCondBranch(MachineInstr &I,
            .addReg(CondReg)
            .addImm(1);
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::JCC_1))
-      .addMBB(DestMBB).addImm(X86::COND_NE);
+      .addMBB(DestMBB)
+      .addImm(X86::COND_NE);
 
   constrainSelectedInstRegOperands(TestInst, TII, TRI, RBI);
 
@@ -1741,13 +1844,13 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
     unsigned HighInReg; // high part of the register pair
     // The following portion depends on both the data type and the operation.
     struct MulDivRemResult {
-      unsigned OpMulDivRem;     // The specific MUL/DIV opcode to use.
-      unsigned OpSignExtend;    // Opcode for sign-extending lowreg into
-                                // highreg, or copying a zero into highreg.
-      unsigned OpCopy;          // Opcode for copying dividend into lowreg, or
-                                // zero/sign-extending into lowreg for i8.
-      unsigned ResultReg;       // Register containing the desired result.
-      bool IsOpSigned;          // Whether to use signed or unsigned form.
+      unsigned OpMulDivRem;  // The specific MUL/DIV opcode to use.
+      unsigned OpSignExtend; // Opcode for sign-extending lowreg into
+                             // highreg, or copying a zero into highreg.
+      unsigned OpCopy;       // Opcode for copying dividend into lowreg, or
+                             // zero/sign-extending into lowreg for i8.
+      unsigned ResultReg;    // Register containing the desired result.
+      bool IsOpSigned;       // Whether to use signed or unsigned form.
     } ResultTable[NumOps];
   } OpTable[NumTypes] = {
       {8,
@@ -1790,10 +1893,10 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
        X86::RAX,
        X86::RDX,
        {
-           {X86::IDIV64r, X86::CQO, Copy, X86::RAX, S},    // SDiv
-           {X86::IDIV64r, X86::CQO, Copy, X86::RDX, S},    // SRem
-           {X86::DIV64r, X86::MOV32r0, Copy, X86::RAX, U}, // UDiv
-           {X86::DIV64r, X86::MOV32r0, Copy, X86::RDX, U}, // URem
+           {X86::IDIV64r, X86::CQO, Copy, X86::RAX, S},     // SDiv
+           {X86::IDIV64r, X86::CQO, Copy, X86::RDX, S},     // SRem
+           {X86::DIV64r, X86::MOV32r0, Copy, X86::RAX, U},  // UDiv
+           {X86::DIV64r, X86::MOV32r0, Copy, X86::RDX, U},  // URem
            {X86::IMUL64r, X86::MOV32r0, Copy, X86::RAX, S}, // Mul
            {X86::IMUL64r, X86::MOV32r0, Copy, X86::RDX, S}, // SMulH
            {X86::MUL64r, X86::MOV32r0, Copy, X86::RDX, U},  // UMulH
