@@ -10,9 +10,12 @@
 #define SUPPORT_FROM_RANGE_HELPERS_H
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <iterator>
+#include <ranges>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "min_allocator.h"
@@ -48,6 +51,41 @@ constexpr auto wrap_input(std::vector<T>& input) {
   auto b = Iter(input.data());
   auto e = Sent(Iter(input.data() + input.size()));
   return std::ranges::subrange(std::move(b), std::move(e));
+}
+
+// https://llvm.org/PR159943
+// Verify container insertion/assignment from ranges whose iterators dereference to prvalues.
+// Especially, `std::prev` should be avoided when inserting such a `bidirectional_range`.
+struct DecayCopy {
+  template <class T>
+    requires std::convertible_to<T, std::decay_t<T>>
+  static constexpr std::decay_t<T> operator()(T&& t) {
+    return std::forward<T>(t);
+  }
+};
+
+template <class Iter, class Sent, std::ranges::input_range Range>
+constexpr auto wrap_input_decay(Range&& input) {
+  auto b = Iter(std::ranges::begin(input));
+  auto e = Sent(Iter(std::ranges::end(input)));
+  if constexpr (std::is_reference_v<std::iter_reference_t<Iter>>)
+    return std::ranges::subrange(std::move(b), std::move(e)) | std::views::transform(DecayCopy{});
+  else
+    return std::ranges::subrange(std::move(b), std::move(e));
+}
+
+template <class Iter, class Sent, class T, std::size_t N>
+constexpr auto wrap_input_decay(std::array<T, N>& input) {
+  auto b = Iter(input.data());
+  auto e = Sent(Iter(input.data() + input.size()));
+  return std::ranges::subrange(std::move(b), std::move(e)) | std::views::transform(DecayCopy{});
+}
+
+template <class Iter, class Sent, class T>
+constexpr auto wrap_input_decay(std::vector<T>& input) {
+  auto b = Iter(input.data());
+  auto e = Sent(Iter(input.data() + input.size()));
+  return std::ranges::subrange(std::move(b), std::move(e)) | std::views::transform(DecayCopy{});
 }
 
 struct KeyValue {

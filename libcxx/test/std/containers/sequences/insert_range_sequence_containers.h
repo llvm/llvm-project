@@ -464,6 +464,76 @@ constexpr void test_sequence_insert_range(Validate validate) {
   }
 }
 
+// https://llvm.org/PR159943
+template <class Container, class Iter, class Sent, class Validate>
+constexpr void test_sequence_insert_range_decay(Validate validate) {
+  using T      = Container::value_type;
+  using D      = Container::difference_type;
+  auto get_pos = [](auto& c, auto& test_case) { return std::ranges::next(c.begin(), static_cast<D>(test_case.index)); };
+
+  auto test = [&](auto& test_case) {
+    Container c(test_case.initial.begin(), test_case.initial.end());
+    auto in  = wrap_input_decay<Iter, Sent>(test_case.input);
+    auto pos = get_pos(c, test_case);
+
+    auto result = c.insert_range(pos, in);
+    assert(result == get_pos(c, test_case));
+    validate(c);
+    return std::ranges::equal(c, test_case.expected);
+  };
+
+  { // Empty container.
+    // empty_c.insert_range(end, empty_range)
+    assert(test(EmptyContainer_EmptyRange<T>));
+    // empty_c.insert_range(end, one_element_range)
+    assert(test(EmptyContainer_OneElementRange<T>));
+    // empty_c.insert_range(end, mid_range)
+    assert(test(EmptyContainer_MidRange<T>));
+  }
+
+  { // One-element container.
+    // one_element_c.insert_range(begin, empty_range)
+    assert(test(OneElementContainer_Begin_EmptyRange<T>));
+    // one_element_c.insert_range(end, empty_range)
+    assert(test(OneElementContainer_End_EmptyRange<T>));
+    // one_element_c.insert_range(begin, one_element_range)
+    assert(test(OneElementContainer_Begin_OneElementRange<T>));
+    // one_element_c.insert_range(end, one_element_range)
+    assert(test(OneElementContainer_End_OneElementRange<T>));
+    // one_element_c.insert_range(begin, mid_range)
+    assert(test(OneElementContainer_Begin_MidRange<T>));
+    // one_element_c.insert_range(end, mid_range)
+    assert(test(OneElementContainer_End_MidRange<T>));
+  }
+
+  { // Full container.
+    // full_container.insert_range(begin, empty_range)
+    assert(test(FullContainer_Begin_EmptyRange<T>));
+    // full_container.insert_range(mid, empty_range)
+    assert(test(FullContainer_Mid_EmptyRange<T>));
+    // full_container.insert_range(end, empty_range)
+    assert(test(FullContainer_End_EmptyRange<T>));
+    // full_container.insert_range(begin, one_element_range)
+    assert(test(FullContainer_Begin_OneElementRange<T>));
+    // full_container.insert_range(end, one_element_range)
+    assert(test(FullContainer_Mid_OneElementRange<T>));
+    // full_container.insert_range(end, one_element_range)
+    assert(test(FullContainer_End_OneElementRange<T>));
+    // full_container.insert_range(begin, mid_range)
+    assert(test(FullContainer_Begin_MidRange<T>));
+    // full_container.insert_range(mid, mid_range)
+    assert(test(FullContainer_Mid_MidRange<T>));
+    // full_container.insert_range(end, mid_range)
+    assert(test(FullContainer_End_MidRange<T>));
+    // full_container.insert_range(begin, long_range)
+    assert(test(FullContainer_Begin_LongRange<T>));
+    // full_container.insert_range(mid, long_range)
+    assert(test(FullContainer_Mid_LongRange<T>));
+    // full_container.insert_range(end, long_range)
+    assert(test(FullContainer_End_LongRange<T>));
+  }
+}
+
 template <class Container, class Iter, class Sent, class Validate>
 constexpr void test_sequence_prepend_range(Validate validate) {
   using T = typename Container::value_type;
@@ -471,6 +541,50 @@ constexpr void test_sequence_prepend_range(Validate validate) {
   auto test = [&](auto& test_case) {
     Container c(test_case.initial.begin(), test_case.initial.end());
     auto in = wrap_input<Iter, Sent>(test_case.input);
+
+    c.prepend_range(in);
+    validate(c);
+    return std::ranges::equal(c, test_case.expected);
+  };
+
+  { // Empty container.
+    // empty_c.prepend_range(empty_range)
+    assert(test(EmptyContainer_EmptyRange<T>));
+    // empty_c.prepend_range(one_element_range)
+    assert(test(EmptyContainer_OneElementRange<T>));
+    // empty_c.prepend_range(mid_range)
+    assert(test(EmptyContainer_MidRange<T>));
+  }
+
+  { // One-element container.
+    // one_element_c.prepend_range(empty_range)
+    assert(test(OneElementContainer_Begin_EmptyRange<T>));
+    // one_element_c.prepend_range(one_element_range)
+    assert(test(OneElementContainer_Begin_OneElementRange<T>));
+    // one_element_c.prepend_range(mid_range)
+    assert(test(OneElementContainer_Begin_MidRange<T>));
+  }
+
+  { // Full container.
+    // full_container.prepend_range(empty_range)
+    assert(test(FullContainer_Begin_EmptyRange<T>));
+    // full_container.prepend_range(one_element_range)
+    assert(test(FullContainer_Begin_OneElementRange<T>));
+    // full_container.prepend_range(mid_range)
+    assert(test(FullContainer_Begin_MidRange<T>));
+    // full_container.prepend_range(long_range)
+    assert(test(FullContainer_Begin_LongRange<T>));
+  }
+}
+
+// https://llvm.org/PR159943
+template <class Container, class Iter, class Sent, class Validate>
+constexpr void test_sequence_prepend_range_decay(Validate validate) {
+  using T = Container::value_type;
+
+  auto test = [&](auto& test_case) {
+    Container c(test_case.initial.begin(), test_case.initial.end());
+    auto in = wrap_input_decay<Iter, Sent>(test_case.input);
 
     c.prepend_range(in);
     validate(c);
@@ -550,6 +664,50 @@ constexpr void test_sequence_append_range(Validate validate) {
   }
 }
 
+// https://llvm.org/PR159943
+template <class Container, class Iter, class Sent, class Validate>
+constexpr void test_sequence_append_range_decay(Validate validate) {
+  using T = Container::value_type;
+
+  auto test = [&](auto& test_case) {
+    Container c(test_case.initial.begin(), test_case.initial.end());
+    auto in = wrap_input_decay<Iter, Sent>(test_case.input);
+
+    c.append_range(in);
+    validate(c);
+    return std::ranges::equal(c, test_case.expected);
+  };
+
+  { // Empty container.
+    // empty_c.append_range(empty_range)
+    assert(test(EmptyContainer_EmptyRange<T>));
+    // empty_c.append_range(one_element_range)
+    assert(test(EmptyContainer_OneElementRange<T>));
+    // empty_c.append_range(mid_range)
+    assert(test(EmptyContainer_MidRange<T>));
+  }
+
+  { // One-element container.
+    // one_element_c.append_range(empty_range)
+    assert(test(OneElementContainer_End_EmptyRange<T>));
+    // one_element_c.append_range(one_element_range)
+    assert(test(OneElementContainer_End_OneElementRange<T>));
+    // one_element_c.append_range(mid_range)
+    assert(test(OneElementContainer_End_MidRange<T>));
+  }
+
+  { // Full container.
+    // full_container.append_range(empty_range)
+    assert(test(FullContainer_End_EmptyRange<T>));
+    // full_container.append_range(one_element_range)
+    assert(test(FullContainer_End_OneElementRange<T>));
+    // full_container.append_range(mid_range)
+    assert(test(FullContainer_End_MidRange<T>));
+    // full_container.append_range(long_range)
+    assert(test(FullContainer_End_LongRange<T>));
+  }
+}
+
 template <class Container, class Iter, class Sent, class Validate>
 constexpr void test_sequence_assign_range(Validate validate) {
   using T = typename Container::value_type;
@@ -565,6 +723,62 @@ constexpr void test_sequence_assign_range(Validate validate) {
   auto test = [&](auto& initial, auto& input) {
     Container c(initial.begin(), initial.end());
     auto in = wrap_input<Iter, Sent>(input);
+
+    c.assign_range(in);
+    validate(c);
+    return std::ranges::equal(c, input);
+  };
+
+  { // Empty container.
+    // empty_container.assign_range(empty_range)
+    assert(test(initial_empty, input_empty));
+    // empty_container.assign_range(one_element_range)
+    assert(test(initial_empty, input_one_element));
+    // empty_container.assign_range(mid_range)
+    assert(test(initial_empty, input_mid_range));
+    // empty_container.assign_range(long_range)
+    assert(test(initial_empty, input_long_range));
+  }
+
+  { // One-element container.
+    // one_element_container.assign_range(empty_range)
+    assert(test(initial_one_element, input_empty));
+    // one_element_container.assign_range(one_element_range)
+    assert(test(initial_one_element, input_one_element));
+    // one_element_container.assign_range(mid_range)
+    assert(test(initial_one_element, input_mid_range));
+    // one_element_container.assign_range(long_range)
+    assert(test(initial_one_element, input_long_range));
+  }
+
+  { // Full container.
+    // full_container.assign_range(empty_range)
+    assert(test(initial_full, input_empty));
+    // full_container.assign_range(one_element_range)
+    assert(test(initial_full, input_one_element));
+    // full_container.assign_range(mid_range)
+    assert(test(initial_full, input_mid_range));
+    // full_container.assign_range(long_range)
+    assert(test(initial_full, input_long_range));
+  }
+}
+
+// https://llvm.org/PR159943
+template <class Container, class Iter, class Sent, class Validate>
+constexpr void test_sequence_assign_range_decay(Validate validate) {
+  using T = Container::value_type;
+
+  auto& initial_empty       = EmptyContainer_EmptyRange<T>.initial;
+  auto& initial_one_element = OneElementContainer_Begin_EmptyRange<T>.initial;
+  auto& initial_full        = FullContainer_Begin_EmptyRange<T>.initial;
+  auto& input_empty         = FullContainer_Begin_EmptyRange<T>.input;
+  auto& input_one_element   = FullContainer_Begin_OneElementRange<T>.input;
+  auto& input_mid_range     = FullContainer_Begin_MidRange<T>.input;
+  auto& input_long_range    = FullContainer_Begin_LongRange<T>.input;
+
+  auto test = [&](auto& initial, auto& input) {
+    Container c(initial.begin(), initial.end());
+    auto in = wrap_input_decay<Iter, Sent>(input);
 
     c.assign_range(in);
     validate(c);
