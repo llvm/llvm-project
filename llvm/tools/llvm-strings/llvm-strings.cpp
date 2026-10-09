@@ -93,18 +93,21 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 template <enum Encoding> struct Strings {
   Strings() = delete;
 
-  // Tries to read one character from the bytes P...E and store it in Ch.
+  // Tries to read one character from the bytes Cur...End and store it in Ch.
   // Returns true if a (possibly invalid) character was read, false otherwise.
   //
-  // If P...E starts with a valid complete character, P and MBState are updated
-  // and true is returned.
-  // If P...E is empty, or holds an incomplete character and AtEOF is false, P
-  // and MBState are unchanged, Ch is set to 0, and false is returned. This is
-  // intended to allow more bytes to be read and readChar to be called again.
-  // If P...E holds an incomplete character and AtEOF is true, or if P...E
-  // starts with an invalid character, the first bytes are skipped and MBState
-  // is reset to allow continuing from the next point, Ch is set to 0, and true
-  // is returned.
+  // If Cur...End starts with a valid complete character, Cur and MBState are
+  // updated and true is returned.
+  // If Cur...End is empty, or holds an incomplete character and AtEOF is false,
+  // Cur and MBState are unchanged, Ch is set to 0, and false is returned. This
+  // is intended to allow more bytes to be read and readChar to be called again.
+  // If Cur...End holds an incomplete character and AtEOF is true, or if
+  // Cur...End starts with an invalid character, the first bytes are skipped and
+  // MBState is reset to allow continuing from the next point, Ch is set to 0,
+  // and true is returned. This case is indistinguishable to the caller from a
+  // null byte being successfully converted to a null character, but a null
+  // character is never printable under any settings and that is how invalid
+  // bytes are treated as well.
   //
   // The number of skipped bytes for invalid characters follows the Unicode
   // definition of the maximal subpart of an ill-formed subsequence, applied to
@@ -148,7 +151,7 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
     // buffer, but the strings utility is unusual in that it is expected to
     // encounter many bytes that do not form valid characters and it is more
     // useful to optimise for this case.
-    const size_t BytesRead = mbrtowc(&WCh, Next, 1, &NextMBState);
+    const std::size_t BytesRead = std::mbrtowc(&WCh, Next, 1, &NextMBState);
     switch (BytesRead) {
     case 1:
       ++Next;
@@ -157,7 +160,7 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
       Ch = WCh;
       return true;
 
-    case (size_t)-2:
+    case (std::size_t)-2:
       // We encountered a byte that is a valid start or continuation of a
       // multibyte character. If we have more bytes, carry on. If we don't
       // have more bytes yet, but we are not at the end of file, return false.
@@ -171,7 +174,7 @@ bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
       LLVM_FALLTHROUGH;
 
     case 0:
-    case (size_t)-1:
+    case (std::size_t)-1:
       // We cannot form a valid non-null character.
       //
       // If we processed any bytes already that formed an incomplete multibyte
@@ -218,7 +221,7 @@ template <> bool Strings<Encoding::Ascii>::isStringChar(UTF32 Ch) {
 }
 
 template <> bool Strings<Encoding::Locale>::isStringChar(UTF32 Ch) {
-  return Ch == L'\t' || iswprint(Ch);
+  return Ch == L'\t' || std::iswprint(Ch);
 }
 
 template <> bool Strings<Encoding::Utf8>::isStringChar(UTF32 Ch) {
@@ -236,7 +239,7 @@ void Strings<Encoding::Locale>::endString(raw_ostream &OS,
   char Buf[MB_LEN_MAX];
   // Note: This is only required for stateful encodings such as the
   // ISO-2022 ones.
-  const size_t BytesWritten = wcrtomb(Buf, L'\0', &MBState);
+  const std::size_t BytesWritten = std::wcrtomb(Buf, L'\0', &MBState);
   Buf[BytesWritten - 1] = '\n';
   OS << StringRef(Buf, BytesWritten);
 }
@@ -245,7 +248,7 @@ template <enum Encoding Encoding>
 void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
                             sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  auto PrintHeader = [&OS, FileName](size_t StringStart) {
+  auto PrintHeader = [&OS, FileName](std::size_t StringStart) {
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
@@ -272,21 +275,21 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
   // never needs an arbitrarily large buffer. Candidate therefore only ever
   // holds a run that is shorter than MinLength and that was cut off by the end
   // of a chunk.
-  const size_t MinLengthChars = MinLength;
+  const std::size_t MinLengthChars = MinLength;
   SmallString<DefaultMinLength> Candidate;
-  size_t CandidateLengthChars = 0;
+  std::size_t CandidateLengthChars = 0;
   bool InString = false;
   std::mbstate_t MBState{};
   // Offset of the start of the current chunk within the file.
-  size_t ChunkOffset = 0;
+  std::size_t ChunkOffset = 0;
 
   while (true) {
     // Size of any partial character left over from the previous chunk.
-    const size_t PendingCharSizeBytes = Buffer.size();
+    const std::size_t PendingCharSizeBytes = Buffer.size();
     Buffer.resize_for_overwrite(PendingCharSizeBytes +
                                 sys::fs::DefaultReadChunkSize);
 
-    Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
+    Expected<std::size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle,
         MutableArrayRef(Buffer.begin() + PendingCharSizeBytes, Buffer.end()));
     if (!ReadBytesOrErr) {
@@ -295,7 +298,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
       return;
     }
     const bool AtEOF = *ReadBytesOrErr == 0;
-    const size_t ChunkSize = PendingCharSizeBytes + *ReadBytesOrErr;
+    const std::size_t ChunkSize = PendingCharSizeBytes + *ReadBytesOrErr;
     if (ChunkSize == 0)
       break;
 
@@ -321,7 +324,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
     if (InString || !Candidate.empty()) {
       const char *StringEnd;
       std::mbstate_t PrevMBState;
-      size_t LengthChars = 0;
+      std::size_t LengthChars = 0;
       bool EndOfChunk;
 
       // Find the end of the current string.
@@ -334,7 +337,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
         ++LengthChars;
       }
 
-      size_t SizeBytes = StringEnd - Begin;
+      std::size_t SizeBytes = StringEnd - Begin;
       if (InString) {
         // Print the remaining part if the previous chunk has already printed
         // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
@@ -382,7 +385,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
     // At this point, we are always at the start of a new string because the
     // remaining part of the previous string has already been handled.
     const char *StrHead = nullptr;
-    size_t LengthChars = 0;
+    std::size_t LengthChars = 0;
     for (;;) {
       const char *Prev = Cur;
       std::mbstate_t PrevMBState = MBState;
@@ -434,7 +437,7 @@ void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
 } // namespace
 
 int main(int argc, char **argv) {
-  setlocale(LC_ALL, "");
+  std::setlocale(LC_ALL, "");
 
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;

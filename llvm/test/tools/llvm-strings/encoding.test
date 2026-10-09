@@ -62,13 +62,15 @@ RUN: not llvm-strings -e x 2>&1 %t | FileCheck --check-prefix CHECK-ERROR %s
 
 CHECK-ERROR: error: 'x' is not a valid value for '--encoding='
 
-# Encodings with multibyte characters may have characters cross chunk
-# boundaries. The string contains a full multibyte character before the
-# boundary, a multibyte character that crosses the boundary, and a full
-# multibyte character after the boundary. This test has four variants:
-# the minimum length may or may not already be reached before the chunk
-# boundary, and the character that crosses the boundary may or may not be
-# printable.                             v chunk boundary
+# llvm-strings reads the input in chunks of 16384 bytes. Encodings with
+# multibyte characters may have characters cross chunk boundaries. The string
+# contains a full multibyte character before the boundary, a multibyte
+# character that crosses the boundary, and a full multibyte character after the
+# boundary. This test has four variants: the minimum length may or may not
+# already be reached before the chunk boundary, and the character that crosses
+# the boundary may or may not be printable.
+#
+#                                        v chunk boundary
 RUN: printf "%16378s\342\200\247e\342\200\247e\342\200\247e\342\200\247" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-A --match-full-lines --strict-whitespace --implicit-check-not={{.}}
