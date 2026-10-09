@@ -865,19 +865,20 @@ private:
                      DenseSet<const ContextNode *> &CurrentStack);
 
   /// Recursive helper for merging clones.
-  void
-  mergeClones(ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-              DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode);
+  void mergeClones(ContextNode *Node, DenseSet<const ContextNode *> &Visited);
   /// Main worker for merging callee clones for a given node.
-  void mergeNodeCalleeClones(
-      ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-      DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode);
+  void mergeNodeCalleeClones(ContextNode *Node,
+                             DenseSet<const ContextNode *> &Visited);
   /// Helper to find other callers of the given set of callee edges that can
   /// share the same callee merge node.
   void findOtherCallersToShareMerge(
       ContextNode *Node, std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
-      DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
       DenseSet<ContextNode *> &OtherCallersToShareMerge);
+
+  /// Map from context id to the associated allocation node, populated for use
+  /// during clone merging (see mergeClones) and empty otherwise. It is kept up
+  /// to date by duplicateContextIds for any context ids created while merging.
+  DenseMap<uint32_t, ContextNode *> ContextIdToAllocationNode;
 
   /// Recursively perform cloning on the graph for the given Node and its
   /// callers, in order to uniquely identify the allocation behavior of an
@@ -1536,6 +1537,10 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
       ContextIdToContextSizeInfos[LastContextId] = CSI->second;
     if (DotAllocContextIds.contains(OldId))
       DotAllocContextIds.insert(LastContextId);
+    // If we are duplicating during clone merging, keep the allocation node
+    // mapping used by the merging up to date.
+    if (auto *Alloc = ContextIdToAllocationNode.lookup(OldId))
+      ContextIdToAllocationNode[LastContextId] = Alloc;
   }
   return NewContextIds;
 }
@@ -4603,7 +4608,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
 
   // Generate a map from context id to the associated allocation node for use
   // when merging clones.
-  DenseMap<uint32_t, ContextNode *> ContextIdToAllocationNode;
+  assert(ContextIdToAllocationNode.empty());
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
     for (auto Id : Node->getContextIds())
@@ -4621,7 +4626,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
 
-    mergeClones(Node, Visited, ContextIdToAllocationNode);
+    mergeClones(Node, Visited);
 
     // Make a copy so the recursive post order traversal that may create new
     // clones doesn't mess up iteration. Note that the recursive traversal
@@ -4629,8 +4634,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
     // (clones of) allocations.
     auto Clones = Node->Clones;
     for (auto *Clone : Clones)
-      mergeClones(Clone, Visited, ContextIdToAllocationNode);
+      mergeClones(Clone, Visited);
   }
+
+  // No longer needed, and should not be used outside of merging.
+  ContextIdToAllocationNode.clear();
 
   if (DumpCCG) {
     dbgs() << "CCG after merging:\n";
@@ -4647,8 +4655,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
 // Recursive helper for above mergeClones method.
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
-    ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-    DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode) {
+    ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   auto Inserted = Visited.insert(Node);
   if (!Inserted.second)
     return;
@@ -4674,7 +4681,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
       // edges again as mergeClones may add or change caller nodes.
       if (DoMergeIteration && !Visited.contains(CallerEdge->Caller))
         FoundUnvisited = true;
-      mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+      mergeClones(CallerEdge->Caller, Visited);
     }
   }
 
@@ -4684,13 +4691,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
     MaxMergeIters = Iters;
 
   // Merge for this node after we handle its callers.
-  mergeNodeCalleeClones(Node, Visited, ContextIdToAllocationNode);
+  mergeNodeCalleeClones(Node, Visited);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
-    ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-    DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode) {
+    ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   // Ignore Node if we moved all of its contexts to clones.
   if (Node->emptyContextIds())
     return;
@@ -4742,8 +4748,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     /// share the same callee merge node. See the comments at this method
     /// definition for details.
     DenseSet<ContextNode *> OtherCallersToShareMerge;
-    findOtherCallersToShareMerge(Node, CalleeEdges, ContextIdToAllocationNode,
-                                 OtherCallersToShareMerge);
+    findOtherCallersToShareMerge(Node, CalleeEdges, OtherCallersToShareMerge);
 
     // Now do the actual merging. Identify existing or create a new MergeNode
     // during the first iteration. Move each callee over, along with edges from
@@ -4835,7 +4840,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     findOtherCallersToShareMerge(
         ContextNode *Node,
         std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
-        DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
         DenseSet<ContextNode *> &OtherCallersToShareMerge) {
   auto NumCalleeClones = CalleeEdges.size();
   // This map counts how many edges to the same callee clone exist for other
@@ -5037,6 +5041,18 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // the vector is the clone number, as function clones are created and
     // numbered sequentially.
     std::vector<FuncCloneInfo> FuncCloneInfos;
+    // Map from each original callsite node in this function to its original
+    // call (clone 0). The Call recorded on an original node is updated to the
+    // call in a function clone if that node is assigned to a function clone,
+    // after which it can no longer be used to index the function clone CallMaps
+    // (which are keyed by the original calls). No node in this function has
+    // been assigned yet at this point.
+    DenseMap<const ContextNode *, CallInfo> OrigNodeToOrigCall;
+    for (auto &Call : CallsWithMetadata) {
+      ContextNode *Node = getNodeForInst(Call);
+      if (Node && Node->Call == Call)
+        OrigNodeToOrigCall[Node] = Call;
+    }
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
@@ -5263,9 +5279,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // that each caller can only call callsites within the same
               // function, so we are guaranteed that Callee Call is in the
               // current OrigFunc.
-              // CallMap is set up as indexed by original Call at clone 0.
-              CallInfo OrigCall(Callee->getOrigNode()->Call);
-              OrigCall.setCloneNo(0);
+              // CallMap is set up as indexed by original Call at clone 0. Note
+              // that we cannot simply use the Call of Callee's original node,
+              // as that is updated to the call in a function clone if the
+              // original node was itself assigned to a function clone.
+              assert(OrigNodeToOrigCall.count(Callee->getOrigNode()));
+              CallInfo OrigCall = OrigNodeToOrigCall[Callee->getOrigNode()];
               DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
               assert(CallMap.count(OrigCall));
