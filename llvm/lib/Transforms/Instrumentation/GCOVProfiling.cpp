@@ -76,6 +76,7 @@ static unsigned wordsOfString(StringRef s) {
 GCOVOptions GCOVOptions::getDefault() {
   GCOVOptions Options;
   Options.EmitNotes = true;
+  Options.UseAbsolutePathsInNotes = false;
   Options.EmitData = true;
   Options.NoRedZone = false;
   Options.Atomic = AtomicCounter;
@@ -113,7 +114,7 @@ public:
     os->write_zeros(4 - s.size() % 4);
   }
   void writeBytes(const char *Bytes, int Size) { os->write(Bytes, Size); }
-  vfs::FileSystem &getVirtualFileSystem() const { return VFS; }
+  SmallString<128> getFilename(const DIScope *SP);
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
@@ -216,16 +217,22 @@ static StringRef getFunctionName(const DISubprogram *SP) {
 
 /// Extract a filename for a DIScope.
 ///
-/// Prefer relative paths in the coverage notes. Clang also may split
-/// up absolute paths into a directory and filename component. When
-/// the relative path doesn't exist, reconstruct the absolute path.
-static SmallString<128> getFilename(const DIScope *SP, vfs::FileSystem &VFS) {
+/// Unless -fprofile-abs-path has been passed, prefer relative paths in the
+/// coverage notes. Clang also may split up absolute paths into a directory and
+/// filename component. When the relative path doesn't exist, reconstruct the
+/// absolute path.
+SmallString<128> GCOVProfiler::getFilename(const DIScope *SP) {
   SmallString<128> Path;
   StringRef RelPath = SP->getFilename();
-  if (VFS.exists(RelPath))
+  if (VFS.exists(RelPath)) {
     Path = RelPath;
-  else
+    if (Options.UseAbsolutePathsInNotes) {
+      VFS.makeAbsolute(Path);
+      sys::path::remove_dots(Path, true);
+    }
+  } else {
     sys::path::append(Path, SP->getDirectory(), SP->getFilename());
+  }
   return Path;
 }
 
@@ -362,7 +369,7 @@ namespace {
 
     void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
-      SmallString<128> Filename = getFilename(SP, P->getVirtualFileSystem());
+      SmallString<128> Filename = P->getFilename(SP);
       uint32_t BlockLen = 3 + wordsOfString(getFunctionName(SP));
       BlockLen += 1 + wordsOfString(Filename) + 4;
 
@@ -460,7 +467,7 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   if (FilterRe.empty() && ExcludeRe.empty()) {
     return true;
   }
-  SmallString<128> Filename = getFilename(F.getSubprogram(), VFS);
+  SmallString<128> Filename = getFilename(F.getSubprogram());
   auto It = InstrumentedFiles.find(Filename);
   if (It != InstrumentedFiles.end()) {
     return It->second;
@@ -795,7 +802,7 @@ bool GCOVProfiler::emitProfileNotes(
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
       uint32_t Line = SP->getLine();
-      auto Filename = getFilename(SP, VFS);
+      auto Filename = getFilename(SP);
 
       BranchProbabilityInfo *BPI = GetBPI(F);
       BlockFrequencyInfo *BFI = GetBFI(F);
@@ -887,7 +894,7 @@ bool GCOVProfiler::emitProfileNotes(
           if (SP != getDISubprogram(Scope))
             continue;
 
-          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope(), VFS));
+          GCOVLines &Lines = Block.getFile(getFilename(Loc->getScope()));
           Lines.addLine(Loc.getLine());
         }
         Line = 0;
