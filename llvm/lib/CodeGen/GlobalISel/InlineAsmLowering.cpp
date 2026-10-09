@@ -337,6 +337,16 @@ bool InlineAsmLowering::lowerInlineAsm(
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
+        // A direct output is the call's result, with no address to write to.
+        if (!OpInfo.isIndirect) {
+          emitInlineAsmError(MIRBuilder, Call,
+                             "cannot handle direct memory outputs yet for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
+        }
+
         const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
@@ -383,6 +393,11 @@ bool InlineAsmLowering::lowerInlineAsm(
           // tied operands that can use the regclass information from the def.
           const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
           Flag.setRegClass(RC->getID());
+
+          // An "rm" operand that preferred a register may still be folded to
+          // a stack slot by the register allocator.
+          if (OpInfo.MayFoldRegister)
+            Flag.setRegMayBeFolded(true);
         }
 
         Inst.addImm(Flag);
@@ -566,6 +581,8 @@ bool InlineAsmLowering::lowerInlineAsm(
         // Put the register class of the virtual registers in the flag word.
         const TargetRegisterClass *RC = MRI->getRegClass(OpInfo.Regs.front());
         Flag.setRegClass(RC->getID());
+        if (OpInfo.MayFoldRegister)
+          Flag.setRegMayBeFolded(true);
       }
       Inst.addImm(Flag);
       if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))

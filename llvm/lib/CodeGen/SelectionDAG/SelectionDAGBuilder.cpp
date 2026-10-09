@@ -1036,7 +1036,8 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
 void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                         unsigned MatchingIdx, const SDLoc &dl,
                                         SelectionDAG &DAG,
-                                        std::vector<SDValue> &Ops) const {
+                                        std::vector<SDValue> &Ops,
+                                        bool MayFoldRegister) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   InlineAsm::Flag Flag(Code, Regs.size());
@@ -1051,6 +1052,10 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
     const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     const TargetRegisterClass *RC = MRI.getRegClass(Regs.front());
     Flag.setRegClass(RC->getID());
+    if (MayFoldRegister) {
+      assert(Regs.size() == 1 && "only a single register can be folded");
+      Flag.setRegMayBeFolded(true);
+    }
   }
 
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);
@@ -10497,8 +10502,9 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
   return false;
 }
 
-/// Compute which constraint option to use for each operand.
-static void
+/// Compute which constraint option to use for each operand. Returns true (and
+/// sets Info.ErrorMsg) on failure.
+static bool
 computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
                        TargetLowering::AsmOperandInfoVector &TargetConstraints,
                        SelectionDAGBuilder &Builder, const TargetLowering &TLI,
@@ -10560,9 +10566,14 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      assert((OpInfo.isMultipleAlternative ||
-              (OpInfo.Type == InlineAsm::isInput)) &&
-             "Can only indirectify direct input operands!");
+      // Only an input has a value to store to memory. A direct output, which
+      // Clang never emits with a memory constraint but other IR can, would
+      // need a stack slot to be reloaded after the asm.
+      if (!OpInfo.isMultipleAlternative && OpInfo.Type != InlineAsm::isInput) {
+        Info.ErrorMsg << "cannot handle direct memory outputs yet for "
+                      << "constraint '" << OpInfo.ConstraintCode << "'";
+        return true;
+      }
 
       // Memory operands really want the address of the value.
       Info.Chain = getAddressForMemoryInput(Info.Chain, Builder.getCurSDLoc(),
@@ -10575,6 +10586,8 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.isIndirect = true;
     }
   }
+
+  return false;
 }
 
 /// Prepare DAG-level operands. As part of this, assign virtual and physical
@@ -10653,7 +10666,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         OpInfo.AssignedRegs.AddInlineAsmOperands(
             OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
                                   : InlineAsm::Kind::RegDef,
-            false, 0, DL, DAG, Info.AsmNodeOperands);
+            false, 0, DL, DAG, Info.AsmNodeOperands, OpInfo.MayFoldRegister);
       }
       break;
 
@@ -10819,8 +10832,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, DL, Info.Chain,
                                         &Info.Glue, &Call);
-      OpInfo.AssignedRegs.AddInlineAsmOperands(
-          InlineAsm::Kind::RegUse, false, 0, DL, DAG, Info.AsmNodeOperands);
+      OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, false,
+                                               0, DL, DAG, Info.AsmNodeOperands,
+                                               OpInfo.MayFoldRegister);
       break;
     }
 
@@ -10868,7 +10882,9 @@ determineConstraints(ConstraintDecisionInfo &Info,
     Info.Chain = Builder.lowerStartEH(Info.Chain, EHPadBB, Info.BeginLabel);
 
   // Second pass: Compute which constraint option to use.
-  computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
+  if (computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM,
+                             DAG))
+    return true;
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   Info.AsmNodeOperands.push_back(SDValue()); // reserve space for input chain

@@ -5480,6 +5480,16 @@ public:
     /// The ValueType for the operand value.
     MVT ConstraintVT = MVT::Other;
 
+    /// True if this "rm" operand should prefer a register, leaving the
+    /// register allocator to fold it to a stack slot if it runs out of
+    /// registers. ParseConstraints() sets this for a direct operand whose
+    /// value fits in one register, on a target that can fold it.
+    /// getConstraintPreferences() then picks 'r', and instruction selection
+    /// marks the register operand foldable (see
+    /// InlineAsm::Flag::setRegMayBeFolded()). The tied input of a "+rm"
+    /// operand has its own constraint ("0"), so only the output gets this.
+    bool MayFoldRegister = false;
+
     /// Copy constructor for copying from a ConstraintInfo.
     AsmOperandInfo(InlineAsm::ConstraintInfo Info)
         : InlineAsm::ConstraintInfo(std::move(Info)) {}
@@ -5523,6 +5533,14 @@ public:
 
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
+
+  /// Return true if the register allocator can fold an inline asm register
+  /// operand to a stack slot on this target, which needs an override of
+  /// TargetInstrInfo::getFrameIndexOperands(). Only then may an "rm" operand
+  /// prefer a register (see AsmOperandInfo::MayFoldRegister): that choice
+  /// relies on the allocator falling back to memory when it runs out of
+  /// registers.
+  virtual bool supportsRegMemInlineAsmFolding() const { return false; }
 
   using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
   using ConstraintGroup = SmallVector<ConstraintPair>;
