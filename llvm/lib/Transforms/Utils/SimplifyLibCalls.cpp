@@ -2703,7 +2703,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Module *Mod = Log->getModule();
   Type *Ty = Log->getType();
 
-  if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
+  if (UnsafeFPShrink && (LogFn->isIntrinsic() || hasFloatVersion(Mod, LogNm)))
     if (Value *Ret = optimizeUnaryDoubleFP(Log, B, TLI, true))
       return Ret;
 
