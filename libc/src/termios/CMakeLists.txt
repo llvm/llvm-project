@@ -78,3 +78,11 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.tcsetattr
 )
+
+add_entrypoint_object(
+  tcgetwinsize
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tcgetwinsize
+)
+
