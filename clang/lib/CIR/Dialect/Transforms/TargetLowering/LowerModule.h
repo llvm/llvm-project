@@ -50,6 +50,10 @@ public:
   }
 
   CIRCXXABI &getCXXABI() const { return *abi; }
+
+  // FIXME remove this once all ABIs are supported.
+  bool hasCXXABI() const { return abi != nullptr; }
+
   const clang::TargetInfo &getTarget() const { return *target; }
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 

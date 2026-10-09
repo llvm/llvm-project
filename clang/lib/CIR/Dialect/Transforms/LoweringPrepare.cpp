@@ -3183,9 +3183,9 @@ void LoweringPreparePass::runOnOperation() {
 
   lowerModule = cir::createLowerModule(mlirModule);
   if (!lowerModule) {
-    mlirModule.emitError() << getArgument()
-                           << " requires a module with a triple";
-    return signalPassFailure();
+    mlirModule.emitWarning("Cannot create a CIR lower module, skipping the ")
+        << getName() << " pass";
+    return;
   }
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
