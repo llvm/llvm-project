@@ -119,6 +119,14 @@ private:
   bool GetRegisterValue(const lldb_private::RegisterInfo &reg_info,
                         lldb_private::RegisterValue &reg_value);
 
+  /// The sentinel value for a given register, which is used to track
+  /// where a register's contents were moved to.
+  static uint64_t GetSentinelFor(const lldb_private::RegisterInfo &reg_info);
+
+  /// Whether \a reg_info still holds the value it had on entry to the
+  /// function.
+  bool RegisterHoldsEntryValue(const lldb_private::RegisterInfo &reg_info);
+
   typedef std::map<uint64_t, lldb_private::RegisterValue> RegisterValueMap;
   struct UnwindState {
     lldb_private::UnwindPlan::Row row = {};
