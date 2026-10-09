@@ -1,0 +1,33 @@
+# REQUIRES: x86-registered-target
+## Check that when `-basic-block-sections` is passed to `llc` we generate CHECK lines for all blocks.
+## TODO: currently it does not. In this particular test it misses the following lines:
+# ; CHECK-NEXT:  .LBB_END0_0:
+# ; CHECK-NEXT:    .cfi_endproc
+# ; CHECK-NEXT:    .section .text.foo,"ax",@progbits,unique,1
+# ; CHECK-NEXT:  foo.__part.1: # %true
+# ; CHECK-NEXT:    .cfi_startproc
+# ; CHECK-NEXT:    .cfi_def_cfa %rsp, 16
+# ; CHECK-NEXT:    callq bar@PLT
+# ; CHECK-NEXT:    popq %rax
+# ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+# ; CHECK-NEXT:    retq
+# ; CHECK-NEXT:  .LBB_END0_1:
+# ; CHECK-NEXT:    .size foo.__part.1, .LBB_END0_1-foo.__part.1
+# ; CHECK-NEXT:    .cfi_endproc
+# ; CHECK-NEXT:    .section .text.foo,"ax",@progbits,unique,2
+# ; CHECK-NEXT:  foo.__part.2: # %false
+# ; CHECK-NEXT:    .cfi_startproc
+# ; CHECK-NEXT:    .cfi_def_cfa %rsp, 16
+# ; CHECK-NEXT:    callq baz@PLT
+# ; CHECK-NEXT:    popq %rax
+# ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+# ; CHECK-NEXT:    retq
+# ; CHECK-NEXT:  .LBB_END0_2:
+# ; CHECK-NEXT:    .size foo.__part.2, .LBB_END0_2-foo.__part.2
+# ; CHECK-NEXT:    .cfi_endproc
+# ; CHECK-NEXT:    .section .text.foo,"ax",@progbits
+# ; CHECK-NEXT:  .Lfunc_end0:
+# ; CHECK-NEXT:    .size foo, .Lfunc_end0-foo
+
+# RUN: cp -f %S/Inputs/x86-basic-block-sections.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86-basic-block-sections.ll.expected %t.ll
