@@ -769,7 +769,8 @@ protected:
 
   template <typename Ty> static Ty readBytesAs(const uint8_t *MatchTable) {
     Ty Ret;
-    memcpy(&Ret, MatchTable, sizeof(Ret));
+    llvm::copy(ArrayRef<uint8_t>(MatchTable, sizeof(Ret)),
+               reinterpret_cast<uint8_t *>(&Ret));
     return Ret;
   }
 
