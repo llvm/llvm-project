@@ -274,9 +274,9 @@ llvm.func @missing_noalias_on_one_ptr(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2:
 // CHECK-SAME: noalias_scopes = [#[[$ORIG_SCOPE]]]
 llvm.func @foo_disjoint(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
-  %1 = llvm.load %arg0 {alias_scopes = [#alias_scope], alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %arg0 <alias_scopes = [#alias_scope], alignment = 4> : !llvm.ptr -> f32
   %2 = llvm.getelementptr inbounds %arg1[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %1, %2 {noalias_scopes = [#alias_scope], alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %2 <alignment = 4, noalias_scopes = [#alias_scope]> : f32, !llvm.ptr
   llvm.return
 }
 
