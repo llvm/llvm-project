@@ -1,14 +1,14 @@
 ;; Tests that the ppc-vsx-fma-mutate pass with the schedule-ppc-vsx-fma-mutation-early pass does not hoist xxspltiw out of loops.
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:    -mtriple powerpc64-ibm-aix < %s | FileCheck --check-prefixes=CHECK64,AIX64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck --check-prefixes=CHECK64,LINUX64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
-; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
+; RUN: llc -verify-machineinstrs -mcpu=pwr10 -ppc-vsx-fma-mutation \
+; RUN:   -ppc-asm-full-reg-names -ppc-schedule-vsx-fma-mutation-early \
 ; RUN:    -mtriple powerpc-ibm-aix < %s | FileCheck --check-prefix=CHECK32 %s
 
 define void @bar(ptr noalias nocapture noundef writeonly %__output_a, ptr noalias nocapture noundef readonly %var1321In_a, ptr noalias nocapture noundef readonly %n) {

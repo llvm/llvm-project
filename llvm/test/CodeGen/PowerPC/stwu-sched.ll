@@ -1,8 +1,8 @@
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -ppc-enable-ctrloops=false < %s -verify-machineinstrs \
 ; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -ppc-enable-ctrloops=false < %s -verify-machineinstrs \
 ; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
 
 

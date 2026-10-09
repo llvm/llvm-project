@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-ppc-prefetching=true | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-ppc-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-ppc-prefetching=true | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-ppc-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -enable-ppc-prefetching=true | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -enable-ppc-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
-; RUN: llc < %s -mtriple=ppc64-- -mcpu=a2 -enable-ppc-prefetching=true | FileCheck %s -check-prefix=CHECK-DCBT
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -ppc-enable-prefetching=true | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -ppc-enable-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ppc-enable-prefetching=true | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ppc-enable-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -ppc-enable-prefetching=true | FileCheck %s
+; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -ppc-enable-prefetching=true -cache-line-size=64 | FileCheck %s -check-prefix=CHECK-DCBT
+; RUN: llc < %s -mtriple=ppc64-- -mcpu=a2 -ppc-enable-prefetching=true | FileCheck %s -check-prefix=CHECK-DCBT
 
 ; Function Attrs: nounwind
 define signext i32 @check_cache_line() local_unnamed_addr {

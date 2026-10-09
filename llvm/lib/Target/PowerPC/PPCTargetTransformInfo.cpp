@@ -35,8 +35,10 @@ static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
-static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
-cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    EnablePPCConstHoist("ppc-constant-hoisting",
+                        cl::desc("enable constant hoisting on PPC"),
+                        cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
 EnablePPCColdCC("ppc-enable-coldcc", cl::Hidden, cl::init(false),
@@ -49,10 +51,10 @@ LsrNoInsnsCost("ppc-lsr-no-insns-cost", cl::Hidden, cl::init(false),
 
 // The latency of mtctr is only justified if there are more than 4
 // comparisons that will be removed as a result.
-static cl::opt<unsigned>
-SmallCTRLoopThreshold("min-ctr-loop-threshold", cl::init(4), cl::Hidden,
-                      cl::desc("Loops with a constant trip count smaller than "
-                               "this value will not use the count register."));
+static cl::opt<unsigned> SmallCTRLoopThreshold(
+    "ppc-min-ctr-loop-threshold", cl::init(4), cl::Hidden,
+    cl::desc("Loops with a constant trip count smaller than "
+             "this value will not use the count register."));
 
 //===----------------------------------------------------------------------===//
 //
@@ -170,7 +172,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
 InstructionCost PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                           TTI::TargetCostKind CostKind) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCost(Imm, Ty, CostKind);
 
   assert(Ty->isIntegerTy());
@@ -202,7 +204,7 @@ InstructionCost
 PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                 const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCostIntrin(IID, Idx, Imm, Ty, CostKind);
 
   assert(Ty->isIntegerTy());
@@ -238,7 +240,7 @@ InstructionCost PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                               const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind,
                                               Instruction *Inst) const {
-  if (DisablePPCConstHoist)
+  if (!EnablePPCConstHoist)
     return BaseT::getIntImmCostInst(Opcode, Idx, Imm, Ty, CostKind, Inst);
 
   assert(Ty->isIntegerTy());
