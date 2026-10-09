@@ -429,25 +429,17 @@ def AArch64ursra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                             [(int_aarch64_sve_ursra node:$op1, node:$op2, node:$op3),
                              (add node:$op1, (AArch64urshri_p (SVEAllActive), node:$op2, node:$op3))]>;
 
-// Replace pattern min(max(v1,v2),v3) by clamp
-def AArch64sclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_sclamp node:$Zd, node:$Zn, node:$Zm),
-                              (AArch64smin_p (SVEAllActive),
-                                  (AArch64smax_p (SVEAllActive), node:$Zd, node:$Zn),
-                                  node:$Zm)
-                               ]>;
-def AArch64uclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_uclamp node:$Zd, node:$Zn, node:$Zm),
-                               (AArch64umin_p (SVEAllActive),
-                                  (AArch64umax_p (SVEAllActive), node:$Zd, node:$Zn),
-                                  node:$Zm)
-                              ]>;
-def AArch64fclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-                              [(int_aarch64_sve_fclamp node:$Zd, node:$Zn, node:$Zm),
-                              (AArch64fminnm_p (SVEAllActive),
-                                  (AArch64fmaxnm_p (SVEAllActive), node:$Zd, node:$Zn),
-                               node:$Zm)
-                               ]>;
+// Replace pattern min(max(v1,v2),v3) by clamp. Min's operands are commutable.
+class ClampPatFrags<SDPatternOperator clamp_ty, SDPatternOperator minop,
+                    SDPatternOperator maxop>
+: PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
+           [(clamp_ty node:$Zd, node:$Zn, node:$Zm),
+            (minop (SVEAllActive), (maxop (SVEAllActive), node:$Zd, node:$Zn), node:$Zm),
+            (minop (SVEAllActive), node:$Zm, (maxop (SVEAllActive), node:$Zd, node:$Zn))]>;
+
+def AArch64sclamp : ClampPatFrags<int_aarch64_sve_sclamp, AArch64smin_p, AArch64smax_p>;
+def AArch64uclamp : ClampPatFrags<int_aarch64_sve_uclamp, AArch64umin_p, AArch64umax_p>;
+def AArch64fclamp : ClampPatFrags<int_aarch64_sve_fclamp, AArch64fminnm_p, AArch64fmaxnm_p>;
 
 def AArch64fdot : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
                             [(int_aarch64_sve_fdot_x2 node:$Zd, node:$Zn, node:$Zm),

@@ -46,9 +46,7 @@ define <vscale x 2 x i64> @uclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 define <vscale x 16 x i8> @uclampi8_commuted_min(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: uclampi8_commuted_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    umin z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uclamp z0.b, z1.b, z2.b
 ; CHECK-NEXT:    ret
   %max = tail call <vscale x 16 x i8> @llvm.umax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %res = tail call <vscale x 16 x i8> @llvm.umin.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %max)
@@ -98,9 +96,7 @@ define <vscale x 2 x i64> @sclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 define <vscale x 16 x i8> @sclampi8_commuted_min(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: sclampi8_commuted_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z1.b
-; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
 ; CHECK-NEXT:    ret
   %max = tail call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %res = tail call <vscale x 16 x i8> @llvm.smin.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %max)
@@ -150,9 +146,7 @@ define <vscale x 2 x double> @fclampf64(<vscale x 2 x double> %a, <vscale x 2 x 
 define <vscale x 4 x float> @fclampf32_commuted_min(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
 ; CHECK-LABEL: fclampf32_commuted_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fclamp z0.s, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %max = tail call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
   %res = tail call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> %c, <vscale x 4 x float> %max)
