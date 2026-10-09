@@ -47,3 +47,19 @@ TEST_F(LlvmLibcTanpif16Test, NegativeRange) {
                                    TOLERANCE + 0.5);
   }
 }
+
+TEST_F(LlvmLibcTanpif16Test, IntegerSigns) {
+  // The MPFR matcher does not distinguish the signs of zeros.
+  constexpr struct {
+    float16 input, expected;
+  } ZERO_TESTS[] = {{1.0f16, neg_zero},
+                    {2.0f16, zero},
+                    {0x1.004p10f16, neg_zero}, // 2^10 + 1 is odd.
+                    {0x1.004p11f16, zero}};    // 2^11 + 2 is even.
+  for (const auto &test : ZERO_TESTS) {
+    EXPECT_FP_EQ_ALL_ROUNDING(test.expected,
+                              LIBC_NAMESPACE::tanpif16(test.input));
+    EXPECT_FP_EQ_ALL_ROUNDING(-test.expected,
+                              LIBC_NAMESPACE::tanpif16(-test.input));
+  }
+}
