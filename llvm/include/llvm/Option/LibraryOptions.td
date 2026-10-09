@@ -41,7 +41,7 @@ class EnumValues<string values, list<code> enumerators>
 // A bool member set by -<name> or -<name>=<true|false|1|0>.
 multiclass BoolField<string name, code default, string help> {
   def NAME : FlagOrEq<["-", "--"], name>, Field<NAME, "bool", default>,
-    BareValue<"true">, HelpText<help>;
+    HelpText<help>;
 }
 
 // A BoolOrDefault member, Default unless -<name> or -<name>=<true|false|1|0>
@@ -49,7 +49,7 @@ multiclass BoolField<string name, code default, string help> {
 multiclass OptionalBoolField<string name, string help> {
   def NAME : FlagOrEq<["-", "--"], name>,
     Field<NAME, "llvm::BoolOrDefault", "llvm::BoolOrDefault::Default">,
-    BareValue<"llvm::BoolOrDefault::True">, HelpText<help>;
+    HelpText<help>;
 }
 
 // A member of the enumeration <type> set by -<name>=<value> or -<name> <value>,

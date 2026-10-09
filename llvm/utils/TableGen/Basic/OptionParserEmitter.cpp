@@ -282,8 +282,10 @@ static void emitOptionsStruct(const Record &Struct,
     if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
       PrintFatalError(R->getLoc(),
                       "a member is set by a FlagOrEq or SeparateOrEq");
-    if (Kind == "FlagOrEq" && !R->getValue("BareValue"))
-      PrintFatalError(R->getLoc(), "a FlagOrEq needs a BareValue");
+    StringRef Type = R->getValueAsString("FieldType");
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault" &&
+        !R->getValue("BareValue"))
+      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool or has a BareValue");
     Fields.push_back(R);
   }
   // Members in declaration order.
@@ -344,9 +346,8 @@ static void emitOptionsStruct(const Record &Struct,
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
     if (R->getValue("BareValue"))
-      OS << "    if (!A.getNumValues()) {\n      " << Member << " = "
-         << R->getValueAsString("BareValue")
-         << ";\n      return true;\n    }\n";
+      OS << "    if (!A.getNumValues()) { " << Member << " = "
+         << R->getValueAsString("BareValue") << "; return true; }\n";
     if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
       SmallVector<StringRef> Values;
       R->getValueAsString("Values").split(Values, ',');
@@ -362,7 +363,12 @@ static void emitOptionsStruct(const Record &Struct,
       OS << "      return false;\n    }\n";
       continue;
     }
-    OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+    // A FlagOrEq without a value means =true.
+    StringRef Value =
+        R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq"
+            ? "A.getNumValues() ? A.getValue() : \"true\""
+            : "A.getValue()";
+    OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
        << ");\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
