@@ -17,16 +17,12 @@ target triple = "aarch64"
 
 define i64 @zext_reduction_i8_to_i64(ptr %arr, i32 %n) {
 ; VF16-LABEL: 'zext_reduction_i8_to_i64'
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%zext> = zext ir<%load> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%zext>
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%zext> = zext ir<%load> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%zext>
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
 ;
 ; VF32-LABEL: 'zext_reduction_i8_to_i64'
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%zext> = zext ir<%load> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%zext>
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%zext> = zext ir<%load> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%zext>
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> zext to i64)
 ;
 ; NODOT-LABEL: 'zext_reduction_i8_to_i64'
 ; NODOT:  Cost of 15 for VF 16: WIDEN-CAST ir<%zext> = zext ir<%load> to i64
@@ -54,16 +50,12 @@ exit:
 
 define i64 @sext_reduction_i8_to_i64(ptr %arr, i32 %n) {
 ; VF16-LABEL: 'sext_reduction_i8_to_i64'
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%sext> = sext ir<%load> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%sext>
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%sext> = sext ir<%load> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%sext>
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
 ;
 ; VF32-LABEL: 'sext_reduction_i8_to_i64'
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%sext> = sext ir<%load> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%sext>
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%sext> = sext ir<%load> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%sext>
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (ir<%load> sext to i64)
 ;
 ; NODOT-LABEL: 'sext_reduction_i8_to_i64'
 ; NODOT:  Cost of 15 for VF 16: WIDEN-CAST ir<%sext> = sext ir<%load> to i64
@@ -91,24 +83,12 @@ exit:
 
 define i64 @sext_mul_reduction_i8_to_i64(ptr %a, ptr %b, i32 %n) {
 ; VF16-LABEL: 'sext_mul_reduction_i8_to_i64'
-; VF16:  Cost of 0 for VF 16: WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i64
-; VF16:  Cost of 0 for VF 16: WIDEN-CAST ir<%ext.b> = sext ir<%load.b> to i64
-; VF16:  Cost of 14 for VF 16: WIDEN ir<%mul> = mul nsw ir<%ext.a>, ir<%ext.b>
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%mul>
-; VF16:  Cost of 0 for VF 16: WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i64
-; VF16:  Cost of 0 for VF 16: WIDEN-CAST ir<%ext.b> = sext ir<%load.b> to i64
-; VF16:  Cost of 14 for VF 16: WIDEN ir<%mul> = mul nsw ir<%ext.a>, ir<%ext.b>
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%acc>, ir<%mul>
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul nsw (ir<%load.a> sext to i64), (ir<%load.b> sext to i64))
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (mul nsw (ir<%load.a> sext to i64), (ir<%load.b> sext to i64))
 ;
 ; VF32-LABEL: 'sext_mul_reduction_i8_to_i64'
-; VF32:  Cost of 0 for VF 32: WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i64
-; VF32:  Cost of 0 for VF 32: WIDEN-CAST ir<%ext.b> = sext ir<%load.b> to i64
-; VF32:  Cost of 28 for VF 32: WIDEN ir<%mul> = mul nsw ir<%ext.a>, ir<%ext.b>
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%mul>
-; VF32:  Cost of 0 for VF 32: WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i64
-; VF32:  Cost of 0 for VF 32: WIDEN-CAST ir<%ext.b> = sext ir<%load.b> to i64
-; VF32:  Cost of 28 for VF 32: WIDEN ir<%mul> = mul nsw ir<%ext.a>, ir<%ext.b>
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%acc>, ir<%mul>
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul nsw (ir<%load.a> sext to i64), (ir<%load.b> sext to i64))
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (mul nsw (ir<%load.a> sext to i64), (ir<%load.b> sext to i64))
 ;
 ; NODOT-LABEL: 'sext_mul_reduction_i8_to_i64'
 ; NODOT:  Cost of 0 for VF 16: WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i64
@@ -202,24 +182,16 @@ exit:
 ; subtracted link does not feed the partial reduction directly either.
 define i64 @sub_add_chain_i8_to_i64(ptr %a, ptr noalias %b, i32 %n) {
 ; VF16-LABEL: 'sub_add_chain_i8_to_i64'
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i64
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%sub> = sub ir<%acc>, ir<%ext.a>
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%sub>, ir<%ext.b>
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i64
-; VF16:  Cost of 15 for VF 16: WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i64
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%sub> = sub ir<%acc>, ir<%ext.a>
-; VF16:  Cost of 8 for VF 16: WIDEN ir<%add> = add ir<%sub>, ir<%ext.b>
+; VF16:  Cost of 23 for VF 16: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP10:%[0-9]+]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+; VF16:  Cost of 23 for VF 16: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF16:  Cost of 2 for VF 16: EXPRESSION vp<[[VP10]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
 ;
 ; VF32-LABEL: 'sub_add_chain_i8_to_i64'
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i64
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%sub> = sub ir<%acc>, ir<%ext.a>
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%sub>, ir<%ext.b>
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i64
-; VF32:  Cost of 30 for VF 32: WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i64
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%sub> = sub ir<%acc>, ir<%ext.a>
-; VF32:  Cost of 16 for VF 32: WIDEN ir<%add> = add ir<%sub>, ir<%ext.b>
+; VF32:  Cost of 46 for VF 32: EXPRESSION vp<[[VP9:%[0-9]+]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP10:%[0-9]+]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
+; VF32:  Cost of 46 for VF 32: EXPRESSION vp<[[VP9]]> = ir<%acc> + partial.reduce.add (sub (0, ir<%load.a>) zext to i64)
+; VF32:  Cost of 4 for VF 32: EXPRESSION vp<[[VP10]]> = vp<[[VP9]]> + partial.reduce.add (ir<%load.b> zext to i64)
 ;
 ; NODOT-LABEL: 'sub_add_chain_i8_to_i64'
 ; NODOT:  Cost of 15 for VF 16: WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i64
