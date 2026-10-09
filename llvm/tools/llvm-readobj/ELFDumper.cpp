@@ -181,25 +181,6 @@ struct GroupSection {
   std::vector<GroupMember> Members;
 };
 
-// A function referenced by a SHT_LLVM_CALL_GRAPH section entry: the function
-// that the entry describes, or one of its direct callees.
-struct CallGraphFunc {
-  // The offset of the address field within the section.
-  uint64_t FieldOffset = 0;
-  // The value stored in the address field.
-  uint64_t FieldValue = 0;
-};
-
-// Per-function call graph information.
-struct FunctionCallGraphInfo {
-  CallGraphFunc Entry;
-  uint8_t FormatVersionNumber;
-  bool IsIndirectTarget;
-  uint64_t FunctionTypeID;
-  SmallVector<CallGraphFunc, 4> DirectCallees;
-  SmallSet<uint64_t, 4> IndirectTypeIDs;
-};
-
 namespace {
 
 struct NoteType {
@@ -225,6 +206,27 @@ public:
   typename ELFT::uint Offset;
   typename ELFT::uint Info;
   std::optional<int64_t> Addend;
+};
+
+// A function referenced by a SHT_LLVM_CALL_GRAPH section entry: the function
+// that the entry describes, or one of its direct callees.
+template <class ELFT> struct CallGraphFunc {
+  // The offset of the address field within the section.
+  uint64_t FieldOffset = 0;
+  // The value stored in the address field.
+  uint64_t FieldValue = 0;
+  // The relocation that applies to the address field, if any.
+  std::optional<Relocation<ELFT>> Reloc = std::nullopt;
+};
+
+// Per-function call graph information.
+template <class ELFT> struct FunctionCallGraphInfo {
+  CallGraphFunc<ELFT> Entry;
+  uint8_t FormatVersionNumber;
+  bool IsIndirectTarget;
+  uint64_t FunctionTypeID;
+  SmallVector<CallGraphFunc<ELFT>, 4> DirectCallees;
+  SmallSet<uint64_t, 4> IndirectTypeIDs;
 };
 
 template <class ELFT> class MipsGOTParser;
@@ -463,8 +465,13 @@ protected:
   // populate call graph related data structures which will be used to dump call
   // graph info. Returns an empty vector if there are no such sections or if
   // parsing fails.
-  SmallVector<FunctionCallGraphInfo, 16>
+  SmallVector<FunctionCallGraphInfo<ELFT>, 16>
   processCallGraphSection(const Elf_Shdr *CGSection);
+  // Attach to each address field in FuncCGInfos the relocation from
+  // CGRelSection that applies to it, if any.
+  void attachCallGraphRelocations(
+      const Elf_Shdr &CGRelSection,
+      MutableArrayRef<FunctionCallGraphInfo<ELFT>> FuncCGInfos);
 
   std::string getProgramHeadersNumString();
 
@@ -5345,9 +5352,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
-SmallVector<FunctionCallGraphInfo, 16>
+SmallVector<FunctionCallGraphInfo<ELFT>, 16>
 ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  SmallVector<FunctionCallGraphInfo, 16> FuncCGInfos;
+  SmallVector<FunctionCallGraphInfo<ELFT>, 16> FuncCGInfos;
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
@@ -5397,7 +5404,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     }
 
     // Create a new entry for this function.
-    FunctionCallGraphInfo CGInfo;
+    FunctionCallGraphInfo<ELFT> CGInfo;
     CGInfo.Entry = {FuncAddrOffset, FuncAddr};
     CGInfo.FormatVersionNumber = FormatVersionNumber;
     bool IsIndirectTarget =
@@ -5470,6 +5477,37 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
         Twine(UnknownCount) + " indirect targets");
   return FuncCGInfos;
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::attachCallGraphRelocations(
+    const Elf_Shdr &CGRelSection,
+    MutableArrayRef<FunctionCallGraphInfo<ELFT>> FuncCGInfos) {
+  std::vector<Relocation<ELFT>> Relocations;
+  forEachRelocationDo(CGRelSection,
+                      [&](const Relocation<ELFT> &R, unsigned, const Elf_Shdr &,
+                          const Elf_Shdr *) { Relocations.push_back(R); });
+  llvm::stable_sort(Relocations, [](const Relocation<ELFT> &LHS,
+                                    const Relocation<ELFT> &RHS) {
+    return LHS.Offset < RHS.Offset;
+  });
+
+  // Address fields are parsed in increasing offset order, so one pass over the
+  // sorted relocations finds the relocation for each field. If more than one
+  // relocation applies to a field, the first one is used.
+  ArrayRef<Relocation<ELFT>> Remaining = Relocations;
+  auto Attach = [&](CallGraphFunc<ELFT> &Func) {
+    Remaining = Remaining.drop_while(
+        [&](const Relocation<ELFT> &R) { return R.Offset < Func.FieldOffset; });
+    if (!Remaining.empty() && Remaining.front().Offset == Func.FieldOffset)
+      Func.Reloc = Remaining.front();
+  };
+
+  for (FunctionCallGraphInfo<ELFT> &CGInfo : FuncCGInfos) {
+    Attach(CGInfo.Entry);
+    for (CallGraphFunc<ELFT> &Callee : CGInfo.DirectCallees)
+      Attach(Callee);
+  }
 }
 
 template <class ELFT>
@@ -8356,12 +8394,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     const Elf_Shdr *CGSection = CGMapEntry.first;
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 
-    SmallVector<FunctionCallGraphInfo, 16> FuncCGInfos =
+    SmallVector<FunctionCallGraphInfo<ELFT>, 16> FuncCGInfos =
         this->processCallGraphSection(CGSection);
     if (FuncCGInfos.empty())
       continue;
 
-    std::vector<Relocation<ELFT>> Relocations;
     const Elf_Shdr *RelocSymTab = nullptr;
     if (IsRelocatable) {
       if (CGRelSection) {
@@ -8375,12 +8412,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           return;
         }
         RelocSymTab = *SymtabOrErr;
-        this->forEachRelocationDo(*CGRelSection, [&](const auto &R, ...) {
-          Relocations.push_back(R);
-        });
-        llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
-          return LHS.Offset < RHS.Offset;
-        });
+        this->attachCallGraphRelocations(*CGRelSection, FuncCGInfos);
       }
     }
 
@@ -8401,17 +8433,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       W.printHex("Address", FuncEntryPC);
     };
 
-    auto PrintRelocatableFuncSymbol = [&](uint64_t RelocOffset) {
-      auto R = llvm::find_if(Relocations, [&](const Relocation<ELFT> &R) {
-        return R.Offset == RelocOffset;
-      });
-      if (R == Relocations.end()) {
+    auto PrintRelocatableFuncSymbol = [&](const CallGraphFunc<ELFT> &Func) {
+      if (!Func.Reloc) {
         this->reportUniqueWarning("missing relocation for symbol at offset " +
-                                  Twine(RelocOffset));
+                                  Twine(Func.FieldOffset));
         return;
       }
       Expected<RelSymbol<ELFT>> RelSymOrErr =
-          this->getRelocationTarget(*R, RelocSymTab);
+          this->getRelocationTarget(*Func.Reloc, RelocSymTab);
       if (!RelSymOrErr) {
         this->reportUniqueWarning(RelSymOrErr.takeError());
         return;
@@ -8419,11 +8448,11 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       W.printString("Name", RelSymOrErr->Name);
     };
 
-    auto PrintFunc = [&](const CallGraphFunc &Func) {
-      // In a relocatable object file, the address field holds a placeholder.
-      // Its offset is used to look up the relocation that applies to it.
+    auto PrintFunc = [&](const CallGraphFunc<ELFT> &Func) {
+      // In a relocatable object file, the address field holds a placeholder,
+      // and the relocation that applies to it identifies the function.
       if (IsRelocatable) {
-        PrintRelocatableFuncSymbol(Func.FieldOffset);
+        PrintRelocatableFuncSymbol(Func);
         return;
       }
       uint64_t FuncEntryPC = Func.FieldValue;
@@ -8436,7 +8465,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     };
     if (!CGI)
       CGI = std::make_unique<ListScope>(W, "CallGraph");
-    for (const FunctionCallGraphInfo &CGInfo : FuncCGInfos) {
+    for (const FunctionCallGraphInfo<ELFT> &CGInfo : FuncCGInfos) {
       DictScope D(W, "Function");
       PrintFunc(CGInfo.Entry);
       W.printNumber("Version", CGInfo.FormatVersionNumber);
@@ -8447,7 +8476,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         // In a linked file, different callees can end up at the same address,
         // e.g. after identical code folding. List each address once.
         SmallSet<uint64_t, 4> SeenCallees;
-        for (const CallGraphFunc &Callee : CGInfo.DirectCallees) {
+        for (const CallGraphFunc<ELFT> &Callee : CGInfo.DirectCallees) {
           if (!IsRelocatable && !SeenCallees.insert(Callee.FieldValue).second)
             continue;
           DictScope D(W);
