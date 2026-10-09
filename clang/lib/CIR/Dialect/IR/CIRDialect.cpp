@@ -1434,6 +1434,20 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return ::mlir::failure();
   }
 
+  if (parser.parseOptionalKeyword("cc").succeeded()) {
+    cir::CallingConv callingConv;
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<cir::CallingConv>(parser, callingConv).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown calling convention");
+    if (parser.parseRParen().failed())
+      return failure();
+    result.addAttribute(
+        CIRDialect::getCallingConvAttrName(),
+        cir::CallingConvAttr::get(parser.getContext(), callingConv));
+  }
+
   if (parser.parseOptionalKeyword("musttail").succeeded())
     result.addAttribute(CIRDialect::getMustTailAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
@@ -1541,6 +1555,10 @@ static void printCallCommon(mlir::Operation *op,
     printer << tryCall.getUnwindDest();
   }
 
+  cir::CallingConv callingConv = callLikeOp.getCallingConv();
+  if (callingConv != cir::CallingConv::C)
+    printer << " cc(" << stringifyCallingConv(callingConv) << ")";
+
   if (op->hasAttr(CIRDialect::getMustTailAttrName()))
     printer << " musttail";
 
@@ -1555,6 +1573,7 @@ static void printCallCommon(mlir::Operation *op,
 
   llvm::StringRef elidedAttrs[] = {
       CIRDialect::getCalleeAttrName(),
+      CIRDialect::getCallingConvAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
