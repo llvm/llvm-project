@@ -513,6 +513,11 @@ bool isFirstInsertElement(const InsertElementInst *IE1,
 /// none.
 DebugLoc getDebugLocFromPHI(PHINode &PN);
 
+/// \returns the number of elements of the homogeneous aggregate built by
+/// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
+/// a homogeneous aggregate.
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
