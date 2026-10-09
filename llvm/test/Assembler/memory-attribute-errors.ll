@@ -36,3 +36,6 @@ declare void @fn() memory(argmem: read, write)
 ;--- default-after-target-loc.ll
 ; DEFAULT-AFTER-TARGET-LOC: error: target memory default access kind must be specified first
 declare void @fn() memory(target_mem0: read, target_mem:write)
+;--- default-after-fpenv-loc.ll
+; DEFAULT-AFTER-FPENV-LOC: error: floating-point environment default access kind must be specified first
+declare void @fn() memory(fccontrol: read, fpenv:write)

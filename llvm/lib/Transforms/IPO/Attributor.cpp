@@ -3116,9 +3116,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
           return !T->isPtrOrPtrVectorTy() ||
                  NewFn->hasParamAttribute(ArgNo, Attribute::ReadNone);
         })) {
-      ME -= MemoryEffects::argMemOnly();
-      ME -= MemoryEffects::fpenvironmentOnly();
-      NewFn->setMemoryEffects(ME);
+      NewFn->setMemoryEffects(ME - MemoryEffects::argMemOnly());
     }
 
     // Since we have now created the new function, splice the body of the old

@@ -107,12 +107,6 @@ public:
     return enum_seq_inclusive(Location::First, Location::Last,
                               force_iteration_on_noniterable_enum);
   }
-  /// Returns iterator over all supported memory location kinds, without
-  /// floating-point registers.
-  static auto mem_locations() {
-    return enum_seq_inclusive(Location::First, Location::LastMem,
-                              force_iteration_on_noniterable_enum);
-  }
   /// Returns iterator over all target location kinds
   static auto targetMemLocations() {
     return enum_seq_inclusive(Location::TargetMem0, Location::TargetMem1,
@@ -135,25 +129,9 @@ public:
       setModRef(Loc, MR);
   }
 
-  /// Create MemoryEffectsBase that can access any location with the given
-  /// ModRefInfo, excluding floating-point locations.
-  /// The boolean argument value is not used, it only allows to distinguish
-  /// between constructors.
-  MemoryEffectsBase(ModRefInfo MR, bool NoFPEnvMarker) {
-    (void)NoFPEnvMarker;
-    for (Location Loc : mem_locations())
-      setModRef(Loc, MR);
-  }
-
   /// Create MemoryEffectsBase that can read and write any memory.
   static MemoryEffectsBase unknown() {
     return MemoryEffectsBase(ModRefInfo::ModRef);
-  }
-
-  /// Create MemoryEffectsBase that can read and write any memory except
-  /// floating-point registers.
-  static MemoryEffectsBase unknown_mem() {
-    return MemoryEffectsBase(ModRefInfo::ModRef, /*NoFPEnvMarker*/ true);
   }
 
   /// Create MemoryEffectsBase that cannot read or write any memory.
@@ -161,16 +139,14 @@ public:
     return MemoryEffectsBase(ModRefInfo::NoModRef);
   }
 
-  /// Create MemoryEffectsBase that can read any memory excluding floating-point
-  /// registers.
+  /// Create MemoryEffectsBase that can read any memory.
   static MemoryEffectsBase readOnly() {
-    return MemoryEffectsBase(ModRefInfo::Ref, /*NoFPEnvMarker*/ true);
+    return MemoryEffectsBase(ModRefInfo::Ref);
   }
 
-  /// Create MemoryEffectsBase that can write any memory excluding
-  /// floating-point registers.
+  /// Create MemoryEffectsBase that can write any memory.
   static MemoryEffectsBase writeOnly() {
-    return MemoryEffectsBase(ModRefInfo::Mod, /*NoFPEnvMarker*/ true);
+    return MemoryEffectsBase(ModRefInfo::Mod);
   }
 
   /// Create MemoryEffectsBase that can only access argument memory.
@@ -196,10 +172,28 @@ public:
 
   /// Create MemoryEffectsBase that can only access floating-point state
   /// register.
-  static MemoryEffectsBase
-  fpenvironmentOnly(ModRefInfo MR = ModRefInfo::ModRef) {
-    return MemoryEffectsBase(Location::FPControl, MR) |
-           MemoryEffectsBase(Location::FPStatus, MR);
+  static MemoryEffectsBase fpenvOnly(ModRefInfo ControlMR = ModRefInfo::ModRef,
+                                     ModRefInfo StatusMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase Result = none();
+    Result.setModRef(Location::FPControl, ControlMR);
+    Result.setModRef(Location::FPStatus, StatusMR);
+    return Result;
+  }
+
+  /// Create MemoryEffectsBase that can only access floating-point
+  /// control modes.
+  static MemoryEffectsBase fpcontrolOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    MemoryEffectsBase Result = none();
+    Result.setModRef(Location::FPControl, MR);
+    return Result;
+  }
+
+  /// Create MemoryEffectsBase that can only access floating-point
+  /// status bits.
+  static MemoryEffectsBase fpstatusOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    MemoryEffectsBase Result = none();
+    Result.setModRef(Location::FPStatus, MR);
+    return Result;
   }
 
   /// Create MemoryEffectsBase that can only access inaccessible or argument
@@ -303,20 +297,18 @@ public:
     return isModOrRefSet(getModRef(Location::ArgMem));
   }
 
-  /// Whether this function only (at most) accesses memory that cannot be
-  /// addressed by any pointer.
+  /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem)
-        .getWithoutLoc(Location::FPControl)
-        .getWithoutLoc(Location::FPStatus)
-        .doesNotAccessMemory();
+    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses inaccessible or target
-  /// memory.
-  bool onlyAccessesInaccessibleOrTargetMem() const {
+  /// memory or floating-point environment.
+  bool onlyAccessesNonaddressableMem() const {
     MemoryEffectsBase ME = *this;
     for (auto Loc : MemoryEffectsBase::targetMemLocations())
+      ME &= ME.getWithoutLoc(Loc);
+    for (auto Loc : MemoryEffectsBase::fpenvLocations())
       ME &= ME.getWithoutLoc(Loc);
     return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }

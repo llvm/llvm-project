@@ -212,6 +212,7 @@ enum Kind {
   kw_target_mem0,
   kw_target_mem1,
   kw_errnomem,
+  kw_fpenv,
   kw_fpcontrol,
   kw_fpstatus,
 

@@ -2760,10 +2760,6 @@ static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
     return {Loc::InaccessibleMem};
   case lltok::kw_errnomem:
     return {Loc::ErrnoMem};
-  case lltok::kw_fpcontrol:
-    return {Loc::FPControl};
-  case lltok::kw_fpstatus:
-    return {Loc::FPStatus};
   case lltok::kw_target_mem0:
     return {Loc::TargetMem0};
   case lltok::kw_target_mem1:
@@ -2773,6 +2769,16 @@ static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
     for (auto Loc : MemoryEffects::targetMemLocations())
       Targets.push_back(Loc);
     return Targets;
+  }
+  case lltok::kw_fpcontrol:
+    return {Loc::FPControl};
+  case lltok::kw_fpstatus:
+    return {Loc::FPStatus};
+  case lltok::kw_fpenv: {
+    SmallVector<MemoryEffects::Location, 2> FPLocs;
+    for (auto Loc : MemoryEffects::fpenvLocations())
+      FPLocs.push_back(Loc);
+    return FPLocs;
   }
   default:
     return {};
@@ -2826,6 +2832,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   bool SeenLoc = false;
   bool SeenTargetLoc = false;
+  bool SeenFPEnvLoc = false;
   do {
     SmallVector<IRMemLocation, 2> Locs = keywordToLoc(Lex.getKind());
     if (!Locs.empty()) {
@@ -2850,22 +2857,30 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     Lex.Lex();
     if (!Locs.empty()) {
       SeenLoc = true;
+      bool IsTargetLoc = ME.isTargetMemLoc(Locs.front());
+      bool IsFPEnvLoc = ME.isFPEnvMemLoc(Locs.front());
       for (IRMemLocation Loc : Locs) {
         ME = ME.getWithModRef(Loc, *MR);
-        if (ME.isTargetMemLoc(Loc) && Locs.size() == 1)
+        if (IsTargetLoc && Locs.size() == 1)
           SeenTargetLoc = true;
+        else if (IsFPEnvLoc && Locs.size() == 1)
+          SeenFPEnvLoc = true;
       }
-      if (Locs.size() > 1 && SeenTargetLoc) {
+      if (IsTargetLoc && Locs.size() > 1 && SeenTargetLoc) {
         tokError("target memory default access kind must be specified first");
         return std::nullopt;
       }
-
+      if (IsFPEnvLoc && Locs.size() > 1 && SeenFPEnvLoc) {
+        tokError("floating-point environment default access kind "
+                 "must be specified first");
+        return std::nullopt;
+      }
     } else {
       if (SeenLoc) {
         tokError("default access kind must be specified first");
         return std::nullopt;
       }
-      ME = MemoryEffects(*MR, /*NoFPEnvMarker*/ false);
+      ME = MemoryEffects(*MR);
     }
 
     if (EatIfPresent(lltok::rparen))

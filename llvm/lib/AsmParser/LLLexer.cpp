@@ -729,6 +729,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(errnomem);
   KEYWORD(fpcontrol);
   KEYWORD(fpstatus);
+  KEYWORD(fpenv);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
   KEYWORD(inaccessiblemem_or_argmemonly);

@@ -971,12 +971,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       return ModRefInfo::Mod;
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
-  // can only reference accessible memory. The same is true for floating-point
-  // registers.
+  // can only reference accessible memory.
   auto ME = AAQI.AAR.getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(IRMemLocation::InaccessibleMem)
-                .getWithoutLoc(IRMemLocation::FPControl)
-                .getWithoutLoc(IRMemLocation::FPStatus);
+                .getWithoutLoc(IRMemLocation::InaccessibleMem);
   if (ME.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 

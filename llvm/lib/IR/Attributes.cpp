@@ -646,9 +646,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
     bool SkipLocGroup = false;
     IRMemLocation LastToSkip;
+    const auto isFPEnvMemLocSameForAll = [](MemoryEffects ME) -> bool {
+      return ME.getModRef(IRMemLocation::FPControl) ==
+             ME.getModRef(IRMemLocation::FPStatus);
+    };
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
-      if (MR == OtherMR && !MemoryEffects::isFPEnvMemLoc(Loc))
+      if (MR == OtherMR)
         continue;
 
       if (SkipLocGroup) {
@@ -657,20 +661,17 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         continue;
       }
 
-      if (MemoryEffects::isFPEnvMemLoc(Loc)) {
-        // If access to a floating-point location is absent, do not print it.
-        if (ME.doesNotAccessFPEnv()) {
-          SkipLocGroup = true;
-          LastToSkip = IRMemLocation::FPStatus;
-          continue;
-        }
-        if (ME.getModRef(Loc) == ModRefInfo::NoModRef)
-          continue;
-      }
-
       if (!First && !SkipLocGroup)
         OS << ", ";
       First = false;
+
+      if (MemoryEffects::isFPEnvMemLoc(Loc) && isFPEnvMemLocSameForAll(ME)) {
+        OS << "fpenv: ";
+        OS << getModRefStr(MR);
+        SkipLocGroup = true;
+        LastToSkip = IRMemLocation::FPStatus;
+        continue;
+      }
 
       // isTargetMemLocSameForAll is fine for target location < 3
       // If more targets are added it should do something like:

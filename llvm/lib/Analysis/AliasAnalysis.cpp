@@ -245,9 +245,8 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   return Result;
 }
 
-ModRefInfo
-getModRefInfoInaccessibleAndTargetMemLoc(const MemoryEffects CallUse,
-                                         const MemoryEffects CallDef) {
+ModRefInfo getModRefInfoNonaddressableMemLoc(const MemoryEffects CallUse,
+                                             const MemoryEffects CallDef) {
 
   ModRefInfo Result = ModRefInfo::NoModRef;
   auto addModRefInfoForLoc = [&](IRMemLocation L) {
@@ -374,11 +373,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
     return R;
   }
 
-  // If only Inaccessible and Target Memory Location have set ModRefInfo
-  // then check the relation between the same locations.
-  if (Call1B.onlyAccessesInaccessibleOrTargetMem() &&
-      Call2B.onlyAccessesInaccessibleOrTargetMem())
-    return getModRefInfoInaccessibleAndTargetMemLoc(Call1B, Call2B);
+  // If only Inaccessible, Target and floating-point Memory Location have
+  // set ModRefInfo then check the relation between the same locations.
+  if (Call1B.onlyAccessesNonaddressableMem() &&
+      Call2B.onlyAccessesNonaddressableMem())
+    return getModRefInfoNonaddressableMemLoc(Call1B, Call2B);
 
   return Result;
 }

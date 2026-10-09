@@ -13,6 +13,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -219,6 +220,88 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   EXPECT_EQ(AA.getModRefInfo(Store1, Bar), ModRefInfo::NoModRef);
   EXPECT_EQ(AA.getModRefInfo(Foo, Bar), ModRefInfo::NoModRef);
   EXPECT_EQ(AA.getModRefInfo(Foo, Foo), ModRefInfo::ModRef);
+}
+
+TEST_F(AliasAnalysisTest, getFPModRefInfo) {
+  IRBuilder<> Builder(C);
+  auto PtrType = PointerType::get(C, 0);
+  auto FloatType = Type::getFloatTy(C);
+
+  // Setup function.
+  auto *FTy =
+      FunctionType::get(Type::getVoidTy(C), {PtrType, FloatType}, false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
+  auto *BB = BasicBlock::Create(C, "entry", F);
+  Builder.SetInsertPoint(BB);
+  auto *Addr = F->getArg(0);
+  auto *Val = F->getArg(1);
+
+  auto *Store = Builder.CreateStore(Val, Addr);
+  auto *Load = Builder.CreateLoad(FloatType, Addr);
+
+  auto *FuncTy = FunctionType::get(Type::getVoidTy(C), {}, false);
+  auto *F1 = Function::Create(FuncTy, Function::ExternalLinkage, "f1", &M);
+  auto *F2 = Function::Create(FuncTy, Function::ExternalLinkage, "f2", &M);
+  F2->setDoesNotAccessMemory();
+  auto *F3 = Function::Create(FuncTy, Function::ExternalLinkage, "f3", &M);
+  F3->setOnlyWritesMemory();
+
+  auto *CallF1 = Builder.CreateCall(F1);
+  auto *CallF2 = Builder.CreateCall(F2);
+  auto *CallF3 = Builder.CreateCall(F3);
+
+  // Function that only reads FP control modes.
+  auto *FReadC = Function::Create(FuncTy, Function::ExternalLinkage, "rc", &M);
+  FReadC->setMemoryEffects(
+      MemoryEffects::fpenvOnly(ModRefInfo::Ref, ModRefInfo::NoModRef));
+  auto *ReadFPC = Builder.CreateCall(FReadC);
+
+  // Function that only writes FP control modes.
+  auto *FWriteC = Function::Create(FuncTy, Function::ExternalLinkage, "wc", &M);
+  FWriteC->setMemoryEffects(
+      MemoryEffects::fpenvOnly(ModRefInfo::Mod, ModRefInfo::NoModRef));
+  auto *WriteFPC = Builder.CreateCall(FWriteC);
+
+  // Function that only reads/writes FP status.
+  auto *FRWS = Function::Create(FuncTy, Function::ExternalLinkage, "rws", &M);
+  FRWS->setMemoryEffects(
+      MemoryEffects::fpenvOnly(ModRefInfo::NoModRef, ModRefInfo::ModRef));
+  auto *ReadWriteFPS = Builder.CreateCall(FRWS);
+
+  // Function that only reads/writes FP status and reads FP control modes.
+  auto *FFPOp = Function::Create(FuncTy, Function::ExternalLinkage, "fpop", &M);
+  FFPOp->setMemoryEffects(
+      MemoryEffects::fpenvOnly(ModRefInfo::Ref, ModRefInfo::ModRef));
+  auto *FPOp = Builder.CreateCall(FFPOp);
+
+  ReturnInst::Create(C, nullptr, BB);
+
+  auto &AA = getAAResults(*F);
+
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, Load), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, Store), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, Load), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, Store), ModRefInfo::NoModRef);
+
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, CallF1), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, CallF2), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, CallF3), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, CallF1), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, CallF2), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, CallF3), ModRefInfo::Mod);
+
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, WriteFPC), ModRefInfo::Ref);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, ReadFPC), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, ReadFPC), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, WriteFPC), ModRefInfo::Mod);
+
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, ReadWriteFPS), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, ReadWriteFPS), ModRefInfo::NoModRef);
+
+  EXPECT_EQ(AA.getModRefInfo(ReadFPC, FPOp), ModRefInfo::NoModRef);
+  EXPECT_EQ(AA.getModRefInfo(WriteFPC, FPOp), ModRefInfo::Mod);
+  EXPECT_EQ(AA.getModRefInfo(ReadWriteFPS, FPOp), ModRefInfo::ModRef);
+  EXPECT_EQ(AA.getModRefInfo(FPOp, FPOp), ModRefInfo::ModRef);
 }
 
 static Instruction *getInstructionByName(Function &F, StringRef Name) {
