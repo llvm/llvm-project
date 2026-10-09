@@ -3161,6 +3161,8 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           attrs.set(isAllocatableMold
                   ? characteristics::Procedure::Attr::NullAllocatable
                   : characteristics::Procedure::Attr::NullPointer);
+          attrs.set(characteristics::Procedure::Attr::Pure);
+          attrs.set(characteristics::Procedure::Attr::Simple);
           characteristics::Procedure chars{
               std::move(*fResult), std::move(args), attrs};
           return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
