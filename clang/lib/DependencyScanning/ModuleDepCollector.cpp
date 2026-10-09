@@ -328,8 +328,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   // were actually used.
   CI.getMutFrontendOpts().ModuleMapFiles.clear();
 
-  for (const std::string &ModuleMapFile : Deps.ModuleMapFileDeps)
-    CI.getMutFrontendOpts().ModuleMapFiles.emplace_back(ModuleMapFile);
+  llvm::append_range(CI.getMutFrontendOpts().ModuleMapFiles,
+                     Deps.ModuleMapFileDeps);
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
@@ -801,8 +801,6 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
             PathBuf, IFI.UnresolvedImportedFilenameAsRequested,
             MF->BaseDirectory);
 
-        // TODO: Track these as `FileEntryRef` to simplify the equality check
-        // below.
         auto ModuleMapEntry =
             MDC.ScanInstance.getFileManager().getOptionalFileRef(
                 *ResolvedFilenameAsRequested);
