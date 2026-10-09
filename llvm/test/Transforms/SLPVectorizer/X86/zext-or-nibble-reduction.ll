@@ -179,3 +179,72 @@ entry:
   %or7 = or i64 %sh7, %or6
   ret i64 %or7
 }
+
+; The absorbed or of the first byte and %x is not disjoint, so the disjoint
+; flags of the outer ors must not be copied to the emitted ops.
+define i32 @test_absorbed_or_not_disjoint(ptr %p, i8 %x) {
+; CHECK-LABEL: @test_absorbed_or_not_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[OP_RDX]]
+;
+entry:
+  %a0 = load i8, ptr %p, align 1
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %a1 = load i8, ptr %p1, align 1
+  %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  %a2 = load i8, ptr %p2, align 1
+  %p3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  %a3 = load i8, ptr %p3, align 1
+  %o0 = or i8 %a0, %x
+  %z0 = zext i8 %o0 to i32
+  %z1 = zext i8 %a1 to i32
+  %s1 = shl i32 %z1, 8
+  %z2 = zext i8 %a2 to i32
+  %s2 = shl i32 %z2, 16
+  %z3 = zext i8 %a3 to i32
+  %s3 = shl i32 %z3, 24
+  %r1 = or disjoint i32 %z0, %s1
+  %r2 = or disjoint i32 %r1, %s2
+  %r3 = or disjoint i32 %r2, %s3
+  ret i32 %r3
+}
+
+; Same as above, but the absorbed or is disjoint, so the flag is kept.
+define i32 @test_absorbed_or_disjoint(ptr %p, i8 %x) {
+; CHECK-LABEL: @test_absorbed_or_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[OP_RDX]]
+;
+entry:
+  %a0 = load i8, ptr %p, align 1
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %a1 = load i8, ptr %p1, align 1
+  %p2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  %a2 = load i8, ptr %p2, align 1
+  %p3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  %a3 = load i8, ptr %p3, align 1
+  %o0 = or disjoint i8 %a0, %x
+  %z0 = zext i8 %o0 to i32
+  %z1 = zext i8 %a1 to i32
+  %s1 = shl i32 %z1, 8
+  %z2 = zext i8 %a2 to i32
+  %s2 = shl i32 %z2, 16
+  %z3 = zext i8 %a3 to i32
+  %s3 = shl i32 %z3, 24
+  %r1 = or disjoint i32 %z0, %s1
+  %r2 = or disjoint i32 %r1, %s2
+  %r3 = or disjoint i32 %r2, %s3
+  ret i32 %r3
+}
