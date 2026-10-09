@@ -11,8 +11,7 @@ entry:
   %0 = load ptr, ptr @buf, align 2
 ; CHECK: mov &buf, r12
 ; CHECK-NEXT: mov #5, r13
-; CHECK-NEXT: clr r14
-; CHECK-NEXT: mov #128, r15
+; CHECK-NEXT: mov #128, r14
 ; CHECK-NEXT: call #memset
   call void @llvm.memset.p0.i16(ptr %0, i8 5, i16 128, i1 false)
   ret void
