@@ -104,7 +104,7 @@ Error COFFWriter::finalizeSymIdxContents() {
   // handling as they have more complex layout.
   auto IsSymIdxSection = [](StringRef Name) {
     return Name == ".gljmp$y" || Name == ".giats$y" || Name == ".gfids$y" ||
-           Name == ".gehcont$y";
+           Name == ".gehcont$y" || Name == ".sxdata";
   };
 
   DenseMap<size_t, size_t> SymIdMap;
