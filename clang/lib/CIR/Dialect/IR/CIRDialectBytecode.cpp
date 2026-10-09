@@ -59,24 +59,27 @@ readAPFloatWithKnownSemantics(DialectBytecodeReader &reader, Type type,
   return success(succeeded(val));
 }
 
-// std::optional<T> parameters need their own presence flag, carried in the
-// varint's low bit. The channel is therefore 63 bits and unsigned-only.
-// Deliberately narrower than the LLVM dialect's version.
+// std::optional<T> parameters carry presence as a varint of its own ahead of
+// the value, so the full width survives.
 template <typename EntryTy>
 static LogicalResult readOptionalInt(DialectBytecodeReader &reader,
                                      std::optional<EntryTy> &storage) {
   static_assert(std::is_unsigned_v<EntryTy>,
-                "EntryTy must be unsigned: writeVarIntWithFlag spends the low "
-                "bit on the presence flag, so a negative value cannot be "
-                "represented");
-  uint64_t value = 0;
-  bool present = false;
-  if (failed(reader.readVarIntWithFlag(value, present)))
+                "EntryTy must be unsigned: only unsigned varints are "
+                "supported here, so a negative value cannot be represented");
+  uint64_t present = 0;
+  if (failed(reader.readVarInt(present)))
     return failure();
-  if (!present) {
+  if (present == 0) {
     storage = std::nullopt;
     return success();
   }
+  if (present != 1)
+    return reader.emitError() << "optional integer presence flag " << present
+                              << " is neither 0 nor 1";
+  uint64_t value = 0;
+  if (failed(reader.readVarInt(value)))
+    return failure();
   // Out-of-range values fail rather than truncating into a plausible index.
   if (value > static_cast<uint64_t>(std::numeric_limits<EntryTy>::max()))
     return reader.emitError() << "optional integer value " << value
@@ -89,12 +92,11 @@ template <typename EntryTy>
 static void writeOptionalInt(DialectBytecodeWriter &writer,
                              std::optional<EntryTy> storage) {
   static_assert(std::is_unsigned_v<EntryTy>,
-                "EntryTy must be unsigned: writeVarIntWithFlag spends the low "
-                "bit on the presence flag, so a negative value cannot be "
-                "represented");
-  // Values at or above 2^63 would lose the top bit on the wire.
-  assert(!storage || *storage < (uint64_t(1) << 63));
-  writer.writeVarIntWithFlag(storage.value_or(0), storage.has_value());
+                "EntryTy must be unsigned: only unsigned varints are "
+                "supported here, so a negative value cannot be represented");
+  writer.writeVarInt(storage.has_value() ? 1 : 0);
+  if (storage)
+    writer.writeVarInt(*storage);
 }
 
 // std::optional<Attr> form (cir.method's symbol). A null attribute is not a

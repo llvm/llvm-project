@@ -8,10 +8,9 @@
 //
 // This is the CIR bytecode reader/writer definition file.
 //
-// Modelled on mlir/include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td. Every
-// entry's parameters must appear in the same order as the attribute's get(),
-// because the generated reader feeds them positionally, and each name must
-// derive the C++ getter (`get` + the name in UpperCamel).
+// Modelled on mlir/include/mlir/Dialect/LLVMIR/LLVMDialectBytecode.td.
+// With the default cBuilder, parameters must match the builder's argument
+// order. Parameter names determine the generated getter names.
 //
 //===----------------------------------------------------------------------===//
 
@@ -77,7 +76,9 @@ def CheckedUnsigned :
 def OptInfoAttr : DialectAttribute<(attr
   CheckedUnsigned:$level,
   CheckedUnsigned:$size
-)>;
+)> {
+  let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 // Negative offsets are legitimate.
 def AddressPointAttr : DialectAttribute<(attr
@@ -171,12 +172,16 @@ def ConstArrayAttr : DialectAttribute<(attr
   Type:$type,
   Attribute:$elts,
   CheckedInt:$trailingZerosNum
-)>;
+)> {
+  let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 def ConstRecordAttr : DialectAttribute<(attr
   Type:$type,
   Attr<"mlir::ArrayAttr">:$members
-)>;
+)> {
+  let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 // Each carries the aggregate type, which the fallback prints fully expanded.
 def CXXCtorAttr : DialectAttribute<(attr
@@ -248,7 +253,9 @@ def MethodAttr : DialectAttribute<(attr
   Ty<"cir::MethodType">:$type,
   StdOptionalAttribute<"mlir::FlatSymbolRefAttr">:$symbol,
   OptionalInt<"uint64_t">:$vtable_offset
-)>;
+)> {
+  let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
+}
 
 def CIRDialectAttributes : DialectAttributes<"CIR"> {
   let elems = [

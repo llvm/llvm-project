@@ -43,6 +43,7 @@ module {
   cir.global external @m_null = #cir.method<null> : !method_Other
   cir.global external @m_virtual = #cir.method<vtable_offset = 8> : !method_Other
   cir.global external @m_virtual0 = #cir.method<vtable_offset = 0> : !method_Other
+  cir.global external @m_bigo = #cir.method<vtable_offset = 18446744073709551615> : !method_Other
 
   cir.func private @__dynamic_cast(!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
   cir.func private @__cxa_bad_cast()
@@ -66,4 +67,5 @@ module {
 // CHECK: cir.global external @m_null = #cir.method<null> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
 // CHECK: cir.global external @m_virtual = #cir.method<vtable_offset = 8> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
 // CHECK: cir.global external @m_virtual0 = #cir.method<vtable_offset = 0> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
+// CHECK: cir.global external @m_bigo = #cir.method<vtable_offset = 18446744073709551615> : !cir.method<!cir.func<(!s32i)> in !rec_Other>
 // CHECK: %0 = cir.dyn_cast ptr %arg0 : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> #dyn_cast_info__ZTI4Base__ZTI7Derived

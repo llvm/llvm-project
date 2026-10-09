@@ -1,0 +1,28 @@
+// Malformed attribute encodings fail with a diagnostic instead of asserting.
+// Each blob is one byte off a valid stdin emission; to regenerate one, emit
+// two valid blobs that differ only in that parameter and diff them.
+
+// Level 4 (valid range is 0-3) in:
+// module attributes { cir.opt_info = #cir.opt_info<level = 2, size = 1> } {}
+// RUN: not cir-opt %S/malformed-optinfo.cirbc 2>&1 | FileCheck %s --check-prefix=OPTINFO
+// OPTINFO: error: optimization level must be between 0 and 3 inclusive
+// OPTINFO-NOT: Assertion
+
+// One element plus trailing_zeros 1 in a 4-long array, in:
+// cir.global external @caz = #cir.const_array<[#cir.int<7> : !s32i], trailing_zeros> : !cir.array<!s32i x 4>
+// RUN: not cir-opt %S/malformed-constarray.cirbc 2>&1 | FileCheck %s --check-prefix=CONSTARRAY
+// CONSTARRAY: error: constant array size should match type size
+// CONSTARRAY-NOT: Assertion
+
+// A const_record whose type points at !s32i instead of the struct, in:
+// cir.global external @cr = #cir.const_record<{#cir.int<3> : !s32i, #cir.int<4> : !s32i}> : !cir.struct<"S" {data !s32i, data !s32i}>
+// RUN: not cir-opt %S/malformed-constrecord.cirbc 2>&1 | FileCheck %s --check-prefix=CONSTRECORD
+// CONSTRECORD: error: expected !cir.struct or !cir.union type
+// CONSTRECORD-NOT: Assertion
+
+// A method with both a symbol and a vtable offset, in a module holding one
+// #cir.method<@f> and one #cir.method<vtable_offset = 8> global whose symbol
+// bytes were unified.
+// RUN: not cir-opt %S/malformed-method.cirbc 2>&1 | FileCheck %s --check-prefix=METHOD
+// METHOD: error: at most one of symbol and vtable_offset can be present in #cir.method
+// METHOD-NOT: Assertion
