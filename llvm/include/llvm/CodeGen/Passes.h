@@ -150,8 +150,7 @@ LLVM_ABI extern char &MachineRegionInfoPassID;
 /// EdgeBundles analysis - Bundle machine CFG edges.
 LLVM_ABI extern char &EdgeBundlesWrapperLegacyID;
 
-/// LiveVariables pass - This pass computes the set of blocks in which each
-/// variable is life and sets machine operand kill flags.
+/// LiveVariables pass - This pass sets dead flags on register definitions.
 LLVM_ABI extern char &LiveVariablesID;
 
 /// PHIElimination - This pass eliminates machine instruction PHI nodes
@@ -183,6 +182,9 @@ LLVM_ABI extern char &MachineSchedulerID;
 
 /// PostMachineScheduler - This pass schedules machine instructions postRA.
 LLVM_ABI extern char &PostMachineSchedulerID;
+
+/// SSAMachineScheduler - This pass schedules machine instructions in SSA.
+LLVM_ABI extern char &SSAMachineSchedulerID;
 
 /// SpillPlacement analysis. Suggest optimal placement of spill code between
 /// basic blocks.
@@ -551,7 +553,7 @@ LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 
 // This pass expands indirectbr instructions.
-LLVM_ABI FunctionPass *createIndirectBrExpandPass();
+LLVM_ABI FunctionPass *createIndirectBrExpandPass(CodeGenOptLevel OptLevel);
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
 LLVM_ABI FunctionPass *createCFIFixupLegacy();

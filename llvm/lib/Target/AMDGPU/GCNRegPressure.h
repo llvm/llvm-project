@@ -86,8 +86,6 @@ struct GCNRegPressure {
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
-  /// \returns the AVGPR32 pressure
-  unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
@@ -129,12 +127,6 @@ struct GCNRegPressure {
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
-
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       unsigned DynamicVGPRBlockSize) const {
-    return getOccupancy(ST, DynamicVGPRBlockSize) >
-           O.getOccupancy(ST, DynamicVGPRBlockSize);
-  }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
   /// less. Since GCNRegpressure contains different types of pressures, and due
@@ -253,11 +245,6 @@ public:
   /// Returns whether the benefit that saving \p SaveRP represents will be
   /// beneficial towards achieving the RP target.
   bool isSaveBeneficial(const GCNRegPressure &SaveRP) const;
-
-  /// Saves virtual register \p Reg with lanemask \p Mask.
-  void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
-    RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
-  }
 
   /// Returns the benefit towards achieving the RP target that saving \p SaveRP
   /// represents, in total number of registers saved across all classes.
@@ -406,6 +393,11 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   MachineBasicBlock::const_iterator NextMI;
 
   MachineBasicBlock::const_iterator MBBEnd;
+
+  /// Drop the lanes of \p Reg that are no longer live at \p SI, decreasing
+  /// CurPressure accordingly. \p Reg must be a virtual register that is
+  /// currently tracked as live.
+  void retireVirtReg(Register Reg, SlotIndex SI);
 
 public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}

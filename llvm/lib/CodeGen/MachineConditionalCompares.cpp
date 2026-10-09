@@ -37,25 +37,15 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "CodeGenOptions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-ccmp"
-
-// Absolute maximum number of instructions allowed per speculated block.
-// This bypasses all other heuristics, so it should be set fairly high.
-static cl::opt<unsigned> BlockInstrLimit(
-    "machine-ccmp-limit", cl::init(30), cl::Hidden,
-    cl::desc("Maximum number of instructions per speculated block."));
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("stress-machine-ccmp", cl::Hidden,
-                            cl::desc("Turn all knobs to 11"));
 
 STATISTIC(NumConsidered, "Number of ccmps considered");
 STATISTIC(NumPhiRejs, "Number of ccmps rejected (PHI)");
@@ -133,6 +123,7 @@ STATISTIC(NumConverted, "Number of ccmp instructions created");
 //
 namespace {
 class SSACCmpConv {
+  const CodeGenOptions &Opts = CodeGenOptions::Global;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
@@ -272,9 +263,9 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     if (I.isDebugInstr())
       continue;
 
-    if (++InstrCount > BlockInstrLimit && !Stress) {
+    if (++InstrCount > Opts.machine_ccmp_limit && !Opts.stress_machine_ccmp) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+                        << Opts.machine_ccmp_limit << " instructions.\n");
       return false;
     }
 
@@ -498,6 +489,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
 
 namespace {
 class MachineConditionalCompares {
+  const CodeGenOptions &Opts = CodeGenOptions::Global;
   const TargetSubtargetInfo *STI = nullptr;
   const MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
@@ -560,7 +552,7 @@ void MachineConditionalCompares::invalidateTraces() {
 /// the conversion is a good idea.
 bool MachineConditionalCompares::shouldConvert() {
   // Stress testing mode disables all cost considerations.
-  if (Stress)
+  if (Opts.stress_machine_ccmp)
     return true;
 
   if (!MinInstr)

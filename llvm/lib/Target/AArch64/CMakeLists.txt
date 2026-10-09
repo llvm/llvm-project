@@ -28,6 +28,12 @@ tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
 tablegen(LLVM AArch64GenExegesis.inc -gen-exegesis)
 
+set(LLVM_TARGET_DEFINITIONS AArch64Options.td)
+tablegen(LLVM AArch64Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/AArch64MCOptions.td)
+tablegen(LLVM AArch64MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(AArch64CommonTableGen)
 
 add_llvm_target(AArch64CodeGen
@@ -78,6 +84,7 @@ add_llvm_target(AArch64CodeGen
   AArch64PromoteConstant.cpp
   AArch64PTrueCoalescing.cpp
   AArch64PBQPRegAlloc.cpp
+  AArch64PredicateAsCounterLoopRewrites.cpp
   AArch64RegisterInfo.cpp
   AArch64SMEAttributes.cpp
   AArch64SLSHardening.cpp
@@ -112,6 +119,7 @@ add_llvm_target(AArch64CodeGen
   Core
   GlobalISel
   MC
+  Option
   Passes
   Scalar
   SelectionDAG

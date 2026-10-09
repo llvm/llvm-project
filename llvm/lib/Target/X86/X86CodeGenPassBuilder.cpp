@@ -38,8 +38,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> X86EnableMachineCombinerPass;
-
 namespace {
 
 class X86CodeGenPassBuilder : public CodeGenPassBuilder {
@@ -173,7 +171,7 @@ Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(MachineConditionalComparesPass(), PMW);
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass)
+  if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
@@ -187,6 +185,7 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(LiveRangeShrinkPass(), PMW);
     addMachineFunctionPass(X86FixupSetCCPass(), PMW);
+    addMachineFunctionPass(X86OptimizeLEAsPass(), PMW);
     addMachineFunctionPass(X86CallFrameOptimizationPass(), PMW);
     addMachineFunctionPass(X86AvoidStoreForwardingBlocksPass(), PMW);
   }
@@ -292,8 +291,18 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  // TODO(boomanaiden154): Add UnpackMachineBundlesPass here once it has been
-  // ported.
+  addMachineFunctionPass(
+      UnpackMachineBundlesPass([&TT](const MachineFunction &MF) {
+        // Only run bundle expansion if the module uses kcfi, or there are
+        // relevant ObjC runtime functions present in the module.
+        const Function &F = MF.getFunction();
+        const Module *M = F.getParent();
+        return M->getModuleFlag("kcfi") ||
+               (TT.isOSDarwin() &&
+                (M->getFunction("objc_retainAutoreleasedReturnValue") ||
+                 M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
+      }),
+      PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.

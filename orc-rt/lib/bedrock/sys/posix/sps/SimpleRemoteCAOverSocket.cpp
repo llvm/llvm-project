@@ -102,7 +102,7 @@ private:
   };
 
   SocketSimpleRemoteCA(Session &S, SocketHandle Sock, SocketHandle WakeRead,
-                       SocketHandle WakeWrite)
+                       SocketHandle WakeWrite) noexcept
       : SimpleRemoteCA(S), Sock(std::move(Sock)), WakeRead(std::move(WakeRead)),
         WakeWrite(std::move(WakeWrite)) {}
 
@@ -551,8 +551,8 @@ SocketSimpleRemoteCA::takePendingCall(uint64_t SeqNo) {
 }
 
 Expected<std::shared_ptr<Session::ControllerAccess>>
-createSimpleRemoteCAOverSocket(Session &S, SocketHandle Sock) {
-  return SocketSimpleRemoteCA::Create(S, std::move(Sock));
+createSimpleRemoteCAOverSocket(Session &S, VettedPeer<SocketHandle> Peer) {
+  return SocketSimpleRemoteCA::Create(S, std::move(Peer).take());
 }
 
 } // namespace orc_rt

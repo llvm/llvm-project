@@ -616,17 +616,6 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
 
 // -----
 
-llvm.func @taskwait_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait nowait {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 // `nowait` on dispatch is unimplemented for OpenMP <= 5.1; from 5.2 it has no
 // effect and is accepted (see openmp-dispatch.mlir).
 module attributes {omp.version = #omp.version<version = 51>} {

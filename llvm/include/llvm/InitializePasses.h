@@ -290,6 +290,7 @@ LLVM_ABI void initializeResetMachineFunctionLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRuntimeLibraryInfoWrapperPass(PassRegistry &);
 LLVM_ABI void initializeSCEVAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeSROALegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeSSAMachineSchedulerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeSafeStackLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeSafepointIRVerifierPass(PassRegistry &);
 LLVM_ABI void initializeSelectOptimizePass(PassRegistry &);

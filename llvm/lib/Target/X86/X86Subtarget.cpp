@@ -27,9 +27,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -47,16 +47,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "X86GenSubtargetInfo.inc"
 
-// Temporary option to control early if-conversion for x86 while adding machine
-// models.
-static cl::opt<bool>
-X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
-               cl::desc("Enable early if-conversion on X86"));
-
-// Enable the conditional-compare formation pass for X86.
-static cl::opt<bool> X86EnableCCMPOpt("x86-enable-ccmp-opt", cl::Hidden,
-                                      cl::desc("Enable CCMP formation on X86"),
-                                      cl::init(true));
+#define OPTIONS_STRUCT_DEFS
+#include "X86Options.inc"
 
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
@@ -323,7 +315,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                            MaybeAlign StackAlignOverride,
                            unsigned PreferVectorWidthOverride,
                            unsigned RequiredVectorWidth)
-    : X86GenSubtargetInfo(TT, CPU, TuneCPU, FS),
+    : X86GenSubtargetInfo(TT, CPU, TuneCPU, FS), CLOpts(TM.getCLOpts()),
       PICStyle(PICStyles::Style::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       PreferVectorWidthOverride(PreferVectorWidthOverride),
@@ -372,11 +364,11 @@ const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {
-  return canUseCMOV() && X86EarlyIfConv;
+  return canUseCMOV() && CLOpts.early_ifcvt;
 }
 
 bool X86Subtarget::enableCCMPFormation() const {
-  return X86EnableCCMPOpt && hasCCMP();
+  return CLOpts.enable_ccmp_opt && hasCCMP();
 }
 
 void X86Subtarget::getPostRAMutations(

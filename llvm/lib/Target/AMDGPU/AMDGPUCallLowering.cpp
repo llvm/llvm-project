@@ -1353,6 +1353,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (FuncInfo->isWholeWaveFunction())
     addOriginalExecToReturn(MF, MIB);
@@ -1654,10 +1656,12 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  MIB.addDef(TRI->getReturnAddressReg(MF));
+  MIB.addDef(TRI->getReturnAddressReg(MF), RegState::Dead);
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;
