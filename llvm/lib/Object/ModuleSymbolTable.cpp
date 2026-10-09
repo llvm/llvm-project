@@ -14,13 +14,21 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -58,27 +66,145 @@ void ModuleSymbolTable::addModule(Module *M) {
   for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
 
-  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-    SymTab.push_back(new (AsmSymbols.Allocate())
-                         AsmSymbol(std::string(Name), Flags));
-  });
+  CollectAsmSymbols(
+      *M,
+      [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+        SymTab.push_back(new (AsmSymbols.Allocate())
+                             AsmSymbol(std::string(Name), Flags));
+      },
+      [this](const Function &F) { AsmDefiningFunctions.insert(&F); });
 }
 
-static void
-initializeRecordStreamer(const Module &M,
-                         function_ref<void(RecordStreamer &)> Init) {
+bool ModuleSymbolTable::inlineAsmMayDefineSymbols(StringRef Asm) {
+  return Asm.contains(".glob") || Asm.contains(".weak");
+}
+
+// Rewrite the asm string of an inline asm call into text the assembler can
+// parse. Operands are not known, so each becomes 0. The syntax is that of
+// AsmPrinter::emitInlineAsm.
+static std::string expandInlineAsm(StringRef Asm,
+                                   InlineAsm::AsmDialect Dialect) {
+  std::string Out;
+  // Position in a $( ... $| ... $) group of dialect alternatives.
+  bool InAlternatives = false;
+  unsigned Alternative = 0;
+  unsigned Wanted = Dialect == InlineAsm::AD_Intel ? 1 : 0;
+  auto Emit = [&](StringRef Text) {
+    if (!InAlternatives || Alternative == Wanted)
+      Out += Text;
+  };
+  for (size_t I = 0, E = Asm.size(); I != E; ++I) {
+    char C = Asm[I];
+    if (C != '$' || I + 1 == E) {
+      Emit(StringRef(&C, 1));
+      continue;
+    }
+    char N = Asm[++I];
+    switch (N) {
+    case '$':
+      Emit("$");
+      break;
+    case '(':
+      InAlternatives = true;
+      Alternative = 0;
+      break;
+    case '|':
+      ++Alternative;
+      break;
+    case ')':
+      InAlternatives = false;
+      break;
+    case '{': {
+      size_t Close = Asm.find('}', I);
+      if (Close == StringRef::npos)
+        Close = E - 1;
+      // ${N:modifier} is an operand, ${:name} a built in string.
+      Emit("0");
+      I = Close;
+      break;
+    }
+    default:
+      if (isDigit(N)) {
+        while (I + 1 != E && isDigit(Asm[I + 1]))
+          ++I;
+        Emit("0");
+      } else {
+        Emit(StringRef(&C, 1));
+        Emit(StringRef(&N, 1));
+      }
+    }
+  }
+  return Out;
+}
+
+namespace {
+// Module level asm, or the asm of an inline asm call in the body of Origin.
+struct AsmFragment {
+  std::string Asm;
+  std::string CPU;
+  std::string Features;
+  InlineAsm::AsmDialect Dialect = InlineAsm::AD_ATT;
+  const Function *Origin = nullptr;
+};
+} // namespace
+
+static void initializeRecordStreamer(
+    const Module &M,
+    function_ref<void(RecordStreamer &, const Function *)> Init,
+    bool IncludeFunctions = true) {
   // This function may be called twice, once for ModuleSummaryIndexAnalysis and
   // the other when writing the IR symbol table. If parsing inline assembly has
   // caused errors in the first run, suppress the second run.
   if (M.getContext().getDiagHandlerPtr()->HasErrors)
     return;
-  if (!M.hasModuleInlineAsm())
+
+  SmallVector<AsmFragment, 1> Fragments;
+  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+    AsmFragment F;
+    F.Asm = Frag.Asm;
+    F.CPU = Frag.Props.TargetCPU;
+    F.Features = Frag.Props.TargetFeatures;
+    Fragments.push_back(std::move(F));
+  }
+  if (IncludeFunctions) {
+    // Inline asm in a function can define symbols the linker has to know about.
+    SmallPtrSet<const InlineAsm *, 4> Seen;
+    for (const Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      Seen.clear();
+      for (const BasicBlock &BB : F)
+        for (const Instruction &I : BB) {
+          const auto *CB = dyn_cast<CallBase>(&I);
+          if (!CB)
+            continue;
+          const auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand());
+          if (!IA ||
+              !ModuleSymbolTable::inlineAsmMayDefineSymbols(
+                  IA->getAsmString()) ||
+              !Seen.insert(IA).second)
+            continue;
+          AsmFragment Frag;
+          Frag.Asm = expandInlineAsm(IA->getAsmString(), IA->getDialect());
+          Frag.CPU = F.getFnAttribute("target-cpu").getValueAsString();
+          Frag.Features =
+              F.getFnAttribute("target-features").getValueAsString();
+          Frag.Dialect = IA->getDialect();
+          Frag.Origin = &F;
+          Fragments.push_back(std::move(Frag));
+        }
+    }
+  }
+  if (Fragments.empty())
     return;
 
   std::string Err;
   const Triple TT(M.getTargetTriple());
   const Target *T = TargetRegistry::lookupTarget(TT, Err);
-  assert(T && T->hasMCAsmParser());
+  if (!T || !T->hasMCAsmParser()) {
+    assert(!M.hasModuleInlineAsm() && "inline asm without an assembler parser");
+    return;
+  }
 
   std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT));
   if (!MRI)
@@ -93,9 +219,9 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-    std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(
-        TT, Frag.Props.TargetCPU, Frag.Props.TargetFeatures));
+  for (const AsmFragment &Frag : Fragments) {
+    std::unique_ptr<MCSubtargetInfo> STI(
+        T->createMCSubtargetInfo(TT, Frag.CPU, Frag.Features));
     if (!STI)
       return;
 
@@ -119,62 +245,105 @@ initializeRecordStreamer(const Module &M,
     if (!TAP)
       return;
 
-    MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
-                                   const SourceMgr &SrcMgr,
-                                   std::vector<const MDNode *> &LocInfos) {
-      M.getContext().diagnose(
-          DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
-    });
+    // The operands are guessed, so the asm may not parse. Errors are reported
+    // when the function is assembled.
+    if (Frag.Origin)
+      MCCtx.setDiagnosticHandler([](const SMDiagnostic &, bool,
+                                    const SourceMgr &,
+                                    std::vector<const MDNode *> &) {});
+    else
+      MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                     const SourceMgr &SrcMgr,
+                                     std::vector<const MDNode *> &LocInfos) {
+        M.getContext().diagnose(DiagnosticInfoSrcMgr(SMD, M.getName(),
+                                                     IsInlineAsm,
+                                                     /*LocCookie=*/0));
+      });
 
     // Module-level inline asm is assumed to use At&t syntax (see
     // AsmPrinter::doInitialization()).
-    Parser->setAssemblerDialect(InlineAsm::AD_ATT);
+    Parser->setAssemblerDialect(Frag.Dialect);
 
     Parser->setSymbolScanningMode(true);
 
     Parser->setTargetParser(*TAP);
-    if (Parser->Run(false))
+    if (Parser->Run(false)) {
+      if (Frag.Origin)
+        continue;
       return;
+    }
 
-    Init(Streamer);
+    Init(Streamer, Frag.Origin);
   }
 }
 
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
-  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
-    Streamer.flushSymverDirectives();
-
-    for (auto &KV : Streamer) {
-      StringRef Key = KV.first();
-      RecordStreamer::State Value = KV.second;
-      // FIXME: For now we just assume that all asm symbols are executable.
-      uint32_t Res = BasicSymbolRef::SF_Executable;
-      switch (Value) {
-      case RecordStreamer::NeverSeen:
-        llvm_unreachable("NeverSeen should have been replaced earlier");
-      case RecordStreamer::DefinedGlobal:
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::Defined:
-        break;
-      case RecordStreamer::Global:
-      case RecordStreamer::Used:
-        Res |= BasicSymbolRef::SF_Undefined;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::DefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::UndefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Undefined;
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
+    function_ref<void(const Function &)> AsmDefiningFunction) {
+  // Asm in a function can name values with local linkage, which are not
+  // symbols the linker sees.
+  StringSet<> LocalNames;
+  bool LocalNamesBuilt = false;
+  auto IsLocalName = [&](StringRef Name) {
+    if (!LocalNamesBuilt) {
+      LocalNamesBuilt = true;
+      Mangler Mang;
+      SmallString<64> MangledName;
+      for (const GlobalValue &GV : M.global_values()) {
+        if (!GV.hasName() || !GV.hasLocalLinkage())
+          continue;
+        MangledName.clear();
+        Mang.getNameWithPrefix(MangledName, &GV,
+                               /*CannotUsePrivateLabel=*/false);
+        LocalNames.insert(MangledName);
       }
-      AsmSymbol(Key, BasicSymbolRef::Flags(Res));
     }
-  });
+    return LocalNames.contains(Name);
+  };
+
+  initializeRecordStreamer(
+      M, [&](RecordStreamer &Streamer, const Function *Origin) {
+        Streamer.flushSymverDirectives();
+
+        for (auto &KV : Streamer) {
+          StringRef Key = KV.first();
+          RecordStreamer::State Value = KV.second;
+          // Labels the asm defines for itself stay inside the function.
+          if (Origin && Value == RecordStreamer::Defined)
+            continue;
+          if (Origin && Value == RecordStreamer::Used && IsLocalName(Key))
+            continue;
+          if (Origin && AsmDefiningFunction &&
+              (Value == RecordStreamer::DefinedGlobal ||
+               Value == RecordStreamer::DefinedWeak))
+            AsmDefiningFunction(*Origin);
+          // FIXME: For now we just assume that all asm symbols are executable.
+          uint32_t Res = BasicSymbolRef::SF_Executable;
+          switch (Value) {
+          case RecordStreamer::NeverSeen:
+            llvm_unreachable("NeverSeen should have been replaced earlier");
+          case RecordStreamer::DefinedGlobal:
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::Defined:
+            break;
+          case RecordStreamer::Global:
+          case RecordStreamer::Used:
+            Res |= BasicSymbolRef::SF_Undefined;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::DefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::UndefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Undefined;
+          }
+          AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+        }
+      });
 
   // In ELF, object code generated for x86-32 and some code models of x86-64 may
   // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
@@ -193,11 +362,14 @@ void ModuleSymbolTable::CollectAsmSymbols(
 
 void ModuleSymbolTable::CollectAsmSymvers(
     const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver) {
-  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
-    for (auto &KV : Streamer.symverAliases())
-      for (auto &Alias : KV.second)
-        AsmSymver(KV.first->getName(), Alias);
-  });
+  initializeRecordStreamer(
+      M,
+      [&](RecordStreamer &Streamer, const Function *) {
+        for (auto &KV : Streamer.symverAliases())
+          for (auto &Alias : KV.second)
+            AsmSymver(KV.first->getName(), Alias);
+      },
+      /*IncludeFunctions=*/false);
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {

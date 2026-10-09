@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
@@ -28,6 +29,7 @@
 
 namespace llvm {
 
+class Function;
 class GlobalValue;
 class Module;
 
@@ -42,6 +44,7 @@ private:
   SpecificBumpPtrAllocator<AsmSymbol> AsmSymbols;
   std::vector<Symbol> SymTab;
   Mangler Mang;
+  SmallPtrSet<const GlobalValue *, 4> AsmDefiningFunctions;
 
 public:
   ArrayRef<Symbol> symbols() const { return SymTab; }
@@ -50,14 +53,26 @@ public:
   LLVM_ABI void printSymbolName(raw_ostream &OS, Symbol S) const;
   LLVM_ABI uint32_t getSymbolFlags(Symbol S) const;
 
+  /// Whether the inline asm in the body of \p GV defines a global symbol, in
+  /// which case the function has to be kept.
+  bool definesAsmSymbols(const GlobalValue *GV) const {
+    return AsmDefiningFunctions.contains(GV);
+  }
+
+  /// Whether \p Asm, the string of an inline asm call, can define a global
+  /// symbol. This is a textual test, not a parse.
+  LLVM_ABI static bool inlineAsmMayDefineSymbols(StringRef Asm);
+
   /// Parse inline ASM and collect the symbols that are defined or referenced in
-  /// the current module.
+  /// the current module, including inline asm in function bodies.
   ///
   /// For each found symbol, call \p AsmSymbol with the name of the symbol found
-  /// and the associated flags.
+  /// and the associated flags. For each function whose inline asm defines a
+  /// global symbol, call \p AsmDefiningFunction if it is given.
   LLVM_ABI static void CollectAsmSymbols(
       const Module &M,
-      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
+      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol,
+      function_ref<void(const Function &)> AsmDefiningFunction = nullptr);
 
   /// Parse inline ASM and collect the symvers directives that are defined in
   /// the current module.
