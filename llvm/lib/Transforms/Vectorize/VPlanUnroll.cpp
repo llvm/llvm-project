@@ -810,8 +810,7 @@ static void processLaneForReplicateRegion(VPlan &Plan, Type *IdxTy,
         assert(vputils::onlyFirstLaneUsed(OldPhi) &&
                "VPPhis expected to have only first lane used");
         auto *BVUser = dyn_cast_or_null<VPInstruction>(OldPhi->getSingleUser());
-        if (BVUser && match(BVUser, m_CombineOr(m_BuildVector(),
-                                                m_BuildStructVector()))) {
+        if (BVUser && match(BVUser, m_BuildVector())) {
           assert(BVUser->getOperand(0) == OldPhi &&
                  "Unexpected first operand of build vector user");
           BVUser->setOperand(Lane, NewPhi);
@@ -852,12 +851,11 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     return;
   }
 
-  // Create a BuildVector or BuildStructVector in successor block for every
-  // VPPhi in (first lane's) exiting block having vector uses. All their
-  // operands are initialized to poison and will be replaced when processing
-  // each clone, except for the operand of the first lane which set here.
-  // BuildVectors are recorded to be replaced later by chains of insert-element
-  // and widen phi's.
+  // Create a BuildVector in successor block for every VPPhi in (first lane's)
+  // exiting block having vector uses. All their operands are initialized to
+  // poison and will be replaced when processing each clone, except for the
+  // operand of the first lane which set here. Non-struct BuildVectors are
+  // recorded to be replaced later by chains of insert-element and widen phi's.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
@@ -869,9 +867,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     bool IsStruct = isa<StructType>(ScalarTy);
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
-    auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
-                                          : VPInstruction::BuildVector,
-                                 BVOps);
+    auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
     if (!IsStruct)
       BuildVectors.push_back(BV);
     Phi->replaceAllUsesWith(BV);
@@ -1011,12 +1007,11 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       // operand, to have all LaneDefs as its operands.
       for (VPUser *U : to_vector(DefR->users())) {
         auto *VPI = dyn_cast<VPInstruction>(U);
-        if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
-                     VPI->getOpcode() != VPInstruction::BuildStructVector))
+        if (!VPI || VPI->getOpcode() != VPInstruction::BuildVector)
           continue;
         assert(VPI->getNumOperands() == 1 &&
-               "Build(Struct)Vector must have a single operand before "
-               "replicating by VF");
+               "BuildVector must have a single operand before replicating by "
+               "VF");
         VPI->setOperand(0, LaneDefs[0]);
         for (VPValue *LaneDef : drop_begin(LaneDefs))
           VPI->addOperand(LaneDef);

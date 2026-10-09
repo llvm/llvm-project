@@ -282,34 +282,22 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi { i64, i64 } [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_STORE_IF]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi { i64, i64 } [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_STORE_IF]] ]
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_CALL_IF1:.*]], label %[[PRED_CALL_CONTINUE2:.*]]
 ; CHECK:       [[PRED_CALL_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE2]]
 ; CHECK:       [[PRED_CALL_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi { i64, i64 } [ poison, %[[PRED_STORE_CONTINUE]] ], [ [[TMP24]], %[[PRED_CALL_IF1]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi { i64, i64 } [ poison, %[[PRED_STORE_CONTINUE]] ], [ [[TMP8]], %[[PRED_CALL_IF1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { <2 x i64>, <2 x i64> } poison, <2 x i64> [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i64 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP7]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP30:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP7]], <2 x i64> [[TMP14]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64 } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP30]], 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <2 x i64> [[TMP32]], i64 [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP30]], <2 x i64> [[TMP33]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { i64, i64 } [[TMP12]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP19]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP20]], i64 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP19]], <2 x i64> [[TMP22]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP23]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i64> [[TMP14]], i64 [[TMP13]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <2 x i64> @llvm.masked.udiv.v2i64(<2 x i64> [[TMP25]], <2 x i64> [[WIDE_LOAD]], <2 x i1> [[TMP1]])
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
 ; CHECK:       [[PRED_STORE_IF2]]:

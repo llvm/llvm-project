@@ -810,7 +810,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
       vp_depth_first_shallow(Plan.getEntry()));
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
       vp_depth_first_shallow(LoopRegion->getEntry()));
-  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
+  // Materialize BuildVector for all replicating VPReplicateRecipes,
   // VPScalarIVStepsRecipe and VPInstructions, excluding ones in replicate
   // regions. Those are not materialized explicitly yet.
   // TODO: materialize build vectors for replicating recipes in replicating
@@ -828,11 +828,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
       if (none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 
-      Type *ScalarTy = DefR->getScalarType();
-      unsigned Opcode = ScalarTy->isStructTy()
-                            ? VPInstruction::BuildStructVector
-                            : VPInstruction::BuildVector;
-      auto *BuildVector = new VPInstruction(Opcode, {DefR});
+      auto *BuildVector = new VPInstruction(VPInstruction::BuildVector, {DefR});
       BuildVector->insertAfter(DefR);
 
       DefR->replaceUsesWithIf(
