@@ -15723,10 +15723,17 @@ namespace {
     bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E,
-                               const LValue &Subobject,
-                               APValue *Value, QualType Type);
+                               const LValue &Subobject, APValue *Value,
+                               QualType Type);
     bool VisitStringLiteral(const StringLiteral *E,
                             QualType AllocType = QualType()) {
+      const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(
+          AllocType.isNull() ? E->getType() : AllocType);
+      if (CAT->getZExtSize() > std::numeric_limits<unsigned>::max()) {
+        Info.FFDiag(E->getExprLoc(), diag::note_constexpr_new_too_large)
+            << CAT->getZExtSize();
+        return false;
+      }
       expandStringLiteral(Info, E, Result, AllocType);
       return true;
     }
@@ -15865,6 +15872,12 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       AllocType.isNull() ? ExprToVisit->getType() : AllocType);
 
   bool Success = true;
+
+  if (CAT->getZExtSize() > std::numeric_limits<unsigned>::max()) {
+    Info.FFDiag(ExprToVisit->getExprLoc(), diag::note_constexpr_new_too_large)
+        << CAT->getZExtSize();
+    return false;
+  }
 
   unsigned NumEltsToInit = Args.size();
   unsigned NumElts = CAT->getZExtSize();
