@@ -328,6 +328,52 @@ entry:
   %r9 = select i1 %t9, i1 %r8, i1 false
   ret i1 %r9
 }
+
+; The disjoint flag of the i1 ors only holds for bit 0, so the or in the wide
+; type must not keep it.
+define i1 @or_disjoint_leftover(ptr %input, i8 noundef %x) {
+; CHECK-LABEL: define i1 @or_disjoint_leftover(
+; CHECK-SAME: ptr [[INPUT:%.*]], i8 noundef [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[INPUT]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i8 [[TMP2]], [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[OP_RDX]] to i1
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %a0 = load i8, ptr %input, !noundef !1
+  %p1 = getelementptr i8, ptr %input, i64 1
+  %a1 = load i8, ptr %p1, !noundef !1
+  %p2 = getelementptr i8, ptr %input, i64 2
+  %a2 = load i8, ptr %p2, !noundef !1
+  %p3 = getelementptr i8, ptr %input, i64 3
+  %a3 = load i8, ptr %p3, !noundef !1
+  %p4 = getelementptr i8, ptr %input, i64 4
+  %a4 = load i8, ptr %p4, !noundef !1
+  %p5 = getelementptr i8, ptr %input, i64 5
+  %a5 = load i8, ptr %p5, !noundef !1
+  %p6 = getelementptr i8, ptr %input, i64 6
+  %a6 = load i8, ptr %p6, !noundef !1
+  %p7 = getelementptr i8, ptr %input, i64 7
+  %a7 = load i8, ptr %p7, !noundef !1
+  %t0 = trunc i8 %a0 to i1
+  %t1 = trunc i8 %a1 to i1
+  %t2 = trunc i8 %a2 to i1
+  %t3 = trunc i8 %a3 to i1
+  %t4 = trunc i8 %a4 to i1
+  %t5 = trunc i8 %a5 to i1
+  %t6 = trunc i8 %a6 to i1
+  %t7 = trunc i8 %a7 to i1
+  %tx = trunc i8 %x to i1
+  %r0 = or disjoint i1 %tx, %t0
+  %r1 = or disjoint i1 %r0, %t1
+  %r2 = or disjoint i1 %r1, %t2
+  %r3 = or disjoint i1 %r2, %t3
+  %r4 = or disjoint i1 %r3, %t4
+  %r5 = or disjoint i1 %r4, %t5
+  %r6 = or disjoint i1 %r5, %t6
+  %r7 = or disjoint i1 %r6, %t7
+  ret i1 %r7
+}
 !0 = !{i8 0, i8 2}
 !1 = !{}
 ;.
