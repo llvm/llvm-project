@@ -512,6 +512,30 @@ struct BoxAddrOpConversion : public fir::FIROpConversion<fir::BoxAddrOp> {
   }
 };
 
+/// Lower `fir.box_set_addr` to a single store of the new base address into the
+/// base_addr field of the descriptor in memory.
+struct BoxSetAddrOpConversion : public fir::FIROpConversion<fir::BoxSetAddrOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::BoxSetAddrOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto boxTy = mlir::cast<fir::BaseBoxType>(
+        fir::unwrapRefType(op.getBoxRef().getType()));
+    TypePair boxTyPair = getBoxTypePair(boxTy);
+    mlir::Location loc = op.getLoc();
+    auto addrField = mlir::LLVM::GEPOp::create(
+        rewriter, loc, ::getLlvmPtrType(op.getContext()), boxTyPair.llvm,
+        adaptor.getBoxRef(),
+        llvm::ArrayRef<mlir::LLVM::GEPArg>{0, kAddrPosInBox});
+    auto store = mlir::LLVM::StoreOp::create(rewriter, loc, adaptor.getAddr(),
+                                             addrField);
+    attachTBAATag(store, boxTyPair.fir, nullptr, addrField);
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 /// Convert `!fir.boxchar_len` to  `!llvm.extractvalue` for the 2nd part of the
 /// boxchar.
 struct BoxCharLenOpConversion : public fir::FIROpConversion<fir::BoxCharLenOp> {
@@ -5118,7 +5142,7 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
       VolatileCastOpConversion, ConvertOpConversion, CoordinateOpConversion,
       CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
-      DeclareValueOpConversion,
+      DeclareValueOpConversion, BoxSetAddrOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       CreateBoxOpConversion, DivcOpConversion, EmboxOpConversion,

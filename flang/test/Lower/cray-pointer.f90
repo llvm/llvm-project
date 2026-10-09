@@ -35,9 +35,7 @@ subroutine cray_scalar()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr:.*]] = fir.box_addr %[[pteload]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: %[[ptevalue:.*]] = fir.load %[[pteaddr]] : !fir.ptr<i32>
@@ -49,9 +47,7 @@ subroutine cray_scalar()
 ! CHECK: %[[jld:.*]] = fir.load %[[j]]#0 : !fir.ref<i32>
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr2:.*]] = fir.box_addr %[[pteload2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: hlfir.assign %[[jld]] to %[[pteaddr2]] : i32, !fir.ptr<i32>
@@ -89,9 +85,7 @@ subroutine cray_derivedType()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr:.*]] = fir.box_addr %[[pteload]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: %[[ptevalue:.*]] = fir.load %[[pteaddr]] : !fir.ptr<i32>
@@ -106,9 +100,7 @@ subroutine cray_derivedType()
 ! CHECK: %[[add:.*]] = arith.addi %[[kld]], %[[const]] : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr2:.*]] = fir.box_addr %[[pteload2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: hlfir.assign %[[add]] to %[[pteaddr2]] : i32, !fir.ptr<i32>
@@ -151,9 +143,7 @@ subroutine cray_ptrArth()
 ! CHECK: hlfir.assign %[[add]] to %[[ptr]]#0 : i64, !fir.ref<i64>
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr:.*]] = fir.box_addr %[[pteload]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: %[[ptevalue:.*]] = fir.load %[[pteaddr]] : !fir.ptr<i32>
@@ -170,9 +160,7 @@ subroutine cray_ptrArth()
 ! CHECK: %[[neg7:.*]] = arith.constant -7 : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld4:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld4]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld4]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr2:.*]] = fir.box_addr %[[pteload2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: hlfir.assign %[[neg7]] to %[[pteaddr2]] : i32, !fir.ptr<i32>
@@ -208,9 +196,7 @@ subroutine cray_arrayElement()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[c3:.*]] = arith.constant 3 : index
 ! CHECK: %[[ptedes:.*]] = hlfir.designate %[[pteload]] (%[[c3]])  : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -223,9 +209,7 @@ subroutine cray_arrayElement()
 ! CHECK: %[[neg2:.*]] = arith.constant -2 : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[c2b:.*]] = arith.constant 2 : index
 ! CHECK: %[[ptedes2:.*]] = hlfir.designate %[[pteload2]] (%[[c2b]])  : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
@@ -261,9 +245,7 @@ subroutine cray_2darrayElement()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
 ! CHECK: %[[c1:.*]] = arith.constant 1 : index
 ! CHECK: %[[c1b:.*]] = arith.constant 1 : index
@@ -277,9 +259,7 @@ subroutine cray_2darrayElement()
 ! CHECK: %[[neg2:.*]] = arith.constant -2 : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
 ! CHECK: %[[c1c:.*]] = arith.constant 1 : index
 ! CHECK: %[[c2c:.*]] = arith.constant 2 : index
@@ -311,9 +291,7 @@ subroutine cray_array()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: hlfir.assign %[[pteload]] to %[[k]]#0 : !fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.ref<!fir.array<3xi32>>
 
@@ -323,9 +301,7 @@ subroutine cray_array()
 ! CHECK: %[[neg2:.*]] = arith.constant -2 : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: hlfir.assign %[[neg2]] to %[[pteload2]] : i32, !fir.box<!fir.ptr<!fir.array<?xi32>>>
 end
@@ -353,9 +329,7 @@ subroutine cray_arraySection()
 
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[ptedes:.*]] = hlfir.designate %[[pteload]] (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK: hlfir.assign %[[ptedes]] to %[[k]]#0 : !fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>
@@ -366,9 +340,7 @@ subroutine cray_arraySection()
 ! CHECK: %[[neg2:.*]] = arith.constant -2 : i32
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK: %[[ptedes2:.*]] = hlfir.designate %[[pteload2]] (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK: hlfir.assign %[[neg2]] to %[[ptedes2]] : i32, !fir.ref<!fir.array<2xi32>>
@@ -410,9 +382,7 @@ subroutine test_pte()
 ! CHECK: %[[xval:.*]] = fir.load %[[x]]#0 : !fir.ref<i32>
 ! CHECK: %[[ptrcvt:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld:.*]] = fir.load %[[ptrcvt]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr:.*]] = fir.convert %[[ptrld]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt]], %[[rawptr]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr:.*]] = fir.box_addr %[[pteload]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: hlfir.assign %[[xval]] to %[[pteaddr]] : i32, !fir.ptr<i32>
@@ -420,9 +390,7 @@ subroutine test_pte()
   x = pte
 ! CHECK: %[[ptrcvt2:.*]] = fir.convert %[[ptr]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK: %[[ptrld2:.*]] = fir.load %[[ptrcvt2]] : !fir.ref<!fir.ptr<i64>>
-! CHECK: %[[ptebox_cvt2:.*]] = fir.convert %[[pte]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[rawptr2:.*]] = fir.convert %[[ptrld2]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-! CHECK: fir.call @_FortranAPointerAssociateScalar(%[[ptebox_cvt2]], %[[rawptr2]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+! CHECK: fir.box_set_addr %[[ptrld2]] to %[[pte]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteload2:.*]] = fir.load %[[pte]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: %[[pteaddr2:.*]] = fir.box_addr %[[pteload2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK: %[[val:.*]] = fir.load %[[pteaddr2]] : !fir.ptr<i32>
