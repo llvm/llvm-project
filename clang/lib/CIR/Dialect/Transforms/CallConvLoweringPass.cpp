@@ -92,8 +92,9 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  // The classifier sizes a vector with its width rounded up to a power of two.
   if (isa<cir::VectorType>(ty))
-    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+    return llvm::PowerOf2Ceil(dl.getTypeSizeInBits(ty).getFixedValue()) >= 128;
   if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
     return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
@@ -220,11 +221,6 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     } else {
       return false;
     }
-    // Clang also rounds the vector's own width up to a power of two, and the
-    // classifier branches on the exact width, so a three-char vector would be
-    // classified at 24 bits where clang uses 32.
-    if (!llvm::isPowerOf2_64(dl.getTypeSizeInBits(ty).getFixedValue()))
-      return false;
     return isSupportedType(elemTy, dl);
   }
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))

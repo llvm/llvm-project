@@ -3470,11 +3470,6 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
-def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
-  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
-  InGroup<IgnoredAttributes>;
-def err_invalid_harden_pac_ret_spec : Error<
-  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
@@ -13958,15 +13953,21 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_variable : Warning<
+defvar UnsafeBufferVariableMsg =
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
-  "does not perform bounds checks}1">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
-def warn_unsafe_buffer_operation : Warning<
+  "does not perform bounds checks}1";
+defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
-  "field %1 prone to unsafe buffer manipulation}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|"
+  "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;

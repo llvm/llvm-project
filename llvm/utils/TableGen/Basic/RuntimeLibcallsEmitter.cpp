@@ -126,15 +126,10 @@ private:
 
   // Emit a `setAvailableLibFuncs_<name>` member function for all LibcallLibrary
   // defs sharing \p Name, each gated by its own availability predicate. \p
-  // Exclusions are emitted as guarded setUnavailable calls at the end. \p
-  // DefaultCCsByLib maps each library to the DefaultLibcallCallingConv of its
-  // consuming system libraries; exactly one must exist across the variants
-  // whose member CCs reference DefaultCC.
+  // Exclusions are emitted as guarded setUnavailable calls at the end.
   void emitLibraryFunction(raw_ostream &OS, StringRef Name,
                            ArrayRef<const Record *> Libs,
-                           ArrayRef<LibraryExclusion> Exclusions,
-                           const DenseMap<const Record *, SetVector<StringRef>>
-                               &DefaultCCsByLib) const;
+                           ArrayRef<LibraryExclusion> Exclusions) const;
 
   // Group all LibcallLibrary defs by their shared LibraryName, preserving
   // definition order. Both the member-declaration fragment and the definitions
@@ -602,15 +597,13 @@ void RuntimeLibcallEmitter::emitLibraryVariant(raw_ostream &OS,
 
 void RuntimeLibcallEmitter::emitLibraryFunction(
     raw_ostream &OS, StringRef Name, ArrayRef<const Record *> Libs,
-    ArrayRef<LibraryExclusion> Exclusions,
-    const DenseMap<const Record *, SetVector<StringRef>> &DefaultCCsByLib)
-    const {
+    ArrayRef<LibraryExclusion> Exclusions) const {
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_";
   emitLibFuncSuffix(OS, Name);
   OS << "(const llvm::Triple &TT, "
         "ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, "
         "StringRef ABIName, "
-        "LongDoubleFormat LongDoubleFormat) {\n";
+        "LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {\n";
 
   SmallVector<ExpandedLibrary, 2> Expanded;
   for (const Record *Lib : Libs) {
@@ -658,43 +651,6 @@ void RuntimeLibcallEmitter::emitLibraryFunction(
     }
 
     Expanded.push_back(std::move(EL));
-  }
-
-  // If any member CC names the DefaultCC sentinel, emit a local for it, seeded
-  // from the DefaultLibcallCallingConv of the system libraries consuming those
-  // variants.
-  SetVector<StringRef> DefaultCCs;
-  const Record *DefaultCCLib = nullptr;
-  for (const ExpandedLibrary &EL : Expanded) {
-    if (none_of(EL.Pred2Funcs, [](const auto &KeyAndFuncs) {
-          const Record *CC = KeyAndFuncs.second.CallingConv;
-          return CC &&
-                 CC->getValueAsString("CallingConv").contains("DefaultCC");
-        }))
-      continue;
-    DefaultCCLib = EL.Lib;
-    if (auto It = DefaultCCsByLib.find(EL.Lib); It != DefaultCCsByLib.end())
-      DefaultCCs.insert_range(It->second);
-  }
-
-  if (DefaultCCLib) {
-    if (DefaultCCs.empty()) {
-      PrintFatalError(DefaultCCLib,
-                      "library '" + Name +
-                          "' has a member calling convention referencing "
-                          "DefaultCC but no consuming SystemRuntimeLibrary "
-                          "provides a DefaultLibcallCallingConv");
-    }
-    if (DefaultCCs.size() > 1) {
-      PrintFatalError(DefaultCCLib,
-                      "library '" + Name +
-                          "' is dispatched by multiple SystemRuntimeLibrary "
-                          "defs with different DefaultLibcallCallingConv; "
-                          "DefaultCC is ambiguous for its member calling "
-                          "conventions");
-    }
-
-    OS << "  const CallingConv::ID DefaultCC = " << DefaultCCs.front() << ";\n";
   }
 
   // Impls unconditional in every variant are emitted once and stripped from
@@ -804,7 +760,7 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallsInfoMemberDecls(
     emitLibFuncSuffix(OS, Name);
     OS << "(const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
           "FloatABI::ABIType FloatABI, StringRef ABIName, "
-          "LongDoubleFormat LongDoubleFormat);\n";
+          "LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC);\n";
   }
 }
 
@@ -839,38 +795,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     }
   }
 
-  // Collect, per library, the distinct DefaultLibcallCallingConv of each system
-  // library referencing it. emitLibraryFunction diagnoses a missing or
-  // ambiguous DefaultCC.
-  DenseMap<const Record *, SetVector<StringRef>> DefaultCCsByLib;
-  for (const Record *R : AllLibs) {
-    const Record *DefaultCCClass =
-        R->getValueAsDef("DefaultLibcallCallingConv");
-    StringRef DefaultCC =
-        DefaultCCClass ? DefaultCCClass->getValueAsString("CallingConv").trim()
-                       : StringRef();
-    if (DefaultCC.empty())
-      continue;
-    const DagInit *MemberDag =
-        R->getValueAsDef("MemberList")->getValueAsDag("MemberList");
-    for (const Init *Arg : MemberDag->getArgs()) {
-      const auto *DI = dyn_cast<DefInit>(Arg);
-      if (!DI)
-        continue;
-      const Record *Def = DI->getDef();
-      const Record *Lib = nullptr;
-      if (Def->isSubClassOf("LibcallLibrary"))
-        Lib = Def;
-      else if (Def->isSubClassOf("LibraryRef"))
-        Lib = Def->getValueAsDef("Library");
-      if (Lib)
-        DefaultCCsByLib[Lib].insert(DefaultCC);
-    }
-  }
-
   for (const auto &[Name, Libs] : collectLibrariesByName())
-    emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name),
-                        DefaultCCsByLib);
+    emitLibraryFunction(OS, Name, Libs, ExclusionsByLibName.lookup(Name));
 
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
         "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
@@ -885,6 +811,9 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     OS << indent(2);
     TopLevelPredicate.emitIf(OS);
 
+    // The default is a property of the target, and is passed to the libraries
+    // as an argument.
+    StringRef DefaultCCArg = "CallingConv::C";
     if (const Record *DefaultCCClass =
             R->getValueAsDef("DefaultLibcallCallingConv")) {
       StringRef DefaultCC =
@@ -895,6 +824,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
            << "    for (CallingConv::ID &Entry : LibcallImplCallingConvs) {\n"
               "      Entry = DefaultCC;\n"
               "    }\n\n";
+        DefaultCCArg = "DefaultCC";
       }
     }
 
@@ -1020,7 +950,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       OS << indent(4) << "if (isLibraryAvailable(\"" << DL.Name << "\"))\n"
          << indent(6) << "setAvailableLibFuncs_";
       emitLibFuncSuffix(OS, DL.FuncSuffix);
-      OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);\n";
+      OS << "(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, "
+         << DefaultCCArg << ");\n";
     }
     if (!DispatchLibs.empty())
       OS << '\n';

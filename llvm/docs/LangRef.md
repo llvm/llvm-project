@@ -2346,7 +2346,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -9511,6 +9512,23 @@ An example of module flags:
    The behavior is to emit an error if the `llvm.module.flags` does not
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
+
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
 
 ### Synthesized Functions Module Flags Metadata
 
@@ -21498,6 +21516,38 @@ call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %l
 ; This also results in a mask with the first two lanes active. This is
 ; because if any more lanes were active the load would be dependent on the
 ; completion of the store.
+```
+
+#### '`llvm.mask.beforefirst.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+```
+
+##### Overview:
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+##### Arguments:
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+##### Semantics:
+
+When the input is all zeroes, the result is all ones.
+
+##### Examples:
+
+```llvm
+@llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+@llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+@llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+@llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
 ```
 
 ### Experimental Vector Intrinsics
