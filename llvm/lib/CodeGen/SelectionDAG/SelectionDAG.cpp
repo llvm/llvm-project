@@ -10796,21 +10796,18 @@ SDValue SelectionDAG::getPseudoProbeNode(const SDLoc &Dl, SDValue Chain,
 static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
                                            SelectionDAG &DAG, SDValue Ptr,
                                            int64_t Offset = 0) {
-  // If this is FI+Offset, we can model it.
+  // Look through (((FI + C1) + C2) + ...) chains
+  while (Ptr.getOpcode() == ISD::ADD &&
+         isa<ConstantSDNode>(Ptr.getOperand(1))) {
+    Offset += cast<ConstantSDNode>(Ptr.getOperand(1))->getSExtValue();
+    Ptr = Ptr.getOperand(0);
+  }
+
+  // If this is FI+Offset, we can model it
   if (const FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Ptr))
     return MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
                                              FI->getIndex(), Offset);
-
-  // If this is (FI+Offset1)+Offset2, we can model it.
-  if (Ptr.getOpcode() != ISD::ADD ||
-      !isa<ConstantSDNode>(Ptr.getOperand(1)) ||
-      !isa<FrameIndexSDNode>(Ptr.getOperand(0)))
-    return Info;
-
-  int FI = cast<FrameIndexSDNode>(Ptr.getOperand(0))->getIndex();
-  return MachinePointerInfo::getFixedStack(
-      DAG.getMachineFunction(), FI,
-      Offset + cast<ConstantSDNode>(Ptr.getOperand(1))->getSExtValue());
+  return Info;
 }
 
 /// InferPointerInfo - If the specified ptr/offset is a frame index, infer a
