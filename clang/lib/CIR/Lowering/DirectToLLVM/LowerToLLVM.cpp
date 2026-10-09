@@ -4927,6 +4927,10 @@ mlir::LogicalResult CIRToLLVMResumeFlatOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMEhTypeIdOpLowering::matchAndRewrite(
     cir::EhTypeIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  if (op->getParentOfType<mlir::omp::ParallelOp>())
+    return op.emitError("catching a specific exception type inside an OpenMP "
+                        "parallel region is not yet implemented");
+
   mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
       rewriter, op.getLoc(),
       mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
