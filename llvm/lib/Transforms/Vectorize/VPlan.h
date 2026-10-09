@@ -2083,7 +2083,9 @@ public:
                                DL),
         Alignment(Alignment) {
     assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store ||
+            VectorIntrinsicID == Intrinsic::masked_compressstore ||
+            VectorIntrinsicID == Intrinsic::masked_expandload) &&
            "Unexpected intrinsic");
   }
 
@@ -2099,6 +2101,15 @@ public:
 
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
+
+  /// Returns the address operand index of the VPWidenMemIntrinsicRecipe.
+  unsigned getAddrOpIdx() const;
+
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
+
+  /// Returns the data type of the memory access at \p VF.
+  Type *getAccessType(ElementCount VF) const;
 
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
