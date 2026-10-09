@@ -696,14 +696,19 @@ TEST_F(ProgramEnvTest, TestExecuteEmptyEnvironment) {
       ExecuteAndWait(Executable, argv, ArrayRef<StringRef>{}, {}, 0, 0, &Error,
                      &ExecutionFailed);
   EXPECT_FALSE(ExecutionFailed) << Error;
-#ifndef __MINGW32__
+#ifdef _WIN32
   // When running with an empty environment, the child process doesn't in herit
   // the PATH variable. On MinGW, it is common for executables to require a
   // shared libstdc++ or libc++ DLL, which may be in PATH but not in the
   // directory of SupportTests.exe - leading to STATUS_DLL_NOT_FOUND errors.
   // Therefore, waive this failure in MinGW environments.
-  ASSERT_EQ(0, RetCode);
+  // This can also happens on Windows when the unittest is linked against
+  // the LLVM.dll.
+  // 0xC0000135 i sthe STATUS_DLL_NOT_FOUND error, so ignore it on Windows.
+  if (RetCode == static_cast<int>(0xC0000135))
+    RetCode = 0;
 #endif
+  ASSERT_EQ(0, RetCode);
 }
 
 } // end anonymous namespace
