@@ -177,6 +177,7 @@ GetItaniumDemangledStr(const char *M) {
            "Expected demangled_size to return length including trailing null");
   }
 
+#if !defined(_AIX)  
   if (Log *log = GetLog(LLDBLog::Demangle)) {
     if (demangled_cstr)
       LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
@@ -188,6 +189,7 @@ GetItaniumDemangledStr(const char *M) {
                 "demangled itanium: %s -> error: failed to retrieve name info",
                 M);
   }
+#endif
 
   return {demangled_cstr, std::move(info)};
 }

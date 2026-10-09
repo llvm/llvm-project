@@ -12,7 +12,7 @@
 #if LLDB_ENABLE_POSIX
 #include <sys/utsname.h>
 #endif
-#include "Utility/ARM64_DWARF_Registers.h"
+#include "Utility/PPC64_DWARF_Registers.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
@@ -135,6 +135,140 @@ void PlatformAIX::CalculateTrapHandlerSymbolNames() {}
 lldb::UnwindPlanSP PlatformAIX::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
                                                          ConstString name) {
   return {};
+}
+
+// AIX signal trampolines live at fixed low-memory addresses in the kernel
+// 0x4ac0 to 0x5000
+static constexpr lldb::addr_t kAIXSigTrampolineStart = 0x4ac0;
+static constexpr lldb::addr_t kAIXSigTrampolineEnd   = 0x5000;
+
+bool PlatformAIX::IsTrapHandlerAddress(lldb::addr_t pc) const {
+  bool result = pc >= kAIXSigTrampolineStart && pc < kAIXSigTrampolineEnd;
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOG(log,
+           "IsTrapHandlerAddress(pc=0x{0:x}): range=[0x{1:x}, 0x{2:x}) "
+           "result={3}",
+           pc, kAIXSigTrampolineStart, kAIXSigTrampolineEnd, result);
+  return result;
+}
+
+// Build the unwind plan for sig_epilog64.
+//
+// At the point sig_epilog64 executes, r14 holds a pointer to ucontext64_t
+//
+// ucontext64_t struct 
+//   +0   int __sc_onstack                 (4 bytes + 4 pad = 8)
+//   +8   sigset64_t uc_sigmask            (uint64_t[4] = 32 bytes)
+//   +40  int __sc_uerror                  (4 bytes + 4 pad = 8)
+//   +48  mcontext64_t uc_mcontext64       (__context64)
+//
+// struct __context64
+//   +0   gpr[32]   (32 x 8 bytes)
+//   +256 msr
+//   +264 iar
+//   +272 lr
+//   +280 ctr
+//   +288 cr    (4 bytes)
+//   +292 xer   (4 bytes)
+//
+// Offsets from r14 (CFA):
+//   GPR[n] = CFA + 48 + n*8
+//   PC     = CFA + 48 + 264 = CFA + 312
+//   LR     = CFA + 48 + 272 = CFA + 320
+//   CTR    = CFA + 48 + 280 = CFA + 328
+//   CR     = CFA + 48 + 288 = CFA + 336
+//   XER    = CFA + 48 + 292 = CFA + 340
+static lldb::UnwindPlanSP GetPPC64AIXUnwindPlan64() {
+  using namespace ppc64_dwarf;
+
+  UnwindPlan::Row row;
+  // CFA = r14 + 0  -  ucontext64_t
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r14_ppc64, 0);
+
+  // Restore gprs 
+  for (int n = 0; n < 32; ++n)
+    row.SetRegisterLocationToAtCFAPlusOffset(dwarf_r0_ppc64 + n,
+                                             48 + n * 8, false);
+  
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_pc_ppc64,  312, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_lr_ppc64,  320, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_ctr_ppc64, 328, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_cr_ppc64,  336, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_xer_ppc64, 340, false);
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("AIX ppc64 64-bit signal handler unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+  return plan_sp;
+}
+
+// Build the unwind plan for sig_epilog32.
+//
+// r14 holds a pointer to ucontext32_t
+//
+// ucontext32_t
+//   +0   int __sc_onstack                 (4 bytes)
+//   +4   sigset32_t uc_sigmask            (2 x uint = 8 bytes)
+//   +12  int __sc_uerror                  (4 bytes)
+//   +16  mcontext32_t uc_mcontext         (mstsave32)
+//
+// struct mstsave32
+//   +0   prev, kjmpbuf, stackfix          (3 x __ptr32 = 12)
+//   +12  intpri, backt, rsvd[2]           (4)
+//   +16  curid                            (4)
+//   +20  excp_type                        (4)
+//   +24  iar                              (4)
+//   +28  msr                              (4)
+//   +32  cr                               (4)
+//   +36  lr                               (4)
+//   ...
+//   +140 adspace32_t as (4 + 16*4 = 68 bytes)
+//   +208 gpr[32]  (32 x 4 bytes), gpr[n] at +208 + n*4
+//
+// Offsets from r14 (CFA):
+//   GPR[n] = CFA + 16 + 208 + n*4 = CFA + 224 + n*4
+//   PC     = CFA + 16 + 24  = CFA + 40
+//   LR     = CFA + 16 + 36  = CFA + 52
+//   CTR    = CFA + 16 + 40  = CFA + 56
+//   CR     = CFA + 16 + 32  = CFA + 48
+//   XER    = CFA + 16 + 44  = CFA + 60
+static lldb::UnwindPlanSP GetPPC64AIXUnwindPlan32() {
+  using namespace ppc64_dwarf;
+
+  UnwindPlan::Row row;
+  // CFA = r14 + 0 - ucontext32_t
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r14_ppc64, 0);
+
+  // Restore GPRs
+  for (int n = 0; n < 32; ++n)
+    row.SetRegisterLocationToAtCFAPlusOffset(dwarf_r0_ppc64 + n,
+                                             224 + n * 4, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_pc_ppc64,  40, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_lr_ppc64,  52, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_ctr_ppc64, 56, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_cr_ppc64,  48, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(dwarf_xer_ppc64, 60, false);
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("AIX ppc64 32-bit signal handler unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolYes);
+  return plan_sp;
+}
+
+lldb::UnwindPlanSP PlatformAIX::GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                         lldb::addr_t pc) {
+  if (arch.GetTriple().getArch() == llvm::Triple::ppc64)
+      return GetPPC64AIXUnwindPlan64();
+  else if (arch.GetTriple().getArch() == llvm::Triple::ppc)
+      return GetPPC64AIXUnwindPlan32();
+  return {};
+
 }
 
 MmapArgList PlatformAIX::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,

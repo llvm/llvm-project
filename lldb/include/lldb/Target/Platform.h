@@ -853,6 +853,34 @@ public:
     return {};
   }
 
+  /// Returns true if the given address is within a trap handler
+  /// (signal trampoline) for this platform. Platforms that cannot
+  /// expose trap handler symbols by name can override this instead.
+  ///
+  /// \param[in] pc
+  ///     The load address to test.
+  ///
+  /// \return
+  ///     true if the address is within a known trap handler region.
+  virtual bool IsTrapHandlerAddress(lldb::addr_t pc) const { return false; }
+
+  /// Try to get a specific unwind plan for a trap handler at a given address.
+  /// Used when the platform detects a trap handler by address rather than
+  /// by symbol name (i.e. IsTrapHandlerAddress returns true).
+  ///
+  /// \param[in] arch
+  ///     Architecture of the current target.
+  ///
+  /// \param[in] pc
+  ///     Load address within the trap handler.
+  ///
+  /// \return
+  ///     A specific unwind plan, or an empty shared pointer.
+  virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
+                                                      lldb::addr_t pc) {
+    return {};
+  }
+
   /// Find a support executable that may not live within in the standard
   /// locations related to LLDB.
   ///
