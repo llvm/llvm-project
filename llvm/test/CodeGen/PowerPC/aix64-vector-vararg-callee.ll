@@ -24,10 +24,10 @@ define <4 x i32> @callee(i32 signext %count, ...) {
   ; CHECK:   STD [[COPY]], 48, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 48)
   ; CHECK:   LIFETIME_START %stack.0.arg_list
   ; CHECK:   [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 %fixed-stack.0, 0
-  ; CHECK:   STD killed [[ADDI8_]], 0, %stack.0.arg_list :: (store (s64) into %ir.arg_list)
+  ; CHECK:   STD [[ADDI8_]], 0, %stack.0.arg_list :: (store (s64) into %ir.arg_list)
   ; CHECK:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 %fixed-stack.0, 15
-  ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR killed [[ADDI8_1]], 0, 59
-  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[RLDICR]] :: (load (s128) from %ir.argp.cur.aligned)
+  ; CHECK:   [[RLDICR:%[0-9]+]]:g8rc = RLDICR [[ADDI8_1]], 0, 59
+  ; CHECK:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero8, [[RLDICR]] :: (load (s128) from %ir.argp.cur.aligned)
   ; CHECK:   LIFETIME_END %stack.0.arg_list
   ; CHECK:   $v2 = COPY [[LXVW4X]]
   ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $v2

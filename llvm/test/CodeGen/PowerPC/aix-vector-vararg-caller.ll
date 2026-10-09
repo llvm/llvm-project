@@ -13,41 +13,41 @@ define <4 x i32> @caller() {
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 176, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc %const.0, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI:%[0-9]+]]:gprc = LI 48
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X]], $r1, killed [[LI]] :: (store (s128))
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X]], $r1, [[LI]] :: (store (s128))
   ; 32BIT-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc %const.1, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc1]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc1]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI1:%[0-9]+]]:gprc = LI 32
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X1]], $r1, killed [[LI1]] :: (store (s128))
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X1]], $r1, [[LI1]] :: (store (s128))
   ; 32BIT-NEXT:   [[LWZtoc2:%[0-9]+]]:gprc = LWZtoc %const.2, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X2:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc2]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X2:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc2]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI2:%[0-9]+]]:gprc = LI 160
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X2]], $r1, killed [[LI2]] :: (store (s128) into stack + 160)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X2]], $r1, [[LI2]] :: (store (s128) into stack + 160)
   ; 32BIT-NEXT:   [[LWZtoc3:%[0-9]+]]:gprc = LWZtoc %const.3, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X3:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc3]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X3:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc3]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI3:%[0-9]+]]:gprc = LI 144
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X3]], $r1, killed [[LI3]] :: (store (s128) into stack + 144)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X3]], $r1, [[LI3]] :: (store (s128) into stack + 144)
   ; 32BIT-NEXT:   [[LWZtoc4:%[0-9]+]]:gprc = LWZtoc %const.4, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X4:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc4]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X4:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc4]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI4:%[0-9]+]]:gprc = LI 128
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X4]], $r1, killed [[LI4]] :: (store (s128) into stack + 128)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X4]], $r1, [[LI4]] :: (store (s128) into stack + 128)
   ; 32BIT-NEXT:   [[LWZtoc5:%[0-9]+]]:gprc = LWZtoc %const.5, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X5:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc5]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X5:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc5]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI5:%[0-9]+]]:gprc = LI 112
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X5]], $r1, killed [[LI5]] :: (store (s128) into stack + 112)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X5]], $r1, [[LI5]] :: (store (s128) into stack + 112)
   ; 32BIT-NEXT:   [[LWZtoc6:%[0-9]+]]:gprc = LWZtoc %const.6, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X6:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc6]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X6:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc6]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI6:%[0-9]+]]:gprc = LI 96
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X6]], $r1, killed [[LI6]] :: (store (s128) into stack + 96)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X6]], $r1, [[LI6]] :: (store (s128) into stack + 96)
   ; 32BIT-NEXT:   [[LWZtoc7:%[0-9]+]]:gprc = LWZtoc %const.7, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X7:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc7]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X7:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc7]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI7:%[0-9]+]]:gprc = LI 80
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X7]], $r1, killed [[LI7]] :: (store (s128) into stack + 80)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X7]], $r1, [[LI7]] :: (store (s128) into stack + 80)
   ; 32BIT-NEXT:   [[LWZtoc8:%[0-9]+]]:gprc = LWZtoc %const.8, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   [[LXVW4X8:%[0-9]+]]:vsrc = LXVW4X $zero, killed [[LWZtoc8]] :: (load (s128) from constant-pool)
+  ; 32BIT-NEXT:   [[LXVW4X8:%[0-9]+]]:vsrc = LXVW4X $zero, [[LWZtoc8]] :: (load (s128) from constant-pool)
   ; 32BIT-NEXT:   [[LI8:%[0-9]+]]:gprc = LI 64
-  ; 32BIT-NEXT:   STXVW4X killed [[LXVW4X8]], $r1, killed [[LI8]] :: (store (s128) into stack + 64)
+  ; 32BIT-NEXT:   STXVW4X [[LXVW4X8]], $r1, [[LI8]] :: (store (s128) into stack + 64)
   ; 32BIT-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 52, $r1 :: (load (s32))
   ; 32BIT-NEXT:   [[LWZ1:%[0-9]+]]:gprc = LWZ 48, $r1 :: (load (s32))
   ; 32BIT-NEXT:   [[LWZ2:%[0-9]+]]:gprc = LWZ 44, $r1 :: (load (s32))
@@ -72,41 +72,41 @@ define <4 x i32> @caller() {
   ; 64BIT: bb.0.entry:
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 208, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   [[LDtocCPT:%[0-9]+]]:g8rc = LDtocCPT %const.0, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_:%[0-9]+]]:g8rc = LI8 96
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X]], $x1, killed [[LI8_]] :: (store (s128))
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X]], $x1, [[LI8_]] :: (store (s128))
   ; 64BIT-NEXT:   [[LDtocCPT1:%[0-9]+]]:g8rc = LDtocCPT %const.1, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT1]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X1:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT1]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_1:%[0-9]+]]:g8rc = LI8 80
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X1]], $x1, killed [[LI8_1]] :: (store (s128))
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X1]], $x1, [[LI8_1]] :: (store (s128))
   ; 64BIT-NEXT:   [[LDtocCPT2:%[0-9]+]]:g8rc = LDtocCPT %const.2, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X2:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT2]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X2:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT2]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_2:%[0-9]+]]:g8rc = LI8 64
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X2]], $x1, killed [[LI8_2]] :: (store (s128))
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X2]], $x1, [[LI8_2]] :: (store (s128))
   ; 64BIT-NEXT:   [[LDtocCPT3:%[0-9]+]]:g8rc = LDtocCPT %const.3, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X3:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT3]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X3:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT3]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_3:%[0-9]+]]:g8rc = LI8 192
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X3]], $x1, killed [[LI8_3]] :: (store (s128) into stack + 192)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X3]], $x1, [[LI8_3]] :: (store (s128) into stack + 192)
   ; 64BIT-NEXT:   [[LDtocCPT4:%[0-9]+]]:g8rc = LDtocCPT %const.4, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X4:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT4]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X4:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT4]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_4:%[0-9]+]]:g8rc = LI8 176
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X4]], $x1, killed [[LI8_4]] :: (store (s128) into stack + 176)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X4]], $x1, [[LI8_4]] :: (store (s128) into stack + 176)
   ; 64BIT-NEXT:   [[LDtocCPT5:%[0-9]+]]:g8rc = LDtocCPT %const.5, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X5:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT5]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X5:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT5]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_5:%[0-9]+]]:g8rc = LI8 160
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X5]], $x1, killed [[LI8_5]] :: (store (s128) into stack + 160)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X5]], $x1, [[LI8_5]] :: (store (s128) into stack + 160)
   ; 64BIT-NEXT:   [[LDtocCPT6:%[0-9]+]]:g8rc = LDtocCPT %const.6, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X6:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT6]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X6:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT6]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_6:%[0-9]+]]:g8rc = LI8 144
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X6]], $x1, killed [[LI8_6]] :: (store (s128) into stack + 144)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X6]], $x1, [[LI8_6]] :: (store (s128) into stack + 144)
   ; 64BIT-NEXT:   [[LDtocCPT7:%[0-9]+]]:g8rc = LDtocCPT %const.7, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X7:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT7]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X7:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT7]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_7:%[0-9]+]]:g8rc = LI8 128
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X7]], $x1, killed [[LI8_7]] :: (store (s128) into stack + 128)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X7]], $x1, [[LI8_7]] :: (store (s128) into stack + 128)
   ; 64BIT-NEXT:   [[LDtocCPT8:%[0-9]+]]:g8rc = LDtocCPT %const.8, $x2 :: (load (s64) from got)
-  ; 64BIT-NEXT:   [[LXVW4X8:%[0-9]+]]:vsrc = LXVW4X $zero8, killed [[LDtocCPT8]] :: (load (s128) from constant-pool)
+  ; 64BIT-NEXT:   [[LXVW4X8:%[0-9]+]]:vsrc = LXVW4X $zero8, [[LDtocCPT8]] :: (load (s128) from constant-pool)
   ; 64BIT-NEXT:   [[LI8_8:%[0-9]+]]:g8rc = LI8 112
-  ; 64BIT-NEXT:   STXVW4X killed [[LXVW4X8]], $x1, killed [[LI8_8]] :: (store (s128) into stack + 112)
+  ; 64BIT-NEXT:   STXVW4X [[LXVW4X8]], $x1, [[LI8_8]] :: (store (s128) into stack + 112)
   ; 64BIT-NEXT:   [[LD:%[0-9]+]]:g8rc = LD 104, $x1 :: (load (s64))
   ; 64BIT-NEXT:   [[LD1:%[0-9]+]]:g8rc = LD 96, $x1 :: (load (s64))
   ; 64BIT-NEXT:   [[LD2:%[0-9]+]]:g8rc = LD 88, $x1 :: (load (s64))

@@ -53,7 +53,6 @@ define <4 x float> @testv4f32_1(<4 x float> noundef %vec) {
 ; CHECK-SD-LABEL: testv4f32_1:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    dup v1.4s, v1.s[0]
 ; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
@@ -166,9 +165,8 @@ entry:
 define <4 x half> @testv4f16_1(<4 x half> noundef %vec) {
 ; CHECK-SD-LABEL: testv4f16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v1.4h, v1.h[0]
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-SD-NEXT:    fmov d0, d1
 ; CHECK-SD-NEXT:    ret
@@ -245,9 +243,8 @@ entry:
 define <4 x bfloat> @testv4bf16_1(<4 x bfloat> noundef %vec) {
 ; CHECK-SD-LABEL: testv4bf16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v1.4h, v1.h[0]
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-SD-NEXT:    fmov d0, d1
 ; CHECK-SD-NEXT:    ret
@@ -317,7 +314,6 @@ define <4 x i32> @testv4i32_1(<4 x i32> noundef %vec) {
 ; CHECK-SD-LABEL: testv4i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    dup v1.4s, v1.s[0]
 ; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
@@ -412,7 +408,6 @@ define <4 x i16> @testv4i16_1(<4 x i16> noundef %vec) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    dup v1.4h, v1.h[0]
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-SD-NEXT:    fmov d0, d1
 ; CHECK-SD-NEXT:    ret

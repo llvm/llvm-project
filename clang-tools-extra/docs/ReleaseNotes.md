@@ -121,6 +121,9 @@ infrastructure are described first, followed by tool-specific sections.
   user config) by default. Pass `--enable-config=false` to restore the previous
   behavior.
 
+- Added support for loading dynamic plugins via the `-load` command-line
+  option.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
@@ -281,6 +284,13 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
+
+  - Preserved used callable results when replacing `std::for_each` and
+    structured binding results when replacing algorithms such as
+    `std::equal_range`.
+
+  - Kept diagnostics but suppressed unsafe fix-its when no safe
+    result-preserving rewrite is available.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer

@@ -4,7 +4,7 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
-load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -2295,11 +2295,24 @@ cc_library(
 _DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS]) + \
                         "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in DEFAULT_SCRIPT_PLUGINS])
 
+# Plugins.def.in has a single slot for the enumerated plugins. Split it so that
+# OS-specific and optional plugins can be selected independently, while the
+# fallback plugins stay after both.
+expand_template(
+    name = "plugins_config_template",
+    out = "Plugins.def.split.in",
+    substitutions = {
+        "@LLDB_ENUM_PLUGINS@": "@LLDB_DEFAULT_PLUGINS@\n@LLDB_OPTIONAL_PLUGINS@\n@LLDB_FALLBACK_PLUGINS@",
+    },
+    template = "Plugins.def.in",
+)
+
 expand_template(
     name = "plugins_config_gen",
     out = "Plugins.def",
     substitutions = {
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
+        "@LLDB_FALLBACK_PLUGINS@": "\n".join(["LLDB_PLUGIN({})".format(x) for x in FALLBACK_PLUGINS]),
     } | select({
         # ProcessWindowsCommon registers via its dedicated slot in Plugins.def.in
         # (ordered after all other process plugins, before ProcessGDBRemote).
@@ -2311,17 +2324,24 @@ expand_template(
         },
     }) | select({
         "@platforms//os:macos": {
-            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
+            "@LLDB_DEFAULT_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
 LLDB_PLUGIN(ProcessMacOSXKernel)
 LLDB_PLUGIN(SymbolLocatorDebugSymbols)
 LLDB_PLUGIN(SymbolVendorMacOSX)
 """,
         },
         "//conditions:default": {
-            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
+            "@LLDB_DEFAULT_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
+        },
+    }) | select({
+        "//lldb:github_bug_reporter_enabled": {
+            "@LLDB_OPTIONAL_PLUGINS@": "LLDB_PLUGIN(GitHubReporter)",
+        },
+        "//conditions:default": {
+            "@LLDB_OPTIONAL_PLUGINS@": "",
         },
     }),
-    template = "Plugins.def.in",
+    template = ":plugins_config_template",
 )
 
 cc_library(

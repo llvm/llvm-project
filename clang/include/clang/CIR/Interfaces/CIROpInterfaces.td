@@ -73,6 +73,17 @@ let cppNamespace = "::cir" in {
                       /*defaultImplementation=*/[{
                         return $_op.getInlineKindAttrName();
                       }]>,
+      InterfaceMethod<"Return the calling convention of the call site",
+                      "cir::CallingConv", "getCallingConv", (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        return $_op.getCallingConv();
+                      }]>,
+      InterfaceMethod<"Set the calling convention of the call site",
+                      "void", "setCallingConv",
+                      (ins "cir::CallingConv":$callingConv), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.setCallingConv(callingConv);
+                      }]>,
     ];
   }
 

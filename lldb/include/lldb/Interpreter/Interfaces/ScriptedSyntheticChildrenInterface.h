@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDSYNTHETICCHILDRENINTERFACE_H
 
 #include "ScriptedInterface.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/ErrorExtras.h"
 

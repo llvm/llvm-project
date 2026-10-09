@@ -141,6 +141,17 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
+// Compute the line offset of a debug location relative to the start line of
+// its enclosing subprogram, clamped at 0 as the profile reader does (e.g. for
+// locations without debug info whose line is 0).
+static uint32_t getLineOffset(const DILocation *DIL) {
+  unsigned Line = DIL->getLine();
+  unsigned SubprogramLine = DIL->getScope()->getSubprogram()->getLine();
+  if (Line < SubprogramLine)
+    return 0;
+  return Line - SubprogramLine;
+}
+
 static AllocationType getAllocType(const AllocationInfo *AllocInfo) {
   return getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
                       AllocInfo->Info.getAllocCount(),
@@ -278,11 +289,6 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
                             function_ref<bool(uint64_t)> IsPresentInProfile) {
   DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> Calls;
 
-  auto GetOffset = [](const DILocation *DIL) {
-    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-           0xffff;
-  };
-
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -330,7 +336,7 @@ memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
             }
           }
 
-          LineLocation Loc = {GetOffset(DIL), DIL->getColumn()};
+          LineLocation Loc = {getLineOffset(DIL), DIL->getColumn()};
           Calls[CallerGUID].emplace_back(Loc, CalleeGUID);
           CalleeName = CallerName;
           IsLeaf = false;
@@ -638,11 +644,6 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
                                 DenseSet<uint64_t> &SeenFrames,
                                 DenseSet<uint64_t> &SeenStacks,
                                 bool ProfileHasColumns) {
-  auto GetOffset = [](const DILocation *DIL) {
-    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-           0xffff;
-  };
-
   // Dump frame info.  Frames are deduplicated using FrameID.
   std::string CallStack;
   raw_string_ostream CallStackOS(CallStack);
@@ -653,12 +654,12 @@ static void dumpInlineCallStack(Instruction &I, CallBase *CI,
     if (Name.empty())
       Name = DIL->getScope()->getSubprogram()->getName();
     auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
-    uint64_t FrameID = computeStackId(CalleeGUID, GetOffset(DIL),
+    uint64_t FrameID = computeStackId(CalleeGUID, getLineOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
     if (SeenFrames.insert(FrameID).second) {
       std::string DictMsg;
       raw_string_ostream DictOS(DictMsg);
-      DictOS << "frame: " << FrameID << " " << Name << ":" << GetOffset(DIL)
+      DictOS << "frame: " << FrameID << " " << Name << ":" << getLineOffset(DIL)
              << ":" << (ProfileHasColumns ? DIL->getColumn() : 0);
       ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "MemProfUse", CI)
                << DictOS.str());
@@ -792,11 +793,6 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     assert(Idx <= CS.Frames.size() && CS.Frames[Idx - 1].Function == FuncGUID);
   }
 
-  auto GetOffset = [](const DILocation *DIL) {
-    return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-           0xffff;
-  };
-
   // Now walk the instructions, looking up the associated profile data using
   // debug locations.
   for (auto &BB : F) {
@@ -836,7 +832,7 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         if (Name.empty())
           Name = DIL->getScope()->getSubprogram()->getName();
         auto CalleeGUID = Function::getGUIDAssumingExternalLinkage(Name);
-        auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
+        auto StackId = computeStackId(CalleeGUID, getLineOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
         // Check if we have found the profile's leaf frame. If yes, collect
         // the rest of the call's inlined context starting here. If not, see if

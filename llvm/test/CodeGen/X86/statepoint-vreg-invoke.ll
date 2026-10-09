@@ -70,7 +70,7 @@ define ptr addrspace(1) @test_invoke_same_val(i1 %cond, ptr addrspace(1) %val1, 
   ; CHECK-NEXT:   renamable $r15 = COPY $rdx
   ; CHECK-NEXT:   renamable $ebx = COPY $edi
   ; CHECK-NEXT:   TEST8ri renamable $bl, 1, implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit killed $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.left:
@@ -116,7 +116,7 @@ define ptr addrspace(1) @test_invoke_same_val(i1 %cond, ptr addrspace(1) %val1, 
   ; CHECK-NEXT:   liveins: $ebx, $r14, $r15
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   TEST8ri renamable $bl, 1, implicit-def $eflags, implicit killed $ebx
-  ; CHECK-NEXT:   renamable $r14 = CMOV64rr killed renamable $r14, killed renamable $r15, 4, implicit killed $eflags
+  ; CHECK-NEXT:   renamable $r14 = CMOV64rr killed renamable $r14, killed renamable $r15, 4, implicit $eflags
   ; CHECK-NEXT:   $rax = COPY killed renamable $r14
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}

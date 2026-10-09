@@ -110,8 +110,8 @@ define void @many_args_inout_za_call(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64
   ; CHECK-COMMON-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-COMMON-NEXT:   InOutZAUsePseudo
   ; CHECK-COMMON-NEXT:   [[COPY8:%[0-9]+]]:gpr64sp = COPY $sp
-  ; CHECK-COMMON-NEXT:   STRXui killed [[LDRXui1]], [[COPY8]], 1 :: (store (s64) into stack + 8)
-  ; CHECK-COMMON-NEXT:   STRXui killed [[LDRXui]], [[COPY8]], 0 :: (store (s64) into stack)
+  ; CHECK-COMMON-NEXT:   STRXui [[LDRXui1]], [[COPY8]], 1 :: (store (s64) into stack + 8)
+  ; CHECK-COMMON-NEXT:   STRXui [[LDRXui]], [[COPY8]], 0 :: (store (s64) into stack)
   ; CHECK-COMMON-NEXT:   $x0 = COPY [[COPY7]]
   ; CHECK-COMMON-NEXT:   $x1 = COPY [[COPY6]]
   ; CHECK-COMMON-NEXT:   $x2 = COPY [[COPY5]]

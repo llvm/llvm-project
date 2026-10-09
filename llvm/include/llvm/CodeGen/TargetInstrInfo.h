@@ -44,7 +44,6 @@ namespace llvm {
 class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
-class LiveVariables;
 class MachineCycleInfo;
 class MachineLoop;
 class MachineLoopInfo;

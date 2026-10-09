@@ -890,16 +890,15 @@ define <4 x i8> @test_or_computed(i8 %a) {
 ; O0-LABEL: test_or_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_or_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
-; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs1;
+; O0-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_or_computed(
@@ -976,19 +975,18 @@ define <4 x i8> @test_xor_computed(i8 %a) {
 ; O0-LABEL: test_xor_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<9>;
+; O0-NEXT:    .reg .b32 %r<8>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_xor_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    prmt.b32 %r6, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r7, %r6, %r2, 0x5410U;
-; O0-NEXT:    xor.b32 %r8, %r7, %r5;
-; O0-NEXT:    st.param.b32 [func_retval0], %r8;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    prmt.b32 %r5, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r6, %r5, %r3, 0x5410U;
+; O0-NEXT:    xor.b32 %r7, %r6, %r4;
+; O0-NEXT:    st.param.b32 [func_retval0], %r7;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_xor_computed(
@@ -1068,16 +1066,15 @@ define <4 x i8> @test_and_computed(i8 %a) {
 ; O0-LABEL: test_and_computed(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_and_computed_param_0];
-; O0-NEXT:    mov.b32 %r1, 0;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs1;
 ; O0-NEXT:    prmt.b32 %r2, %r1, 0, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 0, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    prmt.b32 %r3, 0, 0, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_and_computed(
@@ -1844,16 +1841,15 @@ define <2 x half> @test_bitcast_4xi8_to_2xhalf(i8 %a) #0 {
 ; O0-LABEL: test_bitcast_4xi8_to_2xhalf(
 ; O0:       {
 ; O0-NEXT:    .reg .b16 %rs<2>;
-; O0-NEXT:    .reg .b32 %r<6>;
+; O0-NEXT:    .reg .b32 %r<5>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
 ; O0-NEXT:    ld.param.b8 %rs1, [test_bitcast_4xi8_to_2xhalf_param_0];
-; O0-NEXT:    mov.b32 %r1, 6;
-; O0-NEXT:    prmt.b32 %r2, %r1, 7, 0x3340U;
-; O0-NEXT:    cvt.u32.u16 %r3, %rs1;
-; O0-NEXT:    prmt.b32 %r4, %r3, 5, 0x3340U;
-; O0-NEXT:    prmt.b32 %r5, %r4, %r2, 0x5410U;
-; O0-NEXT:    st.param.b32 [func_retval0], %r5;
+; O0-NEXT:    cvt.u32.u16 %r1, %rs1;
+; O0-NEXT:    prmt.b32 %r2, %r1, 5, 0x3340U;
+; O0-NEXT:    prmt.b32 %r3, 6, 7, 0x3340U;
+; O0-NEXT:    prmt.b32 %r4, %r2, %r3, 0x5410U;
+; O0-NEXT:    st.param.b32 [func_retval0], %r4;
 ; O0-NEXT:    ret;
 ;
 ; O3-LABEL: test_bitcast_4xi8_to_2xhalf(

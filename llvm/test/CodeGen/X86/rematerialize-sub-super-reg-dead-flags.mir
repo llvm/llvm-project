@@ -3,13 +3,14 @@
 # Checks are anchored with {{^}}, since an unanchored check also matches a line
 # with a spurious "dead".
 
-# Def and copy destination cover the same units.
+# Def is a super-register of the copy destination with the same units. Only
+# the copy destination is used, so the def is dead.
 ---
 name: remat_def_units_equal_copy_dst
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: remat_def_units_equal_copy_dst
-  ; CHECK: {{^}}    $rax = MOV64ri32 -11, implicit-def $eax{{$}}
+  ; CHECK: {{^}}    dead $rax = MOV64ri32 -11, implicit-def $eax{{$}}
   bb.0:
     %t1:gr64 = MOV64ri32 -11
     CMP64ri8 %t1, 1, implicit-def $eflags

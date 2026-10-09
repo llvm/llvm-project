@@ -404,8 +404,12 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           FMF &= cast<FPMathOperator>(FII)->getFastMathFlags();
           FMF |= SelectFPOp->getFastMathFlags();
 
-          Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
-          Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
+          Value *SelectVal = Builder.CreateSelect(
+              Cond, LdexpVal0, LdexpVal1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+          Value *SelectExp = Builder.CreateSelect(
+              Cond, LdexpExp0, LdexpExp1, "",
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
 
           Value *NewLdexp = Builder.CreateIntrinsic(
               TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);

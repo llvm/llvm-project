@@ -1,0 +1,153 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa \
+# RUN:   -start-before=register-coalescer \
+# RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
+# RUN:   -filetype=null %s
+
+# A spill slot is stored once and reloaded far away, so the slot's LiveStacks
+# interval is discontiguous, but the unspilled replacement vreg would have to
+# live continuously across the gap. The interference check accounts for that
+# whole span, so the slot cannot be reassigned to an interfering register and is
+# left spilled. Previously the check only considered the discontiguous slot
+# interval, picked an interfering register, and LiveRegMatrix::assign hit an
+# "Overlapping insert" assertion. This test just checks that we no longer crash.
+
+--- |
+  define amdgpu_kernel void @spill_slot_discontiguous_interval() {
+    ret void
+  }
+...
+---
+name:            spill_slot_discontiguous_interval
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $sgpr4_sgpr5
+
+    %0:sgpr_512 = IMPLICIT_DEF
+    undef %1.sub3:sgpr_128 = IMPLICIT_DEF
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vreg_64_align2 = IMPLICIT_DEF
+    %4:sreg_64 = IMPLICIT_DEF
+    %5:vgpr_32 = V_MBCNT_HI_U32_B32_e64 0, 0, implicit $exec
+    %6:vreg_512_align2 = IMPLICIT_DEF
+    %7:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
+    undef %8.sub0:vreg_512_align2 = COPY undef %7
+    %8.sub1 = COPY undef %7
+    %8.sub2 = COPY %7
+    %8.sub3 = IMPLICIT_DEF
+    %8.sub6 = IMPLICIT_DEF
+    %9:av_512_align2 = COPY %8
+    %10:av_512_align2 = IMPLICIT_DEF
+    %11:vgpr_32 = COPY undef %5
+    $exec = S_MOV_B64_term killed undef %4
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.4(0x40000000)
+
+    $exec = S_MOV_B64_term killed undef %4
+    S_CBRANCH_EXECZ %bb.4, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.4(0x80000000)
+
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.9(0x40000000), %bb.13(0x40000000)
+
+    %12:vreg_512_align2 = COPY killed %10
+    $exec = S_XOR_B64_term $exec, undef %4, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.13, implicit $exec
+    S_BRANCH %bb.9
+
+  bb.4:
+    successors: %bb.5(0x40000000), %bb.8(0x40000000)
+
+    $exec = S_OR_B64 $exec, killed undef %4, implicit-def $scc
+    %13:vreg_512_align2 = IMPLICIT_DEF
+    %13 = V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64 undef %2, undef %2, %13, 0, 0, 0, implicit $mode, implicit $exec
+    %14:vreg_64_align2 = IMPLICIT_DEF
+    undef %15.sub0:vreg_512_align2 = IMPLICIT_DEF
+    %16:vreg_512_align2 = IMPLICIT_DEF
+    %16 = V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64 undef %2, undef %2, %16, 0, 0, 0, implicit $mode, implicit $exec
+    %17:vreg_512_align2 = COPY undef %0
+    early-clobber %18:vreg_512_align2 = V_MFMA_F32_32X32X16_BF16_vgprcd_e64 %2, killed undef %2, %17, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %19:vreg_512_align2 = V_MFMA_F32_32X32X16_BF16_vgprcd_e64 killed undef %2, undef %2, killed %17, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.8, implicit killed undef $vcc
+    S_BRANCH %bb.5
+
+  bb.5:
+    successors: %bb.6(0x40000000), %bb.7(0x40000000)
+
+    %20:vgpr_32 = COPY killed %5
+    INLINEASM &"", sideeffect attdialect, regdef:VGPR_32, def dead %21:vgpr_32, regdef:VGPR_32, def dead %22:vgpr_32, regdef-ec:SGPR_64, def dead early-clobber %23:sgpr_64, regdef-ec:SGPR_64, def dead early-clobber %24:sgpr_64, regdef-ec:VGPR_32, def dead early-clobber %25:vgpr_32, reguse:VGPR_32, undef %11, imm, 0, reguse:VGPR_32, undef %11, reguse:VGPR_32, killed %20, imm, 0, reguse:VGPR_32, undef %11, clobber, implicit-def dead early-clobber $vcc
+    S_CBRANCH_VCCNZ %bb.7, implicit killed undef $vcc
+    S_BRANCH %bb.6
+
+  bb.6:
+    successors: %bb.7(0x80000000)
+
+    %26:vgpr_32 = COPY killed %19.sub0
+    INLINEASM &"", sideeffect attdialect, regdef:VGPR_32, def dead %27:vgpr_32, regdef:VGPR_32, def dead %28:vgpr_32, regdef-ec:SGPR_64, def dead early-clobber %29:sgpr_64, regdef-ec:SGPR_64, def dead early-clobber %30:sgpr_64, regdef-ec:VGPR_32, def dead early-clobber %31:vgpr_32, reguse:VGPR_32, killed undef %11, imm, 0, reguse:VGPR_32, killed %26, reguse:VGPR_32, undef %11, imm, 0, reguse:VGPR_32, undef %11, clobber, implicit-def dead early-clobber $vcc
+
+  bb.7:
+    successors: %bb.8(0x80000000)
+
+  bb.8:
+    successors: %bb.3(0x80000000)
+
+    undef %32.sub0:vreg_64_align2 = COPY %13.sub14
+    %33:vreg_64_align2 = V_PK_MUL_F32 8, killed %32, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %34:vreg_512_align2 = COPY killed undef %19
+    %34 = V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64 killed undef %2, undef %2, undef %34, 0, 0, 0, implicit $mode, implicit $exec
+    undef %35.sub0:vreg_64_align2 = COPY %16.sub6
+    %36:vreg_64_align2 = V_PK_MUL_F32 8, killed %35, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    undef %37.sub0:vreg_64_align2 = COPY %16.sub12
+    %38:vreg_64_align2 = V_PK_MUL_F32 8, killed %37, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %39:av_512_align2 = IMPLICIT_DEF
+    undef %40.sub0:vreg_512_align2 = IMPLICIT_DEF
+    %41:vreg_512_align2 = IMPLICIT_DEF
+    %41 = V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64 undef %2, undef %2, undef %41, 0, 0, 0, implicit $mode, implicit $exec
+    %42:vreg_64_align2 = V_PK_MUL_F32 8, killed %18.sub0_sub1, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %10 = COPY killed %39
+    %11 = IMPLICIT_DEF
+    S_BRANCH %bb.3
+
+  bb.9:
+    successors: %bb.11(0x40000000), %bb.10(0x40000000)
+
+    %43:av_512_align2 = COPY killed undef %0, implicit $exec
+    S_CBRANCH_VCCZ %bb.11, implicit killed undef $vcc
+
+  bb.10:
+    successors: %bb.12(0x80000000)
+
+    %44:av_512_align2 = COPY killed %43
+    S_BRANCH %bb.12
+
+  bb.11:
+    successors: %bb.12(0x80000000)
+
+    INLINEASM &"", sideeffect attdialect, regdef:VGPR_32, def dead %45:vgpr_32, regdef:VGPR_32, def dead %46:vgpr_32, regdef-ec:SGPR_64, def dead early-clobber %47:sgpr_64, regdef-ec:SGPR_64, def dead early-clobber %48:sgpr_64, regdef-ec:VGPR_32, def dead early-clobber %49:vgpr_32, reguse:VGPR_32, killed undef %11, imm, 0, reguse:VGPR_32, undef %11, reguse:VGPR_32, killed %11, imm, 0, reguse:VGPR_32, undef %11, clobber, implicit-def dead early-clobber $vcc
+    %44 = COPY killed %9
+
+  bb.12:
+    successors: %bb.13(0x80000000)
+
+    %50:av_512_align2 = COPY killed %44
+    %12 = COPY killed %50
+
+  bb.13:
+    %51:vgpr_32 = V_CVT_PK_BF16_F32_e64 0, undef %12.sub6, 0, %12.sub7, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFSET_exact killed undef %3, killed undef %1, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
+    S_ENDPGM 0
+...
