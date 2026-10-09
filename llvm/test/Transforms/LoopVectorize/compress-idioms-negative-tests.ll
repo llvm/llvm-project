@@ -94,7 +94,7 @@ exit:
   ret void
 }
 
-; CHECK: the cost-model indicates that vectorization is not beneficial
+; CHECK: vectorization is not possible
 
 ; Negative test: In this case the %idx is incremented when %cond.val != 0,
 ; but the store occurs when %cond.val > 100. The store mask does not match the
@@ -136,7 +136,7 @@ exit:
   ret void
 }
 
-; CHECK: the cost-model indicates that vectorization is not beneficial
+; CHECK: vectorization is not possible
 
 ; Negative test: Simple early exit loop with a compressstore. This fails in VPlan handling for early exits.
 define i32 @compress_store_with_early_exit(ptr dereferenceable(1024) %dst, ptr noalias dereferenceable(1024) %src, ptr noalias dereferenceable(1024) %cond, ptr noalias dereferenceable(1024) %exit_cond) {
@@ -268,7 +268,7 @@ exit:
   ret void
 }
 
-; CHECK: the cost-model indicates that vectorization is not beneficial
+; CHECK: vectorization is not possible
 
 ; Negative test: Lowering unpredicated loads/stores to compresstore/expandload is not supported yet.
 define void @unpredicated_load_of_conditional_induction(ptr noalias %tab, ptr noalias %cond, ptr noalias %out, ptr noalias %flag, i64 %n) {
