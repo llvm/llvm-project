@@ -11591,13 +11591,6 @@ bool SystemZTargetLowering::verifyNarrowIntegerArgs(
         return false;
       }
     }
-
-    // Flags should not end up with both kinds of extensions.
-    if (Flags.isSExt() && Flags.isZExt()) {
-      errs() << "ERROR : SExt and ZExt are incompatible (arg " << OrigIdx
-             << ").\n";
-      return false;
-    }
   }
 
   return true;
