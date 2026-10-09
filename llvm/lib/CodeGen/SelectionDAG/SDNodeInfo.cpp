@@ -267,8 +267,23 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
       }
       break;
     }
-    case SDTCisSameNumEltsAs:
+    case SDTCisSameNumEltsAs: {
+      SDNodeValue OtherVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT OtherVT = OtherVal.getValueType();
+
+      // Scalars are treated as having the same "number of elements" as any
+      // other scalar, so this only requires equal element counts when both
+      // are vectors.
+      if (VT.isVector() != OtherVT.isVector() ||
+          (VT.isVector() &&
+           VT.getVectorElementCount() != OtherVT.getVectorElementCount())) {
+        SS << Val << " and " << OtherVal
+           << " must have the same number of elements, but have " << VT
+           << " and " << OtherVT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     case SDTCisSameSizeAs:
       break;
     }
