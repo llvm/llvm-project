@@ -13764,6 +13764,19 @@ def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
+def err_hlsl_semantic_index_out_of_range
+    : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
+def err_hlsl_semantic_zero_sized_array
+    : Error<"semantic %0 cannot be applied to a zero-sized array">;
+def err_hlsl_semantic_64bit_type
+    : Error<"semantic %0 cannot use 64-bit component types in DXIL shader inputs "
+            "or outputs (was %1)">;
+def err_hlsl_semantic_invalid_type
+    : Error<"semantic %0 must be a "
+            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{16 or 32 bit integer|32 bit integer|"
+            "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
+            "32 bit unsigned integer}3 type (was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
