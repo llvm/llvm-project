@@ -161,8 +161,17 @@ TEST(MemProf, FillsValue) {
           {"abc", 10, 5, 30},
       })));
 
+  // A frame whose line (0, e.g. missing debug info) is below the function's
+  // start line; its line offset must be clamped to 0 rather than wrap around.
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x4000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"def", 0, 4, 0},
+      })));
+
   CallStackMap CSM;
-  CSM[0x1] = {0x1000, 0x2000, 0x3000};
+  CSM[0x1] = {0x1000, 0x2000, 0x3000, 0x4000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
   Prof[0x1].AllocCount = 1;
@@ -183,11 +192,12 @@ TEST(MemProf, FillsValue) {
   // bar() { foo(); }                Y               Y
   // inline xyz() { bar(); }         N               Y
   // abc() { xyz(); }                N               Y
+  // def() { abc(); }                N               Y
 
-  // We expect 4 records. We attach alloc site data to foo and bar, i.e.
+  // We expect 5 records. We attach alloc site data to foo and bar, i.e.
   // all frames bottom up until we find a non-inline frame. We attach call site
-  // data to bar, xyz and abc.
-  ASSERT_THAT(Records, SizeIs(4));
+  // data to bar, xyz, abc and def.
+  ASSERT_THAT(Records, SizeIs(5));
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = memprof::getGUID("foo");
@@ -203,6 +213,8 @@ TEST(MemProf, FillsValue) {
               FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Foo.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[4],
+              FrameContains("def", 0U, 0U, false));
   EXPECT_TRUE(Foo.CallSites.empty());
 
   // Check the memprof record for bar.
@@ -219,6 +231,8 @@ TEST(MemProf, FillsValue) {
               FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[4],
+              FrameContains("def", 0U, 0U, false));
 
   EXPECT_THAT(Bar.CallSites,
               ElementsAre(testing::Field(
@@ -248,6 +262,16 @@ TEST(MemProf, FillsValue) {
                   &CallSiteInfo::Frames,
                   ElementsAre(FrameContains("xyz", 5U, 30U, true),
                               FrameContains("abc", 5U, 30U, false)))));
+
+  // Check the memprof record for def.
+  const llvm::GlobalValue::GUID DefId = memprof::getGUID("def");
+  ASSERT_TRUE(Records.contains(DefId));
+  const MemProfRecord &Def = Records[DefId];
+  EXPECT_TRUE(Def.AllocSites.empty());
+  EXPECT_THAT(Def.CallSites,
+              ElementsAre(testing::Field(
+                  &CallSiteInfo::Frames,
+                  ElementsAre(FrameContains("def", 0U, 0U, false)))));
 }
 
 TEST(MemProf, PortableWrapper) {
