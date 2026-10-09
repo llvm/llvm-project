@@ -14,6 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 int __cxa_thread_atexit_impl(AtExitCallback *callback, void *obj, void *);
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_CXA_THREAD_ATEXIT_IMPL_H
