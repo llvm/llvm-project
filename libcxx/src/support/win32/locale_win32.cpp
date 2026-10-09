@@ -298,13 +298,8 @@ const char* __get_locale_encoding(__locale_t loc) {
 //
 // Strtonum functions
 //
+// Fallback, as long double has no _strtold_l on MinGW.
 #if !defined(_LIBCPP_MSVCRT)
-template <>
-float __str_to_float_c_locale<float>(const char* nptr, char** endptr) {
-  __locale_guard __current(__get_c_locale());
-  return std::strtof(nptr, endptr);
-}
-
 template <>
 long double __str_to_float_c_locale<long double>(const char* nptr, char** endptr) {
   __locale_guard __current(__get_c_locale());
