@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -46,6 +47,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VersionTuple.h"
@@ -236,6 +238,41 @@ static std::optional<llvm::VersionTuple> getAMDExtensionVersion() {
           HSA_STATUS_SUCCESS)
     return std::nullopt;
   return llvm::VersionTuple(Major, Minor);
+}
+
+/// Get the information of the allocation containing \p Ptr.
+static Expected<hsa_amd_pointer_info_t> getPointerInfo(const void *Ptr) {
+  hsa_amd_pointer_info_t Info{};
+  Info.size = sizeof(hsa_amd_pointer_info_t);
+  hsa_status_t Status = hsa_amd_pointer_info(Ptr, &Info, /*Allocator=*/nullptr,
+                                             /*num_agents_accessible=*/nullptr,
+                                             /*accessible=*/nullptr);
+  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+    return std::move(Err);
+  return Info;
+}
+
+/// Whether \p Info describes shared virtual memory (SVM), i.e., addresses that
+/// are reserved without being registered in the driver. Runtimes before version
+/// 1.13 of the AMD extension do not report the registration.
+static bool isSVM(const hsa_amd_pointer_info_t &Info) {
+  return Info.type == HSA_EXT_POINTER_TYPE_RESERVED_ADDR &&
+         Info.size >= offsetof(hsa_amd_pointer_info_t, registered) +
+                          sizeof(Info.registered) &&
+         !Info.registered;
+}
+
+/// Fill \p Count copies of the 4 byte \p Pattern at \p Ptr. hsa_amd_memory_fill
+/// fills SVM on the host, where runtimes before ROCr commit 9ab39639dd ("fix
+/// CPU side hsa_amd_memory_fill", May 2026) repeat only the lowest byte of the
+/// pattern.
+static hsa_status_t fillMemory(void *Ptr, uint32_t Pattern, size_t Count,
+                               bool IsSVM) {
+  if (IsSVM && (Pattern & 0xff) * 0x01010101u != Pattern) {
+    std::fill_n(static_cast<uint32_t *>(Ptr), Count, Pattern);
+    return HSA_STATUS_SUCCESS;
+  }
+  return hsa_amd_memory_fill(Ptr, Pattern, Count);
 }
 } // namespace hsa_utils
 
@@ -2716,6 +2753,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
+    // See allocate() for the registration of host / shared memory as pinned
+    // memory.
+    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+      if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
+        return Err;
+
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -2725,20 +2768,26 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     case TARGET_ALLOC_HOST:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
-    case TARGET_ALLOC_SHARED:
+    case TARGET_ALLOC_SHARED: {
+      // Shared allocations are SVM allocations unless SVM is unsupported.
+      auto InfoOrErr = hsa_utils::getPointerInfo(TgtPtr);
+      if (!InfoOrErr)
+        return InfoOrErr.takeError();
+
+      if (hsa_utils::isSVM(*InfoOrErr)) {
+        hsa_status_t Status =
+            hsa_amd_vmem_address_free(TgtPtr, InfoOrErr->sizeInBytes);
+        return Plugin::check(Status, "error in hsa_amd_vmem_address_free: %s");
+      }
+
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
+    }
     }
 
     if (!MemoryPool)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "no memory pool for the specified allocation kind");
-
-    // See allocate() for the registration of host / shared memory as pinned
-    // memory.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
-      if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
-        return Err;
 
     if (auto Err = MemoryPool->deallocate(TgtPtr))
       return Err;
@@ -2828,9 +2877,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return std::move(Err);
 
     // The buffer may be locked or allocated through HSA allocators. Assume that
-    // the buffer is host pinned if the runtime reports a HSA type.
-    if (Info.type != HSA_EXT_POINTER_TYPE_LOCKED &&
-        Info.type != HSA_EXT_POINTER_TYPE_HSA)
+    // the buffer is host pinned if the runtime reports a HSA type. SVM is not
+    // pinned, but all the agents access it through its host address, so it
+    // must not be locked either.
+    if (hsa_utils::isSVM(Info))
+      Info.agentBaseAddress = Info.hostBaseAddress;
+    else if (Info.type != HSA_EXT_POINTER_TYPE_LOCKED &&
+             Info.type != HSA_EXT_POINTER_TYPE_HSA)
       return false;
 
     assert(Info.hostBaseAddress && "Invalid host pinned address");
@@ -3041,6 +3094,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Fast case, where we can use the 4 byte hsa_amd_memory_fill
     if (Size % 4 == 0 &&
         (PatternSize == 4 || PatternSize == 2 || PatternSize == 1)) {
+      auto InfoOrErr = hsa_utils::getPointerInfo(TgtPtr);
+      if (!InfoOrErr)
+        return InfoOrErr.takeError();
+      const bool IsSVM = hsa_utils::isSVM(*InfoOrErr);
+
       uint32_t Pattern;
       if (PatternSize == 1) {
         auto *Byte = reinterpret_cast<const uint8_t *>(PatternPtr);
@@ -3064,14 +3122,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
           void *Dst;
           uint32_t Pattern;
           int64_t Size;
+          bool IsSVM;
         };
-        auto *Args = new MemFillArgsTy{TgtPtr, Pattern, Size / 4};
+        auto *Args = new MemFillArgsTy{TgtPtr, Pattern, Size / 4, IsSVM};
         auto Fill = [](void *Data) {
           MemFillArgsTy *Args = reinterpret_cast<MemFillArgsTy *>(Data);
           assert(Args && "Invalid arguments");
 
-          auto Status =
-              hsa_amd_memory_fill(Args->Dst, Args->Pattern, Args->Size);
+          auto Status = hsa_utils::fillMemory(Args->Dst, Args->Pattern,
+                                              Args->Size, Args->IsSVM);
           delete Args;
           auto Err =
               Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
@@ -3086,7 +3145,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         return Stream->pushHostCallback(Fill, Args);
       }
       // If there is no pending work, do the fill synchronously
-      auto Status = hsa_amd_memory_fill(TgtPtr, Pattern, Size / 4);
+      auto Status = hsa_utils::fillMemory(TgtPtr, Pattern, Size / 4, IsSVM);
       return Plugin::check(Status, "error in hsa_amd_memory_fill: %s\n");
     }
 
@@ -3506,6 +3565,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
       return std::move(Err);
+
+    // SVM is accessible by all the agents, see initSVM().
+    if (hsa_utils::isSVM(Info))
+      return Size <=
+             Info.sizeInBytes - utils::getPtrDiff(Ptr, Info.hostBaseAddress);
 
     // Checks if the pointer is known by HSA and accessible by the device
     for (uint32_t i = 0; i < Count; i++) {
@@ -4002,12 +4066,14 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
 private:
-  // Track each allocation's Kind so we can tell HOST from SHARED — HSA
-  // backs both with the same host fine-grained pool.
-  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  // Track each allocation's kind, owning device and requested size, which HSA
+  // cannot tell: it backs HOST and pool-backed SHARED allocations with the same
+  // host fine-grained pool, reports no owner for SVM, and rounds SVM sizes up
+  // to whole pages.
   struct AllocInfo {
     TargetAllocTy Kind;
     GenericDeviceTy *Device;
+    size_t Size;
   };
   llvm::DenseMap<const void *, AllocInfo> Allocations;
   std::mutex AllocationsMutex;
@@ -4090,6 +4156,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // Setup the memory pools of available for the host.
     if (auto Err = HostDevice->init())
       return std::move(Err);
+
+    initSVM(HostAgents);
 
     return NumDevices;
   }
@@ -4176,6 +4244,62 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Get the list of the available kernel agents.
   const llvm::SmallVector<hsa_agent_t> &getKernelAgents() const {
     return KernelAgents;
+  }
+
+  /// Enable SVM if the user, the driver and the runtime support it.
+  void initSVM(ArrayRef<hsa_agent_t> HostAgents) {
+    bool Supported = false;
+    if (!OMPX_UseSVM ||
+        hsa_system_get_info(HSA_AMD_SYSTEM_INFO_SVM_SUPPORTED, &Supported) !=
+            HSA_STATUS_SUCCESS ||
+        !Supported)
+      return;
+
+    // SVM is recognized through the registration of its addresses, which the
+    // runtime reports since version 1.13 of the AMD extension.
+    auto Version = hsa_utils::getAMDExtensionVersion();
+    if (!Version || *Version < llvm::VersionTuple(1, 13))
+      return;
+
+    // Accesses may incur a page fault and the migration of the memory to the
+    // accessing agent.
+    for (hsa_agent_t Agent :
+         llvm::concat<const hsa_agent_t>(HostAgents, KernelAgents))
+      SVMAttrs.push_back({HSA_AMD_SVM_ATTRIB_AGENT_ACCESSIBLE, Agent.handle});
+  }
+
+  /// Allocate shared virtual memory (SVM), which is accessible by all the
+  /// agents and which the driver migrates between them on demand. Returns null
+  /// if SVM is unsupported.
+  Expected<void *> allocateSVM(size_t Size, size_t Alignment) {
+    // The reserved addresses are page aligned. Some runtimes report the wrong
+    // base address for larger alignments.
+    const size_t PageSize = llvm::sys::Process::getPageSizeEstimate();
+    if (SVMAttrs.empty() || Alignment > PageSize)
+      return nullptr;
+
+    // Reserve whole pages that are not registered in the driver, so that the
+    // SVM attributes govern the memory backing them.
+    const size_t ReservedSize = llvm::alignTo(Size, PageSize);
+    void *Ptr = nullptr;
+    hsa_status_t Status = hsa_amd_vmem_address_reserve_align(
+        &Ptr, ReservedSize, /*address=*/0, /*alignment=*/0,
+        HSA_AMD_VMEM_ADDRESS_NO_REGISTER);
+    if (auto Err = Plugin::check(
+            Status, "error in hsa_amd_vmem_address_reserve_align: %s"))
+      return std::move(Err);
+
+    Status = hsa_amd_svm_attributes_set(Ptr, ReservedSize, SVMAttrs.data(),
+                                        SVMAttrs.size());
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_svm_attributes_set: %s")) {
+      Status = hsa_amd_vmem_address_free(Ptr, ReservedSize);
+      return joinErrors(
+          std::move(Err),
+          Plugin::check(Status, "error in hsa_amd_vmem_address_free: %s"));
+    }
+
+    return Ptr;
   }
 
   /// Create an HSA signal for the RPC doorbell and return the fields needed
@@ -4318,6 +4442,14 @@ private:
 
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
+
+  /// Whether the user allows serving shared allocations through SVM.
+  BoolEnvar OMPX_UseSVM =
+      BoolEnvar("LIBOMPTARGET_AMDGPU_SHARED_ALLOC_SVM", true);
+
+  /// The attributes making SVM accessible by all the agents. Empty if SVM is
+  /// unsupported.
+  llvm::SmallVector<hsa_amd_svm_attribute_pair_t> SVMAttrs;
 };
 
 Expected<void *> AMDGPUPluginContextTy::allocate(
@@ -4328,7 +4460,7 @@ Expected<void *> AMDGPUPluginContextTy::allocate(
   if (!PtrOrErr || !*PtrOrErr)
     return PtrOrErr;
   std::lock_guard<std::mutex> Lock(AllocationsMutex);
-  Allocations[*PtrOrErr] = {Kind, &Device};
+  Allocations[*PtrOrErr] = {Kind, &Device, static_cast<size_t>(Size)};
   return PtrOrErr;
 }
 
@@ -4349,27 +4481,25 @@ Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
 Expected<PluginAllocInfoTy>
 AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
   // HSA gives the base of the region containing Ptr, so interior pointers
-  // resolve to the same tracker entry.
-  hsa_amd_pointer_info_t HsaInfo{};
-  HsaInfo.size = sizeof(hsa_amd_pointer_info_t);
-  hsa_status_t Status = hsa_amd_pointer_info(
-      const_cast<void *>(Ptr), &HsaInfo, /*Allocator=*/nullptr,
-      /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
-  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
-    return std::move(Err);
+  // resolve to the same tracker entry. SVM only reports its host base address,
+  // which all the agents share.
+  auto HsaInfoOrErr = hsa_utils::getPointerInfo(Ptr);
+  if (!HsaInfoOrErr)
+    return HsaInfoOrErr.takeError();
+  void *Base = hsa_utils::isSVM(*HsaInfoOrErr) ? HsaInfoOrErr->hostBaseAddress
+                                               : HsaInfoOrErr->agentBaseAddress;
 
   AllocInfo Info;
   {
     std::lock_guard<std::mutex> Lock(AllocationsMutex);
-    auto It = Allocations.find(HsaInfo.agentBaseAddress);
+    auto It = Allocations.find(Base);
     if (It == Allocations.end())
       return Plugin::error(ErrorCode::NOT_FOUND,
                            "pointer is not a known allocation in this context");
     Info = It->second;
   }
 
-  return PluginAllocInfoTy{Info.Device, Info.Kind, HsaInfo.agentBaseAddress,
-                           HsaInfo.sizeInBytes};
+  return PluginAllocInfoTy{Info.Device, Info.Kind, Base, Info.Size};
 }
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
@@ -4580,6 +4710,23 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;
+
+  // Shared (managed) allocations use SVM, which the driver migrates between
+  // the host and the devices on demand. They fall back to the fine-grained host
+  // memory pool below if SVM is unsupported or cannot serve the alignment.
+  if (Kind == TARGET_ALLOC_SHARED) {
+    auto AllocOrErr =
+        static_cast<AMDGPUPluginTy &>(Plugin).allocateSVM(Size, Alignment);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+
+    // Register as pinned memory like the memory pool allocations below.
+    if (void *Alloc = *AllocOrErr) {
+      if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
+        return std::move(Err);
+      return Alloc;
+    }
+  }
 
   // Find the correct memory pool.
   AMDGPUMemoryPoolTy *MemoryPool = nullptr;
