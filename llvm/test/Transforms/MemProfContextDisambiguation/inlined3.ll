@@ -57,11 +57,16 @@
 ; RUN:  --check-prefix=STATS --check-prefix=REMARKS --check-prefix=SIZES
 
 ; REMARKS: created clone _Z1Ab.memprof.1
+; REMARKS: created clone _Z1Ab.memprof.2
 ; REMARKS: created clone _Z2XZv.memprof.1
 ; REMARKS: created clone _Z1Mv.memprof.1
 ; REMARKS: call in clone main assigned to call function clone _Z1Mv.memprof.1
 ; REMARKS: call in clone _Z1Mv.memprof.1 assigned to call function clone _Z2XZv.memprof.1
-; REMARKS: call in clone _Z2XZv.memprof.1 assigned to call function clone _Z1Ab
+;; The trimmed cold context 6, 2, 8 terminates at the inlined callsite in
+;; _Z2XZv, so it applies to the clone of _Z2XZv created for the cold context
+;; of the allocation at stack id 1 as well. The clone of _Z1Ab called from
+;; there must therefore have both allocations cold.
+; REMARKS: call in clone _Z2XZv.memprof.1 assigned to call function clone _Z1Ab.memprof.2
 ; REMARKS: call in clone main assigned to call function clone _Z1Mv
 ; REMARKS: call in clone _Z1Mv assigned to call function clone _Z2XZv
 ; REMARKS: call in clone _Z2XZv assigned to call function clone _Z1Ab.memprof.1
@@ -71,9 +76,10 @@
 ;; which will call the cold annotated allocation.
 ; REMARKS: call in clone _Z3XZNv assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Yv assigned to call function clone _Z1Ab
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold
-; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute notcold
 
 ;; Cold context 234 is cloned, and only the cloned context is Cold hinted
@@ -85,6 +91,8 @@
 ; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (internal context id 1)
 ; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (internal context id 6)
 ; SIZES: Cold full allocation context 234 with total size 200 is Cold after cloning (internal context id 5)
+;; Trimmed cold context 345 is also duplicated onto the clone of _Z2XZv.
+; SIZES: Cold full allocation context 345 with total size 300 is Cold after cloning (internal context id 8)
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -176,7 +184,9 @@ attributes #7 = { builtin }
 
 ; IR: define {{.*}} @_Z1Ab(i1 noundef zeroext %b)
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+;; No context reaches this allocation in the original function any longer
+;; (the cold one is now on the clone called from _Z2XZv.memprof.1).
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[DEFAULT:[0-9]+]]
 ; IR: define {{.*}} @_Z2XZv()
 ; IR:   call {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext false)
 ; IR: define {{.*}} @_Z1Mv()
@@ -195,16 +205,22 @@ attributes #7 = { builtin }
 ; IR:   call {{.*}} @_Z3XZNv()
 ; IR:   call {{.*}} @_Z1Yv()
 ; IR: define {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext %b)
-; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
 ; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+;; Clone called from _Z2XZv.memprof.1: cold for the trimmed context 6, 2, 8
+;; and for the cold context 1, 2, 8, 3, 5.
+; IR: define {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext %b)
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
 ; IR: define {{.*}} @_Z2XZv.memprof.1()
-; IR:   call {{.*}} @_Z1Ab(i1 noundef zeroext false)
+; IR:   call {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext false)
 ; IR: define {{.*}} @_Z1Mv.memprof.1()
 ; IR:   call {{.*}} @_Z2XZv.memprof.1()
 
 ; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[DEFAULT]] = { builtin }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS: 4 memprof-context-disambiguation - Number of function clones created during whole program analysis

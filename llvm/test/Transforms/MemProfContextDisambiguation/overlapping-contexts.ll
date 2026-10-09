@@ -66,6 +66,7 @@
 ; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; REMARKS: created clone _Z1Ab.memprof.1
+; REMARKS: created clone _Z1Ab.memprof.2
 ; REMARKS: created clone _Z1Xb.memprof.1
 ; REMARKS: created clone _Z1Xb.memprof.2
 ; REMARKS: created clone _Z1Bb.memprof.1
@@ -85,12 +86,17 @@
 ; REMARKS: call in clone _Z1Xb.memprof.2 assigned to call function clone _Z1Ab.memprof.1
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Bb.memprof.1 assigned to call function clone _Z1Xb.memprof.1
-; REMARKS: call in clone _Z1Xb.memprof.1 assigned to call function clone _Z1Ab
+;; The trimmed cold context for the allocation at stack id 10 terminates at
+;; _Z1Cb, so it applies to the clone of _Z1Cb created for the cold allocation
+;; at stack id 11 (the path from _Z1Gv) as well. The clone of _Z1Ab reached
+;; from there must therefore have both allocations cold.
+; REMARKS: call in clone _Z1Xb.memprof.1 assigned to call function clone _Z1Ab.memprof.2
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Dv assigned to call function clone _Z1Bb
 ; REMARKS: call in clone _Z1Bb assigned to call function clone _Z1Xb
 ; REMARKS: call in clone _Z1Xb assigned to call function clone _Z1Ab
 ; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute notcold
-; REMARKS: call in clone _Z1Ab marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Ab.memprof.2 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Ab.memprof.1 marked with memprof allocation attribute notcold
 
 
@@ -220,6 +226,23 @@ attributes #7 = { builtin }
 ; IR-NEXT: if.else:
 ; IR-NEXT:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
 
+;; Clone reached via the trimmed cold context ending at _Z1Cb (stack id 10)
+;; and the cold context from _Z1Gv (stack id 11): both allocations are cold.
+; IR: define {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext %b)
+; IR-NEXT: entry:
+; IR-NEXT:   br i1 %b, label %if.then, label %if.else
+; IR-EMPTY:
+; IR-NEXT: if.then:
+; IR-NEXT:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR-NEXT:   br label %if.end
+; IR-EMPTY:
+; IR-NEXT: if.else:
+; IR-NEXT:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+
+; IR: define {{.*}} @_Z1Xb.memprof.1(i1 noundef zeroext %b)
+; IR-NEXT: entry:
+; IR-NEXT:   call {{.*}} @_Z1Ab.memprof.2(i1 noundef zeroext %b)
+
 ; IR: define {{.*}} @_Z1Xb.memprof.2(i1 noundef zeroext %b)
 ; IR-NEXT: entry:
 ; IR-NEXT:   call {{.*}} @_Z1Ab.memprof.1(i1 noundef zeroext %b)
@@ -231,7 +254,7 @@ attributes #7 = { builtin }
 ; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
 
-; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 7 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS: 8 memprof-context-disambiguation - Number of function clones created during whole program analysis
 ; STATS: 2 memprof-context-disambiguation - Number of new nodes created during merging
