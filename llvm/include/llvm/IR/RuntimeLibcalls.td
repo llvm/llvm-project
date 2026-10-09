@@ -2061,9 +2061,9 @@ defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry), "l_f128"));
 
-// Width-specific slices of the compiler-rt/libgcc body. The core keeps the
-// integer, f32, f64 and f128 helpers; the f80 and ppcf128 slices are added
-// separately.
+// Width-specific slices of the compiler-rt/libgcc body. The core definition
+// contains the integer, f32, f64 and f128 helpers, while the f80 and ppcf128
+// slices are added separately.
 defvar CompilerRtLibgccImpls_f80 =
     !filter(entry, CompilerRtLibgccImpls,
             !match(!cast<string>(entry.Provides), "F80"));
@@ -2160,9 +2160,6 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
 
-// compiler-rt sources suggest __safestack_unsafe_stack_ptr is only available if
-// (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() || TT.isOSSolaris()),
-// but tests exist for other os targets.
 // The SafeStack runtime globals live in compiler-rt and apply only to targets
 // supporting the SafeStack pass. __safestack_pointer_address is further limited
 // to Android.
@@ -2183,8 +2180,8 @@ def SafeStackRuntime : LibcallLibrary<"compiler-rt",
 // libm provider library
 //===----------------------------------------------------------------------===//
 
-// Width-specific slices of the libm body. The core keeps the f32 and f64
-// functions and the complex and fenv entries.
+// Width-specific slices of the libm body. The core holds the f32 and f64
+// functions, as well as the complex and fenv entries.
 defvar LibmCoreImpls_f80 =
     !filter(entry, LibmCoreImpls, !match(!cast<string>(entry.Provides), "F80"));
 defvar LibmCoreImpls_ppcf128 =
