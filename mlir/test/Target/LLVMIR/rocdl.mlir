@@ -444,6 +444,17 @@ llvm.func @rocdl.iglp.opt() {
   llvm.return
 }
 
+llvm.func @rocdl.schedule.bank(%val : f32, %ival : i32) -> f32 {
+  // CHECK-LABEL: rocdl.schedule.bank
+  // strict (default): bank 2 → encoded as 6 (2 | 4)
+  // CHECK: call float @llvm.amdgcn.schedule.bank.f32(float %{{.*}}, i32 6)
+  %0 = rocdl.schedule.bank %val, 2 : f32
+  // soft: bank 1 → encoded as 1
+  // CHECK: call i32 @llvm.amdgcn.schedule.bank.i32(i32 %{{.*}}, i32 1)
+  %1 = rocdl.schedule.bank %ival, 1 soft : i32
+  llvm.return %0 : f32
+}
+
 llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                    %arg2 : vector<32 x f32>, %arg3: i32,
                    %arg4 : vector<16 x f32>, %arg5 : vector<4xf32>,

@@ -3354,6 +3354,31 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
+  case Intrinsic::amdgcn_schedule_bank: {
+    SDValue Src = N->getOperand(1);
+    auto *BankC = dyn_cast<ConstantSDNode>(N->getOperand(2));
+    // Bank must be a constant; fall back (and error) otherwise.
+    if (!BankC) {
+      SelectCode(N);
+      return;
+    }
+    unsigned PseudoOpc;
+    switch (N->getValueType(0).getSizeInBits()) {
+    case 32:  PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B32;  break;
+    case 64:  PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B64;  break;
+    case 128: PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B128; break;
+    case 256: PseudoOpc = AMDGPU::V_SCHEDULE_BANK_B256; break;
+    default:
+      // Unsupported width: drop the hint, forward the value unchanged.
+      ReplaceUses(SDValue(N, 0), Src);
+      CurDAG->RemoveDeadNode(N);
+      return;
+    }
+    SDValue BankImm = CurDAG->getTargetConstant(BankC->getZExtValue(), SDLoc(N),
+                                                MVT::i32);
+    CurDAG->SelectNodeTo(N, PseudoOpc, N->getVTList(), {Src, BankImm});
+    return;
+  }
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap: {
     if ((IntrID == Intrinsic::amdgcn_permlane16_swap &&
