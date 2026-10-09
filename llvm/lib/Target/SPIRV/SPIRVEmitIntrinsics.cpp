@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -2410,9 +2411,14 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
 
     Type *ExpectedType =
         OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
-    if (!ExpectedType && !DemangledName.empty())
-      ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
-          DemangledName, OpIdx, I->getContext());
+    // Do not reparse rejected declaration types with the builtin parser.
+    if (!ExpectedType && !DemangledName.empty()) {
+      auto Set = TM.getSubtarget<SPIRVSubtarget>(*CalledF)
+                     .getPreferredInstructionSet();
+      if (!CalledF->isDeclaration() || SPIRV::isBuiltin(DemangledName, Set))
+        ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
+            DemangledName, OpIdx, I->getContext());
+    }
     if (!ExpectedType || ExpectedType->isVoidTy())
       continue;
 
@@ -3973,45 +3979,101 @@ bool SPIRVEmitIntrinsicsImpl::postprocessTypes(Module &M) {
   return SzTodo > TodoTypeSz;
 }
 
+// Parse unambiguous scalar/vector pointees, e.g. "float vector[4] const*".
+static Type *parseDeclPtrElemType(StringRef TypeStr, LLVMContext &Ctx) {
+  if (!TypeStr.consume_back("*") && !TypeStr.consume_back("&"))
+    return nullptr;
+  StringRef ScalarName = TypeStr;
+  Type *ElemTy = parseBasicTypeName(TypeStr, Ctx);
+  if (!ElemTy || ElemTy->isVoidTy() || ElemTy->isIntegerTy(1))
+    return nullptr;
+  if (ElemTy->isIntegerTy(64))
+    TypeStr.consume_front(" long"); // "[unsigned] long long"
+  ScalarName = ScalarName.drop_back(TypeStr.size());
+  // OpenCL aliases such as uint can also name C++ classes.
+  if (!StringSwitch<bool>(ScalarName)
+           .Cases({"char", "signed char", "unsigned char", "short",
+                   "unsigned short", "int", "unsigned int", "long",
+                   "unsigned long", "long long", "unsigned long long",
+                   "_Float16", "float", "double"},
+                  true)
+           .Default(false) ||
+      (!TypeStr.empty() && !TypeStr.starts_with(" ")))
+    return nullptr;
+  if (TypeStr.consume_front(" vector[")) {
+    auto [Count, Rest] = TypeStr.split(']');
+    unsigned NumElts = 0;
+    if (Count.getAsInteger(10, NumElts) || NumElts == 0)
+      return nullptr;
+    ElemTy = FixedVectorType::get(ElemTy, NumElts);
+    TypeStr = Rest;
+  }
+  // Only cv and address space qualifiers may follow.
+  SmallVector<StringRef, 4> Quals;
+  TypeStr.split(Quals, ' ', -1, /*KeepEmpty=*/false);
+  for (StringRef Qual : Quals) {
+    unsigned AS;
+    if (Qual != "const" && Qual != "volatile" && Qual != "restrict" &&
+        !(Qual.consume_front("AS") && !Qual.getAsInteger(10, AS)))
+      return nullptr;
+  }
+  return ElemTy;
+}
+
 // Parse and store argument types of function declarations where needed.
 void SPIRVEmitIntrinsicsImpl::parseFunDeclarations(Module &M) {
   for (auto &F : M) {
     if (!F.isDeclaration() || F.isIntrinsic())
       continue;
-    // get the demangled name
     std::string DemangledName = getOclOrSpirvBuiltinDemangledName(F.getName());
     if (DemangledName.empty())
       continue;
-    // allow only OpGroupAsyncCopy use case at the moment
     const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
-    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
-        DemangledName, ST.getPreferredInstructionSet());
-    if (Opcode != SPIRV::OpGroupAsyncCopy)
+    auto Set = ST.getPreferredInstructionSet();
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(DemangledName, Set);
+    // Some builtins have no opcode mapping.
+    const bool IsBuiltin = Grp >= 0 || SPIRV::isBuiltin(DemangledName, Set);
+    if (IsBuiltin && Opcode != SPIRV::OpGroupAsyncCopy)
       continue;
-    // find pointer arguments
     SmallVector<unsigned> Idxs;
-    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx) {
-      Argument *Arg = F.getArg(OpIdx);
-      if (isPointerTy(Arg->getType()) && !hasPointeeTypeAttr(Arg))
-        Idxs.push_back(OpIdx);
-    }
-    if (!Idxs.size())
+    for (Argument &Arg : F.args())
+      if (isPointerTy(Arg.getType()) && !hasPointeeTypeAttr(&Arg))
+        Idxs.push_back(Arg.getArgNo());
+    if (Idxs.empty())
       continue;
-    // parse function arguments
     LLVMContext &Ctx = F.getContext();
     SmallVector<StringRef, 10> TypeStrs;
     SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledName, Ctx);
-    if (!TypeStrs.size())
+    if (TypeStrs.empty())
       continue;
-    // find type info for pointer arguments
+    // Avoid nested signatures and hidden ABI arguments such as this and sret.
+    if (!IsBuiltin && (!F.getName().starts_with("_Z") || F.hasStructRetAttr() ||
+                       StringRef(DemangledName).count('(') != 1 ||
+                       StringRef(DemangledName).count(')') != 1 ||
+                       StringRef(DemangledName).contains('<') ||
+                       TypeStrs.size() != F.arg_size()))
+      continue;
     for (unsigned Idx : Idxs) {
       if (Idx >= TypeStrs.size())
         continue;
-      if (Type *ElemTy =
-              SPIRV::parseBuiltinCallArgumentType(TypeStrs[Idx].trim(), Ctx))
-        if (TypedPointerType::isValidElementType(ElemTy) &&
-            !ElemTy->isTargetExtTy())
-          FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
+      StringRef TypeStr = TypeStrs[Idx].trim();
+      Type *ElemTy = IsBuiltin
+                         ? SPIRV::parseBuiltinCallArgumentType(TypeStr, Ctx)
+                         : parseDeclPtrElemType(TypeStr, Ctx);
+      if (!ElemTy || !TypedPointerType::isValidElementType(ElemTy) ||
+          ElemTy->isTargetExtTy())
+        continue;
+      if (!IsBuiltin) {
+        bool AllowLongVectors =
+            ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector);
+        ElemTy = normalizeType(ElemTy, AllowLongVectors);
+        if (!AllowLongVectors && isLongVectorEXT(ElemTy))
+          continue;
+      }
+      FDeclPtrTys[&F].emplace_back(Idx, ElemTy);
+      if (!IsBuiltin)
+        ST.getSPIRVGlobalRegistry()->addDeducedElementType(F.getArg(Idx),
+                                                           ElemTy);
     }
   }
 }
