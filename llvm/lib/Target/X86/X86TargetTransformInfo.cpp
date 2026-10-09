@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <optional>
 
 using namespace llvm;
@@ -8318,4 +8319,29 @@ bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
   }
 
   return true;
+}
+
+bool X86TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
+  if (!ST->hasAVX512() || !TFI || !TFI->LVL)
+    return false;
+
+  if (TFI->IAI && TFI->IAI->hasGroups())
+    return false;
+
+  Loop *L = TFI->LVL->getLoop();
+  if (!L)
+    return false;
+
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &I : *BB) {
+      unsigned Opcode = I.getOpcode();
+      if (Opcode == Instruction::UDiv || Opcode == Instruction::SDiv ||
+          Opcode == Instruction::URem || Opcode == Instruction::SRem) {
+        if (I.getType()->getScalarSizeInBits() == 64)
+          return true;
+      }
+    }
+  }
+
+  return false;
 }
