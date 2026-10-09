@@ -460,21 +460,14 @@ LIBC_INLINE double pow(double x, double y) {
         if (ex_y >= -1074.0 && fputil::is_integer(ex_y))
           return res;
       } else if (LIBC_UNLIKELY(y > 0.0 && y <= 35.0)) {
-        // 2. If x is not a power of 2, exact results in double precision can
-        //    only occur for 0 < y <= 35 (Lauter and Lefevre). If it falls on
-        //    an exact boundary, convert via DyadicFloat to ensure that
-        //    underflow and inexact exceptions are not signaled.
+        // 2. If x is not a power of 2, exact subnormal results in double
+        //    precision have odd exact_m and exact_exp >= -1074.
         uint64_t exact_m = 0;
         int exact_exp = 0;
-        if (pow_internal::is_exact_rounding_boundary(x, y, exact_m,
-                                                     exact_exp)) {
-          int l = 64 - cpp::countl_zero(exact_m);
-          pow_internal::DFloat128 exact_f128(
-              is_neg ? Sign::NEG : Sign::POS, exact_exp + l - 128,
-              pow_internal::MantissaType(exact_m) << (128 - l));
-          exact_f128.normalize();
-          return static_cast<double>(exact_f128);
-        }
+        if (pow_internal::is_exact_rounding_boundary(
+                static_cast<int>(e_x), x_mant, y, exact_m, exact_exp) &&
+            exact_exp >= -1074)
+          return res;
       }
 
       // Otherwise, the denormal or zero result is inexact, so we signal the
@@ -483,7 +476,7 @@ LIBC_INLINE double pow(double x, double y) {
       fputil::raise_underflow_except_if_required<double>();
       return res;
     }
-    return pow_accurate(x, y, is_neg, static_cast<int>(e_x), idx_x, dx);
+    return pow_accurate(y, is_neg, static_cast<int>(e_x), x_mant);
   }
 
   double upper = r.hi + (r.lo + err_r);
@@ -493,7 +486,7 @@ LIBC_INLINE double pow(double x, double y) {
     return tmp1 * scale;
   }
 
-  return pow_accurate(x, y, is_neg, static_cast<int>(e_x), idx_x, dx);
+  return pow_accurate(y, is_neg, static_cast<int>(e_x), x_mant);
 }
 
 } // namespace math
