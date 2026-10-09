@@ -175,9 +175,9 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopUnrolling = true;
   LoopInterchange = Opts.enable_loopinterchange;
   LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
-  LicmMssaOptCap = SetLicmMssaOptCap;
-  LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
+  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll();
+  LicmMssaOptCap = getLicmMssaOptCap();
+  LicmMssaNoAccForPromotionCap = getLicmMssaNoAccForPromotionCap();
   CallGraphProfile = true;
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;

@@ -220,10 +220,10 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
         resultTy = mlir::VectorType::get(
             vecTy.getSize(), vecTy.getElementType(), vecTy.getIsScalable());
       else {
-        uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-        resultTy = mlir::IntegerType::get(origType.getContext(), bytePadded);
-        value = emitBoolVecConversion(
-            rewriter, value, dyn_cast<mlir::IntegerType>(resultTy).getWidth());
+        resultTy = mlir::IntegerType::get(origType.getContext(),
+                                          vecTy.getBoolStorageWidth());
+        value =
+            emitBoolVecConversion(rewriter, value, vecTy.getBoolStorageWidth());
       }
       return mlir::LLVM::BitcastOp::create(rewriter, value.getLoc(), resultTy,
                                            value);
@@ -5341,6 +5341,30 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixExtractOpLowering::matchAndRewrite(
+    cir::MatrixExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getMatrix().getType();
+  mlir::Value rowIdx = createIntCast(rewriter, adaptor.getRowIdx(),
+                                     rewriter.getI64Type(), false);
+  mlir::Value columnIdx = createIntCast(rewriter, adaptor.getColumnIdx(),
+                                        rewriter.getI64Type(), false);
+  mlir::Type indexTy = rowIdx.getType();
+  mlir::Value numRows = mlir::LLVM::ConstantOp::create(
+      rewriter, op.getLoc(), indexTy,
+      rewriter.getIntegerAttr(indexTy, matrixTy.getRowNum()));
+
+  // Column major index = (columnIdx * numRows) + rowIdx
+  mlir::Value flatIndex = mlir::LLVM::MulOp::create(
+      rewriter, op->getLoc(), {columnIdx, numRows}, /*properties=*/{},
+      /*discardableAttributes=*/{});
+  flatIndex = mlir::LLVM::AddOp::create(rewriter, op->getLoc(), flatIndex,
+                                        rowIdx, /*overflowFlags=*/{});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
+      op, adaptor.getMatrix(), flatIndex);
   return mlir::success();
 }
 

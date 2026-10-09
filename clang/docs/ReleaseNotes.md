@@ -264,6 +264,15 @@ features cannot lower the translation-unit ABI level;
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
+- `clang-scan-deps` now reports the directories whose listing a module depends
+  on, such as umbrella directories, via `directory-deps` in its
+  `experimental-full` output. When the listing of one of these directories or
+  their subdirectories changes, for example because a header was added, build
+  systems can pass the reported directory to `-invalidated-path=` in the next
+  incremental scan so that the modules depending on it are rebuilt. Changes can
+  be detected by watching the directories or by comparing their modification
+  times.
+
 ### New Compiler Flags
 
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
@@ -936,6 +945,11 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure when the dynamic initializer of a global variable
+  takes the address of a file-scope compound literal whose initializer is only
+  constant under constant-evaluation rules, such as `__builtin_constant_p` of a
+  non-constant expression. The elements of a file-scope compound literal are now
+  evaluated once in Sema and the results are stored in the AST. (#GH212106)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
 - Fixed a crash in codegen on 32-bit targets caused by a struct too large to
@@ -1003,6 +1017,9 @@ features cannot lower the translation-unit ABI level;
 
   - C2-Pro (`c2-pro`).
   - C2-Ultra (`c2-ultra`).
+
+- Assembler/disassembler support has been added for Armv9.8-A (2026)
+  architecture extensions.
 
 - Added support for pointer authentication discrimination of C++ virtual table
   pointers stored in VTTs via the `-fptrauth-vtt-vtable-pointer-discrimination`

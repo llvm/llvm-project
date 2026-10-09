@@ -6590,6 +6590,45 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixExtractOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'matrix'",
+    "matrix", "result", "mlir::cast<cir::MatrixType>($_self).getElementType()">
+]> {
+  let summary = "Extract one element from a matrix object";
+  let description = [{
+    The `cir.matrix.extract` operation extracts the element at the given row 
+    and column indices from a matrix object.
+
+    Currently, the flatten index is a column-based index.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %columnIdx = cir.const #cir.int<2> : !u64i
+    %element = cir.matrix.extract %matrix[%rowIdx : !u64i, %columnIdx : !u64i] 
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins 
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx,
+    CIR_AnyFundamentalIntType:$columnIdx
+  );
+
+  let results = (outs CIR_MatrixElementType:$result);
+
+  let assemblyFormat = [{
+    $matrix
+    `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixColumnMajorLoadOp
 //===----------------------------------------------------------------------===//
 
@@ -8347,9 +8386,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                   "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 

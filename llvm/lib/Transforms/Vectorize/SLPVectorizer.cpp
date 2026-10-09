@@ -4391,6 +4391,7 @@ private:
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
       RegionHasStackSave = false;
+      RegionHasMayThrow = false;
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -5471,6 +5472,24 @@ private:
     /// region?  Used to optimize the dependence calculation for the
     /// common case where there isn't.
     bool RegionHasStackSave = false;
+
+    /// Used to skip the dependencies calculation for writes that are visible
+    /// after unwinding.
+    bool RegionHasMayThrow = false;
+
+    /// Returns true if \p I writes memory that the caller can still see
+    /// after an unwind.
+    bool isWriteVisibleOnUnwind(Instruction *I) const {
+      if (!RegionHasMayThrow || !I->mayWriteToMemory())
+        return false;
+      MemoryLocation Loc = getLocation(I);
+      if (!Loc.Ptr)
+        return true;
+      bool RequiresNoCaptureBeforeUnwind = false;
+      return !isNotVisibleOnUnwind(getUnderlyingObject(Loc.Ptr),
+                                   RequiresNoCaptureBeforeUnwind) ||
+             RequiresNoCaptureBeforeUnwind;
+    }
 
     /// The current size of the scheduling region.
     int ScheduleRegionSize = 0;
@@ -14034,7 +14053,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
   if (!(LhsTE->State == TreeEntry::Vectorize &&
-        LhsTE->getOpcode() == Instruction::ZExt &&
+        LhsTE->getOpcode() == Instruction::ZExt && !LhsTE->isAltShuffle() &&
         LhsTE->ReorderIndices.empty() && LhsTE->ReuseShuffleIndices.empty() &&
         !MinBWs.contains(LhsTE) &&
         all_of(LhsTE->Scalars, [](Value *V) { return V->hasOneUse(); })))
@@ -17143,6 +17162,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                !SrcIt->second.second) {
       VecOpcode = Instruction::UIToFP;
     }
+    const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
+                            SrcIt != MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17170,6 +17191,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
+      if (IsSExtBack) {
+        auto *DemotedVecTy = getWidenedType(
+            IntegerType::get(F->getContext(), SrcIt->second.first), VL.size());
+        CommonCost += TTI->getCastInstrCost(Instruction::SExt, SrcVecTy,
+                                            DemotedVecTy, CCH, CostKind);
+      }
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -21034,6 +21061,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
+          // Split roots keep their operands in the combined sub-nodes, so there
+          // is no single operand to take the context hint from.
+          if (E.State == TreeEntry::SplitVectorize)
+            break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
           break;
@@ -24531,6 +24562,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
+      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
+                 SrcIt->second.second) {
+        auto *OrigSrcVectorTy =
+            getWidenedType(CI->getSrcTy(), E->Scalars.size());
+        InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -27470,7 +27506,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             BundleMember->clearDirectDependencies();
             if (RegionHasStackSave ||
                 !isGuaranteedToTransferExecutionToSuccessor(
-                    BundleMember->getInst()))
+                    BundleMember->getInst()) ||
+                isWriteVisibleOnUnwind(BundleMember->getInst()))
               ControlDependentMembers.push_back(BundleMember);
           }
           continue;
@@ -27498,7 +27535,9 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                 OpSD && OpSD->hasValidDependencies()) {
               OpSD->clearDirectDependencies();
               if (RegionHasStackSave ||
-                  !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+                  !isGuaranteedToTransferExecutionToSuccessor(
+                      OpSD->getInst()) ||
+                  isWriteVisibleOnUnwind(OpSD->getInst()))
                 ControlDependentMembers.push_back(OpSD);
               // areAllOperandsReplacedByCopyableData() returned true, so every
               // tree entry that currently contains this instruction models Op
@@ -27835,6 +27874,8 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
         match(I, m_Intrinsic<Intrinsic::stackrestore>()))
       RegionHasStackSave = true;
+    if (I->mayThrow())
+      RegionHasMayThrow = true;
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -27998,6 +28039,20 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
         if (!isGuaranteedToTransferExecutionToSuccessor(I))
           // Everything past here must be control dependent on I.
           break;
+      }
+    }
+
+    // A write visible after unwinding must precede the next instruction that
+    // may throw.
+    if (isWriteVisibleOnUnwind(BundleMember->getInst())) {
+      for (Instruction *I = BundleMember->getInst()->getNextNode();
+           I != ScheduleEnd; I = I->getNextNode()) {
+        if (!I->mayThrow())
+          continue;
+
+        // Add the dependency
+        MakeControlDependent(I);
+        break;
       }
     }
 
