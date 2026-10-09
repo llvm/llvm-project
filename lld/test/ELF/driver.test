@@ -62,6 +62,14 @@
 # RUN: not ld.lld %t -z max-page-size 2>&1 | FileCheck -check-prefix=ERR11 %s
 # ERR11: error: invalid max-page-size:
 
+# RUN: not env LDEMULATION=bar ld.lld %t -o /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=LDEMULATION1 --implicit-check-not=error: %s
+# LDEMULATION1: error: unknown emulation: bar
+#
+# RUN: not env LDEMULATION=bar ld.lld -m baz %t -o /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=LDEMULATION2 --implicit-check-not=error: %s
+# LDEMULATION2: error: unknown emulation: baz
+
 .globl _start
 _start:
   nop
