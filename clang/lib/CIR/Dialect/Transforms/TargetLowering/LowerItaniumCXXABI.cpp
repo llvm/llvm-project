@@ -731,14 +731,24 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 
   mlir::Value srcPtr = cir::CastOp::create(builder, loc, voidPtrTy,
                                            cir::CastKind::bitcast, srcValue);
-  mlir::Value srcRtti =
-      cir::ConstantOp::create(builder, loc, castInfo.getSrcRtti());
-  mlir::Value destRtti =
-      cir::ConstantOp::create(builder, loc, castInfo.getDestRtti());
+  mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
+  // Without RTTI for the target, the runtime function gets null pointers.
+  auto emitRtti = [&](cir::GlobalViewAttr rtti, unsigned argNo) -> mlir::Value {
+    if (rtti)
+      return cir::ConstantOp::create(builder, loc, rtti);
+    auto dynCastFunc = mlir::SymbolTable::lookupNearestSymbolFrom<cir::FuncOp>(
+        op, dynCastFuncRef);
+    auto rttiPtrTy = mlir::cast<cir::PointerType>(
+        dynCastFunc.getFunctionType().getInput(argNo));
+    return cir::ConstantOp::create(
+        builder, loc,
+        cir::ConstPtrAttr::get(rttiPtrTy, builder.getI64IntegerAttr(0)));
+  };
+  mlir::Value srcRtti = emitRtti(castInfo.getSrcRtti(), /*argNo=*/1);
+  mlir::Value destRtti = emitRtti(castInfo.getDestRtti(), /*argNo=*/2);
   mlir::Value offsetHint =
       cir::ConstantOp::create(builder, loc, castInfo.getOffsetHint());
 
-  mlir::FlatSymbolRefAttr dynCastFuncRef = castInfo.getRuntimeFunc();
   mlir::Value dynCastFuncArgs[4] = {srcPtr, srcRtti, destRtti, offsetHint};
 
   // TODO(cir): set the runtime calling convention to this call.

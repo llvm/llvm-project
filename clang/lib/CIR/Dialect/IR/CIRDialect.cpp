@@ -81,6 +81,9 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       return AliasResult::FinalAlias;
     }
     if (auto dynCastInfoAttr = mlir::dyn_cast<cir::DynamicCastInfoAttr>(attr)) {
+      // The alias is named after the RTTI, so there is none without it.
+      if (!dynCastInfoAttr.getSrcRtti() || !dynCastInfoAttr.getDestRtti())
+        return AliasResult::NoAlias;
       os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
