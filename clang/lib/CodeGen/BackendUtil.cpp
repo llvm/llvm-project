@@ -1185,7 +1185,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // This should be done for both clang and flang simultaneously.
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     MPM.printPipeline(outs(), [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;

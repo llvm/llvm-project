@@ -283,8 +283,9 @@ static void emitOptionsStruct(const Record &Struct,
       PrintFatalError(R->getLoc(),
                       "a member is set by a FlagOrEq or SeparateOrEq");
     StringRef Type = R->getValueAsString("FieldType");
-    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault")
-      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool member");
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault" &&
+        !R->getValue("BareValue"))
+      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool or has a BareValue");
     Fields.push_back(R);
   }
   // Members in declaration order.
@@ -344,6 +345,9 @@ static void emitOptionsStruct(const Record &Struct,
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
+    if (R->getValue("BareValue"))
+      OS << "    if (!A.getNumValues()) { " << Member << " = "
+         << R->getValueAsString("BareValue") << "; return true; }\n";
     if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
       SmallVector<StringRef> Values;
       R->getValueAsString("Values").split(Values, ',');
