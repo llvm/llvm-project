@@ -1523,6 +1523,9 @@ void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
     // allows to fold 2 registers.
     C.NumBaseAdds +=
         NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(*TTI, LU, F)));
+  // A Special use negates a lone -1 scaled register.
+  else if (LU.Kind == LSRUse::Special && F.Scale == -1)
+    ++C.NumBaseAdds;
   C.NumBaseAdds += (F.UnfoldedOffset.isNonZero());
 
   // Accumulate non-free scaling amounts.
@@ -1587,8 +1590,13 @@ void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
   // Each new AddRec adds 1 instruction to calculation.
   C.Insns += (C.AddRecCost - PrevAddRecCost);
 
-  // BaseAdds adds instructions for unfolded registers.
-  if (LU.Kind != LSRUse::ICmpZero)
+  // BaseAdds adds instructions for unfolded registers. An ICmpZero use can
+  // fold a -1 scaled register into the other operand of the compare, which
+  // NumBaseAdds already accounts for; anything else has to be added up before
+  // the compare. Count that only when the compare is in the loop: outside it,
+  // the add runs once, and counting it makes LSR keep a second IV in the loop
+  // to save it.
+  if (LU.Kind != LSRUse::ICmpZero || !LU.AllFixupsOutsideLoop)
     C.Insns += C.NumBaseAdds - PrevNumBaseAdds;
   assert(isValid() && "invalid cost");
 }
@@ -1854,8 +1862,9 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
     return !BaseGV && Scale == 0 && BaseOffset.isZero();
 
   case LSRUse::Special:
-    // Special case Basic to handle -1 scales.
-    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset.isZero();
+    // Special case Basic to handle -1 scales. They are legal (see isLegalUse),
+    // but not folded: expanding one takes a sub, or a neg.
+    return !BaseGV && Scale == 0 && BaseOffset.isZero();
   }
 
   llvm_unreachable("Invalid LSRUse Kind!");
@@ -1915,7 +1924,11 @@ static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
          // registers.
          (Scale == 1 &&
           isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
-                               BaseGV, BaseOffset, true, 0));
+                               BaseGV, BaseOffset, true, 0)) ||
+         // Or a Special use with a -1 scale.
+         (Kind == LSRUse::Special && Scale == -1 &&
+          isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
+                               BaseGV, BaseOffset, HasBaseReg, 0));
 }
 
 static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
@@ -1954,6 +1967,11 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
                                             const LSRUse &LU, const Formula &F,
                                             const Loop &L) {
   if (!F.Scale)
+    return 0;
+
+  // The sub or neg that a Special use's -1 scale takes is counted as a base
+  // add.
+  if (LU.Kind == LSRUse::Special)
     return 0;
 
   // If the use is not completely folded in that instruction, we will have to
