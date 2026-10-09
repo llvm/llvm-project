@@ -2876,6 +2876,14 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       PartialAliasMaskingStatus = AliasMaskingStatus::Disabled;
   });
 
+  if (Legal->hasConditionalInductions()) {
+    reportVectorizationFailure(
+        "We can vectorize this loop with a compressstore or expandload, but "
+        "vectorization support is not implemented yet.",
+        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
+    return FixedScalableVFPair::getNone();
+  }
+
   // For outer loops, use simple type-based heuristic VF. No cost model or
   // memory dependence analysis is available.
   if (!TheLoop->isInnermost()) {
