@@ -1251,6 +1251,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::FAdd;
   case RecurKind::FSub:
     return Instruction::FSub;
+  case RecurKind::ComplexFMul:
+    return Instruction::FMul;
   case RecurKind::SMax:
   case RecurKind::SMin:
   case RecurKind::UMax:
@@ -1382,6 +1384,119 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
 
   ReductionOperations.push_back(Cur);
   return ReductionOperations;
+}
+
+// A complex multiply recurrence is going to have 2 incoming phi nodes, one for
+// the real part and one for the imaginary part, and the calculation is going to
+// look something like
+//   next.real = (X.real * incoming.real) - (X.imag * incoming.imag)
+//   next.imag = (X.real * incoming.imag) + (X.imag * incoming.real)
+// If we see a pattern like this, we create 2 descriptors linked to each other.
+bool RecurrenceDescriptor::isComplexMultiplyReduction(
+    PHINode *PhiA, PHINode *PhiB, Loop *TheLoop, RecurrenceDescriptor &RdxDescA,
+    RecurrenceDescriptor &RdxDescB) {
+  if (!PhiA->getType()->isFloatingPointTy() ||
+      !PhiB->getType()->isFloatingPointTy())
+    return false;
+  if (PhiA->getType() != PhiB->getType())
+    return false;
+
+  BasicBlock *Header = TheLoop->getHeader();
+  if (PhiA->getParent() != Header || PhiB->getParent() != Header)
+    return false;
+  if (PhiA->getNumIncomingValues() != 2 || PhiB->getNumIncomingValues() != 2)
+    return false;
+
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (!Latch)
+    return false;
+
+  Value *BackA = PhiA->getIncomingValueForBlock(Latch);
+  Value *BackB = PhiB->getIncomingValueForBlock(Latch);
+  if (!BackA || !BackB)
+    return false;
+
+  auto *OpA = dyn_cast<BinaryOperator>(BackA);
+  auto *OpB = dyn_cast<BinaryOperator>(BackB);
+  if (!OpA || !OpB)
+    return false;
+  PHINode *PhiRe, *PhiIm;
+  BinaryOperator *NextRe, *NextIm;
+  if (OpA->getOpcode() == Instruction::FSub &&
+      OpB->getOpcode() == Instruction::FAdd) {
+    PhiRe = PhiA;
+    PhiIm = PhiB;
+    NextRe = OpA;
+    NextIm = OpB;
+  } else if (OpA->getOpcode() == Instruction::FAdd &&
+             OpB->getOpcode() == Instruction::FSub) {
+    PhiRe = PhiB;
+    PhiIm = PhiA;
+    NextRe = OpB;
+    NextIm = OpA;
+  } else
+    return false;
+
+  if (!NextRe->hasAllowReassoc() || !NextIm->hasAllowReassoc())
+    return false;
+
+  Value *NthReForRe, *NthImForRe, *NthReForIm, *NthImForIm;
+  if (!match(NextRe->getOperand(0),
+             m_AllowReassoc(m_c_FMul(m_Value(NthReForRe), m_Specific(PhiRe)))))
+    return false;
+  if (!match(NextRe->getOperand(1),
+             m_AllowReassoc(m_c_FMul(m_Value(NthImForRe), m_Specific(PhiIm)))))
+    return false;
+  if (!match(NextIm, m_c_FAdd(m_AllowReassoc(m_c_FMul(m_Value(NthImForIm),
+                                                      m_Specific(PhiRe))),
+                              m_AllowReassoc(m_c_FMul(m_Value(NthReForIm),
+                                                      m_Specific(PhiIm))))))
+    return false;
+  if (NthImForRe != NthImForIm || NthReForRe != NthReForIm)
+    return false;
+
+  // Make sure there are no other uses of the operands to NextRe or NextIm
+  // other than the matches above.
+  if (!NextRe->getOperand(0)->hasOneUse() ||
+      !NextRe->getOperand(1)->hasOneUse() ||
+      !NextIm->getOperand(0)->hasOneUse() ||
+      !NextIm->getOperand(1)->hasOneUse())
+    return false;
+
+  // Make sure there are no other uses of the Phis other than the matches above.
+  if (!PhiRe->hasNUses(2) || !PhiIm->hasNUses(2))
+    return false;
+
+  // Make sure there are no other uses in the loop of NextRe or NextIm other
+  // than the corresponding Phis.
+  auto OnlyLoopUseIsPhi = [&](Instruction *Next, PHINode *Phi) {
+    for (User *U : Next->users()) {
+      auto *UI = cast<Instruction>(U);
+      if (UI != Phi && TheLoop->contains(UI))
+        return false;
+    }
+    return true;
+  };
+  if (!OnlyLoopUseIsPhi(NextRe, PhiRe) || !OnlyLoopUseIsPhi(NextIm, PhiIm))
+    return false;
+
+  Type *Ty = PhiRe->getType();
+  FastMathFlags FMF = NextRe->getFastMathFlags() & NextIm->getFastMathFlags();
+
+  SmallPtrSet<Instruction *, 8> CastInsts;
+
+  auto RdxDescRe = RecurrenceDescriptor(
+      PhiRe->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(NextRe), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiIm, true);
+  auto RdxDescIm = RecurrenceDescriptor(
+      PhiIm->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(NextIm), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiRe, false);
+  RdxDescA = PhiA == PhiRe ? RdxDescRe : RdxDescIm;
+  RdxDescB = PhiB == PhiRe ? RdxDescRe : RdxDescIm;
+
+  return true;
 }
 
 InductionDescriptor::InductionDescriptor(

@@ -1077,7 +1077,7 @@ private:
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
   /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
+  bool addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

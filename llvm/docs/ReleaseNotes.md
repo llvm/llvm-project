@@ -253,6 +253,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Vectorizers
 
+* LoopVectorizer can now recognize multiply reductions of complex numbers.
+
 ### Changes to the AArch64 Backend
 
 * Added support for C2-Pro and C2-Ultra CPUs.

@@ -208,6 +208,9 @@ struct VPTransformState {
     DenseMap<const VPValue *, Value *> VPV2Vector;
 
     DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
+
+    DenseMap<std::pair<Value *, Value *>, std::pair<Value *, Value *>>
+        ComplexReductionResults;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def if

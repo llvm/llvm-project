@@ -6710,7 +6710,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
 
-  addReductionResultComputation(Plan, Range.Start);
+  if (!addReductionResultComputation(Plan, Range.Start))
+    return nullptr;
 
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
@@ -6770,7 +6771,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   return Plan;
 }
 
-void LoopVectorizationPlanner::addReductionResultComputation(
+bool LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
@@ -6793,6 +6794,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     }
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
+    if (RecurrenceDescriptor::isComplexRecurrenceKind(RecurrenceKind) &&
+        MinVF.isScalable())
+      return false;
+
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = PhiR->getScalarType();
@@ -6912,6 +6917,29 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
           Builder.createAnyOfReduction(NewExiting, NewVal, Start, ExitDL);
+    } else if (RecurrenceDescriptor::isComplexRecurrenceKind(RecurrenceKind)) {
+      // Find the recipe corresponding to the partner PHI.
+      PHINode *PartnerPhi = RdxDesc.getPartnerPhi();
+      assert(PartnerPhi && "ComplexFMul must have a partner PHI");
+      VPReductionPHIRecipe *PartnerPhiR = nullptr;
+      for (VPRecipeBase &OtherR :
+           Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+        auto *OtherPhiR = dyn_cast<VPReductionPHIRecipe>(&OtherR);
+        if (OtherPhiR && OtherPhiR->getUnderlyingInstr() == PartnerPhi) {
+          PartnerPhiR = OtherPhiR;
+          break;
+        }
+      }
+      assert(PartnerPhiR && "Must find partner reduction PHI recipe");
+      auto *PartnerExitingVPV = PartnerPhiR->getBackedgeValue();
+
+      FastMathFlags FMFs = RdxDesc.getFastMathFlags();
+      bool IsReal = RdxDesc.isComplexRealPart();
+      VPIRFlags Flags(RecurrenceKind, /*IsOrdered=*/false, PhiR->isInLoop(),
+                      FMFs, /*IsComplexRealPart=*/IsReal);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeComplexReductionResult,
+          {NewExitingVPV, PartnerExitingVPV}, Flags, ExitDL);
     } else {
       // If the vector reduction can be performed in a smaller type, we
       // truncate then extend the loop exit value to enable InstCombine to
@@ -6956,6 +6984,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       // Skip ComputeReductionResult and FindIV reductions when they are not the
       // final result.
       if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
+          match(U, m_VPInstruction<
+                       VPInstruction::ComputeComplexReductionResult>()) ||
           (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
            match(U, m_VPInstruction<Instruction::ICmp>())))
         continue;
@@ -6976,8 +7006,16 @@ void LoopVectorizationPlanner::addReductionResultComputation(
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
-      VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
+      Value *IdenVal;
+      // For ComplexFMul, the identity for the imaginary part is 0.0,
+      // while the real part uses 1.0.
+      if (RecurrenceDescriptor::isComplexRecurrenceKind(RK) &&
+          !RdxDesc.isComplexRealPart())
+        IdenVal = ConstantFP::get(PhiTy, 0.0);
+      else
+        IdenVal =
+            getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone());
+      VPValue *Iden = Plan->getOrAddLiveIn(IdenVal);
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
@@ -6987,6 +7025,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
+  return true;
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
@@ -7445,7 +7484,10 @@ static void preparePlanForEpilogueVectorLoop(
       // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+        return VPI &&
+               (VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                VPI->getOpcode() ==
+                    VPInstruction::ComputeComplexReductionResult);
       };
       auto *RdxResult = cast<VPInstruction>(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
