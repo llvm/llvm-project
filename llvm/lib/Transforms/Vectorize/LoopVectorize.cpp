@@ -6142,16 +6142,9 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
+  case Instruction::ExtractValue:
     return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
-  case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
-    auto *EVI = cast<ExtractValueInst>(I);
-    assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
-    unsigned Idx = EVI->getIndices()[0];
-    NewOps.push_back(Plan.getConstantInt(32, Idx));
-    return new VPWidenRecipe(*I, NewOps, *VPI, *VPI, VPI->getDebugLoc());
-  }
   };
 }
 

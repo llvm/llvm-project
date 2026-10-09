@@ -14,8 +14,8 @@
 
 ; Ensure the extractvalue + add instructions are hoisted out
 ; CM: vector.ph:
-; CM:  CLONE ir<%a> = extractvalue ir<%sv>
-; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CM:  CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CM:  Successor(s): vector loop
 
@@ -72,8 +72,8 @@ declare float @powf(float, float) readnone nounwind
 ; Ensure the extractvalue instructions are hoisted out
 ; CM-LABEL: Checking a loop in 'test_getVectorCallCost'
 ; CM: vector.ph:
-; CM:  CLONE ir<%a> = extractvalue ir<%sv>
-; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CM:  Successor(s): vector loop
 
 ; CM: LV: Scalar loop costs: 14.
