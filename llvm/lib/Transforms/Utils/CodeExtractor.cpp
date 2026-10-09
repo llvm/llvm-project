@@ -1916,8 +1916,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
     AddrSpaceCastInst *StructSpaceCast = nullptr;
-    Struct = allocateVar(AllocaBlock->getFirstInsertionPt(), DL, StructArgTy,
-                         "structArg", &StructSpaceCast);
+    Struct = allocateVar(getAggregateArgsAllocaIP(AllocaBlock, codeReplacer),
+                         DL, StructArgTy, "structArg", &StructSpaceCast);
     if (StructSpaceCast)
       params.push_back(StructSpaceCast);
     else

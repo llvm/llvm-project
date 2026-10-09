@@ -272,6 +272,15 @@ protected:
   virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
                                      DebugLoc DL, Value *Var, Type *VarType);
 
+  /// Return the insertion point for the aggregate arguments struct allocation.
+  /// Defaults to \p AllocaBlock. \p CodeReplacer is the block in the caller
+  /// that holds the call to the outlined function; subclasses may override to
+  /// allocate there (at the call site) instead.
+  virtual IRBuilder<>::InsertPoint
+  getAggregateArgsAllocaIP(BasicBlock *AllocaBlock, BasicBlock *CodeReplacer) {
+    return AllocaBlock->getFirstInsertionPt();
+  }
+
 private:
   struct LifetimeMarkerInfo {
     bool SinkLifeStart = false;

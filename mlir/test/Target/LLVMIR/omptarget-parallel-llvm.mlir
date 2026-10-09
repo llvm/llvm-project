@@ -59,11 +59,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK:         %[[EXEC_USER_CODE:.*]] = icmp eq i32 %[[TMP4]], -1
 // CHECK:         br i1 %[[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[WORKER_EXIT:.*]]
 // CHECK:         %[[TMP5:.*]] = addrspacecast ptr addrspace(5) %[[TMP1]] to ptr
-// CHECK:         %[[STRUCTARG:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
 // CHECK:         %[[TMP2:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
 // CHECK:         store ptr %[[TMP0]], ptr %[[TMP2]], align 8
 // CHECK:         %[[TMP6:.*]] = load ptr, ptr %[[TMP2]], align 8
 // CHECK:         %[[OMP_GLOBAL_THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
+// CHECK:         %[[STRUCTARG:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
 // CHECK:         %[[GEP_:.*]] = getelementptr { ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
 // CHECK:         store ptr %[[TMP6]], ptr %[[GEP_]], align 8
 // CHECK:         %[[TMP7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[TMP5]], i64 0, i64 0
