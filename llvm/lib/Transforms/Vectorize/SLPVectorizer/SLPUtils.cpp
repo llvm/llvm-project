@@ -859,6 +859,19 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
   return TrueBase != nullptr;
 }
 
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL) {
+  assert(all_of(VL, IsaPred<LoadInst>) &&
+         "Expected only load lanes in a blended load.");
+  const uint64_t ScalarSize = DL.getTypeStoreSize(VL.front()->getType());
+  Align BaseAlignment = cast<LoadInst>(VL.front())->getAlign();
+  for (auto [Idx, V] : enumerate(VL))
+    BaseAlignment =
+        std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
+                                                Idx * ScalarSize));
+  return BaseAlignment;
+}
+
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
                             function_ref<bool(Value *)> IsGEPLane,
                             const DataLayout &DL) {

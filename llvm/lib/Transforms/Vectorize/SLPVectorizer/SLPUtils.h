@@ -338,6 +338,11 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);
 
+/// Returns the alignment of the shared base pointer of a blended load for
+/// the loads \p VL.
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL);
+
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.
 /// \p IsGEPLane tells which lanes of \p VL are matching GEPs, whose index is
