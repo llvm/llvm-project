@@ -166,6 +166,7 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   VOP3_Pseudo<opName, P, pattern, 1> {
   let VOP3P = 1;
   let IsDOT = P.IsDOT;
+  let HasNoOpSelHi = P.HasNoOpSelHi;
 }
 
 class VOP_Real<VOP_Pseudo ps> {
@@ -202,6 +203,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let mayStore             = ps.mayStore;
   let TRANS                = ps.TRANS;
   let isConvergent         = ps.isConvergent;
+  let HasNoOpSelHi         = ps.HasNoOpSelHi;
 
   VOPProfile Pfl = ps.Pfl;
 
@@ -2497,6 +2499,16 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isDPMACCInstructionHelper";
+}
+
+def VOP3PHasNoOpSelHiTable : GenericTable {
+  let FilterClass = "VOP3P_Real";
+  let FilterClassField = "HasNoOpSelHi";
+  let CppTypeName = "VOP3PHasNoOpSelHiInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOP3PHasNoOpSelHiHelper";
 }
 
 // BlockingCycles indicates how many cycles until a new instruction can acquire
