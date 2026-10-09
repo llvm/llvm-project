@@ -924,8 +924,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        IdentifierTable &idents, SelectorTable &sels,
                        Builtin::Context &builtins, TranslationUnitKind TUKind)
     : ConstantArrayTypes(this_(), ConstantArrayTypesLog2InitSize),
-      DependentSizedArrayTypes(this_()), DependentSizedExtVectorTypes(this_()),
-      DependentAddressSpaceTypes(this_()), DependentVectorTypes(this_()),
+      DependentSizedArrayTypes(this_()), DependentAddressSpaceTypes(this_()),
       DependentSizedMatrixTypes(this_()),
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
@@ -4767,18 +4766,20 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   if (VectorType *VTP = VectorTypes.lookup(ID, Token))
     return QualType(VTP, 0);
 
-  // If the element type isn't canonical, this won't be a canonical type either,
-  // so fill in the canonical type field.
+  // If the element type isn't canonical or has qualifiers, this won't be a
+  // canonical type either, so fill in the canonical type field.
   QualType Canonical;
-  if (!vecType.isCanonical()) {
-    Canonical = getVectorType(getCanonicalType(vecType), NumElts, VecKind);
+  if (!vecType.isCanonical() || vecType.hasLocalQualifiers()) {
+    SplitQualType canonSplit = getCanonicalType(vecType).split();
+    Canonical = getVectorType(QualType(canonSplit.Ty, 0), NumElts, VecKind);
+    Canonical = getQualifiedType(Canonical, canonSplit.Quals);
 
     // Get the new insert position for the node we care about.
     VectorType *NewIP = VectorTypes.lookup(ID, Token);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
   auto *New = new (*this, alignof(VectorType))
-      VectorType(vecType, NumElts, Canonical, VecKind);
+      VectorType(*this, vecType, NumElts, Canonical, VecKind);
   VectorTypes.insert(New, Token);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4787,35 +4788,36 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
 QualType ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
                                             SourceLocation AttrLoc,
                                             VectorKind VecKind) const {
+  SplitQualType CanonVecType = getCanonicalType(VecType).split();
+
   llvm::FoldingSetNodeID ID;
-  DependentVectorType::Profile(ID, *this, getCanonicalType(VecType), SizeExpr,
-                               VecKind);
+  DependentVectorType::Profile(ID, *this, QualType(CanonVecType.Ty, 0),
+                               SizeExpr, VecKind);
   llvm::FoldingSetInsertToken Token;
   DependentVectorType *Canon = DependentVectorTypes.lookup(ID, Token);
-  DependentVectorType *New;
 
-  if (Canon) {
-    New = new (*this, alignof(DependentVectorType)) DependentVectorType(
-        VecType, QualType(Canon, 0), SizeExpr, AttrLoc, VecKind);
-  } else {
-    QualType CanonVecTy = getCanonicalType(VecType);
-    if (CanonVecTy == VecType) {
-      New = new (*this, alignof(DependentVectorType))
-          DependentVectorType(VecType, QualType(), SizeExpr, AttrLoc, VecKind);
-
-      DependentVectorType *CanonCheck = DependentVectorTypes.lookup(ID, Token);
-      assert(!CanonCheck &&
-             "Dependent-sized vector_size canonical type broken");
-      (void)CanonCheck;
-      DependentVectorTypes.insert(New, Token);
-    } else {
-      QualType CanonTy = getDependentVectorType(CanonVecTy, SizeExpr,
-                                                SourceLocation(), VecKind);
-      New = new (*this, alignof(DependentVectorType))
-          DependentVectorType(VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
-    }
+  // If we don't have one, build one.
+  if (!Canon) {
+    Canon = new (*this, TypeAlignment)
+        DependentVectorType(*this, QualType(CanonVecType.Ty, 0), QualType(),
+                            SizeExpr, AttrLoc, VecKind);
+    DependentVectorTypes.insert(Canon, Token);
+    Types.push_back(Canon);
   }
 
+  // Apply qualifiers from the element type to the vector.
+  QualType CanonTy = getQualifiedType(QualType(Canon, 0), CanonVecType.Quals);
+
+  // If we didn't need extra canonicalization for the element type or the size
+  // expression, then just use that as our result.
+  if (QualType(CanonVecType.Ty, 0) == VecType &&
+      Canon->getSizeExpr() == SizeExpr)
+    return CanonTy;
+
+  // Otherwise, we need to build a type which follows the spelling
+  // of the element type.
+  auto *New = new (*this, TypeAlignment)
+      DependentVectorType(*this, VecType, CanonTy, SizeExpr, AttrLoc, VecKind);
   Types.push_back(New);
   return QualType(New, 0);
 }
@@ -4837,60 +4839,58 @@ QualType ASTContext::getExtVectorType(QualType vecType,
   if (VectorType *VTP = VectorTypes.lookup(ID, Token))
     return QualType(VTP, 0);
 
-  // If the element type isn't canonical, this won't be a canonical type either,
-  // so fill in the canonical type field.
+  // If the element type isn't canonical or has qualifiers, this won't be a
+  // canonical type either, so fill in the canonical type field.
   QualType Canonical;
-  if (!vecType.isCanonical()) {
-    Canonical = getExtVectorType(getCanonicalType(vecType), NumElts);
+  if (!vecType.isCanonical() || vecType.hasLocalQualifiers()) {
+    SplitQualType canonSplit = getCanonicalType(vecType).split();
+    Canonical = getExtVectorType(QualType(canonSplit.Ty, 0), NumElts);
+    Canonical = getQualifiedType(Canonical, canonSplit.Quals);
 
     // Get the new insert position for the node we care about.
     VectorType *NewIP = VectorTypes.lookup(ID, Token);
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
   auto *New = new (*this, alignof(ExtVectorType))
-      ExtVectorType(vecType, NumElts, Canonical);
+      ExtVectorType(*this, vecType, NumElts, Canonical);
   VectorTypes.insert(New, Token);
   Types.push_back(New);
   return QualType(New, 0);
 }
 
 QualType
-ASTContext::getDependentSizedExtVectorType(QualType vecType,
-                                           Expr *SizeExpr,
+ASTContext::getDependentSizedExtVectorType(QualType VecType, Expr *SizeExpr,
                                            SourceLocation AttrLoc) const {
-  llvm::FoldingSetNodeID ID;
-  DependentSizedExtVectorType::Profile(ID, *this, getCanonicalType(vecType),
-                                       SizeExpr);
+  SplitQualType CanonVecType = getCanonicalType(VecType).split();
 
+  llvm::FoldingSetNodeID ID;
+  DependentSizedExtVectorType::Profile(ID, *this, QualType(CanonVecType.Ty, 0),
+                                       SizeExpr);
   llvm::FoldingSetInsertToken Token;
   DependentSizedExtVectorType *Canon =
       DependentSizedExtVectorTypes.lookup(ID, Token);
-  DependentSizedExtVectorType *New;
-  if (Canon) {
-    // We already have a canonical version of this array type; use it as
-    // the canonical type for a newly-built type.
-    New = new (*this, alignof(DependentSizedExtVectorType))
-        DependentSizedExtVectorType(vecType, QualType(Canon, 0), SizeExpr,
-                                    AttrLoc);
-  } else {
-    QualType CanonVecTy = getCanonicalType(vecType);
-    if (CanonVecTy == vecType) {
-      New = new (*this, alignof(DependentSizedExtVectorType))
-          DependentSizedExtVectorType(vecType, QualType(), SizeExpr, AttrLoc);
 
-      DependentSizedExtVectorType *CanonCheck =
-          DependentSizedExtVectorTypes.lookup(ID, Token);
-      assert(!CanonCheck && "Dependent-sized ext_vector canonical type broken");
-      (void)CanonCheck;
-      DependentSizedExtVectorTypes.insert(New, Token);
-    } else {
-      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                           SourceLocation());
-      New = new (*this, alignof(DependentSizedExtVectorType))
-          DependentSizedExtVectorType(vecType, CanonExtTy, SizeExpr, AttrLoc);
-    }
+  // If we don't have one, build one.
+  if (!Canon) {
+    Canon = new (*this, TypeAlignment) DependentSizedExtVectorType(
+        *this, QualType(CanonVecType.Ty, 0), QualType(), SizeExpr, AttrLoc);
+    DependentSizedExtVectorTypes.insert(Canon, Token);
+    Types.push_back(Canon);
   }
 
+  // Apply qualifiers from the element type to the vector.
+  QualType CanonTy = getQualifiedType(QualType(Canon, 0), CanonVecType.Quals);
+
+  // If we didn't need extra canonicalization for the element type or the size
+  // expression, then just use that as our result.
+  if (QualType(CanonVecType.Ty, 0) == VecType &&
+      Canon->getSizeExpr() == SizeExpr)
+    return CanonTy;
+
+  // Otherwise, we need to build a type which follows the spelling
+  // of the element type.
+  auto *New = new (*this, TypeAlignment)
+      DependentSizedExtVectorType(*this, VecType, CanonTy, SizeExpr, AttrLoc);
   Types.push_back(New);
   return QualType(New, 0);
 }
