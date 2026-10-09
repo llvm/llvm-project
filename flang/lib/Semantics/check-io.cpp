@@ -1195,14 +1195,14 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
   if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
-  if (const Scope *dtScope{derived.scope()}) {
+  if (const Scope * dtScope{derived.scope()}) {
     for (const auto &pair : *dtScope) {
       const Symbol &symbol{*pair.second};
       if (IsAllocatableOrPointer(symbol)) {
         return &symbol;
       }
       if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-        if (const DeclTypeSpec *type{details->type()}) {
+        if (const DeclTypeSpec * type{details->type()}) {
           if (type->category() == DeclTypeSpec::Category::TypeDerived) {
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
             if (const Symbol *bad{FindUnsafeIoDirectComponent(
