@@ -68,9 +68,6 @@ struct PluginManager {
         std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
-  /// Map global data and execute pending ctors
-  int loadImagesOntoDevice(DeviceTy &Device);
-
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
   llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
@@ -183,6 +180,9 @@ private:
   std::list<llvm::SmallVector<__tgt_device_image, 0>> LegacyImages;
   llvm::DenseMap<__tgt_bin_desc *, __tgt_bin_desc> UpgradedDescriptors;
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
+
+  /// Map global data and execute pending ctors.
+  int loadImagesOntoDevice(DeviceTy &Device);
 
   /// Register the image \p Img from \p Desc on the compatible device
   /// \p DeviceHandle, unless the device is already in \p UsedDevices. Returns
