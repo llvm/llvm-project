@@ -556,8 +556,8 @@ struct VPlanTransforms {
   ///
   /// This effectively is a very simple form of loop-aware SLP, where we use
   /// interleave groups to identify candidates.
-  static std::unique_ptr<VPlan>
-  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
+  static std::unique_ptr<VPlan> narrowInterleaveGroups(VPlan &Plan,
+                                                       VPCostContext &Ctx);
 
   /// Adapts the vector loop region for tail folding by introducing a header
   /// mask and conditionally executing the content of the region:

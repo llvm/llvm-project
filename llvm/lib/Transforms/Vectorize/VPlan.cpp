@@ -159,6 +159,17 @@ Type *VPValue::getScalarType() const {
   llvm_unreachable("Unhandled VPValue subclass");
 }
 
+Type *VPValue::getWideType(ElementCount VF) const {
+  return toVectorTy(getScalarType(), getWideningVF(VF));
+}
+
+ElementCount VPValue::getWideningVF(ElementCount VF) const {
+  if (const auto *RV = dyn_cast<VPRecipeValue>(this))
+    if (auto *VecTy = dyn_cast_if_present<VectorType>(RV->getResultType()))
+      return VecTy->getElementCount();
+  return VF;
+}
+
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
