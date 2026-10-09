@@ -141,6 +141,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-rethrow-caught-exception
+  <clang-tidy/checks/bugprone/rethrow-caught-exception>` check.
+
+  Flags `throw` expressions that copy a caught exception variable instead of
+  rethrowing the active exception with a bare `throw;`.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
