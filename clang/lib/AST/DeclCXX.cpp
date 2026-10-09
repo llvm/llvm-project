@@ -3302,7 +3302,7 @@ bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
 LinkageSpecDecl::LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
                                  SourceLocation LangLoc,
                                  LinkageSpecLanguageIDs lang, bool HasBraces)
-    : Decl(LinkageSpec, DC, LangLoc), DeclContext(LinkageSpec),
+    : Decl(LinkageSpec, DC, LangLoc), DeclContext(LinkageSpec, this),
       ExternLoc(ExternLoc), RBraceLoc(SourceLocation()) {
   setLanguage(lang);
   LinkageSpecDeclBits.HasBraces = HasBraces;
@@ -3364,7 +3364,7 @@ NamespaceDecl::NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                              bool Nested)
-    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace),
+    : NamespaceBaseDecl(Namespace, DC, IdLoc, Id), DeclContext(Namespace, this),
       redeclarable_base(C), LocStart(StartLoc) {
   setInline(Inline);
   setNested(Nested);
