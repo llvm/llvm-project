@@ -2657,8 +2657,8 @@ LLVMBool LLVMIntrinsicGetOverloadTypes(unsigned ID, LLVMTypeRef FunctionTy,
   if (IID == Intrinsic::not_intrinsic)
     return false;
   SmallVector<Type *, 4> OverloadTys;
-  if (!llvm::Intrinsic::isSignatureValid(
-          IID, unwrap<FunctionType>(FunctionTy), OverloadTys))
+  if (!llvm::Intrinsic::isSignatureValid(IID, unwrap<FunctionType>(FunctionTy),
+                                         OverloadTys))
     return false;
   *OverloadCount = OverloadTys.size();
   if (OverloadTypes)
