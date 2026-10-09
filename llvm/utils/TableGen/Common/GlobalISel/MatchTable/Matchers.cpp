@@ -1559,16 +1559,16 @@ void InstructionMatcher::emitPredicateOpcodes(MatchTable &Table) {
 }
 
 bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
-  // Instruction matchers involving more predicates have higher priority.
-  if (predicates_size() > B.predicates_size())
-    return true;
-  if (predicates_size() < B.predicates_size())
-    return false;
-
   // Instruction matchers involving more operands have higher priority.
   if (Operands.size() > B.Operands.size())
     return true;
   if (Operands.size() < B.Operands.size())
+    return false;
+
+  // Instruction matchers involving more predicates have higher priority.
+  if (predicates_size() > B.predicates_size())
+    return true;
+  if (predicates_size() < B.predicates_size())
     return false;
 
   for (auto &&P : zip(predicates(), B.predicates())) {
