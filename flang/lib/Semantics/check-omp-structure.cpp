@@ -252,6 +252,12 @@ void OmpStructureChecker::Leave(const parser::Submodule &x) {
   scopeStack_.pop_back();
 }
 
+bool OmpStructureChecker::Enter(const parser::SubroutineSubprogram &x) {
+  const auto &stmt{std::get<parser::Statement<parser::SubroutineStmt>>(x.t)};
+  const auto &name{std::get<parser::Name>(stmt.statement.t)};
+  return name.symbol != nullptr;
+}
+
 // Function/subroutine subprogram nodes don't appear in INTERFACEs, but
 // the subprogram/end statements do.
 void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
@@ -281,6 +287,12 @@ void OmpStructureChecker::CheckTempDescriptorMappings() {
 void OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
   CheckTempDescriptorMappings();
   scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::FunctionSubprogram &x) {
+  const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
+  const auto &name{std::get<parser::Name>(stmt.statement.t)};
+  return name.symbol != nullptr;
 }
 
 void OmpStructureChecker::Enter(const parser::FunctionStmt &x) {

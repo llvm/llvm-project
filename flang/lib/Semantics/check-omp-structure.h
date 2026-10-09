@@ -99,8 +99,10 @@ public:
   void Leave(const parser::Module &);
   bool Enter(const parser::Submodule &);
   void Leave(const parser::Submodule &);
+  bool Enter(const parser::SubroutineSubprogram &);
   void Enter(const parser::SubroutineStmt &);
   void Enter(const parser::EndSubroutineStmt &);
+  bool Enter(const parser::FunctionSubprogram &);
   void Enter(const parser::FunctionStmt &);
   void Enter(const parser::EndFunctionStmt &);
   void Enter(const parser::MpSubprogramStmt &);

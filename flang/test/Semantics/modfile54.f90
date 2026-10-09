@@ -14,3 +14,12 @@ end
 module m3
   use m1
 end
+
+subroutine s()
+  use m1
+end subroutine s
+
+integer function f()
+  use m1
+  f = 0
+end function f
