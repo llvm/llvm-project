@@ -12575,53 +12575,28 @@ static unsigned getRVPScalarMulHighPartsOpcode(unsigned IntNo) {
   }
 }
 
-static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
-  switch (IntNo) {
-  default:
-    llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
-  case Intrinsic::riscv_mqacc_00:
-  case Intrinsic::riscv_pmqacc_h00:
-    return RISCVISD::MQACC_00;
-  case Intrinsic::riscv_mqacc_01:
-  case Intrinsic::riscv_pmqacc_h01:
-    return RISCVISD::MQACC_01;
-  case Intrinsic::riscv_mqacc_11:
-  case Intrinsic::riscv_pmqacc_h11:
-    return RISCVISD::MQACC_11;
-  case Intrinsic::riscv_mqracc_00:
-  case Intrinsic::riscv_pmqracc_h00:
-    return RISCVISD::MQRACC_00;
-  case Intrinsic::riscv_mqracc_01:
-  case Intrinsic::riscv_pmqracc_h01:
-    return RISCVISD::MQRACC_01;
-  case Intrinsic::riscv_mqracc_11:
-  case Intrinsic::riscv_pmqracc_h11:
-    return RISCVISD::MQRACC_11;
-  }
-}
-
 static unsigned getRVPQFormatAccOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed Q-format accumulate intrinsic");
   case Intrinsic::riscv_mqacc_00:
   case Intrinsic::riscv_pmqacc_h00:
-    return RISCVISD::PMQACC_W_H00;
+    return RISCVISD::MQACC_HALVES_00;
   case Intrinsic::riscv_mqacc_01:
   case Intrinsic::riscv_pmqacc_h01:
-    return RISCVISD::PMQACC_W_H01;
+    return RISCVISD::MQACC_HALVES_01;
   case Intrinsic::riscv_mqacc_11:
   case Intrinsic::riscv_pmqacc_h11:
-    return RISCVISD::PMQACC_W_H11;
+    return RISCVISD::MQACC_HALVES_11;
   case Intrinsic::riscv_mqracc_00:
   case Intrinsic::riscv_pmqracc_h00:
-    return RISCVISD::PMQRACC_W_H00;
+    return RISCVISD::MQRACC_HALVES_00;
   case Intrinsic::riscv_mqracc_01:
   case Intrinsic::riscv_pmqracc_h01:
-    return RISCVISD::PMQRACC_W_H01;
+    return RISCVISD::MQRACC_HALVES_01;
   case Intrinsic::riscv_mqracc_11:
   case Intrinsic::riscv_pmqracc_h11:
-    return RISCVISD::PMQRACC_W_H11;
+    return RISCVISD::MQRACC_HALVES_11;
   }
 }
 
@@ -13213,14 +13188,14 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
       SDValue RdLo = DAG.getExtractVectorElt(DL, XLenVT, Rd, 0);
       SDValue RdHi = DAG.getExtractVectorElt(DL, XLenVT, Rd, 1);
-      unsigned ScalarOpc = getRVPQFormatAccScalarOpcode(IntNo);
+      unsigned ScalarOpc = getRVPQFormatAccOpcode(IntNo);
       SDValue Lo = DAG.getNode(ScalarOpc, DL, XLenVT, RdLo, Rs1Lo, Rs2Lo);
       SDValue Hi = DAG.getNode(ScalarOpc, DL, XLenVT, RdHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
     if (VT == XLenVT) {
-      unsigned Opc = getRVPQFormatAccScalarOpcode(IntNo);
+      unsigned Opc = getRVPQFormatAccOpcode(IntNo);
       return DAG.getNode(Opc, DL, XLenVT, Rd, Rs1, Rs2);
     }
 
@@ -13569,8 +13544,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                       DAG.getUNDEF(MVT::v2i16));
     SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
     unsigned Opc = IntNo == Intrinsic::riscv_pmqwacc_i32x2
-                       ? RISCVISD::PMQACC_W_H01
-                       : RISCVISD::PMQRACC_W_H01;
+                       ? RISCVISD::MQACC_HALVES_01
+                       : RISCVISD::MQRACC_HALVES_01;
     return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
   }
   case Intrinsic::riscv_mulh_h0:
