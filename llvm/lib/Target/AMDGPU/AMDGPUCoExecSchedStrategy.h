@@ -16,7 +16,6 @@
 
 #include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
 namespace llvm {
@@ -230,8 +229,8 @@ protected:
   const SIInstrInfo *SII;
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
+  const MachineLoopInfo *MLI;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
-  MachineCycleInfo MCI;
 
   AMDGPU::CarriedLatency RegionCarriedLatency = AMDGPU::CarriedLatency::Off;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;
@@ -262,7 +261,7 @@ public:
   CandidateHeuristics() = default;
 
   void initialize(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel,
-                  const TargetRegisterInfo *TRI);
+                  const TargetRegisterInfo *TRI, const MachineLoopInfo *MLI);
 
   /// Update the state to reflect that \p SU is going to be scheduled.
   void updateForScheduling(SUnit *SU);

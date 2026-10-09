@@ -595,15 +595,15 @@ void CandidateHeuristics::updateForScheduling(SUnit *SU) {
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
                                      const TargetSchedModel *TargetSchedModel,
-                                     const TargetRegisterInfo *TRI) {
+                                     const TargetRegisterInfo *TRI,
+                                     const MachineLoopInfo *LoopInfo) {
   DAG = SchedDAG;
   SchedModel = TargetSchedModel;
+  MLI = LoopInfo;
   assert(SchedModel && SchedModel->hasInstrSchedModel());
 
   SRI = static_cast<const SIRegisterInfo *>(TRI);
   SII = static_cast<const SIInstrInfo *>(DAG->TII);
-
-  MCI.compute(DAG->MF);
 
   HWUInfo.resize(static_cast<int>(InstructionFlavor::NUM_FLAVORS));
 
@@ -726,8 +726,8 @@ void CandidateHeuristics::collectRegionSummary() {
       return false;
 
     MachineBasicBlock *MBB = DAG->begin()->getParent();
-    CycleRef Cycle = MCI.getCycle(MBB);
-    if (!Cycle.isValid() || MCI.getNumBlocks(Cycle) != 1)
+    MachineLoop *Loop = MLI->getLoopFor(MBB);
+    if (!Loop || Loop->getNumBlocks() != 1)
       return false;
 
     SmallVector<SUnit *, 16> RegionWMMAs;
@@ -1148,7 +1148,7 @@ void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   RegionPolicy.OnlyBottomUp = false;
 
   GCNSchedStrategy::initialize(DAG);
-  Heurs.initialize(DAG, SchedModel, TRI);
+  Heurs.initialize(DAG, SchedModel, TRI, Context->MLI);
 
   // Replace the default hazard recognizer with our PreRA one so that pre-RA
   // scheduling accounts for WMMA co-execution slot constraints. This must
