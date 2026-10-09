@@ -465,6 +465,30 @@ TEST(DiagnosticTest, TemplatesInHeaders) {
                                       "'Derived<int>' requested here")))));
 }
 
+// Verify that non-fatal warnings originating from included headers are not
+// promoted and shown in the main file, as this would clutter the user's
+// diagnostics with warnings from code they didn't write.
+TEST(DiagnosticTest, TemplateWarningsInHeadersNotPromoted) {
+  Annotations Main(R"cpp(
+    void foo() {
+      func(3.14); 
+    }
+  )cpp");
+
+  Annotations Header(R"cpp(
+    template <typename T>
+    void func(T x) {
+      int y = x;
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderCode = Header.code().str();
+  TU.ExtraArgs = {"-Wconversion", "-Wno-error=conversion"};
+
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::IsEmpty());
+}
+
 TEST(DiagnosticTest, MakeUnique) {
   // We usually miss diagnostics from header functions as we don't parse them.
   // std::make_unique is an exception.
@@ -2083,10 +2107,10 @@ TEST(ParsedASTTest, ModuleSawDiag) {
   TestTU TU;
 
   auto AST = TU.build();
-        #if 0
+#if 0
   EXPECT_THAT(AST.getDiagnostics(),
               testing::Contains(Diag(Code.range(), KDiagMsg.str())));
-        #endif
+#endif
 }
 
 TEST(Preamble, EndsOnNonEmptyLine) {
