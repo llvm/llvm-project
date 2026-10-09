@@ -28,6 +28,11 @@ namespace vputils {
 /// Returns true if only the first lane of \p Def is used.
 bool onlyFirstLaneUsed(const VPValue *Def);
 
+/// Returns true if only the first lane of \p Def is used. Accepts a \p Visited
+/// set for recursive calls inside usesFirstLaneOnly().
+bool onlyFirstLaneUsed(const VPValue *Def,
+                       SmallPtrSetImpl<const VPValue *> &Visited);
+
 /// Returns true if only the first part of \p Def is used.
 bool onlyFirstPartUsed(const VPValue *Def);
 
