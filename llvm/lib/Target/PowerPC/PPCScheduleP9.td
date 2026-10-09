@@ -44,7 +44,7 @@ def P9Model : SchedMachineModel {
   let UnsupportedFeatures = [HasSPE, PrefixInstrs, MMA,
                              PairedVectorMemops, IsBookE,
                              PCRelativeMemops, IsISA3_1, IsISAFuture,
-                             HasFutureVector];
+                             HasFutureVector, HasPairedSingles];
 }
 
 let SchedModel = P9Model in {
@@ -139,7 +139,7 @@ let SchedModel = P9Model in {
     let NumMicroOps = 0;
     let Latency = 1;
   }
-  // Dispatch Rules: 'E' 
+  // Dispatch Rules: 'E'
   // Even slice ('E')- certain operations must be sent only to an even slice.
   // Also consumes odd dispatch slice slot of the same superslice at dispatch
   def DISP_EVEN_1C : SchedWriteRes<[ DISPx02, DISPx13 ]> {
@@ -426,4 +426,3 @@ let SchedModel = P9Model in {
   include "P9InstrResources.td"
 
 }
-
