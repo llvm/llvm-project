@@ -213,7 +213,7 @@ ol_result_t iterate(IterateFn Func, CallbackTy Callback, void *UserData) {
   struct {
     CallbackTy *Callback;
     void *UserData;
-  } WrapperData;
+  } WrapperData = {&Callback, UserData};
   auto Wrapper = [](ElemTy Elem, void *UserData) -> bool {
     auto *Unwrapped = static_cast<decltype(WrapperData) *>(UserData);
     (*Unwrapped->Callback)(Elem, Unwrapped->UserData);
