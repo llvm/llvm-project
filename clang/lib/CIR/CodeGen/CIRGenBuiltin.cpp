@@ -599,8 +599,7 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1);
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1);
 
   return RValue::get(call->getResult(0));
 }
@@ -645,9 +644,7 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
 
   mlir::Location loc = cgf.getLoc(e.getExprLoc());
-  mlir::Type ty = cgf.convertType(e.getType());
-
-  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1,
+  auto call = Op::create(cgf.getBuilder(), loc, arg0, arg1,
                          cgf.getBuilder().getConstrainedFPAttr());
   return call->getResult(0);
 }
