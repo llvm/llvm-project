@@ -369,21 +369,21 @@ define amdgpu_kernel void @uniform_value_half(ptr addrspace(1) %out, half %in) {
 ; GFX12DAGISEL:       ; %bb.0: ; %entry
 ; GFX12DAGISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12DAGISEL-NEXT:    s_mov_b32 s3, exec_lo
-; GFX12DAGISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12DAGISEL-NEXT:    s_bcnt1_i32_b32 s3, s3
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12DAGISEL-NEXT:    v_cvt_f32_i32_e32 v0, s3
 ; GFX12DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12DAGISEL-NEXT:    s_cvt_f32_f16 s2, s2
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_2)
 ; GFX12DAGISEL-NEXT:    v_mul_f32_e32 v0, s2, v0
-; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
+; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_2)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12DAGISEL-NEXT:    s_cvt_f16_f32 s2, s2
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12DAGISEL-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX12DAGISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12DAGISEL-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12DAGISEL-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX12DAGISEL-NEXT:    s_endpgm
   entry:
   %result = call half @llvm.amdgcn.wave.reduce.fadd(half %in, i32 1)

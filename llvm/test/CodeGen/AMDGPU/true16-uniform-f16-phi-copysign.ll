@@ -21,30 +21,31 @@ define amdgpu_kernel void @uniform_f16_phi_copysign(half %x, ptr addrspace(1) %o
 ; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    s_cmp_nle_f16 s0, 0x3800
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %big
-; CHECK-NEXT:    s_cvt_f32_f16 s1, s0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0.5
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
-; CHECK-NEXT:    v_s_sqrt_f32 s1, s1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
+; CHECK-NEXT:    s_mov_b32 s0, 0.5
+; CHECK-NEXT:    v_sqrt_f32_e32 v1, v1
 ; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_fma_mixlo_f16 v0, s1, s0, v0 op_sel_hi:[0,1,0]
+; CHECK-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; CHECK-NEXT:    v_fma_mixlo_f16 v1, v1, v0, s0 op_sel_hi:[0,1,0]
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: ; %small
-; CHECK-NEXT:    s_mul_f16 s1, s0, s0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_mul_f16_e32 v1.l, v0.l, v0.l
 ; CHECK-NEXT:  .LBB0_3: ; %exit
-; CHECK-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
-; CHECK-NEXT:    s_mov_b32 s1, 0x7fff
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s1, v0 bitop3:0x40
-; CHECK-NEXT:    s_and_b32 s0, s0, 0x8000
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    v_or_b32_e32 v0, s0, v0
+; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
+; CHECK-NEXT:    s_mov_b32 s2, 0x8000
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x7fff, v1
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_or_b32_e32 v0, v1, v0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    global_store_b16 v1, v0, s[2:3]
+; CHECK-NEXT:    global_store_b16 v2, v0, s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   %c = fcmp ugt half %x, 0xH3800

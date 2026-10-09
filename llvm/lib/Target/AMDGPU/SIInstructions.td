@@ -4027,12 +4027,12 @@ foreach vecTy = [v2i16, v2f16, v2bf16] in {
 
 defvar Ty = vecTy.ElementType;
 
+let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
-let True16Predicate = NotUseRealTrue16Insts in {
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)

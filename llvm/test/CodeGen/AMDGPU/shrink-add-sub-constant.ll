@@ -4386,18 +4386,32 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out,
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
-; GFX11-GISEL-LABEL: v_test_v2i16_x_add_neg32_undef:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3]
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_pk_add_u16 v1, 0xffffffe0, v1
-; GFX11-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-GISEL-NEXT:    s_endpgm
+; GFX11-GISEL-TRUE16-LABEL: v_test_v2i16_x_add_neg32_undef:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX11-GISEL-TRUE16-NEXT:    s_pack_ll_b32_b16 s2, 0xffffffe0, s0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_pk_add_u16 v1, v1, s2
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: v_test_v2i16_x_add_neg32_undef:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_pk_add_u16 v1, 0xffffffe0, v1
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i64 %tid.ext
