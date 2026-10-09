@@ -874,6 +874,12 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
   if (KnownSrc.isKnownNever(fcNegative))
     Known.knownNot(fcNegative);
 
+  // A nonzero positive result requires a nonzero positive input.
+  // Zero remains possible: sinh(+/-0.0) = +/-0.0, and flushing a subnormal
+  // may produce +0.0.
+  if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
+    Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
+
   Known.propagateNonNaN(KnownSrc);
 
   return Known;
