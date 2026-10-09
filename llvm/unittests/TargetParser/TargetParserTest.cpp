@@ -1508,7 +1508,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
-      AArch64::AEK_CFLT,
+      AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
   };
 
   std::vector<StringRef> Features;
@@ -1634,6 +1634,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
   EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1816,6 +1817,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"btie", "nobtie", "+btie", "-btie"},
       {"hinte", "nohinte", "+hinte", "-hinte"},
       {"cflt", "nocflt", "+cflt", "-cflt"},
+      {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

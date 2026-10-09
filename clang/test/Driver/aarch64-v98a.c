@@ -21,3 +21,7 @@
 // RUN: %clang -target aarch64 -march=armv9.8a+cflt -### -c %s 2>&1 | FileCheck -check-prefix=V98A-CFLT %s
 // RUN: %clang -target aarch64 -march=armv9.8-a+cflt -### -c %s 2>&1 | FileCheck -check-prefix=V98A-CFLT %s
 // V98A-CFLT: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+cflt"
+//
+// RUN: %clang -target aarch64 -march=armv9.8a+lsc64b -### -c %s 2>&1 | FileCheck -check-prefix=V98A-LSC64B %s
+// RUN: %clang -target aarch64 -march=armv9.8-a+lsc64b -### -c %s 2>&1 | FileCheck -check-prefix=V98A-LSC64B %s
+// V98A-LSC64B: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+lsc64b"

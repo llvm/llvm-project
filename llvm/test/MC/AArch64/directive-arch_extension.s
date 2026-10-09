@@ -88,6 +88,10 @@ stilp   w24, w0, [x16, #-8]!
 ld64b x0, [x13]
 // CHECK: ld64b x0, [x13]
 
+.arch_extension lsc64b
+lda64b x0, [x13]
+// CHECK: lda64b x0, [x13]
+
 .arch_extension pauth
 paciasp
 // CHECK: paciasp
