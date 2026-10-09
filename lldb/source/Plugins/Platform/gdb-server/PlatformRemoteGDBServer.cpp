@@ -711,87 +711,8 @@ const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {
   if (!IsConnected())
     return Platform::GetRemoteUnixSignals();
 
-  if (m_remote_signals_sp)
-    return m_remote_signals_sp;
-
-  // If packet not implemented or JSON failed to parse, we'll guess the signal
-  // set based on the remote architecture.
-  m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
-
-  StringExtractorGDBRemote response;
-  auto result =
-      m_gdb_client_up->SendPacketAndWaitForResponse("jSignalsInfo", response);
-
-  if (result != decltype(result)::Success ||
-      response.GetResponseType() != response.eResponse)
-    return m_remote_signals_sp;
-
-  auto object_sp = StructuredData::ParseJSON(response.GetStringRef());
-  if (!object_sp || !object_sp->IsValid())
-    return m_remote_signals_sp;
-
-  auto array_sp = object_sp->GetAsArray();
-  if (!array_sp || !array_sp->IsValid())
-    return m_remote_signals_sp;
-
-  auto remote_signals_sp = std::make_shared<lldb_private::GDBRemoteSignals>();
-
-  bool done = array_sp->ForEach(
-      [&remote_signals_sp](StructuredData::Object *object) -> bool {
-        if (!object || !object->IsValid())
-          return false;
-
-        auto dict = object->GetAsDictionary();
-        if (!dict || !dict->IsValid())
-          return false;
-
-        // Signal number and signal name are required.
-        uint64_t signo;
-        if (!dict->GetValueForKeyAsInteger("signo", signo))
-          return false;
-
-        llvm::StringRef name;
-        if (!dict->GetValueForKeyAsString("name", name))
-          return false;
-
-        // We can live without short_name, description, etc.
-        bool suppress{false};
-        auto object_sp = dict->GetValueForKey("suppress");
-        if (object_sp && object_sp->IsValid())
-          suppress = object_sp->GetBooleanValue();
-
-        bool stop{false};
-        object_sp = dict->GetValueForKey("stop");
-        if (object_sp && object_sp->IsValid())
-          stop = object_sp->GetBooleanValue();
-
-        bool notify{false};
-        object_sp = dict->GetValueForKey("notify");
-        if (object_sp && object_sp->IsValid())
-          notify = object_sp->GetBooleanValue();
-
-        std::string description;
-        object_sp = dict->GetValueForKey("description");
-        if (object_sp && object_sp->IsValid())
-          description = std::string(object_sp->GetStringValue());
-
-        llvm::StringRef name_backed, description_backed;
-        {
-          std::lock_guard<std::mutex> guard(g_signal_string_mutex);
-          name_backed =
-              g_signal_string_storage.insert(name).first->getKeyData();
-          if (!description.empty())
-            description_backed =
-                g_signal_string_storage.insert(description).first->getKeyData();
-        }
-
-        remote_signals_sp->AddSignal(signo, name_backed, suppress, stop, notify,
-                                     description_backed);
-        return true;
-      });
-
-  if (done)
-    m_remote_signals_sp = std::move(remote_signals_sp);
+  if (!m_remote_signals_sp)
+    m_remote_signals_sp = UnixSignals::Create(GetRemoteSystemArchitecture());
 
   return m_remote_signals_sp;
 }
