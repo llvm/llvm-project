@@ -7,4 +7,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type target("spirv.Event")
+; CHECK-NEXT:   %v = load target("spirv.Event"), ptr %a, align 8 at @main <stdin>:6
 ; CHECK-NEXT: error: -: input module cannot be executed!

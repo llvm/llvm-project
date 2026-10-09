@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   store [2 x target("wasm.externref")] poison, ptr null, align 8 at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

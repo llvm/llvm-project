@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type x86_amx
+; CHECK-NEXT:   store { i32, x86_amx } poison, ptr null, align 64 at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

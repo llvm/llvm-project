@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type x86_amx
+; CHECK-NEXT:   %x = bitcast x86_amx poison to i8192 at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

@@ -10,4 +10,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   %r = call i32 (ptr, ...) @printf(ptr @.str, target("wasm.externref") poison) at @main <stdin>:9
 ; CHECK-NEXT: error: -: input module cannot be executed!

@@ -1317,29 +1317,75 @@ bool Context::isValid(raw_ostream &OS) const {
     }
   };
 
-#define CHECK(TYPE)                                                            \
+  StringRef ModuleFileName = M.getModuleIdentifier();
+
+  auto DumpFunction = [&](Function *F) {
+    OS << "  at ";
+    F->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getFunctionLocation(F))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpArg = [&](Argument *Arg) {
+    OS << "  " << *Arg << " at ";
+    Arg->getParent()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Arg))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpInst = [&](Instruction *Inst) {
+    OS << *Inst << " at ";
+    Inst->getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Inst))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpGlobal = [&](GlobalObject *GO) {
+    OS << "  at ";
+    GO->printAsOperand(errs(), /*PrintType=*/false);
+    OS << '\n';
+
+    return false;
+  };
+
+#define CHECK(TYPE, LOC)                                                       \
   if (!IsSupportedType(IsSupportedType, TYPE))                                 \
-  return false
+    return LOC;
 
   for (auto &F : M) {
-    CHECK(F.getReturnType());
+    CHECK(F.getReturnType(), DumpFunction(&F));
     for (auto &Arg : F.args())
-      CHECK(Arg.getType());
+      CHECK(Arg.getType(), DumpArg(&Arg));
     for (auto &BB : F)
       for (auto &I : BB) {
-        CHECK(I.getType());
+        CHECK(I.getType(), DumpInst(&I));
         switch (I.getOpcode()) {
         case Instruction::Call:
         case Instruction::Invoke:
           for (auto &Op : I.operands())
-            CHECK(Op->getType());
+            CHECK(Op->getType(), DumpInst(&I));
           break;
         case Instruction::Store:
         case Instruction::ExtractElement:
         case Instruction::ExtractValue:
         case Instruction::BitCast:
         case Instruction::ShuffleVector:
-          CHECK(I.getOperand(0)->getType());
+          CHECK(I.getOperand(0)->getType(), DumpInst(&I));
           break;
         default:
           break;
@@ -1348,7 +1394,7 @@ bool Context::isValid(raw_ostream &OS) const {
   }
 
   for (auto &G : M.globals())
-    CHECK(G.getValueType());
+    CHECK(G.getValueType(), DumpGlobal(&G));
 
 #undef CHECK
 

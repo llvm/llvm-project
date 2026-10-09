@@ -7,4 +7,5 @@ define i32 @main() {
   ret i32 0
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   at @g
 ; CHECK-NEXT: error: -: input module cannot be executed!

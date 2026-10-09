@@ -5,4 +5,5 @@ define i32 @main(target("wasm.externref") %a) {
   ret i32 0
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   target("wasm.externref") %a at @main <stdin>:4
 ; CHECK-NEXT: error: -: input module cannot be executed!

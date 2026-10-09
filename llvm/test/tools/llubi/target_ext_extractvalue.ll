@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   %x = extractvalue { i32, target("wasm.externref") } undef, 0 at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

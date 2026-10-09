@@ -9,4 +9,5 @@ define void @main() {
 }
 
 ; CHECK: The number of elements of [4294967296 x [0 x i8]] is too large!
+; CHECK-NEXT:   %v = load [4294967296 x [0 x i8]], ptr @g, align 1 at @main <stdin>:6
 ; CHECK-NEXT: error: -: input module cannot be executed!

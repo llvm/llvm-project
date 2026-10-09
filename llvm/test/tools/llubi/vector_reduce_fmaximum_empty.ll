@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: The number of elements of <vscale x 1073741824 x float> is too large!
+; CHECK-NEXT:   %r = call float @llvm.vector.reduce.fmaximum.nxv1073741824f32(<vscale x 1073741824 x float> zeroinitializer) at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

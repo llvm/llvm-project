@@ -6,4 +6,5 @@ define void @main() {
   ret void
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   %x = freeze target("wasm.externref") poison at @main <stdin>:5
 ; CHECK-NEXT: error: -: input module cannot be executed!

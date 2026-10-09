@@ -5,4 +5,5 @@ define target("wasm.externref") @main() {
   ret target("wasm.externref") poison
 }
 ; CHECK: Unsupported type target("wasm.externref")
+; CHECK-NEXT:   at @main <stdin>:4
 ; CHECK-NEXT: error: -: input module cannot be executed!
