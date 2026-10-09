@@ -148,9 +148,8 @@ static void
 emitUnstructuredIndependentLoopRemark(Operation *op,
                                       acc::OpenACCSupport &accSupport) {
   accSupport.emitRemark(op,
-                        "Loop is not parallelized: unstructured control "
-                        "flow prevents representing this independent loop "
-                        "as a structured loop",
+                        "Loop is not parallelized: complex control "
+                        "flow prevents parallelization",
                         DEBUG_TYPE);
 }
 

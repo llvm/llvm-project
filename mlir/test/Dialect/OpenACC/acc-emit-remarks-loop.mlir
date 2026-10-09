@@ -179,7 +179,7 @@ func.func @acc_routine_gang_vector_loop() attributes {acc.specialized_routine = 
 
 // An independent loop that was lowered as an unstructured region is reported
 // as not parallelized instead of being skipped silently.
-// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=unstructured_independent_loop | Remark="Loop is not parallelized: unstructured control flow prevents representing this independent loop as a structured loop"
+// CHECK: remark: [Passed] openacc | Category:acc-emit-remarks-loop | Function=unstructured_independent_loop | Remark="Loop is not parallelized: complex control flow prevents parallelization"
 func.func @unstructured_independent_loop() {
   acc.kernel_environment {
     acc.compute_region {
