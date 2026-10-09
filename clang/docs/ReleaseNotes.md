@@ -841,6 +841,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed merging of lambdas across modules in the case where neither lambda is
   imported from an AST file. (#GH214560)
 
+- Fixed a crash when an already defined class was redefined with an extraneous
+  `template <>`, such as `template <> struct S {};`. This is now diagnosed as a
+  redefinition and the existing definition is kept. (#GH226183)
+
 - Fixed a crash when a non-type template parameter of reference type is bound
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
