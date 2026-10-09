@@ -8,18 +8,16 @@ target datalayout = "e-p:64:64"
 define ptr @both_operands(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @both_operands(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @both_operands(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i64 %x, 3
@@ -33,20 +31,16 @@ define ptr @both_operands(ptr %p, i64 %x, i64 %y) {
 define ptr @constant_lhs(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @constant_lhs(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[A:%.*]] = add i64 [[X]], 3
-; SPLIT-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[A]], [[B]]
+; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 7
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 15
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @constant_lhs(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[A:%.*]] = add i64 [[X]], 3
-; LOWER-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[A]], [[B]]
+; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 7
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 15
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i64 %x, 3
@@ -61,20 +55,18 @@ define ptr @constant_lhs(ptr %p, i64 %x, i64 %y) {
 define ptr @nested_sub(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @nested_sub(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = sub i64 [[Y]], 5
 ; SPLIT-NEXT:    [[A:%.*]] = sub i64 0, [[X]]
-; SPLIT-NEXT:    [[IDX:%.*]] = sub i64 [[A]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = sub i64 [[A]], [[Y]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 20
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 25
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @nested_sub(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = sub i64 [[Y]], 5
 ; LOWER-NEXT:    [[A:%.*]] = sub i64 0, [[X]]
-; LOWER-NEXT:    [[IDX:%.*]] = sub i64 [[A]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = sub i64 [[A]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 20
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 25
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = sub i64 20, %x
@@ -88,19 +80,15 @@ define ptr @nested_sub(ptr %p, i64 %x, i64 %y) {
 define ptr @cancel(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @cancel(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add i64 [[Y]], 7
-; SPLIT-NEXT:    [[IDX:%.*]] = sub i64 [[X]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = sub i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 7
-; SPLIT-NEXT:    ret ptr [[GEP1]]
+; SPLIT-NEXT:    ret ptr [[GEP]]
 ;
 ; LOWER-LABEL: define ptr @cancel(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add i64 [[Y]], 7
-; LOWER-NEXT:    [[IDX:%.*]] = sub i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = sub i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 7
-; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
+; LOWER-NEXT:    ret ptr [[UGLYGEP]]
 ;
   %a = add i64 %x, 7
   %b = add i64 %y, 7
@@ -113,18 +101,16 @@ define ptr @cancel(ptr %p, i64 %x, i64 %y) {
 define ptr @wrap(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @wrap(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[A:%.*]] = add i64 [[X]], 9223372036854775807
-; SPLIT-NEXT:    [[B:%.*]] = add i64 [[Y]], 9223372036854775807
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[A]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    ret ptr [[GEP]]
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 -2
+; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @wrap(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add i64 [[Y]], 9223372036854775807
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 9223372036854775807
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -2
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i64 %x, 9223372036854775807
@@ -138,22 +124,20 @@ define ptr @wrap(ptr %p, i64 %x, i64 %y) {
 define ptr @sext_sum(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @sext_sum(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nsw i8 [[Y]], 100
-; SPLIT-NEXT:    [[TMP2:%.*]] = sext i8 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = sext i8 [[Y]] to i64
 ; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 100
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 200
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @sext_sum(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nsw i8 [[Y]], 100
-; LOWER-NEXT:    [[TMP2:%.*]] = sext i8 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = sext i8 [[Y]] to i64
 ; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 100
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 200
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nsw i8 %x, 100
@@ -168,22 +152,20 @@ define ptr @sext_sum(ptr %p, i8 %x, i8 %y) {
 define ptr @zext_sum(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @zext_sum(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 100
-; SPLIT-NEXT:    [[TMP2:%.*]] = zext i8 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = zext i8 [[Y]] to i64
 ; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 100
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 200
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @zext_sum(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 100
-; LOWER-NEXT:    [[TMP2:%.*]] = zext i8 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = zext i8 [[Y]] to i64
 ; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 100
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 200
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nuw i8 %x, 100
@@ -198,22 +180,20 @@ define ptr @zext_sum(ptr %p, i8 %x, i8 %y) {
 define ptr @zext_sub(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @zext_sub(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 5
-; SPLIT-NEXT:    [[TMP2:%.*]] = zext i8 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = zext i8 [[Y]] to i64
 ; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -128
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -123
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @zext_sub(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 5
-; LOWER-NEXT:    [[TMP2:%.*]] = zext i8 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = zext i8 [[Y]] to i64
 ; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -128
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -123
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = sub nuw i8 %x, -128
@@ -228,22 +208,20 @@ define ptr @zext_sub(ptr %p, i8 %x, i8 %y) {
 define ptr @sext_sub_min(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @sext_sub_min(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nsw i8 [[Y]], 5
-; SPLIT-NEXT:    [[TMP2:%.*]] = sext i8 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = sext i8 [[Y]] to i64
 ; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 128
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 133
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @sext_sub_min(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nsw i8 [[Y]], 5
-; LOWER-NEXT:    [[TMP2:%.*]] = sext i8 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = sext i8 [[Y]] to i64
 ; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 128
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 133
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = sub nsw i8 %x, -128
@@ -258,22 +236,20 @@ define ptr @sext_sub_min(ptr %p, i8 %x, i8 %y) {
 define ptr @different_casts(ptr %p, i8 %x, i16 %y) {
 ; SPLIT-LABEL: define ptr @different_casts(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i16 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw i16 [[Y]], 5
-; SPLIT-NEXT:    [[TMP2:%.*]] = zext i16 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = zext i16 [[Y]] to i64
 ; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 2
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @different_casts(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i16 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw i16 [[Y]], 5
-; LOWER-NEXT:    [[TMP2:%.*]] = zext i16 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = zext i16 [[Y]] to i64
 ; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 2
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nsw i8 %x, -3
@@ -347,22 +323,22 @@ define ptr @two_xors(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; SPLIT-NEXT:    [[A:%.*]] = and i64 [[X]], -4
 ; SPLIT-NEXT:    [[B:%.*]] = and i64 [[Y]], -8
-; SPLIT-NEXT:    [[XB:%.*]] = xor i64 [[B]], 15
 ; SPLIT-NEXT:    [[XA:%.*]] = xor i64 [[A]], 4
+; SPLIT-NEXT:    [[XB:%.*]] = xor i64 [[B]], 8
 ; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[XA]], [[XB]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 10
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @two_xors(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; LOWER-NEXT:    [[A:%.*]] = and i64 [[X]], -4
 ; LOWER-NEXT:    [[B:%.*]] = and i64 [[Y]], -8
-; LOWER-NEXT:    [[XB:%.*]] = xor i64 [[B]], 15
 ; LOWER-NEXT:    [[XA:%.*]] = xor i64 [[A]], 4
+; LOWER-NEXT:    [[XB:%.*]] = xor i64 [[B]], 8
 ; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[XA]], [[XB]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 10
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = and i64 %x, -4
@@ -378,18 +354,16 @@ define ptr @two_xors(ptr %p, i64 %x, i64 %y) {
 define ptr @disjoint_or(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @disjoint_or(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @disjoint_or(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add i64 [[Y]], 5
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i64 %x, 3
@@ -403,18 +377,16 @@ define ptr @disjoint_or(ptr %p, i64 %x, i64 %y) {
 define ptr @shared_subtree(ptr %p, i64 %x) {
 ; SPLIT-LABEL: define ptr @shared_subtree(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; SPLIT-NEXT:    [[A:%.*]] = add i64 [[X]], 3
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[A]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[X]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 6
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @shared_subtree(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
-; LOWER-NEXT:    [[A:%.*]] = add i64 [[X]], 3
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[A]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[X]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 6
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i64 %x, 3
@@ -455,26 +427,24 @@ define ptr @opaque_branch(ptr %p, i64 %x, i64 %y) {
 define ptr @sext_zext_sum(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @sext_zext_sum(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 100
-; SPLIT-NEXT:    [[TMP1:%.*]] = zext i8 [[B]] to i32
+; SPLIT-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i32
 ; SPLIT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
-; SPLIT-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i32
+; SPLIT-NEXT:    [[TMP3:%.*]] = zext i8 [[Y]] to i32
 ; SPLIT-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
-; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP4]], [[TMP2]]
+; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP2]], [[TMP4]]
 ; SPLIT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP5]], i64 100
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP5]], i64 200
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @sext_zext_sum(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw i8 [[Y]], 100
-; LOWER-NEXT:    [[TMP1:%.*]] = zext i8 [[B]] to i32
+; LOWER-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i32
 ; LOWER-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
-; LOWER-NEXT:    [[TMP3:%.*]] = zext i8 [[X]] to i32
+; LOWER-NEXT:    [[TMP3:%.*]] = zext i8 [[Y]] to i32
 ; LOWER-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
-; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP4]], [[TMP2]]
+; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP2]], [[TMP4]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 100
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 200
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nuw i8 %x, 100
@@ -490,26 +460,24 @@ define ptr @sext_zext_sum(ptr %p, i8 %x, i8 %y) {
 define ptr @zext_sext_sum(ptr %p, i8 %x, i8 %y) {
 ; SPLIT-LABEL: define ptr @zext_sext_sum(
 ; SPLIT-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw nsw i8 [[Y]], 5
-; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[B]] to i32
+; SPLIT-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
 ; SPLIT-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; SPLIT-NEXT:    [[TMP3:%.*]] = sext i8 [[X]] to i32
+; SPLIT-NEXT:    [[TMP3:%.*]] = sext i8 [[Y]] to i32
 ; SPLIT-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP4]], [[TMP2]]
+; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP2]], [[TMP4]]
 ; SPLIT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP5]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP5]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @zext_sext_sum(
 ; LOWER-SAME: ptr [[P:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw nsw i8 [[Y]], 5
-; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[B]] to i32
+; LOWER-NEXT:    [[TMP1:%.*]] = sext i8 [[X]] to i32
 ; LOWER-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; LOWER-NEXT:    [[TMP3:%.*]] = sext i8 [[X]] to i32
+; LOWER-NEXT:    [[TMP3:%.*]] = sext i8 [[Y]] to i32
 ; LOWER-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP4]], [[TMP2]]
+; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP2]], [[TMP4]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nuw nsw i8 %x, 3
@@ -525,22 +493,20 @@ define ptr @zext_sext_sum(ptr %p, i8 %x, i8 %y) {
 define ptr @truncated_tree(ptr %p, i128 %x, i128 %y) {
 ; SPLIT-LABEL: define ptr @truncated_tree(
 ; SPLIT-SAME: ptr [[P:%.*]], i128 [[X:%.*]], i128 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add i128 [[Y]], 18446744073709551621
-; SPLIT-NEXT:    [[TMP2:%.*]] = trunc i128 [[B]] to i64
 ; SPLIT-NEXT:    [[TMP1:%.*]] = trunc i128 [[X]] to i64
+; SPLIT-NEXT:    [[TMP2:%.*]] = trunc i128 [[Y]] to i64
 ; SPLIT-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; SPLIT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @truncated_tree(
 ; LOWER-SAME: ptr [[P:%.*]], i128 [[X:%.*]], i128 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add i128 [[Y]], 18446744073709551621
-; LOWER-NEXT:    [[TMP2:%.*]] = trunc i128 [[B]] to i64
 ; LOWER-NEXT:    [[TMP1:%.*]] = trunc i128 [[X]] to i64
+; LOWER-NEXT:    [[TMP2:%.*]] = trunc i128 [[Y]] to i64
 ; LOWER-NEXT:    [[SUM:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUM]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add i128 %x, 18446744073709551619
@@ -555,18 +521,16 @@ define ptr @truncated_tree(ptr %p, i128 %x, i128 %y) {
 define ptr @preserve_nuw(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @preserve_nuw(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 5
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @preserve_nuw(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = add nuw i64 [[Y]], 5
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nuw i64 %x, 3
@@ -579,18 +543,16 @@ define ptr @preserve_nuw(ptr %p, i64 %x, i64 %y) {
 define ptr @drop_nuw(ptr %p, i64 %x, i64 %y) {
 ; SPLIT-LABEL: define ptr @drop_nuw(
 ; SPLIT-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; SPLIT-NEXT:    [[B:%.*]] = sub i64 [[Y]], 5
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
-; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
+; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -2
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @drop_nuw(
 ; LOWER-SAME: ptr [[P:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; LOWER-NEXT:    [[B:%.*]] = sub i64 [[Y]], 5
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[B]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[X]], [[Y]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 -2
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = add nuw i64 %x, 3
@@ -606,20 +568,18 @@ define ptr @nonnegative_inbounds(ptr %p, i32 %x, i32 %y) {
 ; SPLIT-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; SPLIT-NEXT:    [[A:%.*]] = zext i32 [[X]] to i64
 ; SPLIT-NEXT:    [[B:%.*]] = zext i32 [[Y]] to i64
-; SPLIT-NEXT:    [[R:%.*]] = add i64 [[B]], 5
-; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[A]], [[R]]
+; SPLIT-NEXT:    [[IDX:%.*]] = add i64 [[A]], [[B]]
 ; SPLIT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX]]
-; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 3
+; SPLIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 8
 ; SPLIT-NEXT:    ret ptr [[GEP1]]
 ;
 ; LOWER-LABEL: define ptr @nonnegative_inbounds(
 ; LOWER-SAME: ptr [[P:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; LOWER-NEXT:    [[A:%.*]] = zext i32 [[X]] to i64
 ; LOWER-NEXT:    [[B:%.*]] = zext i32 [[Y]] to i64
-; LOWER-NEXT:    [[R:%.*]] = add i64 [[B]], 5
-; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[A]], [[R]]
+; LOWER-NEXT:    [[IDX:%.*]] = add i64 [[A]], [[B]]
 ; LOWER-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[IDX]]
-; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 3
+; LOWER-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 8
 ; LOWER-NEXT:    ret ptr [[UGLYGEP1]]
 ;
   %a = zext i32 %x to i64
