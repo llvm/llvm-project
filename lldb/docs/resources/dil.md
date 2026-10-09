@@ -15,10 +15,10 @@ consisting entirely of such structured syntax (and starting from a root
 variable).
 
 LLDB has always had two modes for accessing values in your program: path
-expressions, that commands like `frame variable` could understand and interpret;
-and "other" expressions, which could include expressions that `frame variable`
-could handle, but usually also included other pieces written in a source
-language, and which could be passed to the `expression` (aka `expr`)
+expressions, which commands like `frame variable` could understand and
+interpret; and "other" expressions, which could include expressions that `frame
+variable` could handle, but usually also included other pieces written in a
+source language, and which could be passed to the `expression` (aka `expr`)
 command. These "other" expressions were evaluated using a language-accurate
 parser for that language, and the results were obtained by running code in the
 target program.
@@ -32,15 +32,15 @@ the underlying layout of the object. Users generally want to see the semantic
 meaning of the object, not its implementation.
 
 LLDB solves this problem by using Data Formatters that take the types in the
-type system and produce an alternate layout for the types that correspond to how
+type system and produce an alternate layout for the types that corresponds to how
 the class is used (what the user really wants to see), not how it is
-implemented. These re-formatted representations include [Synthetic
+implemented. These reformatted representations include [Synthetic
 Children](https://lldb.llvm.org/use/variable.html#synthetic-children) which are
 constructs that are not actually part of the original data type, but which
-faciliate showing users what they expect to see. The path expressions give you
-access to these re-formatted representations. In addition, these re-formatted
+facilitate showing users what they expect to see. The path expressions give you
+access to these reformatted representations. In addition, these reformatted
 representations allow LLDB to display the dynamic type of an object, not just
-the static type. But these re-formatted representations mean nothing to the
+the static type. But these reformatted representations mean nothing to the
 underlying source language, so you cannot use them in the expression evaluator
 (which is based on the source language). This severely limited the utility of
 the reformatted values, since there was no way to perform logic operations (or
@@ -82,12 +82,12 @@ supporting such languages as Rust, Swift or Fortran.
 
 The actual formal definition of DIL can be found in an EBNF file in the LLDB
 source code repository in
-[dil-expr-lang.ebnf](../../dil-expr-lang.ebnf).
+[dil-expr-lang.ebnf](../dil-expr-lang.ebnf).
 
 
 Here is a quick summary of the types of expressions DIL can support:
 
-- Identifier names, boolean values, numbers, register names, `nullptr`
+- Identifier names, Boolean values, numbers, register names, `nullptr`
 - Logical-and, logical-or, logical-not: `&&`, `||`, `!`
 - Bitwise-and, exclusive-or, inclusive-or: `&`, `^`, `|`
 - Relational and equality expressions: `<`, `>`, `>=`, `<=`, `==`, `!=`
@@ -98,10 +98,11 @@ Here is a quick summary of the types of expressions DIL can support:
 - Pointer dereferencing: `->`, `*`
 - Address-of: `&`
 - Bitwise Not: `~`
-- Type casting, using C-Style syntax, for builtin types, class names, enum names and typedef names
+- Type casting, using C-style syntax, for builtin types, class names, enum names and typedef names
 - Assignment and Composite Assignment: `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`
 - Parenthesized expressions: `(`, `)`
 - Ternary conditional operator: `?` `:`
+- sizeof(): e.g. `sizeof(int)`
 
 NOTE: DIL only allows ONE assignment of any kind in any given expression. This
 is because with multiple assignments it becomes impossible to guarantee a
@@ -146,7 +147,7 @@ are:
 
 
 Historically `frame variable` was intended to handle path expressions (including
-re-formatted values), and `expression` was intended to handle any other
+reformatted values), and `expression` was intended to handle any other
 expressions users wanted to evaluate. Also `expression` will run code (in the
 target) if it needs to, whereas `frame variable` will not. In general this meant
 that languages that don't support IR interpretations must always run code in the
@@ -180,12 +181,12 @@ or overloaded operators), users should still use the full expression evaluator
 (`expr`).
 
 
-Currently`dwim-print`(aka `print` or `p`) dispatches expressions consisting only
-of indentifiers and `.` operators to `frame variable`. It sends everything else
-to the full expression evaluator. Therefore, to avoid the slow path of running
-code in the target (and potentially changing the program state) when it is not
-necessary, it is better for users to use either `v` or `expr` to explicitly, and
-avoid `dwim-print` or `p`.
+Currently `dwim-print` (aka `print` or `p`) dispatches expressions consisting
+only of identifiers and `.` operators to `frame variable`. It sends everything
+else to the full expression evaluator. Therefore, to avoid the slow path of
+running code in the target (and potentially changing the program state) when it
+is not necessary, it is better for users to use either `v` or `expr` explicitly,
+and avoid `dwim-print` or `p`.
 
 ### User options and flags to control using DIL
 
@@ -216,7 +217,7 @@ particularly important. The expression evaluator recognizes this, so it parses
 and JIT's the condition only the first time the breakpoint is hit; on subsequent
 hits it only has to call a simple function (and run it in the target). Even so,
 we have found that just avoiding the overhead of running the code in the target
-generally makes DIL interpreted breakpoints ~2.5x faster that expression
+generally makes DIL interpreted breakpoints up to ~2.5x faster than expression
 evaluated breakpoints.
 
 
@@ -264,22 +265,22 @@ go straight to the full expression evaluator.
 
 The main "knob" we have created for controlling the behavior of DIL
 programmatically is via the LLDB enumeration `DILMode`, defined in the
-lldb-enumerations.h file. There are three DILMode values:
+`lldb-enumerations.h` file. There are three `DILMode` values:
 
-- eDILModeSimple, which handles only identifiers and the `.` operator.
-- eDILModeLegacy, which handles what the old `frame variable` implementation handled, i.e. identifiers, integers, `.`, `->`, `*`, `&`, and `[]`.
-- eDILModeFull, which handles everything supported by DIL.
+- `eDILModeSimple`, which handles only identifiers and the `.` operator.
+- `eDILModeLegacy`, which handles what the old `frame variable` implementation handled, i.e. identifiers, integers, `.`, `->`, `*`, `&`, and `[]`.
+- `eDILModeFull`, which handles everything supported by DIL.
 
 
 #### TryDILFirst in EvaluateExpressionOptions, SBExpressionOptions
 
 We have added a new Boolean private member, `m_try_DIL_first`, to the
-EvaluateExpressionOptions class, along with the public functions
+`EvaluateExpressionOptions` class, along with the public functions
 `GetTryDILFirst` and `SetTryDILFirst`. The default value for `m_try_DIL_first`
 is `false`.
 
 `SBExpressionOptions` has corresponding `GetTryDILFirst` and `SetTryDILFirst`
-functions, which end up calling the EvaluateExpressionOptions functions.
+functions, which end up calling the `EvaluateExpressionOptions` functions.
 
 These methods are called from two different versions of
 `SBValue::CreateValueFromExpression` (which is an overloaded function, hence the
@@ -291,23 +292,23 @@ going straight to the expression evaluator.
 
 #### SBFrame::GetValueForVariablePathWithMode
 
-Initially we wanted to update SBFrame::GetValueForVariablePath directly to use
-DIL, controlled by a DILMode parameter. However, that involved making a breaking
-change to the LLDB API. So instead we added two new functions to SBFrame:
+Initially we wanted to update `SBFrame::GetValueForVariablePath` directly to use
+DIL, controlled by a `DILMode` parameter. However, that involved making a
+breaking change to the LLDB API. So instead we added two new functions to
+`SBFrame`:
 
-```
+```cpp
 lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
                                               lldb::DILMode mode,
                                               DynamicValueType use_dynamic);
 
 lldb::SBValue GetValueForVariablePathWithMode(const char *var_path,
                                               lldb::DILMode mode);
-
 ```
 
-As you might guess, they are similar to SBFrame::GetValueForVariablePath, but
-they use DIL and allow explicitly setting which DILMode to use, rather than 
-using the default (eDILModeFull).
+As you might guess, they are similar to `SBFrame::GetValueForVariablePath`, but
+they use DIL and allow explicitly setting which `DILMode` to use, rather than 
+using the default (`eDILModeFull`).
 
 
 #### Uses of DIL inside lldb-dap
@@ -316,12 +317,12 @@ There are four places in the lldb-dap code where it calls for expression
 evaluation:
 
 * The static function `EvaluateExpression`, in SetVariableRequestHandler.cpp
-* The `EvaluateVariableExpression`, in EvaluateRequestHandler.cpp
+* The static function `EvaluateVariableExpression`, in EvaluateRequestHandler.cpp
 * `SourceBreakpoint::BreakpointHitCallback` in SourceBreakpoint.cpp
 * `DataBreakpointInfoRequestHandler::Run` in DataBreakpointInfoRequestHandler.cpp
 
 In each of these places, if there's a stack frame, we call DIL via
-`SBFrame::GetValueWithVariablePathWithMode` on the expression, passing
+`SBFrame::GetValueForVariablePathWithMode` on the expression, passing
 `eDILModeFull`. If that fails to return a valid value, we fall back on calling
 the full expression evaluator (`SBFrame::EvaluateExpression`). If there's no
 stack frame then we call the expression evaluator directly
