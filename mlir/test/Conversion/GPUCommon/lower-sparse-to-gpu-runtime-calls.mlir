@@ -8,8 +8,10 @@ module attributes {gpu.container_module} {
   // CHECK: llvm.call @mgpuMemAlloc
   // CHECK: llvm.call @mgpuCreateCoo
   // CHECK: llvm.call @mgpuCreateDnVec
-  // CHECK: llvm.call @mgpuSpMVBufferSize
-  // CHECK: llvm.call @mgpuSpMV
+  // CHECK: %[[BUFFERSIZE_MA:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMVBufferSize(%[[BUFFERSIZE_MA]]
+  // CHECK: %[[SPMV_MA:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMV(%[[SPMV_MA]]
   // CHECK: llvm.call @mgpuDestroySpMat
   // CHECK: llvm.call @mgpuDestroyDnVec
   // CHECK: llvm.call @mgpuStreamSynchronize
@@ -25,6 +27,34 @@ module attributes {gpu.container_module} {
     %token8 = gpu.destroy_sp_mat async [%token7] %spmat
     %token9 = gpu.destroy_dn_tensor async [%token8] %dnvec
     gpu.wait [%token9]
+    return
+  }
+
+  // CHECK-LABEL: func @matvec_transpose
+  // CHECK: llvm.call @mgpuStreamCreate
+  // CHECK: llvm.call @mgpuMemAlloc
+  // CHECK: llvm.call @mgpuMemAlloc
+  // CHECK: llvm.call @mgpuCreateCoo
+  // CHECK: llvm.call @mgpuCreateDnVec
+  // CHECK: %[[BUFFERSIZE_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMVBufferSize(%[[BUFFERSIZE_MA]]
+  // CHECK: %[[SPMV_MA:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.call @mgpuSpMV(%[[SPMV_MA]]
+  // CHECK: llvm.call @mgpuDestroySpMat
+  // CHECK: llvm.call @mgpuDestroyDnVec
+  // CHECK: llvm.call @mgpuStreamSynchronize
+  // CHECK: llvm.call @mgpuStreamDestroy
+  func.func @matvec_transpose(%arg0: index) {
+    %token0 = gpu.wait async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    %spmat, %token3 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %dnvec, %token4 = gpu.create_dn_tensor async [%token3] %mem2, %arg0 : index into memref<?xf64>
+    %bufferSz, %token5 = gpu.spmv_buffer_size async [%token4] %spmat{TRANSPOSE}, %dnvec, %dnvec into f64
+    %token6 = gpu.spmv async [%token5] %spmat{TRANSPOSE}, %dnvec, %dnvec, %mem2 : memref<?xf64> into f64
+    %token7 = gpu.destroy_sp_mat async [%token6] %spmat
+    %token8 = gpu.destroy_dn_tensor async [%token7] %dnvec
+    gpu.wait [%token8]
     return
   }
 
