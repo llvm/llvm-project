@@ -1942,13 +1942,13 @@ BasicBlock *InnerLoopVectorizer::createScalarPreheader(StringRef Prefix) {
 /// Knowing that loop \p L executes a single vector iteration, add instructions
 /// that will get simplified and thus should not have any cost to \p
 /// InstsToIgnore.
-template <typename RangeT>
 static void addFullyUnrolledInstructionsToIgnore(
-    Loop *L, RangeT &&IndPhis, SmallPtrSetImpl<Instruction *> &InstsToIgnore) {
+    Loop *L, const LoopVectorizationLegality::InductionList &IL,
+    SmallPtrSetImpl<Instruction *> &InstsToIgnore) {
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (PHINode *IV : IndPhis) {
+  for (PHINode *IV : IL.keys()) {
     // The induction is free: a widened induction generates a vector phi with
     // its start value and an increment that is dead without a backedge.
     InstsToIgnore.insert(IV);
@@ -5510,8 +5510,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
   if (TC == VF && !Plan.hasTailFolded())
-    addFullyUnrolledInstructionsToIgnore(OrigLoop,
-                                         Legal->getInductionVars().keys(),
+    addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
 
   // Pre-compute the costs for branches except for the backedge, as the number
