@@ -4,7 +4,8 @@
 
 ; A direct output is the asm's result, so there is no memory to write it to.
 ; Picking a memory constraint for one is an error, not a crash, with either
-; instruction selector.
+; instruction selector. AArch64 can't fold a register operand to memory, so
+; "rm" keeps picking memory.
 
 ; CHECK: error: cannot handle direct memory outputs yet for constraint 'm'
 define i64 @rm_output() {

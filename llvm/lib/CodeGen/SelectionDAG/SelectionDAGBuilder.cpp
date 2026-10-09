@@ -1036,7 +1036,8 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
 void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                         unsigned MatchingIdx, const SDLoc &dl,
                                         SelectionDAG &DAG,
-                                        std::vector<SDValue> &Ops) const {
+                                        std::vector<SDValue> &Ops,
+                                        bool MayFoldRegister) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   InlineAsm::Flag Flag(Code, Regs.size());
@@ -1051,6 +1052,10 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
     const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     const TargetRegisterClass *RC = MRI.getRegClass(Regs.front());
     Flag.setRegClass(RC->getID());
+    if (MayFoldRegister) {
+      assert(Regs.size() == 1 && "only a single register can be folded");
+      Flag.setRegMayBeFolded(true);
+    }
   }
 
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);
@@ -10655,7 +10660,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         OpInfo.AssignedRegs.AddInlineAsmOperands(
             OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
                                   : InlineAsm::Kind::RegDef,
-            false, 0, DL, DAG, Info.AsmNodeOperands);
+            false, 0, DL, DAG, Info.AsmNodeOperands, OpInfo.MayFoldRegister);
       }
       break;
 
@@ -10821,8 +10826,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, DL, Info.Chain,
                                         &Info.Glue, &Call);
-      OpInfo.AssignedRegs.AddInlineAsmOperands(
-          InlineAsm::Kind::RegUse, false, 0, DL, DAG, Info.AsmNodeOperands);
+      OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, false,
+                                               0, DL, DAG, Info.AsmNodeOperands,
+                                               OpInfo.MayFoldRegister);
       break;
     }
 

@@ -6,15 +6,14 @@
 ; A direct output is the asm's result, so there is no memory to write it to.
 ; Picking a memory constraint for one is an error, not a crash.
 
-; "rm" picks memory, the most general constraint.
+; -O0 picks memory for "rm"; above -O0 the register is preferred.
 ; O0: error: cannot handle direct memory outputs yet for constraint 'm'
-; O2: error: cannot handle direct memory outputs yet for constraint 'm'
 define i32 @rm_i32() {
   %r = call i32 asm "# $0", "=rm"()
   ret i32 %r
 }
 
-; The same for a value no 'r' register can hold.
+; No 'r' register can hold an x87 value, so "rm" picks memory either way.
 ; O0: error: cannot handle direct memory outputs yet for constraint 'm'
 ; O2: error: cannot handle direct memory outputs yet for constraint 'm'
 define x86_fp80 @rm_x86_fp80() {
