@@ -5014,10 +5014,10 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
   EVT SubVT = V1.getValueType();
   EVT SubSVT = SubVT.getScalarType();
   unsigned SubNumElts = SubVT.getVectorNumElements();
-  unsigned SubVectorWidth = SubVT.getSizeInBits();
+  unsigned SubVecWidth = SubVT.getSizeInBits();
   EVT VT = EVT::getVectorVT(*DAG.getContext(), SubSVT, 2 * SubNumElts);
-  SDValue V = insertSubVector(DAG.getPOISON(VT), V1, 0, DAG, dl, SubVectorWidth);
-  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVectorWidth);
+  SDValue V = insertSubVector(DAG.getPOISON(VT), V1, 0, DAG, dl, SubVecWidth);
+  return insertSubVector(V, V2, SubNumElts, DAG, dl, SubVecWidth);
 }
 
 /// Returns a vector of specified type with all bits set.
