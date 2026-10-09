@@ -5,7 +5,7 @@ typedef unsigned char uint8x8_t __attribute__((neon_vector_type(8)));
 typedef __mfp8 mfloat8x8_t __attribute__((neon_vector_type(8)));
 
 void test_neon_vector(uint8x8_t src) {
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{has an unsupported vector kind}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'uint8x8_t'}}
 }
 
 // __mfp8 is an opaque 8-bit container, so it is accepted for the 8-bit
@@ -19,5 +19,5 @@ void test_mfp8_scalar(__mfp8 src) {
 }
 
 void test_mfp8_vector(mfloat8x8_t src) {
-  (void)__builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{has an unsupported vector kind}}
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'mfloat8x8_t'}}
 }

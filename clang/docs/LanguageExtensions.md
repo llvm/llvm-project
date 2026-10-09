@@ -3716,9 +3716,6 @@ The result is a scalar for a scalar input or a vector with the same number of el
 Supported vector kinds are GNU `vector_size` and Clang/OpenCL `ext_vector_type`.
 The result preserves which of those two vector kinds the input uses.
 Sizeless vectors and target-specific fixed-length vector kinds are rejected.
-Preserving both the lane count and a target-specific vector kind after widening
-the element type can produce an invalid type or ABI combination, such as a
-widened NEON vector.
 
 The source format suffix determines the interpretation and required integer element width:
 
@@ -3737,15 +3734,13 @@ The destination suffix determines the result element type:
 | `f32`  | `float`             |
 
 The `f16` suffix denotes `_Float16` in every language mode, including OpenCL.
-The three source suffixes and three destination suffixes form exactly nine
-builtin spellings.
 
 `Float8E5M3FNU` has no sign bit and no infinity encoding, and its exponent
 range exceeds that of `_Float16`. Its seven largest finite encodings therefore
 convert to infinity rather than exactly when the destination is `f16`; the
 `bf16` and `f32` destinations are exact.
 
-Only the signedness-free width of `bits` matters, so for an 8-bit format any 8-bit `char`, `signed char`, `unsigned char`, or `_BitInt(8)` of either signedness may be used.
+Only the signedness-free width of `bits` matters, so for an 8-bit format any 8-bit `char`, `signed char`, `unsigned char`, `_BitInt(8)` of either signedness, or `std::byte` may be used.
 On targets that have it, `__mfp8` is also accepted as a scalar source, because
 it is an opaque 8-bit floating-point container with no interpretation of its
 own. Its Neon vector types are rejected with the other target-specific vector
@@ -3753,11 +3748,13 @@ kinds.
 
 Integer promotions and the usual arithmetic conversions are not applied to
 `bits`, so an expression that C promotes to `int` needs an explicit cast back
-to an 8-bit container:
+to an 8-bit container. Integer constant expressions whose value fits in the
+format width, such as `0x38`, are accepted directly:
 
 ```c
 unsigned char b;
 __builtin_elementwise_convert_from_f8e5m2_f32((unsigned char)(b >> 1));
+__builtin_elementwise_convert_from_f8e5m2_f32(0x38);
 ```
 
 These builtins are available in C, C++, and OpenCL, but are not supported in constant expressions.
@@ -3765,6 +3762,10 @@ These builtins are available in C, C++, and OpenCL, but are not supported in con
 Each builtin maps to the `llvm.convert.from.arbitrary.fp` intrinsic; see its description in the LLVM Language Reference for the exact conversion semantics.
 NaN results follow LLVM's general NaN rules; the sign, quiet or signaling state,
 and payload are not guaranteed to be preserved.
+The conversion is exact or overflows to infinity, so the rounding mode has no
+effect on the result.
+As with other floating-point operations, `-ffinite-math-only` (implied by
+`-ffast-math`) makes the result undefined if it is a NaN or an infinity.
 Current generic code generation for the intrinsic is SelectionDAG-only.
 Other code-generation paths are future work.
 

@@ -3151,26 +3151,22 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
 }
 
 /// Decode a __builtin_elementwise_convert_from_<Src>_<Dst> builtin ID into its
-/// llvm.convert.from.arbitrary.fp interpretation, the source suffix as spelled,
-/// and the destination element type.
+/// llvm.convert.from.arbitrary.fp interpretation and destination element type.
 static bool getArbitraryFPConversion(ASTContext &Ctx, unsigned BuiltinID,
                                      StringRef &Interpretation,
-                                     StringRef &SrcSuffix, QualType &DstEltTy) {
+                                     QualType &DstEltTy) {
   switch (BuiltinID) {
 #define ARBITRARY_FP_FORMAT(Src, LLVMName)                                     \
   case Builtin::BI__builtin_elementwise_convert_from_##Src##_f16:              \
     Interpretation = LLVMName;                                                 \
-    SrcSuffix = #Src;                                                          \
     DstEltTy = Ctx.Float16Ty;                                                  \
     return true;                                                               \
   case Builtin::BI__builtin_elementwise_convert_from_##Src##_bf16:             \
     Interpretation = LLVMName;                                                 \
-    SrcSuffix = #Src;                                                          \
     DstEltTy = Ctx.BFloat16Ty;                                                 \
     return true;                                                               \
   case Builtin::BI__builtin_elementwise_convert_from_##Src##_f32:              \
     Interpretation = LLVMName;                                                 \
-    SrcSuffix = #Src;                                                          \
     DstEltTy = Ctx.FloatTy;                                                    \
     return true;
 #include "clang/Basic/ArbitraryFPFormats.def"
@@ -3179,15 +3175,36 @@ static bool getArbitraryFPConversion(ASTContext &Ctx, unsigned BuiltinID,
   }
 }
 
+/// Narrow an integer constant such as 0x38 to \p FormatBits if its value fits.
+/// Returns true if it does not.
+static bool narrowFPBitsConstant(Sema &S, CallExpr *TheCall,
+                                 unsigned FormatBits) {
+  Expr *Src = TheCall->getArg(0);
+
+  // Recheck on instantiation.
+  if (Src->isValueDependent()) {
+    return false;
+  }
+
+  std::optional<llvm::APSInt> Val = Src->getIntegerConstantExpr(S.Context);
+  if (!Val || Val->isNegative() || Val->getActiveBits() > FormatBits) {
+    return true;
+  }
+
+  QualType FitTy =
+      S.Context.getIntTypeForBitwidth(FormatBits, /*Signed=*/false);
+  TheCall->setArg(0, S.ImpCastExprToType(Src, FitTy, CK_IntegralCast).get());
+  return false;
+}
+
 static bool BuiltinElementwiseConvertFromArbitraryFP(Sema &S, CallExpr *TheCall,
                                                      unsigned BuiltinID) {
   if (S.checkArgCount(TheCall, 1))
     return true;
 
-  StringRef Interpretation, SrcSuffix;
+  StringRef Interpretation;
   QualType DstEltTy;
-  if (!getArbitraryFPConversion(S.Context, BuiltinID, Interpretation, SrcSuffix,
-                                DstEltTy))
+  if (!getArbitraryFPConversion(S.Context, BuiltinID, Interpretation, DstEltTy))
     llvm_unreachable("builtin is missing from ArbitraryFPFormats.def");
 
   if (S.checkFloatingPointTypeSupport(DstEltTy, TheCall->getBeginLoc(),
@@ -3219,21 +3236,26 @@ static bool BuiltinElementwiseConvertFromArbitraryFP(Sema &S, CallExpr *TheCall,
   const auto *SrcVecTy = SrcTy->getAs<VectorType>();
   QualType SrcEltTy = SrcVecTy ? SrcVecTy->getElementType() : SrcTy;
 
-  if (SrcTy->isSizelessVectorType() ||
-      (SrcVecTy && !SrcTy->isExtVectorType() &&
-       SrcVecTy->getVectorKind() != VectorKind::Generic))
-    return S.Diag(Src->getBeginLoc(), diag::err_arbitrary_fp_unsupported_vector)
-           << SrcTy << Src->getSourceRange();
+  auto DiagInvalidSrc = [&] {
+    return S.Diag(Src->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+           << /*ordinal=*/1 << /*scalar or vector*/ 5 << /*8-bit integer*/ 7
+           << /*no fp*/ 0 << SrcTy << Src->getSourceRange();
+  };
 
-  if (!SrcEltTy->isIntegerType() || SrcEltTy->isBooleanType() ||
-      SrcEltTy->isEnumeralType())
-    return S.Diag(Src->getBeginLoc(), diag::err_arbitrary_fp_source_type)
-           << SrcTy << SrcSuffix << FormatBits << Src->getSourceRange();
+  bool IsVendorVector = SrcVecTy && !SrcTy->isExtVectorType() &&
+                        SrcVecTy->getVectorKind() != VectorKind::Generic;
+  // std::byte is the C++ byte container; other enums are rejected.
+  bool IsIntElt = SrcEltTy->isStdByteType() ||
+                  (SrcEltTy->isIntegerType() && !SrcEltTy->isBooleanType() &&
+                   !SrcEltTy->isEnumeralType());
+  if (SrcTy->isSizelessVectorType() || IsVendorVector || !IsIntElt) {
+    return DiagInvalidSrc();
+  }
 
-  if (S.Context.getIntWidth(SrcEltTy) != FormatBits)
-    return S.Diag(Src->getBeginLoc(), diag::err_arbitrary_fp_source_width)
-           << (SrcVecTy != nullptr) << SrcEltTy << FormatBits << SrcSuffix
-           << Src->getSourceRange();
+  if (S.Context.getIntWidth(SrcEltTy) != FormatBits &&
+      (SrcVecTy || narrowFPBitsConstant(S, TheCall, FormatBits))) {
+    return DiagInvalidSrc();
+  }
 
   QualType DstTy = DstEltTy;
   if (SrcVecTy)

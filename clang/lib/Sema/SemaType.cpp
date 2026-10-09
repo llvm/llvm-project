@@ -922,24 +922,8 @@ bool Sema::checkFloatingPointTypeSupport(QualType Ty, SourceLocation Loc,
       if (DiagnoseTarget)
         return targetDiag(Loc, diag::err_type_unsupported) << "__bf16";
     }
-    return false;
   }
 
-  if (!getLangOpts().OpenCL ||
-      (Ty != Context.DoubleTy && Ty != Context.LongDoubleTy))
-    return false;
-
-  if (!getOpenCLOptions().isSupported("cl_khr_fp64", getLangOpts())) {
-    Diag(Loc, diag::err_opencl_requires_extension)
-        << 0 << Ty
-        << (getLangOpts().getOpenCLCompatibleVersion() >= 300
-                ? "cl_khr_fp64 and __opencl_c_fp64"
-                : "cl_khr_fp64");
-    return true;
-  }
-
-  if (!getOpenCLOptions().isAvailableOption("cl_khr_fp64", getLangOpts()))
-    Diag(Loc, diag::ext_opencl_double_without_pragma);
   return false;
 }
 
@@ -1222,7 +1206,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.LongDoubleTy;
     else
       Result = Context.DoubleTy;
-    S.checkFloatingPointTypeSupport(Result, DS.getTypeSpecTypeLoc());
+    if (S.getLangOpts().OpenCL) {
+      if (!S.getOpenCLOptions().isSupported("cl_khr_fp64", S.getLangOpts()))
+        S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
+            << 0 << Result
+            << (S.getLangOpts().getOpenCLCompatibleVersion() >= 300
+                    ? "cl_khr_fp64 and __opencl_c_fp64"
+                    : "cl_khr_fp64");
+      else if (!S.getOpenCLOptions().isAvailableOption("cl_khr_fp64", S.getLangOpts()))
+        S.Diag(DS.getTypeSpecTypeLoc(), diag::ext_opencl_double_without_pragma);
+    }
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&

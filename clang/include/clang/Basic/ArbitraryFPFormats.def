@@ -15,7 +15,8 @@
 // be accepted by APFloat::getArbitraryFPSemantics, or lowering fails.
 //
 // The sub-byte encodings (Float6E3M2FN, Float6E2M3FN, Float4E2M1FN) lower but
-// are not exposed; Clang cannot spell their vector element types coherently.
+// are not exposed: _BitInt(6) vectors are rejected, and a _BitInt(4) vector's
+// sizeof disagrees with its bit-packed IR type.
 //
 //===----------------------------------------------------------------------===//
 

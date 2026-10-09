@@ -2,7 +2,7 @@
 // RUN:   -fsyntax-only -verify %s
 
 template <typename Src> float convert(Src src) {
-  return __builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{argument type 'unsigned short' must be exactly 8 bits wide to hold an 'f8e5m2' encoding}}
+  return __builtin_elementwise_convert_from_f8e5m2_f32(src); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'unsigned short')}}
 }
 
 float instantiate_valid(unsigned char src) { return convert(src); }
@@ -22,6 +22,29 @@ static_assert(
 using v4u8 = unsigned char __attribute__((ext_vector_type(4)));
 using v4f32 = float __attribute__((ext_vector_type(4)));
 static_assert(__is_same(decltype(deduced_result(v4u8{})), v4f32), "");
+
+template <int N> float convert_constant() {
+  return __builtin_elementwise_convert_from_f8e5m2_f32(N); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'int')}}
+}
+
+float instantiate_constant() { return convert_constant<0x38>(); }
+
+// expected-note@+1 {{in instantiation of function template specialization 'convert_constant<256>' requested here}}
+float instantiate_constant_invalid() { return convert_constant<0x100>(); }
+
+namespace std {
+enum class byte : unsigned char {};
+} // namespace std
+
+enum class other_byte : unsigned char {};
+
+void test_byte(std::byte b, other_byte o) {
+  static_assert(
+      __is_same(decltype(__builtin_elementwise_convert_from_f8e5m2_f32(b)),
+                float),
+      "");
+  (void)__builtin_elementwise_convert_from_f8e5m2_f32(o); // expected-error {{1st argument must be a scalar or vector of 8-bit integer types (was 'other_byte')}}
+}
 
 void noexcept_check(unsigned char src) {
   static_assert(
