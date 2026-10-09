@@ -787,14 +787,15 @@ static MachineBasicBlock *
 LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
                  const WebAssemblySubtarget *Subtarget,
                  const TargetInstrInfo &TII) {
-  MachineInstr &CallParams = *CallResults.getPrevNode();
-  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
   assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS ||
          CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS);
+  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() == (IsRetCall ? WebAssembly::RET_CALL_PARAMS
+                                            : WebAssembly::CALL_PARAMS));
 
   bool IsIndirect =
       CallParams.getOperand(0).isReg() || CallParams.getOperand(0).isFI();
-  bool IsRetCall = CallResults.getOpcode() == WebAssembly::RET_CALL_RESULTS;
 
   bool IsFuncrefCall = false;
   if (IsIndirect && CallParams.getOperand(0).isReg()) {
