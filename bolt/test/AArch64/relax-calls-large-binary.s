@@ -15,7 +15,7 @@
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 ## Constant islands at the end of functions foo(), bar(), and _start() make each
-## one of them ~112MB in size. Thus the total code size exceeds 300MB.
+## one of them ~86 MiB in size. Thus the total code size exceeds 256 MiB.
 
   .text
   .global foo
@@ -24,7 +24,7 @@ foo:
   bl _start
   bl bar
   ret
-  .space 0x7000000
+  .space 0x5600000
   .size foo, .-foo
 
   .global bar
@@ -33,7 +33,7 @@ bar:
   bl foo
   bl _start
   ret
-  .space 0x7000000
+  .space 0x5600000
   .size bar, .-bar
 
   .global hot
@@ -77,5 +77,5 @@ _start:
   bl bar
   bl hot
   ret
-  .space 0x7000000
+  .space 0x5600000
   .size _start, .-_start
