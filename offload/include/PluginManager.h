@@ -196,10 +196,6 @@ void initRuntime();
 /// Deinitialize the plugin and delete it.
 void deinitRuntime();
 
-extern PluginManager *PM;
-extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
-extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
-
 namespace llvm::omp::target::helpers {
 // Helper functions to iterate over different elements provided by liboffload.
 template <typename ElemTy, typename IterateFn, typename CallbackTy>
