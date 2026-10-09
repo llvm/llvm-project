@@ -1840,9 +1840,15 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   // Make sure the mask elements make sense.
   int V1Size =
       cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-  for (int Elem : Mask)
-    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
-      return false;
+  // Avoid overflow issues. Enforce that (V1Size * 2) < INT_MAX because
+  // 1. V1Size is int here.
+  // 2. We should be able to refer to all the elements of the concatenated
+  //    vector, with max index being (V1Size * 2 - 1), as per langref.
+  if (V1Size > INT_MAX / 2 + 1)
+    return false;
+  int MaxElem = *max_element(Mask);
+  if (MaxElem != PoisonMaskElem && (MaxElem + 1) / 2 > V1Size)
+    return false;
 
   if (isa<ScalableVectorType>(V1->getType()))
     if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
