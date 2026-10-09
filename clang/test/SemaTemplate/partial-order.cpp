@@ -79,8 +79,8 @@ struct S {
   using type = int;
 };
 
-// T is used in a non-deduced context and has no value, so deduction fails in
-// both directions ([temp.deduct.partial]p12).
+// T and Ts are used in a non-deduced context and have no value,
+// so deduction fails in // both directions ([temp.deduct.partial]p12).
 template <class T> int add(typename T::type); // #gh27357-1
 template <class T, class... Ts>
 int add(typename T::type, typename Ts::type...); // #gh27357-2
