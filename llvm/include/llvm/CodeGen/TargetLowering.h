@@ -5897,6 +5897,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandLoopDependenceMask(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand MASK_BEFOREFIRST nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandMaskBeforeFirst(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))
