@@ -2948,3 +2948,33 @@ define i32 @sub_const_or_no_disjoint(i32 %x) {
   %r = sub i32 100, %a
   ret i32 %r
 }
+
+; A - (B + C) --> (A - B) - C when (A - B) already exists, then
+; (X - (X & M)) -> (X & ~M) folds further.
+define i64 @sub_reuse_existing_sub(i64 %a, i64 %b) {
+; CHECK-LABEL: @sub_reuse_existing_sub(
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[D]], 3
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %d = sub i64 %a, %b
+  %m = and i64 %d, -4
+  %s = add i64 %b, %m
+  %r = sub i64 %a, %s
+  ret i64 %r
+}
+
+; Same fold with sdiv/shl form, further reduced by X - D*(X/D) -> X % D.
+define i64 @sub_reuse_existing_sdiv(i64 %a, i64 %b) {
+; CHECK-LABEL: @sub_reuse_existing_sdiv(
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = srem i64 [[D]], 4
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %d = sub nsw i64 %a, %b
+  %q = sdiv i64 %d, 4
+  %p = shl nsw i64 %q, 2
+  %s = add i64 %b, %p
+  %r = sub i64 %a, %s
+  ret i64 %r
+}

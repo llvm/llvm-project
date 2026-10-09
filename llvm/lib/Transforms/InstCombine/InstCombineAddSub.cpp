@@ -2561,6 +2561,30 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return Sub;
   }
 
+  // A - (B + C) --> (A - C) - B  or  (A - B) - C
+  // If A - B or A - C already exists as an instruction, reuse it.
+  {
+    Value *B, *C;
+    if (match(Op1, m_OneUse(m_Add(m_Value(B), m_Value(C)))) &&
+        !isa<Constant>(Op0)) {
+      for (User *U : Op0->users()) {
+        if (U == &I) continue;
+        auto *SubUser = dyn_cast<Instruction>(U);
+        if (!SubUser || SubUser->getOpcode() != Instruction::Sub) continue;
+        if (SubUser->getOperand(0) != Op0) continue;
+        Value *SubRHS = SubUser->getOperand(1);
+        if (SubRHS == B) {
+          // (A - B) exists, rewrite A - (B + C) as (A - B) - C
+          return BinaryOperator::CreateSub(SubUser, C);
+        }
+        if (SubRHS == C) {
+          // (A - C) exists, rewrite A - (B + C) as (A - C) - B
+          return BinaryOperator::CreateSub(SubUser, B);
+        }
+      }
+    }
+  }
+
   // (X + C0) - (Y + C1) --> (X - Y) + (C0 - C1)
   {
     Constant *CX, *CY;
