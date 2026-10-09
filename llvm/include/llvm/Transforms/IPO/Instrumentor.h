@@ -1119,6 +1119,106 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   }
 };
 
+/// The instrumentation opportunity for atomic RMW instructions.
+struct AtomicRMWIO final : public InstructionIO<Instruction::AtomicRMW> {
+  AtomicRMWIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
+
+  /// The selector of arguments for atomic RMW opportunities.
+  ///{
+  enum ConfigKind {
+    PassPointer = 0,
+    ReplacePointer,
+    PassPointerAS,
+    PassBasePointerInfo,
+    PassValOperand,
+    PassPrevValue,
+    ReplacePrevValue,
+    PassValueSize,
+    PassAlignment,
+    PassValueTypeId,
+    PassValueSubTypeId,
+    PassAtomicityOrdering,
+    PassSyncScopeId,
+    PassIsVolatile,
+    PassOperation,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+  ///}
+
+  /// Get the type of the modified value.
+  Type *getValueType(InstrumentorIRBuilderTy &IIRB) const {
+    return IIRB.Int64Ty;
+  }
+
+  /// Initialize the atomic RMW opportunity using the instrumentation config \p
+  /// IConf and the user config \p UserConfig.
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
+
+  /// Getters and setters for the arguments of the instrumentation function for
+  /// the atomic RMW opportunity.
+  ///{
+  LLVM_ABI static Value *getPointer(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *setPointer(Value &V, Value &NewV,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointerAS(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getBasePointerInfo(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValue(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAlignment(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueTypeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSubTypeId(Value &V, Type &Ty,
+                                           InstrumentationConfig &IConf,
+                                           InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAtomicityOrdering(Value &V, Type &Ty,
+                                              InstrumentationConfig &IConf,
+                                              InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSyncScopeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValOperand(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getOperation(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isVolatile(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  ///}
+
+  /// Create the atomic RMW opportunities for PRE and POST positions.
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO =
+        IConf.allocate<AtomicRMWIO>(InstrumentationLocation::INSTRUCTION_PRE);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO =
+        IConf.allocate<AtomicRMWIO>(InstrumentationLocation::INSTRUCTION_POST);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
 /// The instrumentation opportunity for type cast instructions.
 /// This includes PtrToInt, IntToPtr, Trunc, ZExt, SExt, FPToUI, FPToSI,
 /// UIToFP, SIToFP, FPTrunc, FPExt, AddrSpaceCast, and BitCast.
