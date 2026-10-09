@@ -846,7 +846,7 @@ bool Semantics::Perform() {
     }
   }
   if (!(AnalyzeLabels(context_, program_) &&
-          parser::CanonicalizeDo(program_) && // force line break
+          parser::CanonicalizeDo(context_.messages(), program_) &&
           CanonicalizeAcc(context_.messages(), program_) &&
           CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
           PerformStatementSemantics(context_, program_) &&
