@@ -41,8 +41,20 @@ void *memcpy(void *dst, const void *src, size_t c);
 ssize_t recv(int, void *, size_t, int);
 ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
 ssize_t send(int, const void *, size_t, int);
+#ifndef __cplusplus
+// Under _GNU_SOURCE in C mode, glibc's <sys/socket.h> declares sendto's
+// dest_addr parameter as a transparent_union (__CONST_SOCKADDR_ARG) so callers
+// can pass struct sockaddr_in *, etc. without casting to struct sockaddr *.
+struct sockaddr_in;
+typedef union {
+  const struct sockaddr *__sockaddr__;
+  const struct sockaddr_in *__sockaddr_in__;
+} __CONST_SOCKADDR_ARG __attribute__((transparent_union));
+ssize_t sendto(int, const void *, size_t, int, __CONST_SOCKADDR_ARG, socklen_t);
+#else
 ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *,
                socklen_t);
+#endif
 typedef unsigned long nfds_t;
 #endif
 int poll(struct pollfd *, nfds_t, int);
@@ -375,15 +387,13 @@ void call_send_runtime(int fd, int n) {
 }
 
 #if !defined(__cplusplus) && !defined(USE_BUILTINS)
-typedef union {
-  const struct sockaddr *__sockaddr__;
-} __CONST_SOCKADDR_ARG __attribute__((__transparent_union__));
-ssize_t sendto(int, const void *, size_t, int, __CONST_SOCKADDR_ARG, socklen_t);
-
-void call_sendto_transparent_union(int fd, const struct sockaddr *addr) {
+void call_sendto_transparent_union(int fd, const struct sockaddr *addr,
+                                   const struct sockaddr_in *addr_in) {
   char buf[10];
   sendto(fd, buf, 10, 0, addr, 0);
   sendto(fd, buf, 11, 0, addr, 0); // expected-warning {{'sendto' will always read past the end of the source buffer; source buffer has size 10, but the size is 11}}
+  sendto(fd, buf, 10, 0, addr_in, 0);
+  sendto(fd, buf, 11, 0, addr_in, 0); // expected-warning {{'sendto' will always read past the end of the source buffer; source buffer has size 10, but the size is 11}}
 }
 #endif
 
