@@ -125,6 +125,21 @@ hsa_status_t hsa_amd_memory_unlock(void* host_ptr);
 
 hsa_status_t hsa_amd_memory_fill(void *ptr, uint32_t value, size_t count);
 
+typedef enum hsa_amd_svm_attribute_s {
+  HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG = 0,
+  HSA_AMD_SVM_ATTRIB_AGENT_ACCESSIBLE = 0x200,
+} hsa_amd_svm_attribute_t;
+
+typedef struct hsa_amd_svm_attribute_pair_s {
+  uint64_t attribute;
+  uint64_t value;
+} hsa_amd_svm_attribute_pair_t;
+
+hsa_status_t
+hsa_amd_svm_attributes_set(void *ptr, size_t size,
+                           hsa_amd_svm_attribute_pair_t *attribute_list,
+                           size_t attribute_count);
+
 typedef enum hsa_amd_event_type_s {
   HSA_AMD_GPU_MEMORY_FAULT_EVENT = 0,
 } hsa_amd_event_type_t;
@@ -163,7 +178,8 @@ typedef enum {
 typedef enum {
   HSA_EXT_POINTER_TYPE_UNKNOWN = 0,
   HSA_EXT_POINTER_TYPE_HSA = 1,
-  HSA_EXT_POINTER_TYPE_LOCKED = 2
+  HSA_EXT_POINTER_TYPE_LOCKED = 2,
+  HSA_EXT_POINTER_TYPE_RESERVED_ADDR = 5
 } hsa_amd_pointer_type_t;
 
 typedef struct hsa_amd_pointer_info_s {
@@ -174,6 +190,8 @@ typedef struct hsa_amd_pointer_info_s {
   size_t sizeInBytes;
   void *userData;
   hsa_agent_t agentOwner;
+  uint32_t global_flags;
+  bool registered;
 } hsa_amd_pointer_info_t;
 
 typedef enum {
@@ -210,6 +228,10 @@ hsa_status_t hsa_amd_profiling_set_profiler_enabled(hsa_queue_t *queue,
 
 hsa_status_t hsa_amd_vmem_address_reserve(void **va, size_t size,
                                           uint64_t address, uint64_t flags);
+
+typedef enum hsa_amd_vmem_address_reserve_flag_s {
+  HSA_AMD_VMEM_ADDRESS_NO_REGISTER = (1UL << 0),
+} hsa_amd_vmem_address_reserve_flag_t;
 
 hsa_status_t hsa_amd_vmem_address_free(void *va, size_t size);
 
