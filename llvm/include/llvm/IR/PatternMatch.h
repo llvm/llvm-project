@@ -2002,6 +2002,21 @@ m_ExtractElt(const Val_t &Val, const Idx_t &Idx) {
   return TwoOps_match<Val_t, Idx_t, Instruction::ExtractElement>(Val, Idx);
 }
 
+/// Matches BitInsertInst.
+template <typename Base_t, typename Val_t, typename Off_t>
+inline ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>
+m_BitInsert(const Base_t &Base, const Val_t &Val, const Off_t &Off) {
+  return ThreeOps_match<Base_t, Val_t, Off_t, Instruction::BitInsert>(Base, Val,
+                                                                      Off);
+}
+
+/// Matches BitExtractInst.
+template <typename Src_t, typename Off_t>
+inline TwoOps_match<Src_t, Off_t, Instruction::BitExtract>
+m_BitExtract(const Src_t &Src, const Off_t &Off) {
+  return TwoOps_match<Src_t, Off_t, Instruction::BitExtract>(Src, Off);
+}
+
 /// Matches shuffle.
 template <typename T0, typename T1, typename T2> struct Shuffle_match {
   T0 Op1;
