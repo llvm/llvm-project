@@ -3704,8 +3704,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
         RemRequiresNeg = true;
       else if (PredRem == ICmpInst::ICMP_SLE && RemC->isNegative())
         RemRequiresNeg = true;
-      else
-        return nullptr;
 
       // Check if the X icmp implies the opposite sign.
       if (RemRequiresPos) {
@@ -3715,7 +3713,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
         if ((PredX == ICmpInst::ICMP_SLT && XC->sle(1)) ||
             (PredX == ICmpInst::ICMP_SLE && XC->isNonPositive()))
           return ConstantInt::getFalse(LHS->getType());
-      } else {
+      }
+      if (RemRequiresNeg) {
         // RemRequiresNeg: srem requires X < 0. Contradict if X >= 0.
         // sgt X, K: X > K, implies X >= 0 when K >= -1
         // sge X, K: X >= K, implies X >= 0 when K >= 0
