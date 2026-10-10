@@ -98,7 +98,7 @@ public:
   void setScratchSize(unsigned CC, const MCExpr *Val, MCContext &Ctx);
 
   // Set the stack frame size of a function in the metadata.
-  void setFunctionScratchSize(StringRef FnName, unsigned Val);
+  void setFunctionScratchSize(StringRef FnName, uint64_t Val);
 
   // Set the amount of LDS used in bytes in the metadata. This is an optional
   // advisory record for logging etc; wave dispatch actually uses the rsrc1

@@ -55,7 +55,7 @@ public:
 
 protected:
   virtual void emitVersion() = 0;
-  virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  virtual void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
   virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
                                const MachineFunction &MF,
@@ -104,18 +104,18 @@ protected:
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
 
-  void emitKernelArg(const Argument &Arg, unsigned &Offset,
+  void emitKernelArg(const Argument &Arg, uint64_t &Offset,
                      msgpack::ArrayDocNode Args);
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, Align Alignment,
-                     StringRef ValueKind, unsigned &Offset,
+                     StringRef ValueKind, uint64_t &Offset,
                      msgpack::ArrayDocNode Args,
                      MaybeAlign PointeeAlign = std::nullopt,
                      StringRef Name = "", StringRef TypeName = "",
                      StringRef BaseTypeName = "", StringRef ActAccQual = "",
                      StringRef AccQual = "", StringRef TypeQual = "");
 
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                             msgpack::ArrayDocNode Args) override;
 
   msgpack::DocNode &getRootMetadata(StringRef Key) {
@@ -139,7 +139,7 @@ public:
 class MetadataStreamerMsgPackV5 : public MetadataStreamerMsgPackV4 {
 protected:
   void emitVersion() override;
-  void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
+  void emitHiddenKernelArgs(const MachineFunction &MF, uint64_t &Offset,
                             msgpack::ArrayDocNode Args) override;
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
