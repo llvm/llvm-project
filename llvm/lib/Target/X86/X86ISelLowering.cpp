@@ -65349,7 +65349,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
 
     // flags -> EFLAGS
-    if (StringRef("{flags}").equals_insensitive(Constraint))
+    // Only allow for clobber.
+    if (StringRef("{flags}").equals_insensitive(Constraint) && VT == MVT::Other)
       return std::make_pair(X86::EFLAGS, &X86::CCRRegClass);
 
     // dirflag -> DF
