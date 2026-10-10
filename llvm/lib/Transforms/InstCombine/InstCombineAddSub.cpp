@@ -2050,6 +2050,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldDivCeil(I))
     return Res;
 
+  // (A | -2) + A -> (A - 1) & -2
   APInt NegTwo(Ty->getScalarSizeInBits(), -2, /*isSigned=*/true);
   if (match(&I, m_c_BinOp(m_OneUse(m_Or(m_Value(A), m_SpecificInt(NegTwo))),
                           m_Deferred(A)))) {
