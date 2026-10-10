@@ -2331,3 +2331,57 @@ define i32 @test_plui_h_remat(ptr %p) nounwind {
   ; Use the constant again - it should be rematerialized, not spilled/reloaded
   ret i32 u0x7fc07fc0
 }
+
+define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulh_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulh a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhr_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhr a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhr.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhu_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhru_u32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhru_u32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhru a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhru.u32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
+
+define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
+; CHECK-LABEL: test_mulhrsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhrsu a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
+  ret i32 %res
+}
