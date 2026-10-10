@@ -571,11 +571,12 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
 
 /// Match and rewrite SpMV kernel.
 static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
-                                 linalg::GenericOp op, bool enableRT) {
+                                 linalg::GenericOp op, bool enableRT,
+                                 gpu::TransposeMode modeA) {
   Location loc = op.getLoc();
   Value a = op.getOperand(0);
   Value x = op.getOperand(1);
-  Value y = op.getOperand(2); // we have y = Ax
+  Value y = op.getOperand(2); // we have y = op(A)x
   SmallVector<Value> tokens;
 
   // Only admissible sparse matrix format and dense vectors (no BSR).
@@ -591,8 +592,11 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   //   x : memX           -> vecX
   //   y : memY           -> vecY
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
-  Value szY = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
-  Value szX = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  bool isTranspose = modeA != gpu::TransposeMode::NON_TRANSPOSE;
+  Value szX = isTranspose ? rows : cols;
+  Value szY = isTranspose ? cols : rows;
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
   Value memV = ToValuesOp::create(rewriter, loc, a);
@@ -613,7 +617,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, szY, szX,
+      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, rows, cols,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
@@ -629,7 +633,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMV.
   auto bufferComp = gpu::SpMVBufferSizeOp::create(
-      rewriter, loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
+      rewriter, loc, indexTp, tokenTp, token, modeA, spMatA, dnX, dnY,
       /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -638,9 +642,9 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp =
-      gpu::SpMVOp::create(rewriter, loc, tokenTp, token, spMatA, dnX, dnY,
-                          /*computeType=*/dnYType, buffer);
+  auto spmvComp = gpu::SpMVOp::create(rewriter, loc, tokenTp, token, modeA,
+                                      spMatA, dnX, dnY,
+                                      /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -669,11 +673,13 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
 /// Match and rewrite SpMM kernel.
 static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
-                                 linalg::GenericOp op, bool enableRT) {
+                                 linalg::GenericOp op, bool enableRT,
+                                 gpu::TransposeMode modeA,
+                                 gpu::TransposeMode modeB) {
   Location loc = op.getLoc();
   Value a = op.getOperand(0);
   Value b = op.getOperand(1);
-  Value c = op.getOperand(2); // we have C = AB
+  Value c = op.getOperand(2); // we have C = op(A)op(B)
   SmallVector<Value> tokens;
 
   // Only admissible sparse matrix format and dense matrices (no BSR).
@@ -689,9 +695,15 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   //   b : bufB           -> matB
   //   c : bufC           -> matC
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
-  Value szm = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
-  Value szk = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
-  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
+  Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  bool isTransposeA = modeA != gpu::TransposeMode::NON_TRANSPOSE;
+  bool isTransposeB = modeB != gpu::TransposeMode::NON_TRANSPOSE;
+  Value szm = isTransposeA ? cols : rows;
+  Value szk = isTransposeA ? rows : cols;
+  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, isTransposeB ? 0 : 1);
+  SmallVector<Value> bSizes = isTransposeB ? SmallVector<Value>{szn, szk}
+                                           : SmallVector<Value>{szk, szn};
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
   Value memV = ToValuesOp::create(rewriter, loc, a);
@@ -712,13 +724,12 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, aTp, spMatHandleTp, tokenTp, token, szm, szk,
+      genSpMat(rewriter, loc, aTp, spMatHandleTp, tokenTp, token, rows, cols,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB =
-      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
-                                    token, matB, SmallVector<Value>{szk, szn});
+  auto dmatB = gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp,
+                                             tokenTp, token, matB, bSizes);
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   auto dmatC =
@@ -730,7 +741,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMM.
   auto bufferComp = gpu::SpMMBufferSizeOp::create(
-      rewriter, loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
+      rewriter, loc, indexTp, tokenTp, token, modeA, modeB, spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -740,9 +751,9 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Perform the SpMM.
-  auto spmmComp =
-      gpu::SpMMOp::create(rewriter, loc, tokenTp, token, spMatA, dnB, dnC,
-                          /*computeType=*/dnCType, buffer);
+  auto spmmComp = gpu::SpMMOp::create(rewriter, loc, tokenTp, token, modeA,
+                                      modeB, spMatA, dnB, dnC,
+                                      /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -1324,8 +1335,13 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     if (numLoops == 2 && numTensors == 3 &&
         linalg::isParallelIterator(iteratorTypes[0]) &&
         linalg::isReductionIterator(iteratorTypes[1]) &&
-        maps == infer({{i, j}, {j}, {i}}) && matchSumOfMultOfArgs(op)) {
-      return rewriteSpMV(rewriter, op, enableRT);
+        matchSumOfMultOfArgs(op)) {
+      if (maps == infer({{i, j}, {j}, {i}}))
+        return rewriteSpMV(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      if (maps == infer({{j, i}, {j}, {i}}))
+        return rewriteSpMV(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE);
     }
 
     // Recognize a SpGEMM, 2:4-SpMM, or SpMM kernel.
@@ -1333,12 +1349,29 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         linalg::isParallelIterator(iteratorTypes[0]) &&
         linalg::isParallelIterator(iteratorTypes[1]) &&
         linalg::isReductionIterator(iteratorTypes[2]) &&
-        maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
-      if (!isDenseTensor(op.getOperand(0)) && !isDenseTensor(op.getOperand(1)))
-        return rewriteSpGEMM(rewriter, op, enableRT);
-      if (isConversionInto24(op.getOperand(0)))
-        return rewrite2To4SpMM(rewriter, op);
-      return rewriteSpMM(rewriter, op, enableRT);
+        matchSumOfMultOfArgs(op)) {
+      if (maps == infer({{i, k}, {k, j}, {i, j}})) {
+        if (!isDenseTensor(op.getOperand(0)) &&
+            !isDenseTensor(op.getOperand(1)))
+          return rewriteSpGEMM(rewriter, op, enableRT);
+        if (isConversionInto24(op.getOperand(0)))
+          return rewrite2To4SpMM(rewriter, op);
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      }
+      if (maps == infer({{k, i}, {k, j}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      if (maps == infer({{i, k}, {j, k}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE,
+                           gpu::TransposeMode::TRANSPOSE);
+      if (maps == infer({{k, i}, {j, k}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE,
+                           gpu::TransposeMode::TRANSPOSE);
     }
 
     // Recognize a SDDMM kernel.
