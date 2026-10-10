@@ -155,3 +155,45 @@ define float @fpext_f16_to_f32(half %x) nounwind {
   %a = fpext half %x to float
   ret float %a
 }
+
+define double @fpext_f16_to_f64(half %x) nounwind {
+; RV32-LABEL: fpext_f16_to_f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    fcvt.d.h fa0, fa0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: fpext_f16_to_f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    fcvt.d.h fa0, fa0
+; RV64-NEXT:    ret
+;
+; RV32ZFHMIN-LABEL: fpext_f16_to_f64:
+; RV32ZFHMIN:       # %bb.0:
+; RV32ZFHMIN-NEXT:    fcvt.d.h fa0, fa0
+; RV32ZFHMIN-NEXT:    ret
+;
+; RV64ZFHMIN-LABEL: fpext_f16_to_f64:
+; RV64ZFHMIN:       # %bb.0:
+; RV64ZFHMIN-NEXT:    fcvt.d.h fa0, fa0
+; RV64ZFHMIN-NEXT:    ret
+;
+; RV32NOZFH-LABEL: fpext_f16_to_f64:
+; RV32NOZFH:       # %bb.0:
+; RV32NOZFH-NEXT:    addi sp, sp, -16
+; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    call __extendhfdf2
+; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32NOZFH-NEXT:    addi sp, sp, 16
+; RV32NOZFH-NEXT:    ret
+;
+; RV64NOZFH-LABEL: fpext_f16_to_f64:
+; RV64NOZFH:       # %bb.0:
+; RV64NOZFH-NEXT:    addi sp, sp, -16
+; RV64NOZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64NOZFH-NEXT:    call __extendhfdf2
+; RV64NOZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64NOZFH-NEXT:    addi sp, sp, 16
+; RV64NOZFH-NEXT:    ret
+  %a = fpext half %x to double
+  ret double %a
+}
