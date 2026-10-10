@@ -30,17 +30,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // - the operation that is done by the object from get_current_thread_instance calls
 // - and the operation that is passed to a for_each operating on the _Tp object
 // since there is no mutex guarding between them
+// Tag is to allow creating disjoint singletons of this class since they hold global state.
 template <class Tp, class Tag>
 class thread_local_container {
   static void empty_callback(Tp&) noexcept {}
+  inline static function_ref<void(Tp&) noexcept> pre_dtor_callback_ = std::cw<empty_callback>;
 
   struct thread_entry {
     Tp instance_;
-    function_ref<void(Tp&) noexcept> pre_dtor_callback_;
 
-    thread_entry(function_ref<void(Tp&) noexcept> cb) : instance_(), pre_dtor_callback_(cb) {
-      register_instance(instance_);
-    }
+    thread_entry() : instance_() { register_instance(instance_); }
     thread_entry(const thread_entry&) = delete;
     thread_entry(thread_entry&&)      = delete;
 
@@ -76,9 +75,9 @@ public:
   thread_local_container()                         = delete;
   thread_local_container(thread_local_container&&) = delete;
 
-  static Tp& get_current_thread_instance(function_ref<void(Tp&) noexcept> cb = cw<&empty_callback>) {
+  static Tp& get_current_thread_instance() {
     if (!thread_entry_.has_value()) {
-      auto& entry = thread_entry_.emplace(cb);
+      auto& entry = thread_entry_.emplace();
       return entry.instance_;
     }
     return thread_entry_->instance_;
@@ -91,6 +90,8 @@ public:
       f(*instance);
     }
   }
+
+  static void set_pre_destroy_callback(function_ref<void(Tp&) noexcept> cb) { pre_dtor_callback_ = cb; }
 };
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
