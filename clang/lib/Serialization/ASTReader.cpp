@@ -1861,6 +1861,57 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   }
 }
 
+void ASTReader::buildLoadedInputFiles() {
+  LoadedInputFiles.emplace();
+  // Modules are visited in index order, which is fixed before this runs, so the
+  // copy chosen for a file is the same on every write of this module.
+  for (ModuleFile &F : ModuleMgr) {
+    for (unsigned I = 0, N = F.InputFilesLoaded.size(); I != N; ++I) {
+      InputFileInfo FI = getInputFileInfo(F, I + 1);
+      if (FI.UnresolvedImportedFilename.empty())
+        continue;
+      // An overridden input holds a buffer rather than the file named by its
+      // path, so its path and size cannot identify matching contents.
+      if (FI.Overridden)
+        continue;
+      (*LoadedInputFiles)[FI.StoredSize].push_back({&F, I + 1});
+    }
+  }
+}
+
+InputFileLoc ASTReader::getLoadedFileLoc(FileEntryRef Wanted) {
+  if (!LoadedInputFiles)
+    buildLoadedInputFiles();
+
+  auto Known = LoadedInputFiles->find(Wanted.getSize());
+  if (Known == LoadedInputFiles->end())
+    return InputFileLoc();
+
+  for (const LoadedModuleInputFile &In : Known->second) {
+    InputFileInfo FI = getInputFileInfo(*In.F, In.InputID);
+
+    StringRef Unresolved = FI.UnresolvedImportedFilename;
+    if (!llvm::sys::path::is_absolute(Unresolved) ||
+        Unresolved != Wanted.getName()) {
+      // Determine whether the actual files are equivalent.
+      auto Filename = ResolveImportedPath(PathBuf, Unresolved, *In.F);
+      if (FileMgr.getOptionalFileRef(*Filename) != Wanted)
+        continue;
+    }
+
+    // A module file records no entry index for an input file it redirected
+    // elsewhere, so it has no copy to offer and the search goes on.
+    if (!FI.SLocIndex)
+      continue;
+
+    // \c SLocIndex is a FileID, which counts from one, and a module file's
+    // entries are indexed from zero.
+    return {FileID::get(In.F->SLocEntryBaseID + FI.SLocIndex - 1),
+            In.F->SLocEntryBaseOffset + FI.SLocOffset};
+  }
+  return InputFileLoc();
+}
+
 int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   auto SLocMapI =
       GlobalSLocOffsetMap.find(SourceManager::MaxLoadedOffset - SLocOffset - 1);
@@ -2790,7 +2841,7 @@ bool ASTReader::shouldDisableValidationForFile(
 static std::pair<StringRef, StringRef>
 getUnresolvedInputFilenames(const ASTReader::RecordData &Record,
                             const StringRef InputBlob) {
-  uint16_t AsRequestedLength = Record[7];
+  uint16_t AsRequestedLength = Record[9];
   return {InputBlob.substr(0, AsRequestedLength),
           InputBlob.substr(AsRequestedLength)};
 }
@@ -2838,6 +2889,8 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
+  R.SLocIndex = static_cast<unsigned>(Record[7]);
+  R.SLocOffset = static_cast<uint32_t>(Record[8]);
   auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
       getUnresolvedInputFilenames(Record, Blob);
   R.UnresolvedImportedFilenameAsRequested = UnresolvedFilenameAsRequested;
