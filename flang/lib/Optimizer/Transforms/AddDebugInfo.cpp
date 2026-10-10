@@ -386,7 +386,8 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
 // Create fake uses for compiler-generated internal variables that represent
 // values needed by a debugger.  This prevents values from being optimized out
-// such as the count and lower bound of dynamic arrays.
+// such as the count and lower bound of dynamic arrays. A value kept in a stack
+// slot does not need one, since the debug info describes the slot.
 template <typename Op>
 static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
                                      mlir::Value var) {
@@ -397,7 +398,7 @@ static void InsertFakeUseForDebugVar(mlir::OpBuilder &builder, Op declOp,
                 mlir::dyn_cast<mlir::func::ReturnOp>(block.getTerminator())) {
           mlir::OpBuilder::InsertionGuard guard(builder);
           builder.setInsertionPoint(returnOp);
-          if (!fir::getIntIfConstant(var))
+          if (!fir::getIntIfConstant(var) && !fir::getDebugBoundSlot(var))
             fir::FakeUseOp::create(builder, declOp.getLoc(), var);
         }
       }

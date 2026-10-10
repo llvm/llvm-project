@@ -22,6 +22,10 @@
 
 namespace fir {
 
+/// Return the stack slot that lowering created to hold \p val, if there is one
+/// and it still holds \p val.
+fir::AllocaOp getDebugBoundSlot(mlir::Value val);
+
 /// Special cache to deal with the fact that mlir::LLVM::DITypeAttr for
 /// derived types may only be valid in specific nesting contexts in presence
 /// of derived type recursion and cannot be cached for the whole compilation.

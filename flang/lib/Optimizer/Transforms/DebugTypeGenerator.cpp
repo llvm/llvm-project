@@ -14,6 +14,7 @@
 
 #include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
@@ -91,8 +92,28 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
+fir::AllocaOp getDebugBoundSlot(mlir::Value val) {
+  for (mlir::Operation *user : val.getUsers()) {
+    auto store = mlir::dyn_cast<fir::StoreOp>(user);
+    if (!store || store.getValue() != val)
+      continue;
+    auto slot = store.getMemref().getDefiningOp<fir::AllocaOp>();
+    if (!slot || !slot->hasAttr(fir::getDebugBoundSlotAttrName()))
+      continue;
+    // Slot users should either be above mentioned store or a XDeclareOp which
+    // gets generated in generateArtificialVariable.
+    if (llvm::all_of(slot->getUsers(), [&](mlir::Operation *slotUser) {
+          return slotUser == store || mlir::isa<fir::cg::XDeclareOp>(slotUser);
+        }))
+      return slot;
+  }
+  return {};
+}
+
 // Helper function to create DILocalVariableAttr and DbgValueOp when information
-// about the size or dimension of a variable etc lives in an mlir::Value.
+// about the size or dimension of a variable etc lives in an mlir::Value. If the
+// value is kept in a stack slot, the variable describes the slot instead, which
+// holds the value wherever the variable is visible.
 mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
     mlir::MLIRContext *context, mlir::Value val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
@@ -107,8 +128,10 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
                                                  std::to_string(varID));
   builder.setInsertionPoint(declOp);
-  mlir::Type type = val.getType();
-  if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
+  fir::AllocaOp slot = getDebugBoundSlot(val);
+  mlir::Type type = slot ? slot.getInType() : val.getType();
+  if (!slot &&
+      (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger())) {
     type = builder.getIntegerType(64);
     val = fir::ConvertOp::create(builder, declOp.getLoc(), type, val);
   }
@@ -116,8 +139,17 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
       /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-  mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
-                                 nullptr);
+  if (slot)
+    fir::cg::XDeclareOp::create(
+        builder, builder.getFusedLoc({declOp.getLoc()}, lvAttr), slot.getType(),
+        slot, /*shape=*/mlir::ValueRange{},
+        /*shift=*/mlir::ValueRange{}, /*typeparams=*/mlir::ValueRange{},
+        /*dummy_scope=*/mlir::Value{}, /*storage=*/mlir::Value{},
+        /*storage_offset=*/0, name, /*data_attr=*/cuf::DataAttributeAttr{},
+        /*dummy_arg_no=*/mlir::IntegerAttr{});
+  else
+    mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
+                                   nullptr);
   return lvAttr;
 }
 
