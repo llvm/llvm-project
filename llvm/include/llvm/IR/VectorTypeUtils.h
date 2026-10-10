@@ -14,17 +14,38 @@
 
 namespace llvm {
 
-/// A helper function for converting Scalar types to vector types. If
+/// A helper function for converting scalar or vector types to vector types. If
 /// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
+/// scalar, we return the input type. For vector inputs, the existing vector
+/// element count is multiplied by EC.
 inline Type *toVectorTy(Type *Scalar, ElementCount EC) {
   if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
     return Scalar;
+  if (auto *VTy = dyn_cast<VectorType>(Scalar)) {
+    assert(!(VTy->getElementCount().isScalable() && EC.isScalable()) &&
+           "Attempt to create <vscale x vscale x N x elt>!");
+
+    if (auto *FVTy = dyn_cast<FixedVectorType>(VTy))
+      return VectorType::get(VTy->getElementType(),
+                             EC * FVTy->getNumElements());
+
+    return VectorType::get(VTy->getElementType(),
+                           VTy->getElementCount() * EC.getKnownMinValue());
+  }
+
   return VectorType::get(Scalar, EC);
 }
 
 inline Type *toVectorTy(Type *Scalar, unsigned VF) {
   return toVectorTy(Scalar, ElementCount::getFixed(VF));
+}
+
+/// Returns the ElementCount if Ty is a vector type, and 1 otherwise.
+inline ElementCount getElementCount(Type *Ty) {
+  // TODO: Support vectorized structs?
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return VTy->getElementCount();
+  return ElementCount::getFixed(1);
 }
 
 /// A helper for converting structs of scalar types to structs of vector types.
