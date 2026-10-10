@@ -73,11 +73,14 @@ std::unique_ptr<DependencyTracker> macho::depTracker;
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
-  Arg *outputArg = args.getLastArg(OPT_bundle, OPT_dylib, OPT_execute);
+  Arg *outputArg =
+      args.getLastArg(OPT_kext, OPT_bundle, OPT_dylib, OPT_execute);
   if (outputArg == nullptr)
     return MH_EXECUTE;
 
   switch (outputArg->getOption().getID()) {
+  case OPT_kext:
+    return MH_KEXT_BUNDLE;
   case OPT_bundle:
     return MH_BUNDLE;
   case OPT_dylib:
@@ -101,6 +104,10 @@ static std::optional<StringRef> findLibrary(StringRef name) {
     // (crt1.o)
     if (name.ends_with(".o"))
       return findPathCombination(name, config->librarySearchPaths, {""});
+    // Kexts cannot link against dylibs.
+    if (config->outputType == MH_KEXT_BUNDLE)
+      return findPathCombination("lib" + name, config->librarySearchPaths,
+                                 {".a"});
     if (config->searchDylibsFirst) {
       if (std::optional<StringRef> path =
               findPathCombination("lib" + name, config->librarySearchPaths,
@@ -527,6 +534,10 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
+    if (config->outputType == MH_KEXT_BUNDLE) {
+      warn("ignoring unexpected dylib '" + path + "'");
+      break;
+    }
     if (DylibFile *dylibFile =
             loadDylib(mbref, nullptr, /*isBundleLoader=*/false, isExplicit))
       newFile = dylibFile;
@@ -995,6 +1006,11 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
 
 static UndefinedSymbolTreatment
 getUndefinedSymbolTreatment(const ArgList &args) {
+  // The kernel linker resolves undefined symbols of kexts. Like ld64, ignore
+  // -undefined.
+  if (config->outputType == MH_KEXT_BUNDLE)
+    return UndefinedSymbolTreatment::dynamic_lookup;
+
   StringRef treatmentStr = args.getLastArgValue(OPT_undefined);
   auto treatment =
       StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
@@ -1066,6 +1082,9 @@ static void warnIfDeprecatedOption(const Option &opt) {
 
 static void warnIfUnimplementedOption(const Option &opt) {
   if (!opt.getGroup().isValid() || !opt.hasFlag(DriverFlag::HelpHidden))
+    return;
+  // Clang links kexts with -static, which has no effect on them.
+  if (opt.getID() == OPT_static && config->outputType == MH_KEXT_BUNDLE)
     return;
   switch (opt.getGroup().getID()) {
   case OPT_grp_deprecated:
@@ -1258,6 +1277,9 @@ static bool dataConstDefault(const InputArgList &args) {
   switch (config->outputType) {
   case MH_EXECUTE:
     return !(args.hasArg(OPT_no_pie) && supportsNoPie());
+  case MH_KEXT_BUNDLE:
+    // ld64 places constant data of x86_64 kexts in __DATA.
+    return false;
   case MH_BUNDLE:
     // FIXME: return false when -final_name ...
     // has prefix "/System/Library/UserEventPlugins/"
@@ -1280,6 +1302,13 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    if (requested)
+      error("-fixup_chains is incompatible with -kext");
+
+    return false;
+  }
+
   if (!config->isPic) {
     if (requested)
       error("-fixup_chains is incompatible with -no_pie");
@@ -1884,7 +1913,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     pie = true;
   }
 
-  config->isPic = config->outputType == MH_DYLIB ||
+  // arm64 kexts need __TEXT_EXEC, stubs and split segment info, and arm64e
+  // ones pointer authentication too.
+  if (config->outputType == MH_KEXT_BUNDLE &&
+      !is_contained({AK_x86_64, AK_x86_64h}, config->arch()))
+    fatal("-kext is only supported for x86_64 targets");
+
+  config->isPic = config->outputType == MH_KEXT_BUNDLE ||
+                  config->outputType == MH_DYLIB ||
                   config->outputType == MH_BUNDLE ||
                   (config->outputType == MH_EXECUTE && pie);
 
@@ -2024,9 +2060,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts =
+      config->outputType != MH_KEXT_BUNDLE &&
       args.hasFlag(OPT_function_starts, OPT_no_function_starts, true);
   config->emitDataInCodeInfo =
-      args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
+      args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info,
+                   config->outputType != MH_KEXT_BUNDLE);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
   config->emitInitOffsets =
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
