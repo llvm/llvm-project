@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "clang-include-cleaner/MappingFile.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -36,6 +37,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <assert.h>
@@ -414,9 +416,67 @@ void PragmaIncludes::record(Preprocessor &P) {
 
 llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   auto It = IWYUPublic.find(F->getUniqueID());
-  if (It == IWYUPublic.end())
+  if (It != IWYUPublic.end())
+    return It->getSecond();
+
+  llvm::SmallString<256> NPath(F->tryGetRealPathName());
+  llvm::sys::path::native(NPath, llvm::sys::path::Style::posix);
+
+  // Check one candidate string against exact then regex mappings.
+  auto CheckCandidate = [&](llvm::StringRef Candidate) -> llvm::StringRef {
+    if (auto MI = ExternalIncludes.find(Candidate);
+        MI != ExternalIncludes.end())
+      return MI->getValue();
+    for (const auto &[R, Target] : ExternalIncludeRegexMappings)
+      if (llvm::Regex(R).match(Candidate))
+        return Target;
     return "";
-  return It->getSecond();
+  };
+
+  // Try each suffix of the real path (handles flat layouts like
+  // /usr/include/AE/foo.h).
+  llvm::StringRef Path = NPath;
+  while (!Path.empty()) {
+    if (auto Mapped = CheckCandidate(Path); !Mapped.empty())
+      return Mapped;
+    auto Slash = Path.find('/');
+    if (Slash == llvm::StringRef::npos)
+      break;
+    Path = Path.drop_front(Slash + 1);
+  }
+  return "";
+}
+
+void PragmaIncludes::loadMapping(const MappingFile &Mapping) {
+  for (const auto &E : Mapping.IncludeMappings)
+    ExternalIncludes[E.getKey()] = E.getValue();
+  for (const auto &E : Mapping.SymbolMappings)
+    ExternalSymbols[E.getKey()] = E.getValue();
+  for (const auto &[Pattern, Target] : Mapping.IncludeRegexPatterns) {
+    // Anchor to the start of each path suffix we test against.
+    std::string Anchored = "^(" + Pattern + ")";
+    std::string Err;
+    if (llvm::Regex(Anchored).isValid(Err))
+      ExternalIncludeRegexMappings.emplace_back(std::move(Anchored), Target);
+  }
+}
+
+llvm::StringRef
+PragmaIncludes::getExternalSymbolHeader(llvm::StringRef Name) const {
+  auto It = ExternalSymbols.find(Name);
+  if (It != ExternalSymbols.end())
+    return It->getValue();
+  return "";
+}
+
+llvm::StringRef
+PragmaIncludes::getPublicForSpelling(llvm::StringRef BarePath) const {
+  if (auto It = ExternalIncludes.find(BarePath); It != ExternalIncludes.end())
+    return It->getValue();
+  for (const auto &[R, Target] : ExternalIncludeRegexMappings)
+    if (llvm::Regex(R).match(BarePath))
+      return Target;
+  return "";
 }
 
 static llvm::SmallVector<FileEntryRef>
@@ -452,7 +512,31 @@ bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
 }
 
 bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
-  return IWYUPublic.contains(FE->getUniqueID());
+  if (IWYUPublic.contains(FE->getUniqueID()))
+    return true;
+
+  llvm::SmallString<256> NPath(FE->tryGetRealPathName());
+  llvm::sys::path::native(NPath, llvm::sys::path::Style::posix);
+
+  auto IsPrivateCandidate = [&](llvm::StringRef Candidate) -> bool {
+    if (ExternalIncludes.contains(Candidate))
+      return true;
+    for (const auto &[R, Target] : ExternalIncludeRegexMappings)
+      if (llvm::Regex(R).match(Candidate))
+        return true;
+    return false;
+  };
+
+  llvm::StringRef Path = NPath;
+  while (!Path.empty()) {
+    if (IsPrivateCandidate(Path))
+      return true;
+    auto Slash = Path.find('/');
+    if (Slash == llvm::StringRef::npos)
+      break;
+    Path = Path.drop_front(Slash + 1);
+  }
+  return false;
 }
 
 bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
