@@ -78,24 +78,21 @@ static cl::opt<bool>
     EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
                      cl::desc("Use InstrItineraryData for latency lookup"));
 
-// Note: the two options below might be used in tuning compile time vs
-// output quality. Setting HugeRegion so large that it will never be
-// reached means best-effort, but may be slow.
+// Note: the two options below might be used in tuning compile time vs output
+// quality. Setting these options so large that they will never be reached means
+// best-effort, but may be slow.
+static cl::opt<unsigned> MaxFrontierSize(
+    "store-sequencing-max-frontier-size", cl::Hidden, cl::init(500),
+    cl::desc("With store-sequencing DAG construction, after the number of "
+             "memops in a frontier exceeds this threshold, automatically "
+             "promote the next store and clear the frontier."));
 
-// When Stores and Loads maps together hold this many SUs, a reduction of maps
-// will be done.
-static cl::opt<unsigned>
-    HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
-               cl::desc("The limit to use while constructing the DAG "
-                        "prior to scheduling, at which point a trade-off "
-                        "is made to avoid excessive compile time."));
-
-static cl::opt<bool> EnableStoreSequencing(
-    "enable-unanalyzable-store-sequencing", cl::Hidden, cl::init(false),
-    cl::desc("Enable the store-sequencing DAG construction algorithm. This can "
-             "eliminate a large number of redundant control dependencies and "
-             "spurious alias analysis queries at the cost of some unnecessary "
-             "dependencies."));
+static cl::opt<unsigned> MaxTotalMemops(
+    "store-sequencing-max-total-memops", cl::Hidden, cl::init(3000),
+    cl::desc("With store-sequencing DAG construction, if the occupancy of all "
+             "frontiers exceeds this threshold, automatically promote the next "
+             "memory operation to a global memory barrier and clear the "
+             "frontiers."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> SchedPrintCycles(
@@ -611,92 +608,6 @@ namespace {
 /// with a memory pool (SmallVector was tried but slow and SparseSet is not
 /// applicable).
 using SUList = std::list<SUnit *>;
-
-static void dumpSUList(const SUList &L) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "{ ";
-  for (const SUnit *SU : L) {
-    dbgs() << *SU;
-    if (SU != L.back())
-      dbgs() << ", ";
-  }
-  dbgs() << "}\n";
-#endif
-}
-
-class Value2SUsMap : public SmallMapVector<ValueType, SUList, 4> {
-  /// Current total number of SUs in map.
-  unsigned NumNodes = 0;
-
-  /// 1 for loads, 0 for stores. (see comment in SUList)
-  unsigned TrueMemOrderLatency;
-
-public:
-  Value2SUsMap(unsigned lat = 0) : TrueMemOrderLatency(lat) {}
-
-  /// To keep NumNodes up to date, insert() is used instead of
-  /// this operator w/ push_back().
-  ValueType &operator[](const SUList &Key) {
-    llvm_unreachable("Don't use. Use insert() instead.");
-  };
-
-  /// Adds SU to the SUList of V. If Map grows huge, reduce its size by calling
-  /// reduce().
-  void inline insert(SUnit *SU, ValueType V) {
-    MapVector::operator[](V).push_back(SU);
-    NumNodes++;
-  }
-
-  /// Clears the list of SUs mapped to V.
-  void inline clearList(ValueType V) {
-    iterator Itr = find(V);
-    if (Itr != end()) {
-      assert(NumNodes >= Itr->second.size());
-      NumNodes -= Itr->second.size();
-
-      Itr->second.clear();
-    }
-  }
-
-  /// Clears map from all contents.
-  void clear() {
-    SmallMapVector<ValueType, SUList, 4>::clear();
-    NumNodes = 0;
-  }
-
-  unsigned inline size() const { return NumNodes; }
-
-  /// Counts the number of SUs in this map after a reduction.
-  void reComputeSize() {
-    NumNodes = 0;
-    for (auto &I : *this)
-      NumNodes += I.second.size();
-  }
-
-  unsigned inline getTrueMemOrderLatency() const {
-    return TrueMemOrderLatency;
-  }
-
-  void dump();
-};
-
-void Value2SUsMap::dump() {
-  for (const auto &[ValType, SUs] : *this) {
-    if (isa<const Value *>(ValType)) {
-      const Value *V = cast<const Value *>(ValType);
-      if (isa<UndefValue>(V))
-        dbgs() << "Unknown";
-      else
-        V->printAsOperand(dbgs());
-    } else if (isa<const PseudoSourceValue *>(ValType))
-      dbgs() << cast<const PseudoSourceValue *>(ValType);
-    else
-      llvm_unreachable("Unknown Value type.");
-
-    dbgs() << " : ";
-    dumpSUList(SUs);
-  }
-}
 } // end anonymous namespace
 
 namespace llvm {
@@ -709,45 +620,54 @@ private:
   PressureDiffs *PDiffs;
   LiveIntervals *LIS;
 
-  // Each MIs' memory operand(s) is analyzed to a list of underlying
-  // objects. The SU is then inserted in the SUList(s) mapped from the
-  // Value(s). Each Value thus gets mapped to lists of SUs depending
-  // on it, stores and loads kept separately. Two SUs are trivially
-  // non-aliasing if they both depend on only identified Values and do
-  // not share any common Value.
-  Value2SUsMap Stores, Loads;
-
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
-  // must not be rescheduled across global barriers.  Note that we don't
-  // really need a "map" here since we don't track those MIs by value;
-  // using the same Value2SUsMap data type here is simply a matter of
-  // convenience.
-  Value2SUsMap FPExceptions;
+  // must not be rescheduled across global barriers.
+  SUList FPExceptions;
 
-  /// A frontier of unanalyzable memory operations.
+  /// A frontier of memory operations.
   ///
-  /// As we process memory operations (bottom to top), each new unanalyzable
-  /// memory operation needs to be checked for required control dependencies
-  /// against later memory operations. A naive implementation issues AA calls
-  /// quadratically in the number of memory operations and is therefore
-  /// unacceptable.
+  /// As we process memory operations (bottom to top), each new memory operation
+  /// needs to be checked for required control dependencies against later memory
+  /// operations. A naive implementation issues AA calls quadratically in the
+  /// number of memory operations and is therefore unacceptable.
   ///
   /// To bound the complexity, we only ever consider a frontier of memory
   /// operations which we frequently clear, modeled by this struct. To ensure
   /// that we are not missing any necessary control dependencies, we promote
   /// certain store instructions to what we term 'sequencing stores'. These
   /// sequencing stores are treated carefully to ensure that all previously seen
-  /// unanalyzable memory operations that do not belong to the frontier
-  /// necessarily transitively succeed the current sequencing store.
+  /// memory operations that have been cleared from the frontier necessarily
+  /// transitively succeed the current sequencing store.
   ///
   /// By frequently updating the sequencing store, we bound the number of alias
   /// analysis queries and transitively redundant control dependencies we
   /// generate. However, doing so we necessarily overconstrain the DAG. Indeed,
   /// if we were to update the sequencing store every time we see a store
   /// instruction, the effect would be to linearize the stores.
-  ///
-  /// The conditions we choose to update the sequencing store are as follows:
+  struct MemopFrontier {
+    // The current sequencing store.
+    SUnit *SequencingStore = nullptr;
+    /// The memory operations in the frontier.
+    SUList Stores, Loads;
+
+    /// The number of memops in the frontier, excluding the sequencing store.
+    unsigned size() const;
+
+    /// Clears the frontier.
+    void clear();
+  };
+
+  // For memory operations that can be analyzed to an identified underlying
+  // object, we maintain one frontier per underlying object. We expect the
+  // analyzable frontiers to remain small and benefit from alias analysis, so
+  // only clear when they grow too large.
+  MapVector<ValueType, MemopFrontier> AnalyzableFrontiers;
+
+  /// We maintain an additional frontier of unanalyzable memory operations,
+  /// equipped with some extra state designed to clear the frontier more
+  /// frequently. The conditions we choose to update the sequencing store are as
+  /// follows:
   /// 1. If an incoming store instruction refers to an underlying object outside
   ///    of the set of underlying objects of the current sequencing store;
   /// 2. If an incoming store instruction precedes an intervening load from an
@@ -762,13 +682,11 @@ private:
   /// 3. From all preceding unanalyzable stores to (a subset of) the same base
   ///    objects, independent of AA results;
   /// 4. From all preceding analyzable stores, independent of AA results.
-  struct UnanalyzableFrontier {
-    /// The current sequencing store.
-    SUnit *SequencingStore = nullptr;
+  struct UnanalyzableMemopFrontier {
+    /// The underlying memop frontier.
+    MemopFrontier Frontier;
     /// The underlying objects of the current sequencing store.
     UnderlyingObjectsVector BaseObjects;
-    /// The memory operations in the frontier (keyed by UnknownValue).
-    Value2SUsMap Stores, Loads{1 /*TrueMemOrderLatency*/};
     /// `true` if the frontier contains a load whose underlying objects escape
     /// #BaseObjects.
     bool SeenSequencingLoad = false;
@@ -781,7 +699,7 @@ private:
     /// Returns true if any of \p Objs does not belong to #BaseObjects.
     bool escapesBaseObjects(const UnderlyingObjectsVector &Objs);
 
-    /// Clears the frontier.
+    /// Clears the frontier and resets the associated state.
     void clear();
   };
 
@@ -789,26 +707,21 @@ private:
   ///
   /// FIXME(@cofibrant): For some platforms, a single frontier is too coarse and
   /// we should be maintaining one frontier per address space.
-  UnanalyzableFrontier Frontier;
-
-  /// For an unanalyzable memory access, this Value is used in maps.
-  UndefValue *UnknownValue;
+  UnanalyzableMemopFrontier UnanalyzableFrontier;
 
   /// Remember a generic side-effecting instruction as we proceed.
   /// No other SU ever gets scheduled around it (except in the special
   /// case of a huge region that gets reduced).
   SUnit *BarrierChain = nullptr;
 
-  unsigned MemOpsProcessed = 0;
+  /// The total number of memops amongst all frontiers.
+  unsigned TotalMemops = 0;
 
 public:
   ScheduleDAGDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
                                RegPressureTracker *RPTracker,
                                PressureDiffs *PDiffs, LiveIntervals *LIS)
-      : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS),
-        Stores(), Loads(1), FPExceptions(), Frontier(),
-        UnknownValue(UndefValue::get(
-            Type::getVoidTy(DAG.MF.getFunction().getContext()))) {}
+      : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS) {}
 
 private:
   /// Adds a chain edge between SUa and SUb, but only if both
@@ -819,32 +732,45 @@ private:
 
   /// Adds dependencies as needed from all SUs in list to SU.
   void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency);
-  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap);
-  void addChainDependencies(SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V);
-  void addChainDependencies(SUnit *SU, UnanalyzableFrontier &UF, bool IsStore);
+  void addChainDependencies(SUnit *SU, MemopFrontier &F, bool IsStore);
 
-  void addBarrierChain(Value2SUsMap &map);
-  void addBarrierChain(UnanalyzableFrontier &UF);
+  void addBarrierChain(SUList &SUs);
+  void addBarrierChain(MemopFrontier &F);
+  void addBarrierChain(UnanalyzableMemopFrontier &UF);
 
+  /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
+  /// If \p PreserveNoAliasLoads is true, loads in the frontier that do not
+  /// alias with \p SU will be retained after promotion.
+  void updateSequencingStore(MemopFrontier &F, SUnit *SU,
+                             bool PreserveNoAliasLoads);
   /// Promote the store \p SU with underlying objects \p Objs to be a new
-  /// sequencing store in the frontier \p UF.
-  void updateSequencingStore(UnanalyzableFrontier &UF, SUnit *SU,
-                             UnderlyingObjectsVector &Objs);
+  /// sequencing store in the unanalyzable frontier \p UF.
+  void updateSequencingStore(UnanalyzableMemopFrontier &UF, SUnit *SU,
+                             UnderlyingObjectsVector &&Objs);
 
 public:
   void buildDeps();
 };
 } // end namespace llvm
 
-bool ScheduleDAGDependencyBuilder::UnanalyzableFrontier::shouldUpdate(
-    const UnderlyingObjectsVector &Objs) {
-  if (!EnableStoreSequencing)
-    return false;
-  return !SequencingStore || SeenSequencingLoad || escapesBaseObjects(Objs);
+unsigned ScheduleDAGDependencyBuilder::MemopFrontier::size() const {
+  return Loads.size() + Stores.size();
 }
 
-bool ScheduleDAGDependencyBuilder::UnanalyzableFrontier::escapesBaseObjects(
+void ScheduleDAGDependencyBuilder::MemopFrontier::clear() {
+  SequencingStore = nullptr;
+  Stores.clear();
+  Loads.clear();
+}
+
+bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::shouldUpdate(
     const UnderlyingObjectsVector &Objs) {
+  return !Frontier.SequencingStore || SeenSequencingLoad ||
+         escapesBaseObjects(Objs) || Frontier.size() >= MaxFrontierSize;
+}
+
+bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::
+    escapesBaseObjects(const UnderlyingObjectsVector &Objs) {
   for (const ValueType V : Objs) {
     if (!is_contained(BaseObjects, V))
       return true;
@@ -853,12 +779,10 @@ bool ScheduleDAGDependencyBuilder::UnanalyzableFrontier::escapesBaseObjects(
   return false;
 }
 
-void ScheduleDAGDependencyBuilder::UnanalyzableFrontier::clear() {
-  SequencingStore = nullptr;
+void ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::clear() {
+  Frontier.clear();
   SeenSequencingLoad = false;
   BaseObjects.clear();
-  Stores.clear();
-  Loads.clear();
 }
 
 bool ScheduleDAGDependencyBuilder::addChainDependency(SUnit *SUa, SUnit *SUb,
@@ -878,87 +802,93 @@ void ScheduleDAGDependencyBuilder::addChainDependencies(SUnit *SU, SUList &SUs,
     addChainDependency(SU, Entry, Latency);
 }
 
-void ScheduleDAGDependencyBuilder::addChainDependencies(
-    SUnit *SU, Value2SUsMap &Val2SUsMap) {
-  for (auto &I : Val2SUsMap)
-    addChainDependencies(SU, I.second, Val2SUsMap.getTrueMemOrderLatency());
-}
+void ScheduleDAGDependencyBuilder::addChainDependencies(SUnit *SU,
+                                                        MemopFrontier &F,
+                                                        bool IsStore) {
+  if (F.SequencingStore)
+    F.SequencingStore->addPredBarrier(SU);
 
-void ScheduleDAGDependencyBuilder::addChainDependencies(
-    SUnit *SU, Value2SUsMap &Val2SUsMap, ValueType V) {
-  Value2SUsMap::iterator Itr = Val2SUsMap.find(V);
-  if (Itr != Val2SUsMap.end())
-    addChainDependencies(SU, Itr->second, Val2SUsMap.getTrueMemOrderLatency());
-}
-
-void ScheduleDAGDependencyBuilder::addChainDependencies(
-    SUnit *SU, UnanalyzableFrontier &UF, bool IsStore) {
-  if (UF.SequencingStore)
-    UF.SequencingStore->addPredBarrier(SU);
-
-  addChainDependencies(SU, UF.Stores, UnknownValue);
+  addChainDependencies(SU, F.Stores, /*Latency=*/0);
   if (IsStore)
-    addChainDependencies(SU, UF.Loads, UnknownValue);
+    addChainDependencies(SU, F.Loads, /*Latency=*/1);
 }
 
-void ScheduleDAGDependencyBuilder::addBarrierChain(Value2SUsMap &map) {
+void ScheduleDAGDependencyBuilder::addBarrierChain(SUList &SUs) {
   assert(BarrierChain != nullptr);
 
-  for (auto &[V, SUs] : map) {
-    (void)V;
-    for (auto *SU : SUs)
-      SU->addPredBarrier(BarrierChain);
-  }
+  for (auto *SU : SUs)
+    SU->addPredBarrier(BarrierChain);
 
-  map.clear();
+  SUs.clear();
 }
 
-void ScheduleDAGDependencyBuilder::addBarrierChain(UnanalyzableFrontier &UF) {
+void ScheduleDAGDependencyBuilder::addBarrierChain(MemopFrontier &F) {
   assert(BarrierChain != nullptr);
 
-  addBarrierChain(UF.Stores);
-  addBarrierChain(UF.Loads);
+  addBarrierChain(F.Stores);
+  addBarrierChain(F.Loads);
 
-  if (UF.SequencingStore)
-    UF.SequencingStore->addPredBarrier(BarrierChain);
+  if (F.SequencingStore)
+    F.SequencingStore->addPredBarrier(BarrierChain);
 
+  F.clear();
+}
+
+void ScheduleDAGDependencyBuilder::addBarrierChain(
+    UnanalyzableMemopFrontier &UF) {
+  assert(BarrierChain != nullptr);
+
+  addBarrierChain(UF.Frontier);
   UF.clear();
 }
 
 void ScheduleDAGDependencyBuilder::updateSequencingStore(
-    UnanalyzableFrontier &UF, SUnit *SU, UnderlyingObjectsVector &Objs) {
+    MemopFrontier &F, SUnit *SU, bool PreserveNoAliasLoads) {
   assert(SU->getInstr()->mayStore() &&
          "Only store instructions should be used as sequencing stores");
+  LLVM_DEBUG(dbgs() << "Promoting " << *SU << " to sequencing store\n");
 
-  if (UF.SequencingStore)
-    UF.SequencingStore->addPredBarrier(SU);
+  TotalMemops -= F.size() + (F.SequencingStore ? 1 : 0);
 
-  // Sequence all stores against the sequencing store and clear the map.
-  for (auto &[V, SUs] : UF.Stores) {
-    for (SUnit *S : SUs)
-      S->addPredBarrier(SU);
-  }
+  if (F.SequencingStore)
+    F.SequencingStore->addPredBarrier(SU);
 
-  UF.Stores.clear();
+  // Sequence all stores against the sequencing store and clear the stores.
+  for (SUnit *S : F.Stores)
+    S->addPredBarrier(SU);
 
-  // For loads, we can do slightly better. Rather than naively adding pred
-  // barriers and clearing the map, we check whether each load genuinely needs
-  // to sequence against the new sequencing store. Wherever an edge is not
-  // required, we retain the load and avoid the spurious control dependency.
-  for (auto &[V, SUs] : UF.Loads) {
-    for (auto It = SUs.begin(); It != SUs.end();) {
-      if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1)) {
-        // FIXME(@cofibrant): `UF.Loads` won't record the reduction in its size
-        // here. This wants fixing before we work on promoting stores to
-        // sequencing stores when the maps get too large.
-        It = SUs.erase(It);
-      } else {
+  F.Stores.clear();
+
+  if (PreserveNoAliasLoads && F.size() < MaxFrontierSize) {
+    // If asked, rather than naively adding pred barriers to all loads and
+    // clearing the map, we check whether each load genuinely needs to sequence
+    // against the new sequencing store. Wherever an edge is not required, we
+    // retain the load and avoid the spurious control dependency.
+    for (auto It = F.Loads.begin(); It != F.Loads.end();) {
+      if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1))
+        It = F.Loads.erase(It);
+      else
         ++It;
-      }
     }
+  } else {
+    // Otherwise, sequence all loads against the sequencing store and clear the
+    // loads.
+    for (SUnit *S : F.Loads)
+      S->addPredBarrier(SU);
+
+    F.Loads.clear();
   }
 
-  UF.SequencingStore = SU;
+  F.SequencingStore = SU;
+
+  TotalMemops += F.size() + 1;
+}
+
+void ScheduleDAGDependencyBuilder::updateSequencingStore(
+    UnanalyzableMemopFrontier &UF, SUnit *SU, UnderlyingObjectsVector &&Objs) {
+  assert(SU->getInstr()->mayStore() &&
+         "Only store instructions should be used as sequencing stores");
+  updateSequencingStore(UF.Frontier, SU, /*PreserveNoAliasLoads=*/true);
   UF.BaseObjects = std::move(Objs);
   UF.SeenSequencingLoad = false;
 }
@@ -1081,30 +1011,22 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       LLVM_DEBUG(dbgs() << "Global memory object and new barrier chain: "
                         << *BarrierChain << ".\n");
 
-      // Add dependencies against everything below it and clear maps.
-      addBarrierChain(Stores);
-      addBarrierChain(Loads);
+      // Add dependencies against everything below SU and clear state.
       addBarrierChain(FPExceptions);
-      addBarrierChain(Frontier);
-
+      addBarrierChain(UnanalyzableFrontier);
+      for (auto &[_, AF] : AnalyzableFrontiers)
+        addBarrierChain(AF);
+      AnalyzableFrontiers.clear();
+      TotalMemops = 0;
       continue;
     }
 
-    // Instructions that may raise FP exceptions may not be moved
-    // across any global barriers.
     if (MI.mayRaiseFPException()) {
+      // Instructions that may raise FP exceptions may not be moved
+      // across any global barriers.
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
-
-      if (FPExceptions.size() + 1 >= HugeRegion) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Creating barrier chain and clearing FPExceptions map.\n");
-        BarrierChain = SU;
-        addBarrierChain(FPExceptions);
-      } else {
-        FPExceptions.insert(SU, UnknownValue);
-      }
+      FPExceptions.push_back(SU);
     }
 
     // If it's not a store or a variant load, we're done.
@@ -1112,91 +1034,69 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
         !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad()))
       continue;
 
-    MemOpsProcessed++;
-
     // Always add dependecy edge to BarrierChain if present.
-    if (BarrierChain && BarrierChain != SU)
+    if (BarrierChain)
       BarrierChain->addPredBarrier(SU);
 
-    // Reduce maps if they grow huge.
-    //
-    // FIXME(@cofibrant): With store-sequencing, this condition can be relaxed
-    // and improved. Specifically, we are not so worried about `Stores` and
-    // `Loads` growing too large, but more interested in making sure that the
-    // frontier(s) themselves stay sufficiently small. This is best achieved by
-    // measuring the size of the frontier(s) and, if sufficiently large,
-    // promoting the next store to a sequencing store.
-    if (MemOpsProcessed >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
-
+    // If our frontiers exceed the maximum size, promote SU to the be the
+    // barrier chain and clear the frontiers.
+    if (TotalMemops > MaxTotalMemops) {
       BarrierChain = SU;
-
-      addBarrierChain(Stores);
-      addBarrierChain(Loads);
-      addBarrierChain(Frontier);
-
-      MemOpsProcessed = 0;
+      addBarrierChain(UnanalyzableFrontier);
+      for (auto &[_, AF] : AnalyzableFrontiers)
+        addBarrierChain(AF);
+      AnalyzableFrontiers.clear();
+      TotalMemops = 0;
       continue;
     }
 
-    // Find the underlying objects for MI. The Objs vector is either
+    // Find the underlying objects for SU. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
     // SU depends on.
     UnderlyingObjectsVector Objs;
-    bool ObjsIdentified = getUnderlyingObjectsForInstr(&MI, DAG.MFI, Objs,
-                                                       DAG.MF.getDataLayout());
+    bool ObjsIdentified = getUnderlyingObjectsForInstr(
+        SU->getInstr(), DAG.MFI, Objs, DAG.MF.getDataLayout());
+    bool IsStore = SU->getInstr()->mayStore();
 
-    if (MI.mayStore()) {
-      if (!ObjsIdentified) {
-        // An unknown store depends on all stores and loads.
-        addChainDependencies(SU, Stores);
-        addChainDependencies(SU, Loads);
+    if (!ObjsIdentified) {
+      // An unanalyzable memory operation depends on all analyzable frontiers.
+      for (auto &[_, AF] : AnalyzableFrontiers)
+        addChainDependencies(SU, AF, IsStore);
 
-        if (Frontier.shouldUpdate(Objs)) {
-          LLVM_DEBUG(dbgs() << "Promoting " << *SU << " to sequencing store\n");
-          updateSequencingStore(Frontier, SU, Objs);
-        } else {
-          addChainDependencies(SU, Frontier, /*IsStore=*/true);
-          Frontier.Stores.insert(SU, UnknownValue);
-        }
+      if (IsStore && UnanalyzableFrontier.shouldUpdate(Objs)) {
+        updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs));
       } else {
-        // Add precise dependencies against all previously seen memory
-        // accesses mapped to the same Value(s).
-        for (const ValueType V : Objs) {
-          // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, Stores, V);
-          addChainDependencies(SU, Loads, V);
-        }
-        // Update the store map after all chains have been added to avoid adding
-        // self-loop edge if multiple underlying objects are present.
-        for (const ValueType V : Objs)
-          Stores.insert(SU, V);
-
-        // The store may have dependencies to unanalyzable loads and
-        // stores.
-        addChainDependencies(SU, Frontier, /*IsStore=*/true);
+        if (!IsStore && UnanalyzableFrontier.escapesBaseObjects(Objs))
+          UnanalyzableFrontier.SeenSequencingLoad = true;
+        addChainDependencies(SU, UnanalyzableFrontier.Frontier, IsStore);
+        (IsStore ? UnanalyzableFrontier.Frontier.Stores
+                 : UnanalyzableFrontier.Frontier.Loads)
+            .push_back(SU);
+        ++TotalMemops;
       }
-    } else { // SU is a load.
-      if (!ObjsIdentified) {
-        // An unknown load depends on all stores.
-        addChainDependencies(SU, Stores);
-        addChainDependencies(SU, Frontier, /*IsStore=*/false);
+    } else {
+      // Add precise dependencies against all previously seen memory
+      // accesses mapped to the same Value(s).
+      SmallSet<ValueType, 2> SeenValues;
+      for (const ValueType V : Objs) {
+        // Deduplicate values to avoid adding self loops.
+        if (!SeenValues.insert(V).second)
+          continue;
 
-        Frontier.Loads.insert(SU, UnknownValue);
-        if (Frontier.escapesBaseObjects(Objs))
-          Frontier.SeenSequencingLoad = true;
-      } else {
-        for (const ValueType V : Objs) {
-          // Add precise dependencies against all previously seen stores
-          // mapping to the same Value(s).
-          addChainDependencies(SU, Stores, V);
+        MemopFrontier &Frontier = AnalyzableFrontiers[V];
 
-          // Map this load to V.
-          Loads.insert(SU, V);
+        if (IsStore && Frontier.size() >= MaxFrontierSize) {
+          updateSequencingStore(Frontier, SU, false);
+          continue;
         }
-        // The load may have dependencies to unanalyzable stores.
-        addChainDependencies(SU, Frontier, /*IsStore=*/false);
+
+        addChainDependencies(SU, Frontier, IsStore);
+        (IsStore ? Frontier.Stores : Frontier.Loads).push_back(SU);
+        ++TotalMemops;
       }
+
+      // The memop may have dependencies to unanalyzable stores.
+      addChainDependencies(SU, UnanalyzableFrontier.Frontier, IsStore);
     }
   }
 
