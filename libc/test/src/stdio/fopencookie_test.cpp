@@ -11,6 +11,7 @@
 #include "src/stdio/feof.h"
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
+#include "src/stdio/fileno.h"
 #include "src/stdio/fopencookie.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
@@ -245,5 +246,22 @@ TEST_F(LlvmLibcFOpenCookieTest, WriteUpdateCookieTest) {
   EXPECT_STREQ(read_data, WRITE_DATA);
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(f), 0);
+  free(ss);
+}
+
+TEST_F(LlvmLibcFOpenCookieTest, FilenoFails) {
+  auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
+  ss->buf = nullptr;
+  ss->bufsize = ss->offset = ss->endpos = 0;
+
+  ::FILE *f = LIBC_NAMESPACE::fopencookie(ss, "r", STRING_STREAM_FUNCS);
+  ASSERT_TRUE(f != nullptr);
+
+  // A cookie stream has no underlying file descriptor: POSIX requires
+  // fileno() to fail with EBADF.
+  ASSERT_EQ(LIBC_NAMESPACE::fileno(f), -1);
+  ASSERT_ERRNO_EQ(EBADF);
+
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
   free(ss);
 }

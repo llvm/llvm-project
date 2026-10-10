@@ -61,6 +61,15 @@ public:
   using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
+  // Exposes the platform I/O callbacks so a platform backend can positively
+  // identify which concrete File subclass an object is (e.g. distinguishing
+  // a LinuxFile from a CookieFile/MemoryFile) without needing RTTI. See
+  // is_linux_file() in the Linux backend for the concrete use.
+  ReadFunc *get_read_func() const { return platform_read; }
+  WriteFunc *get_write_func() const { return platform_write; }
+  SeekFunc *get_seek_func() const { return platform_seek; }
+  CloseFunc *get_close_func() const { return platform_close; }
+
   // This is a convenience RAII class to lock and unlock file objects.
   class FileLock {
     File *file;
