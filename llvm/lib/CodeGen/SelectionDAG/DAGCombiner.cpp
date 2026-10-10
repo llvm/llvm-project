@@ -8239,6 +8239,23 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
       return Folded;
 
+  // Fold (and X, (zext (not (shl -1, Y)))) -> (and X, (not (shl -1, Y)))
+  // A low-bits mask built in a narrower type and zero-extended is the same
+  // mask built in the wide type: for shift amounts within the narrow width
+  // the values are equal, and beyond it the narrow shift is poison. The wide
+  // form selects as a single and-not, and nothing needs zero-extending.
+  if (TLI.hasAndNot(SDValue(N, 0)) && VT.isScalarInteger() &&
+      TLI.isTypeLegal(VT) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::SHL, VT)) &&
+      sd_match(N, m_And(m_Value(X), m_OneUse(m_ZExt(m_OneUse(m_Not(m_OneUse(
+                                        m_Shl(m_AllOnes(), m_Value(Y))))))))))
+    return DAG.getNode(
+        ISD::AND, DL, VT, X,
+        DAG.getNOT(DL,
+                   DAG.getNode(ISD::SHL, DL, VT, DAG.getAllOnesConstant(DL, VT),
+                               DAG.getShiftAmountOperand(VT, Y)),
+                   VT));
+
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
   // this to shifting the MSB directly to expose further simplifications.
