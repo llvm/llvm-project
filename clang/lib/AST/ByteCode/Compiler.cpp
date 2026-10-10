@@ -7197,7 +7197,8 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     }
   } else {
     const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
-    assert(TargetLoop && "break target label not available");
+    if (!TargetLoop)
+      return this->emitUnsupported(S);
 
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
@@ -7239,7 +7240,8 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     }
   } else {
     const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
-    assert(TargetLoop && "continue target label not available");
+    if (!TargetLoop)
+      return this->emitUnsupported(S);
 
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
