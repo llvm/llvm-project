@@ -1086,18 +1086,6 @@ def PseudoXVREPLI_D : Pseudo<(outs LASX256:$xd), (ins simm10:$imm), [],
                              "xvrepli.d", "$xd, $imm">;
 }
 
-def PseudoXVBNZ_B : VecCond<loongarch_vall_nonzero, v32i8, LASX256>;
-def PseudoXVBNZ_H : VecCond<loongarch_vall_nonzero, v16i16, LASX256>;
-def PseudoXVBNZ_W : VecCond<loongarch_vall_nonzero, v8i32, LASX256>;
-def PseudoXVBNZ_D : VecCond<loongarch_vall_nonzero, v4i64, LASX256>;
-def PseudoXVBNZ : VecCond<loongarch_vany_nonzero, v32i8, LASX256>;
-
-def PseudoXVBZ_B : VecCond<loongarch_vall_zero, v32i8, LASX256>;
-def PseudoXVBZ_H : VecCond<loongarch_vall_zero, v16i16, LASX256>;
-def PseudoXVBZ_W : VecCond<loongarch_vall_zero, v8i32, LASX256>;
-def PseudoXVBZ_D : VecCond<loongarch_vall_zero, v4i64, LASX256>;
-def PseudoXVBZ : VecCond<loongarch_vany_zero, v32i8, LASX256>;
-
 let usesCustomInserter = 1, Constraints = "$xd = $dst" in {
 def PseudoXVINSGR2VR_B
   : Pseudo<(outs LASX256:$dst), (ins LASX256:$xd, GPR:$rj, uimm5:$imm)>;
@@ -2792,27 +2780,19 @@ def : Pat<(int_loongarch_lasx_xvstelm_d v4i64:$xd, GPR:$rj, timm:$imm, timm:$idx
 
 // Whole-vector zero tests, see the LSX counterparts.
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in {
-def : Pat<(GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))),
-          (MOVCF2GR (XVSETNEZ_V LASX256:$xj))>;
-def : Pat<(GRLenVT (loongarch_vallzero (vt LASX256:$xj))),
-          (MOVCF2GR (XVSETEQZ_V LASX256:$xj))>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vanynonzero (vt LASX256:$xj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (XVSETNEZ_V LASX256:$xj), bb:$imm21)>;
-def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
-                          SETNE, bb:$imm21),
-          (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
+defm : PatVecCond<loongarch_vanynonzero, XVSETNEZ_V, vt, LASX256>;
+defm : PatVecCond<loongarch_vallzero, XVSETEQZ_V, vt, LASX256>;
 }
 
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
-defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
-defm : PatVecCondBrCC<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
-defm : PatVecCondBrCC<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
+defm : PatVecCond<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
+defm : PatVecCond<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
+defm : PatVecCond<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
+defm : PatVecCond<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
 
 } // Predicates = [HasExtLASX]
