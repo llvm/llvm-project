@@ -2178,6 +2178,9 @@ public:
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
+  /// Return true if we should enable load widening for this target.
+  LLVM_ABI bool allowLoadWidening() const;
+
   /// Determine if an instruction with Custom uniformity can be proven uniform
   /// based on which operands are uniform.
   ///

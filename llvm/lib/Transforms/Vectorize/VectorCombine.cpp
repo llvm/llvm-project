@@ -229,12 +229,13 @@ static bool isEquivBitcast(Value *X, Value *Y) {
 }
 
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
-  // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
+  // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan
+  // or if not supported by the target.
   // The widened load may load data from dirty regions or create data races
   // non-existent in the source.
   if (!Load || !Load->isSimple() || !Load->hasOneUse() ||
       Load->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag) ||
-      mustSuppressSpeculation(*Load))
+      mustSuppressSpeculation(*Load) || !TTI.allowLoadWidening())
     return false;
 
   // We are potentially transforming byte-sized (8-bit) memory accesses, so make
