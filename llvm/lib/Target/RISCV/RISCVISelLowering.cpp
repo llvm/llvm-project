@@ -67,9 +67,9 @@ static cl::opt<unsigned> ExtensionMaxWebSize(
 
 static cl::opt<bool>
     AllowSplatInVW_W(DEBUG_TYPE "-form-vw-w-with-splat", cl::Hidden,
-                     cl::desc("Allow the formation of VW_W operations (e.g., "
-                              "VWADD_W) with splat constants"),
-                     cl::init(false));
+                     cl::desc("Allow profitable formation of VW_W operations "
+                              "(e.g., VWADD_W) with scalar splats"),
+                     cl::init(true));
 
 static cl::opt<unsigned> NumRepeatedDivisors(
     DEBUG_TYPE "-fp-repeated-divisors", cl::Hidden,
@@ -21104,6 +21104,149 @@ struct NodeExtensionHelper {
            OrigOperand.getOpcode() == ISD::SPLAT_VECTOR;
   }
 
+  /// Return the scalar value used by this splat.
+  SDValue getSplatScalar() const {
+    assert(isSplat() && "Expected a splat");
+    return OrigOperand.getOpcode() == ISD::SPLAT_VECTOR
+               ? OrigOperand.getOperand(0)
+               : OrigOperand.getOperand(1);
+  }
+
+  /// Look for an existing narrow integer context in which a VW_W operation
+  /// using a VSETVLI result can execute. Merely lacking another user with the
+  /// wide result type is insufficient: tuple users and conversions back to
+  /// wide floating-point arithmetic can still require the wide configuration.
+  /// This is a conservative local heuristic, not a VTYPE analysis. Reject
+  /// unclassified consumers and bound the inspected web as for VW expansion.
+  static bool hasNarrowIntegerContext(SDNode *Root, SDValue WideOperand,
+                                      SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+    EVT WideVT = Root->getValueType(0);
+    EVT NarrowVT = WideVT.getSimpleVT().changeVectorElementType(
+        MVT::getIntegerVT(WideVT.getScalarSizeInBits() / 2));
+    SDValue VL = getMaskAndVL(Root, DAG, Subtarget).second;
+    // Generic truncates use VLMAX. Do not infer a shared configuration for a
+    // root with an explicit AVL from those consumers.
+    auto *RegisterVL = dyn_cast<RegisterSDNode>(VL);
+    if (!RegisterVL || RegisterVL->getReg() != RISCV::X0)
+      return false;
+    SmallVector<SDValue, 8> Worklist{WideOperand, SDValue(Root, 0)};
+    SmallPtrSet<SDNode *, 16> Visited, Expanded;
+    bool HasNarrowContext = false;
+    while (!Worklist.empty()) {
+      SDValue Value = Worklist.pop_back_val();
+      if (!Expanded.insert(Value.getNode()).second)
+        continue;
+      bool IsWide = Value.getValueType() == WideVT;
+      for (SDUse &Use : Value->uses()) {
+        if (Use.getResNo() != Value.getResNo() ||
+            (Value == WideOperand && Use.getUser() == Root))
+          continue;
+        SDNode *User = Use.getUser();
+        Visited.insert(User);
+        if (Visited.size() > ExtensionMaxWebSize)
+          return false;
+        if (User->getOpcode() == ISD::CopyToReg && Use.getOperandNo() == 2)
+          continue;
+        if (IsWide) {
+          if (Use.getOperandNo() != 0 || User->getValueType(0) != NarrowVT ||
+              (User->getOpcode() != ISD::TRUNCATE &&
+               (User->getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL ||
+                User->getOperand(2) != VL)))
+            return false;
+          HasNarrowContext = true;
+          Worklist.push_back(SDValue(User, 0));
+          continue;
+        }
+        if ((User->getOpcode() == ISD::STORE ||
+             User->getOpcode() == ISD::VP_STORE) &&
+            Use.getOperandNo() == 1 &&
+            cast<MemSDNode>(User)->getMemoryVT() == NarrowVT)
+          continue;
+        if (User->getOpcode() == ISD::INTRINSIC_VOID &&
+            Use.getOperandNo() == 2 &&
+            (User->getConstantOperandVal(1) == Intrinsic::riscv_vse ||
+             User->getConstantOperandVal(1) == Intrinsic::riscv_vse_mask))
+          continue;
+        if (User->getValueType(0) != NarrowVT)
+          return false;
+        switch (User->getOpcode()) {
+        default:
+          return false;
+        case ISD::ADD:
+        case ISD::SUB:
+        case ISD::MUL:
+        case ISD::AND:
+        case ISD::OR:
+        case ISD::XOR:
+        case ISD::SHL:
+        case ISD::SRL:
+        case ISD::SRA:
+        case ISD::SELECT:
+        case ISD::VSELECT:
+        case ISD::VP_MERGE:
+        case RISCVISD::ADD_VL:
+        case RISCVISD::SUB_VL:
+        case RISCVISD::MUL_VL:
+        case RISCVISD::AND_VL:
+        case RISCVISD::OR_VL:
+        case RISCVISD::XOR_VL:
+        case RISCVISD::SHL_VL:
+        case RISCVISD::SRL_VL:
+        case RISCVISD::SRA_VL:
+        case RISCVISD::VMERGE_VL:
+          Worklist.push_back(SDValue(User, 0));
+          break;
+        }
+      }
+    }
+    return HasNarrowContext;
+  }
+
+  /// Check for a removable scalar extension or a narrow integer context
+  /// that makes a VSETVLI-result splat a promising VW_W candidate.
+  bool isProfitableSplatForVW_W(SDNode *Root, ExtKind Ext, SDValue WideOperand,
+                                SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) const {
+    if (!isSplat())
+      return true;
+    if (!OrigOperand.hasOneUse())
+      return false;
+
+    SDValue Scalar = getSplatScalar();
+    if (Scalar.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+        Scalar->getConstantOperandVal(0) == Intrinsic::riscv_vsetvli) {
+      if (WideOperand.getOpcode() != ISD::CopyFromReg)
+        return false;
+      return hasNarrowIntegerContext(Root, WideOperand, DAG, Subtarget);
+    }
+
+    if (!Scalar.hasOneUse())
+      return false;
+
+    unsigned NarrowSize = Root->getValueType(0).getScalarSizeInBits() / 2;
+    switch (Scalar.getOpcode()) {
+    default:
+      return false;
+    case ISD::ZERO_EXTEND:
+      return Ext == ExtKind::ZExt &&
+             Scalar.getOperand(0).getValueSizeInBits() == NarrowSize;
+    case ISD::SIGN_EXTEND:
+      return Ext == ExtKind::SExt &&
+             Scalar.getOperand(0).getValueSizeInBits() == NarrowSize;
+    case ISD::SIGN_EXTEND_INREG:
+      return Ext == ExtKind::SExt &&
+             cast<VTSDNode>(Scalar.getOperand(1))->getVT().getSizeInBits() ==
+                 NarrowSize;
+    case ISD::AND: {
+      auto *Mask = dyn_cast<ConstantSDNode>(Scalar.getOperand(1));
+      return Ext == ExtKind::ZExt && Mask &&
+             Mask->getAPIntValue() ==
+                 APInt::getLowBitsSet(Scalar.getValueSizeInBits(), NarrowSize);
+    }
+    }
+  }
+
   /// Get the extended opcode.
   unsigned getExtOpc(ExtKind SupportsExt) const {
     switch (SupportsExt) {
@@ -21718,15 +21861,21 @@ canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::FPExt),
         Root, LHS, /*LHSExt=*/std::nullopt, RHS, /*RHSExt=*/{ExtKind::FPExt});
 
-  // FIXME: Is it useful to form a vwadd.wx or vwsub.wx if it removes a scalar
-  // sext/zext?
-  // Control this behavior behind an option (AllowSplatInVW_W) for testing
-  // purposes.
-  if (RHS.SupportsZExt && (!RHS.isSplat() || AllowSplatInVW_W))
+  // Prefer splats with a removable scalar extension or a VSETVLI result with
+  // an existing narrow integer context.
+  if (RHS.SupportsZExt &&
+      (!RHS.isSplat() ||
+       (AllowSplatInVW_W &&
+        RHS.isProfitableSplatForVW_W(Root, ExtKind::ZExt, LHS.OrigOperand, DAG,
+                                     Subtarget))))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::ZExt), Root,
         LHS, /*LHSExt=*/std::nullopt, RHS, /*RHSExt=*/{ExtKind::ZExt});
-  if (RHS.SupportsSExt && (!RHS.isSplat() || AllowSplatInVW_W))
+  if (RHS.SupportsSExt &&
+      (!RHS.isSplat() ||
+       (AllowSplatInVW_W &&
+        RHS.isProfitableSplatForVW_W(Root, ExtKind::SExt, LHS.OrigOperand, DAG,
+                                     Subtarget))))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::SExt), Root,
         LHS, /*LHSExt=*/std::nullopt, RHS, /*RHSExt=*/{ExtKind::SExt});

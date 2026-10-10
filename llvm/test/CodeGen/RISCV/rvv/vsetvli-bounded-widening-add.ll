@@ -38,8 +38,7 @@ define i32 @bounded_widening_add(i32 %count, ptr %forward, ptr %reverse) {
 ; CHECK-NEXT:    vwsubu.vv v16, v19, v18
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmadd.vv v14, v16, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vadd.vx v8, v8, a5
+; CHECK-NEXT:    vwaddu.wx v8, v8, a5
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v12, v14, v12
 ; CHECK-NEXT:    add a3, a3, a5

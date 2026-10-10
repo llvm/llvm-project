@@ -1528,14 +1528,13 @@ define <vscale x 8 x i32> @vwadd_vx_splat_zext_i1(<vscale x 8 x i1> %va, i16 %b)
 ;
 ; RV64-LABEL: vwadd_vx_splat_zext_i1:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    vwaddu.vx v8, v12, a0, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vwaddu.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %zb = zext i16 %b to i32
   %head = insertelement <vscale x 8 x i32> poison, i32 %zb, i32 0
@@ -1562,10 +1561,8 @@ define <vscale x 8 x i64> @vwadd_wx_splat_zext(<vscale x 8 x i64> %va, i32 %b) {
 ;
 ; RV64-LABEL: vwadd_wx_splat_zext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwaddu.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %zb = zext i32 %b to i64
   %head = insertelement <vscale x 8 x i64> poison, i64 %zb, i32 0
@@ -1602,14 +1599,13 @@ define <vscale x 8 x i32> @vwadd_vx_splat_sext_i1(<vscale x 8 x i1> %va, i16 %b)
 ;
 ; RV64-LABEL: vwadd_vx_splat_sext_i1:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srai a0, a0, 48
-; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    vwadd.vx v8, v12, a0, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vwadd.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %sb = sext i16 %b to i32
   %head = insertelement <vscale x 8 x i32> poison, i32 %sb, i32 0
@@ -1628,9 +1624,8 @@ define <vscale x 8 x i64> @vwadd_wx_splat_sext(<vscale x 8 x i64> %va, i32 %b) {
 ;
 ; RV64-LABEL: vwadd_wx_splat_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwadd.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %sb = sext i32 %b to i64
   %head = insertelement <vscale x 8 x i64> poison, i64 %sb, i32 0
@@ -1708,9 +1703,8 @@ define void @fold_vsetvli_splat(ptr %out, i64 %remaining, <vscale x 2 x i64> %v)
 ;
 ; RV64-LABEL: fold_vsetvli_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, a1, e64, m2, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a1
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetvli a1, a1, e32, m1, ta, ma
+; RV64-NEXT:    vwaddu.wx v8, v8, a1
 ; RV64-NEXT:    vnsrl.wi v10, v8, 0
 ; RV64-NEXT:    vse32.v v10, (a0)
 ; RV64-NEXT:    ret

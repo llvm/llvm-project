@@ -112,10 +112,8 @@ define <vscale x 4 x i64> @ordinary_zext(<vscale x 4 x i64> %wide, i32 %scalar) 
 ;
 ; RV64-LABEL: ordinary_zext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; RV64-NEXT:    vwaddu.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %step = zext i32 %scalar to i64
   %head = insertelement <vscale x 4 x i64> poison, i64 %step, i64 0
@@ -133,9 +131,8 @@ define <vscale x 4 x i64> @ordinary_sext(<vscale x 4 x i64> %wide, i32 %scalar) 
 ;
 ; RV64-LABEL: ordinary_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; RV64-NEXT:    vwadd.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %step = sext i32 %scalar to i64
   %head = insertelement <vscale x 4 x i64> poison, i64 %step, i64 0

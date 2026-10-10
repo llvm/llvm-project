@@ -77,9 +77,8 @@ define void @narrow_arithmetic_store(ptr %out, i64 %remaining, <vscale x 2 x i64
 ;
 ; RV64-LABEL: narrow_arithmetic_store:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, a1, e64, m2, ta, ma
-; RV64-NEXT:    vadd.vx v8, v8, a1
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vsetvli a1, a1, e32, m1, ta, ma
+; RV64-NEXT:    vwaddu.wx v8, v8, a1
 ; RV64-NEXT:    vnsrl.wi v10, v8, 0
 ; RV64-NEXT:    vadd.vi v8, v10, 1
 ; RV64-NEXT:    vmul.vv v8, v8, v8
