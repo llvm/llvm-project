@@ -885,9 +885,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // PTX does not directly support SELP of i1, so promote to i32 first
   setOperationAction(ISD::SELECT, MVT::i1, Custom);
 
-  // PTX cannot multiply two i64s in a single instruction.
-  setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
-  setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+  // PTX only exposes the separate mul.lo and mul.hi forms. Expands to MUL and
+  // MULHS/MULHU.
+  setOperationAction(ISD::SMUL_LOHI, {MVT::i16, MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::UMUL_LOHI, {MVT::i16, MVT::i32, MVT::i64}, Expand);
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD,
