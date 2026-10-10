@@ -52,8 +52,7 @@ define amdgpu_kernel void @store_as4_i64(ptr addrspace(4) %p, i64 %v) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-NEXT:    v_mov_b32_e32 v3, s3
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store i64 %v, ptr addrspace(4) %p
@@ -80,8 +79,7 @@ define amdgpu_kernel void @store_as4_double(ptr addrspace(4) %p, double %v) {
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-NEXT:    v_mov_b32_e32 v3, s3
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   store double %v, ptr addrspace(4) %p
