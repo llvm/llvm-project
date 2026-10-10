@@ -16,7 +16,7 @@ define amdgpu_kernel void @extract_v2i32_from_v4i32_at2(ptr addrspace(1) %out) {
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"; def $0", attdialect, regdef:VReg_128, def %13
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY %13.sub2_sub3
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <4 x i32> asm "; def $0", "=v"()
   %sub = shufflevector <4 x i32> %in, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
@@ -34,7 +34,7 @@ define amdgpu_kernel void @extract_v4i32_from_v8i32_at4(ptr addrspace(1) %out) {
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"; def $0", attdialect, regdef:VReg_256, def %13
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY %13.sub4_sub5_sub6_sub7
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed [[V_MOV_B32_e32_]], killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <8 x i32> asm "; def $0", "=v"()
   %sub = shufflevector <8 x i32> %in, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -52,7 +52,7 @@ define amdgpu_kernel void @extract_v2i64_from_v8i64_at2(ptr addrspace(1) %out) {
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"; def $0", attdialect, regdef:VReg_512, def %13
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY %13.sub4_sub5_sub6_sub7
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed [[V_MOV_B32_e32_]], killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <8 x i64> asm "; def $0", "=v"()
   %sub = shufflevector <8 x i64> %in, <8 x i64> poison, <2 x i32> <i32 2, i32 3>
@@ -71,7 +71,7 @@ define amdgpu_kernel void @extract_v4i16_from_v8i16_at4(ptr addrspace(1) %out) {
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"; def $0", attdialect, regdef:VReg_128, def %13
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY %13.sub2_sub3
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[COPY1]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <8 x i16> asm "; def $0", "=v"()
   %sub = shufflevector <8 x i16> %in, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -92,13 +92,13 @@ define amdgpu_kernel void @extract_v4i16_from_v8i16_at3(ptr addrspace(1) %out) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY %13.sub1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY %13.sub2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %13.sub3
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY killed [[COPY3]]
-  ; CHECK-NEXT:   [[V_ALIGNBIT_B32_opsel_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_opsel_e64 0, killed [[COPY4]], 0, killed [[COPY2]], 0, 16, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[V_ALIGNBIT_B32_opsel_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_opsel_e64 0, [[COPY4]], 0, [[COPY2]], 0, 16, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY %13.sub2_sub3
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY5]].sub0
-  ; CHECK-NEXT:   [[V_ALIGNBIT_B32_opsel_e64_1:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_opsel_e64 0, killed [[COPY6]], 0, killed [[COPY1]], 0, 16, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[V_ALIGNBIT_B32_opsel_e64_1]], %subreg.sub0, killed [[V_ALIGNBIT_B32_opsel_e64_]], %subreg.sub1
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], killed [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
+  ; CHECK-NEXT:   [[V_ALIGNBIT_B32_opsel_e64_1:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_opsel_e64 0, [[COPY6]], 0, [[COPY1]], 0, 16, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ALIGNBIT_B32_opsel_e64_1]], %subreg.sub0, [[V_ALIGNBIT_B32_opsel_e64_]], %subreg.sub1
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s64) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <8 x i16> asm "; def $0", "=v"()
   %sub = shufflevector <8 x i16> %in, <8 x i16> poison, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -126,11 +126,11 @@ define amdgpu_kernel void @extract_v9i32_from_v16i32_at0(ptr addrspace(1) %out) 
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY %13.sub5
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %13.sub4
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY %13.sub8
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], killed [[COPY9]], [[S_LOAD_DWORDX2_IMM]], 32, 0, implicit $exec :: (volatile store (s32) into %ir.out.load + 32, align 32, addrspace 1)
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE]], [[S_LOAD_DWORDX2_IMM]], 16, 0, implicit $exec :: (volatile store (s128) into %ir.out.load + 16, addrspace 1)
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY4]], %subreg.sub0, killed [[COPY3]], %subreg.sub1, killed [[COPY2]], %subreg.sub2, killed [[COPY1]], %subreg.sub3
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, align 64, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[COPY9]], [[S_LOAD_DWORDX2_IMM]], 32, 0, implicit $exec :: (volatile store (s32) into %ir.out.load + 32, align 32, addrspace 1)
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], [[S_LOAD_DWORDX2_IMM]], 16, 0, implicit $exec :: (volatile store (s128) into %ir.out.load + 16, addrspace 1)
+  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (volatile store (s128) into %ir.out.load, align 64, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %in = call <16 x i32> asm "; def $0", "=v"()
   %sub = shufflevector <16 x i32> %in, <16 x i32> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>

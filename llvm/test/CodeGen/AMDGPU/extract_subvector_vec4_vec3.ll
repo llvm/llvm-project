@@ -19,7 +19,7 @@ define amdgpu_hs void @main(ptr addrspace(6) inreg %arg) {
   ; GCN-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY2]], [[COPY3]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96) into `ptr addrspace(8) poison`, align 1, addrspace 8)
+  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact [[COPY2]], [[COPY3]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96) into `ptr addrspace(8) poison`, align 1, addrspace 8)
   ; GCN-NEXT:   S_ENDPGM 0
 main_body:
   %tmp25 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
