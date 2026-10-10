@@ -35,6 +35,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include "CIRDialectBytecode.h"
+
 using namespace mlir;
 using namespace cir;
 
@@ -102,6 +104,7 @@ void cir::CIRDialect::initialize() {
 #include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
       >();
   addInterfaces<CIROpAsmDialectInterface>();
+  detail::addBytecodeInterface(this);
 }
 
 Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
@@ -1434,6 +1437,20 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     return ::mlir::failure();
   }
 
+  if (parser.parseOptionalKeyword("cc").succeeded()) {
+    cir::CallingConv callingConv;
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parseCIRKeyword<cir::CallingConv>(parser, callingConv).failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown calling convention");
+    if (parser.parseRParen().failed())
+      return failure();
+    result.addAttribute(
+        CIRDialect::getCallingConvAttrName(),
+        cir::CallingConvAttr::get(parser.getContext(), callingConv));
+  }
+
   if (parser.parseOptionalKeyword("musttail").succeeded())
     result.addAttribute(CIRDialect::getMustTailAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
@@ -1541,6 +1558,10 @@ static void printCallCommon(mlir::Operation *op,
     printer << tryCall.getUnwindDest();
   }
 
+  cir::CallingConv callingConv = callLikeOp.getCallingConv();
+  if (callingConv != cir::CallingConv::C)
+    printer << " cc(" << stringifyCallingConv(callingConv) << ")";
+
   if (op->hasAttr(CIRDialect::getMustTailAttrName()))
     printer << " musttail";
 
@@ -1555,6 +1576,7 @@ static void printCallCommon(mlir::Operation *op,
 
   llvm::StringRef elidedAttrs[] = {
       CIRDialect::getCalleeAttrName(),
+      CIRDialect::getCallingConvAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
@@ -2312,6 +2334,26 @@ void cir::SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
 
   build(builder, result, value, defaultOperands, caseOperands, attrs,
         defaultDestination, caseDestinations);
+}
+
+SuccessorOperands cir::SwitchFlatOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  if (index == 0)
+    return SuccessorOperands(getDefaultOperandsMutable());
+  return SuccessorOperands(getCaseOperandsMutable()[index - 1]);
+}
+
+Block *
+cir::SwitchFlatOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  auto cond = dyn_cast_if_present<cir::IntAttr>(operands.front());
+  if (!cond)
+    return nullptr;
+  for (auto [value, dest] : llvm::zip(getCaseValues(), getCaseDestinations())) {
+    const APInt &caseValue = cast<cir::IntAttr>(value).getValue();
+    if (caseValue == cond.getValue())
+      return dest;
+  }
+  return getDefaultDestination();
 }
 
 /// <cases> ::= `[` (case (`,` case )* )? `]`
@@ -4498,10 +4540,11 @@ LogicalResult cir::MatrixTransposeOp::verify() {
   cir::MatrixType resultTy = getResult().getType();
 
   if ((valueTy.getElementType() != resultTy.getElementType()) ||
-      (valueTy.getRowNum() != resultTy.getColumnNum()) ||
-      (valueTy.getColumnNum() != resultTy.getRowNum())) {
-    auto expectedTy = cir::MatrixType::get(
-        valueTy.getElementType(), valueTy.getColumnNum(), valueTy.getRowNum());
+      (valueTy.getNumRows() != resultTy.getNumColumns()) ||
+      (valueTy.getNumColumns() != resultTy.getNumRows())) {
+    auto expectedTy =
+        cir::MatrixType::get(valueTy.getElementType(), valueTy.getNumColumns(),
+                             valueTy.getNumRows());
     emitOpError() << "operand type " << valueTy << " expects result type of "
                   << expectedTy << " but got " << resultTy;
     return failure();

@@ -27,29 +27,6 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscvtti"
 
-static cl::opt<unsigned> RVVRegisterWidthLMUL(
-    "riscv-v-register-bit-width-lmul",
-    cl::desc(
-        "The LMUL to use for getRegisterBitWidth queries. Affects LMUL used "
-        "by autovectorized code. Fractional LMULs are not supported."),
-    cl::init(2), cl::Hidden);
-
-static cl::opt<unsigned> SLPMaxVF(
-    "riscv-v-slp-max-vf",
-    cl::desc(
-        "Overrides result used for getMaximumVF query which is used "
-        "exclusively by SLP vectorizer."),
-    cl::Hidden);
-
-static cl::opt<unsigned>
-    RVVMinTripCount("riscv-v-min-trip-count",
-                    cl::desc("Set the lower bound of a trip count to decide on "
-                             "vectorization while tail-folding."),
-                    cl::init(5), cl::Hidden);
-
-static cl::opt<bool> EnableOrLikeSelectOpt("riscv-or-like-select",
-                                           cl::init(true), cl::Hidden);
-
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) const {
@@ -455,8 +432,8 @@ std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
 
 TypeSize
 RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-  unsigned LMUL =
-      llvm::bit_floor(std::clamp<unsigned>(RVVRegisterWidthLMUL, 1, 8));
+  unsigned LMUL = llvm::bit_floor(
+      std::clamp<unsigned>(ST->getCLOpts().v_register_bit_width_lmul, 1, 8));
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->getXLen());
@@ -3557,8 +3534,8 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {
 }
 
 unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
-  if (SLPMaxVF.getNumOccurrences())
-    return SLPMaxVF;
+  if (std::optional<unsigned> MaxVF = ST->getCLOpts().v_slp_max_vf)
+    return *MaxVF;
 
   // Return how many elements can fit in getRegisterBitwidth.  This is the
   // same routine as used in LoopVectorizer.  We should probably be
@@ -3573,7 +3550,7 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 }
 
 unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
-  return RVVMinTripCount;
+  return ST->getCLOpts().v_min_trip_count;
 }
 
 bool RISCVTTIImpl::preferAlternateOpcodeVectorization() const {
@@ -3885,7 +3862,7 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
 bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
     const Instruction *I) const {
-  if (EnableOrLikeSelectOpt) {
+  if (ST->getCLOpts().or_like_select) {
     // For the binary operators (e.g. or) we need to be more careful than
     // selects, here we only transform them if they are already at a natural
     // break point in the code - the end of a block with an unconditional

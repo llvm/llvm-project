@@ -2162,6 +2162,7 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
         realCallOp = builder.createIndirectCallOp(
             noProtoCallOp.getLoc(), casted, callFnType, callOperands);
       }
+      realCallOp.setCallingConv(noProtoCallOp.getCallingConv());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -3743,7 +3744,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // library entity.
     setFuncInfoAttr(func, funcDecl);
 
-    if (this->getLangOpts().OpenACC) {
+    if (funcDecl && this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are
       // handled via the end-of-TU work.
       for (const auto *attr :

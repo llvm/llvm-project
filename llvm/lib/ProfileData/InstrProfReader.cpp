@@ -1559,36 +1559,6 @@ Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   return error(instrprof_error::unknown_function);
 }
 
-static Expected<memprof::MemProfRecord>
-getMemProfRecordV2(const memprof::IndexedMemProfRecord &IndexedRecord,
-                   MemProfFrameHashTable &MemProfFrameTable,
-                   MemProfCallStackHashTable &MemProfCallStackTable) {
-  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
-      MemProfFrameTable);
-
-  memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
-      MemProfCallStackTable, FrameIdConv);
-
-  memprof::MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
-
-  // Check that all call stack ids were successfully converted to call stacks.
-  if (CSIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(
-        instrprof_error::hash_mismatch,
-        "memprof call stack not found for call stack id " +
-            Twine(*CSIdConv.LastUnmappedId));
-  }
-
-  // Check that all frame ids were successfully converted to frames.
-  if (FrameIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*FrameIdConv.LastUnmappedId));
-  }
-
-  return Record;
-}
-
 Expected<memprof::MemProfRecord>
 IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
@@ -1603,17 +1573,9 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
-  case memprof::Version2:
-    assert(MemProfFrameTable && "MemProfFrameTable must be available");
-    assert(MemProfCallStackTable && "MemProfCallStackTable must be available");
-    return getMemProfRecordV2(IndexedRecord, *MemProfFrameTable,
-                              *MemProfCallStackTable);
   // Combine V3 and V4 cases as the record conversion logic is the same.
   case memprof::Version3:
   case memprof::Version4:
-    assert(!MemProfFrameTable && "MemProfFrameTable must not be available");
-    assert(!MemProfCallStackTable &&
-           "MemProfCallStackTable must not be available");
     assert(FrameBase && "FrameBase must be available");
     assert(CallStackBase && "CallStackBase must be available");
     {

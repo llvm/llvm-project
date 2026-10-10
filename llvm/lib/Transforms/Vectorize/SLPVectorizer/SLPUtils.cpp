@@ -588,16 +588,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
   if (It == VL.end())
     return std::nullopt;
-  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
-    auto *EI = dyn_cast<ExtractElementInst>(V);
-    if (!EI)
-      return S;
-    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VTy)
-      return S;
-    return std::max(S, VTy->getNumElements());
-  });
-
+  unsigned Size = 0;
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   bool HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
@@ -633,12 +624,14 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
       if (!Idx)
         return std::nullopt;
-      // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
+      // Undefined behavior if Idx is negative or out of bounds.
+      if (Idx->getValue().uge(getNumElements(Vec->getType())))
         continue;
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
     }
+    // The width is defined only by the lanes that are present in the mask.
+    Size = std::max(Size, getNumElements(Vec->getType()));
     if (isUndefVector(Vec).all() && HasNonUndefVec)
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
@@ -647,15 +640,26 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       Vec1 = Vec;
     } else if (!Vec2 || Vec2 == Vec) {
       Vec2 = Vec;
-      Mask[I] += Size;
     } else {
       return std::nullopt;
     }
+  }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
+  for (auto [I, Idx] : enumerate(Mask)) {
+    if (Idx == PoisonMaskElem)
+      continue;
+    auto *Vec = cast<ExtractElementInst>(VL[I])->getVectorOperand();
+    if (Vec == Vec2)
+      Idx += Size;
+    else if (Vec != Vec1)
+      continue;
     if (CommonShuffleMode == Permute)
       continue;
     // If the extract index is not the same as the operation number, it is a
     // permutation.
-    if (Mask[I] % Size != I) {
+    if (Idx % Size != I) {
       CommonShuffleMode = Permute;
       continue;
     }
@@ -857,6 +861,19 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
     Conditions[Idx] = Sel->getCondition();
   }
   return TrueBase != nullptr;
+}
+
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL) {
+  assert(all_of(VL, IsaPred<LoadInst>) &&
+         "Expected only load lanes in a blended load.");
+  const uint64_t ScalarSize = DL.getTypeStoreSize(VL.front()->getType());
+  Align BaseAlignment = cast<LoadInst>(VL.front())->getAlign();
+  for (auto [Idx, V] : enumerate(VL))
+    BaseAlignment =
+        std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
+                                                Idx * ScalarSize));
+  return BaseAlignment;
 }
 
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
