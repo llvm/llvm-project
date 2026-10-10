@@ -28,20 +28,11 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 1
-; GFX9-NEXT:    s_mov_b64 s[6:7], 0
-; GFX9-NEXT:    s_add_u32 s4, s6, s4
-; GFX9-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX9-NEXT:    s_cmp_lg_u64 s[8:9], 0
-; GFX9-NEXT:    s_addc_u32 s5, s7, s5
-; GFX9-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    v_addc_co_u32_e64 v2, s[8:9], v40, v0, s[8:9]
-; GFX9-NEXT:    v_mov_b32_e32 v0, s7
-; GFX9-NEXT:    v_addc_co_u32_e64 v3, s[6:7], v41, v0, s[8:9]
-; GFX9-NEXT:    v_lshrrev_b64 v[4:5], s34, v[2:3]
 ; GFX9-NEXT:    s_lshr_b64 s[6:7], s[4:5], s34
+; GFX9-NEXT:    v_lshrrev_b64 v[4:5], s34, v[40:41]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
+; GFX9-NEXT:    v_mov_b32_e32 v2, v40
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX9-NEXT:    v_readlane_b32 s30, v42, 1
 ; GFX9-NEXT:    v_readlane_b32 s31, v42, 2
@@ -91,23 +82,13 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-NEXT:    s_mov_b64 s[0:1], 1
-; GFX12-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_add_co_u32 s0, s2, s0
-; GFX12-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-NEXT:    s_add_co_ci_u32 s1, s3, s1
-; GFX12-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v2, s2, v40, s2, s4
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s2, v41, s3, s2
-; GFX12-NEXT:    v_lshrrev_b64 v[3:4], s34, v[2:3]
 ; GFX12-NEXT:    s_lshr_b64 s[2:3], s[0:1], s34
+; GFX12-NEXT:    v_lshrrev_b64 v[3:4], s34, v[40:41]
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
+; GFX12-NEXT:    v_mov_b32_e32 v2, v40
 ; GFX12-NEXT:    v_readlane_b32 s30, v42, 1
 ; GFX12-NEXT:    v_readlane_b32 s31, v42, 2
 ; GFX12-NEXT:    v_readlane_b32 s34, v42, 0
