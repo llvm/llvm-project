@@ -400,130 +400,31 @@ define <8 x i16> @test_unsigned_v8i16_v8f32(<8 x float> %f) nounwind {
 define <8 x i32> @test_unsigned_v8i32_v8f32(<8 x float> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v8i32_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    movl $-1, %ecx
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vcvttss2si %xmm3, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm3
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm3
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm3[1,0]
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdi
-; AVX2-NEXT:    vmovd %esi, %xmm5
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edi
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm4
-; AVX2-NEXT:    vpinsrd $2, %edi, %xmm4, %xmm4
-; AVX2-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; AVX2-NEXT:    vcvttss2si %xmm3, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm3
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm3
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvttss2si %xmm3, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm3
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm3
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm3
-; AVX2-NEXT:    vcvttss2si %xmm0, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm0
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm0
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdi
-; AVX2-NEXT:    vmovd %edx, %xmm5
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edi
-; AVX2-NEXT:    vpinsrd $1, %esi, %xmm5, %xmm4
-; AVX2-NEXT:    vpinsrd $2, %edi, %xmm4, %xmm4
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX2-NEXT:    vcvttss2si %xmm0, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm0
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm0
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; AVX2-NEXT:    vcmpnleps %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vcvttps2dq %ymm2, %ymm2
+; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm3
+; AVX2-NEXT:    vpsrad $31, %ymm3, %ymm4
+; AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vandnps %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4.29496704E+9,4.29496704E+9,4.29496704E+9,4.29496704E+9,4.29496704E+9,4.29496704E+9,4.29496704E+9,4.29496704E+9]
+; AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v8i32_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    movl $-1, %ecx
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vcvttss2si %xmm3, %rsi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm4
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm4, %xmm4
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm5 = xmm3[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm5, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
-; AVX512-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm3, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm3
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vcvttss2si %xmm0, %rsi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm4
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm4, %xmm4
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm5, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
-; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm0, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm0
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; AVX512-NEXT:    vcmpnleps %ymm0, %ymm1, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vcvttps2udq %ymm0, %ymm1 {%k1} {z}
+; AVX512-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f32(<8 x float> %f)
   ret <8 x i32> %x
@@ -532,190 +433,111 @@ define <8 x i32> @test_unsigned_v8i32_v8f32(<8 x float> %f) nounwind {
 define <8 x i64> @test_unsigned_v8i64_v8f32(<8 x float> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v8i64_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-NEXT:    vsubss %xmm2, %xmm4, %xmm1
-; AVX2-NEXT:    vcvttss2si %xmm1, %rax
-; AVX2-NEXT:    vcvttss2si %xmm4, %rcx
+; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; AVX2-NEXT:    vsubss %xmm1, %xmm2, %xmm3
+; AVX2-NEXT:    vcvttss2si %xmm3, %rax
+; AVX2-NEXT:    vcvttss2si %xmm2, %rcx
 ; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
 ; AVX2-NEXT:    andq %rax, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbq %rax, %rdx
-; AVX2-NEXT:    vmovss {{.*#+}} xmm3 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-NEXT:    vucomiss %xmm3, %xmm4
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovaq %rcx, %rdx
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX2-NEXT:    vsubss %xmm1, %xmm2, %xmm3
+; AVX2-NEXT:    vcvttss2si %xmm3, %rax
+; AVX2-NEXT:    vcvttss2si %xmm2, %rcx
+; AVX2-NEXT:    vmovq %rdx, %xmm2
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm3
+; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm4
+; AVX2-NEXT:    vcvttss2si %xmm4, %rax
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX2-NEXT:    vcvttss2si %xmm0, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vsubss %xmm1, %xmm3, %xmm4
+; AVX2-NEXT:    vcvttss2si %xmm4, %rax
+; AVX2-NEXT:    vcvttss2si %xmm3, %rcx
+; AVX2-NEXT:    vmovq %rdx, %xmm3
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm4
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX2-NEXT:    vsubss %xmm2, %xmm5, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rdx
-; AVX2-NEXT:    vcvttss2si %xmm5, %rsi
-; AVX2-NEXT:    movq %rsi, %rdi
-; AVX2-NEXT:    sarq $63, %rdi
-; AVX2-NEXT:    andq %rdx, %rdi
-; AVX2-NEXT:    orq %rsi, %rdi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbq %rax, %rdi
-; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rcx, %rdi
-; AVX2-NEXT:    vmovq %rdi, %xmm5
-; AVX2-NEXT:    vsubss %xmm2, %xmm0, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rsi
-; AVX2-NEXT:    vcvttss2si %xmm0, %rdi
-; AVX2-NEXT:    movq %rdi, %rdx
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vcmpnleps %xmm0, %xmm3, %xmm4
+; AVX2-NEXT:    vpmovsxdq %xmm4, %ymm4
+; AVX2-NEXT:    vpandn %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm4 = [1.8446743E+19,1.8446743E+19,1.8446743E+19,1.8446743E+19]
+; AVX2-NEXT:    vcmpltps %xmm0, %xmm4, %xmm5
+; AVX2-NEXT:    vpmovsxdq %xmm5, %ymm5
+; AVX2-NEXT:    vpor %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vshufps {{.*#+}} xmm5 = xmm0[3,3,3,3]
+; AVX2-NEXT:    vsubss %xmm1, %xmm5, %xmm6
+; AVX2-NEXT:    vcvttss2si %xmm6, %rax
+; AVX2-NEXT:    vcvttss2si %xmm5, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
-; AVX2-NEXT:    andq %rsi, %rdx
-; AVX2-NEXT:    orq %rdi, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm0
-; AVX2-NEXT:    cmovbq %rax, %rdx
-; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rcx, %rdx
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vsubss %xmm2, %xmm6, %xmm7
-; AVX2-NEXT:    vcvttss2si %xmm7, %rdi
-; AVX2-NEXT:    vcvttss2si %xmm6, %r8
-; AVX2-NEXT:    movq %r8, %rsi
-; AVX2-NEXT:    sarq $63, %rsi
-; AVX2-NEXT:    andq %rdi, %rsi
-; AVX2-NEXT:    orq %r8, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbq %rax, %rsi
-; AVX2-NEXT:    vucomiss %xmm3, %xmm6
-; AVX2-NEXT:    cmovaq %rcx, %rsi
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm5
-; AVX2-NEXT:    vshufps {{.*#+}} xmm6 = xmm5[3,3,3,3]
-; AVX2-NEXT:    vsubss %xmm2, %xmm6, %xmm0
-; AVX2-NEXT:    vcvttss2si %xmm0, %rdi
-; AVX2-NEXT:    vcvttss2si %xmm6, %r8
-; AVX2-NEXT:    vmovq %rdx, %xmm0
-; AVX2-NEXT:    movq %r8, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm5
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm6 = xmm0[1,0]
+; AVX2-NEXT:    vsubss %xmm1, %xmm6, %xmm7
+; AVX2-NEXT:    vcvttss2si %xmm7, %rax
+; AVX2-NEXT:    vcvttss2si %xmm6, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
-; AVX2-NEXT:    andq %rdi, %rdx
-; AVX2-NEXT:    orq %r8, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbq %rax, %rdx
-; AVX2-NEXT:    vucomiss %xmm3, %xmm6
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm7 = xmm5[1,0]
-; AVX2-NEXT:    vsubss %xmm2, %xmm7, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rdi
-; AVX2-NEXT:    vmovq %rsi, %xmm6
-; AVX2-NEXT:    cmovaq %rcx, %rdx
-; AVX2-NEXT:    vcvttss2si %xmm7, %r8
-; AVX2-NEXT:    movq %r8, %rsi
-; AVX2-NEXT:    sarq $63, %rsi
-; AVX2-NEXT:    andq %rdi, %rsi
-; AVX2-NEXT:    orq %r8, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm7
-; AVX2-NEXT:    cmovbq %rax, %rsi
-; AVX2-NEXT:    vucomiss %xmm3, %xmm7
-; AVX2-NEXT:    vsubss %xmm2, %xmm5, %xmm7
-; AVX2-NEXT:    vcvttss2si %xmm7, %rdi
-; AVX2-NEXT:    vmovq %rdx, %xmm7
-; AVX2-NEXT:    cmovaq %rcx, %rsi
-; AVX2-NEXT:    vcvttss2si %xmm5, %r8
-; AVX2-NEXT:    movq %r8, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm6
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm6[0],xmm5[0]
+; AVX2-NEXT:    vsubss %xmm1, %xmm0, %xmm6
+; AVX2-NEXT:    vcvttss2si %xmm6, %rax
+; AVX2-NEXT:    vcvttss2si %xmm0, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
-; AVX2-NEXT:    andq %rdi, %rdx
-; AVX2-NEXT:    orq %r8, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbq %rax, %rdx
-; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rcx, %rdx
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; AVX2-NEXT:    vsubss %xmm2, %xmm5, %xmm2
-; AVX2-NEXT:    vcvttss2si %xmm2, %rdi
-; AVX2-NEXT:    vmovq %rsi, %xmm2
-; AVX2-NEXT:    vcvttss2si %xmm5, %rsi
-; AVX2-NEXT:    movq %rsi, %r8
-; AVX2-NEXT:    sarq $63, %r8
-; AVX2-NEXT:    andq %rdi, %r8
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm6[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm7[0]
-; AVX2-NEXT:    orq %rsi, %r8
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbq %rax, %r8
-; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rcx, %r8
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm6
+; AVX2-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vsubss %xmm1, %xmm7, %xmm1
+; AVX2-NEXT:    vcvttss2si %xmm1, %rax
+; AVX2-NEXT:    vcvttss2si %xmm7, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdx, %xmm1
-; AVX2-NEXT:    vmovq %r8, %xmm3
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm6[0],xmm1[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
+; AVX2-NEXT:    vcmpnleps %xmm0, %xmm3, %xmm3
+; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm3
+; AVX2-NEXT:    vpandn %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vcmpltps %xmm0, %xmm4, %xmm0
+; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v8i64_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX512-NEXT:    vshufps {{.*#+}} xmm4 = xmm3[3,3,3,3]
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    movq $-1, %rcx
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm4 = xmm3[1,0]
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rsi
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rsi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    vmovq %rsi, %xmm4
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm5[0]
-; AVX512-NEXT:    vcvttss2usi %xmm3, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX512-NEXT:    vcvttss2usi %xmm3, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm3
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm5[0],xmm3[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
-; AVX512-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rsi
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rsi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    vmovq %rsi, %xmm4
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm5[0]
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm5[0],xmm0[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; AVX512-NEXT:    vcmpnleps %ymm0, %ymm1, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vcvttps2uqq %ymm0, %zmm1 {%k1} {z}
+; AVX512-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; AVX512-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %x = call <8 x i64> @llvm.fptoui.sat.v8i64.v8f32(<8 x float> %f)
   ret <8 x i64> %x
@@ -896,27 +718,17 @@ define <8 x i128> @test_unsigned_v8i128_v8f32(<8 x float> %f) nounwind {
 define <4 x i1> @test_unsigned_v4i1_v4f64(<4 x double> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v4i1_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vmaxsd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm3 = [1.0E+0,0.0E+0]
-; AVX2-NEXT:    vminsd %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vcvttsd2si %xmm1, %eax
-; AVX2-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
-; AVX2-NEXT:    vminsd %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vcvttsd2si %xmm1, %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm1
-; AVX2-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vmaxsd %xmm2, %xmm0, %xmm4
-; AVX2-NEXT:    vminsd %xmm3, %xmm4, %xmm4
-; AVX2-NEXT:    vcvttsd2si %xmm4, %eax
-; AVX2-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX2-NEXT:    vmaxsd %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vminsd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX2-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vminpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX2-NEXT:    vsubpd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1013,31 +825,30 @@ define <4 x i16> @test_unsigned_v4i16_v4f64(<4 x double> %f) nounwind {
 }
 
 define <4 x i32> @test_unsigned_v4i32_v4f64(<4 x double> %f) nounwind {
-; CHECK-LABEL: test_unsigned_v4i32_v4f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmaxsd %xmm1, %xmm2, %xmm1
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm3 = [4.294967295E+9,0.0E+0]
-; CHECK-NEXT:    vminsd %xmm1, %xmm3, %xmm1
-; CHECK-NEXT:    vcvttsd2si %xmm1, %rax
-; CHECK-NEXT:    vmaxsd %xmm0, %xmm2, %xmm1
-; CHECK-NEXT:    vminsd %xmm1, %xmm3, %xmm1
-; CHECK-NEXT:    vcvttsd2si %xmm1, %rcx
-; CHECK-NEXT:    vmovd %ecx, %xmm1
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vmaxsd %xmm0, %xmm2, %xmm4
-; CHECK-NEXT:    vminsd %xmm4, %xmm3, %xmm4
-; CHECK-NEXT:    vcvttsd2si %xmm4, %rax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    vmaxsd %xmm0, %xmm2, %xmm0
-; CHECK-NEXT:    vminsd %xmm0, %xmm3, %xmm0
-; CHECK-NEXT:    vcvttsd2si %xmm0, %rax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; AVX2-LABEL: test_unsigned_v4i32_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [4.294967295E+9,4.294967295E+9,4.294967295E+9,4.294967295E+9]
+; AVX2-NEXT:    vminpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm2
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; AVX2-NEXT:    vsubpd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; AVX2-NEXT:    vandpd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vorpd %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_v4i32_v4f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512-NEXT:    vcvttpd2udq %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f64(<4 x double> %f)
   ret <4 x i32> %x
 }
@@ -1045,103 +856,63 @@ define <4 x i32> @test_unsigned_v4i32_v4f64(<4 x double> %f) nounwind {
 define <4 x i64> @test_unsigned_v4i64_v4f64(<4 x double> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v4i64_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX2-NEXT:    vsubsd %xmm1, %xmm4, %xmm2
-; AVX2-NEXT:    vcvttsd2si %xmm2, %rax
+; AVX2-NEXT:    vsubsd %xmm1, %xmm2, %xmm3
+; AVX2-NEXT:    vcvttsd2si %xmm3, %rax
+; AVX2-NEXT:    vcvttsd2si %xmm2, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm3
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
+; AVX2-NEXT:    vsubsd %xmm1, %xmm2, %xmm4
+; AVX2-NEXT:    vcvttsd2si %xmm4, %rax
+; AVX2-NEXT:    vcvttsd2si %xmm2, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm2
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX2-NEXT:    vsubsd %xmm1, %xmm0, %xmm3
+; AVX2-NEXT:    vcvttsd2si %xmm3, %rax
+; AVX2-NEXT:    vcvttsd2si %xmm0, %rcx
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    sarq $63, %rdx
+; AVX2-NEXT:    andq %rax, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm3
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
+; AVX2-NEXT:    vsubsd %xmm1, %xmm4, %xmm1
+; AVX2-NEXT:    vcvttsd2si %xmm1, %rax
 ; AVX2-NEXT:    vcvttsd2si %xmm4, %rcx
 ; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    sarq $63, %rdx
 ; AVX2-NEXT:    andq %rax, %rdx
 ; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vucomisd %xmm2, %xmm4
-; AVX2-NEXT:    cmovbq %rax, %rdx
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm3 = [1.844674407370955E+19,0.0E+0]
-; AVX2-NEXT:    vucomisd %xmm3, %xmm4
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovaq %rcx, %rdx
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm4[1,0]
-; AVX2-NEXT:    vsubsd %xmm1, %xmm4, %xmm5
-; AVX2-NEXT:    vcvttsd2si %xmm5, %rdi
-; AVX2-NEXT:    vcvttsd2si %xmm4, %r8
-; AVX2-NEXT:    movq %r8, %rsi
-; AVX2-NEXT:    sarq $63, %rsi
-; AVX2-NEXT:    andq %rdi, %rsi
-; AVX2-NEXT:    orq %r8, %rsi
-; AVX2-NEXT:    vucomisd %xmm2, %xmm4
-; AVX2-NEXT:    cmovbq %rax, %rsi
-; AVX2-NEXT:    vucomisd %xmm3, %xmm4
-; AVX2-NEXT:    cmovaq %rcx, %rsi
-; AVX2-NEXT:    vsubsd %xmm1, %xmm0, %xmm4
-; AVX2-NEXT:    vcvttsd2si %xmm4, %r8
-; AVX2-NEXT:    vcvttsd2si %xmm0, %r9
-; AVX2-NEXT:    movq %r9, %rdi
-; AVX2-NEXT:    sarq $63, %rdi
-; AVX2-NEXT:    andq %r8, %rdi
-; AVX2-NEXT:    orq %r9, %rdi
-; AVX2-NEXT:    vucomisd %xmm2, %xmm0
-; AVX2-NEXT:    cmovbq %rax, %rdi
-; AVX2-NEXT:    vucomisd %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rcx, %rdi
-; AVX2-NEXT:    vmovq %rdx, %xmm4
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX2-NEXT:    vsubsd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vcvttsd2si %xmm1, %rdx
-; AVX2-NEXT:    vcvttsd2si %xmm0, %r8
-; AVX2-NEXT:    vmovq %rsi, %xmm1
-; AVX2-NEXT:    movq %r8, %rsi
-; AVX2-NEXT:    sarq $63, %rsi
-; AVX2-NEXT:    andq %rdx, %rsi
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm4[0],xmm1[0]
-; AVX2-NEXT:    orq %r8, %rsi
-; AVX2-NEXT:    vucomisd %xmm2, %xmm0
-; AVX2-NEXT:    cmovbq %rax, %rsi
-; AVX2-NEXT:    vucomisd %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rcx, %rsi
-; AVX2-NEXT:    vmovq %rdi, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm2
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovq %rdx, %xmm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm3[0],xmm1[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vcmpnlepd %ymm0, %ymm2, %ymm2
+; AVX2-NEXT:    vandnpd %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.844674407370955E+19,1.844674407370955E+19,1.844674407370955E+19,1.844674407370955E+19]
+; AVX2-NEXT:    vcmpltpd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vorpd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v4i64_v4f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vcvttsd2usi %xmm1, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vucomisd %xmm2, %xmm1
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm3 = [1.844674407370955E+19,0.0E+0]
-; AVX512-NEXT:    vucomisd %xmm3, %xmm1
-; AVX512-NEXT:    movq $-1, %rcx
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX512-NEXT:    vcvttsd2usi %xmm1, %rdx
-; AVX512-NEXT:    vucomisd %xmm2, %xmm1
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomisd %xmm3, %xmm1
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm1
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %rdx
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm4[0],xmm1[0]
-; AVX512-NEXT:    vucomisd %xmm2, %xmm0
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomisd %xmm3, %xmm0
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %rdx
-; AVX512-NEXT:    vucomisd %xmm2, %xmm0
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomisd %xmm3, %xmm0
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm0[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vcmpnlepd %ymm0, %ymm1, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vcvttpd2uqq %ymm0, %ymm1 {%k1} {z}
+; AVX512-NEXT:    vcmpgtpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vmovdqa64 %ymm0, %ymm1 {%k1}
+; AVX512-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %x = call <4 x i64> @llvm.fptoui.sat.v4i64.v4f64(<4 x double> %f)
   ret <4 x i64> %x
@@ -1672,277 +1443,57 @@ define <16 x i16> @test_unsigned_v16i16_v16f16(<16 x half> %f) nounwind {
 define <16 x i32> @test_unsigned_v16i32_v16f16(<16 x half> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v16i32_v16f16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm3
-; AVX2-NEXT:    vcvttss2si %xmm3, %rdx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vucomiss %xmm1, %xmm3
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-NEXT:    vucomiss %xmm2, %xmm3
-; AVX2-NEXT:    movl $-1, %ecx
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
-; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX2-NEXT:    vcvttss2si %xmm3, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm3
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm3
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vmovd %esi, %xmm3
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm3, %xmm3
-; AVX2-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm3, %xmm3
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm4
-; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm4
-; AVX2-NEXT:    vcvttss2si %xmm4, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vmovd %esi, %xmm4
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm4, %xmm4
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX2-NEXT:    vcvttss2si %xmm5, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm5
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm4, %xmm4
-; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm5
-; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX2-NEXT:    vcvttss2si %xmm5, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm5
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm4, %xmm4
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX2-NEXT:    vcvttss2si %xmm5, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm5
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX2-NEXT:    vcvttss2si %xmm5, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm5
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm5
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vmovd %esi, %xmm5
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm5
-; AVX2-NEXT:    vshufps {{.*#+}} xmm6 = xmm0[3,3,3,3]
-; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm6
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm5, %xmm5
-; AVX2-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm6
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm5, %xmm5
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm6
-; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm6
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm6
-; AVX2-NEXT:    vcvttss2si %xmm6, %rsi
-; AVX2-NEXT:    vucomiss %xmm1, %xmm6
-; AVX2-NEXT:    cmovbl %eax, %esi
-; AVX2-NEXT:    vucomiss %xmm2, %xmm6
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vmovd %esi, %xmm6
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm6, %xmm6
-; AVX2-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvtph2ps %xmm7, %xmm7
-; AVX2-NEXT:    vcvttss2si %xmm7, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm7
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm7
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm6, %xmm6
-; AVX2-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX2-NEXT:    vcvttss2si %xmm0, %rdx
-; AVX2-NEXT:    vucomiss %xmm1, %xmm0
-; AVX2-NEXT:    cmovbl %eax, %edx
-; AVX2-NEXT:    vucomiss %xmm2, %xmm0
-; AVX2-NEXT:    cmoval %ecx, %edx
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm0
-; AVX2-NEXT:    vpinsrd $3, %edx, %xmm6, %xmm1
-; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
+; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm2
+; AVX2-NEXT:    vcmpnleps %ymm2, %ymm1, %ymm3
+; AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    vpmovsxwd %xmm3, %ymm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vsubps %ymm4, %ymm2, %ymm5
+; AVX2-NEXT:    vcvttps2dq %ymm5, %ymm5
+; AVX2-NEXT:    vcvttps2dq %ymm2, %ymm6
+; AVX2-NEXT:    vpsrad $31, %ymm6, %ymm7
+; AVX2-NEXT:    vpand %ymm7, %ymm5, %ymm5
+; AVX2-NEXT:    vpor %ymm5, %ymm6, %ymm5
+; AVX2-NEXT:    vpandn %ymm5, %ymm3, %ymm3
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm5 = [6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4]
+; AVX2-NEXT:    vcmpltps %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm6
+; AVX2-NEXT:    vpackssdw %xmm6, %xmm2, %xmm2
+; AVX2-NEXT:    vpmovsxwd %xmm2, %ymm2
+; AVX2-NEXT:    vpor %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX2-NEXT:    vcmpnleps %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpmovsxwd %xmm1, %ymm1
+; AVX2-NEXT:    vsubps %ymm4, %ymm0, %ymm3
+; AVX2-NEXT:    vcvttps2dq %ymm3, %ymm3
+; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm4
+; AVX2-NEXT:    vpsrad $31, %ymm4, %ymm6
+; AVX2-NEXT:    vpand %ymm6, %ymm3, %ymm3
+; AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
+; AVX2-NEXT:    vpandn %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vcmpltps %ymm0, %ymm5, %ymm0
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v16i32_v16f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm3
-; AVX512-NEXT:    vcvttss2usi %xmm3, %edx
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    movl $-1, %ecx
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm4[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512-NEXT:    vcvttss2usi %xmm3, %esi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm3
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm3
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm3
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm4[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm3, %xmm3
-; AVX512-NEXT:    vpsrld $16, %xmm4, %xmm5
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %esi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm5
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm5
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm4[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm5, %xmm5
-; AVX512-NEXT:    vpsrlq $48, %xmm4, %xmm4
-; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vcvttss2usi %xmm4, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm5, %xmm4
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %esi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm5
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovd %esi, %xmm5
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm5, %xmm5
-; AVX512-NEXT:    vshufps {{.*#+}} xmm6 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm5, %xmm5
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm5, %xmm5
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm6
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %esi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %esi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %edi
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbl %eax, %edi
-; AVX512-NEXT:    vucomiss %xmm2, %xmm6
-; AVX512-NEXT:    vmovd %esi, %xmm6
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm6, %xmm6
-; AVX512-NEXT:    cmoval %ecx, %edi
-; AVX512-NEXT:    vpinsrd $2, %edi, %xmm6, %xmm6
-; AVX512-NEXT:    vpsrlq $48, %xmm0, %xmm0
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
-; AVX512-NEXT:    vcvttss2usi %xmm0, %edx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbl %eax, %edx
-; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm6, %xmm0
-; AVX512-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; AVX512-NEXT:    vcvtph2ps %ymm0, %zmm1
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vcmpnleps %zmm1, %zmm0, %k0
+; AVX512-NEXT:    knotw %k0, %k1
+; AVX512-NEXT:    vcvttps2udq %zmm1, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %x = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f16(<16 x half> %f)
   ret <16 x i32> %x
@@ -2205,151 +1756,22 @@ define <16 x i64> @test_unsigned_v16i64_v16f16(<16 x half> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v16i64_v16f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm2
-; AVX512-NEXT:    vcvttss2usi %xmm2, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vucomiss %xmm1, %xmm2
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vmovss {{.*#+}} xmm3 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
-; AVX512-NEXT:    vucomiss %xmm3, %xmm2
-; AVX512-NEXT:    movq $-1, %rcx
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm2
-; AVX512-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm2[0]
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vpsrlq $48, %xmm0, %xmm6
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %rdx
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm6
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rsi
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rsi
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rdx
-; AVX512-NEXT:    vmovq %rsi, %xmm6
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm5
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rsi
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm6[0],xmm4[0]
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rsi
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vmovq %rsi, %xmm6
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm4, %zmm2
+; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm3 = [6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4,6.5504E+4]
+; AVX512-NEXT:    vcmpltps %ymm1, %ymm3, %k1
+; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX512-NEXT:    vcmpnleps %ymm1, %ymm4, %k0
+; AVX512-NEXT:    knotb %k0, %k2
+; AVX512-NEXT:    vcvttps2uqq %ymm1, %zmm2 {%k2} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm5 = -1
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm4, %xmm4
-; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm4
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm4
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vshufps {{.*#+}} xmm5 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %rdx
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm6
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vshufpd {{.*#+}} xmm5 = xmm0[1,0]
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rsi
-; AVX512-NEXT:    vmovq %rdx, %xmm6
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rsi
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    vmovq %rsi, %xmm5
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
-; AVX512-NEXT:    vpsrlq $48, %xmm0, %xmm5
-; AVX512-NEXT:    vcvtph2ps %xmm5, %xmm5
-; AVX512-NEXT:    vcvttss2usi %xmm5, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm5
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm5
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm5
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvtph2ps %xmm6, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm6
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm6
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm5 = xmm6[0],xmm5[0]
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm6
-; AVX512-NEXT:    vcvttss2usi %xmm6, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm6
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm6
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm6
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vcvttss2usi %xmm0, %rdx
-; AVX512-NEXT:    vucomiss %xmm1, %xmm0
-; AVX512-NEXT:    cmovbq %rax, %rdx
-; AVX512-NEXT:    vucomiss %xmm3, %xmm0
-; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm6[0],xmm0[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm1
+; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa64 %zmm5, %zmm2 {%k1}
+; AVX512-NEXT:    vcmpltps %ymm0, %ymm3, %k1
+; AVX512-NEXT:    vcmpnleps %ymm0, %ymm4, %k0
+; AVX512-NEXT:    knotb %k0, %k2
+; AVX512-NEXT:    vcvttps2uqq %ymm0, %zmm1 {%k2} {z}
+; AVX512-NEXT:    vmovdqa64 %zmm5, %zmm1 {%k1}
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %x = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f16(<16 x half> %f)
