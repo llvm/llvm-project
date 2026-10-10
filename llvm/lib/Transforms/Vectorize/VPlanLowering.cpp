@@ -119,9 +119,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 // the loop terminator with a branch-on-cond recipe with the negated
 // wide-active-lane-mask as operand. Note that this turns the loop into an
 // uncountable one. Only the existing terminator is replaced, all other existing
-// recipes/users remain unchanged, except for poison-generating flags being
-// dropped from the canonical IV increment. Return the created
-// VPActiveLaneMaskPHIRecipe.
+// recipes/users remain unchanged. Return the created VPActiveLaneMaskPHIRecipe.
 //
 // The function adds the following recipes:
 //
@@ -147,8 +145,6 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
   auto *CanonicalIVIncrement = TopRegion->getOrCreateCanonicalIVIncrement();
-  // TODO: Check if dropping the flags is needed.
-  TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
   DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
   auto *VecPreheader = Plan.getVectorPreheader();
   VPBuilder Builder(VecPreheader);

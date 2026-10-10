@@ -20,7 +20,7 @@ define void @wide_vscale_range_needs_tail_folding(ptr noalias %A) #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP2]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP3]], ptr align 4 [[TMP2]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT]], i64 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i1 [[TMP4]], true
