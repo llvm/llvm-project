@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- \
-// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions
+// RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- -- -fexceptions
 #include <vector>
 #include <memory>
 
