@@ -1056,6 +1056,12 @@ namespace GH167840 {
   }
   static_assert(heap.p->a == 1, ""); // both-error {{not an integral constant expression}} \
                                      // both-note {{initializer of 'heap' is not a constant expression}}
+
+  constinit const W nested_constinit = { { { &(const s){7, 8} } } }; // both-error {{taking the address of a temporary object of type 'const s'}} \
+                                                                     // both-error {{variable does not have a constant initializer}} \
+                                                                     // both-note {{required by 'constinit' specifier here}} \
+                                                                     // both-note {{pointer to temporary is not a constant expression}} \
+                                                                     // both-note {{temporary created here}}
 #endif
 }
 

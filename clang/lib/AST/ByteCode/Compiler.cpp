@@ -5654,9 +5654,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
 
   OptPrimType VarT = classify(VD->getType());
   bool IsReference = VD->getType()->isReferenceType();
-  UnsignedOrNone GlobalIndex = std::nullopt;
   if (Context::shouldBeGloballyIndexed(VD)) {
-    GlobalIndex = P.getGlobal(VD);
+    auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
     if (VarT) {
       if (!this->emitGetGlobalUnchecked(*VarT, *GlobalIndex, VD))
@@ -5684,15 +5683,13 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
   if (!this->emitRet(VarT.value_or(PT_Ptr), VD)) {
     // If the Ret above failed and this is a global variable. Mark it as
     // uninitialized, even if everything else succeeded.
-    if (GlobalIndex)
+    if (Context::shouldBeGloballyIndexed(VD)) {
+      auto GlobalIndex = P.getGlobal(VD);
+      assert(GlobalIndex);
       P.markGlobalUninitialized(*GlobalIndex);
+    }
     return false;
   }
-
-  // Returning a pointer to a local or temporary succeeds here since the caller
-  // diagnoses that, but the global must not stay initialized with it.
-  if (GlobalIndex && !this->emitCheckGlobalInit(*GlobalIndex, VD))
-    return false;
 
   return VDScope.destroyLocals() && this->emitCheckAllocations(VD);
 }

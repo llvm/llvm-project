@@ -324,10 +324,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     } else if ((Desc = createDescriptor(FD, FT.getTypePtr(), IsConst,
                                         /*IsTemporary=*/false, IsMutable,
                                         IsVolatile))) {
-      HasPtrField =
-          HasPtrField ||
-          (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
-          (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
+      HasPtrField = HasPtrField || Desc->containsPointer();
     } else {
       Desc = allocateDescriptor(FD);
     }

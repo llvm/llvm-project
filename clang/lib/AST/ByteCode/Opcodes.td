@@ -537,10 +537,6 @@ def InitGlobalTempComp : Opcode {
   let Args = [ArgLETD];
   let NeedsOpPC = 0;
 }
-// [] -> []
-def CheckGlobalInit : SuccessOpcode {
-  let Args = [ArgUint32];
-}
 // [Value] -> []
 def SetGlobal : AccessOpcode;
 
