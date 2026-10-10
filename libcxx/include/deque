@@ -1243,6 +1243,10 @@ private:
   template <class _BiIter>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
+  _LIBCPP_HIDE_FROM_ABI bool __is_valid_insert_position(const_iterator __p) const {
+    return begin() <= __p && __p <= end();
+  }
+
   template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __append(_InpIter __f, _InpIter __l);
   template <class _ForIter, __enable_if_t<__has_forward_iterator_category<_ForIter>::value, int> = 0>
@@ -1683,6 +1687,8 @@ deque<_Tp, _Allocator>::emplace_front(_Args&&... __args) {
 template <class _Tp, class _Allocator>
 template <class... _Args>
 typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(const_iterator __p, _Args&&... __args) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
@@ -1732,6 +1738,8 @@ typename deque<_Tp, _Allocator>::iterator deque<_Tp, _Allocator>::__emplace(cons
 template <class _Tp, class _Allocator>
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_type& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = __size() - __pos;
   allocator_type& __a = __alloc();
@@ -1832,6 +1840,8 @@ template <class _Tp, class _Allocator>
 template <class _BiIter>
 _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __is_valid_insert_position(__p), "deque::insert/emplace called with an iterator outside [begin(), end()]");
   size_type __pos     = __p - begin();
   size_type __to_end  = size() - __pos;
   allocator_type& __a = __alloc();
