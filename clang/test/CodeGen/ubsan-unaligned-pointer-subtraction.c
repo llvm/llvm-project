@@ -1,14 +1,19 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c -w -emit-llvm -o - %s \
 // RUN:     -fsanitize=unaligned-pointer-subtraction | \
-// RUN:     FileCheck %s --check-prefixes=CHECK,CONLY
+// RUN:     FileCheck %s --check-prefixes=CHECK,CONLY,EXACT
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -w -emit-llvm -o - %s \
 // RUN:     -fsanitize=unaligned-pointer-subtraction | \
-// RUN:     FileCheck %s
+// RUN:     FileCheck %s --check-prefixes=CHECK,EXACT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c -w -emit-llvm -o - %s \
+// RUN:     -fsanitize=unaligned-pointer-subtraction -fdefined-pointer-subtraction | \
+// RUN:     FileCheck %s --check-prefixes=CHECK,DEFINED
 //
 // Verify that -fsanitize=unaligned-pointer-subtraction instruments the
 // subtraction of two pointers: it checks at runtime that the byte distance is
 // an exact multiple of the element size, and skips the check when the element
-// size is one (where the remainder is trivially zero).
+// size is one (where the remainder is trivially zero). The check is still
+// emitted under -fdefined-pointer-subtraction, which only drops the "exact"
+// flag from the division.
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +30,8 @@ long f_const(int *p) {
   // CHECK-NEXT: %sub.ptr.exact = icmp eq i64 %sub.ptr.rem, 0, !nosanitize
   // CHECK-NEXT: br i1 %sub.ptr.exact, label %cont, label %handler.unaligned_pointer_subtraction{{.*}}, !nosanitize
   // CHECK:      call void @__ubsan_handle_unaligned_pointer_subtraction{{.*}}(ptr @{{[0-9]+}}, i64 %sub.ptr.sub, i64 8)
-  // CHECK:      %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 8
+  // EXACT:      %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 8
+  // DEFINED:    %sub.ptr.div = sdiv i64 %sub.ptr.sub, 8
   return (A *)(p + 1) - (A *)p;
 }
 

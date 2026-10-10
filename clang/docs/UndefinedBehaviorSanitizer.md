@@ -171,7 +171,9 @@ Available checks are:
   overflows, or where either the old or new pointer value is a null pointer
   (excluding the case where both are null pointers).
 - `-fsanitize=unaligned-pointer-subtraction`: Subtraction of two pointers whose
-  byte distance is not a multiple of the element size.
+  byte distance is not a multiple of the element size. Note that checks are
+  still added even when `-fdefined-pointer-subtraction` is enabled, although
+  `-fsanitize=undefined` does not enable this check in that mode.
 - `-fsanitize=return`: In C++, reaching the end of a
   value-returning function without returning a value.
 - `-fsanitize=returns-nonnull-attribute`: Returning null pointer

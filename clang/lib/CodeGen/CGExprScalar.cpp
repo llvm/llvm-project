@@ -5077,7 +5077,6 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   if (CGF.getLangOpts().StablePointerSubtraction)
     return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
-
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands
   // are pointing to elements of an array.

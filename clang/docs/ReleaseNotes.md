@@ -1179,8 +1179,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### Sanitizers
 
 - Introduced `-fsanitize=unaligned-pointer-subtraction`, a new UndefinedBehaviorSanitizer check that
-  flag subtraction of two pointers whose byte distance is not a multiple of the element size.
-  It is part of the `undefined` group.
+  flags subtraction of two pointers whose byte distance is not a multiple of the element size.
+  It is part of the `undefined` group, except when `-fdefined-pointer-subtraction` is enabled.
 
 ### Python Binding Changes
 
