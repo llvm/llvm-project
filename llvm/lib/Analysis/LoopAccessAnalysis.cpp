@@ -1902,11 +1902,12 @@ llvm::getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp,
 
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
 /// information from the IR pointer value to determine no-wrap. If \p Predicates
-/// is not nullptr add no-wrap assumptions if needed.
+/// is not nullptr add no-wrap assumptions if needed. If \p Stride is passed, we
+/// try to prove no-wrap based on it as well.
 static bool
 isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
          Type *AccessTy, const Loop *L, const DominatorTree &DT,
-         std::optional<int64_t> Stride = std::nullopt,
+         std::optional<int64_t> Stride,
          SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
   if (any(AR->getNoWrapFlags()))
@@ -1933,17 +1934,18 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
       return true;
   }
 
-  if (!Stride)
-    Stride = getStrideFromAddRec(AR, L, AccessTy, Ptr, PSE);
-  if (Stride) {
+  auto IsAddRecStrideNoWrap = [](std::optional<int64_t> Stride, Function *F,
+                                 unsigned AddrSpace) {
     // If the null pointer is undefined, then a access sequence which would
-    // otherwise access it can be assumed not to unsigned wrap.  Note that this
-    // assumes the object in memory is aligned to the natural alignment.
-    unsigned AddrSpace = AR->getType()->getPointerAddressSpace();
-    if (!NullPointerIsDefined(L->getHeader()->getParent(), AddrSpace) &&
-        (Stride == 1 || Stride == -1))
-      return true;
-  }
+    // otherwise access it can be assumed not to unsigned wrap.  Note that
+    // this assumes the object in memory is aligned to the natural
+    // alignment.
+    return !NullPointerIsDefined(F, AddrSpace) && (Stride == 1 || Stride == -1);
+  };
+
+  if (IsAddRecStrideNoWrap(Stride, L->getHeader()->getParent(),
+                           AR->getType()->getPointerAddressSpace()))
+    return true;
 
   ScalarEvolution &SE = *PSE.getSE();
   const SCEVPredicate *WrapPred =
@@ -2216,9 +2218,10 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       P.setPointer(AR);
     }
 
+    std::optional<int64_t> Stride =
+        getStrideFromAddRec(AR, TheLoop, AccessTy, Ptr, PSE);
     if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, DT, /*Stride=*/std::nullopt,
-                  Assume ? &Predicates : nullptr))
+                  TheLoop, DT, Stride, Assume ? &Predicates : nullptr))
       return false;
   }
   PSE.addPredicates(Predicates);
@@ -2585,10 +2588,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
 
   std::optional<int64_t> Stride =
       getStrideFromAddRec(AR, Lp, AccessTy, Ptr, PSE);
-  if (!ShouldCheckWrap || !Stride)
-    return Stride;
-
-  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, DT, Stride, Predicates))
+  if (!ShouldCheckWrap ||
+      isNoWrap(PSE, AR, Ptr, AccessTy, Lp, DT, Stride, Predicates))
     return Stride;
 
   LLVM_DEBUG(
