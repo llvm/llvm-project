@@ -610,7 +610,7 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
-set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c arm/aeabi_drsub.c PROVIDES subdf3 aeabi_drsub)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
 set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
