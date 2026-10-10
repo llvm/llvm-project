@@ -310,3 +310,42 @@ entry:
   %cmp = icmp ne <4 x i32> %or, zeroinitializer
   ret <4 x i1> %cmp
 }
+
+; ==============================================================================
+; Zero-test on or(add(X, Y), Y): the "or(add(X,Y),Y) == 0" sub-expression is
+; folded to "or(X, Y)".  The add is redundant because it does not contribute
+; bits that are not already present in Y (adding X to Y keeps all bits of Y
+; that are tested by the zero-check; the fold relies on the later zero-icmp).
+; (Generated from real missed-optimization candidates.)
+; ==============================================================================
+define i1 @zero_or_add_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: @zero_or_add_eq(
+; CHECK-NEXT:    [[N0:%.*]] = tail call i64 @llvm.umax.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[N0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %n0 = tail call i64 @llvm.umax.i64(i64 %x, i64 %y)
+  %n1 = add nsw i64 %n0, %x
+  %n2 = icmp ult i64 %n1, %x
+  %n3 = tail call i64 @llvm.umin.i64(i64 %n1, i64 576460752303423487)
+  %n4 = select i1 %n2, i64 576460752303423487, i64 %n3
+  %n5 = icmp eq i64 %n4, 0
+  ret i1 %n5
+}
+
+define i1 @zero_or_add_ne(i1 %c, i64 %y) {
+; CHECK-LABEL: @zero_or_add_ne(
+; CHECK-NEXT:    [[N0:%.*]] = select i1 [[C:%.*]], i64 1, i64 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[N0]], [[Y]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %n0 = select i1 %c, i64 1, i64 %y
+  %n1 = add nsw i64 %n0, %y
+  %n2 = icmp ult i64 %n1, %y
+  %n3 = tail call i64 @llvm.umin.i64(i64 %n1, i64 288230376151711743)
+  %n4 = select i1 %n2, i64 288230376151711743, i64 %n3
+  %n5 = icmp ne i64 %n4, 0
+  ret i1 %n5
+}
