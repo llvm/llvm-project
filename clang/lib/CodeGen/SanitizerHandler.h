@@ -70,6 +70,10 @@
   SANITIZER_CHECK(                                                             \
       VLABoundNotPositive, vla_bound_not_positive, 0,                          \
       "Variable length array bound evaluates to non-positive value")           \
+  SANITIZER_CHECK(                                                             \
+      UnalignedPointerSubtraction, unaligned_pointer_subtraction, 0,           \
+      "Pointer subtraction where the byte distance is not a multiple of the "  \
+      "element size")                                                          \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0,                              \
                   "") // BoundsSafety Msg is empty because it is not considered
                       // part of UBSan; therefore, no trap reason is emitted for

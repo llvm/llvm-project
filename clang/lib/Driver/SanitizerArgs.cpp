@@ -694,7 +694,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if (CfiCrossDso)
         Add &= ~SanitizerKind::CFIMFCall;
       // -fsanitize=undefined does not expand to signed-integer-overflow in
-      // -fwrapv (implied by -fno-strict-overflow) mode.
+      // -fwrapv (implied by -fno-strict-overflow) mode, or to
+      // unaligned-pointer-subtraction in -fdefined-pointer-subtraction mode.
       if (Add & SanitizerKind::UndefinedGroup) {
         bool S = Args.hasFlagNoClaim(options::OPT_fno_strict_overflow,
                                      options::OPT_fstrict_overflow, false);
@@ -703,6 +704,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         if (Args.hasFlagNoClaim(options::OPT_fwrapv_pointer,
                                 options::OPT_fno_wrapv_pointer, S))
           Add &= ~SanitizerKind::PointerOverflow;
+        if (Args.hasArgNoClaim(options::OPT_fdefined_pointer_subtraction))
+          Add &= ~SanitizerKind::UnalignedPointerSubtraction;
       }
       Add &= BoundArchSupported;
 
