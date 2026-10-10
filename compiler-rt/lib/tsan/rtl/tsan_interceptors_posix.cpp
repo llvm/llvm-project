@@ -859,6 +859,63 @@ static int munmap_interceptor(ThreadState *thr, uptr pc, Munmap real_munmap,
 }
 
 #if SANITIZER_LINUX
+const int MREMAP_FIXED = 2;
+const int MREMAP_DONTUNMAP = 4;
+
+TSAN_INTERCEPTOR(void*, mremap, void* old_address, SIZE_T old_size,
+                 SIZE_T new_size, int flags, ...) {
+  void* new_address = nullptr;
+  if (flags & (MREMAP_FIXED | MREMAP_DONTUNMAP)) {
+    va_list ap;
+    va_start(ap, flags);
+    new_address = va_arg(ap, void*);
+    va_end(ap);
+  }
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return (void*)internal_mremap(old_address, old_size, new_size, flags,
+                                  new_address);
+  SCOPED_TSAN_INTERCEPTOR(mremap, old_address, old_size, new_size, flags,
+                          new_address);
+  if (!fix_mmap_addr(&new_address, new_size,
+                     (flags & MREMAP_FIXED) ? MAP_FIXED : 0))
+    return MAP_FAILED;
+  void* res = REAL(mremap)(old_address, old_size, new_size, flags, new_address);
+  if (res == MAP_FAILED)
+    return res;
+  if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + new_size - 1)) {
+    Report(
+        "ThreadSanitizer: mremap at bad address: old_addr=%p old_size=%p "
+        "new_size=%p res=%p\n",
+        old_address, (void*)old_size, (void*)new_size, res);
+    Die();
+  }
+  const uptr page_size = GetPageSizeCached();
+  const uptr aligned_old_size = RoundUpTo(old_size, page_size);
+  const uptr aligned_new_size = RoundUpTo(new_size, page_size);
+  if (res == old_address) {
+    if (new_size > old_size) {
+      uptr old_end = RoundUp((uptr)res + old_size, kShadowCell);
+      uptr new_end = RoundUp((uptr)res + new_size, kShadowCell);
+      if (new_end > old_end)
+        MemoryRangeImitateWriteOrResetRange(thr, pc, old_end,
+                                            new_end - old_end);
+    } else if (aligned_new_size < aligned_old_size) {
+      UnmapShadow(thr, (uptr)res + aligned_new_size,
+                  aligned_old_size - aligned_new_size);
+    }
+  } else {
+    if (!(flags & MREMAP_DONTUNMAP) && aligned_old_size > 0)
+      UnmapShadow(thr, (uptr)old_address, aligned_old_size);
+    MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, new_size);
+  }
+  return res;
+}
+#  define TSAN_MAYBE_INTERCEPT_MREMAP TSAN_INTERCEPT(mremap)
+#else
+#  define TSAN_MAYBE_INTERCEPT_MREMAP
+#endif
+
+#if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(memalign, align, sz);
   return user_memalign(thr, pc, align, sz);
@@ -3079,6 +3136,7 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);
+  TSAN_MAYBE_INTERCEPT_MREMAP;
   TSAN_MAYBE_INTERCEPT_MEMALIGN;
   TSAN_INTERCEPT(valloc);
   TSAN_MAYBE_INTERCEPT_PVALLOC;
