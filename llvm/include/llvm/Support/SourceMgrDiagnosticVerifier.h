@@ -23,6 +23,8 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -83,6 +85,18 @@ public:
     Ignored,
   };
 
+  /// \param Prefixes The comment prefixes that introduce an expected
+  /// diagnostic, e.g. \c {"expected"} to recognize 'expected-error'. Matched
+  /// literally, not as a regex. Must not contain an empty string.
+  /// \param CommentPrefixes If non-empty, only text at or after the earliest
+  /// occurrence of one of these strings on a line is scanned for expected
+  /// diagnostics, so a magic string that happens to appear outside of a
+  /// comment (e.g. in an instruction operand) is ignored. If empty, the
+  /// whole line is eligible.
+  explicit SourceMgrDiagnosticVerifier(
+      ArrayRef<std::string> Prefixes = {"expected"},
+      ArrayRef<std::string> CommentPrefixes = {});
+
   /// Computes and caches the list of expected diagnostics for \p Buf, if not
   /// already cached. Returns the (mutable) cached list.
   MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &OS,
@@ -120,17 +134,20 @@ public:
   bool verify(raw_ostream &OS, SourceMgr &Mgr);
 
 private:
+  /// Regex used to recognize '<prefix>-<kind>' comments, built from the
+  /// \p Prefixes passed to the constructor.
+  Regex Expected;
+
+  /// If non-empty, only text at or after the earliest occurrence of one of
+  /// these strings on a line is eligible to match \p Expected.
+  std::vector<std::string> CommentPrefixes;
+
   /// The expected diagnostics for each buffer that has been scanned so far,
   /// keyed by buffer identifier (i.e. file name).
   StringMap<SmallVector<ExpectedDiag, 2>> ExpectedDiagsPerFile;
 
   /// The expected diagnostics with an '@unknown' location.
   SmallVector<ExpectedDiag, 2> ExpectedUnknownLocDiags;
-
-  /// Regex used to recognize 'expected-<kind>' comments.
-  Regex Expected =
-      Regex("expected-(error|note|remark|warning)(-re)? "
-            "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
 
   /// Whether any diagnostic mismatch has been recorded so far.
   bool OK = true;
