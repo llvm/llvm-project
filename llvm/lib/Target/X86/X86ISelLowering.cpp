@@ -53422,6 +53422,19 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // SETCC only produces 0 or 1, so AND only observes the low bit of the NOT.
+  // Fold the inversion even if demanded bits changed XOR with 1 into NOT.
+  // Require one use of the NOT to avoid duplicating the inverted condition.
+  SDValue SetCC, OtherSetCC;
+  if (sd_match(N, m_And(m_OneUse(m_Not(
+                            m_Value(SetCC, m_SpecificOpc<X86ISD::SETCC>()))),
+                        m_Value(OtherSetCC, m_SpecificOpc<X86ISD::SETCC>())))) {
+    auto CC = static_cast<X86::CondCode>(SetCC.getConstantOperandVal(0));
+    SDValue Inverted = getSETCC(X86::GetOppositeBranchCondition(CC),
+                                SetCC.getOperand(1), dl, DAG);
+    return DAG.getNode(ISD::AND, dl, VT, OtherSetCC, Inverted);
+  }
+
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
     return SetCC;
 
@@ -57859,6 +57872,17 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     APInt Bits1, Elts1;
     std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
     std::tie(Bits1, Elts1) = GetDemandedMasks(N0, true);
+
+    // Reuse a live arithmetic shift when only sign bits are needed. This keeps
+    // the two-address SSE shift from requiring a copy of its input for ANDNP.
+    if (!Subtarget.hasAVX() && Bits0.isSignMask() &&
+        N0->hasNUsesOfValue(2, N0.getResNo())) {
+      for (SDNode *User : N0->users()) {
+        if (User->getOpcode() == X86ISD::VSRAI && User->hasOneUse() &&
+            User->getOperand(0) == N0)
+          return DAG.getNode(X86ISD::ANDNP, DL, VT, SDValue(User, 0), N1);
+      }
+    }
 
     if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
         TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
