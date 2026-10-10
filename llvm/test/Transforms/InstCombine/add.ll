@@ -5333,9 +5333,7 @@ define i32 @zext_add_no_fold_symmetric(i8 %x) {
 
 define i8 @add_or_add(i8 %x) {
 ; CHECK-LABEL: @add_or_add(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[ADD]], -2
-; CHECK-NEXT:    [[RET:%.*]] = add i8 [[OR]], [[ADD]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], -2
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %add = add i8 %x, 1
@@ -5346,8 +5344,8 @@ define i8 @add_or_add(i8 %x) {
 
 define i8 @add_or(i8 %x) {
 ; CHECK-LABEL: @add_or(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[RET:%.*]] = add i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -2
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %or = or i8 %x, -2
@@ -5357,8 +5355,8 @@ define i8 @add_or(i8 %x) {
 
 define i8 @add_or_commuted(i8 %x) {
 ; CHECK-LABEL: @add_or_commuted(
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[RET:%.*]] = add i8 [[X]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -2
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %or = or i8 %x, -2
@@ -5368,8 +5366,8 @@ define i8 @add_or_commuted(i8 %x) {
 
 define <2 x i8> @add_or_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @add_or_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 -2)
-; CHECK-NEXT:    [[RET:%.*]] = add <2 x i8> [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -2)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %or = or <2 x i8> %x, <i8 -2, i8 -2>
