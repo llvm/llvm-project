@@ -2285,14 +2285,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              AMDGPU::SReg_64RegClass,
                              MFI->ArgInfo.ImplicitBufferPtr, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDX,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDX, 0, 0) ||
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDX,
+                             0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDY,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDY, 0, 0) ||
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDY,
+                             0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDZ,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDZ, 0, 0)))
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDZ,
+                             0, 0)))
     return true;
 
   // Parse FirstKernArgPreloadReg separately, since it's a Register,
