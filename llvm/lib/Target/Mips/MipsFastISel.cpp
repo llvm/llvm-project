@@ -72,9 +72,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
-
 namespace {
 
 class MipsFastISel final : public FastISel {
@@ -1579,7 +1576,7 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   CLI.Call = MIB;
 
-  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+  if (Subtarget->getMCCLOpts().jalr_reloc && !Subtarget->inMips16Mode()) {
     // Attach callee address to the instruction, let asm printer emit
     // .reloc R_MIPS_JALR.
     if (Symbol)
@@ -1951,8 +1948,9 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!NoZeroDivCheck && (!isa<ConstantInt>(I->getOperand(1)) ||
-                          dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
+  if (!Subtarget->getMCCLOpts().mno_check_zero_division &&
+      (!isa<ConstantInt>(I->getOperand(1)) ||
+       dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
     emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
   }
 

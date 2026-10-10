@@ -21,21 +21,11 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
-    "mips-compact-branches", cl::init(CB_Optimal),
-    cl::desc("MIPS Specific: Compact branch policy."),
-    cl::values(clEnumValN(CB_Never, "never",
-                          "Do not use compact branches if possible."),
-               clEnumValN(CB_Optimal, "optimal",
-                          "Use compact branches where appropriate (default)."),
-               clEnumValN(CB_Always, "always",
-                          "Always use compact branches if possible.")));
 
 #define DEBUG_TYPE "mips-subtarget"
 
@@ -43,18 +33,8 @@ cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
 #define GET_SUBTARGETINFO_CTOR
 #include "MipsGenSubtargetInfo.inc"
 
-static cl::opt<bool> Mips16HardFloat("mips16-hard-float", cl::NotHidden,
-                                     cl::desc("Enable mips16 hard float."),
-                                     cl::init(false));
-
-static cl::opt<bool>
-    Mips16ConstantIslands("mips16-constant-islands", cl::NotHidden,
-                          cl::desc("Enable mips16 constant islands."),
-                          cl::init(true));
-
-static cl::opt<bool>
-    GPOpt("mgpopt", cl::Hidden,
-          cl::desc("Enable gp-relative addressing of mips small data items"));
+#define OPTIONS_STRUCT_DEFS
+#include "MipsOptions.inc"
 
 bool MipsSubtarget::DspWarningPrinted = false;
 bool MipsSubtarget::MSAWarningPrinted = false;
@@ -69,18 +49,19 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              const MipsTargetMachine &TM,
                              MaybeAlign StackAlignOverride)
     : MipsGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      CLOpts(TM.getCLOpts()), MCCLOpts(TM.getMCCLOpts()),
       MipsArchVersion(MipsDefault), IsLittle(little), IsSoftFloat(false),
       IsSingleFloat(false), IsFPXX(false), NoABICalls(false), Abs2008(false),
       IsFP64bit(false), UseOddSPReg(true), IsNaN2008bit(false),
       IsGP64bit(false), HasVFPU(false), HasCnMips(false), HasCnMipsP(false),
       IsR5900(false), FixR5900(false), HasMips3_32(false), HasMips3_32r2(false),
       HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
-      InMips16Mode(false), InMips16HardFloat(Mips16HardFloat),
+      InMips16Mode(false), InMips16HardFloat(CLOpts.mips16_hard_float),
       InMicroMipsMode(false), HasDSP(false), HasDSPR2(false), HasDSPR3(false),
       HasMSA(false), UseTCCInDIV(false), HasSym32(false), HasEVA(false),
       DisableMadd4(false), HasMT(false), HasCRC(false), HasVirt(false),
       HasGINV(false), UseIndirectJumpsHazard(false), StrictAlign(false),
-      UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
+      UseCompactBranches(CLOpts.compact_branches != CompactBranchPolicy::Never),
       StackAlignOverride(StackAlignOverride), TM(TM),
       ABI(MipsABIInfo::computeTargetABI(TT, ABIName)),
       InstrInfo(
@@ -153,8 +134,8 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     NoABICalls = true;
 
   // Set UseSmallSection.
-  UseSmallSection = GPOpt;
-  if (!NoABICalls && GPOpt) {
+  UseSmallSection = CLOpts.mgpopt;
+  if (!NoABICalls && CLOpts.mgpopt) {
     errs() << "warning: cannot use small-data accesses for '-mabicalls'"
            << "\n";
     UseSmallSection = false;
@@ -265,10 +246,10 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
   return *this;
 }
 
-bool MipsSubtarget::useConstantIslands() {
-  LLVM_DEBUG(dbgs() << "use constant islands " << Mips16ConstantIslands
+bool MipsSubtarget::useConstantIslands() const {
+  LLVM_DEBUG(dbgs() << "use constant islands " << CLOpts.mips16_constant_islands
                     << "\n");
-  return Mips16ConstantIslands;
+  return CLOpts.mips16_constant_islands;
 }
 
 Reloc::Model MipsSubtarget::getRelocationModel() const {
