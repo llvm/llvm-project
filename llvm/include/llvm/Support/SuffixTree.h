@@ -68,8 +68,6 @@ private:
 
   /// Maintains internal nodes in the tree.
   SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
-  /// Maintains leaf nodes in the tree.
-  SpecificBumpPtrAllocator<SuffixTreeLeafNode> LeafNodeAllocator;
 
   /// The root of the suffix tree.
   ///
@@ -97,11 +95,12 @@ private:
   /// construction algorithm.
   ActiveState Active;
 
-  /// Allocate a leaf node and add it to the tree.
+  /// Add a leaf node to the tree.
   ///
   /// \param Parent The parent of this node.
   /// \param StartIdx The start index of this node's associated string.
   /// \param Edge The label on the edge leaving \p Parent to this node.
+  /// The leaf is represented by its incoming edge start index.
   void insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
                   unsigned Edge);
 

@@ -55,11 +55,7 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
 void SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
                             unsigned Edge) {
   assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
-  auto *N = new (LeafNodeAllocator.Allocate())
-      SuffixTreeLeafNode(StartIdx, &LeafEndIdx);
-  // Subtract the parent path length to find the start of the suffix.
-  N->setSuffixIdx(StartIdx - Parent.getConcatLen());
-  Parent.Children[Edge] = N;
+  Parent.Children[Edge] = SuffixTreeIndex(StartIdx);
 }
 
 SuffixTreeInternalNode *
@@ -111,11 +107,12 @@ void SuffixTree::setLeafNodes() {
         ChildrenMap[CurrInternalNode] = LeafCounter;
         for (; J != CurrInternalNode->Children.end(); ++J) {
           if (auto *InternalChild =
-                  dyn_cast<SuffixTreeInternalNode>(J->second)) {
+                  dyn_cast<SuffixTreeInternalNode *>(J->second)) {
             ToVisit.push_back(InternalChild);
           } else {
-            LeafNodes.push_back(
-                cast<SuffixTreeLeafNode>(J->second)->getSuffixIdx());
+            // Subtract the parent path length to find the suffix start.
+            LeafNodes.push_back(cast<SuffixTreeIndex>(J->second) -
+                                CurrInternalNode->getConcatLen());
             ++LeafCounter;
           }
         }
@@ -171,11 +168,12 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
     } else {
       // There's a match with FirstChar, so look for the point in the tree to
       // insert a new node.
-      SuffixTreeNode *NextNode = It->second;
-      unsigned NextStartIdx = NextNode->getStartIdx();
+      auto NextNode = It->second;
+      unsigned NextStartIdx;
 
       // A leaf edge reaches the current prefix end, so it cannot be consumed.
-      if (auto *NextInternalNode = dyn_cast<SuffixTreeInternalNode>(NextNode)) {
+      if (auto *NextInternalNode =
+              dyn_cast<SuffixTreeInternalNode *>(NextNode)) {
         unsigned SubstringLen = numElementsInSubstring(NextInternalNode);
 
         // Consume the edge only when the active suffix reaches its end.
@@ -185,6 +183,9 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
           Active.Node = NextInternalNode;
           continue;
         }
+        NextStartIdx = NextInternalNode->getStartIdx();
+      } else {
+        NextStartIdx = cast<SuffixTreeIndex>(NextNode);
       }
 
       // Otherwise, the suffix we're trying to insert must be contained in the
@@ -230,7 +231,10 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       // Make the old node a child of the split node and update its start
       // index. This is the node n from the diagram.
       NextStartIdx += Active.Len;
-      NextNode->incrementStartIdx(Active.Len);
+      if (auto *NextInternalNode = dyn_cast<SuffixTreeInternalNode *>(NextNode))
+        NextInternalNode->incrementStartIdx(Active.Len);
+      else
+        NextNode = SuffixTreeIndex(NextStartIdx);
       unsigned Edge = Str[NextStartIdx];
       if (!isBoundary(Edge) || SplitNode->getConcatLen() >= MinLength)
         SplitNode->Children[Edge] = NextNode;
@@ -283,7 +287,7 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     for (auto &ChildPair : Curr->Children)
       // Save all of this node's children for processing.
       if (auto *InternalChild =
-              dyn_cast<SuffixTreeInternalNode>(ChildPair.second))
+              dyn_cast<SuffixTreeInternalNode *>(ChildPair.second))
         InternalNodesToVisit.push_back(InternalChild);
 
     // If length of repeated substring is below threshold, then skip it.
@@ -303,8 +307,8 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
                                          Curr->getRightLeafIdx() + 1);
     } else {
       for (auto &ChildPair : Curr->Children)
-        if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
-          RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
+        if (auto Leaf = dyn_cast<SuffixTreeIndex>(ChildPair.second))
+          RepeatedSubstringStarts.push_back(Leaf - Length);
     }
 
     // Do we have any repeated substrings?
