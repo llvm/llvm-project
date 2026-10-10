@@ -700,6 +700,19 @@ private:
   void propagateDuplicateContextIds(
       const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds);
 
+  /// Propagates the duplicated context ids in the given map along the callee
+  /// edges starting at Node, down to the allocation node(s). Each callee edge
+  /// containing one of the original ids is updated to also contain the
+  /// corresponding duplicated ids.
+  void propagateDuplicateContextIdsToCallees(
+      ContextNode *Node,
+      const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds);
+
+  /// Identifies context ids whose contexts are not consistently represented
+  /// along a single path in the graph, populating InconsistentContextIds. Must
+  /// be invoked after the graph is built and finalized, but before any cloning.
+  void identifyInconsistentContexts();
+
   /// Connect the NewNode to OrigNode's callees if TowardsCallee is true,
   /// else to its callers. Also updates OrigNode's edges to remove any context
   /// ids moved to the newly created edge.
@@ -852,19 +865,20 @@ private:
                      DenseSet<const ContextNode *> &CurrentStack);
 
   /// Recursive helper for merging clones.
-  void
-  mergeClones(ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-              DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode);
+  void mergeClones(ContextNode *Node, DenseSet<const ContextNode *> &Visited);
   /// Main worker for merging callee clones for a given node.
-  void mergeNodeCalleeClones(
-      ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-      DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode);
+  void mergeNodeCalleeClones(ContextNode *Node,
+                             DenseSet<const ContextNode *> &Visited);
   /// Helper to find other callers of the given set of callee edges that can
   /// share the same callee merge node.
   void findOtherCallersToShareMerge(
       ContextNode *Node, std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
-      DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
       DenseSet<ContextNode *> &OtherCallersToShareMerge);
+
+  /// Map from context id to the associated allocation node, populated for use
+  /// during clone merging (see mergeClones) and empty otherwise. It is kept up
+  /// to date by duplicateContextIds for any context ids created while merging.
+  DenseMap<uint32_t, ContextNode *> ContextIdToAllocationNode;
 
   /// Recursively perform cloning on the graph for the given Node and its
   /// callers, in order to uniquely identify the allocation behavior of an
@@ -881,6 +895,10 @@ private:
   /// optionally populated when requested (via MemProfReportHintedSizes or
   /// MinClonedColdBytePercent).
   DenseMap<uint32_t, std::vector<ContextTotalSize>> ContextIdToContextSizeInfos;
+
+  /// The context ids of contexts that are not consistently represented along a
+  /// single path in the graph. See identifyInconsistentContexts.
+  DenseSet<uint32_t> InconsistentContextIds;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
@@ -1519,24 +1537,31 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::duplicateContextIds(
       ContextIdToContextSizeInfos[LastContextId] = CSI->second;
     if (DotAllocContextIds.contains(OldId))
       DotAllocContextIds.insert(LastContextId);
+    // If we are duplicating during clone merging, keep the allocation node
+    // mapping used by the merging up to date.
+    if (auto *Alloc = ContextIdToAllocationNode.lookup(OldId))
+      ContextIdToAllocationNode[LastContextId] = Alloc;
   }
   return NewContextIds;
+}
+
+// Build a set of duplicated context ids corresponding to the input id set,
+// using the provided map from original to duplicated ids.
+static DenseSet<uint32_t> getDuplicatedContextIds(
+    const DenseSet<uint32_t> &ContextIds,
+    const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds) {
+  DenseSet<uint32_t> NewIds;
+  for (auto Id : ContextIds)
+    if (auto NewId = OldToNewContextIds.find(Id);
+        NewId != OldToNewContextIds.end())
+      NewIds.insert_range(NewId->second);
+  return NewIds;
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     propagateDuplicateContextIds(
         const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds) {
-  // Build a set of duplicated context ids corresponding to the input id set.
-  auto GetNewIds = [&OldToNewContextIds](const DenseSet<uint32_t> &ContextIds) {
-    DenseSet<uint32_t> NewIds;
-    for (auto Id : ContextIds)
-      if (auto NewId = OldToNewContextIds.find(Id);
-          NewId != OldToNewContextIds.end())
-        NewIds.insert_range(NewId->second);
-    return NewIds;
-  };
-
   // Recursively update context ids sets along caller edges.
   auto UpdateCallers = [&](ContextNode *Node,
                            DenseSet<const ContextEdge *> &Visited,
@@ -1546,7 +1571,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       if (!Inserted.second)
         continue;
       ContextNode *NextNode = Edge->Caller;
-      DenseSet<uint32_t> NewIdsToAdd = GetNewIds(Edge->getContextIds());
+      DenseSet<uint32_t> NewIdsToAdd =
+          getDuplicatedContextIds(Edge->getContextIds(), OldToNewContextIds);
       // Only need to recursively iterate to NextNode via this caller edge if
       // it resulted in any added ids to NextNode.
       if (!NewIdsToAdd.empty()) {
@@ -1560,6 +1586,66 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
     UpdateCallers(Node, Visited, UpdateCallers);
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
+    propagateDuplicateContextIdsToCallees(
+        ContextNode *Node,
+        const DenseMap<uint32_t, DenseSet<uint32_t>> &OldToNewContextIds) {
+  // Recursively update context ids sets along callee edges.
+  DenseSet<const ContextEdge *> Visited;
+  auto UpdateCallees = [&](ContextNode *Node, auto &&UpdateCallees) -> void {
+    for (const auto &Edge : Node->CalleeEdges) {
+      auto Inserted = Visited.insert(Edge.get());
+      if (!Inserted.second)
+        continue;
+      DenseSet<uint32_t> NewIdsToAdd =
+          getDuplicatedContextIds(Edge->getContextIds(), OldToNewContextIds);
+      // Only need to recursively iterate to the callee via this edge if it
+      // resulted in any added ids.
+      if (NewIdsToAdd.empty())
+        continue;
+      // The edge alloc types do not change, as the duplicated ids have the same
+      // allocation types as the original ids already on this edge.
+      Edge->getContextIds().insert_range(NewIdsToAdd);
+      UpdateCallees(Edge->Callee, UpdateCallees);
+    }
+  };
+  UpdateCallees(Node, UpdateCallees);
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy,
+                          CallTy>::identifyInconsistentContexts() {
+  // Each context should be represented by a single path through the graph, so
+  // that for every interior (non-allocation) node the context is either on
+  // both its callee and caller edges, or on its callee edges only, at the one
+  // node where the context terminates (its outermost recorded frame). However,
+  // the context ids on the graph edges are not always fully consistent, e.g.
+  // the handling of recursion when matching inlined callsites onto the graph,
+  // or the fixup of important contexts, can leave a context with a gap along
+  // its path (a node where it is only on the caller edges). Such a context
+  // would also appear to terminate at the node just below the gap. Identify
+  // these inconsistent contexts, so that we can avoid treating them as having
+  // been trimmed at such a node during cloning.
+  DenseMap<uint32_t, unsigned> NumTerminatingNodes;
+  for (auto &Node : NodeOwner) {
+    if (Node->IsAllocation || Node->isRemoved())
+      continue;
+    DenseSet<uint32_t> CalleeEdgeContextIds;
+    for (auto &Edge : Node->CalleeEdges)
+      CalleeEdgeContextIds.insert_range(Edge->getContextIds());
+    DenseSet<uint32_t> CallerEdgeContextIds;
+    for (auto &Edge : Node->CallerEdges)
+      CallerEdgeContextIds.insert_range(Edge->getContextIds());
+    for (auto Id : CalleeEdgeContextIds)
+      if (!CallerEdgeContextIds.contains(Id) && ++NumTerminatingNodes[Id] > 1)
+        InconsistentContextIds.insert(Id);
+    for (auto Id : CallerEdgeContextIds)
+      if (!CalleeEdgeContextIds.contains(Id))
+        InconsistentContextIds.insert(Id);
   }
 }
 
@@ -3649,6 +3735,34 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 
   ContextNode *OldCallee = Edge->Callee;
 
+  // Identify any trimmed contexts that terminate at OldCallee, i.e. that are on
+  // its callee edges but not on any of its caller edges. These are contexts
+  // whose recorded call stacks were trimmed at OldCallee because the
+  // allocation behavior was unambiguous from that frame on, regardless of the
+  // caller. Since these contexts are caller-agnostic they apply equally to
+  // every clone of OldCallee. When a new clone is created (for a different
+  // allocation reached via Edge), duplicate these contexts onto the clone and
+  // its callee edges (see below), otherwise the clone's paths to the
+  // corresponding allocations would carry no context information and could be
+  // assigned to a callee function version with the wrong allocation type.
+  // Compute this before moving any ids, so that the ids on Edge are still
+  // reflected in OldCallee's caller edges. Only needed when creating a new
+  // clone, as existing clones would have received duplicates on creation.
+  DenseSet<uint32_t> TerminatingContextIds;
+  // Accumulates the alloc types of any duplicated terminating contexts.
+  uint8_t DuplicatedAllocTypes = (uint8_t)AllocationType::None;
+  if (NewClone && !OldCallee->CalleeEdges.empty()) {
+    for (auto &OldCalleeEdge : OldCallee->CalleeEdges)
+      TerminatingContextIds.insert_range(OldCalleeEdge->getContextIds());
+    for (auto &OldCallerEdge : OldCallee->CallerEdges)
+      set_subtract(TerminatingContextIds, OldCallerEdge->getContextIds());
+    // Ignore any contexts that are not consistently represented in the graph,
+    // as those may only appear to terminate here (see
+    // identifyInconsistentContexts).
+    if (!InconsistentContextIds.empty())
+      set_subtract(TerminatingContextIds, InconsistentContextIds);
+  }
+
   // We might already have an edge to the new callee from earlier cloning for a
   // different allocation. If one exists we will reuse it.
   auto ExistingEdgeToNewCallee = NewCallee->findEdgeFromCaller(Edge->Caller);
@@ -3728,6 +3842,25 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     set_subtract(OldCalleeEdge->getContextIds(), EdgeContextIdsToMove);
     OldCalleeEdge->AllocTypes =
         computeAllocType(OldCalleeEdge->getContextIds());
+    // Duplicate any contexts terminating at OldCallee that flow through this
+    // callee edge onto the new clone (see comment where TerminatingContextIds
+    // is computed above). We need new context ids for the duplicates, since
+    // they are on different paths through the graph and would otherwise be
+    // confused with recursive contexts, and we propagate the new ids down the
+    // callee edges to the corresponding allocation(s).
+    if (!TerminatingContextIds.empty()) {
+      DenseSet<uint32_t> TerminatingIdsOnEdge = set_intersection(
+          OldCalleeEdge->getContextIds(), TerminatingContextIds);
+      if (!TerminatingIdsOnEdge.empty()) {
+        DenseMap<uint32_t, DenseSet<uint32_t>> OldToNewContextIds;
+        DenseSet<uint32_t> NewIds =
+            duplicateContextIds(TerminatingIdsOnEdge, OldToNewContextIds);
+        propagateDuplicateContextIdsToCallees(OldCalleeEdge->Callee,
+                                              OldToNewContextIds);
+        DuplicatedAllocTypes |= computeAllocType(NewIds);
+        EdgeContextIdsToMove.insert_range(NewIds);
+      }
+    }
     if (!NewClone) {
       // Update context ids / alloc type on corresponding edge to NewCallee.
       // There is a chance this may not exist if we are reusing an existing
@@ -3746,6 +3879,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     NewCallee->CalleeEdges.push_back(NewEdge);
     NewEdge->Callee->CallerEdges.push_back(NewEdge);
   }
+  // Include the alloc types of any duplicated terminating contexts, which are
+  // not reflected in the caller edge moved to NewCallee.
+  NewCallee->AllocTypes |= DuplicatedAllocTypes;
   // Recompute the node alloc type now that its callee edges have been
   // updated (since we will compute from those edges).
   OldCallee->AllocTypes = OldCallee->computeAllocType();
@@ -4472,7 +4608,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
 
   // Generate a map from context id to the associated allocation node for use
   // when merging clones.
-  DenseMap<uint32_t, ContextNode *> ContextIdToAllocationNode;
+  assert(ContextIdToAllocationNode.empty());
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
     for (auto Id : Node->getContextIds())
@@ -4490,7 +4626,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
   for (auto &Entry : AllocationCallToContextNodeMap) {
     auto *Node = Entry.second;
 
-    mergeClones(Node, Visited, ContextIdToAllocationNode);
+    mergeClones(Node, Visited);
 
     // Make a copy so the recursive post order traversal that may create new
     // clones doesn't mess up iteration. Note that the recursive traversal
@@ -4498,8 +4634,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
     // (clones of) allocations.
     auto Clones = Node->Clones;
     for (auto *Clone : Clones)
-      mergeClones(Clone, Visited, ContextIdToAllocationNode);
+      mergeClones(Clone, Visited);
   }
+
+  // No longer needed, and should not be used outside of merging.
+  ContextIdToAllocationNode.clear();
 
   if (DumpCCG) {
     dbgs() << "CCG after merging:\n";
@@ -4516,8 +4655,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones() {
 // Recursive helper for above mergeClones method.
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
-    ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-    DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode) {
+    ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   auto Inserted = Visited.insert(Node);
   if (!Inserted.second)
     return;
@@ -4543,7 +4681,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
       // edges again as mergeClones may add or change caller nodes.
       if (DoMergeIteration && !Visited.contains(CallerEdge->Caller))
         FoundUnvisited = true;
-      mergeClones(CallerEdge->Caller, Visited, ContextIdToAllocationNode);
+      mergeClones(CallerEdge->Caller, Visited);
     }
   }
 
@@ -4553,13 +4691,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeClones(
     MaxMergeIters = Iters;
 
   // Merge for this node after we handle its callers.
-  mergeNodeCalleeClones(Node, Visited, ContextIdToAllocationNode);
+  mergeNodeCalleeClones(Node, Visited);
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
-    ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-    DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode) {
+    ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   // Ignore Node if we moved all of its contexts to clones.
   if (Node->emptyContextIds())
     return;
@@ -4611,8 +4748,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::mergeNodeCalleeClones(
     /// share the same callee merge node. See the comments at this method
     /// definition for details.
     DenseSet<ContextNode *> OtherCallersToShareMerge;
-    findOtherCallersToShareMerge(Node, CalleeEdges, ContextIdToAllocationNode,
-                                 OtherCallersToShareMerge);
+    findOtherCallersToShareMerge(Node, CalleeEdges, OtherCallersToShareMerge);
 
     // Now do the actual merging. Identify existing or create a new MergeNode
     // during the first iteration. Move each callee over, along with edges from
@@ -4704,7 +4840,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     findOtherCallersToShareMerge(
         ContextNode *Node,
         std::vector<std::shared_ptr<ContextEdge>> &CalleeEdges,
-        DenseMap<uint32_t, ContextNode *> &ContextIdToAllocationNode,
         DenseSet<ContextNode *> &OtherCallersToShareMerge) {
   auto NumCalleeClones = CalleeEdges.size();
   // This map counts how many edges to the same callee clone exist for other
@@ -4906,6 +5041,22 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     // the vector is the clone number, as function clones are created and
     // numbered sequentially.
     std::vector<FuncCloneInfo> FuncCloneInfos;
+    // Map from each original callsite node in this function to its original
+    // call and matching calls (clone 0). The calls recorded on an original node
+    // are updated to the calls in a function clone if that node is assigned to
+    // a function clone, after which they can no longer be used to index the
+    // function clone CallMaps (which are keyed by the original calls). No node
+    // in this function has been assigned yet at this point.
+    struct OrigCallsInfo {
+      CallInfo Call;
+      SmallVector<CallInfo, 0> MatchingCalls;
+    };
+    DenseMap<const ContextNode *, OrigCallsInfo> OrigNodeToOrigCalls;
+    for (auto &Call : CallsWithMetadata) {
+      ContextNode *Node = getNodeForInst(Call);
+      if (Node && Node->Call == Call)
+        OrigNodeToOrigCalls[Node] = {Call, Node->MatchingCalls};
+    }
     for (auto &Call : CallsWithMetadata) {
       ContextNode *Node = getNodeForInst(Call);
       // Skip call if we do not have a node for it (all uses of its stack ids
@@ -4936,13 +5087,18 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
         if (auto It = CallMap.find(Call); It != CallMap.end())
           CallClone = It->second;
         CallsiteClone->setCall(CallClone);
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          CallInfo CallClone(MatchingCall);
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end())
+        // Need to do the same for all matching calls. Rebuild the list of
+        // CallsiteClone from the original matching calls (it may have been
+        // copied from a node whose calls were already remapped), using the
+        // same mapping as for Call.
+        assert(OrigNodeToOrigCalls.count(Node));
+        CallsiteClone->MatchingCalls.clear();
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          CallInfo CallClone(OrigMatchingCall);
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end())
             CallClone = It->second;
-          // Updates the call in the list.
-          MatchingCall = CallClone;
+          CallsiteClone->MatchingCalls.push_back(CallClone);
         }
       };
 
@@ -5132,24 +5288,26 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // that each caller can only call callsites within the same
               // function, so we are guaranteed that Callee Call is in the
               // current OrigFunc.
-              // CallMap is set up as indexed by original Call at clone 0.
-              CallInfo OrigCall(Callee->getOrigNode()->Call);
-              OrigCall.setCloneNo(0);
+              // CallMap is set up as indexed by original calls at clone 0. Note
+              // that we cannot simply use the calls recorded on Callee's
+              // original node, as those are updated to the calls in a function
+              // clone if the original node was itself assigned to a function
+              // clone.
+              assert(OrigNodeToOrigCalls.count(Callee->getOrigNode()));
+              auto &OrigCalls = OrigNodeToOrigCalls[Callee->getOrigNode()];
               DenseMap<CallInfo, CallInfo> &CallMap =
                   FuncCloneInfos[NewFuncClone.cloneNo()].CallMap;
-              assert(CallMap.count(OrigCall));
-              CallInfo NewCall(CallMap[OrigCall]);
+              assert(CallMap.count(OrigCalls.Call));
+              CallInfo NewCall(CallMap[OrigCalls.Call]);
               assert(NewCall);
               NewClone->setCall(NewCall);
               // Need to do the same for all matching calls.
-              for (auto &MatchingCall : NewClone->MatchingCalls) {
-                CallInfo OrigMatchingCall(MatchingCall);
-                OrigMatchingCall.setCloneNo(0);
+              NewClone->MatchingCalls.clear();
+              for (auto &OrigMatchingCall : OrigCalls.MatchingCalls) {
                 assert(CallMap.count(OrigMatchingCall));
                 CallInfo NewCall(CallMap[OrigMatchingCall]);
                 assert(NewCall);
-                // Updates the call in the list.
-                MatchingCall = NewCall;
+                NewClone->MatchingCalls.push_back(NewCall);
               }
             }
           }
@@ -5384,9 +5542,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
           // for all calls.
           assert(false && "Expected to find call in CallMap");
         }
-        // Need to do the same for all matching calls.
-        for (auto &MatchingCall : Node->MatchingCalls) {
-          if (auto It = CallMap.find(MatchingCall); It != CallMap.end()) {
+        // Need to do the same for all matching calls. Use the original
+        // matching calls, as those on Node may have been remapped to the calls
+        // of a function clone if Node was assigned to one.
+        assert(OrigNodeToOrigCalls.count(Node));
+        for (const CallInfo &OrigMatchingCall :
+             OrigNodeToOrigCalls[Node].MatchingCalls) {
+          if (auto It = CallMap.find(OrigMatchingCall); It != CallMap.end()) {
             CallInfo CallClone = It->second;
             CallVector.push_back(CallClone);
           } else {
@@ -6340,6 +6502,8 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
   if (VerifyCCG) {
     check();
   }
+
+  identifyInconsistentContexts();
 
   identifyClones();
 
