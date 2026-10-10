@@ -1685,6 +1685,13 @@ def TestOpFoldUnmaterializable : TEST_Op<"op_fold_unmaterializable"> {
   let hasFolder = 1;
 }
 
+// Anchor op for the pattern that builds a `test.fold_dispatch` op with a
+// partial fold through the multi-result `createOrFold`.
+def TestOpPartialFoldAnchor : TEST_Op<"op_partial_fold_anchor"> {
+  let arguments = (ins I32:$operand);
+  let results = (outs I32, I32, I32);
+}
+
 def TestAddIOp : TEST_Op<"addi"> {
   let arguments = (ins AnyTypeOf<[I32, TestI32]>:$op1,
                        AnyTypeOf<[I32, TestI32]>:$op2);
