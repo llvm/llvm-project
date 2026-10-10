@@ -1638,3 +1638,178 @@ define <vscale x 8 x i64> @vwadd_wx_splat_sext(<vscale x 8 x i64> %va, i32 %b) {
   %ve = add <vscale x 8 x i64> %va, %splat
   ret <vscale x 8 x i64> %ve
 }
+
+define void @fold_vsetvli_splat(ptr %out, i64 %remaining, <vscale x 2 x i64> %v) {
+; RV32-LABEL: fold_vsetvli_splat:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
+; RV32-NEXT:    .cfi_offset s2, -16
+; RV32-NEXT:    csrr a3, vlenb
+; RV32-NEXT:    slli a3, a3, 1
+; RV32-NEXT:    sub sp, sp, a3
+; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
+; RV32-NEXT:    addi a3, sp, 16
+; RV32-NEXT:    vs2r.v v8, (a3) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    mv s2, a2
+; RV32-NEXT:    mv s1, a1
+; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    li a2, 2
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    li a3, 0
+; RV32-NEXT:    call __muldi3
+; RV32-NEXT:    beq s2, a1, .LBB110_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    sltu a2, s2, a1
+; RV32-NEXT:    beqz a2, .LBB110_3
+; RV32-NEXT:    j .LBB110_4
+; RV32-NEXT:  .LBB110_2:
+; RV32-NEXT:    sltu a2, s1, a0
+; RV32-NEXT:    bnez a2, .LBB110_4
+; RV32-NEXT:  .LBB110_3:
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    mv s2, a1
+; RV32-NEXT:  .LBB110_4:
+; RV32-NEXT:    sw s1, 8(sp)
+; RV32-NEXT:    sw s2, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli zero, s1, e64, m2, ta, ma
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vl2r.v v10, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vadd.vv v8, v10, v8
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vnsrl.wi v10, v8, 0
+; RV32-NEXT:    vse32.v v10, (s0)
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 32
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: fold_vsetvli_splat:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, a1, e64, m2, ta, ma
+; RV64-NEXT:    vadd.vx v8, v8, a1
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vnsrl.wi v10, v8, 0
+; RV64-NEXT:    vse32.v v10, (a0)
+; RV64-NEXT:    ret
+  %vl = call i32 @llvm.experimental.get.vector.length.i64(i64 %remaining, i32 2, i1 true)
+  %vl.wide = zext i32 %vl to i64
+  %vl.insert = insertelement <vscale x 2 x i64> poison, i64 %vl.wide, i64 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %next = add <vscale x 2 x i64> %v, %vl.splat
+  %narrow = trunc <vscale x 2 x i64> %next to <vscale x 2 x i32>
+  call void @llvm.vp.store.nxv2i32.p0(<vscale x 2 x i32> %narrow, ptr %out, <vscale x 2 x i1> splat (i1 true), i32 %vl)
+  ret void
+}
+
+define void @keep_wide_vtype(ptr %out0, ptr %out1, i64 %remaining, <vscale x 2 x i64> %v) {
+; RV32-LABEL: keep_wide_vtype:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -64
+; RV32-NEXT:    .cfi_def_cfa_offset 64
+; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 52(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 48(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 44(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    .cfi_offset s1, -12
+; RV32-NEXT:    .cfi_offset s2, -16
+; RV32-NEXT:    .cfi_offset s3, -20
+; RV32-NEXT:    csrr a4, vlenb
+; RV32-NEXT:    slli a4, a4, 1
+; RV32-NEXT:    sub sp, sp, a4
+; RV32-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 2 * vlenb
+; RV32-NEXT:    addi a4, sp, 32
+; RV32-NEXT:    vs2r.v v8, (a4) # vscale x 16-byte Folded Spill
+; RV32-NEXT:    mv s3, a3
+; RV32-NEXT:    mv s2, a2
+; RV32-NEXT:    mv s0, a1
+; RV32-NEXT:    mv s1, a0
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a0, a0, 3
+; RV32-NEXT:    li a2, 2
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    li a3, 0
+; RV32-NEXT:    call __muldi3
+; RV32-NEXT:    beq s3, a1, .LBB111_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    sltu a1, s3, a1
+; RV32-NEXT:    beqz a1, .LBB111_3
+; RV32-NEXT:    j .LBB111_4
+; RV32-NEXT:  .LBB111_2:
+; RV32-NEXT:    sltu a1, s2, a0
+; RV32-NEXT:    bnez a1, .LBB111_4
+; RV32-NEXT:  .LBB111_3:
+; RV32-NEXT:    mv s2, a0
+; RV32-NEXT:  .LBB111_4:
+; RV32-NEXT:    sw s2, 16(sp)
+; RV32-NEXT:    sw zero, 20(sp)
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vsetvli zero, s2, e64, m2, ta, ma
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    addi a0, sp, 32
+; RV32-NEXT:    vl2r.v v12, (a0) # vscale x 16-byte Folded Reload
+; RV32-NEXT:    vnot.v v10, v12
+; RV32-NEXT:    vadd.vv v8, v12, v8
+; RV32-NEXT:    vse64.v v10, (s1)
+; RV32-NEXT:    vse64.v v8, (s0)
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 64
+; RV32-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 52(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 48(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: keep_wide_vtype:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a2, a2, e64, m2, ta, ma
+; RV64-NEXT:    vnot.v v10, v8
+; RV64-NEXT:    vadd.vx v8, v8, a2
+; RV64-NEXT:    vse64.v v10, (a0)
+; RV64-NEXT:    vse64.v v8, (a1)
+; RV64-NEXT:    ret
+  %vl = call i32 @llvm.experimental.get.vector.length.i64(i64 %remaining, i32 2, i1 true)
+  %vl.wide = zext i32 %vl to i64
+  %vl.insert = insertelement <vscale x 2 x i64> poison, i64 %vl.wide, i64 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %wide = xor <vscale x 2 x i64> %v, splat (i64 -1)
+  %next = add <vscale x 2 x i64> %v, %vl.splat
+  call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> %wide, ptr %out0, <vscale x 2 x i1> splat (i1 true), i32 %vl)
+  call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> %next, ptr %out1, <vscale x 2 x i1> splat (i1 true), i32 %vl)
+  ret void
+}
