@@ -146,17 +146,17 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM C++ mangled name remapper\n");
 
   auto OldSymbolBufOrError =
-      MemoryBuffer::getFileOrSTDIN(OldSymbolFile, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(OldSymbolFile, sys::fs::OF_TextWithCRLF);
   if (!OldSymbolBufOrError)
     exitWithErrorCode(OldSymbolBufOrError.getError(), OldSymbolFile);
 
   auto NewSymbolBufOrError =
-      MemoryBuffer::getFileOrSTDIN(NewSymbolFile, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(NewSymbolFile, sys::fs::OF_TextWithCRLF);
   if (!NewSymbolBufOrError)
     exitWithErrorCode(NewSymbolBufOrError.getError(), NewSymbolFile);
 
   auto RemappingBufOrError =
-      MemoryBuffer::getFileOrSTDIN(RemappingFile, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(RemappingFile, sys::fs::OF_TextWithCRLF);
   if (!RemappingBufOrError)
     exitWithErrorCode(RemappingBufOrError.getError(), RemappingFile);
 

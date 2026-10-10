@@ -17,6 +17,7 @@
 
 #include "llvm/FileCheck/FileCheck.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
@@ -1166,7 +1167,7 @@ int main(int argc, char **argv) {
 
   // Read the expected strings from the check file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CheckFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(CheckFilename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(CheckFilename, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = CheckFileOrErr.getError()) {
     errs() << "Could not open check file '" << CheckFilename
            << "': " << EC.message() << '\n';
@@ -1188,7 +1189,7 @@ int main(int argc, char **argv) {
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, sys::fs::OF_TextWithCRLF);
   if (InputFilename == "-")
     InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {

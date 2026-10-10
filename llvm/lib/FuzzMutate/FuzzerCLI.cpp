@@ -156,7 +156,7 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
       continue;
     }
 
-    auto BufOrErr = MemoryBuffer::getFile(Arg, /*IsText=*/false,
+    auto BufOrErr = MemoryBuffer::getFile(Arg, /*Flags=*/sys::fs::OF_None,
                                           /*RequiresNullTerminator=*/false);
     if (std::error_code EC = BufOrErr.getError()) {
       errs() << "Error reading file: " << Arg << ": " << EC.message() << "\n";

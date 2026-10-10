@@ -10,6 +10,7 @@
 #include "benchmark/benchmark.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -45,7 +46,8 @@ static std::vector<std::string> getRandomFuncNames() {
 
 #ifdef SYMBOL_TEST_DATA_FILE
 static std::vector<std::string> readSymbolsFromFile(StringRef InputFile) {
-  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile, /*IsText=*/true);
+  auto BufOrError =
+      MemoryBuffer::getFileOrSTDIN(InputFile, sys::fs::OF_TextWithCRLF);
   if (!BufOrError) {
     reportFatalUsageError("failed to open \'" + Twine(InputFile) +
                           "\': " + BufOrError.getError().message());
