@@ -283,7 +283,7 @@ def : Pat<(relaxed_store<atomic_store_64>
           (STURDi FPR64Op:$val, GPR64sp:$Rn, simm9:$offset)>;
 
 //===----------------------------------
-// Atomic store with hint pseudos
+// Atomic operations with hint pseudos
 //===----------------------------------
 
 let Size = 8, isCodeGenOnly = 1, hasSideEffects = 1, mayStore = 1 in {
@@ -436,6 +436,69 @@ let AddedComplexity = 1, GISelShouldIgnore = 1 in {
   defm : AtomicHintPatterns<0, 50, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH); }]>;
   defm : AtomicHintPatterns<1, 51, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>;
   defm : AtomicHintPatterns<0, 51, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>;
+}
+
+// Keep the hint and the LSE instruction together until assembly emission.
+// The opcode operand lets all operations and orderings share these pseudos.
+let Size = 8, isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1,
+    mayStore = 1 in {
+  class BaseFetchHintPseudo<RegisterClass dsttype, RegisterClass srctype>
+      : Pseudo<(outs dsttype:$result),
+               (ins srctype:$data, GPR64sp:$addr, i32imm:$opcode,
+                    i32imm:$hint), []>, Sched<[WriteAtomic]>;
+
+  def ATOMIC_FETCH_HINT_W : BaseFetchHintPseudo<GPR32common, GPR32>;
+  def ATOMIC_FETCH_HINT_X : BaseFetchHintPseudo<GPR64common, GPR64>;
+}
+
+class atomic_hint_fetch<PatFrag Base, code Pred>
+  : PatFrag<(ops node:$ptr, node:$val),
+            (Base node:$ptr, node:$val), Pred> {
+  // TODO: Change once mem.cache_hint supported in GISel
+  let GISelPredicateCode = [{ return false; }];
+}
+
+// Pass the LSE opcode as an immediate so all operations and orderings can use
+// the same two fetch pseudos.
+class AtomicFetchOpcode<string Inst> : SDNodeXForm<imm,
+  "return CurDAG->getTargetConstant(AArch64::" # Inst # ", SDLoc(N), MVT::i32);">;
+
+multiclass AtomicFetchHintPatternsForOpcode<string Inst, string Op,
+                                          RegisterClass RC, Instruction Pseudo> {
+  defvar Base = !cast<PatFrag>(Op);
+  defvar Opcode = AtomicFetchOpcode<Inst>;
+  def : Pat<(atomic_hint_fetch<Base, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH); }]>
+             GPR64sp:$addr, RC:$data),
+            (Pseudo RC:$data, GPR64sp:$addr, (Opcode (i32 0)), (i32 50))>;
+  def : Pat<(atomic_hint_fetch<Base, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>
+             GPR64sp:$addr, RC:$data),
+            (Pseudo RC:$data, GPR64sp:$addr, (Opcode (i32 0)), (i32 51))>;
+}
+
+multiclass AtomicFetchHintPatternsOrd<string Inst, string Suffix, string Op,
+                                    RegisterClass RC, Instruction Pseudo> {
+  defm : AtomicFetchHintPatternsForOpcode<Inst # Suffix, Op # "_monotonic", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "A" # Suffix, Op # "_acquire", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "L" # Suffix, Op # "_release", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_acq_rel", RC, Pseudo>;
+  defm : AtomicFetchHintPatternsForOpcode<Inst # "AL" # Suffix, Op # "_seq_cst", RC, Pseudo>;
+}
+
+multiclass AtomicFetchHintPatterns<string Inst, string Op> {
+  defm : AtomicFetchHintPatternsOrd<Inst, "X", Op # "_i64", GPR64, ATOMIC_FETCH_HINT_X>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "W", Op # "_i32", GPR32, ATOMIC_FETCH_HINT_W>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "H", Op # "_i16", GPR32, ATOMIC_FETCH_HINT_W>;
+  defm : AtomicFetchHintPatternsOrd<Inst, "B", Op # "_i8", GPR32, ATOMIC_FETCH_HINT_W>;
+}
+
+// SelectionDAG lowers SUB to ADD with a negated value and AND to CLR with a
+// complemented value. Hinted atomics use SelectionDAG, so separate SUB/AND
+// patterns are not needed here (unlike the GlobalISel patterns below).
+let Predicates = [HasLSE], AddedComplexity = 1 in {
+  defm : AtomicFetchHintPatterns<"LDADD", "atomic_load_add">;
+  defm : AtomicFetchHintPatterns<"LDSET", "atomic_load_or">;
+  defm : AtomicFetchHintPatterns<"LDEOR", "atomic_load_xor">;
+  defm : AtomicFetchHintPatterns<"LDCLR", "atomic_load_clr">;
 }
 
 //===----------------------------------
