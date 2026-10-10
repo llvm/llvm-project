@@ -247,6 +247,43 @@ public:
     }
   }
 
+  void test_range_underflow(float (*func)(float, float)) {
+    constexpr float BASES[] = {0x1.8p-2f, 0x1.fffffep-2f, 0x1.8p-130f};
+    constexpr float EXPONENTS[] = {150.0f, 150.0f, 1.25f};
+    for (int mode = 0; mode < N_ROUNDING_MODES; ++mode) {
+      ForceRoundingMode rounding(ROUNDING_MODES[mode]);
+      if (!rounding.success)
+        continue;
+      float positive =
+          ROUNDING_MODES[mode] == RoundingMode::Upward ? min_denormal : zero;
+      float negative = ROUNDING_MODES[mode] == RoundingMode::Downward
+                           ? -min_denormal
+                           : neg_zero;
+      for (unsigned index = 0; index < 3; ++index)
+        EXPECT_FP_EQ_WITH_EXCEPTION(positive,
+                                    func(BASES[index], EXPONENTS[index]),
+                                    FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-2f, 151.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(negative, func(-0x1.8p-130f, 3.0f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      float boundary = ROUNDING_MODES[mode] == RoundingMode::Upward ||
+                               ROUNDING_MODES[mode] == RoundingMode::Nearest
+                           ? min_denormal
+                           : zero;
+      EXPECT_FP_EQ_WITH_EXCEPTION(boundary, func(0x1.fffffep-2f, 0x1.2bfffep7f),
+                                  FE_UNDERFLOW | FE_INEXACT);
+      constexpr float SUBNORMAL_BOUND = 150.0f / 126.0f;
+      uint32_t bound_bits = FPBits(SUBNORMAL_BOUND).uintval();
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          boundary, func(0x1.fffffcp-127f, FPBits(bound_bits - 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
+      EXPECT_FP_EQ_WITH_EXCEPTION(
+          positive, func(0x1.fffffcp-127f, FPBits(bound_bits + 1).get_val()),
+          FE_UNDERFLOW | FE_INEXACT);
+    }
+  }
+
 #ifdef LIBC_TEST_FTZ_DAZ
   void test_ftz(float (*func)(float, float)) {
     LIBC_NAMESPACE::testing::ModifyMXCSR mxcsr(LIBC_NAMESPACE::testing::FTZ);
@@ -297,6 +334,9 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcPowfTest##suffix, SubnormalBase) {                            \
     test_subnormal_base(&func, tolerance);                                     \
+  }                                                                            \
+  TEST_F(LlvmLibcPowfTest##suffix, RangeUnderflow) {                           \
+    test_range_underflow(&func);                                               \
   }                                                                            \
   LIST_POWF_FTZ_DAZ_TESTS(suffix, func)                                        \
   static_assert(true, "Require semicolon.")
