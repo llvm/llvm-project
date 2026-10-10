@@ -20,6 +20,7 @@
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
 #include "flang/Lower/OpenACC.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -39,6 +40,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -156,6 +158,101 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
         !fir::ConvertOp::canBeConverted(actualType, dummyType))
       return true;
   return false;
+}
+
+namespace {
+/// Type used to call a known function from arguments prepared for the call
+/// site, and how the call must be emitted.
+struct DirectCallSignature {
+  mlir::FunctionType type;
+  /// Call through the function address cast to `type`.
+  bool mustCast = false;
+  /// Append the host association tuple to the arguments.
+  bool addHostAssociations = false;
+};
+} // namespace
+
+static DirectCallSignature getDirectCallSignature(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    mlir::FunctionType callSiteType, mlir::func::FuncOp func) {
+  DirectCallSignature signature;
+  mlir::FunctionType funcOpType = func.getFunctionType();
+  if (callSiteType.getNumResults() == funcOpType.getNumResults() &&
+      callSiteType.getNumInputs() + 1 == funcOpType.getNumInputs() &&
+      fir::anyFuncArgsHaveAttr(func, fir::getHostAssocAttrName())) {
+    // The number of arguments is off by one, and we're lowering a function
+    // with host associations. Modify call to include host associations
+    // argument by appending the value at the end of the operands.
+    assert(funcOpType.getInput(findHostAssocTuplePos(func)) ==
+           converter.hostAssocTupleValue().getType());
+    signature.addHostAssociations = true;
+  }
+  // When this is not a call to an internal procedure (where there is a
+  // mismatch due to the extra argument, but the interface is otherwise
+  // explicit and safe), handle interface mismatch due to F77 implicit
+  // interface "abuse" with a function address cast if needed.
+  signature.mustCast = !signature.addHostAssociations &&
+                       mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
+                           loc, converter, callSiteType, funcOpType);
+  signature.type = signature.mustCast ? callSiteType : funcOpType;
+  return signature;
+}
+
+/// Convert the actual arguments prepared in \p caller to the inputs of
+/// \p funcType and append them to \p operands.
+static void genCallArguments(mlir::Location loc,
+                             Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::CallerInterface &caller,
+                             mlir::FunctionType funcType,
+                             llvm::SmallVectorImpl<mlir::Value> &operands) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // Deal with potential mismatches in arguments types. Passing an array to a
+  // scalar argument should for instance be tolerated here.
+  for (auto [fst, snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
+    // When passing arguments to a procedure that can be called by implicit
+    // interface, allow any character actual arguments to be passed to dummy
+    // arguments of any type and vice versa.
+    mlir::Value cast;
+    auto *context = builder.getContext();
+
+    if (mlir::isa<fir::BoxProcType>(snd) &&
+        mlir::isa<mlir::FunctionType>(fst.getType())) {
+      mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
+      fir::BoxProcType boxProcTy = builder.getBoxProcType(funcTy);
+      if (mlir::Value host = argumentHostAssocs(converter, fst)) {
+        cast = fir::EmboxProcOp::create(builder, loc, boxProcTy,
+                                        llvm::ArrayRef<mlir::Value>{fst, host});
+      } else {
+        cast = fir::EmboxProcOp::create(builder, loc, boxProcTy, fst);
+      }
+    } else {
+      mlir::Type fromTy = fir::unwrapRefType(fst.getType());
+      if (fir::isa_builtin_cptr_type(fromTy) &&
+          Fortran::lower::isCPtrArgByValueType(snd)) {
+        cast = genRecordCPtrValueArg(builder, loc, fst, fromTy);
+      } else if (fir::isa_derived(snd) && !fir::isa_derived(fst.getType())) {
+        // TODO: remove this TODO once the old lowering is gone.
+        TODO(loc, "derived type argument passed by value");
+      } else {
+        // With the lowering to HLFIR, box arguments have already been built
+        // according to the attributes, rank, bounds, and type they should have.
+        // Do not attempt any reboxing here that could break this.
+        // When dealing with a dummy character argument (fir.boxchar), the
+        // effective argument might be a non-character raw pointer. This may
+        // happen when calling an implicit interface that was previously called
+        // with a character argument, or when calling an explicit interface with
+        // an IgnoreTKR dummy character arguments. Allow creating a fir.boxchar
+        // from the raw pointer, which requires a non-trivial type conversion.
+        const bool allowCharacterConversions = true;
+        bool isVolatile = fir::isa_volatile_type(snd);
+        cast = builder.createVolatileCast(loc, isVolatile, fst);
+        cast = builder.convertWithSemantics(loc, snd, cast,
+                                            allowCharacterConversions,
+                                            /*allowRebox=*/false);
+      }
+    }
+    operands.push_back(cast);
+  }
 }
 
 static mlir::Value readDim3Value(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -516,32 +613,18 @@ Fortran::lower::genCallOpAndResult(
   // arguments which can happen in legal program if it was passed as a dummy
   // procedure argument earlier with no further type information.
   mlir::SymbolRefAttr funcSymbolAttr;
+  mlir::FunctionType funcType = callSiteType;
+  bool mustCastFunc = false;
   bool addHostAssociations = false;
   if (!funcPointer) {
-    mlir::FunctionType funcOpType = caller.getFuncOp().getFunctionType();
     mlir::SymbolRefAttr symbolAttr =
         builder.getSymbolRefAttr(caller.getMangledName());
-    if (callSiteType.getNumResults() == funcOpType.getNumResults() &&
-        callSiteType.getNumInputs() + 1 == funcOpType.getNumInputs() &&
-        fir::anyFuncArgsHaveAttr(caller.getFuncOp(),
-                                 fir::getHostAssocAttrName())) {
-      // The number of arguments is off by one, and we're lowering a function
-      // with host associations. Modify call to include host associations
-      // argument by appending the value at the end of the operands.
-      assert(funcOpType.getInput(findHostAssocTuplePos(caller.getFuncOp())) ==
-             converter.hostAssocTupleValue().getType());
-      addHostAssociations = true;
-    }
-    // When this is not a call to an internal procedure (where there is a
-    // mismatch due to the extra argument, but the interface is otherwise
-    // explicit and safe), handle interface mismatch due to F77 implicit
-    // interface "abuse" with a function address cast if needed.
-    if (!addHostAssociations &&
-        mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
-            loc, converter, callSiteType, funcOpType))
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcOpType, symbolAttr);
-    else
-      funcSymbolAttr = symbolAttr;
+    DirectCallSignature signature = getDirectCallSignature(
+        loc, converter, callSiteType, caller.getFuncOp());
+    funcType = signature.type;
+    mustCastFunc = signature.mustCast;
+    addHostAssociations = signature.addHostAssociations;
+    funcSymbolAttr = symbolAttr;
 
     // Issue a warning if the procedure name conflicts with
     // a runtime function name a call to which has been already
@@ -557,30 +640,68 @@ Fortran::lower::genCallOpAndResult(
                           "Flang - this may lead to undefined behavior")));
   }
 
-  mlir::FunctionType funcType =
-      funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
-
   // If we have any ignore_tkr(c) dummy args, adjust the function type to
   // have these args match the caller.
   if (auto modifiedFuncType =
           getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
-    // Note: funcPointer would only be non-null here, if we are already
-    // processing indirect function call. In such case we can re-use the same
-    // funcPointer and we'll cast it below the the modified funcType.
-    if (!funcPointer) {
-      // We want to cast the function to a different type, in order to avoid
-      // changing/casting some of the args. The cast will generate a new
-      // function pointer, so that we would make a function call not through
-      // the original function symbol, but through the new function pointer
-      // (an indirect function call).
-      mlir::SymbolRefAttr symbolAttr =
-          builder.getSymbolRefAttr(caller.getMangledName());
-      // Create pointer to original function. This pointer will be cast later.
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
-      funcSymbolAttr = {}; // This marks it as indirect call
-    }
     funcType = *modifiedFuncType;
+    mustCastFunc = true;
   }
+
+  // OpenMP dispatch `novariants`/`nocontext`: the callee is chosen at runtime.
+  // Collect each condition with the procedure it selects, in priority order;
+  // the procedure selected for the enclosing context is the fallback. Each
+  // procedure is called directly with its own signature, including any host
+  // association argument, using the actual arguments lowered once above.
+  llvm::SmallVector<std::pair<mlir::Value, mlir::func::FuncOp>, 2>
+      dispatchCallees;
+  if (funcSymbolAttr && Fortran::lower::omp::isDispatchTargetCall(
+                            caller.getCallDescription(), converter)) {
+    mlir::Value novariantsCond =
+        Fortran::lower::omp::getEnclosingDispatchNovariants(builder);
+    mlir::Value nocontextCond =
+        Fortran::lower::omp::getEnclosingDispatchNocontext(builder);
+    const Fortran::semantics::Symbol *baseSym =
+        caller.getCallDescription().proc().GetSymbol();
+    const Fortran::semantics::Symbol *selectedSym = caller.getProcedureSymbol();
+    // A runtime choice is only needed when a variant was actually selected for
+    // the enclosing dispatch context (otherwise the base is already the call
+    // target and dropping the dispatch construct cannot introduce a variant).
+    if ((novariantsCond || nocontextCond) && baseSym && selectedSym &&
+        &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
+      const Fortran::semantics::Symbol &baseUlt = baseSym->GetUltimate();
+      const Fortran::semantics::Symbol &selectedUlt =
+          selectedSym->GetUltimate();
+      auto getFunc = [&](const Fortran::semantics::Symbol &sym) {
+        return Fortran::lower::getOrDeclareFunction(
+            Fortran::evaluate::ProcedureDesignator{sym}, converter);
+      };
+
+      // `novariants(true)` takes precedence: always call the base.
+      if (novariantsCond)
+        dispatchCallees.emplace_back(novariantsCond, getFunc(baseUlt));
+
+      // `nocontext(true)`: re-select the variant with the dispatch construct
+      // removed from the OpenMP context. That may resolve to a different
+      // variant (e.g. one matching `device={kind(host)}`) or to the base
+      // procedure.
+      if (nocontextCond) {
+        const Fortran::semantics::Symbol *nocontextSym =
+            Fortran::lower::omp::resolveDeclareVariantCallee(
+                baseUlt, converter, /*excludeDispatchContext=*/true);
+        const Fortran::semantics::Symbol &nocontextUlt =
+            nocontextSym ? nocontextSym->GetUltimate() : baseUlt;
+        if (&nocontextUlt != &selectedUlt)
+          dispatchCallees.emplace_back(nocontextCond, getFunc(nocontextUlt));
+      }
+    }
+  }
+
+  if (!funcPointer && mustCastFunc)
+    funcPointer = fir::AddrOfOp::create(
+        builder, loc, caller.getFuncOp().getFunctionType(), funcSymbolAttr);
+  if (funcPointer)
+    funcSymbolAttr = {};
 
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to
@@ -594,53 +715,7 @@ Fortran::lower::genCallOpAndResult(
             : builder.createConvert(loc, funcType, funcPointer));
   }
 
-  // Deal with potential mismatches in arguments types. Passing an array to a
-  // scalar argument should for instance be tolerated here.
-  for (auto [fst, snd] : llvm::zip(caller.getInputs(), funcType.getInputs())) {
-    // When passing arguments to a procedure that can be called by implicit
-    // interface, allow any character actual arguments to be passed to dummy
-    // arguments of any type and vice versa.
-    mlir::Value cast;
-    auto *context = builder.getContext();
-
-    if (mlir::isa<fir::BoxProcType>(snd) &&
-        mlir::isa<mlir::FunctionType>(fst.getType())) {
-      mlir::FunctionType funcTy = mlir::FunctionType::get(context, {}, {});
-      fir::BoxProcType boxProcTy = builder.getBoxProcType(funcTy);
-      if (mlir::Value host = argumentHostAssocs(converter, fst)) {
-        cast = fir::EmboxProcOp::create(builder, loc, boxProcTy,
-                                        llvm::ArrayRef<mlir::Value>{fst, host});
-      } else {
-        cast = fir::EmboxProcOp::create(builder, loc, boxProcTy, fst);
-      }
-    } else {
-      mlir::Type fromTy = fir::unwrapRefType(fst.getType());
-      if (fir::isa_builtin_cptr_type(fromTy) &&
-          Fortran::lower::isCPtrArgByValueType(snd)) {
-        cast = genRecordCPtrValueArg(builder, loc, fst, fromTy);
-      } else if (fir::isa_derived(snd) && !fir::isa_derived(fst.getType())) {
-        // TODO: remove this TODO once the old lowering is gone.
-        TODO(loc, "derived type argument passed by value");
-      } else {
-        // With the lowering to HLFIR, box arguments have already been built
-        // according to the attributes, rank, bounds, and type they should have.
-        // Do not attempt any reboxing here that could break this.
-        // When dealing with a dummy character argument (fir.boxchar), the
-        // effective argument might be a non-character raw pointer. This may
-        // happen when calling an implicit interface that was previously called
-        // with a character argument, or when calling an explicit interface with
-        // an IgnoreTKR dummy character arguments. Allow creating a fir.boxchar
-        // from the raw pointer, which requires a non-trivial type conversion.
-        const bool allowCharacterConversions = true;
-        bool isVolatile = fir::isa_volatile_type(snd);
-        cast = builder.createVolatileCast(loc, isVolatile, fst);
-        cast = builder.convertWithSemantics(loc, snd, cast,
-                                            allowCharacterConversions,
-                                            /*allowRebox=*/false);
-      }
-    }
-    operands.push_back(cast);
-  }
+  genCallArguments(loc, converter, caller, funcType, operands);
 
   // Add host associations as necessary.
   if (addHostAssociations)
@@ -801,15 +876,78 @@ Fortran::lower::genCallOpAndResult(
     else if (caller.getCallDescription().hasAlwaysInline())
       inlineAttr = fir::FortranInlineEnumAttr::get(
           builder.getContext(), fir::FortranInlineEnum::always_inline);
-    auto call = fir::CallOp::create(
-        builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
-        /*accessGroups=*/mlir::ArrayAttr{});
-    callOp = call;
+    auto genCall = [&](mlir::FunctionType type, mlir::SymbolRefAttr callee,
+                       mlir::ValueRange args) {
+      return fir::CallOp::create(builder, loc, type.getResults(), callee, args,
+                                 /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
+                                 procAttrs, inlineAttr,
+                                 /*accessGroups=*/mlir::ArrayAttr{});
+    };
+    if (dispatchCallees.empty()) {
+      auto call = genCall(funcType, funcSymbolAttr, operands);
+      callOp = call;
 
-    callNumResults = call.getNumResults();
-    if (callNumResults != 0)
-      callResult = call.getResult(0);
+      callNumResults = call.getNumResults();
+      if (callNumResults != 0)
+        callResult = call.getResult(0);
+    } else {
+      // Emit `if (c0) call f0 else if (c1) call f1 ... else call selected`.
+      // The abstract result conversion requires a fir.save_result right after
+      // each call, so a result in memory is saved in every branch.
+      llvm::SmallVector<mlir::Type> resultTypes;
+      if (!caller.mustSaveResult())
+        resultTypes.append(funcType.getResults().begin(),
+                           funcType.getResults().end());
+      auto finishBranch = [&](fir::CallOp call) {
+        if (caller.mustSaveResult()) {
+          assert(allocatedResult.has_value());
+          fir::SaveResultOp::create(builder, loc, call.getResult(0),
+                                    fir::getBase(*allocatedResult),
+                                    arrayResultShape, resultLengths);
+        } else if (!resultTypes.empty()) {
+          fir::ResultOp::create(
+              builder, loc,
+              builder.createConvert(loc, resultTypes[0], call.getResult(0)));
+        }
+      };
+      fir::IfOp outerIf;
+      for (auto [condition, callee] : dispatchCallees) {
+        auto ifOp = fir::IfOp::create(builder, loc, resultTypes, condition,
+                                      /*withElseRegion=*/true);
+        if (!outerIf)
+          outerIf = ifOp;
+        else if (!resultTypes.empty())
+          fir::ResultOp::create(builder, loc, ifOp.getResults());
+        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+        DirectCallSignature signature =
+            getDirectCallSignature(loc, converter, callSiteType, callee);
+        if (auto modifiedFuncType = getTypeWithIgnoreTkrC(
+                signature.type, caller, builder.getContext())) {
+          signature.type = *modifiedFuncType;
+          signature.mustCast = true;
+        }
+        mlir::SymbolRefAttr calleeAttr =
+            builder.getSymbolRefAttr(callee.getSymName());
+        llvm::SmallVector<mlir::Value> args;
+        if (signature.mustCast) {
+          mlir::Value address = fir::AddrOfOp::create(
+              builder, loc, callee.getFunctionType(), calleeAttr);
+          args.push_back(builder.createConvert(loc, signature.type, address));
+          calleeAttr = {};
+        }
+        genCallArguments(loc, converter, caller, signature.type, args);
+        if (signature.addHostAssociations)
+          args.push_back(converter.hostAssocTupleValue());
+        finishBranch(genCall(signature.type, calleeAttr, args));
+        builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      }
+      finishBranch(genCall(funcType, funcSymbolAttr, operands));
+      builder.setInsertionPointAfter(outerIf);
+      callOp = outerIf;
+      callNumResults = outerIf.getNumResults();
+      if (callNumResults != 0)
+        callResult = outerIf.getResult(0);
+    }
   }
 
   std::optional<Fortran::evaluate::DynamicType> retTy =
@@ -822,7 +960,7 @@ Fortran::lower::genCallOpAndResult(
   const bool mustFinalizeResult =
       !isElemental && mustDestroyOrFinalizeFunctionResult(callSiteType, retTy);
 
-  if (caller.mustSaveResult()) {
+  if (caller.mustSaveResult() && dispatchCallees.empty()) {
     assert(allocatedResult.has_value());
     fir::SaveResultOp::create(builder, loc, callResult,
                               fir::getBase(*allocatedResult), arrayResultShape,
@@ -1097,6 +1235,12 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
     for (auto resUser : insertBefore->getResult(0).getUsers())
       if (auto save_result = llvm::dyn_cast<fir::SaveResultOp>(resUser))
         save_result.getMemrefMutable().assign(declare.getFirBase());
+  // A call with a callee chosen at runtime saves the result in each branch.
+  if (insertBefore && insertBefore->getNumRegions() != 0)
+    insertBefore->walk([&](fir::SaveResultOp saveResult) {
+      if (saveResult.getMemref() == firBase)
+        saveResult.getMemrefMutable().assign(declare.getFirBase());
+    });
   return declare;
 }
 namespace {
