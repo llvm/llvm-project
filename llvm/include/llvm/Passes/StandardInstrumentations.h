@@ -32,6 +32,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 
@@ -669,6 +670,7 @@ class StandardInstrumentations {
   VerifyInstrumentation Verify;
   DroppedVariableStatsIR DroppedStatsIR;
 
+  uint64_t InstNamerNextID = 0;
   bool VerifyEach;
 
 public:

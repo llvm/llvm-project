@@ -56,6 +56,10 @@ static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
   return new SPIRVTargetStreamer(S);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new SPIRVTargetStreamer(S);
+}
+
 static MCInstPrinter *createSPIRVMCInstPrinter(const Triple &T,
                                                unsigned SyntaxVariant,
                                                const MCAsmInfo &MAI,
@@ -92,5 +96,6 @@ LLVMInitializeSPIRVTargetMC() {
     TargetRegistry::RegisterMCCodeEmitter(*T, createSPIRVMCCodeEmitter);
     TargetRegistry::RegisterMCAsmBackend(*T, createSPIRVAsmBackend);
     TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
   }
 }
