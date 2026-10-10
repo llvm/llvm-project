@@ -1437,6 +1437,7 @@ def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let has_sccb = 1;
   let InOperandList = (ins CPol_0:$cpol);
   let AsmOperands = "$cpol";
+  let Pattern = [(int_amdgcn_buffer_inv timm:$cpol)];
 }
 
 def BUFFER_GL0_INV : MUBUF_Invalidate<"buffer_gl0_inv">;

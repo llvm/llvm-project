@@ -14402,6 +14402,9 @@ def note_amdgpu_named_barrier_reason_inherited : Note<
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_buffer_inv_invalid_cpol
+    : Error<"argument to '__builtin_amdgcn_buffer_inv' must be a combination "
+            "of the sc0 (1) and sc1 (16) cache-policy bits">;
 def err_invalid_sync_scope
     : Error<"unsupported atomic synchronization scope '%0'">;
 def err_amdgcn_processor_is_arg_not_literal
