@@ -3487,15 +3487,17 @@ struct CompilerDirective {
   EMPTY_CLASS(IVDep);
   EMPTY_CLASS(Simd);
   EMPTY_CLASS(Unrecognized);
-  // !DIR$ prefix keyword [( arg [, arg]... )] for a prefix registered by a
-  // plugin (see flang/Support/PluginDirectives.h).
+  // !DIR$ prefix keyword [( arg [, arg]... )] [name(value)]... for a prefix
+  // registered by a plugin (see flang/Support/PluginDirectives.h). A trailing
+  // name(value) is an Arg with that keyword.
   struct Plugin {
     // A COMMON block named in an argument, /name/.
     WRAPPER_CLASS(CommonBlock, Name);
     struct Arg {
       TUPLE_CLASS_BOILERPLATE(Arg);
       std::tuple<std::optional<Name>,
-          std::variant<Name, CommonBlock, std::uint64_t, std::string>>
+          std::variant<Name, CommonBlock, std::uint64_t,
+              SignedRealLiteralConstant, std::string>>
           t;
     };
     TUPLE_CLASS_BOILERPLATE(Plugin);
