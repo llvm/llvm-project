@@ -1054,7 +1054,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL,                MVT::v8i16, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v16i8, Legal);
     setOperationAction(ISD::AVGCEILU,           MVT::v8i16, Legal);
-    setOperationAction(ISD::CTLZ, MVT::v4i32, Custom);
+    setOperationAction(ISD::CTLZ,               MVT::v4i32, Custom);
 
     if (!Subtarget.is64Bit()) {
       setOperationAction(ISD::MULHU,            MVT::v2i64, Custom);
