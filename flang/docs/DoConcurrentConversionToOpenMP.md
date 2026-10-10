@@ -278,7 +278,8 @@ similar to OpenMP's `omp.private` op, can carry `init` and `dealloc` regions)
 referenced from the `local(...)` operand group of the `fir.do_concurrent.loop`
 op. The conversion pass translates each localizer into an equivalent
 `omp.private` op and attaches the corresponding `private(...)` clause to the
-generated worksharing loop. For examples, see
+`omp.wsloop` op when mapping to the host, and to the `omp.parallel` op when
+mapping to the device. For examples, see
 `flang/test/Transforms/DoConcurrent/locality_specifiers_simple.mlir` and
 `flang/test/Transforms/DoConcurrent/local_device.mlir`.
 
