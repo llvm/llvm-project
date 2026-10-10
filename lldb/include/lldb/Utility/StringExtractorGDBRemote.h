@@ -131,7 +131,6 @@ public:
     eServerPacketType_qWatchpointSupportInfoSupported,
     eServerPacketType_qXfer,
 
-    eServerPacketType_jSignalsInfo,
     eServerPacketType_jModulesInfo,
 
     eServerPacketType_vAttach,
