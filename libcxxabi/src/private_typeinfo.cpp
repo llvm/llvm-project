@@ -183,7 +183,7 @@ const void* dyn_cast_to_derived(
       false,
       false};
   // Do the  search
-  (void)dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, false);
+  (void)dst_type->search_above_dst<false>(&info, dynamic_ptr, dynamic_ptr, public_path);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // The following if should always be false because we should
   //   definitely find (static_ptr, static_type), either on a public
@@ -204,7 +204,7 @@ const void* dyn_cast_to_derived(
     // Redo the search comparing type_info's using strcmp
     info                    = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false};
     info.number_of_dst_type = 1;
-    dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, true);
+    dst_type->search_above_dst<true>(&info, dynamic_ptr, dynamic_ptr, public_path);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // Query the search.
@@ -254,7 +254,7 @@ const void* dyn_cast_try_downcast(
       1, // number_of_dst_type
       false,
       false};
-  (void)dynamic_type->search_above_dst(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, public_path, false);
+  (void)dynamic_type->search_above_dst<false>(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, public_path);
   if (dynamic_to_dst_info.path_dst_ptr_to_static_ptr != unknown) {
     // We have found at least one path from dynamic_ptr to dst_ptr. The
     //   downcast can succeed.
@@ -276,7 +276,7 @@ const void* dyn_cast_slow(
   // Initialize info struct for this search.
   __dynamic_cast_info info = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false};
 
-  (void)dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, false);
+  (void)dynamic_type->search_below_dst<false>(&info, dynamic_ptr, public_path);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // The following if should always be false because we should
   //   definitely find (static_ptr, static_type), either on a public
@@ -296,7 +296,7 @@ const void* dyn_cast_slow(
              dst_type->name());
     // Redo the search comparing type_info's using strcmp
     info = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false};
-    dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, true);
+    dynamic_type->search_below_dst<true>(&info, dynamic_ptr, public_path);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // Query the search.
@@ -961,8 +961,9 @@ void __class_type_info::process_static_type_below_dst(
 //         }
 //     }
 // }
-bool __vmi_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __vmi_class_type_info::search_below_dst_impl(
+    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
   typedef const __base_class_type_info* Iter;
   if (is_equal(this, info->static_type, use_strcmp)) {
     process_static_type_below_dst(info, current_ptr, path_below);
@@ -1002,7 +1003,7 @@ bool __vmi_class_type_info::search_below_dst(
           // Zero out found flags
           info->found_our_static_ptr  = false;
           info->found_any_static_type = false;
-          if (p->search_above_dst(info, current_ptr, current_ptr, public_path, use_strcmp))
+          if (p->search_above_dst<use_strcmp>(info, current_ptr, current_ptr, public_path))
             return true;
           if (info->found_any_static_type) {
             is_dst_type_derived_from_static_type = true;
@@ -1051,7 +1052,7 @@ bool __vmi_class_type_info::search_below_dst(
     // This is not a static_type and not a dst_type.
     const Iter e = __base_info + __base_count;
     Iter p       = __base_info;
-    if (p->search_below_dst(info, current_ptr, path_below, use_strcmp))
+    if (p->search_below_dst<use_strcmp>(info, current_ptr, path_below))
       return true;
     if (++p < e) {
       if ((__flags & __diamond_shaped_mask) || info->number_to_static_ptr == 1) {
@@ -1060,7 +1061,7 @@ bool __vmi_class_type_info::search_below_dst(
         //    then there is no way to break out of this loop early unless
         //    something below detects the search is done.
         do {
-          if (p->search_below_dst(info, current_ptr, path_below, use_strcmp))
+          if (p->search_below_dst<use_strcmp>(info, current_ptr, path_below))
             return true;
         } while (++p < e);
       } else if (__flags & __non_diamond_repeat_mask) {
@@ -1074,7 +1075,7 @@ bool __vmi_class_type_info::search_below_dst(
           //    If !diamond, then we don't need to search here.
           if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == public_path)
             break;
-          if (p->search_below_dst(info, current_ptr, path_below, use_strcmp))
+          if (p->search_below_dst<use_strcmp>(info, current_ptr, path_below))
             return true;
         } while (++p < e);
       } else {
@@ -1093,7 +1094,7 @@ bool __vmi_class_type_info::search_below_dst(
           //    and not a dst_type under here.
           if (info->number_to_static_ptr == 1)
             break;
-          if (p->search_below_dst(info, current_ptr, path_below, use_strcmp))
+          if (p->search_below_dst<use_strcmp>(info, current_ptr, path_below))
             return true;
         } while (++p < e);
       }
@@ -1104,8 +1105,9 @@ bool __vmi_class_type_info::search_below_dst(
 
 // This is the same algorithm as __vmi_class_type_info::search_below_dst but
 //   simplified to the case that there is only a single base class.
-bool __si_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __si_class_type_info::search_below_dst_impl(
+    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
   if (is_equal(this, info->static_type, use_strcmp)) {
     process_static_type_below_dst(info, current_ptr, path_below);
     return false;
@@ -1113,7 +1115,7 @@ bool __si_class_type_info::search_below_dst(
 
   if (!is_equal(this, info->dst_type, use_strcmp)) {
     // This is not a static_type and not a dst_type
-    return __base_type->search_below_dst(info, current_ptr, path_below, use_strcmp);
+    return __base_type->search_below_dst<use_strcmp>(info, current_ptr, path_below);
   }
 
   // We've been here before if we've recorded current_ptr in one of these
@@ -1138,7 +1140,7 @@ bool __si_class_type_info::search_below_dst(
       // Zero out found flags
       info->found_our_static_ptr  = false;
       info->found_any_static_type = false;
-      if (__base_type->search_above_dst(info, current_ptr, current_ptr, public_path, use_strcmp))
+      if (__base_type->search_above_dst<use_strcmp>(info, current_ptr, current_ptr, public_path))
         return true;
       if (info->found_any_static_type) {
         is_dst_type_derived_from_static_type = true;
@@ -1171,8 +1173,9 @@ bool __si_class_type_info::search_below_dst(
 
 // This is the same algorithm as __vmi_class_type_info::search_below_dst but
 //   simplified to the case that there is no base class.
-bool __class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __class_type_info::search_below_dst_impl(
+    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
   if (is_equal(this, info->static_type, use_strcmp)) {
     process_static_type_below_dst(info, current_ptr, path_below);
     return false;
@@ -1210,6 +1213,13 @@ bool __class_type_info::search_below_dst(
   return info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == not_public_path;
 }
 
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+bool __class_type_info::search_below_dst_strcmp(
+    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
+  return search_below_dst_impl<true>(info, current_ptr, path_below);
+}
+#endif
+
 // Call this function when searching above a dst_type node.  This function searches
 // for a public path to (static_ptr, static_type).
 // This function is guaranteed not to find a node of type dst_type.
@@ -1236,8 +1246,9 @@ bool __class_type_info::search_below_dst(
 //         }
 //     }
 // }
-bool __vmi_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __vmi_class_type_info::search_above_dst_impl(
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
   if (is_equal(this, info->static_type, use_strcmp))
     return process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
 
@@ -1260,7 +1271,7 @@ bool __vmi_class_type_info::search_above_dst(
   // Zero out found flags
   info->found_our_static_ptr  = false;
   info->found_any_static_type = false;
-  if (p->search_above_dst(info, dst_ptr, current_ptr, path_below, use_strcmp))
+  if (p->search_above_dst<use_strcmp>(info, dst_ptr, current_ptr, path_below))
     return true;
   found_our_static_ptr |= info->found_our_static_ptr;
   found_any_static_type |= info->found_any_static_type;
@@ -1285,7 +1296,7 @@ bool __vmi_class_type_info::search_above_dst(
       // Zero out found flags
       info->found_our_static_ptr  = false;
       info->found_any_static_type = false;
-      if (p->search_above_dst(info, dst_ptr, current_ptr, path_below, use_strcmp))
+      if (p->search_above_dst<use_strcmp>(info, dst_ptr, current_ptr, path_below))
         return true;
       found_our_static_ptr |= info->found_our_static_ptr;
       found_any_static_type |= info->found_any_static_type;
@@ -1299,18 +1310,20 @@ bool __vmi_class_type_info::search_above_dst(
 
 // This is the same algorithm as __vmi_class_type_info::search_above_dst but
 //   simplified to the case that there is only a single base class.
-bool __si_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __si_class_type_info::search_above_dst_impl(
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
   if (is_equal(this, info->static_type, use_strcmp))
     return process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
   else
-    return __base_type->search_above_dst(info, dst_ptr, current_ptr, path_below, use_strcmp);
+    return __base_type->search_above_dst<use_strcmp>(info, dst_ptr, current_ptr, path_below);
 }
 
 // This is the same algorithm as __vmi_class_type_info::search_above_dst but
 //   simplified to the case that there is no base class.
-bool __class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+template <bool use_strcmp>
+bool __class_type_info::search_above_dst_impl(
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
   if (is_equal(this, info->static_type, use_strcmp))
     return process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
   return false;
@@ -1319,34 +1332,33 @@ bool __class_type_info::search_above_dst(
 // The search functions for __base_class_type_info are simply convenience
 //   functions for adjusting the current_ptr and path_below as the search is
 //   passed up to the base class node.
-
+template <bool use_strcmp>
 bool __base_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
   ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
   if (__offset_flags & __virtual_mask) {
     const char* vtable = strip_vtable(*static_cast<const char* const*>(current_ptr));
     offset_to_base     = update_offset_to_base(vtable, offset_to_base);
   }
-  return __base_type->search_above_dst(
+  return __base_type->search_above_dst<use_strcmp>(
       info,
       dst_ptr,
       static_cast<const char*>(current_ptr) + offset_to_base,
-      (__offset_flags & __public_mask) ? path_below : not_public_path,
-      use_strcmp);
+      (__offset_flags & __public_mask) ? path_below : not_public_path);
 }
 
+template <bool use_strcmp>
 bool __base_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
   ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
   if (__offset_flags & __virtual_mask) {
     const char* vtable = strip_vtable(*static_cast<const char* const*>(current_ptr));
     offset_to_base     = update_offset_to_base(vtable, offset_to_base);
   }
-  return __base_type->search_below_dst(
+  return __base_type->search_below_dst<use_strcmp>(
       info,
       static_cast<const char*>(current_ptr) + offset_to_base,
-      (__offset_flags & __public_mask) ? path_below : not_public_path,
-      use_strcmp);
+      (__offset_flags & __public_mask) ? path_below : not_public_path);
 }
 
 } // namespace __cxxabiv1

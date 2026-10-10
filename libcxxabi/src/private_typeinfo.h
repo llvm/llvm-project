@@ -136,9 +136,65 @@ public:
   _LIBCXXABI_HIDDEN void process_static_type_below_dst(__dynamic_cast_info *,
                                                        const void *, int) const;
   _LIBCXXABI_HIDDEN [[nodiscard]] bool process_found_base_class(catch_info*, void*, int) const;
+
+  template <bool use_strcmp>
+  [[nodiscard]] bool
+  search_above_dst(__dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+    if constexpr (use_strcmp)
+      return search_above_dst_strcmp(info, dst_ptr, current_ptr, path_below);
+    else
+      return search_above_dst(info, dst_ptr, current_ptr, path_below);
+#else
+    static_assert(!use_strcmp);
+    return search_above_dst(info, dst_ptr, current_ptr, path_below);
+#endif
+  }
+
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_below_dst(__dynamic_cast_info* info, const void* current_ptr, int path_below) const {
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+    if constexpr (use_strcmp)
+      return search_below_dst_strcmp(info, current_ptr, path_below);
+    else
+      return search_below_dst(info, current_ptr, path_below);
+#else
+    static_assert(!use_strcmp);
+    return search_below_dst(info, current_ptr, path_below);
+#endif
+  }
+
+  template <bool use_strcmp>
+  bool
+  search_above_dst_impl(__dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const;
+
   _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool
-  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
-  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
+  search_above_dst(__dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
+    return search_above_dst_impl<false>(info, dst_ptr, current_ptr, path_below);
+  }
+
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool search_above_dst_strcmp(
+      __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
+    return search_above_dst_impl<true>(info, dst_ptr, current_ptr, path_below);
+  }
+#endif
+
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_below_dst_impl(__dynamic_cast_info* info, const void* current_ptr, int path_below) const;
+
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool
+  search_below_dst(__dynamic_cast_info* catch_info, const void* current_ptr, int path_below) const {
+    return search_below_dst_impl<false>(catch_info, current_ptr, path_below);
+  }
+
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+  _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool
+  search_below_dst_strcmp(__dynamic_cast_info* info, const void* current_ptr, int path_below) const {
+    return search_below_dst_impl<true>(info, current_ptr, path_below);
+  }
+#endif
+
   _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
   _LIBCXXABI_HIDDEN [[nodiscard]] virtual bool has_unambiguous_public_base(catch_info*, void*, int) const;
 };
@@ -150,9 +206,29 @@ public:
 
   _LIBCXXABI_HIDDEN ~__si_class_type_info() final;
 
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_above_dst_impl(__dynamic_cast_info*, const void*, const void*, int) const;
+
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_above_dst(
+      __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const final {
+    return search_above_dst_impl<false>(info, dst_ptr, current_ptr, path_below);
+  }
+
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_above_dst_strcmp(
+      __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const final {
+    return search_above_dst_impl<true>(info, dst_ptr, current_ptr, path_below);
+  }
+#endif
+
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_below_dst_impl(__dynamic_cast_info*, const void*, int) const;
+
   _LIBCXXABI_HIDDEN [[nodiscard]] bool
-  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  search_below_dst(__dynamic_cast_info* info, const void* current_ptr, int path_below) const final {
+    return search_below_dst_impl<false>(info, current_ptr, path_below);
+  }
+
   _LIBCXXABI_HIDDEN [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const final;
 };
 
@@ -169,8 +245,10 @@ public:
         __offset_shift = 8
     };
 
-    [[nodiscard]] bool search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
-    [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
+    template <bool use_strcmp>
+    [[nodiscard]] bool search_above_dst(__dynamic_cast_info*, const void*, const void*, int) const;
+    template <bool use_strcmp>
+    [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int) const;
     [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const;
 };
 
@@ -190,9 +268,32 @@ public:
 
   _LIBCXXABI_HIDDEN ~__vmi_class_type_info() final;
 
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_above_dst_impl(__dynamic_cast_info*, const void*, const void*, int) const;
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_above_dst(
+      __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const final {
+    return search_above_dst_impl<false>(info, dst_ptr, current_ptr, path_below);
+  }
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_above_dst_strcmp(
+      __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const final {
+    return search_above_dst_impl<true>(info, dst_ptr, current_ptr, path_below);
+  }
+#endif
+
+  template <bool use_strcmp>
+  [[nodiscard]] bool search_below_dst_impl(__dynamic_cast_info*, const void*, int) const;
+
   _LIBCXXABI_HIDDEN [[nodiscard]] bool
-  search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN [[nodiscard]] bool search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
+  search_below_dst(__dynamic_cast_info* info, const void* current_ptr, int path_below) const final {
+    return search_below_dst_impl<false>(info, current_ptr, path_below);
+  }
+#ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
+  _LIBCXXABI_HIDDEN [[nodiscard]] bool
+  search_below_dst_strcmp(__dynamic_cast_info* info, const void* current_ptr, int path_below) const final {
+    return search_below_dst_impl<true>(info, current_ptr, path_below);
+  }
+#endif
   _LIBCXXABI_HIDDEN [[nodiscard]] bool has_unambiguous_public_base(catch_info*, void*, int) const final;
 };
 
