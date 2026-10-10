@@ -82,6 +82,8 @@ using namespace llvm;
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
+STATISTIC(NumPhysicalHintRecolors,
+          "Number of broken physical hints repaired by recoloring");
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
@@ -2324,6 +2326,196 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
   return true;
 }
 
+/// Recolor the virtual intervals that occupy \p PhysHint over \p HintRange.
+/// \p MaxCostIncrease is the copy cost that satisfying the hint would save.
+/// Return true when at least one interference was recolored.
+bool RAGreedy::recolorPhysicalHintInterferences(
+    const LiveRange &HintRange, MCRegister PhysHint,
+    BlockFrequency MaxCostIncrease) {
+  SmallLISet RecoloringCandidates;
+  for (MCRegUnit Unit : TRI->regunits(PhysHint)) {
+    LiveIntervalUnion::Query Query;
+    Query.reset(0, HintRange, Matrix->getLiveUnions()[unsigned(Unit)]);
+    if (Query.interferingVRegs(LastChanceRecoloringMaxInterference).size() >=
+            LastChanceRecoloringMaxInterference &&
+        !ExhaustiveSearch)
+      return false;
+    RecoloringCandidates.insert_range(Query.interferingVRegs());
+  }
+  if (RecoloringCandidates.empty())
+    return false;
+
+  SmallVector<std::pair<const LiveInterval *, MCRegister>, 4> OldAssignments;
+  SmallVector<HintsInfo, 4> HintInfos;
+  BlockFrequency OldCost(0);
+  for (const LiveInterval *Intf : RecoloringCandidates) {
+    MCRegister OldPhys = VRM->getPhys(Intf->reg());
+    if (!OldPhys)
+      return false;
+    OldAssignments.emplace_back(Intf, OldPhys);
+    HintInfos.emplace_back();
+    collectHintInfo(Intf->reg(), HintInfos.back());
+    OldCost += getBrokenHintFreq(HintInfos.back(), OldPhys);
+  }
+  for (const auto &[Intf, OldPhys] : OldAssignments)
+    Matrix->unassign(*Intf);
+
+  bool Success = true;
+  BlockFrequency NewCost(0);
+  for (const auto &[Index, Assignment] : llvm::enumerate(OldAssignments)) {
+    const LiveInterval *Intf = Assignment.first;
+    MCRegister OldPhys = Assignment.second;
+    MCRegister NewPhys;
+    BlockFrequency BestCost = BlockFrequency::max();
+    auto Order =
+        AllocationOrder::create(Intf->reg(), *VRM, RegClassInfo, Matrix);
+    for (MCRegister Candidate : Order) {
+      if (TRI->regsOverlap(Candidate, PhysHint) ||
+          RegCosts[Candidate.id()] > RegCosts[OldPhys.id()] ||
+          RegClassInfo.getLastCalleeSavedAlias(Candidate) ||
+          Matrix->checkInterference(*Intf, Candidate) != LiveRegMatrix::IK_Free)
+        continue;
+      BlockFrequency Cost = getBrokenHintFreq(HintInfos[Index], Candidate);
+      if (!NewPhys || Cost < BestCost) {
+        NewPhys = Candidate;
+        BestCost = Cost;
+      }
+    }
+    if (!NewPhys) {
+      Success = false;
+      break;
+    }
+    Matrix->assign(*Intf, NewPhys);
+  }
+
+  if (Success)
+    for (const auto &Assignment : OldAssignments) {
+      const LiveInterval *Intf = Assignment.first;
+      HintsInfo NewHintInfo;
+      collectHintInfo(Intf->reg(), NewHintInfo);
+      NewCost += getBrokenHintFreq(NewHintInfo, VRM->getPhys(Intf->reg()));
+    }
+
+  if (Success && NewCost <= OldCost + MaxCostIncrease) {
+    LLVM_DEBUG(dbgs() << "Freed physical hint " << printReg(PhysHint, TRI)
+                      << " over [" << HintRange.beginIndex() << ','
+                      << HintRange.endIndex() << ")\n");
+    return true;
+  }
+
+  for (auto [Intf, OldPhys] : llvm::reverse(OldAssignments))
+    if (VRM->hasPhys(Intf->reg()))
+      Matrix->unassign(*Intf);
+  for (auto [Intf, OldPhys] : OldAssignments)
+    Matrix->assign(*Intf, OldPhys);
+  return false;
+}
+
+/// Try to repair a broken physical register hint. Prefer assigning the whole
+/// live interval to the hint when that lowers register cost. When whole-range
+/// reassignment is not possible, try to make a physical-source copy
+/// optimizable by freeing its local range.
+void RAGreedy::tryRecoloringForPhysicalHint(const LiveInterval &VirtReg,
+                                            MCRegister PhysHint) {
+  MCRegister CurrPhys = VRM->getPhys(VirtReg.reg());
+  if (!CurrPhys)
+    return;
+
+  const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+  if (TRI->regsOverlap(CurrPhys, PhysHint) || !RC->contains(PhysHint) ||
+      MRI->isReserved(PhysHint))
+    return;
+
+  MCRegister CurrCSR = RegClassInfo.getLastCalleeSavedAlias(CurrPhys);
+  MCRegister HintCSR = RegClassInfo.getLastCalleeSavedAlias(PhysHint);
+  bool ReducesCSRCost = false;
+  if (CurrCSR && !HintCSR) {
+    Matrix->unassign(VirtReg);
+    ReducesCSRCost = !Matrix->isPhysRegUsed(CurrPhys);
+    Matrix->assign(VirtReg, CurrPhys);
+  }
+  // Reassigning an entire interval solely for an equal-cost copy hint can
+  // cause widespread register churn. Only do so when it removes a CSR use.
+  // Local copy repair below can still operate on an equal-cost hint when it
+  // enables a concrete copy optimization.
+  if (ReducesCSRCost) {
+    HintsInfo VirtRegHints;
+    collectHintInfo(VirtReg.reg(), VirtRegHints);
+    BlockFrequency OldVirtRegCost = getBrokenHintFreq(VirtRegHints, CurrPhys);
+    BlockFrequency NewVirtRegCost = getBrokenHintFreq(VirtRegHints, PhysHint);
+    if (NewVirtRegCost <= OldVirtRegCost) {
+      LiveRegMatrix::InterferenceKind IK =
+          Matrix->checkInterference(VirtReg, PhysHint);
+      if (IK == LiveRegMatrix::IK_Free ||
+          (IK == LiveRegMatrix::IK_VirtReg &&
+           recolorPhysicalHintInterferences(VirtReg, PhysHint,
+                                            OldVirtRegCost - NewVirtRegCost))) {
+        Matrix->unassign(VirtReg);
+        Matrix->assign(VirtReg, PhysHint);
+        LLVM_DEBUG(dbgs() << "Recolored " << printReg(VirtReg.reg(), TRI)
+                          << " to physical hint " << printReg(PhysHint, TRI)
+                          << '\n');
+        ++NumPhysicalHintRecolors;
+        return;
+      }
+    }
+  }
+
+  // Restrict partial repair to a callee-saved interval whose physical hint
+  // is call-clobbered. Other equal-cost moves tend to cause widespread
+  // register churn without reducing save/restore cost.
+  if (!CurrCSR || HintCSR)
+    return;
+
+  MachineInstr *Copy = MRI->getUniqueVRegDef(VirtReg.reg());
+  if (!Copy || !Copy->isCopy() ||
+      Copy->getOperand(0).getReg() != VirtReg.reg() ||
+      Copy->getOperand(1).getReg() != PhysHint ||
+      Copy->getParent()->succ_size() < 2)
+    return;
+
+  MachineBasicBlock *CopyMBB = Copy->getParent();
+  MachineBasicBlock *LiveInSucc = nullptr;
+  for (MachineBasicBlock *Succ : CopyMBB->successors()) {
+    if (!VirtReg.liveAt(Indexes->getMBBStartIdx(Succ)))
+      continue;
+    if (LiveInSucc || Succ->pred_size() != 1)
+      return;
+    LiveInSucc = Succ;
+  }
+  if (!LiveInSucc)
+    return;
+  if (!TII->shouldPostRASink(*Copy))
+    return;
+
+  SlotIndex LastLocalUse = LIS->getInstructionIndex(*Copy).getDeadSlot();
+  for (const MachineOperand &MO : MRI->use_nodbg_operands(VirtReg.reg())) {
+    const MachineInstr &MI = *MO.getParent();
+    if (MI.getParent() != CopyMBB)
+      continue;
+    const TargetRegisterClass *UseRC =
+        MI.getRegClassConstraint(MO.getOperandNo(), TII, TRI);
+    if (MO.isImplicit() || MO.isTied() || MO.isUndef() ||
+        MI.hasExtraSrcRegAllocReq(MachineInstr::IgnoreBundle) || !UseRC ||
+        !UseRC->contains(PhysHint))
+      return;
+    LastLocalUse =
+        std::max(LastLocalUse, LIS->getInstructionIndex(MI).getDeadSlot());
+  }
+
+  for (auto I = std::next(Copy->getIterator()), E = CopyMBB->instr_end();
+       I != E; ++I)
+    if (I->isCall() || I->modifiesRegister(PhysHint, TRI))
+      return;
+
+  LiveRange HintRange;
+  SlotIndex MBBEnd = Indexes->getMBBEndIdx(CopyMBB);
+  VNInfo HintValue(0, LastLocalUse);
+  HintRange.addSegment(LiveRange::Segment(LastLocalUse, MBBEnd, &HintValue));
+  if (recolorPhysicalHintInterferences(HintRange, PhysHint, BlockFrequency(0)))
+    ++NumPhysicalHintRecolors;
+}
+
 //===----------------------------------------------------------------------===//
 //                            Main Entry Point
 //===----------------------------------------------------------------------===//
@@ -2652,6 +2844,16 @@ void RAGreedy::tryHintsRecoloring() {
     if (!VRM->hasPhys(LI->reg()))
       continue;
     tryHintRecoloring(*LI);
+  }
+
+  // Try to repair physical hints after normal hint reconciliation so later
+  // recoloring cannot undo the result.
+  for (const LiveInterval *LI : SetOfBrokenHints) {
+    if (!VRM->hasPhys(LI->reg()))
+      continue;
+    Register Hint = MRI->getSimpleHint(LI->reg());
+    if (Hint && Hint.isPhysical())
+      tryRecoloringForPhysicalHint(*LI, Hint.asMCReg());
   }
 }
 
