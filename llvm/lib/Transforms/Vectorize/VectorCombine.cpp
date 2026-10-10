@@ -3129,12 +3129,98 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
 /// "shuffle (shuffle x, undef), y"
 /// "shuffle x, (shuffle y, undef)"
 /// into "shuffle x, y".
+/// Also compose unary shuffles separated by a bitcast to wider elements.
 bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   ArrayRef<int> OuterMask;
   Value *OuterV0, *OuterV1;
   if (!match(&I,
              m_Shuffle(m_Value(OuterV0), m_Value(OuterV1), m_Mask(OuterMask))))
     return false;
+
+  // Compose unary shuffles through a bitcast to wider elements. Evaluate all
+  // outer shuffles together because they share the inner shuffle and bitcast.
+  if (auto *BC = dyn_cast<BitCastInst>(OuterV0);
+      BC && isa<PoisonValue>(OuterV1)) {
+    auto *Inner = dyn_cast<ShuffleVectorInst>(BC->getOperand(0));
+    if (!Inner || !Inner->hasOneUse() || BC->hasNUsesOrMore(3) ||
+        !isa<PoisonValue>(Inner->getOperand(1)))
+      return false;
+
+    auto *InnerTy = dyn_cast<FixedVectorType>(Inner->getType());
+    auto *CastTy = dyn_cast<FixedVectorType>(BC->getType());
+    if (!InnerTy || !CastTy)
+      return false;
+
+    unsigned InnerEltSize = InnerTy->getScalarSizeInBits();
+    unsigned CastEltSize = CastTy->getScalarSizeInBits();
+    if (!InnerEltSize || CastEltSize <= InnerEltSize ||
+        CastEltSize % InnerEltSize != 0)
+      return false;
+
+    SmallVector<ShuffleVectorInst *, 2> Outers;
+    for (User *U : BC->users()) {
+      auto *Outer = dyn_cast<ShuffleVectorInst>(U);
+      if (!Outer || Outer->getOperand(0) != BC ||
+          !isa<PoisonValue>(Outer->getOperand(1)) ||
+          Outer->getParent() != I.getParent() || Outer->use_empty())
+        return false;
+      Outers.push_back(Outer);
+    }
+
+    auto *SrcTy = cast<FixedVectorType>(Inner->getOperand(0)->getType());
+    SmallVector<SmallVector<int, 16>, 2> NewMasks;
+    InstructionCost OldCost = TTI.getInstructionCost(Inner, CostKind) +
+                              TTI.getInstructionCost(BC, CostKind);
+    InstructionCost NewCost = 0;
+    for (ShuffleVectorInst *Outer : Outers) {
+      auto *DstTy = dyn_cast<FixedVectorType>(Outer->getType());
+      if (!DstTy)
+        return false;
+
+      // Express each outer mask in terms of the inner shuffle's element type.
+      SmallVector<int, 16> &NewMask = NewMasks.emplace_back();
+      narrowShuffleMaskElts(CastEltSize / InnerEltSize, Outer->getShuffleMask(),
+                            NewMask);
+      for (int &M : NewMask) {
+        if (M < 0 || M >= static_cast<int>(InnerTy->getNumElements())) {
+          M = PoisonMaskElem;
+          continue;
+        }
+        M = Inner->getMaskValue(M);
+        if (M >= static_cast<int>(SrcTy->getNumElements()))
+          M = PoisonMaskElem;
+      }
+
+      auto *NewShuffleTy =
+          FixedVectorType::get(SrcTy->getElementType(), NewMask.size());
+      OldCost += TTI.getInstructionCost(Outer, CostKind);
+      NewCost +=
+          TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewShuffleTy, SrcTy,
+                             CostKind, NewMask, 0, nullptr,
+                             {Inner->getOperand(0), Inner->getOperand(1)}) +
+          TTI.getCastInstrCost(Instruction::BitCast, DstTy, NewShuffleTy,
+                               TTI::CastContextHint::None, CostKind);
+    }
+
+    LLVM_DEBUG(dbgs() << "Found shuffles through a bitcast: " << *BC
+                      << "\n  OldCost: " << OldCost
+                      << " vs NewCost: " << NewCost << "\n");
+    if (!OldCost.isValid() || !NewCost.isValid() || NewCost >= OldCost)
+      return false;
+
+    // Defer erasure to the worklist: a sibling may be the next instruction
+    // visited by the pass's initial traversal.
+    for (unsigned Idx = 0; Idx != Outers.size(); ++Idx) {
+      ShuffleVectorInst *Outer = Outers[Idx];
+      Builder.SetInsertPoint(Outer);
+      Value *Shuf =
+          Builder.CreateShuffleVector(Inner->getOperand(0), NewMasks[Idx]);
+      Value *Cast = Builder.CreateBitCast(Shuf, Outer->getType());
+      Worklist.pushValue(Shuf);
+      replaceValue(*Outer, *Cast, /*Erase=*/false);
+    }
+    return true;
+  }
 
   ArrayRef<int> InnerMask0, InnerMask1;
   Value *X0, *X1, *Y0, *Y1;
