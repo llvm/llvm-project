@@ -65,6 +65,7 @@
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/Instrumentor.h"
+#include "llvm/Transforms/IPO/InternalizeLinkOnceODR.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -1071,6 +1072,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(DropTypeTestsPass());
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
+
+  // Give linkonce_odr functions internal copies before the interprocedural
+  // passes that require local linkage (IPSCCP, GlobalOpt, DeadArgElim, etc.).
+  MPM.addPass(InternalizeLinkOnceODRPass());
 
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.

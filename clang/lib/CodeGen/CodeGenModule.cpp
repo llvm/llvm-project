@@ -93,6 +93,12 @@ static llvm::cl::opt<bool> LimitedCoverage(
     "limited-coverage-experimental", llvm::cl::Hidden,
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
+static llvm::cl::opt<bool> EmitModuleLocalHints(
+    "clang-emit-module-local-hints", llvm::cl::Hidden,
+    llvm::cl::init(false),
+    llvm::cl::desc("Mark inline and template functions defined in the main "
+                   "source file with \"frontend-hint-likely-module-local\""));
+
 static const char AnnotationSection[] = "llvm.metadata";
 static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
 
@@ -3299,6 +3305,19 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   // function attribute.
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
+
+  // An inline function or template instantiation defined in the main source
+  // file is (ignoring unusual setups like #include-ing a .cpp file) not
+  // referenced or emitted by any other translation unit.
+  if (EmitModuleLocalHints) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    const SourceManager &SM = getContext().getSourceManager();
+    // D->getLocation(), for a template instantiation, is the location of the
+    // template's definition, not instantiation.
+    bool InMainFile = SM.isInMainFile(D->getLocation());
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
+      B.addAttribute("frontend-hint-likely-module-local");
+  }
 
   F->addFnAttrs(B);
 

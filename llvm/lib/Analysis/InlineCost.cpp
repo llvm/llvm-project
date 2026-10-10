@@ -1247,10 +1247,16 @@ public:
 };
 
 // Return true if CB is the sole call to local function Callee.
+//
+// A linkonce_odr function marked "frontend-hint-likely-module-local" counts as
+// local too: no other module is expected to reference it, so we expect
+// inlining the sole call to turn the original dead.
 static bool isSoleCallToLocalFunction(const CallBase &CB,
                                       const Function &Callee) {
-  return Callee.hasLocalLinkage() && Callee.hasOneLiveUse() &&
-         &Callee == CB.getCalledFunction();
+  bool Local = Callee.hasLocalLinkage() ||
+               (Callee.hasLinkOnceODRLinkage() &&
+                Callee.hasFnAttribute("frontend-hint-likely-module-local"));
+  return Local && Callee.hasOneLiveUse() && &Callee == CB.getCalledFunction();
 }
 
 class InlineCostFeaturesAnalyzer final : public CallAnalyzer {
