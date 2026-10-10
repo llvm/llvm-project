@@ -509,7 +509,9 @@ bool AArch64Subtarget::enableEarlyIfConversion() const {
   return CLOpts.early_ifcvt;
 }
 
-bool AArch64Subtarget::enableCCMPFormation() const { return CLOpts.enable_ccmp; }
+bool AArch64Subtarget::enableCCMPFormation() const {
+  return CLOpts.enable_ccmp;
+}
 
 bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
   if (!CLOpts.use_tbi)
