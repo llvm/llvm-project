@@ -6200,6 +6200,17 @@ void Verifier::visitInstruction(Instruction &I) {
           MD);
   }
 
+  if (MDNode *MD = I.getMetadata("amdgpu.cfs")) {
+    Check(MD->getNumOperands() == 1,
+          "!amdgpu.cfs must have exactly one operand", &I, MD);
+    ConstantInt *CI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+    Check(CI && CI->getType()->isIntegerTy(32),
+          "!amdgpu.cfs operand must be an i32 constant", &I, MD);
+    Check(CI->getZExtValue() <= 3,
+          "!amdgpu.cfs operand must be in the range [0, 3]", &I, MD);
+  }
+
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
     visitMDNode(*N, AreDebugLocsAllowed::Yes);

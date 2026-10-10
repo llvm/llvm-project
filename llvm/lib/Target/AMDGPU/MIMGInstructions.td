@@ -522,6 +522,7 @@ class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
 class VIMAGE_NoSampler_gfx13_Base<mimgopc op, string opcode, RegisterOperand DataRC,
                                   DAGOperand RsrcRC, bit isIndexed, int num_addrs, bit enableDisasm=0>
   : VIMAGE_NoSampler<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
   // The two MSBs of the 9-bit rsrc field select the index-register kind for the
   // indexed form, and are always 0 for the direct SReg_256 form. Pinning them
   // keeps the two forms statically distinguishable by the disassembler.
@@ -564,6 +565,7 @@ class VSAMPLE_Sampler_gfx13_Base<mimgopc op, string opcode, RegisterOperand Data
                                  bit isIndexedSamp, int num_addrs,
                                  RegisterOperand Addr3RC = VGPROp_32_Lo256, bit enableDisasm=0>
   : VSAMPLE_Sampler<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), (ins SampRC:$samp), num_addrs, GFX13Gen, MIMGEncGfx13, Addr3RC, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
   // Pin the index-kind MSBs of the rsrc (Inst{49-48}) and samp (Inst{63-62})
   // fields so the four direct/indexed combinations stay distinguishable.
   let Inst{49-48} = !if(isIndexedRsrc, rsrc{8-7}, 0b00);
@@ -916,6 +918,7 @@ class VIMAGE_Store_gfx12<mimgopc op, string opcode,
 class VIMAGE_Store_gfx13_Base<mimgopc op, string opcode, RegisterOperand DataRC,
                               int num_addrs, DAGOperand RsrcRC, bit isIndexed, bit enableDisasm=0>
   : VIMAGE_Store<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
   let Inst{49-48} = !if(isIndexed, rsrc{8-7}, 0b00);
   let Inst{47-41} = rsrc{6-0};
 }
@@ -1165,6 +1168,7 @@ class VIMAGE_Atomic_gfx13_Base<mimgopc op, string opcode, RegisterOperand DataRC
                                int num_addrs, DAGOperand RsrcRC, bit isIndexed, string renamed,
                                bit noRtn = 0, bit enableDisasm=0>
   : VIMAGE_Atomic<op.GFX13, opcode, DataRC, (ins RsrcRC:$rsrc), num_addrs, GFX13Gen, MIMGEncGfx13, renamed, noRtn, enableDisasm> {
+  let Inst{9-8} = cpol{8-7};
   let Inst{49-48} = !if(isIndexed, rsrc{8-7}, 0b00);
   let Inst{47-41} = rsrc{6-0};
 }

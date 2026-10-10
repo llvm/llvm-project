@@ -12951,7 +12951,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Aux = Op.getConstantOperandVal(8 + OpOffset);
     Ops.push_back(DAG.getTargetConstant(
         Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12),
-        DL, MVT::i8)); // cpol
+        DL, MVT::i16)); // cpol
     Ops.push_back(DAG.getTargetConstant(
         Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
             ? 1
@@ -21467,6 +21467,14 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
     Flags |= MONoClobber;
   if (I.getMetadata("amdgpu.last.use"))
     Flags |= MOLastUse;
+  if (MDNode *N = I.getMetadata("amdgpu.cfs")) {
+    const ConstantAsMetadata *CAM = cast<ConstantAsMetadata>(N->getOperand(0));
+    ConstantInt *CI = cast<ConstantInt>(CAM->getValue());
+    unsigned CFS = CI->getZExtValue() & AMDGPU::CPol::CFS_MASK;
+    static_assert((MOCFSB0 << 1) == MOCFSB1,
+                  "MOCFSB0 and MOCFSB1 are not adjacent bits");
+    Flags |= static_cast<MachineMemOperand::Flags>(CFS * MOCFSB0);
+  }
   return Flags;
 }
 
