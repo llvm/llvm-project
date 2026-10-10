@@ -2899,6 +2899,35 @@ public:
     setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
   }
 
+  void visitBitInsertInst(BitInsertInst &BII) {
+    ByteValue Res = getValue(BII.getOperand(0)).asByte();
+    auto &Val = getValue(BII.getOperand(1));
+    auto &Offset = getValue(BII.getOperand(2));
+    Type *ValTy = BII.getOperand(1)->getType();
+    uint64_t NumBits = DL.getTypeSizeInBits(ValTy).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Res.getBitWidth()) {
+      setResult(BII, AnyValue::getPoisonValue(Ctx, BII.getType()));
+      return;
+    }
+    Ctx.insertBits(Res, OffsetInBits, Val, ValTy);
+    setResult(BII, std::move(Res));
+  }
+
+  void visitBitExtractInst(BitExtractInst &BEI) {
+    auto &Src = getValue(BEI.getOperand(0)).asByte();
+    auto &Offset = getValue(BEI.getOperand(1));
+    uint64_t NumBits = DL.getTypeSizeInBits(BEI.getType()).getFixedValue();
+    uint64_t OffsetInBits =
+        Offset.isPoison() ? 0 : Offset.asInteger().getZExtValue();
+    if (Offset.isPoison() || OffsetInBits + NumBits > Src.getBitWidth()) {
+      setResult(BEI, AnyValue::getPoisonValue(Ctx, BEI.getType()));
+      return;
+    }
+    setResult(BEI, Ctx.extractBits(Src, OffsetInBits, BEI.getType()));
+  }
+
   void visitFreezeInst(FreezeInst &FI) {
     AnyValue Val = getValue(FI.getOperand(0));
     Ctx.freeze(Val, FI.getType());
