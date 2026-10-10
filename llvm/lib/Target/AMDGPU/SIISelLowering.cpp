@@ -15826,8 +15826,16 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   if (VT == MVT::i32 && !DCI.isBeforeLegalize()) {
     // The select may need an e64 cndmask, so only fold when it eliminates
     // the extension.
-    bool RHSIsBoolExt = RHS.hasOneUse() && isBoolSGPRExt(RHS);
-    if (RHSIsBoolExt || (LHS.hasOneUse() && isBoolSGPRExt(LHS))) {
+    auto IsProfitableBoolExt = [N](SDValue V) {
+      if (!V.hasOneUse() || !isBoolSGPRExt(V))
+        return false;
+      // A divergent select still needs to materialize a uniform condition.
+      // Sharing that condition can also require converting it back to SCC.
+      SDValue Cond = V.getOperand(0);
+      return !N->isDivergent() || Cond->isDivergent() || Cond.hasOneUse();
+    };
+    bool RHSIsBoolExt = IsProfitableBoolExt(RHS);
+    if (RHSIsBoolExt || IsProfitableBoolExt(LHS)) {
       // or x, (sext/anyext cc from i1) => select cc, -1, x
       // Any-extended bits can be chosen to match sign extension.
       if (!RHSIsBoolExt)
