@@ -76,6 +76,14 @@ public:
 
   // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M);
+
+  /// Reloads a set of modules to link in. LinkInModules() consume the modules,
+  /// so incremental compilation(clang-repl) needs to reload the modules for
+  /// every TU.
+  void setLinkModules(SmallVector<LinkModule, 4> LMs) {
+    LinkModules = std::move(LMs);
+  }
+
   /// Create an llvm::DiagnosticHandler that routes LLVM backend diagnostics
   /// through this consumer's clang diagnostics.
   std::unique_ptr<llvm::DiagnosticHandler> createDiagnosticHandler();

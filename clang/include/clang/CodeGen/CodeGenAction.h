@@ -63,6 +63,9 @@ public:
 
   CodeGenerator *getCodeGenerator() const;
 
+  /// Reload the -mlink-builtin-bitcode modules into the backend consumer.
+  void reloadLinkModules(CompilerInstance &CI);
+
   BackendConsumer *BEConsumer = nullptr;
 };
 
