@@ -37,6 +37,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
 #include <deque>
+#include <list>
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
@@ -177,6 +178,17 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamInAllocaType(ArgIdx);
   if (Entry.IsSRet)
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
+}
+
+TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
+                                               Attribute::AttrKind Attr)
+    : ArgListEntry(nullptr, Node, Ty) {
+  if (Attr == Attribute::SExt)
+    IsSExt = true;
+  else if (Attr == Attribute::ZExt)
+    IsZExt = true;
+  else if (Attr != Attribute::None)
+    llvm_unreachable("Unexpected attribute left unhandled.");
 }
 
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,

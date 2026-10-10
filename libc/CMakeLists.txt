@@ -102,22 +102,22 @@ set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all 
 # Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LIBC_ENABLE_COVERAGE_MCDC
-       "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
+  "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
 if(LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fcoverage-mapping"
-         "-fprofile-continuous")
+      "-fprofile-instr-generate=libc_cov_%p.profraw"
+      "-fcoverage-mapping"
+      "-fprofile-continuous")
     list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fprofile-continuous")
+      "-fprofile-instr-generate=libc_cov_%p.profraw"
+      "-fprofile-continuous")
     if(LIBC_ENABLE_COVERAGE_MCDC)
       list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
     endif()
   else()
     message(FATAL_ERROR
-            "Coverage instrumentation is currently only supported with Clang")
+      "Coverage instrumentation is currently only supported with Clang")
   endif()
 endif()
 
@@ -241,16 +241,16 @@ if(LIBC_ENABLE_COVERAGE)
     endif()
     execute_process(
       COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
-              --print-file-name=libclang_rt.profile.a
+        --print-file-name=libclang_rt.profile.a
       OUTPUT_STRIP_TRAILING_WHITESPACE
       OUTPUT_VARIABLE libc_profile_lib
     )
     if(NOT EXISTS "${libc_profile_lib}")
       set(profile_arch_lib
-          "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
+        "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
       execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
-                --print-file-name=${profile_arch_lib}
+          --print-file-name=${profile_arch_lib}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libc_profile_lib
       )
@@ -259,14 +259,23 @@ if(LIBC_ENABLE_COVERAGE)
       message(FATAL_ERROR "Coverage enabled but profile runtime not found.")
     endif()
     set(LIBC_CLANG_PROFILE_LIB "${libc_profile_lib}"
-        CACHE INTERNAL "Clang profile runtime")
+      CACHE INTERNAL "Clang profile runtime")
   endif()
 endif()
+option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
+  "Link hermetic tests against LLVM libc's own startup object"
+  ON)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT
+  "Build LLVM libc minor variant archive" OFF)
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+  "Target and archive name for the LLVM libc minor variant")
+set(LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS "" CACHE STRING
+  "Semicolon-separated entrypoint targets for the LLVM libc minor variant")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 

@@ -14,6 +14,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 using namespace llvm;
 using namespace PatternMatch;
@@ -1581,7 +1582,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (SrcTyBitWidth == 1) {
         auto *NewC = ConstantInt::get(
             Ty, APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        auto *SI = SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+        return SI;
       }
 
       if ((!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType())) &&
