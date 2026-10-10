@@ -3750,7 +3750,7 @@ static SDValue performSETCCCombine(SDNode *N,
 
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v8i32 && VT != MVT::v16i32)
+  if (VT != MVT::v4i32 && VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
 
   // Mul with extending inputs.
@@ -3790,6 +3790,8 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   //            |             | %low_low = i32x4.ext_low_i16x8_ %low
   //            |             | %low_high = i32x4.ext_high_i16x8_ %low
   //            |             | %res = concat_vector(%low_low, %low_high)
+  // v4i8       | v4i32       | %low = i16x8.extmul_low_i8x16_ %a, %b
+  //                          | %res = i32x4.ext_low_i16x8_ %low
 
   SDLoc DL(N);
   unsigned NumElts = VT.getVectorNumElements();
@@ -3822,14 +3824,36 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
         GetExtendHigh(MVT::v4i32, MulHigh),
     };
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubVectors);
-  } else {
-    assert(NumElts == 8);
+  } else if (NumElts == 8) {
     SDValue LowLHS = DAG.getNode(LHS->getOpcode(), DL, MVT::v8i16, ExtendInLHS);
     SDValue LowRHS = DAG.getNode(RHS->getOpcode(), DL, MVT::v8i16, ExtendInRHS);
     SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
     SDValue Lo = GetExtendLow(MVT::v4i32, MulLow);
     SDValue Hi = GetExtendHigh(MVT::v4i32, MulLow);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  } else {
+    assert(NumElts == 4);
+    SDValue Poison = DAG.getPOISON(MVT::v4i8);
+    SDValue SubVectorsLHS[] = {
+        ExtendInLHS,
+        Poison,
+        Poison,
+        Poison,
+    };
+    SDValue SubVectorsRHS[] = {
+        ExtendInRHS,
+        Poison,
+        Poison,
+        Poison,
+    };
+    SDValue LowLHS =
+        GetExtendLow(MVT::v8i16, DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                                             MVT::v16i8, SubVectorsLHS));
+    SDValue LowRHS =
+        GetExtendLow(MVT::v8i16, DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                                             MVT::v16i8, SubVectorsRHS));
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    return GetExtendLow(MVT::v4i32, MulLow);
   }
   return SDValue();
 }
