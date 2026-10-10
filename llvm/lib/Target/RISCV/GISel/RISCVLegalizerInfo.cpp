@@ -629,7 +629,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
-      .legalFor(ST.hasStdExtZfh(), {s16})
+      .legalFor(ST.hasStdExtZfhmin(), {s16})
       .customFor(!ST.is64Bit(), {s32})
       .customFor(ST.is64Bit(), {s32, s64})
       .lowerFor({s64, s128});
