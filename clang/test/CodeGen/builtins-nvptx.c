@@ -72,6 +72,30 @@
 #define __shared__ __attribute__((shared))
 #define __constant__ __attribute__((constant))
 
+__device__ int mulhi_i(int a, int b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_i
+  // CHECK: call i32 @llvm.smulh.i32(
+  return __nvvm_mulhi_i(a, b);
+}
+
+__device__ unsigned int mulhi_ui(unsigned int a, unsigned int b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ui
+  // CHECK: call i32 @llvm.umulh.i32(
+  return __nvvm_mulhi_ui(a, b);
+}
+
+__device__ long long mulhi_ll(long long a, long long b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ll
+  // CHECK: call i64 @llvm.smulh.i64(
+  return __nvvm_mulhi_ll(a, b);
+}
+
+__device__ unsigned long long mulhi_ull(unsigned long long a, unsigned long long b) {
+  // CHECK-LABEL: define{{.*}} @{{.*}}mulhi_ull
+  // CHECK: call i64 @llvm.umulh.i64(
+  return __nvvm_mulhi_ull(a, b);
+}
+
 __device__ int read_tid() {
 
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -1206,6 +1230,38 @@ __device__ void nvvm_cvt_pzo_sm107f() {
   // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m3x2.rz.satfinite(<2 x bfloat> zeroinitializer, i1 true)
   __nvvm_bf16x2_to_e2m3x2_rz_satfinite_pzo({0, 0});
 
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m1x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  __nvvm_ff_to_e2m1x2_rz_relu_satfinite(1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m1x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 true)
+  __nvvm_ff_to_e2m1x2_rz_relu_satfinite_pzo(1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.f16x2.to.e2m1x2.rn.satfinite(<2 x half> zeroinitializer, i1 true)
+  __nvvm_f16x2_to_e2m1x2_rn_satfinite_pzo({0, 0});
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m1x2.rz.satfinite(<2 x bfloat> zeroinitializer, i1 true)
+  __nvvm_bf16x2_to_e2m1x2_rz_satfinite_pzo({0, 0});
+
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e4m3x2.rn.scale.n1.ue8m0(float 1.000000e+00, float 1.000000e+00, i16 1, i1 false)
+  __nvvm_ff_to_e4m3x2_rn_scale_n1_ue8m0(1, 1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e4m3x2.rn.scale.n1.ue8m0(float 1.000000e+00, float 1.000000e+00, i16 1, i1 true)
+  __nvvm_ff_to_e4m3x2_rn_scale_n1_ue8m0_pzo(1, 1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rz.relu.scale.n1.ue8m0(<2 x half> zeroinitializer, i16 1, i1 false)
+  __nvvm_f16x2_to_e5m2x2_rz_relu_scale_n1_ue8m0({0, 0}, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e4m3x2.rz.satfinite.scale.n1.ue8m0(<2 x bfloat> zeroinitializer, i16 1, i1 true)
+  __nvvm_bf16x2_to_e4m3x2_rz_satfinite_scale_n1_ue8m0_pzo({0, 0}, 1);
+
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite.scale.n1.ue8m0(float 1.000000e+00, float 1.000000e+00, i16 1, i1 false)
+  __nvvm_ff_to_e2m3x2_rn_satfinite_scale_n1_ue8m0(1, 1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.f16x2.to.e3m2x2.rz.relu.satfinite.scale.n1.ue8m0(<2 x half> zeroinitializer, i16 1, i1 true)
+  __nvvm_f16x2_to_e3m2x2_rz_relu_satfinite_scale_n1_ue8m0_pzo({0, 0}, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m3x2.rn.satfinite.scale.n1.ue8m0(<2 x bfloat> zeroinitializer, i16 1, i1 false)
+  __nvvm_bf16x2_to_e2m3x2_rn_satfinite_scale_n1_ue8m0({0, 0}, 1);
+
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m1x2.rz.relu.satfinite.scale.n1.ue8m0(float 1.000000e+00, float 1.000000e+00, i16 1, i1 true)
+  __nvvm_ff_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0_pzo(1, 1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.f16x2.to.e2m1x2.rn.satfinite.scale.n1.ue8m0(<2 x half> zeroinitializer, i16 1, i1 false)
+  __nvvm_f16x2_to_e2m1x2_rn_satfinite_scale_n1_ue8m0({0, 0}, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m1x2.rz.satfinite.scale.n1.ue8m0(<2 x bfloat> zeroinitializer, i16 1, i1 true)
+  __nvvm_bf16x2_to_e2m1x2_rz_satfinite_scale_n1_ue8m0_pzo({0, 0}, 1);
+
 #endif
   // CHECK: ret void
 }
@@ -1318,14 +1374,14 @@ __device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
   // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
   __nvvm_e3m2x2_to_f16x2_rn_relu(0x4C4C);
 
-  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
   __nvvm_ff_to_e2m1x2_rn_satfinite(1.0f, 1.0f);
 
-  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
   __nvvm_ff_to_e2m1x2_rn_relu_satfinite(1.0f, 1.0f);
   
   // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
@@ -1700,13 +1756,13 @@ __device__ void nvvm_add_mul_f16_sat() {
   // CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
 
-  // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_f16(F16, F16_2);
-  // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.ftz.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
   
   // CHECK: ret void

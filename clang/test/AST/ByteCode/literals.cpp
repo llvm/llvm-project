@@ -1022,17 +1022,27 @@ namespace GH167840 {
   static_assert(sub.p->a == 5, ""); // both-error {{not an integral constant expression}} \
                                     // both-note {{initializer of 'sub' is not a constant expression}}
 
-  /// Reads through the lifetime-extended temporary are rejected by CheckTemporary.
   const P &ref = P{ &(const s){5, 6} }; // both-error {{taking the address of a temporary object of type 'const s'}} \
-                                        // ref-note {{declared here}} \
-                                        // expected-note {{temporary created here}}
+                                        // both-note {{declared here}}
   void qux(void) {
     if (ref.p->a != 5)
       abort();
   }
   static_assert(ref.p->a == 5, ""); // both-error {{not an integral constant expression}} \
-                                    // ref-note {{initializer of 'ref' is not a constant expression}} \
-                                    // expected-note {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+                                    // both-note {{initializer of 'ref' is not a constant expression}}
+
+  /// hasPtrField() doesn't look into the array field.
+  struct W {
+    P arr[1];
+  };
+  const W nested = { { { &(const s){5, 6} } } }; // both-error {{taking the address of a temporary object of type 'const s'}} \
+                                                 // both-note {{declared here}}
+  void quux(void) {
+    if (nested.arr[0].p->a != 5)
+      abort();
+  }
+  static_assert(nested.arr[0].p->a == 5, ""); // both-error {{not an integral constant expression}} \
+                                              // both-note {{initializer of 'nested' is not a constant expression}}
 
 #if __cplusplus >= 202002L
   /// Same with a pointer to a heap allocation.

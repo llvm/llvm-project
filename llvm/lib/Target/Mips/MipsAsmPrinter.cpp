@@ -720,7 +720,7 @@ printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
     MipsTargetStreamer &TS = getTargetStreamer();
@@ -746,8 +746,8 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     // for a feature string that doesn't match the default one.
     StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
     const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-    const MipsSubtarget STI(TT, CPU, StringRef(strFS), MTM.isLittleEndian(),
-                            MTM, std::nullopt);
+    const MipsSubtarget STI(TT, CPU, StringRef(strFS), MTM.getTargetABIName(M),
+                            MTM.isLittleEndian(), MTM, std::nullopt);
 
     bool IsABICalls = STI.isABICalls();
     const MipsABIInfo &ABI = STI.getABI();

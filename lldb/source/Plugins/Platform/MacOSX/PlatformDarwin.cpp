@@ -780,7 +780,7 @@ lldb::ProcessSP PlatformDarwin::DebugProcess(ProcessLaunchInfo &launch_info,
 }
 
 void PlatformDarwin::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 static FileSpec GetCommandLineToolsLibraryPath() {
@@ -1514,20 +1514,6 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
   if (!path_or_err)
     return path_or_err.takeError();
   return path_or_err->GetPath();
-}
-
-llvm::Expected<XcodeSDKAndSysroot>
-PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
-  ModuleSP module_sp = unit.CalculateSymbolContextModule();
-  if (!module_sp)
-    return llvm::createStringError("compile unit has no module");
-  SymbolFile *sym_file = module_sp->GetSymbolFile();
-  if (!sym_file)
-    return llvm::createStringError(
-        llvm::formatv("No symbol file available for module '{0}'",
-                      module_sp->GetFileSpec().GetFilename()));
-
-  return sym_file->ParseXcodeSDK(unit);
 }
 
 llvm::Expected<std::string>

@@ -51,13 +51,6 @@ STATISTIC(NumTransformedToWInstrs,
 STATISTIC(NumTransformedToNonWInstrs,
           "Number of instructions transformed to non-W-ops");
 
-static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
-                                         cl::desc("Disable removal of sext.w"),
-                                         cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
-                                         cl::desc("Disable strip W suffix"),
-                                         cl::init(false), cl::Hidden);
-
 namespace {
 
 class RISCVOptWInstrsImpl {
@@ -277,7 +270,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::SRL:
       case RISCV::ROL:
       case RISCV::ROR:
-        // Operand 2 is the shift amount which uses 6 bits.
+      case RISCV::BEXT:
+        // Operand 2 is the shift amount or bit index, using log2(XLEN) bits.
         if (OpIdx == 2 && Bits >= Log2_32(ST.getXLen()))
           break;
         return false;
@@ -745,7 +739,7 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
                                             const RISCVInstrInfo &TII,
                                             const RISCVSubtarget &ST,
                                             MachineRegisterInfo &MRI) {
-  if (DisableSExtWRemoval)
+  if (!ST.getCLOpts().sextw_removal)
     return false;
 
   bool MadeChange = false;
@@ -808,7 +802,7 @@ bool RISCVOptWInstrsImpl::canonicalizeWSuffixes(MachineFunction &MF,
                                                 const RISCVInstrInfo &TII,
                                                 const RISCVSubtarget &ST,
                                                 MachineRegisterInfo &MRI) {
-  bool ShouldStripW = !(DisableStripWSuffix || ST.preferWInst());
+  bool ShouldStripW = ST.getCLOpts().strip_w_suffix && !ST.preferWInst();
   bool ShouldPreferW = ST.preferWInst();
   bool MadeChange = false;
 
