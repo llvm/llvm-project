@@ -945,3 +945,48 @@ void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
 }
 
 } // namespace short_lived_temporaries
+
+namespace hash_table_empty_value {
+
+template <typename T> struct HashTraits {
+  static T emptyValue() { return T(); }
+  static T peek(const T& value) { return value; }
+};
+
+template <typename P> struct HashTraits<Ref<P>> {
+  static Ref<P> emptyValue() { return HashTableEmptyValue; }
+  static P* peek(const Ref<P>& value) { return value.ptr(); }
+};
+
+template <typename KeyType, typename MappedType> struct SingleEntryHashMap {
+  using KeyTraits = HashTraits<KeyType>;
+  using MappedTraits = HashTraits<MappedType>;
+
+  auto get(const KeyType& key) const {
+    if (key == KeyTraits::emptyValue() || key != m_key)
+      return MappedTraits::peek(MappedTraits::emptyValue());
+    return MappedTraits::peek(*m_value);
+  }
+
+  KeyType m_key;
+  MappedType* m_value;
+};
+
+void get_in_trivial_context(const SingleEntryHashMap<int, Ref<RefCountable>>& map) {
+  {
+    auto* obj = map.get(1); // no-warning
+    obj->trivial();
+  }
+}
+
+Ref<RefCountable> makeRef(RefCountable& obj) { return obj; }
+
+void non_null_temporary(RefCountable& obj) {
+  {
+    auto* bar = HashTraits<Ref<RefCountable>>::peek(makeRef(obj));
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    bar->trivial();
+  }
+}
+
+} // namespace hash_table_empty_value
