@@ -171,13 +171,10 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
       unitListStr = exceptionStr;
     }
 
-    unitListSvptr = nullptr;
-
     // Loop over unit list extracting individual or ranges of units, separated
     // by commas.
-
+    char *units{nullptr};
     while (success) {
-      char *units;
       int lb, ub;
       char remStr[2];
       int nread;
@@ -185,11 +182,9 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
       lb = ub = -1;
 #if _WIN32
-      units =
-          strtok_s(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_s(units ? nullptr : unitListStr, ",", &unitListSvptr);
 #else
-      units =
-          strtok_r(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_r(units ? nullptr : unitListStr, ",", &unitListSvptr);
 #endif
       if (nullptr == units) {
         break;
