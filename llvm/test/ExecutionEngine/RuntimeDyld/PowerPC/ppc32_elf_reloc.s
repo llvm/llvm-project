@@ -30,10 +30,10 @@ call_plt:
 	bl external+32768@PLT
 
 # R_PPC_REL16_HA and R_PPC_REL16_LO
-# rtdyld-check: decode_operand(rel16_ha, 2) = (object - rel16_ha + 0x8000) [31:16]
+# rtdyld-check: decode_operand(rel16_ha, 2)[15:0] = (object - rel16_ha + 0x8000)[31:16]
 rel16_ha:
 	addis 3, 3, object-rel16_ha@ha
-# rtdyld-check: decode_operand(rel16_lo, 2) = (object - rel16_ha) [15:0]
+# rtdyld-check: decode_operand(rel16_lo, 2)[15:0] = (object - rel16_ha)[15:0]
 rel16_lo:
 	addi 3, 3, object-rel16_ha@l
 	blr
