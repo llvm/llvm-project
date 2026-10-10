@@ -284,7 +284,7 @@ INITIALIZE_PASS(MicroMipsSizeReduce, DEBUG_TYPE, MICROMIPS_SIZE_REDUCE_NAME,
 
 // Returns true if the machine operand MO is register SP.
 static bool IsSP(const MachineOperand &MO) {
-  if (MO.isReg() && ((MO.getReg() == Mips::SP)))
+  if (MO.isReg() && ((MO.getReg() == Mips::R29)))
     return true;
   return false;
 }
@@ -362,7 +362,7 @@ static bool CheckXWPInstr(MachineInstr *MI, bool ReduceToLwp,
     return false;
 
   Register reg = MI->getOperand(0).getReg();
-  if (reg == Mips::RA)
+  if (reg == Mips::R31)
     return false;
 
   if (!ImmInRange(MI, Entry))
@@ -377,11 +377,11 @@ static bool CheckXWPInstr(MachineInstr *MI, bool ReduceToLwp,
 // Returns true if the registers Reg1 and Reg2 are consecutive
 static bool ConsecutiveRegisters(unsigned Reg1, unsigned Reg2) {
   constexpr std::array<unsigned, 31> Registers = {
-      {Mips::AT, Mips::V0, Mips::V1, Mips::A0, Mips::A1, Mips::A2, Mips::A3,
-       Mips::T0, Mips::T1, Mips::T2, Mips::T3, Mips::T4, Mips::T5, Mips::T6,
-       Mips::T7, Mips::S0, Mips::S1, Mips::S2, Mips::S3, Mips::S4, Mips::S5,
-       Mips::S6, Mips::S7, Mips::T8, Mips::T9, Mips::K0, Mips::K1, Mips::GP,
-       Mips::SP, Mips::FP, Mips::RA}};
+      {Mips::R1, Mips::R2, Mips::R3, Mips::R4, Mips::R5, Mips::R6, Mips::R7,
+       Mips::R8, Mips::R9, Mips::R10, Mips::R11, Mips::R12, Mips::R13, Mips::R14,
+       Mips::R15, Mips::R16, Mips::R17, Mips::R18, Mips::R19, Mips::R20, Mips::R21,
+       Mips::R22, Mips::R23, Mips::R24, Mips::R25, Mips::R26, Mips::R27, Mips::R28,
+       Mips::R29, Mips::R30, Mips::R31}};
 
   for (uint8_t i = 0; i < Registers.size() - 1; i++) {
     if (Registers[i] == Reg1) {
@@ -572,9 +572,9 @@ bool MicroMipsSizeReduce::ReduceSXtoSX16(ReduceEntryFunArgs *Arguments) {
 // of MOVEP instruction
 static bool IsMovepSrcRegister(unsigned Reg) {
 
-  if (Reg == Mips::ZERO || Reg == Mips::V0 || Reg == Mips::V1 ||
-      Reg == Mips::S0 || Reg == Mips::S1 || Reg == Mips::S2 ||
-      Reg == Mips::S3 || Reg == Mips::S4)
+  if (Reg == Mips::R0 || Reg == Mips::R2 || Reg == Mips::R3 ||
+      Reg == Mips::R16 || Reg == Mips::R17 || Reg == Mips::R18 ||
+      Reg == Mips::R19 || Reg == Mips::R20)
     return true;
 
   return false;
@@ -584,8 +584,8 @@ static bool IsMovepSrcRegister(unsigned Reg) {
 // of MOVEP instruction
 static bool IsMovepDestinationReg(unsigned Reg) {
 
-  if (Reg == Mips::A0 || Reg == Mips::A1 || Reg == Mips::A2 ||
-      Reg == Mips::A3 || Reg == Mips::S5 || Reg == Mips::S6)
+  if (Reg == Mips::R4 || Reg == Mips::R5 || Reg == Mips::R6 ||
+      Reg == Mips::R7 || Reg == Mips::R21 || Reg == Mips::R22)
     return true;
 
   return false;
@@ -595,14 +595,14 @@ static bool IsMovepDestinationReg(unsigned Reg) {
 // registers in MOVEP instruction
 static bool IsMovepDestinationRegPair(unsigned R0, unsigned R1) {
 
-  if ((R0 == Mips::A0 && R1 == Mips::S5) ||
-      (R0 == Mips::A0 && R1 == Mips::S6) ||
-      (R0 == Mips::A0 && R1 == Mips::A1) ||
-      (R0 == Mips::A0 && R1 == Mips::A2) ||
-      (R0 == Mips::A0 && R1 == Mips::A3) ||
-      (R0 == Mips::A1 && R1 == Mips::A2) ||
-      (R0 == Mips::A1 && R1 == Mips::A3) ||
-      (R0 == Mips::A2 && R1 == Mips::A3))
+  if ((R0 == Mips::R4 && R1 == Mips::R21) ||
+      (R0 == Mips::R4 && R1 == Mips::R22) ||
+      (R0 == Mips::R4 && R1 == Mips::R5) ||
+      (R0 == Mips::R4 && R1 == Mips::R6) ||
+      (R0 == Mips::R4 && R1 == Mips::R7) ||
+      (R0 == Mips::R5 && R1 == Mips::R6) ||
+      (R0 == Mips::R5 && R1 == Mips::R7) ||
+      (R0 == Mips::R6 && R1 == Mips::R7))
     return true;
 
   return false;

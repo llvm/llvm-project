@@ -51,8 +51,8 @@ bool Mips16RegisterInfo::saveScavengerRegister(
     Register Reg) const {
   DebugLoc DL;
   const TargetInstrInfo &TII = *MBB.getParent()->getSubtarget().getInstrInfo();
-  TII.copyPhysReg(MBB, I, DL, Mips::T0, Reg, true);
-  TII.copyPhysReg(MBB, UseMI, DL, Reg, Mips::T0, true);
+  TII.copyPhysReg(MBB, I, DL, Mips::R8, Reg, true);
+  TII.copyPhysReg(MBB, UseMI, DL, Reg, Mips::R8, true);
   return true;
 }
 
@@ -89,17 +89,17 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   Register FrameReg;
 
   if (FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI)
-    FrameReg = Mips::SP;
+    FrameReg = Mips::R29;
   else {
     const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
     if (TFI->hasFP(MF)) {
-      FrameReg = Mips::S0;
+      FrameReg = Mips::R16;
     }
     else {
       if ((MI.getNumOperands()> OpNo+2) && MI.getOperand(OpNo+2).isReg())
         FrameReg = MI.getOperand(OpNo+2).getReg();
       else
-        FrameReg = Mips::SP;
+        FrameReg = Mips::R29;
     }
   }
   // Calculate final offset.

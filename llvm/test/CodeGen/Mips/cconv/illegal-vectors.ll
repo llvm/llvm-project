@@ -282,11 +282,11 @@ define <3 x i32> @arg_v3i32(<3 x i32> %vec, ptr %p) {
 ;
 ; MIPS32-LABEL: arg_v3i32:
 ; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    move $3, $5
+; MIPS32-NEXT:    move $2, $4
 ; MIPS32-NEXT:    sw $6, 8($7)
 ; MIPS32-NEXT:    sw $5, 4($7)
 ; MIPS32-NEXT:    sw $4, 0($7)
-; MIPS32-NEXT:    move $2, $4
-; MIPS32-NEXT:    move $3, $5
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    move $4, $6
   store <3 x i32> %vec, ptr %p
@@ -328,7 +328,7 @@ define void @call_v3i32(ptr %p) nounwind {
 ; MIPS64-NEXT:    dsrl $4, $5, 32
 ; MIPS64-NEXT:    jal ret_v3i32
 ; MIPS64-NEXT:    nop
-; MIPS64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; MIPS64-NEXT:    sw $4, 8($16)
 ; MIPS64-NEXT:    dsll $1, $2, 32
 ; MIPS64-NEXT:    dsll $2, $3, 32
@@ -1277,10 +1277,10 @@ define void @call_v4i18(ptr %p) nounwind {
 ; MIPS64-NEXT:    dsll $19, $1, 56
 ; MIPS64-NEXT:    jal ret_v4i18
 ; MIPS64-NEXT:    ori $17, $17, 65280
-; MIPS64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
-; MIPS64-NEXT:    # kill: def $v1 killed $v1 def $v1_64
-; MIPS64-NEXT:    # kill: def $a0 killed $a0 def $a0_64
-; MIPS64-NEXT:    # kill: def $a1 killed $a1 def $a1_64
+; MIPS64-NEXT:    # kill: def $r2 killed $r2 def $r2_64
+; MIPS64-NEXT:    # kill: def $r3 killed $r3 def $r3_64
+; MIPS64-NEXT:    # kill: def $r4 killed $r4 def $r4_64
+; MIPS64-NEXT:    # kill: def $r5 killed $r5 def $r5_64
 ; MIPS64-NEXT:    dsll $1, $2, 54
 ; MIPS64-NEXT:    and $3, $3, $18
 ; MIPS64-NEXT:    dsll $3, $3, 36

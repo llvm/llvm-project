@@ -172,15 +172,15 @@ def CTTC1 : MipsAsmPseudoInst<(outs FGR32CCOpnd:$ft), (ins GPR32Opnd:$rt),
 //===----------------------------------------------------------------------===//
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsInstAlias<"dmt", (DMT ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"dmt", (DMT R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"emt", (EMT ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"emt", (EMT R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"dvpe", (DVPE ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"dvpe", (DVPE R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"evpe", (EVPE ZERO), 1>, ASE_MT;
+  def : MipsInstAlias<"evpe", (EVPE R0), 1>, ASE_MT;
 
-  def : MipsInstAlias<"yield $rs", (YIELD ZERO, GPR32Opnd:$rs), 1>, ASE_MT;
+  def : MipsInstAlias<"yield $rs", (YIELD R0, GPR32Opnd:$rs), 1>, ASE_MT;
 
   def : MipsInstAlias<"mftc0 $rd, $rt", (MFTC0 GPR32Opnd:$rd, COP0Opnd:$rt, 0),
                       1>, ASE_MT;

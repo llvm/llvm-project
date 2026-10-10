@@ -130,7 +130,7 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   MCOperand MCOp;
 
   if (HasLinkReg) {
-    unsigned ZeroReg = Subtarget->isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
+    unsigned ZeroReg = Subtarget->isGP64bit() ? Mips::R0_64 : Mips::R0;
     TmpInst0.addOperand(MCOperand::createReg(ZeroReg));
   }
 
@@ -904,28 +904,29 @@ void MipsAsmPrinter::EmitSwapFPIntParams(const MCSubtargetInfo &STI,
                                          bool LE, bool ToFP) {
   using namespace Mips16HardFloatInfo;
 
+  const MipsABIInfo &ABI = Subtarget->getABI();
   unsigned MovOpc = ToFP ? Mips::MTC1 : Mips::MFC1;
   switch (PV) {
   case FSig:
-    EmitInstrRegReg(STI, MovOpc, Mips::A0, Mips::F12);
+    EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(0), Mips::F12);
     break;
   case FFSig:
-    EmitMovFPIntPair(STI, MovOpc, Mips::A0, Mips::A1, Mips::F12, Mips::F14, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F14, LE);
     break;
   case FDSig:
-    EmitInstrRegReg(STI, MovOpc, Mips::A0, Mips::F12);
-    EmitMovFPIntPair(STI, MovOpc, Mips::A2, Mips::A3, Mips::F14, Mips::F15, LE);
+    EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(0), Mips::F12);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14, Mips::F15, LE);
     break;
   case DSig:
-    EmitMovFPIntPair(STI, MovOpc, Mips::A0, Mips::A1, Mips::F12, Mips::F13, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
     break;
   case DDSig:
-    EmitMovFPIntPair(STI, MovOpc, Mips::A0, Mips::A1, Mips::F12, Mips::F13, LE);
-    EmitMovFPIntPair(STI, MovOpc, Mips::A2, Mips::A3, Mips::F14, Mips::F15, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(2), ABI.getArgReg(3), Mips::F14, Mips::F15, LE);
     break;
   case DFSig:
-    EmitMovFPIntPair(STI, MovOpc, Mips::A0, Mips::A1, Mips::F12, Mips::F13, LE);
-    EmitInstrRegReg(STI, MovOpc, Mips::A2, Mips::F14);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F12, Mips::F13, LE);
+    EmitInstrRegReg(STI, MovOpc, ABI.getArgReg(2), Mips::F14);
     break;
   case NoSig:
     return;
@@ -937,20 +938,21 @@ void MipsAsmPrinter::EmitSwapFPIntRetval(
     bool LE) {
   using namespace Mips16HardFloatInfo;
 
+  const MipsABIInfo &ABI = Subtarget->getABI();
   unsigned MovOpc = Mips::MFC1;
   switch (RV) {
   case FRet:
-    EmitInstrRegReg(STI, MovOpc, Mips::V0, Mips::F0);
+    EmitInstrRegReg(STI, MovOpc, ABI.getReturnReg(0), Mips::F0);
     break;
   case DRet:
-    EmitMovFPIntPair(STI, MovOpc, Mips::V0, Mips::V1, Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
     break;
   case CFRet:
-    EmitMovFPIntPair(STI, MovOpc, Mips::V0, Mips::V1, Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
     break;
   case CDRet:
-    EmitMovFPIntPair(STI, MovOpc, Mips::V0, Mips::V1, Mips::F0, Mips::F1, LE);
-    EmitMovFPIntPair(STI, MovOpc, Mips::A0, Mips::A1, Mips::F2, Mips::F3, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getReturnReg(0), ABI.getReturnReg(1), Mips::F0, Mips::F1, LE);
+    EmitMovFPIntPair(STI, MovOpc, ABI.getArgReg(0), ABI.getArgReg(1), Mips::F2, Mips::F3, LE);
     break;
   case NoFPRet:
     break;
@@ -1077,7 +1079,8 @@ void MipsAsmPrinter::EmitFPCallStub(
   //
   // Mov $18, $31
 
-  EmitInstrRegRegReg(*STI, Mips::OR, Mips::S2, Mips::RA, Mips::ZERO);
+  EmitInstrRegRegReg(*STI, Mips::OR, Subtarget->getABI().getSavedReg(2),
+                     Mips::R31, Mips::R0);
 
   EmitSwapFPIntParams(*STI, Signature->ParamSig, LE, true);
 
@@ -1092,7 +1095,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   // if (Signature->RetSig == NoFPRet)
   //  llvm_unreachable("should not be any stubs here with no return value");
   // else
-  EmitInstrReg(*STI, Mips::JR, Mips::S2);
+  EmitInstrReg(*STI, Mips::JR, Subtarget->getABI().getSavedReg(2));
 
   MCSymbol *Tmp = OutContext.createTempSymbol();
   OutStreamer->emitLabel(Tmp);
@@ -1194,14 +1197,14 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   // start of function
   const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
-                                   .addReg(Mips::ZERO)
-                                   .addReg(Mips::ZERO)
+                                   .addReg(Mips::R0)
+                                   .addReg(Mips::R0)
                                    .addExpr(TargetExpr));
 
   for (int8_t I = 0; I < NoopsInSledCount; I++)
     EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::SLL)
-                                     .addReg(Mips::ZERO)
-                                     .addReg(Mips::ZERO)
+                                     .addReg(Mips::R0)
+                                     .addReg(Mips::R0)
                                      .addImm(0));
 
   OutStreamer->emitLabel(Target);
@@ -1209,8 +1212,8 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   if (!Subtarget->isGP64bit()) {
     EmitToStreamer(*OutStreamer,
                    MCInstBuilder(Mips::ADDiu)
-                       .addReg(Mips::T9)
-                       .addReg(Mips::T9)
+                       .addReg(Mips::R25)
+                       .addReg(Mips::R25)
                        .addImm(0x34));
   }
 

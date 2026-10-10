@@ -21,12 +21,12 @@
 # CHECK-EMPTY:
 ## Parameter forwarding register A1_64 is set in call delay slot.
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 A1_64)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg17 S1_64+0)
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 R5_64)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg17 R17_64+0)
 # CHECK-EMPTY:
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
-# CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 A0_64)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg17 S1_64+0)
+# CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 R4_64)
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg17 R17_64+0)
 
 --- |
   ; ModuleID = 'm.ll'
@@ -80,47 +80,47 @@ name:            set
 alignment:       4
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$ra', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$s1', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '$r17', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
   - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 
-      stack-id: default, callee-saved-register: '$s0', callee-saved-restored: true, 
+      stack-id: default, callee-saved-register: '$r16', callee-saved-restored: true, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
   - { bb: 0, offset: 16, fwdArgRegs: 
-      - { arg: 0, reg: '$a0' }
-      - { arg: 1, reg: '$a1' } }
+      - { arg: 0, reg: '$r4' }
+      - { arg: 1, reg: '$r5' } }
 body:             |
   bb.0.entry:
-    DBG_VALUE $a0, $noreg, !17, !DIExpression(), debug-location !19
-    DBG_VALUE $a1, $noreg, !18, !DIExpression(), debug-location !19
-    DBG_VALUE $a1, $noreg, !18, !DIExpression(), debug-location !19
-    $sp = ADDiu $sp, -32
+    DBG_VALUE $r4, $noreg, !17, !DIExpression(), debug-location !19
+    DBG_VALUE $r5, $noreg, !18, !DIExpression(), debug-location !19
+    DBG_VALUE $r5, $noreg, !18, !DIExpression(), debug-location !19
+    $r29 = ADDiu $r29, -32
     CFI_INSTRUCTION def_cfa_offset 32
-    SW killed $ra, $sp, 28 :: (store (s32) into %stack.0)
-    SW killed $s1, $sp, 24 :: (store (s32) into %stack.1)
-    SW killed $s0, $sp, 20 :: (store (s32) into %stack.2)
-    CFI_INSTRUCTION offset $ra_64, -4
-    CFI_INSTRUCTION offset $s1_64, -8
-    CFI_INSTRUCTION offset $s0_64, -12
-    $s0 = OR $a0, $zero
-    DBG_VALUE $s0, $noreg, !17, !DIExpression(), debug-location !19
-    renamable $s1 = nsw ADDiu killed renamable $a1, 1, debug-location !19
-    DBG_VALUE $s1, $noreg, !18, !DIExpression(), debug-location !19
-    $a0 = OR $s1, $zero, debug-location !19
-    JAL @sum, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, implicit-def $v0, debug-location !19 {
-      $a1 = OR $s1, $zero, debug-location !19
+    SW killed $r31, $r29, 28 :: (store (s32) into %stack.0)
+    SW killed $r17, $r29, 24 :: (store (s32) into %stack.1)
+    SW killed $r16, $r29, 20 :: (store (s32) into %stack.2)
+    CFI_INSTRUCTION offset $r31_64, -4
+    CFI_INSTRUCTION offset $r17_64, -8
+    CFI_INSTRUCTION offset $r16_64, -12
+    $r16 = OR $r4, $r0
+    DBG_VALUE $r16, $noreg, !17, !DIExpression(), debug-location !19
+    renamable $r17 = nsw ADDiu killed renamable $r5, 1, debug-location !19
+    DBG_VALUE $r17, $noreg, !18, !DIExpression(), debug-location !19
+    $r4 = OR $r17, $r0, debug-location !19
+    JAL @sum, csr_o32, implicit-def dead $r31, implicit $r4, implicit $r5, implicit-def $r29, implicit-def $r2, debug-location !19 {
+      $r5 = OR $r17, $r0, debug-location !19
     }
-    renamable $at = nsw ADDu killed renamable $v0, killed renamable $s1, debug-location !19
-    SW killed renamable $at, killed renamable $s0, 0, debug-location !19 :: (store (s32) into %ir.adr)
-    $s0 = LW $sp, 20
-    DBG_VALUE $a0, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !19
-    $s1 = LW $sp, 24
-    $ra = LW $sp, 28
-    PseudoReturn undef $ra {
-      $sp = ADDiu $sp, 32
+    renamable $r1 = nsw ADDu killed renamable $r2, killed renamable $r17, debug-location !19
+    SW killed renamable $r1, killed renamable $r16, 0, debug-location !19 :: (store (s32) into %ir.adr)
+    $r16 = LW $r29, 20
+    DBG_VALUE $r4, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !19
+    $r17 = LW $r29, 24
+    $r31 = LW $r29, 28
+    PseudoReturn undef $r31 {
+      $r29 = ADDiu $r29, 32
     }
 
 ...

@@ -279,37 +279,37 @@ class CMP_CBR_RT_Z_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rt, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class BEQZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"beqzalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BGEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgezalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BGTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bgtzalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BLEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"blezalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BLTZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bltzalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BNEZALC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bnezalc", brtarget_mm,
                                                       GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BLTZC_MMR6_DESC : CMP_CBR_RT_Z_MMR6_DESC_BASE<"bltzc", brtarget_lsl2_mm,
@@ -326,7 +326,7 @@ class CMP_CBR_2R_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class BGEC_MMR6_DESC : CMP_CBR_2R_MMR6_DESC_BASE<"bgec", brtarget_lsl2_mm,
@@ -361,7 +361,7 @@ class BC_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd>
 
 class BALC_MMR6_DESC : BC_MMR6_DESC_BASE<"balc", brtarget26_mm> {
   bit isCall = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 class BC_MMR6_DESC : BC_MMR6_DESC_BASE<"bc", brtarget26_mm> {
   list<dag> Pattern = [(br bb:$offset)];
@@ -376,7 +376,7 @@ class BC16_MMR6_DESC : MicroMipsInst16<(outs), (ins brtarget10_mm:$offset),
   let isBarrier = 1;
   let hasDelaySlot = 0;
   let AdditionalPredicates = [RelocPIC];
-  let Defs = [AT];
+  let Defs = [R1];
 }
 
 class BEQZC_BNEZC_MM16R6_DESC_BASE<string instr_asm>
@@ -385,7 +385,7 @@ class BEQZC_BNEZC_MM16R6_DESC_BASE<string instr_asm>
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = 0;
-  let Defs = [AT];
+  let Defs = [R1];
 }
 class BEQZC16_MMR6_DESC : BEQZC_BNEZC_MM16R6_DESC_BASE<"beqzc16">;
 class BNEZC16_MMR6_DESC : BEQZC_BNEZC_MM16R6_DESC_BASE<"bnezc16">;
@@ -453,7 +453,7 @@ class JALRC16_MMR6_DESC_BASE<string opstr, RegisterOperand RO>
       MMR6Arch<opstr> {
   let isCall = 1;
   let hasDelaySlot = 0;
-  let Defs = [RA];
+  let Defs = [R31];
   let hasPostISelHook = 1;
 }
 class JALRC16_MMR6_DESC : JALRC16_MMR6_DESC_BASE<"jalr", GPR32Opnd>;
@@ -471,13 +471,13 @@ class JMP_MMR6_IDX_COMPACT_DESC_BASE<string opstr, DAGOperand opnd,
 class JIALC_MMR6_DESC : JMP_MMR6_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
                                                        GPR32Opnd> {
   bit isCall = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class JIC_MMR6_DESC : JMP_MMR6_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16,
                                                      GPR32Opnd> {
   bit isBarrier = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class JRC16_MMR6_DESC_BASE<string opstr, RegisterOperand RO>
@@ -1188,7 +1188,7 @@ class BRANCH_COP1_MMR6_DESC_BASE<string opstr> :
     InstSE<(outs), (ins FGR64Opnd:$rt, brtarget_mm:$offset),
            !strconcat(opstr, "\t$rt, $offset"), [], FrmI>,
     HARDFLOAT, BRANCH_DESC_BASE {
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class BC1EQZC_MMR6_DESC : BRANCH_COP1_MMR6_DESC_BASE<"bc1eqzc">;
@@ -1199,7 +1199,7 @@ class BRANCH_COP2_MMR6_DESC_BASE<string opstr>
   dag InOperandList = (ins COP2Opnd:$rt, brtarget_mm:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(opstr, "\t$rt, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class BC2EQZC_MMR6_DESC : BRANCH_COP2_MMR6_DESC_BASE<"bc2eqzc">;
@@ -1234,7 +1234,7 @@ class JALRC_MMR6_DESC {
   list<dag> Pattern = [];
   bit isCall = 1;
   bit hasDelaySlot = 0;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BOVC_BNVC_MMR6_DESC_BASE<string instr_asm, Operand opnd,
@@ -1243,7 +1243,7 @@ class BOVC_BNVC_MMR6_DESC_BASE<string instr_asm, Operand opnd,
   dag InOperandList = (ins GPROpnd:$rt, GPROpnd:$rs, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class BOVC_MMR6_DESC : BOVC_BNVC_MMR6_DESC_BASE<"bovc", brtargetr6, GPR32Opnd>;
@@ -1581,9 +1581,9 @@ def BLTZALC_MMR6 : R6MMR6Rel, BLTZALC_MMR6_ENC, BLTZALC_MMR6_DESC,
 //
 //===----------------------------------------------------------------------===//
 
-def : MipsInstAlias<"ei", (EI_MMR6 ZERO), 1>, ISA_MICROMIPS32R6;
-def : MipsInstAlias<"di", (DI_MMR6 ZERO), 1>, ISA_MICROMIPS32R6;
-def : MipsInstAlias<"nop", (SLL_MMR6 ZERO, ZERO, 0), 1>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"ei", (EI_MMR6 R0), 1>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"di", (DI_MMR6 R0), 1>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"nop", (SLL_MMR6 R0, R0, 0), 1>, ISA_MICROMIPS32R6;
 def B_MMR6_Pseudo : MipsAsmPseudoInst<(outs), (ins brtarget_mm:$offset),
                                       !strconcat("b", "\t$offset")> {
   string DecoderNamespace = "MicroMipsR6";
@@ -1606,13 +1606,13 @@ def : MipsInstAlias<"mfc0 $rt, $rs",
 def : MipsInstAlias<"mfhc0 $rt, $rs",
                     (MFHC0_MMR6 GPR32Opnd:$rt, COP0Opnd:$rs, 0), 0>,
                     ISA_MICROMIPS32R6;
-def : MipsInstAlias<"jalrc.hb $rs", (JALRC_HB_MMR6 RA, GPR32Opnd:$rs), 1>,
+def : MipsInstAlias<"jalrc.hb $rs", (JALRC_HB_MMR6 R31, GPR32Opnd:$rs), 1>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"jal $offset", (BALC_MMR6 brtarget26_mm:$offset), 0>,
                     ISA_MICROMIPS32R6;
-def : MipsInstAlias<"dvp", (DVP_MMR6 ZERO), 0>, ISA_MICROMIPS32R6;
-def : MipsInstAlias<"evp", (EVP_MMR6 ZERO), 0>, ISA_MICROMIPS32R6;
-def : MipsInstAlias<"jalrc $rs", (JALRC_MMR6 RA, GPR32Opnd:$rs), 1>,
+def : MipsInstAlias<"dvp", (DVP_MMR6 R0), 0>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"evp", (EVP_MMR6 R0), 0>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"jalrc $rs", (JALRC_MMR6 R31, GPR32Opnd:$rs), 1>,
       ISA_MICROMIPS32R6;
 def : MipsInstAlias<"and $rs, $rt, $imm",
                     (ANDI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rt, uimm16:$imm), 0>,
@@ -1633,25 +1633,25 @@ def : MipsInstAlias<"xor $rs, $imm",
                     (XORI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rs, uimm16:$imm), 0>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"not $rt, $rs",
-                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
+                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rs, R0), 0>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"not $rt",
-                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rt, ZERO), 0>,
+                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rt, R0), 0>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"lapc $rd, $imm",
                     (ADDIUPC_MMR6 GPR32Opnd:$rd, simm19_lsl2:$imm)>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"neg $rt, $rs",
-                    (SUB_MMR6 GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                    (SUB_MMR6 GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
       ISA_MICROMIPS32R6;
 def : MipsInstAlias<"neg $rt",
-                    (SUB_MMR6 GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                    (SUB_MMR6 GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
       ISA_MICROMIPS32R6;
 def : MipsInstAlias<"negu $rt, $rs",
-                    (SUBU_MMR6 GPR32Opnd:$rt, ZERO, GPR32Opnd:$rs), 1>,
+                    (SUBU_MMR6 GPR32Opnd:$rt, R0, GPR32Opnd:$rs), 1>,
       ISA_MICROMIPS32R6;
 def : MipsInstAlias<"negu $rt",
-                    (SUBU_MMR6 GPR32Opnd:$rt, ZERO, GPR32Opnd:$rt), 1>,
+                    (SUBU_MMR6 GPR32Opnd:$rt, R0, GPR32Opnd:$rt), 1>,
       ISA_MICROMIPS32R6;
 def : MipsInstAlias<"beqz16 $rs, $offset", (BEQZC16_MMR6 GPRMM16Opnd:$rs,
                                                          brtarget7_mm:$offset),
@@ -1690,8 +1690,8 @@ defm : SelectInt_Pats<i32, OR_MM, XORI_MMR6, SLTi_MM, SLTiu_MM, SELEQZ_MMR6,
 defm S_MMR6 : Cmp_Pats<f32>, ISA_MICROMIPS32R6;
 defm D_MMR6 : Cmp_Pats<f64>, ISA_MICROMIPS32R6;
 
-def : MipsPat<(f32 fpimm0), (MTC1_MMR6 ZERO)>, ISA_MICROMIPS32R6;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6(MTC1_MMR6 ZERO))>,
+def : MipsPat<(f32 fpimm0), (MTC1_MMR6 R0)>, ISA_MICROMIPS32R6;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6(MTC1_MMR6 R0))>,
       ISA_MICROMIPS32R6;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D_MMR6 FGR64Opnd:$src)>, ISA_MICROMIPS32R6;
@@ -1704,18 +1704,18 @@ def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),
 def : MipsPat<(and GPR32:$src, immZExt16:$imm),
               (ANDI_MMR6 GPR32:$src, immZExt16:$imm)>, ISA_MICROMIPS32R6;
 def : MipsPat<(i32 immZExt16:$imm),
-              (XORI_MMR6 ZERO, immZExt16:$imm)>, ISA_MICROMIPS32R6;
+              (XORI_MMR6 R0, immZExt16:$imm)>, ISA_MICROMIPS32R6;
 def : MipsPat<(not GPRMM16:$in),
               (NOT16_MMR6 GPRMM16:$in)>, ISA_MICROMIPS32R6;
 def : MipsPat<(not GPR32:$in),
-              (NOR_MMR6 GPR32Opnd:$in, ZERO)>, ISA_MICROMIPS32R6;
+              (NOR_MMR6 GPR32Opnd:$in, R0)>, ISA_MICROMIPS32R6;
 // Patterns for load with a reg+imm operand.
 let AddedComplexity = 41 in {
   def : LoadRegImmPat<LDC1_D64_MMR6, f64, load>, FGR_64, ISA_MICROMIPS32R6;
   def : StoreRegImmPat<SDC1_D64_MMR6, f64>, FGR_64, ISA_MICROMIPS32R6;
 }
 
-let isCall=1, hasDelaySlot=0, isCTI=1, Defs = [RA] in {
+let isCall=1, hasDelaySlot=0, isCTI=1, Defs = [R31] in {
   class JumpLinkMMR6<Instruction JumpInst, DAGOperand Opnd> :
     PseudoSE<(outs), (ins calltarget:$target), []>,
     PseudoInstExpansion<(JumpInst Opnd:$target)>;

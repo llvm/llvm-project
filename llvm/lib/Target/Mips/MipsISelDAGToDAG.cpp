@@ -248,7 +248,7 @@ void MipsDAGToDAGISel::PreprocessISelDAG() {
 
     const auto *BaseReg = dyn_cast<RegisterSDNode>(Base);
     if (!BaseReg ||
-        (BaseReg->getReg() != Mips::GP && BaseReg->getReg() != Mips::GP_64) ||
+        (BaseReg->getReg() != Mips::R28 && BaseReg->getReg() != Mips::R28_64) ||
         Sel.getOpcode() != ISD::SELECT)
       continue;
 

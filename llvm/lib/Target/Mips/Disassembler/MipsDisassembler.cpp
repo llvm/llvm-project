@@ -241,8 +241,8 @@ static DecodeStatus DecodeCOP2RegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
                                          uint64_t Address,
                                          const MCDisassembler *Decoder) {
-  unsigned Regs[] = {Mips::S0, Mips::S1, Mips::S2, Mips::S3, Mips::S4,
-                     Mips::S5, Mips::S6, Mips::S7, Mips::FP};
+  unsigned Regs[] = {Mips::R16, Mips::R17, Mips::R18, Mips::R19, Mips::R20,
+                     Mips::R21, Mips::R22, Mips::R23, Mips::R30};
   unsigned RegNum;
 
   unsigned RegLst = fieldFromInstruction(Insn, 21, 5);
@@ -261,7 +261,7 @@ static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
     Inst.addOperand(MCOperand::createReg(Regs[i]));
 
   if (RegLst & 0x10)
-    Inst.addOperand(MCOperand::createReg(Mips::RA));
+    Inst.addOperand(MCOperand::createReg(Mips::R31));
 
   return MCDisassembler::Success;
 }
@@ -269,7 +269,7 @@ static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Insn,
 static DecodeStatus DecodeRegListOperand16(MCInst &Inst, unsigned Insn,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  unsigned Regs[] = {Mips::S0, Mips::S1, Mips::S2, Mips::S3};
+  unsigned Regs[] = {Mips::R16, Mips::R17, Mips::R18, Mips::R19};
   unsigned RegLst;
   switch (Inst.getOpcode()) {
   default:
@@ -285,7 +285,7 @@ static DecodeStatus DecodeRegListOperand16(MCInst &Inst, unsigned Insn,
   for (unsigned i = 0; i <= RegNum; i++)
     Inst.addOperand(MCOperand::createReg(Regs[i]));
 
-  Inst.addOperand(MCOperand::createReg(Mips::RA));
+  Inst.addOperand(MCOperand::createReg(Mips::R31));
 
   return MCDisassembler::Success;
 }
@@ -1289,7 +1289,7 @@ static DecodeStatus DecodeMemMMSPImm5Lsl2(MCInst &Inst, unsigned Insn,
   MCRegister Reg = getReg(Decoder, Mips::GPR32RegClassID, RegNo);
 
   Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createReg(Mips::SP));
+  Inst.addOperand(MCOperand::createReg(Mips::R29));
   Inst.addOperand(MCOperand::createImm(Offset << 2));
 
   return MCDisassembler::Success;
@@ -1304,7 +1304,7 @@ static DecodeStatus DecodeMemMMGPImm7Lsl2(MCInst &Inst, unsigned Insn,
   MCRegister Reg = getReg(Decoder, Mips::GPR32RegClassID, RegNo);
 
   Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createReg(Mips::GP));
+  Inst.addOperand(MCOperand::createReg(Mips::R28));
   Inst.addOperand(MCOperand::createImm(Offset << 2));
 
   return MCDisassembler::Success;
@@ -1328,7 +1328,7 @@ static DecodeStatus DecodeMemMMReglistImm4Lsl2(MCInst &Inst, unsigned Insn,
       == MCDisassembler::Fail)
     return MCDisassembler::Fail;
 
-  Inst.addOperand(MCOperand::createReg(Mips::SP));
+  Inst.addOperand(MCOperand::createReg(Mips::R29));
   Inst.addOperand(MCOperand::createImm(Offset << 2));
 
   return MCDisassembler::Success;
@@ -1740,36 +1740,36 @@ static DecodeStatus DecodeMovePRegPair(MCInst &Inst, unsigned RegPair,
   default:
     return MCDisassembler::Fail;
   case 0:
-    Inst.addOperand(MCOperand::createReg(Mips::A1));
-    Inst.addOperand(MCOperand::createReg(Mips::A2));
+    Inst.addOperand(MCOperand::createReg(Mips::R5));
+    Inst.addOperand(MCOperand::createReg(Mips::R6));
     break;
   case 1:
-    Inst.addOperand(MCOperand::createReg(Mips::A1));
-    Inst.addOperand(MCOperand::createReg(Mips::A3));
+    Inst.addOperand(MCOperand::createReg(Mips::R5));
+    Inst.addOperand(MCOperand::createReg(Mips::R7));
     break;
   case 2:
-    Inst.addOperand(MCOperand::createReg(Mips::A2));
-    Inst.addOperand(MCOperand::createReg(Mips::A3));
+    Inst.addOperand(MCOperand::createReg(Mips::R6));
+    Inst.addOperand(MCOperand::createReg(Mips::R7));
     break;
   case 3:
-    Inst.addOperand(MCOperand::createReg(Mips::A0));
-    Inst.addOperand(MCOperand::createReg(Mips::S5));
+    Inst.addOperand(MCOperand::createReg(Mips::R4));
+    Inst.addOperand(MCOperand::createReg(Mips::R21));
     break;
   case 4:
-    Inst.addOperand(MCOperand::createReg(Mips::A0));
-    Inst.addOperand(MCOperand::createReg(Mips::S6));
+    Inst.addOperand(MCOperand::createReg(Mips::R4));
+    Inst.addOperand(MCOperand::createReg(Mips::R22));
     break;
   case 5:
-    Inst.addOperand(MCOperand::createReg(Mips::A0));
-    Inst.addOperand(MCOperand::createReg(Mips::A1));
+    Inst.addOperand(MCOperand::createReg(Mips::R4));
+    Inst.addOperand(MCOperand::createReg(Mips::R5));
     break;
   case 6:
-    Inst.addOperand(MCOperand::createReg(Mips::A0));
-    Inst.addOperand(MCOperand::createReg(Mips::A2));
+    Inst.addOperand(MCOperand::createReg(Mips::R4));
+    Inst.addOperand(MCOperand::createReg(Mips::R6));
     break;
   case 7:
-    Inst.addOperand(MCOperand::createReg(Mips::A0));
-    Inst.addOperand(MCOperand::createReg(Mips::A3));
+    Inst.addOperand(MCOperand::createReg(Mips::R4));
+    Inst.addOperand(MCOperand::createReg(Mips::R7));
     break;
   }
 

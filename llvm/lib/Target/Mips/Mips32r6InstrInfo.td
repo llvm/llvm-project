@@ -389,7 +389,7 @@ class CMP_BC_DESC_BASE<string instr_asm, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
   bit hasForbiddenSlot = 1;
   bit isCTI = 1;
 }
@@ -400,7 +400,7 @@ class CMP_CBR_EQNE_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rs, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rs, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
   bit hasForbiddenSlot = 1;
   bit isCTI = 1;
 }
@@ -411,7 +411,7 @@ class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
   dag InOperandList = (ins GPROpnd:$rt, opnd:$offset);
   dag OutOperandList = (outs);
   string AsmString = !strconcat(instr_asm, "\t$rt, $offset");
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
   bit hasForbiddenSlot = 1;
   bit isCTI = 1;
 }
@@ -419,19 +419,19 @@ class CMP_CBR_RT_Z_DESC_BASE<string instr_asm, DAGOperand opnd,
 class BAL_DESC : BC_DESC_BASE<"bal", brtarget> {
   bit isCall = 1;
   bit hasDelaySlot = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
   bit isCTI = 1;
 }
 
 class NAL_DESC : NAL_DESC_BASE<"nal"> {
   bit hasDelaySlot = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
   bit isCTI = 1;
 }
 
 class BALC_DESC : BC_DESC_BASE<"balc", brtarget26> {
   bit isCall = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
   bit isCTI = 1;
 }
 
@@ -492,14 +492,14 @@ class JMP_IDX_COMPACT_DESC_BASE<string opstr, DAGOperand opnd,
 class JIALC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jialc", calloffset16,
                                              GPR32Opnd> {
   bit isCall = 1;
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class JIC_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16,
                                            GPR32Opnd> {
   bit isBarrier = 1;
   bit isTerminator = 1;
-  list<Register> Defs = [AT];
+  list<Register> Defs = [R1];
 }
 
 class JR_HB_R6_DESC : JR_HB_DESC_BASE<"jr.hb", GPR32Opnd> {
@@ -551,27 +551,27 @@ class MOD_DESC  : DIVMOD_DESC_BASE<"mod", GPR32Opnd, srem>;
 class MODU_DESC : DIVMOD_DESC_BASE<"modu", GPR32Opnd, urem>;
 
 class BEQZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"beqzalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BGEZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"bgezalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BGTZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"bgtzalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BLEZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"blezalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BLTZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"bltzalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class BNEZALC_DESC : CMP_CBR_RT_Z_DESC_BASE<"bnezalc", brtarget, GPR32Opnd> {
-  list<Register> Defs = [RA];
+  list<Register> Defs = [R31];
 }
 
 class MUL_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
@@ -953,13 +953,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //
 //===----------------------------------------------------------------------===//
 
-def : MipsInstAlias<"dvp", (DVP ZERO), 0>, ISA_MIPS32R6;
-def : MipsInstAlias<"evp", (EVP ZERO), 0>, ISA_MIPS32R6;
+def : MipsInstAlias<"dvp", (DVP R0), 0>, ISA_MIPS32R6;
+def : MipsInstAlias<"evp", (EVP R0), 0>, ISA_MIPS32R6;
 
 let AdditionalPredicates = [NotInMicroMips] in {
 def : MipsInstAlias<"sdbbp", (SDBBP_R6 0)>, ISA_MIPS32R6;
 def : MipsInstAlias<"sigrie", (SIGRIE 0)>, ISA_MIPS32R6;
-def : MipsInstAlias<"jr $rs", (JALR ZERO, GPR32Opnd:$rs), 1>,
+def : MipsInstAlias<"jr $rs", (JALR R0, GPR32Opnd:$rs), 1>,
       ISA_MIPS32R6, GPR_32;
 }
 
@@ -1118,18 +1118,18 @@ def to_fclass_mask: SDNodeXForm<imm, [{
 }]>;
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(is_fpclass f32:$lhs, i32:$imm),
-                (SLTu ZERO, (ANDi (MFC1 (CLASS_S f32:$lhs)),
+                (SLTu R0, (ANDi (MFC1 (CLASS_S f32:$lhs)),
                           (to_fclass_mask imm:$imm)))>,
                 ISA_MIPS32R6;
   def : MipsPat<(is_fpclass f64:$lhs, i32:$imm),
-                (SLTu ZERO, (ANDi (MFC1_D64 (CLASS_D f64:$lhs)),
+                (SLTu R0, (ANDi (MFC1_D64 (CLASS_D f64:$lhs)),
                           (to_fclass_mask imm:$imm)))>,
                 ISA_MIPS32R6;
 }
 
 // Pseudo instructions
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
-    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT], hasPostISelHook = 1 in {
+    hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [R1], hasPostISelHook = 1 in {
   class TailCallRegR6<Instruction JumpInst, Register RT, RegisterOperand RO> :
     PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)]>,
     PseudoInstExpansion<(JumpInst RT:$rt, RO:$rs)>;
@@ -1150,8 +1150,8 @@ class PseudoIndirectBranchBaseR6<Instruction JumpInst, Register RT,
 
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                             NoIndirectJumpGuards] in {
-  def TAILCALLR6REG : TailCallRegR6<JALR, ZERO, GPR32Opnd>, ISA_MIPS32R6;
-  def PseudoIndirectBranchR6 : PseudoIndirectBranchBaseR6<JALR, ZERO,
+  def TAILCALLR6REG : TailCallRegR6<JALR, R0, GPR32Opnd>, ISA_MIPS32R6;
+  def PseudoIndirectBranchR6 : PseudoIndirectBranchBaseR6<JALR, R0,
                                                           GPR32Opnd>,
                                ISA_MIPS32R6;
 }

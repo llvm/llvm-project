@@ -150,7 +150,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (isMicroMips)
         Opc = Mips::MOVE16_MM;
       else
-        Opc = Mips::OR, ZeroReg = Mips::ZERO;
+        Opc = Mips::OR, ZeroReg = Mips::R0;
     } else if (Mips::CCRRegClass.contains(SrcReg))
       Opc = Mips::CFC1;
     else if (Mips::FGR32RegClass.contains(SrcReg))
@@ -213,7 +213,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = Mips::FMOV_D64;
   else if (Mips::GPR64RegClass.contains(DestReg)) { // Copy to CPU64 Reg.
     if (Mips::GPR64RegClass.contains(SrcReg))
-      Opc = Mips::OR64, ZeroReg = Mips::ZERO_64;
+      Opc = Mips::OR64, ZeroReg = Mips::R0_64;
     else if (Mips::HI64RegClass.contains(SrcReg))
       Opc = Mips::MFHI64, SrcReg = 0;
     else if (Mips::LO64RegClass.contains(SrcReg))
@@ -278,11 +278,11 @@ static bool isORCopyInst(const MachineInstr &MI) {
     break;
   case Mips::OR_MM:
   case Mips::OR:
-    if (MI.getOperand(2).getReg() == Mips::ZERO)
+    if (MI.getOperand(2).getReg() == Mips::R0)
       return true;
     break;
   case Mips::OR64:
-    if (MI.getOperand(2).getReg() == Mips::ZERO_64)
+    if (MI.getOperand(2).getReg() == Mips::R0_64)
       return true;
     break;
   }
@@ -356,17 +356,17 @@ void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
   const Function &Func = MBB.getParent()->getFunction();
   if (Func.hasFnAttribute("interrupt")) {
     if (Mips::HI32RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFHI), Mips::K0);
-      SrcReg = Mips::K0;
+      BuildMI(MBB, I, DL, get(Mips::MFHI), Mips::R26);
+      SrcReg = Mips::R26;
     } else if (Mips::HI64RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFHI64), Mips::K0_64);
-      SrcReg = Mips::K0_64;
+      BuildMI(MBB, I, DL, get(Mips::MFHI64), Mips::R26_64);
+      SrcReg = Mips::R26_64;
     } else if (Mips::LO32RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFLO), Mips::K0);
-      SrcReg = Mips::K0;
+      BuildMI(MBB, I, DL, get(Mips::MFLO), Mips::R26);
+      SrcReg = Mips::R26;
     } else if (Mips::LO64RegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, I, DL, get(Mips::MFLO64), Mips::K0_64);
-      SrcReg = Mips::K0_64;
+      BuildMI(MBB, I, DL, get(Mips::MFLO64), Mips::R26_64);
+      SrcReg = Mips::R26_64;
     }
   }
 
@@ -441,13 +441,13 @@ void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
   else {
     // Load HI/LO through K0. Notably the DestReg is encoded into the
     // instruction itself.
-    unsigned Reg = Mips::K0;
+    unsigned Reg = Mips::R26;
     unsigned LdOp = Mips::MTLO;
     if (DestReg == Mips::HI0)
       LdOp = Mips::MTHI;
 
     if (Subtarget.getABI().ArePtrs64bit()) {
-      Reg = Mips::K0_64;
+      Reg = Mips::R26_64;
       if (DestReg == Mips::HI0_64)
         LdOp = Mips::MTHI64;
       else
@@ -688,7 +688,7 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
   unsigned Size = STI.isABI_N64() ? 64 : 32;
   unsigned LUi = STI.isABI_N64() ? Mips::LUi64 : Mips::LUi;
-  unsigned ZEROReg = STI.isABI_N64() ? Mips::ZERO_64 : Mips::ZERO;
+  unsigned ZEROReg = STI.isABI_N64() ? Mips::R0_64 : Mips::R0;
   const TargetRegisterClass *RC = STI.isABI_N64() ?
     &Mips::GPR64RegClass : &Mips::GPR32RegClass;
   bool LastInstrIsADDiu = NewImm;
@@ -754,10 +754,10 @@ void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
   MachineInstrBuilder MIB;
   if (Subtarget.isGP64bit())
     MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn64))
-              .addReg(Mips::RA_64, RegState::Undef);
+              .addReg(Mips::R31_64, RegState::Undef);
   else
     MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn))
-              .addReg(Mips::RA, RegState::Undef);
+              .addReg(Mips::R31, RegState::Undef);
 
   // Retain any imp-use flags.
   for (auto & MO : I->operands()) {
@@ -953,10 +953,10 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   // indirect jump to TargetReg
   MipsABIInfo ABI = Subtarget.getABI();
   unsigned ADDU = ABI.GetPtrAdduOp();
-  unsigned SP = Subtarget.isGP64bit() ? Mips::SP_64 : Mips::SP;
-  unsigned RA = Subtarget.isGP64bit() ? Mips::RA_64 : Mips::RA;
+  unsigned SP = Subtarget.isGP64bit() ? Mips::R29_64 : Mips::R29;
+  unsigned RA = Subtarget.isGP64bit() ? Mips::R31_64 : Mips::R31;
   unsigned T9 = ABI.getTempReg(9, Subtarget.isGP64bit());
-  unsigned ZERO = Subtarget.isGP64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  unsigned ZERO = Subtarget.isGP64bit() ? Mips::R0_64 : Mips::R0;
   Register OffsetReg = I->getOperand(0).getReg();
   Register TargetReg = I->getOperand(1).getReg();
 

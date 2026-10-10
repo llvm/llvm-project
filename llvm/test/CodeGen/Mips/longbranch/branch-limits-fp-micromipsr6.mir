@@ -72,57 +72,57 @@ body:             |
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
   ; MM:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
-  ; MM:   BC1EQZC_MMR6 $d0_64, %bb.2, implicit-def $at
+  ; MM:   BC1EQZC_MMR6 $d0_64, %bb.2, implicit-def $r1
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MM:   $v0 = LI16_MM 0
-  ; MM:   JRC16_MM undef $ra, implicit $v0
+  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $r1
+  ; MM:   $r2 = LI16_MM 0
+  ; MM:   JRC16_MM undef $r31, implicit $r2
   ; MM: bb.3.return:
-  ; MM:   $v0 = LI16_MM 1
-  ; MM:   JRC16_MM undef $ra, implicit $v0
+  ; MM:   $r2 = LI16_MM 1
+  ; MM:   JRC16_MM undef $r31, implicit $r2
   ; PIC-LABEL: name: a
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
   ; PIC:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
-  ; PIC:   BC1EQZC_MMR6 $d0_64, %bb.3, implicit-def $at
+  ; PIC:   BC1EQZC_MMR6 $d0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
-  ; PIC:   BALC_MMR6 %bb.2, implicit-def $ra
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   BALC_MMR6 %bb.2, implicit-def $r31
   ; PIC: bb.2.entry:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   $sp = ADDiu $sp, 8
-  ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   $r29 = ADDiu $r29, 8
+  ; PIC:   JIC_MMR6 $r1, 0, implicit-def $r1
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   $v0 = LI16_MM 0
-  ; PIC:   JRC16_MM undef $ra, implicit $v0
+  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $r1
+  ; PIC:   $r2 = LI16_MM 0
+  ; PIC:   JRC16_MM undef $r31, implicit $r2
   ; PIC: bb.4.return:
-  ; PIC:   $v0 = LI16_MM 1
-  ; PIC:   JRC16_MM undef $ra, implicit $v0
+  ; PIC:   $r2 = LI16_MM 1
+  ; PIC:   JRC16_MM undef $r31, implicit $r2
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d12_64, $d14_64
 
     $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
-    BC1NEZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
+    BC1NEZC_MMR6 killed $d0_64, %bb.2, implicit-def $r1
 
   bb.1.if.then:
-    INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    $v0 = LI16_MM 0
-    PseudoReturn undef $ra, implicit $v0
+    INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $r1
+    $r2 = LI16_MM 0
+    PseudoReturn undef $r31, implicit $r2
 
   bb.2.return:
-    $v0 = LI16_MM 1
-    PseudoReturn undef $ra, implicit $v0
+    $r2 = LI16_MM 1
+    PseudoReturn undef $r31, implicit $r2
 
 ...
 ---
@@ -164,56 +164,56 @@ body:             |
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; MM:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
-  ; MM:   BC1NEZC_MMR6 $d0_64, %bb.2, implicit-def $at
+  ; MM:   BC1NEZC_MMR6 $d0_64, %bb.2, implicit-def $r1
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MM:   $v0 = LI16_MM 0
-  ; MM:   JRC16_MM undef $ra, implicit $v0
+  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $r1
+  ; MM:   $r2 = LI16_MM 0
+  ; MM:   JRC16_MM undef $r31, implicit $r2
   ; MM: bb.3.return:
-  ; MM:   $v0 = LI16_MM 1
-  ; MM:   JRC16_MM undef $ra, implicit $v0
+  ; MM:   $r2 = LI16_MM 1
+  ; MM:   JRC16_MM undef $r31, implicit $r2
   ; PIC-LABEL: name: b
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; PIC:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
-  ; PIC:   BC1NEZC_MMR6 $d0_64, %bb.3, implicit-def $at
+  ; PIC:   BC1NEZC_MMR6 $d0_64, %bb.3, implicit-def $r1
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
-  ; PIC:   $sp = ADDiu $sp, -8
-  ; PIC:   SW $ra, $sp, 0
-  ; PIC:   $at = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
-  ; PIC:   $at = LONG_BRANCH_ADDiu $at, target-flags(mips-abs-lo) %bb.4, %bb.2
-  ; PIC:   BALC_MMR6 %bb.2, implicit-def $ra
+  ; PIC:   $r29 = ADDiu $r29, -8
+  ; PIC:   SW $r31, $r29, 0
+  ; PIC:   $r1 = LONG_BRANCH_LUi target-flags(mips-abs-hi) %bb.4, %bb.2
+  ; PIC:   $r1 = LONG_BRANCH_ADDiu $r1, target-flags(mips-abs-lo) %bb.4, %bb.2
+  ; PIC:   BALC_MMR6 %bb.2, implicit-def $r31
   ; PIC: bb.2.entry:
   ; PIC:   successors: %bb.4(0x80000000)
-  ; PIC:   $at = ADDu $ra, $at
-  ; PIC:   $ra = LW $sp, 0
-  ; PIC:   $sp = ADDiu $sp, 8
-  ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
+  ; PIC:   $r1 = ADDu $r31, $r1
+  ; PIC:   $r31 = LW $r29, 0
+  ; PIC:   $r29 = ADDiu $r29, 8
+  ; PIC:   JIC_MMR6 $r1, 0, implicit-def $r1
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   $v0 = LI16_MM 0
-  ; PIC:   JRC16_MM undef $ra, implicit $v0
+  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $r1
+  ; PIC:   $r2 = LI16_MM 0
+  ; PIC:   JRC16_MM undef $r31, implicit $r2
   ; PIC: bb.4.return:
-  ; PIC:   $v0 = LI16_MM 1
-  ; PIC:   JRC16_MM undef $ra, implicit $v0
+  ; PIC:   $r2 = LI16_MM 1
+  ; PIC:   JRC16_MM undef $r31, implicit $r2
   bb.0.entry:
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $d12_64, $d14_64
 
     $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
-    BC1EQZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
+    BC1EQZC_MMR6 killed $d0_64, %bb.2, implicit-def $r1
 
   bb.1.if.then:
-    INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    $v0 = LI16_MM 0
-    PseudoReturn undef $ra, implicit $v0
+    INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $r1
+    $r2 = LI16_MM 0
+    PseudoReturn undef $r31, implicit $r2
 
   bb.2.return:
-    $v0 = LI16_MM 1
-    PseudoReturn undef $ra, implicit $v0
+    $r2 = LI16_MM 1
+    PseudoReturn undef $r31, implicit $r2
 
 ...

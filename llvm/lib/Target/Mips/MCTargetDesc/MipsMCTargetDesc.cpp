@@ -84,10 +84,10 @@ int MIPS_MC::getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
     // NoRegAltName applies to all ABIs.
     unsigned AltIdx;
   } Aliases[] = {
-      {"AT", Mips::AT, Mips::NoRegAltName},
-      {"s8", Mips::FP, Mips::NoRegAltName},
-      {"kt0", Mips::K0, Mips::NABIRegAltName},
-      {"kt1", Mips::K1, Mips::NABIRegAltName},
+      {"AT", Mips::R1, Mips::NoRegAltName},
+      {"s8", Mips::R30, Mips::NoRegAltName},
+      {"kt0", Mips::R26, Mips::NABIRegAltName},
+      {"kt1", Mips::R27, Mips::NABIRegAltName},
   };
   for (const auto &Alias : Aliases)
     if (Name == Alias.Name &&
@@ -100,10 +100,10 @@ int MIPS_MC::getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
       StringLiteral Name;
       MCPhysReg Reg;
     } Deprecated[] = {
-        {"t4", Mips::T4},
-        {"t5", Mips::T5},
-        {"t6", Mips::T6},
-        {"t7", Mips::T7},
+        {"t4", Mips::R12},
+        {"t5", Mips::R13},
+        {"t6", Mips::R14},
+        {"t7", Mips::R15},
     };
     for (const auto &Alias : Deprecated) {
       if (Name == Alias.Name) {
@@ -122,38 +122,38 @@ void MIPS_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
     codeview::RegisterId CVReg;
     MCPhysReg Reg;
   } RegMap[] = {
-      {codeview::RegisterId::MIPS_ZERO, Mips::ZERO},
-      {codeview::RegisterId::MIPS_AT, Mips::AT},
-      {codeview::RegisterId::MIPS_V0, Mips::V0},
-      {codeview::RegisterId::MIPS_V1, Mips::V1},
-      {codeview::RegisterId::MIPS_A0, Mips::A0},
-      {codeview::RegisterId::MIPS_A1, Mips::A1},
-      {codeview::RegisterId::MIPS_A2, Mips::A2},
-      {codeview::RegisterId::MIPS_A3, Mips::A3},
-      {codeview::RegisterId::MIPS_T0, Mips::T0},
-      {codeview::RegisterId::MIPS_T1, Mips::T1},
-      {codeview::RegisterId::MIPS_T2, Mips::T2},
-      {codeview::RegisterId::MIPS_T3, Mips::T3},
-      {codeview::RegisterId::MIPS_T4, Mips::T4},
-      {codeview::RegisterId::MIPS_T5, Mips::T5},
-      {codeview::RegisterId::MIPS_T6, Mips::T6},
-      {codeview::RegisterId::MIPS_T7, Mips::T7},
-      {codeview::RegisterId::MIPS_S0, Mips::S0},
-      {codeview::RegisterId::MIPS_S1, Mips::S1},
-      {codeview::RegisterId::MIPS_S2, Mips::S2},
-      {codeview::RegisterId::MIPS_S3, Mips::S3},
-      {codeview::RegisterId::MIPS_S4, Mips::S4},
-      {codeview::RegisterId::MIPS_S5, Mips::S5},
-      {codeview::RegisterId::MIPS_S6, Mips::S6},
-      {codeview::RegisterId::MIPS_S7, Mips::S7},
-      {codeview::RegisterId::MIPS_T8, Mips::T8},
-      {codeview::RegisterId::MIPS_T9, Mips::T9},
-      {codeview::RegisterId::MIPS_K0, Mips::K0},
-      {codeview::RegisterId::MIPS_K1, Mips::K1},
-      {codeview::RegisterId::MIPS_GP, Mips::GP},
-      {codeview::RegisterId::MIPS_SP, Mips::SP},
-      {codeview::RegisterId::MIPS_S8, Mips::FP},
-      {codeview::RegisterId::MIPS_RA, Mips::RA},
+      {codeview::RegisterId::MIPS_ZERO, Mips::R0},
+      {codeview::RegisterId::MIPS_AT, Mips::R1},
+      {codeview::RegisterId::MIPS_V0, Mips::R2},
+      {codeview::RegisterId::MIPS_V1, Mips::R3},
+      {codeview::RegisterId::MIPS_A0, Mips::R4},
+      {codeview::RegisterId::MIPS_A1, Mips::R5},
+      {codeview::RegisterId::MIPS_A2, Mips::R6},
+      {codeview::RegisterId::MIPS_A3, Mips::R7},
+      {codeview::RegisterId::MIPS_T0, Mips::R8},
+      {codeview::RegisterId::MIPS_T1, Mips::R9},
+      {codeview::RegisterId::MIPS_T2, Mips::R10},
+      {codeview::RegisterId::MIPS_T3, Mips::R11},
+      {codeview::RegisterId::MIPS_T4, Mips::R12},
+      {codeview::RegisterId::MIPS_T5, Mips::R13},
+      {codeview::RegisterId::MIPS_T6, Mips::R14},
+      {codeview::RegisterId::MIPS_T7, Mips::R15},
+      {codeview::RegisterId::MIPS_S0, Mips::R16},
+      {codeview::RegisterId::MIPS_S1, Mips::R17},
+      {codeview::RegisterId::MIPS_S2, Mips::R18},
+      {codeview::RegisterId::MIPS_S3, Mips::R19},
+      {codeview::RegisterId::MIPS_S4, Mips::R20},
+      {codeview::RegisterId::MIPS_S5, Mips::R21},
+      {codeview::RegisterId::MIPS_S6, Mips::R22},
+      {codeview::RegisterId::MIPS_S7, Mips::R23},
+      {codeview::RegisterId::MIPS_T8, Mips::R24},
+      {codeview::RegisterId::MIPS_T9, Mips::R25},
+      {codeview::RegisterId::MIPS_K0, Mips::R26},
+      {codeview::RegisterId::MIPS_K1, Mips::R27},
+      {codeview::RegisterId::MIPS_GP, Mips::R28},
+      {codeview::RegisterId::MIPS_SP, Mips::R29},
+      {codeview::RegisterId::MIPS_S8, Mips::R30},
+      {codeview::RegisterId::MIPS_RA, Mips::R31},
       {codeview::RegisterId::MIPS_LO, Mips::HI0},
       {codeview::RegisterId::MIPS_HI, Mips::LO0},
       {codeview::RegisterId::MIPS_Fir, Mips::FCR0},
@@ -229,7 +229,7 @@ static MCInstrInfo *createMipsMCInstrInfo() {
 
 static MCRegisterInfo *createMipsMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitMipsMCRegisterInfo(X, Mips::RA);
+  InitMipsMCRegisterInfo(X, Mips::R31);
   return X;
 }
 
@@ -249,7 +249,7 @@ static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
   else
     MAI = new MipsELFMCAsmInfo(TT, Options);
 
-  unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
+  unsigned SP = MRI.getDwarfRegNum(Mips::R29, true);
   MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);
   MAI->addInitialFrameState(Inst);
 
