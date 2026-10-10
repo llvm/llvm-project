@@ -21065,9 +21065,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
-          // Split roots keep their operands in the combined sub-nodes, so there
-          // is no single operand to take the context hint from.
-          if (E.State == TreeEntry::SplitVectorize)
+          // Split and gather roots have no operand entry to take the context
+          // hint from.
+          if (E.isGather() || E.State == TreeEntry::SplitVectorize)
             break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
