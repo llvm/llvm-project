@@ -9,6 +9,7 @@
 #include "../common/Properties.hpp"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 using olMemAllocAlignedTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocAlignedTest);
@@ -95,16 +96,24 @@ TEST_P(olMemAllocAlignedTest, InvalidHostType) {
                                  DefaultAlignment, &Alloc));
 }
 
-TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
-  if (getPlatformBackend() != OL_PLATFORM_BACKEND_CUDA) {
-    GTEST_SKIP() << "Test inteded for CUDA backend";
-  }
+TEST_P(olMemAllocAlignedTest, ExceedSupportedAlignment) {
+  ol_platform_backend_t Backend = getPlatformBackend();
+  if (Backend != OL_PLATFORM_BACKEND_CUDA &&
+      Backend != OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "Test intended for CUDA and AMDGPU backends";
 
   void *Alloc = nullptr;
-  // The default page size for cuda is 64 KB.
   ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
                olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024,
                                  1024 * 64 * 64 * 64, &Alloc));
+  ASSERT_EQ(Alloc, nullptr);
+}
+
+TEST_P(olMemAllocAlignedTest, FailedAllocateLeavesOutPointerNull) {
+  void *Alloc = nullptr;
+  ASSERT_ANY_ERROR(olMemAllocAligned(Context, Device, OL_ALLOC_TYPE_DEVICE,
+                                     std::numeric_limits<size_t>::max(),
+                                     DefaultAlignment, &Alloc));
   ASSERT_EQ(Alloc, nullptr);
 }
 
