@@ -4042,6 +4042,25 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
+  } else if (name == "signal") {
+    const auto &arg{call.arguments[1]};
+    bool handlerOk{false};
+    if (arg) {
+      if (const auto *expr{arg->UnwrapExpr()}) {
+        if (IsProcedure(*expr)) {
+          handlerOk = true;
+        } else if (auto type{expr->GetType()}) {
+          handlerOk =
+              type->category() == TypeCategory::Integer && expr->Rank() == 0;
+        }
+      }
+      if (!handlerOk) {
+        ok = false;
+        context.messages().Say(
+            arg ? arg->sourceLocation() : context.messages().at(),
+            "'handler=' argument to SIGNAL() must be a procedure or a scalar INTEGER"_err_en_US);
+      }
+    }
   } else if (name == "tokenize") {
     // Both forms of TOKENIZE have at least 4 dummy arguments, and the last two
     // must be allocatable.
