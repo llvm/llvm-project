@@ -4496,7 +4496,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (isa<FixedVectorType>(Ty)) {
         // Fast case - sign splat can be simply split across the small elements.
         // This works for both vector and scalar sources
-        Tmp = ComputeNumSignBits(Src, Q, Depth + 1);
+        unsigned Scale = SrcBits / TyBits;
+        APInt SrcDemandedElts = APIntOps::ScaleBitMask(
+            DemandedElts, DemandedElts.getBitWidth() / Scale);
+        Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Q, Depth + 1);
         if (Tmp == SrcBits)
           return TyBits;
       }
@@ -4625,7 +4628,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Add:
       // Add can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1) break;
 
       // Special case decrementing a value (ADD X, -1):
@@ -4722,7 +4725,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If the input contained enough sign bits that some remain after the
       // truncation, then we can make use of that. Otherwise we don't know
       // anything.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
         return Tmp - (OperandTyBits - TyBits);
@@ -4730,12 +4733,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return 1;
     }
 
-    case Instruction::ExtractElement:
-      // Look through extract element. At the moment we keep this simple and
-      // skip tracking the specific element. But at least we might find
-      // information valid for all elements of the vector (for example if vector
-      // is sign extended, shifted, etc).
-      return ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+    case Instruction::ExtractElement: {
+      const Value *Vec = U->getOperand(0);
+      auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+      if (!VecTy)
+        return ComputeNumSignBits(Vec, Q, Depth + 1);
+
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      if (auto *CIdx = dyn_cast<ConstantInt>(U->getOperand(1)))
+        if (CIdx->getValue().ult(NumElts))
+          DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return ComputeNumSignBits(Vec, DemandedVecElts, Q, Depth + 1);
+    }
 
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
