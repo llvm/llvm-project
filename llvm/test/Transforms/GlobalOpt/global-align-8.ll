@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @phi = internal global ptr null
 
 ;.
-; CHECK: @phi.body = internal unnamed_addr global [16 x i8] undef{{$}}
+; CHECK: @phi.body = internal unnamed_addr global [16 x i8] undef, align 16
 ;.
 define void @init() {
 ; CHECK-LABEL: define void @init() local_unnamed_addr {

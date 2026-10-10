@@ -910,11 +910,9 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
 /// Because it is always the result of the specified malloc, there is no reason
 /// to actually DO the malloc.  Instead, turn the malloc into a global, and any
 /// loads of GV as uses of the new global.
-static GlobalVariable *
-OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
-                                  uint64_t AllocSize, Constant *InitVal,
-                                  const DataLayout &DL,
-                                  TargetLibraryInfo *TLI) {
+static GlobalVariable *OptimizeGlobalAddressOfAllocation(
+    GlobalVariable *GV, CallInst *CI, uint64_t AllocSize, Constant *InitVal,
+    Align GVAlign, const DataLayout &DL, TargetLibraryInfo *TLI) {
   LLVM_DEBUG(errs() << "PROMOTING GLOBAL: " << *GV << "  CALL = " << *CI
                     << '\n');
 
@@ -929,6 +927,12 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       UndefValue::get(GlobalType), GV->getName() + ".body", nullptr,
       GV->getThreadLocalMode());
 
+  // Only specify the global alignment if it increases the preferred alignment.
+  // Otherwise leave it unset to allow other optimizations to increase it.
+  if (GVAlign > DL.getPreferredAlign(NewGV)) {
+    NewGV->setAlignment(GVAlign);
+  }
+
   // Initialize the global at the point of the original call.  Note that this
   // is a different point from the initialization referred to below for the
   // nullability handling.  Sublety: We have not proven the original global was
@@ -936,8 +940,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
   // of the new global as may need to re-init the storage multiple times.
   if (!isa<UndefValue>(InitVal)) {
     IRBuilder<> Builder(CI->getNextNode());
-    // TODO: Use alignment above if align!=1
-    Builder.CreateMemSet(NewGV, InitVal, AllocSize, std::nullopt);
+    Builder.CreateMemSet(NewGV, InitVal, AllocSize, NewGV->getAlign());
   }
 
   // Update users of the allocation to use the new global instead.
@@ -1070,6 +1073,78 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
   return true;
 }
 
+/// Compute the alignment of the global that will replace the allocation `CI`,
+/// which is stored in `GV`. The global needs to be aligned enough for all loads
+/// and stores through `CI`, and through the pointers loaded from `GV`. Returns
+/// `std::nullopt` if an access is at an offset that no alignment of the global
+/// can make aligned enough.
+///
+/// This considers the uses that `valueIsOnlyUsedLocallyOrStoredToOneGlobal`
+/// allows on `CI`, and `allUsesOfLoadedValueWillTrapIfNull` allows on the
+/// pointers loaded from `GV`.
+static std::optional<Align> getAllocationGlobalAlign(GlobalVariable *GV,
+                                                     CallInst *CI,
+                                                     const DataLayout &DL) {
+  // Alignment of the return value of the allocator call.
+  Align GVAlign = CI->getPointerAlignment(DL);
+
+  // For each visited pointer, the alignment of its offset from the start of
+  // the allocation. We do not try to distinguish between different offsets of
+  // the pointer. The offset alignment of a pointer reached in multiple ways
+  // (via PHIs) is the minimum of them, so a pointer is visited again when its
+  // offset alignment decreases.
+  SmallDenseMap<const Value *, Align, 8> OffsetAligns;
+  SmallVector<std::pair<const Value *, Align>, 8> Worklist;
+  Worklist.emplace_back(CI, Align(Value::MaximumAlignment));
+
+  SmallVector<Value *, 4> Guses;
+  allUsesOfLoadAndStores(GV, Guses);
+  for (Value *Guse : Guses)
+    if (isa<LoadInst>(Guse))
+      Worklist.emplace_back(Guse, Align(Value::MaximumAlignment));
+
+  while (!Worklist.empty()) {
+    auto [V, OffsetAlign] = Worklist.pop_back_val();
+    auto [It, Inserted] = OffsetAligns.try_emplace(V, OffsetAlign);
+    if (!Inserted) {
+      if (It->second <= OffsetAlign)
+        continue;
+      It->second = OffsetAlign;
+    }
+
+    for (const Use &VUse : V->uses()) {
+      const User *U = VUse.getUser();
+      Align AccessAlign;
+      if (auto *LI = dyn_cast<LoadInst>(U)) {
+        AccessAlign = LI->getAlign();
+      } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        // Storing the pointer (into GV) is not an access to the allocation.
+        if (VUse.getOperandNo() != SI->getPointerOperandIndex())
+          continue;
+        AccessAlign = SI->getAlign();
+      } else if (auto *GEP = dyn_cast<GEPOperator>(U)) {
+        Worklist.emplace_back(
+            GEP, std::min(OffsetAlign, GEP->getMaxPreservedAlignment(DL)));
+        continue;
+      } else if (isa<AddrSpaceCastOperator>(U) || isa<PHINode>(U)) {
+        Worklist.emplace_back(U, OffsetAlign);
+        continue;
+      } else {
+        continue;
+      }
+
+      // If the access is at an offset that is only known to be a multiple of
+      // a smaller alignment than the access's, aligning the global does not
+      // make the access aligned.
+      if (AccessAlign > OffsetAlign)
+        return std::nullopt;
+      GVAlign = std::max(GVAlign, AccessAlign);
+    }
+  }
+
+  return GVAlign;
+}
+
 /// If we have a global that is only initialized with a fixed size allocation
 /// try to transform the program to use global memory instead of heap
 /// allocated memory. This eliminates dynamic allocation, avoids an indirection
@@ -1080,6 +1155,12 @@ static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
                                                    TargetLibraryInfo *TLI) {
   if (!isRemovableAlloc(CI, TLI))
     // Must be able to remove the call when we get done..
+    return false;
+
+  // The new global is created in the default globals address space, so it can
+  // only replace the allocation if they are in the same address space.
+  if (CI->getType()->getPointerAddressSpace() !=
+      DL.getDefaultGlobalsAddressSpace())
     return false;
 
   Type *Int8Ty = Type::getInt8Ty(CI->getFunction()->getContext());
@@ -1114,7 +1195,12 @@ static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
   if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(CI, GV))
     return false;
 
-  OptimizeGlobalAddressOfAllocation(GV, CI, AllocSize, InitVal, DL, TLI);
+  std::optional<Align> GVAlign = getAllocationGlobalAlign(GV, CI, DL);
+  if (!GVAlign)
+    return false;
+
+  OptimizeGlobalAddressOfAllocation(GV, CI, AllocSize, InitVal, *GVAlign, DL,
+                                    TLI);
   return true;
 }
 

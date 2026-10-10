@@ -12,10 +12,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @g = internal global ptr null
 
 ;.
-; CHECK: @g.body = internal unnamed_addr global [16 x i8] undef{{$}}
+; CHECK: @g = internal unnamed_addr global ptr null
 ;.
 define void @init() {
 ; CHECK-LABEL: define void @init() local_unnamed_addr {
+; CHECK-NEXT:    [[M:%.*]] = call noalias ptr @malloc(i64 16)
+; CHECK-NEXT:    store ptr [[M]], ptr @g, align 8
 ; CHECK-NEXT:    ret void
 ;
   %m = call noalias ptr @malloc(i64 16)
@@ -26,7 +28,8 @@ define void @init() {
 define void @store(i64 %i, i64 %v) {
 ; CHECK-LABEL: define void @store(
 ; CHECK-SAME: i64 [[I:%.*]], i64 [[V:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr i64, ptr @g.body, i64 [[I]]
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr @g, align 8
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i64, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    store i64 [[V]], ptr [[Q]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -39,7 +42,8 @@ define void @store(i64 %i, i64 %v) {
 define i8 @load(i64 %i) {
 ; CHECK-LABEL: define i8 @load(
 ; CHECK-SAME: i64 [[I:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr @g.body, i64 [[I]]
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr @g, align 8
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[Q]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
@@ -50,3 +54,6 @@ define i8 @load(i64 %i) {
 }
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) }
+;.

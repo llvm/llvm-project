@@ -102,9 +102,8 @@ std::optional<ConstantRange> GEPOperator::getInRange() const {
 }
 
 Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
-  /// compute the worse possible offset for every level of the GEP et accumulate
-  /// the minimum alignment into Result.
-
+  // Compute the worst possible offset for every level of the GEP to accumulate
+  // the minimum alignment into Result.
   Align Result = Align(llvm::Value::MaximumAlignment);
   for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
        GTI != GTE; ++GTI) {
@@ -117,8 +116,8 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
           SL->getElementOffset(OpC->getValue().getLoBits(32).getZExtValue());
     } else {
       assert(GTI.isSequential() && "should be sequencial");
-      /// If the index isn't known, we take 1 because it is the index that will
-      /// give the worse alignment of the offset.
+      // If the index isn't known, we take 1 because it is the index that will
+      // give the worse alignment of the offset.
       const uint64_t ElemCount = OpC ? OpC->getLimitedValue() : 1;
       Offset = GTI.getSequentialElementStride(DL) * ElemCount;
     }
