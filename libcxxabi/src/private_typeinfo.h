@@ -50,13 +50,10 @@ public:
   _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
 };
 
-enum
-{
-    unknown = 0,
-    public_path,
-    not_public_path,
-    yes,
-    no
+enum class path_kind : uint8_t {
+  unknown,
+  public_path,
+  not_public_path,
 };
 
 class _LIBCXXABI_TYPE_VIS __class_type_info;
@@ -69,9 +66,8 @@ struct catch_info {
   // pointer to a dst_type which does not have (static_ptr, static_type) above it
   const void* dst_ptr_not_leading_to_static_ptr;
 
-  // The following three paths are either unknown, public_path or not_public_path.
   // access of path from dst_ptr_leading_to_static_ptr to (static_ptr, static_type)
-  int path_dst_ptr_to_static_ptr;
+  path_kind path_dst_ptr_to_static_ptr;
 
   // Number of dst_types below (static_ptr, static_type)
   int number_to_static_ptr;
@@ -100,15 +96,14 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
     // pointer to a dst_type which does not have (static_ptr, static_type) above it
     const void* dst_ptr_not_leading_to_static_ptr;
 
-    // The following three paths are either unknown, public_path or not_public_path.
     // access of path from dst_ptr_leading_to_static_ptr to (static_ptr, static_type)
-    int path_dst_ptr_to_static_ptr;
+    path_kind path_dst_ptr_to_static_ptr;
     // access of path from (dynamic_ptr, dynamic_type) to (static_ptr, static_type)
     //    when there is no dst_type along the path
-    int path_dynamic_ptr_to_static_ptr;
+    path_kind path_dynamic_ptr_to_static_ptr;
     // access of path from (dynamic_ptr, dynamic_type) to dst_type
     //    (not used if there is a (static_ptr, static_type) above a dst_type).
-    int path_dynamic_ptr_to_dst_ptr;
+    path_kind path_dynamic_ptr_to_dst_ptr;
 
     // Number of dst_types below (static_ptr, static_type)
     int number_to_static_ptr;
@@ -117,8 +112,7 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info
 
 // Data that helps stop the search before the entire tree is searched:
 
-    // is_dst_type_derived_from_static_type is either unknown, yes or no.
-    int is_dst_type_derived_from_static_type;
+    bool dst_type_might_be_derived_from_static_type;
     // Number of dst_type in tree.  If 0, then that means unknown.
     int number_of_dst_type;
     // communicates to a dst_type node that (static_ptr, static_type) was found
@@ -136,19 +130,14 @@ class _LIBCXXABI_TYPE_VIS __class_type_info : public __shim_type_info {
 public:
   _LIBCXXABI_HIDDEN ~__class_type_info() override;
 
-  _LIBCXXABI_HIDDEN void process_static_type_above_dst(__dynamic_cast_info *,
-                                                       const void *,
-                                                       const void *, int) const;
-  _LIBCXXABI_HIDDEN void process_static_type_below_dst(__dynamic_cast_info *,
-                                                       const void *, int) const;
-  _LIBCXXABI_HIDDEN void process_found_base_class(catch_info*, void*, int) const;
-  _LIBCXXABI_HIDDEN virtual void search_above_dst(__dynamic_cast_info *,
-                                                  const void *, const void *,
-                                                  int, bool) const;
+  _LIBCXXABI_HIDDEN void process_static_type_above_dst(__dynamic_cast_info*, const void*, const void*, path_kind) const;
+  _LIBCXXABI_HIDDEN void process_static_type_below_dst(__dynamic_cast_info*, const void*, path_kind) const;
+  _LIBCXXABI_HIDDEN void process_found_base_class(catch_info*, void*, path_kind) const;
   _LIBCXXABI_HIDDEN virtual void
-  search_below_dst(__dynamic_cast_info *, const void *, int, bool) const;
+  search_above_dst(__dynamic_cast_info*, const void*, const void*, path_kind, bool) const;
+  _LIBCXXABI_HIDDEN virtual void search_below_dst(__dynamic_cast_info*, const void*, path_kind, bool) const;
   _LIBCXXABI_HIDDEN bool can_catch(const __shim_type_info*, void*&) const final;
-  _LIBCXXABI_HIDDEN virtual void has_unambiguous_public_base(catch_info*, void*, int) const;
+  _LIBCXXABI_HIDDEN virtual void has_unambiguous_public_base(catch_info*, void*, path_kind) const;
 };
 
 // Has one non-virtual public base class at offset zero
@@ -158,9 +147,9 @@ public:
 
   _LIBCXXABI_HIDDEN ~__si_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, int) const final;
+  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, path_kind, bool) const final;
+  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, path_kind, bool) const final;
+  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, path_kind) const final;
 };
 
 struct _LIBCXXABI_HIDDEN __base_class_type_info
@@ -176,9 +165,9 @@ public:
         __offset_shift = 8
     };
 
-    void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const;
-    void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const;
-    void has_unambiguous_public_base(catch_info*, void*, int) const;
+    void search_above_dst(__dynamic_cast_info*, const void*, const void*, path_kind, bool) const;
+    void search_below_dst(__dynamic_cast_info*, const void*, path_kind, bool) const;
+    void has_unambiguous_public_base(catch_info*, void*, path_kind) const;
 };
 
 // Has one or more base classes
@@ -197,9 +186,9 @@ public:
 
   _LIBCXXABI_HIDDEN ~__vmi_class_type_info() final;
 
-  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, int, bool) const final;
-  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, int) const final;
+  _LIBCXXABI_HIDDEN void search_above_dst(__dynamic_cast_info*, const void*, const void*, path_kind, bool) const final;
+  _LIBCXXABI_HIDDEN void search_below_dst(__dynamic_cast_info*, const void*, path_kind, bool) const final;
+  _LIBCXXABI_HIDDEN void has_unambiguous_public_base(catch_info*, void*, path_kind) const final;
 };
 
 class _LIBCXXABI_TYPE_VIS __pbase_type_info : public __shim_type_info {

@@ -173,18 +173,18 @@ const void* dyn_cast_to_derived(
       static_type,
       0,
       0,
+      path_kind::unknown,
+      path_kind::unknown,
+      path_kind::unknown,
       0,
       0,
-      0,
-      0,
-      0,
-      0,
+      true,
       1, // number_of_dst_type
       false,
       false,
       false};
   // Do the  search
-  dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, false);
+  dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, path_kind::public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // The following if should always be false because we should
   //   definitely find (static_ptr, static_type), either on a public
@@ -203,13 +203,13 @@ const void* dyn_cast_to_derived(
              static_type->name(),
              dst_type->name());
     // Redo the search comparing type_info's using strcmp
-    info                    = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false};
+    info                    = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, true, 0, false, false, false};
     info.number_of_dst_type = 1;
-    dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, true);
+    dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, path_kind::public_path, true);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // Query the search.
-  if (info.path_dst_ptr_to_static_ptr != public_path)
+  if (info.path_dst_ptr_to_static_ptr != path_kind::public_path)
     return nullptr;
 
   return dynamic_ptr;
@@ -246,18 +246,18 @@ const void* dyn_cast_try_downcast(
       dst_type,
       0,
       0,
+      path_kind::unknown,
+      path_kind::unknown,
+      path_kind::unknown,
       0,
       0,
-      0,
-      0,
-      0,
-      0,
+      true,
       1, // number_of_dst_type
       false,
       false,
       false};
-  dynamic_type->search_above_dst(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, public_path, false);
-  if (dynamic_to_dst_info.path_dst_ptr_to_static_ptr != unknown) {
+  dynamic_type->search_above_dst(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, path_kind::public_path, false);
+  if (dynamic_to_dst_info.path_dst_ptr_to_static_ptr != path_kind::unknown) {
     // We have found at least one path from dynamic_ptr to dst_ptr. The
     //   downcast can succeed.
     return dst_ptr_to_static;
@@ -276,9 +276,24 @@ const void* dyn_cast_slow(
   // Not using giant short cut.  Do the search
 
   // Initialize info struct for this search.
-  __dynamic_cast_info info = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false};
+  __dynamic_cast_info info = {
+      dst_type,
+      static_ptr,
+      static_type,
+      0,
+      0,
+      path_kind::unknown,
+      path_kind::unknown,
+      path_kind::unknown,
+      0,
+      0,
+      true,
+      0,
+      false,
+      false,
+      false};
 
-  dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, false);
+  dynamic_type->search_below_dst(&info, dynamic_ptr, path_kind::public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // The following if should always be false because we should
   //   definitely find (static_ptr, static_type), either on a public
@@ -297,21 +312,21 @@ const void* dyn_cast_slow(
              dynamic_type->name(),
              dst_type->name());
     // Redo the search comparing type_info's using strcmp
-    info = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false};
-    dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, true);
+    info = {dst_type, static_ptr, static_type, 0, 0, 0, 0, 0, 0, 0, true, 0, false, false, false};
+    dynamic_type->search_below_dst(&info, dynamic_ptr, path_kind::public_path, true);
   }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
   // Query the search.
   switch (info.number_to_static_ptr) {
   case 0:
-    if (info.number_to_dst_ptr == 1 && info.path_dynamic_ptr_to_static_ptr == public_path &&
-        info.path_dynamic_ptr_to_dst_ptr == public_path)
+    if (info.number_to_dst_ptr == 1 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
+        info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path)
       return info.dst_ptr_not_leading_to_static_ptr;
     break;
   case 1:
-    if (info.path_dst_ptr_to_static_ptr == public_path ||
-        (info.number_to_dst_ptr == 0 && info.path_dynamic_ptr_to_static_ptr == public_path &&
-         info.path_dynamic_ptr_to_dst_ptr == public_path))
+    if (info.path_dst_ptr_to_static_ptr == path_kind::public_path ||
+        (info.number_to_dst_ptr == 0 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
+         info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path))
       return info.dst_ptr_leading_to_static_ptr;
     break;
   }
@@ -444,9 +459,9 @@ bool __class_type_info::can_catch(const __shim_type_info* thrown_type, void*& ad
     return false;
   // bullet 2
   _LIBCXXABI_ASSERT(adjustedPtr, "catching a class without an object?");
-  catch_info info = {this, nullptr, nullptr, 0, 0, false, true, nullptr};
-  thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
-  if (info.path_dst_ptr_to_static_ptr == public_path) {
+  catch_info info = {this, nullptr, nullptr, path_kind::unknown, 0, false, true, nullptr};
+  thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, path_kind::public_path);
+  if (info.path_dst_ptr_to_static_ptr == path_kind::public_path) {
     adjustedPtr = const_cast<void*>(info.dst_ptr_leading_to_static_ptr);
     return true;
   }
@@ -473,7 +488,7 @@ bool __class_type_info::can_catch(const __shim_type_info* thrown_type, void*& ad
 // different offset (adjustedPtr) from any previously recorded, this indicates
 // an ambiguous case within the virtual base.
 
-void __class_type_info::process_found_base_class(catch_info* info, void* adjustedPtr, int path_below) const {
+void __class_type_info::process_found_base_class(catch_info* info, void* adjustedPtr, path_kind path_below) const {
   if (info->number_to_static_ptr == 0) {
     // First time we found this base
     info->dst_ptr_leading_to_static_ptr = adjustedPtr;
@@ -484,30 +499,31 @@ void __class_type_info::process_found_base_class(catch_info* info, void* adjuste
   } else if (info->dst_ptr_not_leading_to_static_ptr == info->vbase_cookie &&
              info->dst_ptr_leading_to_static_ptr == adjustedPtr) {
     // We've been here before.  Update path to "most public"
-    if (info->path_dst_ptr_to_static_ptr == not_public_path)
+    if (info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
       info->path_dst_ptr_to_static_ptr = path_below;
   } else {
     // We've detected an ambiguous cast from (thrown_class_type, adjustedPtr)
     // to a static_type.
     info->number_to_static_ptr += 1;
-    info->path_dst_ptr_to_static_ptr = not_public_path;
+    info->path_dst_ptr_to_static_ptr = path_kind::not_public_path;
     info->search_done                = true;
   }
 }
 
-void __class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, int path_below) const {
+void __class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, path_kind path_below) const {
   if (is_equal(this, info->static_type, false))
     process_found_base_class(info, adjustedPtr, path_below);
 }
 
-void __si_class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, int path_below) const {
+void __si_class_type_info::has_unambiguous_public_base(
+    catch_info* info, void* adjustedPtr, path_kind path_below) const {
   if (is_equal(this, info->static_type, false))
     process_found_base_class(info, adjustedPtr, path_below);
   else
     __base_type->has_unambiguous_public_base(info, adjustedPtr, path_below);
 }
 
-void __base_class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, int path_below) const {
+void __base_class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, path_kind path_below) const {
   bool is_virtual          = __offset_flags & __virtual_mask;
   ptrdiff_t offset_to_base = 0;
   if (info->have_object) {
@@ -535,10 +551,10 @@ void __base_class_type_info::has_unambiguous_public_base(catch_info* info, void*
   __base_type->has_unambiguous_public_base(
       info,
       reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(adjustedPtr) + offset_to_base),
-      (__offset_flags & __public_mask) ? path_below : not_public_path);
+      (__offset_flags & __public_mask) ? path_below : path_kind::not_public_path);
 }
 
-void __vmi_class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, int path_below) const {
+void __vmi_class_type_info::has_unambiguous_public_base(catch_info* info, void* adjustedPtr, path_kind path_below) const {
   if (is_equal(this, info->static_type, false))
     process_found_base_class(info, adjustedPtr, path_below);
   else {
@@ -635,9 +651,9 @@ bool __pointer_type_info::can_catch(const __shim_type_info* thrown_type, void*& 
   if (thrown_class_type == 0)
     return false;
   bool have_object = adjustedPtr != nullptr;
-  catch_info info  = {catch_class_type, nullptr, nullptr, 0, 0, false, have_object, nullptr};
-  thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
-  if (info.path_dst_ptr_to_static_ptr == public_path) {
+  catch_info info  = {catch_class_type, nullptr, nullptr, path_kind::unknown, 0, false, have_object, nullptr};
+  thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, path_kind::public_path);
+  if (info.path_dst_ptr_to_static_ptr == path_kind::public_path) {
     // In the case of a thrown null pointer, we have no object but we might
     // well have computed the offset to where a public sub-object would be.
     // However, we do not want to return that offset to the user; we still
@@ -862,7 +878,7 @@ __dynamic_cast(const void* static_ptr,
 //   If more than one (dst_ptr, dst_type) points to (static_ptr, static_type),
 //   then mark this dyanmic_cast as ambiguous and stop the search.
 void __class_type_info::process_static_type_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, path_kind path_below) const {
   // Record that we found a static_type
   info->found_any_static_type = true;
   if (current_ptr == info->static_ptr) {
@@ -875,15 +891,15 @@ void __class_type_info::process_static_type_above_dst(
       info->number_to_static_ptr          = 1;
       // If there is only one dst_type in the entire tree and the path from
       //    there to here is public then we are done!
-      if (info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == public_path)
+      if (info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == path_kind::public_path)
         info->search_done = true;
     } else if (info->dst_ptr_leading_to_static_ptr == dst_ptr) {
       // We've been here before.  Update path to "most public"
-      if (info->path_dst_ptr_to_static_ptr == not_public_path)
+      if (info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
         info->path_dst_ptr_to_static_ptr = path_below;
       // If there is only one dst_type in the entire tree and the path from
       //    there to here is public then we are done!
-      if (info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == public_path)
+      if (info->number_of_dst_type == 1 && info->path_dst_ptr_to_static_ptr == path_kind::public_path)
         info->search_done = true;
     } else {
       // We've detected an ambiguous cast from (static_ptr, static_type)
@@ -899,11 +915,11 @@ void __class_type_info::process_static_type_above_dst(
 //   Record the path (public or not) from (dynamic_ptr, dynamic_type) to here.  There may be
 //   multiple paths from (dynamic_ptr, dynamic_type) to here, record the "most public" one.
 void __class_type_info::process_static_type_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below) const {
+    __dynamic_cast_info* info, const void* current_ptr, path_kind path_below) const {
   if (current_ptr == info->static_ptr) {
     // Record the most public path from (dynamic_ptr, dynamic_type) to
     //                                  (static_ptr, static_type)
-    if (info->path_dynamic_ptr_to_static_ptr != public_path)
+    if (info->path_dynamic_ptr_to_static_ptr != path_kind::public_path)
       info->path_dynamic_ptr_to_static_ptr = path_below;
   }
 }
@@ -962,7 +978,7 @@ void __class_type_info::process_static_type_below_dst(
 //     }
 // }
 void __vmi_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* current_ptr, path_kind path_below, bool use_strcmp) const {
   typedef const __base_class_type_info* Iter;
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_below_dst(info, current_ptr, path_below);
@@ -973,8 +989,8 @@ void __vmi_class_type_info::search_below_dst(
       // We've seen this node before, and therefore have already searched
       // its base classes above.
       //  Update path to here that is "most public".
-      if (path_below == public_path)
-        info->path_dynamic_ptr_to_dst_ptr = public_path;
+      if (path_below == path_kind::public_path)
+        info->path_dynamic_ptr_to_dst_ptr = path_kind::public_path;
     } else // We have haven't been here before
     {
       // Record the access path that got us here
@@ -983,7 +999,7 @@ void __vmi_class_type_info::search_below_dst(
       bool does_dst_type_point_to_our_static_type = false;
       // Only search above here if dst_type derives from static_type, or
       //    if it is unknown if dst_type derives from static_type.
-      if (info->is_dst_type_derived_from_static_type != no) {
+      if (info->dst_type_might_be_derived_from_static_type) {
         // Set up flags to record results from all base classes
         bool is_dst_type_derived_from_static_type = false;
 
@@ -1001,7 +1017,7 @@ void __vmi_class_type_info::search_below_dst(
           // Zero out found flags
           info->found_our_static_ptr  = false;
           info->found_any_static_type = false;
-          p->search_above_dst(info, current_ptr, current_ptr, public_path, use_strcmp);
+          p->search_above_dst(info, current_ptr, current_ptr, path_kind::public_path, use_strcmp);
           if (info->search_done)
             break;
           if (info->found_any_static_type) {
@@ -1009,7 +1025,7 @@ void __vmi_class_type_info::search_below_dst(
             if (info->found_our_static_ptr) {
               does_dst_type_point_to_our_static_type = true;
               // If we found what we're looking for, stop looking above.
-              if (info->path_dst_ptr_to_static_ptr == public_path)
+              if (info->path_dst_ptr_to_static_ptr == path_kind::public_path)
                 break;
               // We found a private path to (static_ptr, static_type)
               //   If there is no diamond then there is only one path
@@ -1029,10 +1045,7 @@ void __vmi_class_type_info::search_below_dst(
         //   from static_type, else it does.  Record this result so that
         //   next time we hit a dst_type we will know not to search above
         //   it if it doesn't derive from static_type.
-        if (is_dst_type_derived_from_static_type)
-          info->is_dst_type_derived_from_static_type = yes;
-        else
-          info->is_dst_type_derived_from_static_type = no;
+        info->dst_type_might_be_derived_from_static_type = is_dst_type_derived_from_static_type;
       }
       if (!does_dst_type_point_to_our_static_type) {
         // We found a dst_type that doesn't point to (static_ptr, static_type)
@@ -1044,7 +1057,7 @@ void __vmi_class_type_info::search_below_dst(
         //    (static_ptr, static_type), then the cast from
         //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous,
         //      so stop search.
-        if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == not_public_path)
+        if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
           info->search_done = true;
       }
     }
@@ -1075,7 +1088,7 @@ void __vmi_class_type_info::search_below_dst(
           //    then the only reason to continue the search is to make sure
           //    no other dst_type points to (static_ptr, static_type).
           //    If !diamond, then we don't need to search here.
-          if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == public_path)
+          if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == path_kind::public_path)
             break;
           p->search_below_dst(info, current_ptr, path_below, use_strcmp);
         } while (++p < e);
@@ -1107,7 +1120,7 @@ void __vmi_class_type_info::search_below_dst(
 // This is the same algorithm as __vmi_class_type_info::search_below_dst but
 //   simplified to the case that there is only a single base class.
 void __si_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* current_ptr, path_kind path_below, bool use_strcmp) const {
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_below_dst(info, current_ptr, path_below);
   else if (is_equal(this, info->dst_type, use_strcmp)) {
@@ -1117,8 +1130,8 @@ void __si_class_type_info::search_below_dst(
       // We've seen this node before, and therefore have already searched
       // its base classes above.
       //  Update path to here that is "most public".
-      if (path_below == public_path)
-        info->path_dynamic_ptr_to_dst_ptr = public_path;
+      if (path_below == path_kind::public_path)
+        info->path_dynamic_ptr_to_dst_ptr = path_kind::public_path;
     } else // We have haven't been here before
     {
       // Record the access path that got us here
@@ -1127,13 +1140,13 @@ void __si_class_type_info::search_below_dst(
       bool does_dst_type_point_to_our_static_type = false;
       // Only search above here if dst_type derives from static_type, or
       //    if it is unknown if dst_type derives from static_type.
-      if (info->is_dst_type_derived_from_static_type != no) {
+      if (info->dst_type_might_be_derived_from_static_type) {
         // Set up flags to record results from all base classes
         bool is_dst_type_derived_from_static_type = false;
         // Zero out found flags
         info->found_our_static_ptr  = false;
         info->found_any_static_type = false;
-        __base_type->search_above_dst(info, current_ptr, current_ptr, public_path, use_strcmp);
+        __base_type->search_above_dst(info, current_ptr, current_ptr, path_kind::public_path, use_strcmp);
         if (info->found_any_static_type) {
           is_dst_type_derived_from_static_type = true;
           if (info->found_our_static_ptr)
@@ -1143,10 +1156,7 @@ void __si_class_type_info::search_below_dst(
         //   from static_type, else it does.  Record this result so that
         //   next time we hit a dst_type we will know not to search above
         //   it if it doesn't derive from static_type.
-        if (is_dst_type_derived_from_static_type)
-          info->is_dst_type_derived_from_static_type = yes;
-        else
-          info->is_dst_type_derived_from_static_type = no;
+        info->dst_type_might_be_derived_from_static_type = is_dst_type_derived_from_static_type;
       }
       if (!does_dst_type_point_to_our_static_type) {
         // We found a dst_type that doesn't point to (static_ptr, static_type)
@@ -1157,7 +1167,7 @@ void __si_class_type_info::search_below_dst(
         // If there exists another dst with a private path to
         //    (static_ptr, static_type), then the cast from
         //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous.
-        if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == not_public_path)
+        if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
           info->search_done = true;
       }
     }
@@ -1170,7 +1180,7 @@ void __si_class_type_info::search_below_dst(
 // This is the same algorithm as __vmi_class_type_info::search_below_dst but
 //   simplified to the case that there is no base class.
 void __class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* current_ptr, path_kind path_below, bool use_strcmp) const {
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_below_dst(info, current_ptr, path_below);
   else if (is_equal(this, info->dst_type, use_strcmp)) {
@@ -1180,8 +1190,8 @@ void __class_type_info::search_below_dst(
       // We've seen this node before, and therefore have already searched
       // its base classes above.
       //  Update path to here that is "most public".
-      if (path_below == public_path)
-        info->path_dynamic_ptr_to_dst_ptr = public_path;
+      if (path_below == path_kind::public_path)
+        info->path_dynamic_ptr_to_dst_ptr = path_kind::public_path;
     } else // We have haven't been here before
     {
       // Record the access path that got us here
@@ -1195,10 +1205,10 @@ void __class_type_info::search_below_dst(
       // If there exists another dst with a private path to
       //    (static_ptr, static_type), then the cast from
       //     (dynamic_ptr, dynamic_type) to dst_type is now ambiguous.
-      if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == not_public_path)
+      if (info->number_to_static_ptr == 1 && info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
         info->search_done = true;
       // We found that dst_type does not derive from static_type
-      info->is_dst_type_derived_from_static_type = no;
+      info->dst_type_might_be_derived_from_static_type = false;
     }
   }
 }
@@ -1230,7 +1240,8 @@ void __class_type_info::search_below_dst(
 //     }
 // }
 void __vmi_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, path_kind path_below, bool use_strcmp)
+    const {
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
   else {
@@ -1262,7 +1273,7 @@ void __vmi_class_type_info::search_above_dst(
           break;
         if (info->found_our_static_ptr) {
           // If we found what we're looking for, stop looking above.
-          if (info->path_dst_ptr_to_static_ptr == public_path)
+          if (info->path_dst_ptr_to_static_ptr == path_kind::public_path)
             break;
           // We found a private path to (static_ptr, static_type)
           //   If there is no diamond then there is only one path
@@ -1293,7 +1304,8 @@ void __vmi_class_type_info::search_above_dst(
 // This is the same algorithm as __vmi_class_type_info::search_above_dst but
 //   simplified to the case that there is only a single base class.
 void __si_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, path_kind path_below, bool use_strcmp)
+    const {
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
   else
@@ -1303,7 +1315,8 @@ void __si_class_type_info::search_above_dst(
 // This is the same algorithm as __vmi_class_type_info::search_above_dst but
 //   simplified to the case that there is no base class.
 void __class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, path_kind path_below, bool use_strcmp)
+    const {
   if (is_equal(this, info->static_type, use_strcmp))
     process_static_type_above_dst(info, dst_ptr, current_ptr, path_below);
 }
@@ -1313,7 +1326,8 @@ void __class_type_info::search_above_dst(
 //   passed up to the base class node.
 
 void __base_class_type_info::search_above_dst(
-    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* dst_ptr, const void* current_ptr, path_kind path_below, bool use_strcmp)
+    const {
   ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
   if (__offset_flags & __virtual_mask) {
     const char* vtable = strip_vtable(*static_cast<const char* const*>(current_ptr));
@@ -1323,12 +1337,12 @@ void __base_class_type_info::search_above_dst(
       info,
       dst_ptr,
       static_cast<const char*>(current_ptr) + offset_to_base,
-      (__offset_flags & __public_mask) ? path_below : not_public_path,
+      (__offset_flags & __public_mask) ? path_below : path_kind::not_public_path,
       use_strcmp);
 }
 
 void __base_class_type_info::search_below_dst(
-    __dynamic_cast_info* info, const void* current_ptr, int path_below, bool use_strcmp) const {
+    __dynamic_cast_info* info, const void* current_ptr, path_kind path_below, bool use_strcmp) const {
   ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
   if (__offset_flags & __virtual_mask) {
     const char* vtable = strip_vtable(*static_cast<const char* const*>(current_ptr));
@@ -1337,7 +1351,7 @@ void __base_class_type_info::search_below_dst(
   __base_type->search_below_dst(
       info,
       static_cast<const char*>(current_ptr) + offset_to_base,
-      (__offset_flags & __public_mask) ? path_below : not_public_path,
+      (__offset_flags & __public_mask) ? path_below : path_kind::not_public_path,
       use_strcmp);
 }
 
