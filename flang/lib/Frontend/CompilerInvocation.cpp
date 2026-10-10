@@ -383,6 +383,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
 
+  // -fkeep-inline-functions. The driver forwards only the positive flag.
+  opts.KeepInlineFunctions =
+      args.hasArg(clang::options::OPT_fkeep_inline_functions);
   if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
     opts.DisableTailCalls = 1;
 
