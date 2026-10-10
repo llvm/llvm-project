@@ -597,39 +597,27 @@ define i32 @bz_h_multiuse(<8 x i16> %v, ptr %p) {
 ; LA64-LABEL: bz_h_multiuse:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vsetanyeqz.h $fcc0, $vr0
-; LA64-NEXT:    bcnez $fcc0, .LBB20_3
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.d $a1, $zero, 0
-; LA64-NEXT:    st.w $a1, $a0, 0
-; LA64-NEXT:    bcnez $fcc0, .LBB20_4
-; LA64-NEXT:  .LBB20_2: # %e
-; LA64-NEXT:    move $a0, $zero
-; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB20_3:
-; LA64-NEXT:    addi.d $a1, $zero, 1
+; LA64-NEXT:    movcf2gr $a1, $fcc0
 ; LA64-NEXT:    st.w $a1, $a0, 0
 ; LA64-NEXT:    bceqz $fcc0, .LBB20_2
-; LA64-NEXT:  .LBB20_4: # %t
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ori $a0, $zero, 1
+; LA64-NEXT:    ret
+; LA64-NEXT:  .LBB20_2: # %e
+; LA64-NEXT:    move $a0, $zero
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: bz_h_multiuse:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vsetanyeqz.h $fcc0, $vr0
-; LA32-NEXT:    bcnez $fcc0, .LBB20_3
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    bcnez $fcc0, .LBB20_4
-; LA32-NEXT:  .LBB20_2: # %e
-; LA32-NEXT:    move $a0, $zero
-; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB20_3:
-; LA32-NEXT:    addi.w $a1, $zero, 1
+; LA32-NEXT:    movcf2gr $a1, $fcc0
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    bceqz $fcc0, .LBB20_2
-; LA32-NEXT:  .LBB20_4: # %t
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ori $a0, $zero, 1
+; LA32-NEXT:    ret
+; LA32-NEXT:  .LBB20_2: # %e
+; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lsx.bz.h(<8 x i16> %v)
   store volatile i32 %r, ptr %p

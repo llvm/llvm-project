@@ -8,12 +8,7 @@ define i32 @lasx_xbnz_b(<32 x i8> %va) nounwind {
 ; CHECK-LABEL: lasx_xbnz_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvsetallnez.b $fcc0, $xr0
-; CHECK-NEXT:    bcnez $fcc0, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 1
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lasx.xbnz.b(<32 x i8> %va)
@@ -26,12 +21,7 @@ define i32 @lasx_xbnz_h(<16 x i16> %va) nounwind {
 ; CHECK-LABEL: lasx_xbnz_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvsetallnez.h $fcc0, $xr0
-; CHECK-NEXT:    bcnez $fcc0, .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 1
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lasx.xbnz.h(<16 x i16> %va)
@@ -44,12 +34,7 @@ define i32 @lasx_xbnz_w(<8 x i32> %va) nounwind {
 ; CHECK-LABEL: lasx_xbnz_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvsetallnez.w $fcc0, $xr0
-; CHECK-NEXT:    bcnez $fcc0, .LBB2_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 1
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lasx.xbnz.w(<8 x i32> %va)
@@ -62,12 +47,7 @@ define i32 @lasx_xbnz_d(<4 x i64> %va) nounwind {
 ; CHECK-LABEL: lasx_xbnz_d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvsetallnez.d $fcc0, $xr0
-; CHECK-NEXT:    bcnez $fcc0, .LBB3_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_2: # %entry
-; CHECK-NEXT:    addi.w $a0, $zero, 1
+; CHECK-NEXT:    movcf2gr $a0, $fcc0
 ; CHECK-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lasx.xbnz.d(<4 x i64> %va)
