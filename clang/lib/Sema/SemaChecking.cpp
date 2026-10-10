@@ -1601,6 +1601,23 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
+  case Builtin::BIrealpath: {
+    BufferSize = Checker.ComputeSizeArgument(1);
+    if (!BufferSize)
+      return;
+    const llvm::Triple &T = Context.getTargetInfo().getTriple();
+    uint64_t PathMax = 0;
+    if (T.isOSLinux() || T.isOSFuchsia() || T.isOSAIX() || T.isOSHaiku())
+      PathMax = 4096;
+    else if (T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() ||
+             T.isOSOpenBSD() || T.isOSSolaris())
+      PathMax = 1024;
+    else
+      return;
+    DiagID = diag::warn_fortify_source_buffer_too_small;
+    AccessSize = llvm::APSInt::getUnsigned(PathMax).extOrTrunc(SizeTypeWidth);
+    break;
+  }
   // memchr(buf, val, size)
   case Builtin::BImemchr:
   case Builtin::BI__builtin_memchr: {
