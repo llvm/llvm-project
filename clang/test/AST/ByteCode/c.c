@@ -253,6 +253,11 @@ void unaryops(void) {
   (void)((struct ww {float x;}){3}.x--);
 }
 
+/// Elements of a file-scope compound literal carry their evaluated value.
+static long *addr_as_int = (long[]){2, (long)"x"};
+static const char **into_string = (const char *[]){&"abc"[1]};
+static int **int_as_ptr = (int *[]){(int *)(intptr_t)16};
+
 /// This used to fail because we didn't properly mark the struct
 /// initialized through a CompoundLiteralExpr as initialized.
 struct TestStruct {
@@ -486,3 +491,9 @@ Parse sqlite3Prepare_sParse;
 void sqlite3Prepare(void) {
   memset( ((char *)&sqlite3Prepare_sParse) + sizeof(int), 0, sizeof(int));
 }
+
+int strcmp(const char *, const char *);
+const union u {
+  char c[2];
+} str[] = {"", ""};
+const int strcmpFoo = strcmp((const char *)str, (const char *)str); // all-error {{not a compile-time constant}}

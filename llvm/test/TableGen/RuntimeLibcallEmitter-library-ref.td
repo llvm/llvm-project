@@ -44,10 +44,8 @@ def X86System : SystemRuntimeLibrary<isX86,
 // The dispatcher is a plain call for both libraries; no setUnavailable here.
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
 // CHECK:   if (TT.isX86()) {
-// CHECK: AvailableLibcallImpls = SystemAvailableImpls;
-// CHECK-EMPTY:
 // CHECK-NEXT:     if (isLibraryAvailable("compiler-rt"))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-NEXT:     if (isLibraryAvailable("libm"))
-// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
 // CHECK-NOT:   setUnavailable

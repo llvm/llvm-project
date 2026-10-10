@@ -15,10 +15,10 @@ define fp128 @soften_f128_load(ptr %p) {
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY2]], 0 :: (store (s32), align 16)
+  ; CHECK-NEXT:   SW [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 16)
+  ; CHECK-NEXT:   SW [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8, basealign 16)
+  ; CHECK-NEXT:   SW [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 16)
+  ; CHECK-NEXT:   SW [[LW]], [[COPY2]], 0 :: (store (s32), align 16)
   ; CHECK-NEXT:   PseudoRET
   %v = load fp128, ptr %p, align 16, !mem.cache_hint !0
   ret fp128 %v
@@ -62,10 +62,10 @@ define i128 @expand_i128_load(ptr %p) {
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 8)
-  ; CHECK-NEXT:   SW killed [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8)
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY2]], 0 :: (store (s32), align 8)
+  ; CHECK-NEXT:   SW [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 8)
+  ; CHECK-NEXT:   SW [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8)
+  ; CHECK-NEXT:   SW [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; CHECK-NEXT:   SW [[LW]], [[COPY2]], 0 :: (store (s32), align 8)
   ; CHECK-NEXT:   PseudoRET
   %v = load i128, ptr %p, align 16, !range !2, !mem.cache_hint !0
   ret i128 %v
@@ -82,10 +82,10 @@ define void @expand_i128_store(ptr %p, i128 %v) {
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
   ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32))
   ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32))
-  ; CHECK-NEXT:   SW killed [[LW3]], [[COPY1]], 12 :: (store (s32) into %ir.p + 12, basealign 16, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW2]], [[COPY1]], 8 :: (store (s32) into %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 16, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW3]], [[COPY1]], 12 :: (store (s32) into %ir.p + 12, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW2]], [[COPY1]], 8 :: (store (s32) into %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   PseudoRET
   store i128 %v, ptr %p, align 16, !mem.cache_hint !1
   ret void
@@ -104,8 +104,8 @@ define i128 @expand_i128_extload(ptr %p) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT:   SW [[COPY3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 8)
   ; CHECK-NEXT:   SW [[COPY3]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8)
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY2]], 0 :: (store (s32), align 8)
+  ; CHECK-NEXT:   SW [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; CHECK-NEXT:   SW [[LW]], [[COPY2]], 0 :: (store (s32), align 8)
   ; CHECK-NEXT:   PseudoRET
   %v = load i64, ptr %p, align 8, !range !3, !mem.cache_hint !0
   %ext = zext i64 %v to i128
@@ -121,8 +121,8 @@ define void @expand_i128_truncstore(ptr %p, i128 %v) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 8, !mem.cache_hint !1)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 8, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 8, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 8, !mem.cache_hint !1)
   ; CHECK-NEXT:   PseudoRET
   %trunc = trunc i128 %v to i64
   store i64 %trunc, ptr %p, align 8, !mem.cache_hint !1
