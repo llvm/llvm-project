@@ -40,6 +40,6 @@ end
 
 subroutine f06
   integer :: obj
-!ERROR: The DEPOBJ construct requires a single clause
+!ERROR: UPDATE (depend-objects) and DESTROY clauses are mutually exclusive
   !$omp depobj(obj) update(in) destroy
 end

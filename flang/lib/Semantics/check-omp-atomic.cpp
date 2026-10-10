@@ -1631,39 +1631,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
       llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_relaxed,
       llvm::omp::Clause::OMPC_release, llvm::omp::Clause::OMPC_seq_cst};
 
-  auto checkExclusive{[&](llvm::ArrayRef<llvm::omp::Clause> group,
-                          std::string_view name,
-                          const parser::OmpClauseList &clauses) {
-    const parser::OmpClause *present{nullptr};
-    for (const parser::OmpClause &clause : clauses.v) {
-      llvm::omp::Clause id{clause.Id()};
-      if (!llvm::is_contained(group, id)) {
-        continue;
-      }
-      if (present == nullptr) {
-        present = &clause;
-        continue;
-      } else if (id == present->Id()) {
-        // Ignore repetitions of the same clause, those will be diagnosed
-        // separately.
-        continue;
-      }
-      parser::MessageFormattedText txt(
-          "At most one clause from the '%s' group is allowed on ATOMIC construct"_err_en_US,
-          name.data());
-      parser::Message message(clause.source, txt);
-      message.Attach(present->source,
-          "Previous clause from this group provided here"_en_US);
-      context_.Say(std::move(message));
-      return;
-    }
-  }};
-
   const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   llvm::omp::Clause kind{x.GetKind()};
-
-  checkExclusive(atomic, "atomic", dirSpec.Clauses());
-  checkExclusive(memoryOrder, "memory-order", dirSpec.Clauses());
 
   checkIncompatibleMemoryOrderClause(context_, x, atomic, memoryOrder);
 
