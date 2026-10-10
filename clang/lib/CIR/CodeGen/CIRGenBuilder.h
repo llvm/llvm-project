@@ -482,7 +482,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto baseAddr =
         cir::BaseClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                      mlir::APInt(64, offset), assumeNotNull);
@@ -495,7 +495,7 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    cir::PointerType ptrTy = getPointerTo(destType);
+    cir::PointerType ptrTy = getPointerTo(destType, addr.getAddressSpace());
     auto derivedAddr =
         cir::DerivedClassAddrOp::create(*this, loc, ptrTy, addr.getPointer(),
                                         mlir::APInt(64, offset), assumeNotNull);
