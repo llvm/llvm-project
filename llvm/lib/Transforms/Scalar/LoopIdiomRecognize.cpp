@@ -405,7 +405,7 @@ static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
 }
 
 /// getMemSetPatternValue - If a strided store of the specified value is safe to
-/// turn into a memset.patternn intrinsic, return the Constant that should
+/// turn into a memset.pattern intrinsic, return the Constant that should
 /// be passed in. Otherwise, return null.
 ///
 /// TODO this function could allow more constants than it does today (e.g.
@@ -643,8 +643,12 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
   SetVector<StoreInst *> Heads, Tails;
   SmallDenseMap<StoreInst *, StoreInst *> ConsecutiveChain;
 
-  // Do a quadratic search on all of the given stores and find
-  // all of the pairs of stores that follow each other.
+  // Do a quadratic search on all of the given stores and find all of the pairs
+  // of stores that follow each other.
+  //
+  // This only considers pairs and chains stores of values like 1, undef, 2, in
+  // a single chain. The next loop considers stored values and avoids turning
+  // those chains into memsets.
   SmallVector<unsigned, 16> IndexQueue;
   for (unsigned i = 0, e = SL.size(); i < e; ++i) {
     assert(SL[i]->isSimple() && "Expected only non-volatile stores.");
@@ -654,7 +658,8 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     const SCEVAddRecExpr *FirstStoreEv =
         cast<SCEVAddRecExpr>(SE->getSCEV(FirstStorePtr));
     APInt FirstStride = getStoreStride(FirstStoreEv);
-    unsigned FirstStoreSize = DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
+    unsigned FirstStoreSize =
+        DL->getTypeStoreSize(SL[i]->getValueOperand()->getType());
 
     // See if we can optimize just this store in isolation.
     if (FirstStride == FirstStoreSize || -FirstStride == FirstStoreSize) {
@@ -710,12 +715,14 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
         if (For == ForMemset::Yes) {
           if (isa<UndefValue>(FirstSplatValue))
             FirstSplatValue = SecondSplatValue;
-          if (FirstSplatValue != SecondSplatValue)
+          if (!isa<UndefValue>(SecondSplatValue) &&
+              FirstSplatValue != SecondSplatValue)
             continue;
         } else {
           if (isa<UndefValue>(FirstPatternValue))
             FirstPatternValue = SecondPatternValue;
-          if (FirstPatternValue != SecondPatternValue)
+          if (!isa<UndefValue>(SecondPatternValue) &&
+              FirstPatternValue != SecondPatternValue)
             continue;
         }
         Tails.insert(SL[k]);
@@ -741,6 +748,11 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     SmallPtrSet<Instruction *, 8> AdjacentStores;
     StoreInst *HeadStore = I;
     unsigned StoreSize = 0;
+    Value *StoredVal = HeadStore->getValueOperand();
+    Value *StoredBytewiseOrPatternVal =
+        For == ForMemset::Yes ? isBytewiseValue(StoredVal, *DL)
+                              : getMemSetPatternValue(StoredVal, DL);
+    bool ValueMismatch = false;
 
     // Collect the chain into a list.
     while (Tails.count(I) || Heads.count(I)) {
@@ -748,12 +760,38 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
         break;
       AdjacentStores.insert(I);
 
+      Value *NextVal = I->getValueOperand();
+      Value *NextBytewiseOrPatternVal =
+          For == ForMemset::Yes ? isBytewiseValue(NextVal, *DL)
+                                : getMemSetPatternValue(NextVal, DL);
+
+      // Use the first non-undef value as the chain's value.
+      if (isa<UndefValue>(StoredBytewiseOrPatternVal)) {
+        StoredVal = NextVal;
+        StoredBytewiseOrPatternVal = NextBytewiseOrPatternVal;
+      }
+
+      // The first loop considers the stores pair-wise, and can chain stores
+      // with different values with `undef`s in between. Check for those cases
+      // here and avoid creating a memset for such chains.
+      //
+      // TODO: We could break the chain into two smaller ones here. See the test
+      // `undef_mid_missed_optimization`.
+      if (!isa<UndefValue>(StoredBytewiseOrPatternVal) &&
+          !isa<UndefValue>(NextBytewiseOrPatternVal) &&
+          StoredBytewiseOrPatternVal != NextBytewiseOrPatternVal) {
+        ValueMismatch = true;
+        break;
+      }
+
       StoreSize += DL->getTypeStoreSize(I->getValueOperand()->getType());
       // Move to the next value in the chain.
       I = ConsecutiveChain[I];
     }
 
-    Value *StoredVal = HeadStore->getValueOperand();
+    if (ValueMismatch)
+      continue;
+
     Value *StorePtr = HeadStore->getPointerOperand();
     const SCEVAddRecExpr *StoreEv = cast<SCEVAddRecExpr>(SE->getSCEV(StorePtr));
     APInt Stride = getStoreStride(StoreEv);

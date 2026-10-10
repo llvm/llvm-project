@@ -9,7 +9,7 @@ define void @poison_head(ptr %p, i64 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 poison, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -42,13 +42,13 @@ define void @poison_tail(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @poison_tail(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 [[I]], i64 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 [[I]], i64 1
-; CHECK-NEXT:    store i8 1, ptr [[A]], align 1
-; CHECK-NEXT:    store i8 poison, ptr [[B]], align 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -77,7 +77,7 @@ define void @undef_head(ptr %p, i64 %n) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 undef, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -110,13 +110,13 @@ define void @undef_tail(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @undef_tail(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 [[I]], i64 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [2 x i8], ptr [[P]], i64 [[I]], i64 1
-; CHECK-NEXT:    store i8 1, ptr [[A]], align 1
-; CHECK-NEXT:    store i8 undef, ptr [[B]], align 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -144,15 +144,14 @@ define void @undef_mid(ptr %p, i64 %n) {
 ; CHECK-LABEL: define void @undef_mid(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i64 [[N]], 3
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds [3 x i8], ptr [[P]], i64 [[I]], i64 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [3 x i8], ptr [[P]], i64 [[I]], i64 1
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [3 x i8], ptr [[P]], i64 [[I]], i64 2
-; CHECK-NEXT:    store i8 1, ptr [[A]], align 1
-; CHECK-NEXT:    store i8 undef, ptr [[B]], align 1
-; CHECK-NEXT:    store i8 1, ptr [[C]], align 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
