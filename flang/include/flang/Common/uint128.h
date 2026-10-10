@@ -21,12 +21,15 @@
 
 #include "api-attrs.h"
 #include "leading-zero-bit-count.h"
+#include "numeric-limits.h"
 #include <cstdint>
 #include <type_traits>
 
 namespace Fortran::common {
 
 template <bool IS_SIGNED = false> class Int128 {
+  friend class detail::numeric_limits_impl<Int128>;
+
 public:
   constexpr Int128() {}
   // This means of definition provides some portability for
@@ -303,6 +306,40 @@ template <int BITS>
 using HostUnsignedIntType = typename HostUnsignedIntTypeHelper<BITS>::type;
 template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
+
+namespace detail {
+
+template <> class numeric_limits_impl<Fortran::common::UnsignedInt128> {
+public:
+  using T = Fortran::common::UnsignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{false};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() { return T{0, 0}; }
+  static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
+  static constexpr T lowest() { return min(); }
+};
+
+template <> class numeric_limits_impl<Fortran::common::SignedInt128> {
+public:
+  using T = Fortran::common::SignedInt128;
+
+  static constexpr bool is_specialized{true};
+  static constexpr bool is_signed{true};
+  static constexpr bool is_integer{true};
+
+  static constexpr T min() {
+    return T{static_cast<std::uint64_t>(INT64_MIN), 0};
+  }
+  static constexpr T max() {
+    return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
+  }
+  static constexpr T lowest() { return min(); }
+};
+
+} // namespace detail
 
 } // namespace Fortran::common
 #endif

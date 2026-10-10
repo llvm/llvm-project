@@ -8,6 +8,7 @@
 
 #define AVOID_NATIVE_UINT128_T 1
 #include "flang/Common/uint128.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Testing/testing.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
@@ -121,6 +122,37 @@ static void TestVsNative() {
 }
 #endif
 
+/// T is the native __(u)int128_t implementation to compare against. It only
+/// executes on platforms with HAS_NATIVE_UINT128_T enabled.
+template <typename T> static void TestNumericLimitsVsNative() {
+  using Std = std::numeric_limits<T>;
+  using Detail = Fortran::common::detail::numeric_limits<T>;
+  using Common = Fortran::common::numeric_limits<T>;
+
+  // Our implementation in Detail must be equivalent to Std
+  // (if Std supports __(u)int128).
+  if constexpr (Std::is_specialized) {
+    TEST(Detail::is_specialized == Std::is_specialized);
+    TEST(Detail::is_signed == Std::is_signed);
+    TEST(Detail::is_integer == Std::is_integer);
+    TEST(Detail::min() == Std::min());
+    TEST(Detail::max() == Std::max());
+    TEST(Detail::lowest() == Std::lowest());
+  } else {
+    llvm::outs() << "common::numeric_limits is not specialized for this type\n";
+  }
+
+  // Common may refer to either Std or Detail; in either case it must be
+  // identical. This is testing the `using numeric_limits` junction between
+  // `detail::` and `std::`.
+  TEST(Detail::is_specialized == Common::is_specialized);
+  TEST(Detail::is_integer == Common::is_integer);
+  TEST(Detail::is_signed == Common::is_signed);
+  TEST(Detail::min() == Common::min());
+  TEST(Detail::max() == Common::max());
+  TEST(Detail::lowest() == Common::lowest());
+}
+
 int main() {
   for (std::uint64_t j{0}; j < 64; ++j) {
     Test(j);
@@ -133,6 +165,10 @@ int main() {
 #if HAS_NATIVE_UINT128_T
   llvm::outs() << "Environment has native __uint128_t\n";
   TestVsNative();
+  TestNumericLimitsVsNative<__int128_t>();
+  TestNumericLimitsVsNative<__uint128_t>();
+  TestNumericLimitsVsNative<const __int128_t>();
+  TestNumericLimitsVsNative<const __uint128_t>();
 #else
   llvm::outs() << "Environment lacks native __uint128_t\n";
 #endif

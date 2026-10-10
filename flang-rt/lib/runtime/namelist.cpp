@@ -138,7 +138,7 @@ static RT_API_ATTRS common::optional<SubscriptValue> GetSubscriptValue(
   bool overflow{false};
   while (ch && *ch >= '0' && *ch <= '9') {
     SubscriptValue was{value.value_or(0)};
-    overflow |= was >= std::numeric_limits<SubscriptValue>::max() / 10;
+    overflow |= was >= common::numeric_limits<SubscriptValue>::max() / 10;
     value = 10 * was + *ch - '0';
     io.HandleRelativePosition(byteCount);
     ch = io.GetCurrentChar(byteCount);
