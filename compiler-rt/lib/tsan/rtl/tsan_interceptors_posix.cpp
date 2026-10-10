@@ -142,6 +142,10 @@ const int PTHREAD_BARRIER_SERIAL_THREAD = 1234567;
 const int PTHREAD_BARRIER_SERIAL_THREAD = -1;
 #endif
 const int MAP_FIXED = 0x10;
+#if SANITIZER_LINUX
+// Linux UAPI value, independent of the libc headers used to build the runtime.
+const int MAP_FIXED_NOREPLACE = 0x100000;
+#endif
 typedef long long_t;
 typedef __sanitizer::u16 mode_t;
 
@@ -817,11 +821,15 @@ TSAN_INTERCEPTOR(char*, strdup, const char *str) {
 }
 
 // Zero out addr if it points into shadow memory and was provided as a hint
-// only, i.e., MAP_FIXED is not set.
+// only, i.e., neither MAP_FIXED nor MAP_FIXED_NOREPLACE is set.
 static bool fix_mmap_addr(void **addr, long_t sz, int flags) {
   if (*addr) {
     if (!IsAppMem((uptr)*addr) || !IsAppMem((uptr)*addr + sz - 1)) {
-      if (flags & MAP_FIXED) {
+      bool fixed = flags & MAP_FIXED;
+#if SANITIZER_LINUX
+      fixed |= flags & MAP_FIXED_NOREPLACE;
+#endif
+      if (fixed) {
         errno = errno_EINVAL;
         return false;
       } else {
