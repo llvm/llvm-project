@@ -8878,6 +8878,68 @@ static BasicBlock *allPredecessorsComeFromSameSource(BasicBlock *BB) {
   return PredPred;
 }
 
+/// Bypass a PHI-only detour when both paths provide the same values.
+///
+/// Before:                         After:
+///
+///   BB ------> CommonDest         BB ------> CommonDest
+///    \                 ^                       ^
+///     v                |                       |
+///   EdgeBB ------------+         EdgeBB -------+
+///     ^                            ^
+///     |                            |
+///   OtherPred                    OtherPred
+///
+/// For every CommonDest PHI, the direct value from BB must equal the
+/// value forwarded through EdgeBB's PHI on the BB -> EdgeBB edge.
+/// Only that edge is removed; EdgeBB may have other predecessors.
+static bool bypassTrivialSuccessor(CondBrInst *BI, DomTreeUpdater *DTU,
+                                   ArrayRef<WeakVH> LoopHeaders,
+                                   bool NeedCanonicalLoop) {
+  BasicBlock *BB = BI->getParent();
+
+  // Leave loop-header branch folding to the existing canonical-loop policy.
+  if (NeedCanonicalLoop && is_contained(LoopHeaders, BB))
+    return false;
+
+  for (unsigned I = 0; I != 2; ++I) {
+    BasicBlock *EdgeBB = BI->getSuccessor(I);
+    BasicBlock *CommonDest = BI->getSuccessor(I ^ 1);
+    auto *EdgeBI = dyn_cast<UncondBrInst>(EdgeBB->getTerminator());
+    if (!EdgeBI || EdgeBI->getSuccessor() != CommonDest ||
+        &*EdgeBB->getFirstNonPHIOrDbg() != EdgeBI)
+      continue;
+    if (NeedCanonicalLoop && !LoopHeaders.empty() &&
+        EdgeBB->hasNPredecessorsOrMore(2) &&
+        (is_contained(LoopHeaders, EdgeBB) ||
+         is_contained(LoopHeaders, CommonDest)))
+      continue;
+
+    bool CanBypass = all_of(CommonDest->phis(), [&](PHINode &PN) {
+      Value *DirectV = PN.getIncomingValueForBlock(BB);
+      Value *IndirectV = PN.getIncomingValueForBlock(EdgeBB);
+      if (auto *EdgePN = dyn_cast<PHINode>(IndirectV))
+        if (EdgePN->getParent() == EdgeBB)
+          IndirectV = EdgePN->getIncomingValueForBlock(BB);
+      // Preserve the PHI-based opportunity to remove undefined control flow.
+      return DirectV == IndirectV &&
+             !passingValueIsAlwaysUndefined(DirectV, &PN);
+    });
+    if (!CanBypass)
+      continue;
+
+    auto *NewBI = UncondBrInst::Create(CommonDest, BI->getIterator());
+    NewBI->setDebugLoc(BI->getDebugLoc());
+    EdgeBB->removePredecessor(BB);
+    eraseTerminatorAndDCECond(BI);
+    if (DTU)
+      DTU->applyUpdates({{DominatorTree::Delete, BB, EdgeBB}});
+    return true;
+  }
+
+  return false;
+}
+
 /// Fold the following pattern:
 /// bb0:
 ///   br i1 %cond1, label %bb1, label %bb2
@@ -9020,6 +9082,9 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
     RecursivelyDeleteTriviallyDeadInstructions(OldCond);
     return requestResimplify();
   }
+
+  if (bypassTrivialSuccessor(BI, DTU, LoopHeaders, Options.NeedCanonicalLoop))
+    return requestResimplify();
 
   // If this basic block is ONLY a compare and a branch, and if a predecessor
   // branches to us and one of our successors, fold the comparison into the
