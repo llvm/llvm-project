@@ -1825,11 +1825,15 @@ namespace Strchr {
   static_assert(__builtin_strchr(kStr, 'd') == nullptr);
   static_assert(__builtin_strchr(kStr, 'e') == nullptr);
   static_assert(__builtin_strchr(kStr, '\0') == kStr + 5);
-  static_assert(__builtin_strchr(kStr, 'a' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, 'a' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, 256) == kStr + 5);
+  static_assert(__builtin_strchr(kStr, -256) == kStr + 5);
+  static_assert(__builtin_strchr(kStr, 'a' + 256) == kStr);
+  static_assert(__builtin_strchr(kStr, 'a' - 256) == kStr);
   static_assert(__builtin_strchr(kStr, '\xff') == kStr + 4);
-  static_assert(__builtin_strchr(kStr, '\xff' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, '\xff' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, '\xff' + 256) == kStr + 4);
+  static_assert(__builtin_strchr(kStr, '\xff' - 256) == kStr + 4);
+  constexpr char kStr2[] = "\x80\x41";
+  static_assert(__builtin_strchr(kStr2, 128) == kStr2);
   static_assert(__builtin_strchr(kFoo, 'o') == kFoo + 1);
   static_assert(__builtin_strchr(kFoo, 'x') == nullptr); // both-error {{not an integral constant}} \
                                                          // both-note {{dereferenced one-past-the-end}}
