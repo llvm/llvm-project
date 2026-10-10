@@ -621,6 +621,9 @@ features cannot lower the translation-unit ABI level;
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- Added `-Wabi-tag-redeclaration` to diagnose when a forward namespace
+  declaration prevents applying `abi_tag` later on namespace reopening.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

@@ -6912,6 +6912,15 @@ could have a different set of data members and thus have a different size. Using
 the `abi_tag` attribute, it is possible to have different mangled names for
 a global variable of the class type. Therefore, the old code could keep using
 the old mangled name and the new code will use the new mangled name with tags.
+
+On an inline namespace, the attribute does not change the namespace's mangled
+name. Instead, the tags are added to functions and variables whose type refers
+to an entity of that namespace, unless the tags already appear in the mangled
+name. As in GCC, the attribute is not limited to the namespace where it is
+written but affects subsequent reopenings. Specifying different tags on a
+reopening can make Clang and GCC produce different mangled names. So, for
+portability, it is recommended to use the same `abi_tag` on each namespace
+reopening.
   }];
 }
 

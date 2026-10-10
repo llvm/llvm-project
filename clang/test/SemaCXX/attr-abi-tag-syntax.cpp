@@ -17,7 +17,33 @@ inline namespace __attribute__((__abi_tag__)) {}
 
 inline namespace N __attribute__((__abi_tag__)) {}
 
-} // namespcace N2
+} // namespace N2
+
+namespace N3 {
+inline namespace AbsentOld {}
+inline namespace AbsentOld __attribute__((__abi_tag__)) {}
+// expected-warning@-2 {{no 'abi_tag' prevents applying 'abi_tag("AbsentOld")' later}}
+// expected-note@-2 {{declared here}}
+
+inline namespace AbsentNew __attribute__((__abi_tag__)) {}
+inline namespace AbsentNew {}
+// No tags on a namespace reopening can be deliberate, no diagnostic.
+
+inline namespace Different __attribute__((abi_tag("A"))) {}
+inline namespace Different __attribute__((abi_tag("B"))) {}
+// expected-warning@-2 {{'abi_tag("A")' prevents applying 'abi_tag("B")' later}}
+// expected-note@-2 {{declared here}}
+inline namespace Different __attribute__((abi_tag("A"))) {}
+// No error as we compare with the canonical namespace decl, not with the previous one.
+
+inline namespace MultipleTags __attribute__((abi_tag("A", "B"))) {}
+inline namespace MultipleTags __attribute__((abi_tag("X", "Y", "B"))) {}
+// expected-warning@-2 {{'abi_tag("A", "B")' prevents applying 'abi_tag("X", "Y")' later}}
+// expected-note@-2 {{declared here}}
+inline namespace MultipleTagsSubset __attribute__((abi_tag("A", "B"))) {}
+inline namespace MultipleTagsSubset __attribute__((abi_tag("A"))) {}
+// No diagnostic as tag "A" *is* applied.
+} // namespace N3
 
 __attribute__((abi_tag("B", "A"))) extern int a1;
 
