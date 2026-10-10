@@ -16,14 +16,25 @@ concurrency:
 
 jobs:
   build:
-    if: github.repository_owner == 'llvm'
     name: Check LLVM_ABI annotations with ids
-    runs-on: ubuntu-26.04
+    runs-on: ${{ matrix.runs-on }}
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-26.04-ids-checks:latest@sha256:610825c41aea545132a5b441ee864acf050ac54ff40009fbaaf3e158f139e5d7'
-    timeout-minutes: 20
+      image: ${{ matrix.image }} 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-26.04
+            image: 'ghcr.io/llvm/ci-ubuntu-26.04-ids-checks:latest@sha256:610825c41aea545132a5b441ee864acf050ac54ff40009fbaaf3e158f139e5d7'
+          - runs-on: windows-2022
+            image: null
 
     steps:
+      - name: Setup crlf
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -40,20 +51,31 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
 
+      - if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          set >> "%GITHUB_ENV%"
+
       - name: Configure and build minimal LLVM for use by ids
+        shell: bash
+        env:
+          CC: ${{ case(runner.os == 'Windows', 'cl', 'clang') }}
+          CXX: ${{ case(runner.os == 'Windows', 'cl', 'clang++') }}
         run: |
           cmake -B ./llvm-project/build/ \
                 -S ./llvm-project/llvm/ \
                 -D CMAKE_BUILD_TYPE=Release \
-                -D CMAKE_C_COMPILER=clang \
-                -D CMAKE_CXX_COMPILER=clang++ \
                 -D LLVM_TARGETS_TO_BUILD="host" \
-                -D LLVM_INCLUDE_TESTS=OFF \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
                 -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+                -D LLVM_BUILD_LLVM_DYLIB_VIS=ON \
+                -D LLVM_LINK_LLVM_DYLIB=ON \
                 -G Ninja
-
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            exit 0
+          fi
           # Build the generated-header prerequisites that idt needs to parse
           # LLVM source.
           BUILD_DIR=./llvm-project/build
@@ -77,6 +99,7 @@ jobs:
           ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
 
       - name: Run ids check
+        if: runner.os != 'Windows'
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
@@ -94,8 +117,13 @@ jobs:
 
       - name: Upload results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: always() && runner.os != 'Windows'
         with:
           name: workflow-args
           path: |
             comments
+
+      - name: Build and test libLLVM.so
+        shell: bash
+        run: |
+          ninja -C ./llvm-project/build check-llvm
