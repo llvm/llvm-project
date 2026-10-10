@@ -205,6 +205,17 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
              "to be live in"));
 
+static cl::opt<unsigned> MaxConstTableSwitchElts(
+    "max-const-table-switch-elts", cl::Hidden, cl::init(32),
+    cl::desc(
+        "Limit number of const table elements to consider before folding the "
+        "table into a switch"));
+
+static cl::opt<unsigned> MaxLookupTablesPerConstTableSwitch(
+    "max-lookup-tables-per-const-table-switch", cl::Hidden, cl::init(3),
+    cl::desc("Limit number of lookup tables introduced per const table lookup "
+             "switch"));
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
@@ -218,6 +229,8 @@ STATISTIC(
     NumLookupTablesHoles,
     "Number of switch instructions turned into lookup tables (holes checked)");
 STATISTIC(NumTableCmpReuses, "Number of reused switch table lookup compares");
+STATISTIC(NumSwitchOnConstTableLoad,
+          "Number of switches on a constant table load folded into the table");
 STATISTIC(NumFoldValueComparisonIntoPredecessors,
           "Number of value comparisons folded into predecessor basic blocks");
 STATISTIC(NumFoldBranchToCommonDest,
@@ -7061,6 +7074,8 @@ public:
   /// Return true if a suitable switch replacement was found.
   bool isValid() const { return Kind != InvalidKind; }
 
+  const Constant *getLookupTableInitializer() { return Initializer; }
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -7582,6 +7597,202 @@ static void reuseTableCompare(
     CmpInst->replaceAllUsesWith(InvertedTableCmp);
     ++NumTableCmpReuses;
   }
+}
+
+static bool isOnlyUsedByLoad(const GlobalVariable *GV, const LoadInst *LI) {
+  SmallVector<const User *, 8> Worklist(GV->users());
+  while (!Worklist.empty()) {
+    const User *U = Worklist.pop_back_val();
+    if (U == LI)
+      continue;
+    if (isa<GEPOperator>(U)) {
+      append_range(Worklist, U->users());
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+/// If the switch is on a load from a const global and the switch branches only
+/// update PHIs in a common destination block with constants, transform the
+/// original const global to globals with the constants passed to the PHIs, and
+/// convert the PHIs to reads from the globals.
+/// See `SimpifyCFG/switch-to-table-N.ll` tests for examples.
+static bool foldSwitchOnConstTableLoad(SwitchInst *SI, IRBuilder<> &Builder,
+                                       DomTreeUpdater *DTU,
+                                       const DataLayout &DL,
+                                       const TargetTransformInfo &TTI,
+                                       bool ConvertSwitchToLookupTable) {
+  auto *LI = dyn_cast<LoadInst>(SI->getCondition());
+  if (!LI || LI->isVolatile())
+    return false;
+
+  // Check the underlying object before decomposing the pointer:
+  // `decomposeLinearExpression` doesn't terminate on cyclic GEPs, which can
+  // appear in blocks that become unreachable during SimplifyCFG.
+  auto *GV =
+      dyn_cast<GlobalVariable>(getUnderlyingObject(LI->getPointerOperand()));
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return false;
+
+  // Load offset = LIOperand.Offset + (LIOperand.Index * LIOperand.Scale)
+  LinearExpression LIOperand =
+      decomposeLinearExpression(DL, LI->getPointerOperand());
+
+  if (!LIOperand.Flags.isInBounds()) {
+    // We could still do this if
+    // - Scales of the original table and the new tables are the same.
+    // - Offset is 0.
+    // We'd also need to generate `inbounds` only if the original GEP has one.
+    // (currently `replaceSwitch` generates `inbounds` always)
+    return false;
+  }
+
+  if (LIOperand.BasePtr != GV || !LIOperand.Index)
+    return false;
+
+  // Because we map indices of the old global to indices of the new global
+  // directly, we can't handle the cases where the offset skips an element or
+  // more.
+  // Single ult below as shorthand for `0 <= offset && offset < scale`.
+  if (!LIOperand.Offset.ult(LIOperand.Scale))
+    return false;
+
+  Type *LoadEltTy = LI->getType();
+  const TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
+  const TypeSize LoadSize = DL.getTypeStoreSize(LoadEltTy);
+
+  // Check that we can make at least one load.
+  if (LIOperand.Offset.getZExtValue() + LoadSize > GVSize)
+    return false;
+
+  Constant *Init = GV->getInitializer();
+  BasicBlock *CommonDest = nullptr;
+
+  // Maps loaded elements to the values of PHIs at the destination block
+  // (`CommonDest`) of the `switch`.
+  using ResultsTy = SmallVector<std::pair<PHINode *, Constant *>, 4>;
+  SmallVector<ResultsTy, 64> EltResults;
+
+  const uint64_t Scale = LIOperand.Scale.getZExtValue();
+
+  // `Offset + LoadSize <= GVSize` checked above.
+  const uint64_t NumElts =
+      ((GVSize.getFixedValue() - LIOperand.Offset.getZExtValue() - LoadSize) /
+       Scale) +
+      1;
+
+  if (NumElts > MaxConstTableSwitchElts)
+    return false;
+
+  // NB. We check above that offset < scale, so we don't have to consider
+  // negative indices here and we can start at offset.
+  for (uint64_t I = 0; I < NumElts; I += 1) {
+    APInt Offset = LIOperand.Offset + (I * Scale);
+
+    auto *Elt = dyn_cast_or_null<ConstantInt>(
+        ConstantFoldLoadFromConst(Init, LoadEltTy, Offset, DL));
+
+    if (!Elt)
+      return false;
+
+    auto Case = SI->findCaseValue(Elt);
+
+    ResultsTy Results;
+    if (!getCaseResults(SI, Elt, Case->getCaseSuccessor(), &CommonDest, Results,
+                        DL))
+      return false;
+    EltResults.push_back(std::move(Results));
+  }
+
+  // PHIs at the destination that'll be reading a lookup table.
+  // NB. We rely on EltResults having the the PHIs in the same order each of the
+  // results vector here and below.
+  SmallVector<PHINode *, 4> PHIs;
+  for (const auto &[PHI, _] : EltResults.front())
+    PHIs.push_back(PHI);
+
+  // Create replacements for the PHIs at the destination.
+  Function *Fn = SI->getFunction();
+  Module &M = *Fn->getParent();
+  Type *IndexTy = LIOperand.Index->getType();
+  SmallVector<SwitchReplacement, 4> Replacements;
+  for (auto [PhiIdx, PHI] : enumerate(PHIs)) {
+    SmallVector<std::pair<ConstantInt *, Constant *>, 64> Values;
+    for (auto [I, Results] : enumerate(EltResults))
+      Values.emplace_back(cast<ConstantInt>(ConstantInt::get(IndexTy, I)),
+                          Results[PhiIdx].second);
+    Constant *Poison = PoisonValue::get(PHI->getType());
+    SwitchReplacement Replacement(
+        M, NumElts, cast<ConstantInt>(ConstantInt::get(IndexTy, 0)), Values,
+        Poison, DL, TTI, Fn->getName());
+    if (!Replacement.isValid())
+      return false;
+    Replacements.emplace_back(Replacement);
+  }
+
+  // When optimizing for size make sure we don't introduce more global data than
+  // we remove.
+  if (Fn->hasOptSize()) {
+    uint64_t AddedBytes = 0;
+    for (auto &R : Replacements) {
+      if (R.isLookupTable()) {
+        AddedBytes +=
+            DL.getTypeAllocSize(R.getLookupTableInitializer()->getType())
+                .getFixedValue();
+      }
+    }
+    uint64_t RemovedBytes =
+        GV->hasLocalLinkage() && isOnlyUsedByLoad(GV, LI) && LI->hasOneUser()
+            ? GVSize.getFixedValue()
+            : 0;
+    if (AddedBytes > RemovedBytes)
+      return false;
+  }
+
+  // In all optimization levels: limit number of lookup tables introduced per
+  // switch.
+  unsigned NumLookupTables = 0;
+  for (auto &Replacement : Replacements) {
+    if (Replacement.isLookupTable()) {
+      NumLookupTables += 1;
+    }
+  }
+  if (NumLookupTables > MaxLookupTablesPerConstTableSwitch)
+    return false;
+
+  // Branch to a new block that reads the results from the new globals and jumps
+  // to `CommonDest`.
+  BasicBlock *BB = SI->getParent();
+  BasicBlock *LookupBB =
+      BasicBlock::Create(M.getContext(), "switch.lookup", Fn, CommonDest);
+  Builder.SetInsertPoint(SI);
+  Builder.CreateBr(LookupBB);
+  Builder.SetInsertPoint(LookupBB);
+  for (auto [PHI, Replacement] : zip(PHIs, Replacements))
+    PHI->addIncoming(
+        Replacement.replaceSwitch(LIOperand.Index, Builder, DL, Fn), LookupBB);
+  Builder.CreateBr(CommonDest);
+
+  // Remove the switch.
+  std::vector<DominatorTree::UpdateType> Updates;
+  SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
+  for (BasicBlock *Succ : successors(SI)) {
+    Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
+    if (RemovedSuccessors.insert(Succ).second)
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
+  }
+  SI->eraseFromParent();
+
+  if (DTU) {
+    Updates.push_back({DominatorTree::Insert, BB, LookupBB});
+    Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
+    DTU->applyUpdates(Updates);
+  }
+
+  ++NumSwitchOnConstTableLoad;
+  return true;
 }
 
 /// If the switch is only used to initialize one or more phi nodes in a common
@@ -8650,6 +8861,10 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
+    return requestResimplify();
+
+  if (foldSwitchOnConstTableLoad(SI, Builder, DTU, DL, TTI,
+                                 Options.ConvertSwitchToLookupTable))
     return requestResimplify();
 
   // The conversion of switches to arithmetic or lookup table is disabled in
