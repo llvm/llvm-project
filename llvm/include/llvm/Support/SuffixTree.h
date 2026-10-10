@@ -144,7 +144,8 @@ private:
   /// are identified using post-order depth-first traversal, so that the order
   /// of these leaf nodes in the vector matches the order of the leaves in the
   /// tree from left to right if one were to draw the tree on paper.
-  std::vector<SuffixTreeLeafNode *> LeafNodes;
+  /// Each leaf is represented by its suffix start index.
+  std::vector<unsigned> LeafNodes;
 
   /// Perform a post-order depth-first traversal of the tree and perform two
   /// tasks during the traversal. The first is to populate LeafNodes, adding
@@ -178,7 +179,8 @@ public:
     SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
 
     /// Vector of leaf nodes of the suffix tree.
-    const std::vector<SuffixTreeLeafNode *> &LeafNodes;
+    /// Each leaf is represented by its suffix start index.
+    const std::vector<unsigned> &LeafNodes;
 
     /// Whether to consider leaf descendants or only leaf children.
     bool OutlinerLeafDescendants = !LeafNodes.empty();
@@ -208,9 +210,8 @@ public:
       return !(*this == Other);
     }
 
-    RepeatedSubstringIterator(
-        SuffixTreeInternalNode *N,
-        const std::vector<SuffixTreeLeafNode *> &LeafNodes = {})
+    RepeatedSubstringIterator(SuffixTreeInternalNode *N,
+                              const std::vector<unsigned> &LeafNodes = {})
         : N(N), LeafNodes(LeafNodes) {
       // Do we have a non-null node?
       if (!N)

@@ -150,7 +150,7 @@ void SuffixTree::setLeafNodes() {
       CurrNode->setRightLeafIdx(LeafCounter);
       ++LeafCounter;
       auto *CurrLeafNode = cast<SuffixTreeLeafNode>(CurrNode);
-      LeafNodes.push_back(CurrLeafNode);
+      LeafNodes.push_back(CurrLeafNode->getSuffixIdx());
     }
   }
 }
@@ -317,9 +317,10 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
 
     // Collect leaf children or leaf descendants by OutlinerLeafDescendants.
     if (OutlinerLeafDescendants) {
-      for (unsigned I = Curr->getLeftLeafIdx(); I <= Curr->getRightLeafIdx();
-           ++I)
-        RepeatedSubstringStarts.push_back(LeafNodes[I]->getSuffixIdx());
+      // Leaf descendants occupy a contiguous range.
+      RepeatedSubstringStarts.append(LeafNodes.begin() + Curr->getLeftLeafIdx(),
+                                     LeafNodes.begin() +
+                                         Curr->getRightLeafIdx() + 1);
     } else {
       for (auto &ChildPair : Curr->Children)
         if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
