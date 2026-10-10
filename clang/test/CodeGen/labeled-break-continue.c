@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c2y -triple x86_64-unknown-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c2y -triple x86_64-unknown-linux -O1 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefix=OPT
 
 bool g1();
 bool g2();
@@ -144,6 +145,12 @@ void f4() {
 // CHECK:   br label %while.cond
 // CHECK: while.end:
 // CHECK:   ret void
+// OPT-LABEL: define {{.*}} void @f5()
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 1, label %while.end
+// OPT-NEXT: i32 2, label %sw.epilog
+// OPT-NEXT: i32 3, label %sw.bb
+// OPT-NEXT: ]
 void f5() {
   l1: while (g1()) {
     l2: switch (g2()) {
@@ -272,10 +279,113 @@ void f6() {
 // CHECK:   br label %while.cond
 // CHECK: while.end:
 // CHECK:   ret void
+// OPT-LABEL: define {{.*}} void @f7()
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 1, label %while.end
+// OPT-NEXT: ]
 void f7() {
   loop: while (g1()) {
     switch (g2()) {
       case 1: break loop;
     }
   }
+}
+
+// CHECK-LABEL: define {{.*}} i32 @f8()
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %for.end
+// OPT-LABEL: define {{.*}} i32 @f8()
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %sw.bb
+// OPT-NEXT: ]
+// OPT: sw.bb:
+// OPT-NEXT: store i32 {{[0-9]+}}, ptr %cleanup.dest.slot
+// OPT-NEXT: br label %cleanup
+// OPT: cleanup:
+// OPT-NEXT: call void @llvm.lifetime.end.p0(ptr %i)
+// OPT-NEXT: br label %for.end
+int f8() {
+  int count = 0;
+  outer: for (int i = 0; i < 2; ++i) {
+    ++count;
+    switch (i) {
+    case 0: break outer;
+    }
+  }
+  return count;
+}
+
+// Check both the switch edge and fallthrough into a named break.
+// OPT-LABEL: define {{.*}} void @f9(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 1, label %sw.bb
+// OPT-NEXT: i32 0, label %while.end
+// OPT-NEXT: i32 2, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.bb:
+// OPT: call {{.*}} i1 @g2()
+// OPT-NEXT: br label %while.end
+void f9(int x) {
+  loop: while (g1()) {
+    switch (x) {
+    case 1: g2();
+    case 0: break loop;
+    case 2: break;
+    }
+  }
+}
+
+// Without loop-scope cleanups, the named break can go directly to the loop
+// exit. An ordinary break must still go to the switch exit.
+// CHECK-LABEL: define {{.*}} void @f10(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %for.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @f10(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %for.end
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.epilog:
+// OPT-NEXT: br label %for.cond
+void f10(int x) {
+  loop: for (; g1();) {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @f11(
+// CHECK: switch i32 {{.*}}, label %sw.epilog [
+// CHECK-NEXT: i32 0, label %sw.bb
+// CHECK-NEXT: i32 1, label %sw.bb1
+// CHECK-NEXT: ]
+// CHECK: sw.bb:
+// CHECK-NEXT: br label %do.end
+// CHECK: sw.bb1:
+// CHECK-NEXT: br label %sw.epilog
+// OPT-LABEL: define {{.*}} void @f11(
+// OPT: switch i32 {{.*}}, label %sw.epilog [
+// OPT-NEXT: i32 0, label %do.end
+// OPT-NEXT: i32 1, label %sw.epilog
+// OPT-NEXT: ]
+// OPT: sw.epilog:
+// OPT-NEXT: br label %do.cond
+void f11(int x) {
+  loop: do {
+    switch (x) {
+    case 0: break loop;
+    case 1: break;
+    }
+  } while (g1());
 }
