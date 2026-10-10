@@ -2849,6 +2849,19 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return Cost <= Subtarget.getCLOpts().lower_fpimm_cost;
 }
 
+bool RISCVTargetLowering::shouldConvertFPCmpToClassTest(const APFloat &Imm,
+                                                        EVT VT) const {
+  // FCLASS is cheaper than materializing the largest finite value, which FLI
+  // cannot produce.
+  if ((VT == MVT::f32 || VT == MVT::f64) && Imm.isLargest())
+    return true;
+  // Without FLI.D, FCLASS.D is cheaper than materializing the smallest normal
+  // double.
+  if (VT == MVT::f64 && Imm.isSmallestNormalized() && !Subtarget.hasStdExtZfa())
+    return true;
+  return TargetLowering::shouldConvertFPCmpToClassTest(Imm, VT);
+}
+
 // TODO: This is very conservative.
 TargetLowering::ExtractSubvectorCost
 RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,

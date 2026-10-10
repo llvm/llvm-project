@@ -4922,6 +4922,46 @@ static SDValue foldSetCCWithFunnelShift(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+/// If \p C is the boundary of a floating-point class, return the class test
+/// equivalent to "X \p Cond \p C". Otherwise return fcNone.
+static FPClassTest getFPClassBoundaryTest(const APFloat &C, ISD::CondCode Cond,
+                                          DenormalMode Mode) {
+  const fltSemantics &Sem = C.getSemantics();
+  if (!APFloat::isIEEELikeFP(Sem))
+    return fcNone;
+
+  FPClassTest Mask = fcNone;
+  if (C.bitwiseIsEqual(APFloat::getLargest(Sem, /*Negative=*/true))) {
+    if (Cond == ISD::SETOLT || Cond == ISD::SETULT)
+      Mask = fcNegInf;
+    else if (Cond == ISD::SETOGE || Cond == ISD::SETUGE)
+      Mask = ~(fcNegInf | fcNan);
+  } else if (C.bitwiseIsEqual(APFloat::getLargest(Sem))) {
+    if (Cond == ISD::SETOGT || Cond == ISD::SETUGT)
+      Mask = fcPosInf;
+    else if (Cond == ISD::SETOLE || Cond == ISD::SETULE)
+      Mask = ~(fcPosInf | fcNan);
+  } else if (Mode.Input == DenormalMode::IEEE) {
+    const FPClassTest Below = fcNegInf | fcNegNormal | fcNegSubnormal |
+                              fcNegZero | fcPosZero | fcPosSubnormal;
+    if (C.bitwiseIsEqual(APFloat::getSmallestNormalized(Sem))) {
+      if (Cond == ISD::SETOLT || Cond == ISD::SETULT)
+        Mask = Below;
+      else if (Cond == ISD::SETOGE || Cond == ISD::SETUGE)
+        Mask = fcPosNormal | fcPosInf;
+    } else if (C.bitwiseIsEqual(
+                   APFloat::getSmallestNormalized(Sem, /*Negative=*/true))) {
+      if (Cond == ISD::SETOGT || Cond == ISD::SETUGT)
+        Mask = ~(fcNegInf | fcNegNormal | fcNan);
+      else if (Cond == ISD::SETOLE || Cond == ISD::SETULE)
+        Mask = fcNegInf | fcNegNormal;
+    }
+  }
+  if (Mask != fcNone && ISD::getUnorderedFlavor(Cond) == 1)
+    Mask |= fcNan;
+  return Mask;
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
@@ -5760,6 +5800,20 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getNode(ISD::IS_FPCLASS, dl, VT, Op,
                            DAG.getTargetConstant(Flag, dl, MVT::i32));
       }
+    }
+
+    // setcc X, C -> is_fpclass X, Mask if C is a class boundary, e.g.
+    // setogt X, largest_finite -> is_fpclass X, fcPosInf
+    EVT OpVT = N0.getValueType();
+    if (DCI.isBeforeLegalizeOps()
+            ? isOperationLegalOrCustom(ISD::IS_FPCLASS, OpVT)
+            : isOperationLegal(ISD::IS_FPCLASS, OpVT)) {
+      FPClassTest Mask = getFPClassBoundaryTest(CFP->getValueAPF(), Cond,
+                                                DAG.getDenormalMode(OpVT));
+      if (Mask != fcNone &&
+          shouldConvertFPCmpToClassTest(CFP->getValueAPF(), OpVT))
+        return DAG.getNode(ISD::IS_FPCLASS, dl, VT, N0,
+                           DAG.getTargetConstant(Mask, dl, MVT::i32));
     }
 
     // If the condition is not legal, see if we can find an equivalent one
