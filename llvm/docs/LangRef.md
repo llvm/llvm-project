@@ -1535,7 +1535,13 @@ Currently, only the following parameter attributes are defined:
     when used on function arguments. On function return values, the `noalias`
     attribute indicates that the function acts like a system memory allocation
     function, returning a pointer to allocated storage disjoint from the
-    storage for any other object accessible to the caller.
+    storage for any other object accessible to the caller. More specifically,
+    this latter statement is about provenance only: it does not imply anything
+    about the address of the returned pointer, which may coincide with that of,
+    e.g., an alloca, a global or another allocation (more at
+    {ref}`llvm.provenance.alloc <int_provenance_alloc>`). Address assumptions
+    may be expressed via "address_unpredictable" and "alloc_disjoint" options
+    of `allockind`.
 
 (captures_attr)=
 
@@ -2136,7 +2142,8 @@ define void @f() "no-sse" { ... }
       will match that of the `allocptr` argument and the `allocptr`
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by `allocptr`.
-      Functions marked as "free" `allockind` must return void.
+      Functions marked as "free" `allockind` that also carry "poisons_memory"
+      must return void.
     * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.
@@ -2145,10 +2152,29 @@ define void @f() "no-sse" { ... }
       zeroed.
     * "aligned": the function returns memory aligned according to the
       `allocalign` parameter.
+    * "address_unpredictable": the address of the returned allocation cannot
+      be predicted by the caller. Comparisons of the address with pointers not
+      derived from the allocation may assume the two are unequal, provided this
+      is done consistently for all observations of the address. This does not
+      hold for allocators that return storage at an address that is derived from
+      their inputs (more at {ref}`llvm.provenance.alloc <int_provenance_alloc>`).
+    * "alloc_disjoint": the returned allocation does not overlap with storage
+      of allocas, global variables, `byval` arguments, or other allocations.
+      This only holds for top-level allocators which are not nested within
+      another allocator.
+    * "poisons_memory": the contents of the freed region are not observable
+      after the free call site, meaning that stores to such a region prior to
+      the call may be eliminated. This is only valid for "free". Deallocators
+      without this property do preserve the contents, which remain observable
+      through the allocation it originated from, and they may therefore return
+      a pointer to the freed memory (more at {ref}`llvm.provenance.dealloc
+      <int_provenance_dealloc>`).
 
     The first three options are mutually exclusive, and the remaining options
-    describe more details of how the function behaves. The remaining options
-    are invalid for "free"-type functions.
+    describe more details of how the function behaves. Except for "poisons_memory",
+    the remaining options are invalid for "free"-type functions. Top-level
+    allocators such as `malloc` and `free` are treated as having respectively
+    "address_unpredictable" and "alloc_disjoint", and "poisons_memory".
 
     Calls to functions annotated with `allockind` are subject to allocation
     elision: Calls to allocator functions can be removed, and the allocation
@@ -24652,6 +24678,151 @@ for the purposes of `load`/`store` `invariant.group` metadata.
 It does not read any accessible memory and the execution can be speculated.
 
 
+(int_provenance_alloc_intrinsics)=
+
+### Allocator Provenance Intrinsics
+
+The `llvm.provenance.alloc` and `llvm.provenance.dealloc` intrinsics describe
+the provenance semantics of allocators whose implementation may be visible to
+the optimizer. Informally, memory allocation *creates* pointer provenance, and
+deallocation *destroys* it. When only the allocator declaration is visible to
+LLVM, its attributes imply this. Conversely, when the implementation of an
+allocator and its deallocator is visible too (and they may thus be inlined
+asymmetrically), these intrinsics mark such provenance changes explicitly.
+
+Allocator provenance forms a tree: each allocation adds a new leaf, which
+remembers the provenance of the parent allocation it was derived from, and each
+deallocation removes a leaf, returning a pointer with the parent provenance
+through which the memory is accessible again. Only a leaf has full access to the
+memory range it covers.
+
+Allocators are expected to call `llvm.provenance.alloc` on the pointer they return,
+and deallocators to call `llvm.provenance.dealloc` on the pointer they receive:
+
+```llvm
+define noalias ptr @my_alloc(i64 %size) allockind("alloc") "alloc-family"="my_alloc" {
+  %p = call ptr @get_memory_chunk(i64 %size) ; Obtain memory.
+  %p.alloc = call ptr @llvm.provenance.alloc.p0(ptr %p, i64 %size)
+  ret ptr %p.alloc
+}
+
+define void @my_free(ptr allocptr %p.alloc) allockind("free") "alloc-family"="my_alloc" {
+  %p = call ptr @llvm.provenance.dealloc.p0(ptr %p.alloc)
+  ; Do something with the freed memory, e.g., put it in a free list.
+  call void @push_to_freelist(ptr %p)
+  ret void
+}
+```
+
+The parent allocation may be any allocated object, including a global variable or
+an alloca. The intrinsics may thus also be used standalone to split one larger
+allocation into separate allocated objects, as shown in the following example:
+
+```llvm
+@pool = internal global [16 x i8] zeroinitializer
+
+; Two separate allocated objects obtained from @pool. Accesses through %a and
+; %b do not alias each other, nor do they alias accesses through @pool.
+%a = call ptr @llvm.provenance.alloc.p0(ptr @pool, i64 8)
+%b = call ptr @llvm.provenance.alloc.p0(ptr getelementptr (i8, ptr @pool, i64 8), i64 8)
+```
+
+It is undefined behavior to deallocate a parent allocation while a child
+allocation created from it is still live.
+
+(int_provenance_alloc)=
+
+#### '`llvm.provenance.alloc`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. The pointer argument can belong to any address
+space. The returned pointer belongs to the same address space as the argument.
+
+```
+declare noalias ptr @llvm.provenance.alloc.p0(ptr <ptr_orig>, i64 <size>)
+    nofree nosync nocallback nounwind willreturn
+    memory(argmem: readwrite, inaccessiblemem: readwrite)
+    allockind("alloc") allocsize(1) "alloc-family"="provenance-alloc"
+```
+
+##### Overview:
+
+The '`llvm.provenance.alloc`' intrinsic creates a new allocated object of `size`
+bytes at the address of `ptr_orig`, sub-allocated from the parent allocation
+`ptr_orig` points into. Allocators should call it on the pointer they return.
+
+##### Arguments:
+
+The first argument is a pointer into the parent allocation. The second argument
+is the size in bytes of the new allocated object.
+
+##### Semantics:
+
+* If `ptr_orig` is a null pointer, a null pointer is returned.
+* The provenance of `ptr_orig` (the provenance of the *parent* allocator) must
+  have access permissions for `size` bytes starting at `ptr_orig`, otherwise
+  the behavior is undefined.
+* The access permissions for `size` bytes starting at `ptr_orig` are *masked*
+  in the parent allocator provenance, including in any pointer based on it.
+  Masked bytes behave similarly to a stack object outside its {ref}`lifetime
+  <objectlifetime>`: through the parent provenance, stores to them are undefined
+  behavior, and loads return poison (rather than being undefined behavior). As a
+  result, the parent allocation remains dereferenceable (loads from it may still
+  be speculated), and the intrinsic does not free memory.
+* The result is a pointer to a new allocated object of `size` bytes at the same
+  address as `ptr_orig`, with fresh provenance that has access permissions for
+  exactly those `size` bytes.
+
+Hence, the address of the returned pointer may be known, and the new object may
+overlap allocas, or global variables. Particularly, unlike other `noalias`
+allocations, it is neither "address_unpredictable" nor "alloc_disjoint"
+({ref}`allockind <fnattrs>`). The parent pointer argument `ptr_orig` is captured by
+the call: its provenance is retained and later returned by `llvm.provenance.dealloc`.
+
+(int_provenance_dealloc)=
+
+#### '`llvm.provenance.dealloc`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. The pointer argument can belong to any address
+space. The returned pointer belongs to the same address space as the argument.
+
+```
+declare ptr @llvm.provenance.dealloc.p0(ptr allocptr captures(address) <ptr>)
+    nosync nocallback nounwind willreturn
+    allockind("free") "alloc-family"="provenance-alloc"
+```
+
+##### Overview:
+
+The '`llvm.provenance.dealloc`' intrinsic destroys an allocated object created by
+`llvm.provenance.alloc` and returns a pointer with the provenance of its parent
+allocation.
+
+##### Arguments:
+
+The argument is a pointer with allocator provenance, i.e., a pointer returned by
+`llvm.provenance.alloc`, or by an allocation function whose implementation is
+assumed to perform `llvm.provenance.alloc` on its result. Only the address of the
+argument pointer is captured, as its provenance ends with the call.
+
+##### Semantics:
+
+* If `ptr` is a null pointer, a null pointer is returned.
+* `ptr` must have allocator provenance, otherwise the behavior is undefined.
+* The previously allocated object `ptr` is destroyed: its provenance is *destroyed*,
+  i.e., all its access permissions are disabled, so any access through it (or any
+  pointer derived from it) result in undefined behavior. The masked access
+  permissions for the bytes covered by the allocation are restored in the parent
+  allocator provenance.
+* The result is a pointer with the provenance of the parent allocator.
+
+Because the returned pointer carries the parent provenance, the freed memory may
+still be used through it, e.g., to place the memory object into a free list. This
+likewise allows reallocation to be represented as `llvm.provenance.dealloc` on
+entry to the reallocator followed by `llvm.provenance.alloc` on return.
 
 (constrainedfp)=
 

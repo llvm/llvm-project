@@ -623,6 +623,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       parts.push_back("zeroed");
     if ((Kind & AllocFnKind::Aligned) != AllocFnKind::Unknown)
       parts.push_back("aligned");
+    if ((Kind & AllocFnKind::AddressUnpredictable) != AllocFnKind::Unknown)
+      parts.push_back("address_unpredictable");
+    if ((Kind & AllocFnKind::AllocDisjoint) != AllocFnKind::Unknown)
+      parts.push_back("alloc_disjoint");
+    if ((Kind & AllocFnKind::PoisonsMemory) != AllocFnKind::Unknown)
+      parts.push_back("poisons_memory");
     return ("allockind(\"" +
             Twine(llvm::join(parts.begin(), parts.end(), ",")) + "\")")
         .str();

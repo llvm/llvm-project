@@ -887,6 +887,15 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         if (auto *CondLoop = M.getFunction("llvm.cond.loop"))
           Changed |= expandCondLoop(*CondLoop);
       break;
+    case Intrinsic::provenance_alloc:
+    case Intrinsic::provenance_dealloc:
+      // Allocator provenance intrinsics are lowered to their pointer operand.
+      Changed |= forEachCall(F, [](CallInst *CI) {
+        CI->replaceAllUsesWith(CI->getArgOperand(0));
+        CI->eraseFromParent();
+        return true;
+      });
+      break;
     }
   }
   return Changed;
