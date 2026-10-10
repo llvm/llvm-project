@@ -1393,6 +1393,42 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
 }
 
+TEST(APFloatTest, ExactDecimalStringsDirectedRounding) {
+  struct TestCase {
+    const fltSemantics &Sem;
+    const char *Decimal;
+    uint64_t Bits;
+  };
+  const TestCase Tests[] = {
+      {APFloat::IEEEsingle(), "0.100000001490116119384765625", 0x3DCCCCCD},
+      {APFloat::IEEEhalf(), "0.000017225742340087890625", 0x0121},
+      {APFloat::IEEEdouble(),
+       "0.1000000000000000055511151231257827021181583404541015625",
+       0x3FB999999999999A},
+  };
+  // These decimals are exact binary values. An approximation just below the
+  // upper truncation boundary must not be mistaken for a safe rounding result.
+  for (const TestCase &Test : Tests) {
+    for (bool Negative : {false, true}) {
+      APFloat Expected(
+          Test.Sem, APInt(APFloat::semanticsSizeInBits(Test.Sem), Test.Bits));
+      if (Negative)
+        Expected.changeSign();
+      std::string Input = std::string(Negative ? "-" : "") + Test.Decimal;
+      for (auto RM : {APFloat::rmTowardZero, APFloat::rmTowardPositive,
+                      APFloat::rmTowardNegative}) {
+        SCOPED_TRACE(Input);
+        SCOPED_TRACE(static_cast<unsigned>(RM));
+        APFloat Value(Test.Sem);
+        auto Status = Value.convertFromString(Input, RM);
+        ASSERT_TRUE(!!Status);
+        EXPECT_EQ(*Status, APFloat::opOK);
+        EXPECT_TRUE(Value.bitwiseIsEqual(Expected));
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, DecimalStringsUseLargePowersOfFive) {
   // These values are just below one, so they cannot take the early obvious
   // underflow path. The number of fractional digits is the power passed to
