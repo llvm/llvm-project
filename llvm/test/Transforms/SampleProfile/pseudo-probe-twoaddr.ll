@@ -25,8 +25,8 @@ for.body14:                                       ; preds = %for.body14, %for.bo
 ; CHECK: PSEUDO_PROBE -6878943695821059507, 9, 0, 0
   call void @llvm.pseudoprobe(i64 -6878943695821059507, i64 9, i32 0, i64 -1)
 ;; Check an opeq form of instruction is created.
-; CHECK: %[[#REG:]]:gr64_nosp = COPY %[[#]]
-; CHECK: %[[#REG]]:gr64_nosp = nuw ADD64ri32 %[[#REG]], 4, implicit-def dead $eflags
+; CHECK: %[[#REG:]]:gr64 = COPY %[[#]]
+; CHECK: %[[#REG]]:gr64 = nuw ADD64ri32 %[[#REG]], 4, implicit-def dead $eflags
   %niter137.nsub.3 = add i64 %niter137, -4
   %niter137.ncmp.3 = icmp eq i64 %niter137.nsub.3, 0
   br i1 %niter137.ncmp.3, label %for.cond25.preheader.loopexit.unr-lcssa, label %for.body14
