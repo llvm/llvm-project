@@ -293,6 +293,21 @@ AArch64FrameLowering::getArgumentStackToRestore(MachineFunction &MF,
   return ArgumentPopSize;
 }
 
+bool AArch64FrameLowering::authenticatesReturnAddressEarly(
+    MachineFunction &MF, MachineBasicBlock &MBB) const {
+  if (!needsWinCFI(MF) ||
+      !MF.getInfo<AArch64FunctionInfo>()->shouldSignReturnAddress(MF))
+    return false;
+
+  // Funclets don't tail call, and are not what the unwind info is about.
+  MachineBasicBlock::iterator LastI = MBB.getLastNonDebugInstr();
+  if (LastI != MBB.end() && (LastI->getOpcode() == AArch64::CATCHRET ||
+                             LastI->getOpcode() == AArch64::CLEANUPRET))
+    return false;
+
+  return getArgumentStackToRestore(MF, MBB) != 0;
+}
+
 static bool produceCompactUnwindFrame(const AArch64FrameLowering &,
                                       MachineFunction &MF);
 
@@ -464,13 +479,13 @@ AArch64FrameLowering::getFixedObjectSize(const MachineFunction &MF,
                                          bool IsWin64, bool IsFunclet) const {
   assert(AFI->getTailCallReservedStack() % 16 == 0 &&
          "Tail call reserved stack must be aligned to 16 bytes");
-  if (!IsWin64 || IsFunclet) {
+  if (!IsWin64) {
     return AFI->getTailCallReservedStack();
+  } else if (IsFunclet) {
+    // A funclet has its own frame; the tail call reserve belongs to the parent
+    // function's incoming argument area.
+    return 0;
   } else {
-    if (AFI->getTailCallReservedStack() != 0 &&
-        !MF.getFunction().getAttributes().hasAttrSomewhere(
-            Attribute::SwiftAsync))
-      report_fatal_error("cannot generate ABI-changing tail call for Win64");
     unsigned FixedObjectSize = AFI->getTailCallReservedStack();
 
     // Var args are stored here in the primary function.
@@ -538,6 +553,12 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // are accessed off the frame pointer in both the parent function and the
   // funclets.
   if (MF.hasEHFunclets())
+    return true;
+
+  // Unwinding through a callee that tail calls with a larger stack argument
+  // area leaves SP lower than our unwind info expects, so on Windows we must
+  // be found via the frame pointer instead.
+  if (AFI.hasWinCallToGuaranteedTCOFunction())
     return true;
 
   // When the stack guard is mixed with the frame pointer, a dedicated FP is
@@ -2226,6 +2247,11 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd);
 
+  // If the return address is authenticated before the epilogue, it stays in LR
+  // rather than being restored here, as that would replace it with the
+  // unauthenticated value from the stack.
+  bool KeepLR = authenticatesReturnAddressEarly(MF, MBB);
+
   bool PTrueCreated = false;
   for (const RegPairInfo &RPI : RegPairs) {
     Register Reg1 = RPI.Reg1;
@@ -2307,6 +2333,26 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
           MachineMemOperand::MOLoad, Size, Alignment));
+    } else if (KeepLR && RPI.Type == RegPairInfo::GPR &&
+               (Reg1 == AArch64::LR || Reg2 == AArch64::LR)) {
+      // Windows pairs LR with the register before it, which is the one at the
+      // lower address (and so the first operand of the ldp once the pair is
+      // swapped, as below), so restore just that register. The pair has not
+      // been swapped yet at this point, so that register is Reg1.
+      if (!RPI.isPaired())
+        continue;
+      assert(Reg2 == AArch64::LR && "Expected LR to be the second of the pair");
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MBBI, DL, TII.get(AArch64::LDRXui));
+      MIB.addReg(Reg1, getDefRegState(true));
+      MIB.addReg(AArch64::SP)
+          .addImm(RPI.Offset)
+          .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
+          MachineMemOperand::MOLoad, 8, Align(8)));
+      if (NeedsWinCFI)
+        insertSEH(MIB, TII, MachineInstr::FrameDestroy);
     } else {
       // Windows unwind codes require consecutive registers if registers are
       // paired.  Make the switch here, so that the code below will save (x,x+1)

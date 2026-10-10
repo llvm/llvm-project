@@ -299,6 +299,11 @@ void AArch64PointerAuthImpl::authenticateLR(
       MF.getSubtarget().getFrameLowering());
   int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
 
+  // The signing SP is already in X16 if we are before the epilogue proper.
+  bool EntrySPInX16 = MBBI->getOpcode() == AArch64::PAUTH_EPILOGUE_ENTRY_SP;
+  assert((!EntrySPInX16 || ArgumentStackToRestore != 0) &&
+         "Early authentication is only for epilogues that change SP");
+
   // The AUTIASP instruction assembles to a hint instruction before v8.3a so
   // this instruction can safely be used for any v8a architecture.
   // From v8.3a onwards there are optimised authenticate LR and return
@@ -372,6 +377,18 @@ void AArch64PointerAuthImpl::authenticateLR(
     return;
   }
 
+  // Windows unwind info describes the authentication as a single pac_sign_lr
+  // unwind code, which the unwinder applies with the SP it has at that point.
+  // That is the signing SP only if the epilogue leaves SP at its entry value,
+  // and a single code can't stand in for the multi-instruction sequence below.
+  // So there, the epilogue emitter authenticates before the epilogue starts,
+  // where the prologue's unwind codes still apply, and the epilogue's unwind
+  // codes don't mention pac_sign_lr.
+  if (NeedsWinCFI && !EntrySPInX16)
+    report_fatal_error("Can't handle a tail call that changes the stack "
+                       "argument size in a function that signs its return "
+                       "address on Windows");
+
   // When ArgumentStackToRestore > 0, this function received more argument
   // space than the tail callee pops. The epilogue contains an SP adjustment
   // (e.g. "add sp, sp, #N") to discard the leftover argument space.
@@ -387,12 +404,23 @@ void AArch64PointerAuthImpl::authenticateLR(
   // At this point there is an offset to the incoming SP, and we can't use the
   // aut variants that hard-code SP. Reconstruct entry SP in x16 and
   // authenticate using AUTI[AB]1716 (x17=LR, x16=entry_SP).
-  emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                  StackOffset::getFixed(-ArgumentStackToRestore), TII,
-                  MachineInstr::FrameDestroy);
+  if (!EntrySPInX16)
+    emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                    StackOffset::getFixed(-ArgumentStackToRestore), TII,
+                    MachineInstr::FrameDestroy);
+
+  // At this point, if EntrySPInX16 is true, it means we're using
+  // PAUTH_EPILOGUE_ENTRY_SP, so the signed return address will already be in
+  // x17 if the sequence below works on that, as the epilogue emitter works out
+  // using AArch64PAuth::authenticatesLRViaX17, and in LR if it doesn't. Each
+  // of the sequences below asserts that it agrees.
+  [[maybe_unused]] const bool ViaX17 = AArch64PAuth::authenticatesLRViaX17(
+      MFnI->branchProtectionPAuthLR(), Subtarget->hasPAuth());
 
   if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-    emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
+    assert(ViaX17 && "Expected to authenticate via X17");
+    if (!EntrySPInX16)
+      emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
@@ -404,7 +432,9 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   } else if (MFnI->branchProtectionPAuthLR()) {
-    emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
+    assert(ViaX17 && "Expected to authenticate via X17");
+    if (!EntrySPInX16)
+      emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
@@ -424,6 +454,7 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   } else if (Subtarget->hasPAuth()) {
+    assert(!ViaX17 && "Expected to authenticate using LR directly");
     BuildMI(MBB, MBBI, DL, TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA),
             AArch64::LR)
         .addUse(AArch64::LR)
@@ -431,7 +462,9 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   } else {
-    emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
+    assert(ViaX17 && "Expected to authenticate via X17");
+    if (!EntrySPInX16)
+      emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
     BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
@@ -441,7 +474,7 @@ void AArch64PointerAuthImpl::authenticateLR(
     emitMOVWithFrameDestroy(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   }
 
-  if (NeedsWinCFI) {
+  if (NeedsWinCFI && !EntrySPInX16) {
     assert(UseBKey &&
            "Windows SEH PAC unwind info only supports B-key signing");
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
@@ -479,6 +512,7 @@ bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
         break;
       case AArch64::PAUTH_PROLOGUE:
       case AArch64::PAUTH_EPILOGUE:
+      case AArch64::PAUTH_EPILOGUE_ENTRY_SP:
         PAuthPseudoInstrs.push_back(MI.getIterator());
         break;
       }
@@ -491,6 +525,7 @@ bool AArch64PointerAuthImpl::run(MachineFunction &MF) {
       signLR(MF, It);
       break;
     case AArch64::PAUTH_EPILOGUE:
+    case AArch64::PAUTH_EPILOGUE_ENTRY_SP:
       authenticateLR(MF, It);
       break;
     default:
