@@ -54,9 +54,6 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -956,20 +953,12 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // indicates that, each time execution reaches the peeled iterations,
   // execution is estimated to exit them without reaching the remaining loop's
   // header.
-  //
-  // Even if the probability of reaching a loop's header is low, if it is
-  // reached, it is the start of an iteration.  Consequently, some passes
-  // historically assume that llvm::getLoopEstimatedTripCount always returns a
-  // positive count or std::nullopt.  Thus, return std::nullopt when
-  // llvm.loop.estimated_trip_count is 0.
   if (std::optional<unsigned> TC =
           getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC
-                      << (*TC == 0 ? " (returning std::nullopt)" : "")
-                      << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : TC;
+                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
+    return TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1002,7 +991,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
+  unsigned LatchExitWeight = 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -1206,6 +1195,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vector_reduce_fminimumnum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1255,6 +1246,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
     return Intrinsic::minimum;
   case Intrinsic::vector_reduce_fmaximum:
     return Intrinsic::maximum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1305,6 +1300,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMaximum;
   case Intrinsic::vector_reduce_fminimum:
     return RecurKind::FMinimum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return RecurKind::FMaximumNum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return RecurKind::FMinimumNum;
   default:
     return RecurKind::None;
   }
@@ -1435,7 +1434,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
     NewLoop->addBasicBlockToLoop(LoopBB, *LI);
   }
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Res;
 }
 
@@ -1496,36 +1495,6 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
-}
-
-Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
-                                  Value *InitVal, PHINode *OrigPhi) {
-  Value *NewVal = nullptr;
-
-  // First use the original phi to determine the new value we're trying to
-  // select from in the loop.
-  SelectInst *SI = nullptr;
-  for (auto *U : OrigPhi->users()) {
-    if ((SI = dyn_cast<SelectInst>(U)))
-      break;
-  }
-  assert(SI && "One user of the original phi should be a select");
-
-  if (SI->getTrueValue() == OrigPhi)
-    NewVal = SI->getFalseValue();
-  else {
-    assert(SI->getFalseValue() == OrigPhi &&
-           "At least one input to the select should be the original Phi");
-    NewVal = SI->getTrueValue();
-  }
-
-  // If any predicate is true it means that we want to select the new value.
-  Value *AnyOf =
-      Src->getType()->isVectorTy() ? Builder.CreateOrReduce(Src) : Src;
-  // The compares in the loop may yield poison, which propagates through the
-  // bitwise ORs. Freeze it here before the condition is used.
-  AnyOf = Builder.CreateFreeze(AnyOf);
-  return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1796,11 +1765,11 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
 struct RewritePhi {
   PHINode *PN;               // For which PHI node is this replacement?
   unsigned Ith;              // For which incoming value?
-  const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  SCEVUse ExpansionSCEV;     // The SCEV of the incoming value we are rewriting.
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
+  RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
              bool H)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
         HighCost(H) {}
@@ -1971,25 +1940,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        const SCEV *ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
-        if (isa<SCEVCouldNotCompute>(ExitValue) ||
-            !SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue)) {
-          // TODO: This should probably be sunk into SCEV in some way; maybe a
-          // getSCEVForExit(SCEV*, L, ExitingBB)?  It can be generalized for
-          // most SCEV expressions and other recurrence types (e.g. shift
-          // recurrences).  Is there existing code we can reuse?
-          const SCEV *ExitCount = SE->getExitCount(L, PN->getIncomingBlock(i));
-          if (isa<SCEVCouldNotCompute>(ExitCount))
-            continue;
-          if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-            if (AddRec->getLoop() == L)
-              ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
-          if (isa<SCEVCouldNotCompute>(ExitValue) ||
-              !SE->isLoopInvariant(ExitValue, L) ||
-              !Rewriter.isSafeToExpand(ExitValue))
-            continue;
-        }
+        SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, PN->getIncomingBlock(i));
+        if (!SE->isLoopInvariant(ExitValue, L) ||
+            !Rewriter.isSafeToExpand(ExitValue))
+          continue;
 
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
@@ -2002,7 +1956,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
         // Check if expansions of this SCEV would count as being high cost.
         bool HighCost = Rewriter.isHighCostExpansion(
-            ExitValue, L, SCEVCheapExpansionBudget, TTI, Inst);
+            ExitValue.getPointer(), L, SCEVCheapExpansionBudget, TTI, Inst);
 
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion
@@ -2263,9 +2217,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
@@ -2318,9 +2271,8 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                                   SCEVExpander &Expander, ElementCount VF,
                                   unsigned IC) {
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 

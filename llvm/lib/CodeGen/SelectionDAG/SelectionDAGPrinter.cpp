@@ -281,10 +281,11 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 #endif
 }
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream O(s);
-  O << "SU(" << SU->NodeNum << "): ";
+  O << *SU << ": ";
   if (SU->getNode()) {
     SmallVector<SDNode *, 4> GluedNodes;
     for (SDNode *N = SU->getNode(); N; N = N->getGluedNode())
@@ -301,6 +302,7 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   }
   return s;
 }
+#endif
 
 void ScheduleDAGSDNodes::getCustomGraphFeatures(GraphWriter<ScheduleDAG*> &GW) const {
   if (DAG) {

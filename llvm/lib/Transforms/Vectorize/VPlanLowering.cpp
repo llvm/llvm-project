@@ -23,7 +23,6 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -61,7 +60,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
-        {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
+        WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -87,7 +86,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, CostKind);
   InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
   if (PHICost > BroadcastCost)
     return;
@@ -528,6 +527,13 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPBuilder Builder(&R);
+      // !prof is only supported on scalar selects.
+      if (auto *Widen = dyn_cast<VPWidenRecipe>(&R)) {
+        if (Widen->getOpcode() == Instruction::Select &&
+            !vputils::isSingleScalar(Widen->getOperand(0)))
+          Widen->eraseMetadata(LLVMContext::MD_prof);
+      }
+
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR);
         WidenIVR->eraseFromParent();
@@ -733,7 +739,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
       if (User->usesScalars(VPV))
         continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
-        HoistPoint = HoistBlock->begin();
+        HoistPoint = HoistBlock->getFirstNonPhi();
       else
         assert(VPDT.dominates(VectorPreheader,
                               cast<VPRecipeBase>(User)->getParent()) &&
@@ -742,10 +748,9 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
-    VPV->replaceUsesWithIf(Broadcast,
-                           [VPV, Broadcast](VPUser &U, unsigned Idx) {
-                             return Broadcast != &U && !U.usesScalars(VPV);
-                           });
+    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser &U) {
+      return Broadcast != &U && !U.usesScalars(VPV);
+    });
   }
 }
 
@@ -777,7 +782,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   if (!isa<SCEVConstant>(TCScev))
     return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);
-  auto VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
+  const SCEV *VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
   if (auto *ConstVecTC = dyn_cast<SCEVConstant>(VecTCScev))
     Plan.getVectorTripCount().setUnderlyingValue(ConstVecTC->getValue());
 }
@@ -788,7 +793,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   if (BTC->user_empty())
     return;
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   auto *TCTy = Plan.getTripCount()->getScalarType();
   auto *TCMO =
       Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
@@ -831,8 +836,8 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
       BuildVector->insertAfter(DefR);
 
       DefR->replaceUsesWithIf(
-          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
-                           VPUser &U, unsigned) {
+          BuildVector,
+          [BuildVector, &UsesVectorOrInsideReplicateRegion](VPUser &U) {
             return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
           });
     }
@@ -868,9 +873,8 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(Unpack, [&Def](VPUser &U, unsigned) {
-          return U.usesFirstLaneOnly(Def);
-        });
+        Def->replaceUsesWithIf(
+            Unpack, [&Def](VPUser &U) { return U.usesFirstLaneOnly(Def); });
       }
     }
   }
@@ -888,7 +892,7 @@ void VPlanTransforms::materializeVectorTripCount(
 
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = TC->getScalarType();
-  VPBasicBlock::iterator InsertPt = VectorPHVPBB->begin();
+  VPBasicBlock::iterator InsertPt = VectorPHVPBB->getFirstNonPhi();
   if (auto *StepR = Step->getDefiningRecipe()) {
     assert(VPDominatorTree(Plan).dominates(StepR->getParent(), VectorPHVPBB) &&
            "Step VPBB must dominate VectorPHVPBB");
@@ -957,7 +961,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
     return;
   }
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
@@ -975,8 +979,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
   if (!vputils::onlyScalarValuesUsed(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
-    VF.replaceUsesWithIf(
-        BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
+    VF.replaceUsesWithIf(BC, [&VF](VPUser &U) { return !U.usesScalars(&VF); });
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
@@ -1003,8 +1006,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
+      Src = Builder.createFreeze(Src);
+      Sink = Builder.createFreeze(Sink);
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write
@@ -1089,23 +1092,19 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getDebugLoc();
   VPSCEVExpander Expander(Builder, SE, DL);
 
-  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
-  // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
-  // late expansion.
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV || ExpSCEV->user_empty())
+  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
+  for (VPExpandSCEVRecipe &ExpSCEV :
+       make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(*Entry))) {
+    if (ExpSCEV.user_empty())
       continue;
-    Builder.setInsertPoint(ExpSCEV);
-    VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
-    if (!Expanded)
-      continue;
-    ExpSCEV->replaceAllUsesWith(Expanded);
+    Builder.setInsertPoint(&ExpSCEV);
+    VPValue *Expanded = Expander.expand(ExpSCEV.getSCEV());
+    ExpSCEV.replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
-    if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(Plan.getPoison(ExpSCEV->getScalarType()));
-    ExpSCEV->eraseFromParent();
+    if (Plan.getTripCount() == &ExpSCEV)
+      Plan.resetTripCount(Plan.getPoison(ExpSCEV.getScalarType()));
+    ExpSCEV.eraseFromParent();
   }
 }
 
@@ -1117,19 +1116,17 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
   DenseMap<const SCEV *, Value *> ExpandedSCEVs;
   // Expand remaining VPExpandSCEVRecipes to IR instructions using SCEVExpander.
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV)
-      continue;
-    const SCEV *Expr = ExpSCEV->getSCEV();
+  for (VPExpandSCEVRecipe &ExpSCEV :
+       make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(*Entry))) {
+    const SCEV *Expr = ExpSCEV.getSCEV();
     Value *Res =
         Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
     ExpandedSCEVs[Expr] = Res;
     VPValue *Exp = Plan.getOrAddLiveIn(Res);
-    ExpSCEV->replaceAllUsesWith(Exp);
-    if (Plan.getTripCount() == ExpSCEV)
+    ExpSCEV.replaceAllUsesWith(Exp);
+    if (Plan.getTripCount() == &ExpSCEV)
       Plan.resetTripCount(Exp);
-    ExpSCEV->eraseFromParent();
+    ExpSCEV.eraseFromParent();
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "all VPExpandSCEVRecipes must have been expanded");

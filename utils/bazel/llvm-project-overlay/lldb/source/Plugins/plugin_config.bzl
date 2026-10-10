@@ -43,7 +43,7 @@ DEFAULT_PLUGINS = [
     "InstructionPPC64",
     "InstructionRISCV",
     "InstrumentationRuntimeASan",
-    "InstrumentationRuntimeASanLibsanitizers",
+    "InstrumentationRuntimeBoundsSafety",
     "InstrumentationRuntimeMainThreadChecker",
     "InstrumentationRuntimeTSan",
     "InstrumentationRuntimeUBSan",
@@ -94,8 +94,17 @@ DEFAULT_PLUGINS = [
     "SystemRuntimeMacOSX",
     "TraceExporterCTF",
     "TypeSystemClang",
+    "TypeSystemFortran",
     "UnwindAssemblyInstEmulation",
     "UnwindAssemblyX86",
+]
+
+# Fallback plugins that must be registered after the plugins they back up,
+# including optional ones selected in BUILD.bazel. These are kept separate so
+# that reordering DEFAULT_PLUGINS cannot move them earlier.
+FALLBACK_PLUGINS = [
+    # Bug reporters are tried in registration order, so None must be last.
+    "BugReporterNone",
 ]
 
 DEFAULT_SCRIPT_PLUGINS = [

@@ -20,17 +20,18 @@
 #include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/ELF.h"
 
-// System includes - They have to be included after framework includes because
-// they define some macros which collide with variable names in other modules
 #include <mutex>
 #include <optional>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sys/ptrace.h>
 #include <sys/uio.h>
 
 #ifndef HWCAP_PACA
@@ -51,6 +52,18 @@
 
 #ifndef HWCAP2_POE
 #define HWCAP2_POE (1ULL << 63)
+#endif
+
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
+#ifndef PTRACE_PEEKMTETAGS
+#define PTRACE_PEEKMTETAGS 33
+#endif
+
+#ifndef PTRACE_POKEMTETAGS
+#define PTRACE_POKEMTETAGS 34
 #endif
 
 using namespace lldb;
@@ -119,6 +132,8 @@ unsigned int NativeRegisterContextLinux_arm64::GetPtraceSet(
   case RegisterSetType::POE:
     return llvm::ELF::NT_ARM_POE;
   }
+
+  llvm_unreachable("No ptrace set for this RegisterType.");
 }
 
 size_t NativeRegisterContextLinux_arm64::GetSetSize(
@@ -153,6 +168,8 @@ size_t NativeRegisterContextLinux_arm64::GetSetSize(
   case RegisterSetType::POE:
     return sizeof(m_poe_regs);
   }
+
+  llvm_unreachable("No set size for this RegisterType.");
 }
 
 void *NativeRegisterContextLinux_arm64::GetSetBuffer(
@@ -185,6 +202,8 @@ void *NativeRegisterContextLinux_arm64::GetSetBuffer(
   case RegisterSetType::POE:
     return &m_poe_regs;
   }
+
+  llvm_unreachable("No set buffer for this RegisterType.");
 }
 
 // A NativeRegisterContext is constructed per thread, but all threads' registers
@@ -621,7 +640,6 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
   uint8_t *dst;
   uint32_t offset = LLDB_INVALID_INDEX32;
-  std::vector<uint8_t> sve_reg_non_live;
 
   if (GetRegisterInfo().IsGPR(reg)) {
     error = ReadGPR();

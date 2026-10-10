@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVPrepareFunctions.h"
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
@@ -543,7 +542,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           Changed = true;
           break;
         }
-        if (TM.getTargetTriple().getVendor() == Triple::AMD ||
+        if (STI.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
                 return false;
@@ -591,7 +590,7 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
   if (F->isIntrinsic())
     return F;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
     return Arg.getType()->isAggregateType();
@@ -786,7 +785,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
   if (Calls.empty())
     return false;
 
-  IRBuilder<> B(F->getContext());
+  IRBuilder<> B(*F->getParent());
 
   unsigned MutatedCallIdx = 0;
   for (auto &&[CB, NewFnTy] : Calls) {
@@ -904,8 +903,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   return Changed;
 }
 
-PreservedAnalyses SPIRVPrepareFunctions::run(Module &M,
-                                             ModuleAnalysisManager &AM) {
+PreservedAnalyses SPIRVPrepareFunctionsPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto GetTTI = [&FAM](Function &F) -> const TargetTransformInfo & {

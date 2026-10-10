@@ -61,6 +61,10 @@ void DIEDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   CU.addBaseTypeRef(getActiveDIE(), Idx);
 }
 
+void DIEDwarfExpression::emitRelocatedAddress(const MCSymbol *Sym) {
+  CU.addLabel(getActiveDIE(), dwarf::DW_FORM_addr, Sym);
+}
+
 void DIEDwarfExpression::enableTemporaryBuffer() {
   assert(!IsBuffering && "Already buffering?");
   IsBuffering = true;
@@ -510,6 +514,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   addSourceLine(Die, Ty->getLine(), /*Column*/ 0, Ty->getFile());
 }
 
+void DwarfUnit::addSourceLine(DIE &Die, const DIProperty *P) {
+  assert(P);
+
+  addSourceLine(Die, P->getLine(), /*Column*/ 0, P->getFile());
+}
+
 void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
   // Pass this down to addConstantValue as an unsigned bag of bits.
   addConstantValue(Die, CFP->getValueAPF().bitcastToAPInt(), true);
@@ -859,6 +869,9 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
             STy->getEncoding());
   }
+
+  if (STy->getCharType())
+    addType(Buffer, STy->getCharType());
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
@@ -1145,6 +1158,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         if (unsigned PropertyAttributes = Property->getAttributes())
           addUInt(ElemDie, dwarf::DW_AT_APPLE_property_attribute, std::nullopt,
                   PropertyAttributes);
+      } else if (auto *Property = dyn_cast<DIProperty>(Element)) {
+        constructPropertyDIE(Buffer, Property);
       } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
         if (Composite->getTag() == dwarf::DW_TAG_variant_part) {
           DIE &VariantPart = createAndAddDIE(Composite->getTag(), Buffer);
@@ -2009,6 +2024,33 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     addFlag(MemberDie, dwarf::DW_AT_artificial);
 
   return MemberDie;
+}
+
+void DwarfUnit::constructPropertyDIE(DIE &Buffer, const DIProperty *P) {
+  DIE &PropertyDie = createAndAddDIE(dwarf::DW_TAG_property, Buffer, P);
+  addString(PropertyDie, dwarf::DW_AT_name, P->getName());
+  if (DIType *Ty = P->getType())
+    addType(PropertyDie, Ty);
+  addSourceLine(PropertyDie, P);
+
+  if (DINode *BackingStorage = P->getBackingStorage()) {
+    DIE &GetterDie =
+        createAndAddDIE(dwarf::DW_TAG_property_getter, PropertyDie);
+    PropertyForwardMap.insert(std::make_pair(&GetterDie, BackingStorage));
+  }
+}
+
+void DwarfUnit::constructPropertyForwardDIEs() {
+  for (auto &P : PropertyForwardMap) {
+    DIE &GetterDie = *P.first;
+    const DINode *Target = P.second;
+    if (!Target)
+      continue;
+    DIE *TargetDie = getDIE(Target);
+    if (!TargetDie)
+      continue;
+    addDIEEntry(GetterDie, dwarf::DW_AT_property_forward, *TargetDie);
+  }
 }
 
 DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {

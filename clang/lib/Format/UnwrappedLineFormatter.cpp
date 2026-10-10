@@ -8,7 +8,6 @@
 
 #include "UnwrappedLineFormatter.h"
 #include "FormatToken.h"
-#include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
@@ -136,8 +135,9 @@ private:
       // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
-      return Style.IndentAccessModifiers ? -Style.IndentWidth
-                                         : Style.AccessModifierOffset;
+      return Style.IndentAccessModifiers != FormatStyle::IAMS_Never
+                 ? -Style.IndentWidth
+                 : Style.AccessModifierOffset;
     }
     return 0;
   }
@@ -444,7 +444,8 @@ private:
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         (FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
                                   TT_ForEachMacro) ||
-         TheLine->startsWithExportBlock())) {
+         (TheLine->Last->is(TT_ExportLBrace) &&
+          !Style.BraceWrapping.AfterExportBlock))) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -518,9 +519,14 @@ private:
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                        TT_UnionLBrace) ||
-                 (TheLine->Last->is(TT_RecordLBrace) && Style.isJava())) {
+                                        TT_UnionLBrace)) {
         return tryMergeRecord(I, E, Limit);
+      } else if (TheLine->Last->is(TT_RecordLBrace) && Style.isJava()) {
+        // Java `interface` and `record` have no dedicated `BraceWrapping.After`
+        // option and are not governed by `AllowShortRecordOnASingleLine`.
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (NextLine.First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, tok::kw_union)) {
@@ -892,7 +898,7 @@ private:
         Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
                             tok::kw___finally, tok::r_brace,
                             Keywords.kw___except) ||
-        Line.startsWithExportBlock()) {
+        Line.Last->is(TT_ExportLBrace)) {
       if (IsSplitBlock)
         return 0;
       // Don't merge when we can't except the case when
@@ -937,6 +943,11 @@ private:
     }
 
     if (Line.endsWith(tok::l_brace)) {
+      if (Style.BraceWrapping.AfterExportBlock &&
+          Line.First->is(TT_ExportLBrace)) {
+        return 0;
+      }
+
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never &&
           Line.First->is(TT_BlockLBrace)) {
         return 0;
@@ -1561,7 +1572,7 @@ unsigned UnwrappedLineFormatter::format(
     if (ShouldFormat && TheLine.Type != LT_Invalid) {
       if (!DryRun) {
         bool LastLine = TheLine.First->is(tok::eof);
-        formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines, Indent,
+        formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Indent,
                          LastLine ? LastStartColumn : NextStartColumn + Indent);
       }
 
@@ -1609,7 +1620,7 @@ unsigned UnwrappedLineFormatter::format(
                               TheLine.LeadingEmptyLinesAffected);
         // Format the first token.
         if (ReformatLeadingWhitespace) {
-          formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines,
+          formatFirstToken(TheLine, PreviousLine, PrevPrevLine,
                            TheLine.First->OriginalColumn,
                            TheLine.First->OriginalColumn);
         } else {
@@ -1634,7 +1645,6 @@ unsigned UnwrappedLineFormatter::format(
 static auto computeNewlines(const AnnotatedLine &Line,
                             const AnnotatedLine *PreviousLine,
                             const AnnotatedLine *PrevPrevLine,
-                            const SmallVectorImpl<AnnotatedLine *> &Lines,
                             const FormatStyle &Style) {
   const auto &RootToken = *Line.First;
   if (isClangFormatOn(RootToken.TokenText))
@@ -1646,7 +1656,8 @@ static auto computeNewlines(const AnnotatedLine &Line,
       (!RootToken.Next ||
        (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
       // Do not remove empty lines before namespace closing "}".
-      !getNamespaceToken(&Line, Lines)) {
+      (Line.InPPDirective || !Line.startsWith(TT_NamespaceRBrace)) &&
+      !Style.KeepEmptyLines.AtEndOfBlock) {
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
@@ -1742,11 +1753,11 @@ static auto computeNewlines(const AnnotatedLine &Line,
   return Newlines;
 }
 
-void UnwrappedLineFormatter::formatFirstToken(
-    const AnnotatedLine &Line, const AnnotatedLine *PreviousLine,
-    const AnnotatedLine *PrevPrevLine,
-    const SmallVectorImpl<AnnotatedLine *> &Lines, unsigned Indent,
-    unsigned NewlineIndent) {
+void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
+                                              const AnnotatedLine *PreviousLine,
+                                              const AnnotatedLine *PrevPrevLine,
+                                              unsigned Indent,
+                                              unsigned NewlineIndent) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
     unsigned Newlines = std::min(
@@ -1760,7 +1771,7 @@ void UnwrappedLineFormatter::formatFirstToken(
 
   if (RootToken.Newlines < 0) {
     RootToken.Newlines =
-        computeNewlines(Line, PreviousLine, PrevPrevLine, Lines, Style);
+        computeNewlines(Line, PreviousLine, PrevPrevLine, Style);
     assert(RootToken.Newlines >= 0);
   }
 

@@ -32,6 +32,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -49,6 +50,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
     "object-size-offset-visitor-max-visit-instructions",
@@ -292,14 +297,6 @@ bool llvm::isAllocationFn(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   return getAllocationData(V, AnyAlloc, GetTLI).has_value() ||
          checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
-}
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory similar to malloc or calloc.
-bool llvm::isMallocOrCallocLikeFn(const Value *V,
-                                  const TargetLibraryInfo *TLI) {
-  // TODO: Function behavior does not match name.
-  return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -676,17 +673,16 @@ Value *llvm::lowerObjectSizeCall(
         isUIntN(ResultType->getBitWidth(), Size))
       return ConstantInt::get(ResultType, Size);
   } else {
-    LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
-    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions);
+    ObjectSizeOffsetEvaluator Eval(*ObjectSize->getModule(), TLI, EvalOptions);
     SizeOffsetValue SizeOffsetPair = Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
       IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
-          Ctx, TargetFolder(DL), IRBuilderCallbackInserter([&](Instruction *I) {
+          ObjectSize->getIterator(), TargetFolder(DL),
+          IRBuilderCallbackInserter([&](Instruction *I) {
             if (InsertedInstructions)
               InsertedInstructions->push_back(I);
           }));
-      Builder.SetInsertPoint(ObjectSize);
 
       Value *Size = SizeOffsetPair.Size;
       Value *Offset = SizeOffsetPair.Offset;
@@ -945,7 +941,7 @@ bool ObjectSizeOffsetVisitor::checkedZextOrTrunc(APInt &I) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
-  TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
+  TypeSize ElemSize = I.getAllocationBaseSize(DL);
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return ObjectSizeOffsetVisitor::unknown();
   if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
@@ -1234,10 +1230,9 @@ SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
     : SizeOffsetType(SOT.Size, SOT.Offset) {}
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
-    const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    ObjectSizeOpts EvalOpts)
-    : DL(DL), TLI(TLI), Context(Context),
-      Builder(Context, TargetFolder(DL),
+    Module &M, const TargetLibraryInfo *TLI, ObjectSizeOpts EvalOpts)
+    : DL(M.getDataLayout()), TLI(TLI), Context(M.getContext()),
+      Builder(M, TargetFolder(DL),
               IRBuilderCallbackInserter(
                   [&](Instruction *I) { InsertedInstructions.insert(I); })),
       EvalOpts(EvalOpts) {
@@ -1332,11 +1327,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
-  if (!I.getAllocatedType()->isSized())
-    return ObjectSizeOffsetEvaluator::unknown();
-
   // must be a VLA or vscale.
-  assert(I.isArrayAllocation() || I.getAllocatedType()->isScalableTy());
+  assert(I.isArrayAllocation() || I.isScalable());
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
@@ -1410,7 +1402,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
   // Compute offset/size for each PHI incoming pointer.
   for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i) {
     BasicBlock *IncomingBlock = PHI.getIncomingBlock(i);
-    Builder.SetInsertPoint(IncomingBlock, IncomingBlock->getFirstInsertionPt());
+    Builder.SetInsertPoint(IncomingBlock->getFirstInsertionPt());
     SizeOffsetValue EdgeData = compute_(PHI.getIncomingValue(i));
 
     if (!EdgeData.bothKnown()) {
@@ -1452,9 +1444,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitSelectInst(SelectInst &I) {
     return TrueSide;
 
   Value *Size =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size, "",
+                           ProfcheckDisableMetadataFixes ? nullptr : &I);
   Value *Offset =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset,
+                           "", ProfcheckDisableMetadataFixes ? nullptr : &I);
   return SizeOffsetValue(Size, Offset);
 }
 

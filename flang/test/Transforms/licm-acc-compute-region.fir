@@ -6,7 +6,7 @@
 // CHECK-SAME:                     %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"},
 // CHECK-SAME:                     %[[ARG1:.*]]: index {fir.bindc_name = "n"}) {
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[REBOX_0:.*]] = fir.rebox %[[DECLARE_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[COPYIN_0:.*]] = acc.copyin var(%[[REBOX_0]] : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) implicit(true) name("x") -> !fir.box<!fir.array<?xf32>>
 // CHECK:           acc.kernel_environment dataOperands(%[[COPYIN_0]] : !fir.box<!fir.array<?xf32>>) {
@@ -21,14 +21,14 @@
 // CHECK:                 memref.store %{{.*}}, %[[REINTERPRET_CAST_0]]{{\[}}%[[VAL_2]]] : memref<?xf32, strided<[?]>>
 // CHECK:               }
 // CHECK:               acc.yield
-// CHECK:             } {origin = "acc.kernels"}
+// CHECK:             } <{origin = "acc.kernels"}>
 // CHECK:           }
 // CHECK:           acc.copyout accVar(%[[COPYIN_0]] : !fir.box<!fir.array<?xf32>>) to var(%[[REBOX_0]] : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) implicit(true) name("x")
 // CHECK:           return
 // CHECK:         }
 func.func @test_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: index {fir.bindc_name = "n"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %4 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %4 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtestEx") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %5 = fir.rebox %4 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
   %7 = acc.copyin var(%5 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) implicit(true) name("x") -> !fir.box<!fir.array<?xf32>>
   acc.kernel_environment dataOperands(%7 : !fir.box<!fir.array<?xf32>>) {
@@ -46,7 +46,7 @@ func.func @test_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg
         memref.store %cst, %reinterpret_cast[%arg4] : memref<?xf32, strided<[?]>>
       }
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   acc.copyout accVar(%7 : !fir.box<!fir.array<?xf32>>) to var(%5 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) implicit(true) name("x")
   return

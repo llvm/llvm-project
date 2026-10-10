@@ -43,6 +43,7 @@ class InstructionSelector;
 class LegalizerInfo;
 class LibcallLoweringInfo;
 class MachineInstr;
+struct MachinePipelinerPolicy;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
 struct MCSchedModel;
@@ -253,6 +254,10 @@ public:
   /// allocation.
   virtual bool enablePostRAMachineScheduler() const;
 
+  /// True if the subtarget should run a machine scheduler before PHI
+  /// elimination.
+  virtual bool enableSSAMachineScheduler() const;
+
   /// True if the subtarget should run the atomic expansion pass.
   virtual bool enableAtomicExpand() const;
 
@@ -276,6 +281,9 @@ public:
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                          const SchedRegion &Region) const {}
+
+  /// Override generic software pipelining policy.
+  virtual void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.

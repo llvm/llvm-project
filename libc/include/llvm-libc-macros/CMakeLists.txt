@@ -118,6 +118,18 @@ add_macro_header(
 )
 
 add_macro_header(
+  fnmatch_macros
+  HDR
+    fnmatch-macros.h
+)
+
+add_macro_header(
+  glob_macros
+  HDR
+    glob-macros.h
+)
+
+add_macro_header(
   file_seek_macros
   HDR
     file-seek-macros.h
@@ -142,9 +154,25 @@ add_macro_header(
 )
 
 add_macro_header(
+  common_threads_macros
+  HDR
+    common-threads-macros.h
+)
+
+add_macro_header(
+  threads_macros
+  HDR
+    threads-macros.h
+  DEPENDS
+    .common_threads_macros
+)
+
+add_macro_header(
   limits_macros
   HDR
     limits-macros.h
+  DEPENDS
+    .common_threads_macros
 )
 
 add_macro_header(
@@ -173,6 +201,7 @@ add_macro_header(
     math-function-macros.h
   DEPENDS
     .math_macros
+    .float16_macros
 )
 
 add_macro_header(
@@ -252,9 +281,21 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_file_macros
+  HDR
+    sys-file-macros.h
+)
+
+add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_macro_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
 )
 
 add_macro_header(
@@ -285,6 +326,12 @@ add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
+)
+
+add_macro_header(
+  sys_mount_macros
+  HDR
+    sys-mount-macros.h
 )
 
 add_macro_header(
@@ -341,6 +388,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
@@ -350,6 +403,12 @@ add_macro_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h
+)
+
+add_macro_header(
+  sys_xattr_macros
+  HDR
+    sys-xattr-macros.h
 )
 
 add_macro_header(

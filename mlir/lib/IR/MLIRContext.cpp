@@ -373,16 +373,6 @@ MLIRContext::~MLIRContext() {
   impl->remarkEngine.reset();
 }
 
-/// Copy the specified array of elements into memory managed by the provided
-/// bump pointer allocator.  This assumes the elements are all PODs.
-template <typename T>
-static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
-                                    ArrayRef<T> elements) {
-  auto result = allocator.Allocate<T>(elements.size());
-  llvm::uninitialized_copy(elements, result);
-  return ArrayRef<T>(result, elements.size());
-}
-
 //===----------------------------------------------------------------------===//
 // Action Handling
 //===----------------------------------------------------------------------===//
@@ -618,9 +608,9 @@ void MLIRContext::allowUnregisteredDialects(bool allowing) {
 }
 
 /// Return true if multi-threading is enabled by the context.
-bool MLIRContext::isMultithreadingEnabled() {
-  return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
-}
+#if LLVM_ENABLE_THREADS
+bool MLIRContext::isMultithreadingEnabled() { return impl->threadingIsEnabled; }
+#endif
 
 /// Set the flag specifying if multi-threading is disabled by the context.
 void MLIRContext::disableMultithreading(bool disable) {
@@ -1007,8 +997,8 @@ void OperationName::UnregisteredOpModel::setInherentAttr(Operation *op,
   *op->getPropertiesStorage().as<Attribute *>() =
       attrs.getDictionary(op->getContext());
 }
-void OperationName::UnregisteredOpModel::populateInherentAttrs(
-    Operation *op, NamedAttrList &attrs) {}
+void OperationName::UnregisteredOpModel::walkInherentAttrs(
+    Operation *op, InherentAttrVisitor visitor) {}
 LogicalResult OperationName::UnregisteredOpModel::verifyInherentAttrs(
     OperationName opName, NamedAttrList &attributes,
     function_ref<InFlightDiagnostic()> emitError) {
@@ -1118,6 +1108,10 @@ void RegisteredOperationName::insert(
                                  rhs.getIdentifier().strref();
                         }),
       value);
+}
+
+void *RegisteredOperationName::allocateModelStorage() {
+  return ::operator new(sizeof(Impl));
 }
 
 //===----------------------------------------------------------------------===//

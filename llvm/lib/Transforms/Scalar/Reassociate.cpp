@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/Reassociate.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -52,7 +53,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -70,12 +70,6 @@ using namespace PatternMatch;
 STATISTIC(NumChanged, "Number of insts reassociated");
 STATISTIC(NumAnnihil, "Number of expr tree annihilated");
 STATISTIC(NumFactor , "Number of multiplies factored");
-
-static cl::opt<bool>
-    UseCSELocalOpt(DEBUG_TYPE "-use-cse-local",
-                   cl::desc("Only reorder expressions within a basic block "
-                            "when exposing CSE opportunities"),
-                   cl::init(true), cl::Hidden);
 
 #ifndef NDEBUG
 /// Print out the expression identified in the Ops list.
@@ -182,6 +176,10 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
 /// operand, both allowing contraction. Such pairs can be fused into a single
 /// fma, so they are kept together as leaves of the enclosing expression tree
 /// instead of being linearized into it.
+///
+/// Do not keep the pair together if the other operand is itself a reassociable
+/// fadd. Treating the outer fadd as a leaf would hide the nested addition from
+/// reassociation and prevent the complete expression from being optimized.
 static BinaryOperator *isFMulAddCandidate(Value *V) {
   BinaryOperator *FAdd = isReassociableOp(V, Instruction::FAdd);
   if (!FAdd || !FAdd->hasAllowContract())
@@ -190,12 +188,14 @@ static BinaryOperator *isFMulAddCandidate(Value *V) {
     return m_CombineAnd(m_AllowContract(m_OneUse(m_FMul(m_Value(), m_Value()))),
                         m_BinOp(FMul));
   };
-  BinaryOperator *Mul = nullptr, *OtherMul = nullptr;
+  BinaryOperator *Mul = nullptr;
   Value *OtherOp = nullptr;
-  // Keep constants visible to the enclosing expression so they still can be
-  // folded there.
+  // Keep constants, nested additions and other contractible multiplies visible
+  // to the enclosing expression so they can participate in folding,
+  // reassociation and factorization.
   if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
-      isa<Constant>(OtherOp) || match(OtherOp, ContractableFMul(OtherMul)))
+      isa<Constant>(OtherOp) || isReassociableOp(OtherOp, Instruction::FAdd) ||
+      match(OtherOp, m_AllowContract(m_FMul(m_Value(), m_Value()))))
     return nullptr;
   return Mul;
 }
@@ -2553,7 +2553,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     // reordering on the values that live in the first seen basic block.
     // The main idea is that we want to avoid forming expressions that would
     // become loop dependent.
-    if (UseCSELocalOpt) {
+    if (ScalarOptions::Global.reassociate_use_cse_local) {
       const BasicBlock *FirstSeenBB = nullptr;
       int StartIdx = Ops.size() - 1;
       // Skip the first value of the expression since we need at least two

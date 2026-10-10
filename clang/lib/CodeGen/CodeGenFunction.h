@@ -302,6 +302,19 @@ public:
   // because of jumps.
   VarBypassDetector Bypasses;
 
+  // Addresses of bypassed variables, for re-emitting their
+  // trivial-auto-var-init at a jump that re-enters their scope.
+  llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
+
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
+    llvm::AssertingVH<llvm::BasicBlock> Block;
+    const Stmt *Source;
+  };
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
+
   /// List of recently emitted OMPCanonicalLoops.
   ///
   /// Since OMPCanonicalLoops are nested inside other statements (in particular
@@ -722,8 +735,6 @@ public:
   llvm::Instruction *CurrentFuncletPad = nullptr;
 
   class CallLifetimeEnd final : public EHScopeStack::Cleanup {
-    bool isRedundantBeforeReturn() override { return true; }
-
     llvm::Value *Addr;
 
   public:
@@ -1159,9 +1170,10 @@ public:
     /// Sets the address of the variable \p LocalVD to be \p TempAddr in
     /// function \p CGF.
     /// \return true if at least one variable was set already, false otherwise.
-    bool setVarAddr(CodeGenFunction &CGF, const VarDecl *LocalVD,
+    bool setVarAddr(CodeGenFunction &CGF, const ValueDecl *LocalVD,
                     Address TempAddr) {
-      LocalVD = LocalVD->getCanonicalDecl();
+      LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
+
       // Only save it once.
       if (SavedLocals.count(LocalVD))
         return false;
@@ -1180,6 +1192,8 @@ public:
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
+        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
       SavedTempAddresses.try_emplace(LocalVD, TempAddr);
 
       return true;
@@ -1222,6 +1236,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
+    llvm::DenseMap<const BindingDecl *, Address> BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
@@ -1232,8 +1247,14 @@ public:
     /// PrivateGen is the address of the generated private variable.
     /// \return true if the variable is registered as private, false if it has
     /// been privatized already.
-    bool addPrivate(const VarDecl *LocalVD, Address Addr) {
+    bool addPrivate(const ValueDecl *LocalVD, Address Addr) {
       assert(PerformCleanup && "adding private to dead scope");
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
+        auto It = CGF.OMPPrivatizedBindings.find(BD);
+        BindingChanges.insert({BD, It != CGF.OMPPrivatizedBindings.end()
+                                       ? It->second
+                                       : Address::invalid()});
+      }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
 
@@ -1256,6 +1277,17 @@ public:
     ~OMPPrivateScope() {
       if (PerformCleanup)
         ForceCleanup();
+      for (auto &Change : BindingChanges) {
+        if (Change.second.isValid()) {
+          auto It = CGF.OMPPrivatizedBindings.find(Change.first);
+          if (It != CGF.OMPPrivatizedBindings.end())
+            It->second = Change.second;
+          else
+            CGF.OMPPrivatizedBindings.insert({Change.first, Change.second});
+        } else {
+          CGF.OMPPrivatizedBindings.erase(Change.first);
+        }
+      }
     }
 
     /// Checks if the global variable is captured in current function.
@@ -1328,6 +1360,14 @@ public:
   /// stack, emitting any required code (other than the catch handlers
   /// themselves).
   void popCatchScope();
+
+  // This function should be called after emitting all catch clauses and none
+  // of them were 'catch-all' clauses.
+  // Because in wasm we merge all catch clauses into one big catchpad, in case
+  // none of the types in catch handlers matches after we test against each of
+  // them, we should unwind to the next EH enclosing scope. We generate a call
+  // to rethrow function here to do that.
+  void WasmEmitFallthroughRethrow(llvm::BasicBlock *WasmCatchStartBlock);
 
   llvm::BasicBlock *getEHResumeBlock(bool isCleanup);
   llvm::BasicBlock *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
@@ -1554,6 +1594,11 @@ private:
   /// LocalDeclMap - This keeps track of the LLVM allocas or globals for local C
   /// decls.
   DeclMapTy LocalDeclMap;
+
+  /// Lookup map for privatized BindingDecls.
+  /// Used when BindingDecls are remapped during OpenMP outlining, since the
+  /// remapped BindingDecl has a different pointer than the original.
+  llvm::SmallDenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
@@ -1988,10 +2033,10 @@ public:
     /// \param IP	Insertion point for generating the finalization code.
     static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
+      llvm::BasicBlock *IPBB = IP.getNodeParent();
+      assert(IPBB->end() != IP &&
              "OpenMP IR Builder should cause terminated block!");
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
       llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
       assert(DestBB && "Finalization block should have one successor!");
 
@@ -2015,10 +2060,10 @@ public:
                                          InsertPointTy CodeGenIP,
                                          Twine RegionName);
 
-    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+    static void EmitCaptureStmt(CodeGenFunction &CGF,
+                                llvm::BasicBlock *CodeGenIPBB,
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
       if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
@@ -2029,7 +2074,7 @@ public:
       else
         CGF.EmitRuntimeCall(Fn, Args);
 
-      if (CGF.Builder.saveIP().isSet())
+      if (CGF.Builder.saveIP().isValid())
         CGF.Builder.CreateBr(&FiniBB);
     }
 
@@ -2058,10 +2103,10 @@ public:
       OutlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
                              llvm::BasicBlock &RetBB)
           : CGF(cgf) {
-        assert(AllocaIP.isSet() &&
+        assert(AllocaIP.isValid() &&
                "Must specify Insertion point for allocas of outlined function");
         OldAllocaIP = CGF.AllocaInsertPt;
-        CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        CGF.AllocaInsertPt = &*AllocaIP;
 
         OldReturnBlock = CGF.ReturnBlock;
         CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
@@ -2087,13 +2132,13 @@ public:
         // function so it expects an empty AllocaIP in which case will reuse the
         // old alloca insertion point, or a new AllocaIP in the same block as
         // the old one
-        assert((!AllocaIP.isSet() ||
-                CGF.AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
+        assert((!AllocaIP.isValid() ||
+                CGF.AllocaInsertPt->getParent() == AllocaIP.getNodeParent()) &&
                "Insertion point should be in the entry block of containing "
                "function!");
         OldAllocaIP = CGF.AllocaInsertPt;
-        if (AllocaIP.isSet())
-          CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        if (AllocaIP.isValid())
+          CGF.AllocaInsertPt = &*AllocaIP;
 
         // TODO: Remove the call, after making sure the counter is not used by
         //       the EHStack.
@@ -2238,6 +2283,17 @@ public:
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }
+
+  /// Accessors for LocalDeclMap.
+  DeclMapTy::iterator findLocalDecl(const Decl *D) {
+    return LocalDeclMap.find(D);
+  }
+  DeclMapTy::iterator localDeclMapEnd() { return LocalDeclMap.end(); }
+  std::pair<DeclMapTy::iterator, bool> insertLocalDecl(const Decl *D,
+                                                       Address Addr) {
+    return LocalDeclMap.insert({D, Addr});
+  }
+  void eraseLocalDecl(const Decl *D) { LocalDeclMap.erase(D); }
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
@@ -3497,9 +3553,9 @@ public:
     /// escaping block.
     bool IsEscapingByRef;
 
-    /// True if the variable is of aggregate type and has a constant
-    /// initializer.
-    bool IsConstantAggregate;
+    /// If the variable is of aggregate type and has a constant initializer,
+    /// a constant representing that initializer.
+    llvm::Constant *ConstantAggregateInitializer;
 
     /// True if lifetime markers should be used.
     bool UseLifetimeMarkers;
@@ -3515,7 +3571,7 @@ public:
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
-          IsEscapingByRef(false), IsConstantAggregate(false),
+          IsEscapingByRef(false), ConstantAggregateInitializer(nullptr),
           UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
@@ -3548,6 +3604,11 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
+
+  /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
+  void emitBypassedVarInitsForSource(const Stmt *Source);
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
@@ -3949,6 +4010,7 @@ public:
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFlattenDirective(const OMPFlattenDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
@@ -4147,6 +4209,9 @@ public:
 
   /// Emits the lvalue for the expression with possibly captured variable.
   LValue EmitOMPSharedLValue(const Expr *E);
+
+  /// Emits the original address for a structured binding.
+  Address EmitOMPBindingOriginalAddr(const BindingDecl *BD, SourceLocation Loc);
 
 private:
   /// Helpers for blocks.
@@ -4493,6 +4558,7 @@ public:
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
+  LValue EmitOMPCapturedBindingLValue(const BindingDecl *BD);
   LValue EmitStringLiteralLValue(const StringLiteral *E);
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
@@ -5433,9 +5499,13 @@ public:
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
                      bool NoMerge = false, const TrapReason *TR = nullptr);
 
-  /// Emit a call to trap or debugtrap and attach function attribute
-  /// "trap-func-name" if specified.
-  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
+  /// Emit a call to trap or debugtrap. If 'EnsureInsertPoint' is false, the
+  /// IR builder need not have a valid insert point after this returns.
+  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                               bool EnsureInsertPoint = true);
+
+  /// Emit a call to '\@llvm.trap()' and clear the current insert point.
+  void EmitTrapCallAndMakeUnreachable();
 
   /// Emit a stub for the cross-DSO CFI check function.
   void EmitCfiCheckStub();
@@ -5573,6 +5643,8 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
+                                                         const VarDecl &D);
 
 public:
   enum class EvaluationOrder {

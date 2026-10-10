@@ -18,7 +18,6 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -29,14 +28,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
-
-extern cl::opt<uint32_t> PreferredLandingPadLabel;
-
-static cl::opt<bool> UsePseudoMovImm(
-    "riscv-use-rematerializable-movimm", cl::Hidden,
-    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
-             "constant materialization"),
-    cl::init(false));
 
 #define GET_DAGISEL_BODY RISCVDAGToDAGISel
 #include "RISCVGenDAGISel.inc"
@@ -129,6 +120,81 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
                                TrueMask, VLMAX);
       break;
     }
+    case ISD::ADD: {
+      // Turn (add X, C) into (sub X, -C) when a constant node holding -C
+      // already exists in the DAG, so both share one materialization. Do this
+      // before selection, while both are still ConstantSDNodes: by selection
+      // time -C may already have been selected into instructions.
+      //
+      // ADD is commutative, but getNode canonicalizes constants to the RHS, so
+      // the constant is always operand 1.
+      auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+      if (!N1C)
+        break;
+      MVT VT = N->getSimpleValueType(0);
+      if (VT != Subtarget->getXLenVT())
+        break;
+      int64_t Imm = N1C->getSExtValue();
+      // Only worthwhile for wide constants: values that fit in 32 bits take at
+      // most two instructions to materialize, matching the threshold used by
+      // selectNegImm. Skip INT64_MIN too, whose negation is itself.
+      if (isInt<32>(Imm) || Imm == INT64_MIN)
+        break;
+      // A constant is anchored if it has a user other than an ADD, i.e. it is
+      // materialized regardless of this fold. N1C is the (unique) node for Imm,
+      // so the positive side needs no search.
+      auto IsAnchored = [](const SDNode *C) {
+        return any_of(C->users(), [](const SDNode *U) {
+          return U->getOpcode() != ISD::ADD;
+        });
+      };
+      // If Imm is materialized anyway, keep the ADD so it reuses Imm; an ADD is
+      // also more compressible than a SUB. This also lets us skip the search
+      // for -Imm below.
+      if (IsAnchored(N1C))
+        break;
+      // Find the (unique) constant node for -Imm, if any.
+      const SDNode *NegC = nullptr;
+      for (const SDNode &Node : CurDAG->allnodes()) {
+        auto *C = dyn_cast<ConstantSDNode>(&Node);
+        if (C && C->getSimpleValueType(0) == VT && C->getSExtValue() == -Imm) {
+          NegC = &Node;
+          break;
+        }
+      }
+      // Reuse is only free if -Imm is already in the DAG.
+      if (!NegC)
+        break;
+      // dyn_cast<ConstantSDNode> also matches TargetConstant, which is encoded
+      // into the instruction rather than materialized, so reusing it would not
+      // remove a materialization. No TargetConstant is this wide (the largest
+      // are intrinsic IDs, which fit in 32 bits), so assert it is a Constant.
+      assert(NegC->getOpcode() == ISD::Constant &&
+             "Unexpected wide TargetConstant");
+      // Pick which of Imm/-Imm should be the surviving constant, so exactly
+      // one of the pair is materialized and any ADDs of the other reuse it:
+      //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
+      //  - else keep the cheaper constant, breaking ties towards the positive
+      //    value so both ADDs of a C/-C pair agree on the survivor.
+      bool Rewrite;
+      if (IsAnchored(NegC)) {
+        Rewrite = true;
+      } else {
+        int PosCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                                 /*CompressionCost=*/true);
+        int NegCost =
+            RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                       /*CompressionCost=*/true);
+        Rewrite = NegCost != PosCost ? NegCost < PosCost : Imm < 0;
+      }
+      if (!Rewrite)
+        break;
+      SDLoc DL(N);
+      // getConstant uniques onto the existing -C node, so it is shared.
+      Result = CurDAG->getNode(ISD::SUB, DL, VT, N->getOperand(0),
+                               CurDAG->getConstant(-Imm, DL, VT));
+      break;
+    }
     }
 
     if (Result) {
@@ -214,7 +280,7 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, Subtarget);
 
   // Use a rematerializable pseudo instruction for short sequences if enabled.
-  if (Seq.size() == 2 && UsePseudoMovImm)
+  if (Seq.size() == 2 && Subtarget.getCLOpts().use_rematerializable_movimm)
     return SDValue(
         CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
                                CurDAG->getSignedTargetConstant(Imm, DL, VT)),
@@ -2073,6 +2139,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::MQWACC:
+  case RISCVISD::MQRWACC:
+  case RISCVISD::WMACC:
+  case RISCVISD::WMACCU:
+  case RISCVISD::WMACCSU: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    SDValue Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Node->getOperand(0),
+                               Node->getOperand(1));
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case RISCVISD::MQWACC:
+      Opc = RISCV::MQWACC;
+      break;
+    case RISCVISD::MQRWACC:
+      Opc = RISCV::MQRWACC;
+      break;
+    case RISCVISD::WMACC:
+      Opc = RISCV::WMACC;
+      break;
+    case RISCVISD::WMACCU:
+      Opc = RISCV::WMACCU;
+      break;
+    case RISCVISD::WMACCSU:
+      Opc = RISCV::WMACCSU;
+      break;
+    }
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::ADDD:
     // Try to match WMACC pattern: ADDD where one operand pair comes from a
     // widening multiply.
@@ -3112,6 +3216,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Insert.getNode());
     return;
   }
+  case RISCVISD::TUPLE_CAST: {
+    // TUPLE_CAST reinterprets a vector tuple as a different tuple type with
+    // the same register class (same NF and LMUL), just a different minimum
+    // number of elements per field. The two types occupy identical
+    // registers, so just forward the operand like we do for same-register-
+    // class ISD::BITCAST, without emitting a copy.
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(VT) ==
+               RISCVTargetLowering::getRegClassIDForVecVT(
+                   Node->getOperand(0).getSimpleValueType()) &&
+           "Expected input and output of TUPLE_CAST to use the same "
+           "register class");
+    ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
     if (Subtarget->hasStdExtP())
@@ -3237,11 +3356,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                     : RISCV::PseudoCALLLpadAlign;
 
     uint32_t LpadLabel = 0;
-    if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-      if (!isUInt<20>(PreferredLandingPadLabel))
+    if (std::optional<uint32_t> Label =
+            Subtarget->getCLOpts().landing_pad_label) {
+      if (!isUInt<20>(*Label))
         report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit "
                            "in unsigned 20-bits");
-      LpadLabel = PreferredLandingPadLabel;
+      LpadLabel = *Label;
     }
 
     // Preserve the argument-register and register-mask operands, between
@@ -3583,6 +3703,29 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
                          /*IsPrefetch=*/false))
     return true;
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+/// Similar to SelectAddrRegImm, but only matches a register, or a register
+/// plus a simm12 offset. Doesn't match a FrameIndex or global address, since
+/// those aren't valid for the callers of this function (e.g. the target of
+/// an indirect branch).
+bool RISCVDAGToDAGISel::SelectBrindRegImm(SDValue Addr, SDValue &Base,
+                                          SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
@@ -4006,12 +4149,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
 /// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                                    SDValue &Val) {
+                                    SDValue &Val, bool OneUse) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  if (OneUse && !N->hasOneUse())
     return false;
 
   // Must be an equality comparison.
@@ -4534,7 +4680,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BSET:
     case RISCV::BCLR:
     case RISCV::BINV:
-      // Shift amount operands only use log2(Xlen) bits.
+    case RISCV::BEXT:
+      // Shift amount and bit index operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;

@@ -26,6 +26,10 @@ SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
   return SymbolTable::Visibility::Private;
 }
 
+StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
+  return getSymNameAttr();
+}
+
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:
@@ -82,7 +86,7 @@ SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
 
 LogicalResult TestCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   if (!symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(*this, fnAttr))
@@ -459,7 +463,8 @@ struct TestResource : public SideEffects::Resource::Base<TestResource> {
 void SideEffectOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -520,7 +525,8 @@ void ConditionalSideEffectOp::getEffects(
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -629,10 +635,15 @@ void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
     }
   }
 
-  if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
-  else
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), {"names"});
+  if (namesDisagree) {
+    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+    attrs.emplace_back(getNamesAttrName(), getNamesAttr());
+    llvm::sort(attrs);
+    p.printOptionalAttrDictWithKeyword(attrs);
+  } else {
+    p.printOptionalAttrDictWithKeyword(
+        (*this)->getDiscardableAttrDictionary().getValue(), {"names"});
+  }
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
@@ -953,7 +964,13 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 }
 
 void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUminAttrName(), getUminAttr());
+  attrs.emplace_back(getUmaxAttrName(), getUmaxAttr());
+  attrs.emplace_back(getSminAttrName(), getSminAttr());
+  attrs.emplace_back(getSmaxAttrName(), getSmaxAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
                         /*omitType=*/false);
@@ -1306,6 +1323,85 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// SegmentedRegionBranchOp / SegmentedRegionBranchTerminatorOp
+//===----------------------------------------------------------------------===//
+
+void SegmentedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+void SegmentedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getFirstRegion());
+  regions.emplace_back(&getSecondRegion());
+  if (!point.isParent())
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+SegmentedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  return successor.getSuccessor()->front().getArguments();
+}
+
+OperandRange
+SegmentedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return successor.getSuccessor() == &getFirstRegion() ? getFirst()
+                                                       : getSecond();
+}
+
+MutableOperandRange
+SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
+    RegionSuccessor successor) {
+  if (successor.isOperation())
+    return MutableOperandRange(getOperation(), getNumOperands(), 0);
+  auto parent = cast<SegmentedRegionBranchOp>((*this)->getParentOp());
+  return successor.getSuccessor() == &parent.getFirstRegion()
+             ? getFirstMutable()
+             : getSecondMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// IsolatedRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+IsolatedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange
+IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInputs();
+}
+
+void IsolatedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+MutableOperandRange
+IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopBlockOp
 //===----------------------------------------------------------------------===//
 
@@ -1337,6 +1433,37 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   if (successor.isOperation())
     return getExitArgMutable();
   return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopWithExtraResultOp / LoopWithExtraResultYieldOp
+//===----------------------------------------------------------------------===//
+
+void LoopWithExtraResultOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Parent always enters the body; the body can loop back or exit to parent.
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor(getOperation()));
+}
+
+ValueRange
+LoopWithExtraResultOp::getSuccessorInputs(RegionSuccessor successor) {
+  // When branching to the parent, only iterResult (result #1) is a successor
+  // input; extraResult (#0) is not. Similaly when branching to the body, only
+  // body block arg #1 (iterArg) is a successor input; arg #0 is not.
+  if (successor.isOperation())
+    return getResults().drop_front(1);
+  return getBody().getArguments().drop_front(1);
+}
+
+OperandRange LoopWithExtraResultOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return MutableOperandRange(getInitMutable());
+}
+
+MutableOperandRange
+LoopWithExtraResultYieldOp::getMutableSuccessorOperands(RegionSuccessor) {
+  return getIterArgMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1709,7 +1836,7 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+  return TestOpConstant::create(builder, getLoc(), slot.valueType,
                                 builder.getI32IntegerAttr(42));
 }
 
@@ -1864,10 +1991,10 @@ Value TestTransparentCastAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1875,10 +2002,10 @@ Value TestTransparentCastAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -1920,10 +2047,10 @@ Value TestTransparentDualAlias::projectSlotValueToAliasValue(
     OpOperand & /*aliasedSlotPointerOperand*/,
     const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
     Value slotValue, OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
+  if (slotValue.getType() == aliasSlot.valueType)
     return slotValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1931,10 +2058,10 @@ Value TestTransparentDualAlias::projectAliasValueToSlotValue(
     OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
     const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
     OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
+  if (aliasValue.getType() == parentSlot.valueType)
     return aliasValue;
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType, aliasValue)
+                                            parentSlot.valueType, aliasValue)
       .getResult(0);
 }
 
@@ -1971,7 +2098,7 @@ Value TestPartialAlias::projectSlotValueToAliasValue(
     Value slotValue, OpBuilder &builder) {
   // Sub-value extraction: 1-input cast.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            aliasSlot.elemType, slotValue)
+                                            aliasSlot.valueType, slotValue)
       .getResult(0);
 }
 
@@ -1982,7 +2109,7 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
   // Sub-value insertion into the current reaching definition: emit a 2-input
   // cast taking both the new alias value and the existing parent value.
   return UnrealizedConversionCastOp::create(builder, getLoc(),
-                                            parentSlot.elemType,
+                                            parentSlot.valueType,
                                             ValueRange{aliasValue, reachingDef})
       .getResult(0);
 }

@@ -48,23 +48,33 @@ class VecDesc {
   ElementCount VectorizationFactor;
   bool Masked;
   StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC;
 
 public:
   VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
+  constexpr VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+                    ElementCount VectorizationFactor, bool Masked,
+                    StringRef VABIPrefix, std::optional<CallingConv::ID> Conv)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
+        VABIPrefix(VABIPrefix),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
 
   StringRef getScalarFnName() const { return ScalarFnName; }
   StringRef getVectorFnName() const { return VectorFnName; }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
   StringRef getVABIPrefix() const { return VABIPrefix; }
-  std::optional<CallingConv::ID> getCallingConv() const { return CC; }
+  std::optional<CallingConv::ID> getCallingConv() const {
+    if (CC == 0)
+      return std::nullopt;
+    return static_cast<CallingConv::ID>(CC - 1);
+  }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
@@ -454,6 +464,17 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
+  static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                          bool &ShouldZExtBoolReturn,
+                                          const Triple &T) {
+    ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
+
+    if (!T.isAArch64() && !T.isOSDarwin()) {
+      ShouldZExtBoolParam = true;
+      ShouldZExtBoolReturn = true;
+    }
+  }
+
   static void initExtensionsForTriple(bool &ShouldExtI32Param,
                                       bool &ShouldExtI32Return,
                                       bool &ShouldSignExtI32Param,
@@ -496,6 +517,18 @@ private:
   }
 
 public:
+  static Attribute::AttrKind getExtAttrForBoolParam(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
+  }
+
+  static Attribute::AttrKind getExtAttrForI8Param(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;

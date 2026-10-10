@@ -34,9 +34,6 @@ class raw_ostream;
 class TargetTransformInfo;
 class Value;
 
-/// Set by -max-assumes-per-value; see AssumptionCache::assumptionsFor().
-LLVM_ABI extern unsigned MaxAssumesPerValue;
-
 /// A cache of \@llvm.assume calls within a function.
 ///
 /// This cache provides fast lookup of assumptions within a function by caching
@@ -167,18 +164,8 @@ public:
 
   /// Access the list of assumptions which affect this value.
   ///
-  /// Callers inspect every assumption returned, so this returns only the first
-  /// -max-assumes-per-value of them.
+  /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
-    return allAssumptionsFor(V).take_front(MaxAssumesPerValue);
-  }
-
-  /// Access the list of assumptions which affect this value, ignoring the
-  /// -max-assumes-per-value limit.
-  ///
-  /// Only for callers which must observe every assumption, such as cache
-  /// verification. Analyses should use assumptionsFor().
-  MutableArrayRef<ResultElem> allAssumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();
 
@@ -258,10 +245,6 @@ public:
   /// If no assumptions are cached, this will scan the function. Otherwise, the
   /// existing cache will be returned.
   AssumptionCache &getAssumptionCache(Function &F);
-
-  /// Return the cached assumptions for a function if it has already been
-  /// scanned. Otherwise return nullptr.
-  AssumptionCache *lookupAssumptionCache(Function &F);
 
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;

@@ -18,11 +18,11 @@ end subroutine
 ! CHECK:  }
 
 ! CHECK:  func.func @{{.*}}first_and_lastprivate()
-! CHECK:    %[[ORIG_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
+! CHECK:    %[[ORIG_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Evar")
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.wsloop private(@{{.*}}var_firstprivate_i32 {{.*}}) private_barrier {
 ! CHECK:        omp.loop_nest {{.*}} {
-! CHECK:          %[[PRIV_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
+! CHECK:          %[[PRIV_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}Evar")
 ! CHECK:          fir.if %{{.*}} {
 ! CHECK:            %[[PRIV_VAR_VAL:.*]] = fir.load %[[PRIV_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:            hlfir.assign %[[PRIV_VAR_VAL]] to %[[ORIG_VAR_DECL]]#0
