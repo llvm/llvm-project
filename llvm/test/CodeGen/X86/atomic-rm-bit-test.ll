@@ -1085,11 +1085,10 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valz(ptr %v, i16 zeroext %
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB19_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setae %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setae %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1112,11 +1111,10 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valz(ptr %v, i16 zeroext %
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB19_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setae %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setae %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = and i16 %c, 7
@@ -1218,12 +1216,11 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_valz(ptr %v, i16 zeroext %c) no
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB21_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setae %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setae %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1244,12 +1241,11 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_valz(ptr %v, i16 zeroext %c) no
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB21_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setae %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setae %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %conv = zext i16 %c to i32
@@ -1474,11 +1470,10 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valnz(ptr %v, i16 zeroext 
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB25_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setb %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1501,11 +1496,10 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valnz(ptr %v, i16 zeroext 
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB25_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setb %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setb %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = and i16 %c, 7
@@ -1607,12 +1601,11 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_valnz(ptr %v, i16 zeroext %c) n
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB27_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setb %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1633,12 +1626,11 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_valnz(ptr %v, i16 zeroext %c) n
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB27_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setb %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setb %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %conv = zext i16 %c to i32
@@ -1863,31 +1855,31 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_brz(ptr %v, i16 zeroext %c
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $7, %ecx
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    shll %cl, %esi
-; X86-NEXT:    movzwl (%edx), %eax
-; X86-NEXT:    movzwl %si, %esi
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movzwl (%esi), %eax
+; X86-NEXT:    movzwl %dx, %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB31_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl %esi, %edi
+; X86-NEXT:    xorl %edx, %edi
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %di, (%edx)
+; X86-NEXT:    lock cmpxchgw %di, (%esi)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB31_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %esi
-; X86-NEXT:    movw $123, %ax
-; X86-NEXT:    btl %ecx, %esi
+; X86-NEXT:    movw $123, %dx
+; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB31_4
 ; X86-NEXT:  # %bb.3: # %if.then
 ; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl (%edx,%eax,2), %eax
+; X86-NEXT:    movzwl (%esi,%eax,2), %edx
 ; X86-NEXT:  .LBB31_4: # %return
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1910,15 +1902,16 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_brz(ptr %v, i16 zeroext %c
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB31_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
-; X64-NEXT:    movw $123, %ax
-; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    movw $123, %dx
+; X64-NEXT:    btl %ecx, %eax
 ; X64-NEXT:    jae .LBB31_3
 ; X64-NEXT:  # %bb.4: # %return
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB31_3: # %if.then
 ; X64-NEXT:    movzwl %cx, %eax
-; X64-NEXT:    movzwl (%rdi,%rax,2), %eax
+; X64-NEXT:    movzwl (%rdi,%rax,2), %edx
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = and i16 %c, 7
@@ -2031,30 +2024,30 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_brz(ptr %v, i16 zeroext %c) nou
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    shll %cl, %esi
-; X86-NEXT:    movzwl (%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movzwl (%esi), %eax
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB33_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl %esi, %edi
+; X86-NEXT:    xorl %edx, %edi
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %di, (%edx)
+; X86-NEXT:    lock cmpxchgw %di, (%esi)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB33_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %esi
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    andl $15, %edi
-; X86-NEXT:    movw $123, %ax
-; X86-NEXT:    btl %edi, %esi
+; X86-NEXT:    movw $123, %dx
+; X86-NEXT:    btl %edi, %eax
 ; X86-NEXT:    jb .LBB33_4
 ; X86-NEXT:  # %bb.3: # %if.then
 ; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl (%edx,%eax,2), %eax
+; X86-NEXT:    movzwl (%esi,%eax,2), %edx
 ; X86-NEXT:  .LBB33_4: # %return
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -2075,17 +2068,18 @@ define zeroext i16 @atomic_shl1_mask1_xor_16_gpr_brz(ptr %v, i16 zeroext %c) nou
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB33_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
 ; X64-NEXT:    movl %ecx, %esi
 ; X64-NEXT:    andl $15, %esi
-; X64-NEXT:    movw $123, %ax
-; X64-NEXT:    btl %esi, %edx
+; X64-NEXT:    movw $123, %dx
+; X64-NEXT:    btl %esi, %eax
 ; X64-NEXT:    jae .LBB33_3
 ; X64-NEXT:  # %bb.4: # %return
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB33_3: # %if.then
 ; X64-NEXT:    movzwl %cx, %eax
-; X64-NEXT:    movzwl (%rdi,%rax,2), %eax
+; X64-NEXT:    movzwl (%rdi,%rax,2), %edx
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %conv = zext i16 %c to i32
@@ -2684,11 +2678,10 @@ define zeroext i16 @atomic_shl1_small_mask_and_16_gpr_valnz(ptr %v, i16 zeroext 
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB43_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setb %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -2710,11 +2703,10 @@ define zeroext i16 @atomic_shl1_small_mask_and_16_gpr_valnz(ptr %v, i16 zeroext 
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB43_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setb %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setb %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %0 = and i16 %c, 7
@@ -2815,12 +2807,11 @@ define zeroext i16 @atomic_shl1_mask1_and_16_gpr_valnz(ptr %v, i16 zeroext %c) n
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB45_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %edx
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    btl %ecx, %edx
-; X86-NEXT:    setb %al
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    btl %ecx, %eax
+; X86-NEXT:    setb %dl
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -2841,12 +2832,11 @@ define zeroext i16 @atomic_shl1_mask1_and_16_gpr_valnz(ptr %v, i16 zeroext %c) n
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB45_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %edx
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    btl %ecx, %edx
-; X64-NEXT:    setb %al
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    btl %ecx, %eax
+; X64-NEXT:    setb %dl
+; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    retq
 entry:
   %conv = zext i16 %c to i32
@@ -3111,7 +3101,6 @@ define zeroext i16 @atomic_shl1_small_mask_and_16_gpr_brnz(ptr %v, i16 zeroext %
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB49_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB49_3
 ; X86-NEXT:  # %bb.4: # %if.then
@@ -3142,7 +3131,6 @@ define zeroext i16 @atomic_shl1_small_mask_and_16_gpr_brnz(ptr %v, i16 zeroext %
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB49_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    btl %ecx, %eax
 ; X64-NEXT:    jae .LBB49_3
 ; X64-NEXT:  # %bb.4: # %if.then
@@ -3278,7 +3266,6 @@ define zeroext i16 @atomic_shl1_mask1_and_16_gpr_brnz(ptr %v, i16 zeroext %c) no
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB51_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    andl $15, %esi
 ; X86-NEXT:    btl %esi, %eax
@@ -3310,7 +3297,6 @@ define zeroext i16 @atomic_shl1_mask1_and_16_gpr_brnz(ptr %v, i16 zeroext %c) no
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    jne .LBB51_1
 ; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    andl $15, %edx
 ; X64-NEXT:    btl %edx, %eax
