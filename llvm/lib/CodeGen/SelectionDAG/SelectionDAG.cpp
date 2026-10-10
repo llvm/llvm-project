@@ -5353,10 +5353,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::min(Tmp, Tmp2) - 1;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
-    unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned SignBitsOp0 =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (SignBitsOp0 == 1)
       break;
-    unsigned SignBitsOp1 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    unsigned SignBitsOp1 =
+        ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (SignBitsOp1 == 1)
       break;
     unsigned OutValidBits =
@@ -5379,7 +5381,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
-    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned NumSrcSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
       return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
