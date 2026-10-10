@@ -318,7 +318,12 @@ CondGROTask cond_gro_temporary() { co_return; }
 // CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
 // CIR:         cir.coroutine initialSuspend : {
 // CIR:           cir.cleanup.scope {
-// CIR:             cir.call @_ZN7CondTmpC1Ev(%[[TMP]])
+// CIR-NEXT:        %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:        %{{.*}} = cir.ternary(%{{.*}}, true {
+// CIR-NEXT:          cir.call @_ZN7CondTmpC1Ev(%[[TMP]])
+// CIR-NEXT:          %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:          cir.store %[[TRUE]], %[[ACTIVE]]
 // CIR:             cir.call @_ZN11CondGROTask12promise_type17get_return_objectEb(
 // CIR-NOEH:      } cleanup normal {
 // CIR-EH:        } cleanup all {
@@ -342,7 +347,12 @@ TrivialTask cond_param_temporary(CondMove m) { co_return; }
 // CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_CondTmp>
 // CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond"
 // CIR:         cir.cleanup.scope {
-// CIR:           cir.call @_ZN7CondTmpC1Ev(%[[TMP]])
+// CIR-NEXT:      %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      %{{.*}} = cir.ternary(%{{.*}}, true {
+// CIR-NEXT:        cir.call @_ZN7CondTmpC1Ev(%[[TMP]])
+// CIR-NEXT:        %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:        cir.store %[[TRUE]], %[[ACTIVE]]
 // CIR:           cir.call @_ZN8CondMoveC1EOS_b(%[[M]],
 // CIR-NOEH:    } cleanup normal {
 // CIR-EH:      } cleanup all {
