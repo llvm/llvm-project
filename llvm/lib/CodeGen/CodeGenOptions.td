@@ -15,6 +15,13 @@ defm : ValueField<"propeller-infer-threshold", "float", "0.6",
   "Threshold for infer stale profile">;
 defm : BoolField<"propeller-match-bbid", "false",
   "Match basic blocks using BBIDs instead of hashes for Propeller inference">;
+let MetaVarName = "<filename>" in
+defm : ValueField<"sample-profile-supplement", "StringRef", "",
+  "Sample profile used to supplement the weights of basic blocks without samples in another profile. "
+  "Currently used with basic-block-sections profile only.">;
+let MetaVarName = "<filename>" in
+defm : ValueField<"sample-profile-supplement-remapping-file", "StringRef", "",
+  "Symbol remapping file for -sample-profile-supplement">;
 
 // CodeGenPrepare.cpp
 defm : BoolField<"bbsections-guided-section-prefix", "true",
