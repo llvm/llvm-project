@@ -944,17 +944,9 @@ public:
           GEPNoWrapFlags::fromRaw(GEPFlagsStorage));
       break;
     case OperationType::FPMathOp:
-    case OperationType::FCmp: {
-      const FastMathFlagsTy &F = getFMFsRef();
-      I.setHasAllowReassoc(F.AllowReassoc);
-      I.setHasNoNaNs(F.NoNaNs);
-      I.setHasNoInfs(F.NoInfs);
-      I.setHasNoSignedZeros(F.NoSignedZeros);
-      I.setHasAllowReciprocal(F.AllowReciprocal);
-      I.setHasAllowContract(F.AllowContract);
-      I.setHasApproxFunc(F.ApproxFunc);
+    case OperationType::FCmp:
+      I.copyFastMathFlags(getFastMathFlagsOrNone());
       break;
-    }
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
