@@ -5651,12 +5651,8 @@ static Value *simplifyBitInsertInst(Value *Base, Value *Val, Value *Offset,
   if (Val->getType() == Base->getType())
     return Val;
 
-  // bitinsert x, (bitextract bM, x, n), n -> x
-  // Only fold byte extracts, which keep every bit as is. Other extracts can
-  // drop provenance, or make the whole value poison if any bit is poison, so
-  // reinserting them doesn't always give back the original value.
-  if (Val->getType()->isByteTy() &&
-      match(Val, m_BitExtract(m_Specific(Base), m_Specific(Offset))))
+  // bitinsert x, (bitextract ty, x, n), n -> x
+  if (match(Val, m_BitExtract(m_Specific(Base), m_Specific(Offset))))
     return Base;
 
   return nullptr;

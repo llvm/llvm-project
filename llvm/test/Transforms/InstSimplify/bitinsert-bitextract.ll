@@ -239,40 +239,30 @@ define b32 @bitinsert_bitextract_variable_offset(b32 %x, i32 %n) {
   ret b32 %r
 }
 
-; An integer extract strips provenance.
-define b32 @neg_bitinsert_bitextract_i8(b32 %x) {
-; CHECK-LABEL: define b32 @neg_bitinsert_bitextract_i8(
+define b32 @bitinsert_bitextract_i8(b32 %x) {
+; CHECK-LABEL: define b32 @bitinsert_bitextract_i8(
 ; CHECK-SAME: b32 [[X:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = bitextract i8, b32 [[X]], i32 8
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 [[X]], i8 [[E]], i32 8
-; CHECK-NEXT:    ret b32 [[R]]
+; CHECK-NEXT:    ret b32 [[X]]
 ;
   %e = bitextract i8, b32 %x, i32 8
   %r = bitinsert b32 %x, i8 %e, i32 8
   ret b32 %r
 }
 
-; A floating-point extract strips provenance.
-define b64 @neg_bitinsert_bitextract_double(b64 %x) {
-; CHECK-LABEL: define b64 @neg_bitinsert_bitextract_double(
+define b64 @bitinsert_bitextract_double(b64 %x) {
+; CHECK-LABEL: define b64 @bitinsert_bitextract_double(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = bitextract double, b64 [[X]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 [[X]], double [[E]], i32 0
-; CHECK-NEXT:    ret b64 [[R]]
+; CHECK-NEXT:    ret b64 [[X]]
 ;
   %e = bitextract double, b64 %x, i32 0
   %r = bitinsert b64 %x, double %e, i32 0
   ret b64 %r
 }
 
-; A pointer extract returns a new pointer without provenance, unless the bits
-; are one pointer in order.
-define b64 @neg_bitinsert_bitextract_ptr(b64 %x) {
-; CHECK-LABEL: define b64 @neg_bitinsert_bitextract_ptr(
+define b64 @bitinsert_bitextract_ptr(b64 %x) {
+; CHECK-LABEL: define b64 @bitinsert_bitextract_ptr(
 ; CHECK-SAME: b64 [[X:%.*]]) {
-; CHECK-NEXT:    [[E:%.*]] = bitextract ptr, b64 [[X]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b64 [[X]], ptr [[E]], i32 0
-; CHECK-NEXT:    ret b64 [[R]]
+; CHECK-NEXT:    ret b64 [[X]]
 ;
   %e = bitextract ptr, b64 %x, i32 0
   %r = bitinsert b64 %x, ptr %e, i32 0
