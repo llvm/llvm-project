@@ -113,6 +113,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <string>
@@ -14341,7 +14342,9 @@ static void AnalyzeImplicitConversions(
   bool IsLogicalAndOperator = BO && BO->getOpcode() == BO_LAnd;
   for (Stmt *SubStmt : E->children()) {
     Expr *ChildExpr = dyn_cast_or_null<Expr>(SubStmt);
-    if (!ChildExpr)
+    // Value initialization has no implicit conversions to diagnose. Sparse
+    // array initializers can contain many references to the same zero filler.
+    if (!ChildExpr || isa<ImplicitValueInitExpr>(ChildExpr))
       continue;
 
     if (auto *CSE = dyn_cast<CoroutineSuspendExpr>(E))
@@ -14714,9 +14717,11 @@ void Sema::CheckForIntOverflow (const Expr *E) {
       continue;
     }
 
-    if (const auto *InitList = dyn_cast<InitListExpr>(OriginalE))
-      Exprs.append(InitList->inits().begin(), InitList->inits().end());
-    else if (isa<ObjCBoxedExpr>(OriginalE))
+    if (const auto *InitList = dyn_cast<InitListExpr>(OriginalE)) {
+      llvm::copy_if(
+          InitList->inits(), std::back_inserter(Exprs),
+          [](const Expr *Init) { return !isa<ImplicitValueInitExpr>(Init); });
+    } else if (isa<ObjCBoxedExpr>(OriginalE))
       E->EvaluateForOverflow(Context);
     else if (const auto *Call = dyn_cast<CallExpr>(E))
       Exprs.append(Call->arg_begin(), Call->arg_end());
@@ -15574,8 +15579,12 @@ public:
   }
 
   void VisitInitListExpr(const InitListExpr *ILE) {
-    if (!SemaRef.getLangOpts().CPlusPlus11)
-      return VisitExpr(ILE);
+    if (!SemaRef.getLangOpts().CPlusPlus11) {
+      for (const Expr *Init : ILE->inits())
+        if (Init && !isa<ImplicitValueInitExpr>(Init))
+          Visit(Init);
+      return;
+    }
 
     // In C++11, list initializations are sequenced.
     SequenceExpressionsInOrder(ILE->inits());
