@@ -1,6 +1,7 @@
-! RUN: %python %S/test_modfile.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Ensure that procedure name or derived type name that has been shadowed
 ! behind a generic interface gets its proper USE statement in a module file.
+! 
 module m1
  contains
   subroutine foo
@@ -17,6 +18,7 @@ module m3
   end type
 end module
 module m4
+  ! ERROR: Module 'm4' cannot USE itself
   use m4
   interface foo
     procedure bar
