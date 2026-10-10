@@ -954,6 +954,50 @@ public:
   DenseSet<std::pair<BinaryFunction *, uint64_t>>
       InvalidInterproceduralReferences;
 
+  /// A non-branch reference into code without a relocation that names the
+  /// referenced symbol.
+  struct UnanchoredCodeReference {
+    enum KindTy : uint8_t {
+      Absolute,   ///< Absolute relocation in code (e.g. mov $imm).
+      PCRelLEA,   ///< RIP-relative LEA without a usable relocation.
+      PCRelMemory ///< Other RIP-relative operand without a usable relocation.
+    };
+    BinaryFunction *FromFunction;
+    uint64_t FromAddress;
+    uint64_t Target;
+    KindTy Kind;
+  };
+
+  /// Collected until processUnanchoredCodeReferences().
+  std::vector<UnanchoredCodeReference> UnanchoredCodeReferences;
+  bool CollectUnanchoredCodeReferences{true};
+
+  /// Targets of ambiguous references to code.
+  DenseSet<uint64_t> AmbiguousCodeReferenceTargets;
+
+  /// Functions emitted unoptimized, with their original contents.
+  DenseSet<BinaryFunction *> FrozenFunctions;
+
+  /// Frozen functions emitted back-to-back, with the original bytes between
+  /// them.
+  DenseMap<const BinaryFunction *, BinaryFunction *> FusedSuccessors;
+  DenseMap<const BinaryFunction *, BinaryFunction *> FusedPredecessors;
+
+  /// Return the function that must be emitted right after \p BF, if any.
+  BinaryFunction *getFusedSuccessor(const BinaryFunction &BF) const {
+    return FusedSuccessors.lookup(&BF);
+  }
+
+  /// Return the function that must be emitted right before \p BF, if any.
+  BinaryFunction *getFusedPredecessor(const BinaryFunction &BF) const {
+    return FusedPredecessors.lookup(&BF);
+  }
+
+  /// Record an unanchored non-branch reference to code at \p Target.
+  void addUnanchoredCodeReference(BinaryFunction *FromFunction,
+                                  uint64_t FromAddress, uint64_t Target,
+                                  UnanchoredCodeReference::KindTy Kind);
+
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
@@ -1258,6 +1302,11 @@ public:
   /// Resolve inter-procedural branch dependencies discovered during
   /// disassembly.
   void processInterproceduralReferences();
+
+  /// Find unanchored references into code that are ambiguous between the
+  /// functions around their target. Ignore those functions, or, if all
+  /// functions are processed, freeze them and emit them back-to-back.
+  void processUnanchoredCodeReferences();
 
   /// Skip functions with all parent and child fragments transitively.
   void skipMarkedFragments();

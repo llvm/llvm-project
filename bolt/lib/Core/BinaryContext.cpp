@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -102,6 +103,12 @@ static cl::opt<bool> DropDWOPageCache(
              "pages as soon as BOLT is done reading each one. Keeps the "
              "file-backed footprint of large split-DWARF inputs bounded."),
     cl::Hidden, cl::init(false), cl::cat(BoltCategory));
+
+cl::opt<unsigned> BoundaryRefDistance(
+    "boundary-ref-distance",
+    cl::desc("maximum distance in bytes from a function start at which an "
+             "unanchored reference into code is ambiguous"),
+    cl::init(2), cl::Hidden, cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -1563,7 +1570,217 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
   return Ret;
 }
 
+void BinaryContext::addUnanchoredCodeReference(
+    BinaryFunction *FromFunction, uint64_t FromAddress, uint64_t Target,
+    UnanchoredCodeReference::KindTy Kind) {
+  if (!CollectUnanchoredCodeReferences)
+    return;
+  // A function referencing itself, including one past its end, e.g. after
+  // __builtin_unreachable(), is not ambiguous.
+  if (Target >= FromFunction->getAddress() &&
+      Target <= FromFunction->getAddress() + FromFunction->getSize())
+    return;
+  // Neither is a function start, e.g. a function pointer, unless the next
+  // function starts right after it, or another target named in the symbol
+  // table, e.g. a secondary entry point written in assembly.
+  if (BinaryFunctions.count(Target)) {
+    auto NextI = BinaryFunctions.upper_bound(Target);
+    if (NextI == BinaryFunctions.end() ||
+        NextI->first - Target > opts::BoundaryRefDistance)
+      return;
+  } else if (const BinaryData *BD = getBinaryDataAtAddress(Target)) {
+    if (BD->isFromSymbolTable())
+      return;
+  }
+  UnanchoredCodeReferences.push_back({FromFunction, FromAddress, Target, Kind});
+}
+
+void BinaryContext::processUnanchoredCodeReferences() {
+  // A reference is anchored when a relocation names the referenced symbol: it
+  // then follows that symbol, whatever its addend. The references collected in
+  // UnanchoredCodeReferences are non-branch references into code that are not
+  // anchored:
+  //   * RewriteInstance::handleRelocation() records non-PC-relative relocations
+  //     from code against section symbols, i.e. "section + offset" where the
+  //     original symbol was local and is lost (X86 only). References from data
+  //     are not collected: they are function pointers, which point to a
+  //     function start, or jump table entries, which point inside the function
+  //     that owns the table.
+  //   * X86MCSymbolizer records RIP-relative operands, including LEA, for which
+  //     the function has no relocation, both when disassembling and when
+  //     scanning functions that are not disassembled. handleRelocation() only
+  //     keeps a PC-relative relocation from code to code when it names the
+  //     referenced symbol, so these are the ones against section symbols, or
+  //     without any relocation.
+  // Near a function boundary, such a reference cannot be told apart from
+  // "Next - Delta" and "Prev + Offset". The targets of the ones that are
+  // ambiguous are recorded in AmbiguousCodeReferenceTargets below.
+  using RefTy = UnanchoredCodeReference;
+  if (!CollectUnanchoredCodeReferences)
+    return;
+  CollectUnanchoredCodeReferences = false;
+  std::vector<RefTy> &Refs = UnanchoredCodeReferences;
+  if (Refs.empty())
+    return;
+
+  llvm::sort(Refs, [](const RefTy &A, const RefTy &B) {
+    return std::tie(A.FromAddress, A.Target) <
+           std::tie(B.FromAddress, B.Target);
+  });
+  Refs.erase(llvm::unique(Refs,
+                          [](const RefTy &A, const RefTy &B) {
+                            return A.FromAddress == B.FromAddress &&
+                                   A.Target == B.Target;
+                          }),
+             Refs.end());
+
+  enum CategoryTy {
+    Padding,
+    BeforeStart,
+    AfterStart,
+    TinyFunction,
+    BetweenFunctions,
+    Interior,
+    NumCategories
+  };
+  uint64_t Counts[NumCategories] = {};
+  const unsigned MaxDistance = opts::BoundaryRefDistance;
+  const bool IgnoreReferenced = !opts::processAllFunctions();
+  SmallPtrSet<BinaryFunction *, 4> FunctionsToIgnore;
+  std::map<uint64_t, BinaryFunction> &BFs = BinaryFunctions;
+
+  for (const RefTy &Ref : Refs) {
+    const uint64_t Target = Ref.Target;
+    ErrorOr<BinarySection &> Section = getSectionForAddress(Target);
+    if (!Section || !Section->isText())
+      continue;
+
+    auto NextI = BFs.upper_bound(Target);
+    BinaryFunction *Next = nullptr;
+    if (NextI != BFs.end() && NextI->second.getOriginSection() == &*Section)
+      Next = &NextI->second;
+    BinaryFunction *Prev = nullptr;
+    if (NextI != BFs.begin() &&
+        std::prev(NextI)->second.getOriginSection() == &*Section)
+      Prev = &std::prev(NextI)->second;
+    if (!Prev)
+      continue;
+
+    const uint64_t PrevEnd = Prev->getAddress() + Prev->getSize();
+    const bool InPrev = Target < PrevEnd;
+    // PLT entries are never moved.
+    if (InPrev && Prev->isPLTFunction())
+      continue;
+
+    const uint64_t OffsetInPrev = Target - Prev->getAddress();
+    const uint64_t DistToNext = Next ? Next->getAddress() - Target
+                                     : std::numeric_limits<uint64_t>::max();
+    CategoryTy Category;
+    if (!InPrev)
+      Category = DistToNext <= MaxDistance ? Padding : BetweenFunctions;
+    else if (OffsetInPrev == 0)
+      Category = TinyFunction;
+    else if (DistToNext <= MaxDistance)
+      Category = BeforeStart;
+    else if (OffsetInPrev <= MaxDistance)
+      Category = AfterStart;
+    else
+      Category = Interior;
+    ++Counts[Category];
+
+    // References to tiny functions are currently not considered ambiguous.
+    // We might want to revisit this later, at the cost of freezing/ignoring
+    // quite a few more functions.
+    const bool IsAmbiguous = Category == Padding || Category == BeforeStart ||
+                             Category == AfterStart;
+    if (!IsAmbiguous) {
+      if (opts::Verbosity < 1)
+        continue;
+    } else {
+      AmbiguousCodeReferenceTargets.insert(Target);
+      // Right after a function start, only that function is involved.
+      if (IgnoreReferenced) {
+        FunctionsToIgnore.insert(Prev);
+        if (Category != AfterStart)
+          FunctionsToIgnore.insert(Next);
+      } else {
+        FrozenFunctions.insert(Prev);
+        if (Category != AfterStart) {
+          FrozenFunctions.insert(Next);
+          FusedSuccessors[Prev] = Next;
+          FusedPredecessors[Next] = Prev;
+        }
+      }
+    }
+
+    raw_ostream &OS = this->errs();
+    OS << "BOLT-WARNING: unanchored ";
+    switch (Ref.Kind) {
+    case RefTy::Absolute:
+      OS << "absolute";
+      break;
+    case RefTy::PCRelLEA:
+      OS << "PC-relative LEA";
+      break;
+    case RefTy::PCRelMemory:
+      OS << "PC-relative memory";
+      break;
+    }
+    OS << formatv(" reference to {0:x} from function {1} at {2:x}: ", Target,
+                  *Ref.FromFunction, Ref.FromAddress);
+    switch (Category) {
+    case Padding:
+    case BetweenFunctions:
+      OS << formatv("in padding {0} bytes after the end of {1}",
+                    Target - PrevEnd, *Prev);
+      if (Next)
+        OS << formatv(" and {0} bytes before {1}", DistToNext, *Next);
+      break;
+    case BeforeStart:
+    case TinyFunction:
+      OS << formatv("inside {0} at offset {1:x}, {2} bytes before {3}", *Prev,
+                    OffsetInPrev, DistToNext, *Next);
+      break;
+    case AfterStart:
+    case Interior:
+      OS << formatv("inside {0} at offset {1:x}", *Prev, OffsetInPrev);
+      break;
+    case NumCategories:
+      llvm_unreachable("invalid category");
+    }
+    if (IsAmbiguous && Category == AfterStart)
+      OS << formatv("; {0} {1}", IgnoreReferenced ? "ignoring" : "freezing",
+                    *Prev);
+    else if (IsAmbiguous)
+      OS << formatv("; {0} {1} and {2}",
+                    IgnoreReferenced ? "ignoring" : "freezing and fusing",
+                    *Prev, *Next);
+    OS << '\n';
+  }
+
+  for (BinaryFunction *BF : FunctionsToIgnore)
+    if (!BF->isIgnored())
+      BF->setIgnored();
+
+  Refs.clear();
+  Refs.shrink_to_fit();
+
+  if (llvm::all_of(Counts, [](uint64_t Count) { return Count == 0; }))
+    return;
+  this->outs()
+      << "BOLT-INFO: unanchored non-branch references into code within "
+      << MaxDistance << " bytes of a function start: " << Counts[Padding]
+      << " in padding before it, " << Counts[BeforeStart]
+      << " inside the preceding function, " << Counts[AfterStart]
+      << " after it; elsewhere: " << Counts[TinyFunction]
+      << " to functions of at most " << MaxDistance << " bytes, "
+      << Counts[BetweenFunctions] << " between functions, " << Counts[Interior]
+      << " inside functions\n";
+}
+
 void BinaryContext::processInterproceduralReferences() {
+  processUnanchoredCodeReferences();
+
   SmallPtrSet<BinaryFunction *, 4> InvalidFunctions;
 
   for (const std::pair<BinaryFunction *, uint64_t> &It :
@@ -1573,6 +1790,10 @@ void BinaryContext::processInterproceduralReferences() {
     // Process interprocedural references from ignored functions in BAT mode
     // (non-simple in non-relocation mode) to properly register entry points
     if (!Address || (Function.isIgnored() && !HasBATSection))
+      continue;
+
+    // Handled by processUnanchoredCodeReferences().
+    if (AmbiguousCodeReferenceTargets.contains(Address))
       continue;
 
     BinaryFunction *TargetFunction =
