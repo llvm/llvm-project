@@ -28,6 +28,7 @@
 #include <cassert>
 #include <ratio>
 #include <sstream>
+#include <type_traits>
 
 #include "make_string.h"
 #include "platform_support.h" // locale name macros
@@ -215,8 +216,38 @@ static void test_ja_JP() {
              std::chrono::duration<long long, std::ratio<1, 100>>{12'345'678'9010}}) == SV("2009-02-13 23:31:30.10"));
 }
 
+template <class CharT, class T>
+concept is_ostreamable = requires(std::basic_ostream<CharT>& os, T const& val) {
+  { os << val };
+};
+
 template <class CharT>
 static void test() {
+  // Test local_time's constraints:
+  //   os << sys_time<Duration>{lt.time_since_epoch()} is a valid expression.
+  static_assert(is_ostreamable<CharT, std::chrono::local_seconds>);
+  static_assert(is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<long long>>>);
+
+  // floating-point types
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<float>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<double>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<long double>>>);
+
+  // duration > day
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<int, std::ratio<86401>>>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::months>>);
+  static_assert(!is_ostreamable<CharT, std::chrono::local_time<std::chrono::years>>);
+
+  // multiple of days are considered days
+  static_assert(is_ostreamable<CharT, std::chrono::local_days>);
+  static_assert(is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<int, std::ratio<3 * 86400>>>>);
+  static_assert(is_ostreamable<CharT, std::chrono::local_time<std::chrono::weeks>>);
+
+  // a different rep does not matter
+  using rep = std::conditional_t<std::is_same_v<std::chrono::days::rep, int>, long, int>;
+  static_assert(is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<rep, std::ratio<86400>>>>);
+  static_assert(is_ostreamable<CharT, std::chrono::local_time<std::chrono::duration<rep, std::ratio<20 * 86400>>>>);
+
   test_c<CharT>();
   test_fr_FR<CharT>();
   test_ja_JP<CharT>();
