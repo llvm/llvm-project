@@ -408,6 +408,8 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
+* llvm-cov now reports regions and branches whose counter expression evaluates to a negative value as not executed, instead of showing a huge wrapped-around count.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
