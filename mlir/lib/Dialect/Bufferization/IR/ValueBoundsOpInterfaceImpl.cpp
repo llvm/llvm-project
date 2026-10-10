@@ -35,7 +35,7 @@ struct MaterializationOpInterface
     // shaped, for which no bound can be computed.
     Value source = materializationOp.getOperand();
     if (isa<ShapedType>(value.getType()) && isa<ShapedType>(source.getType()))
-      cstr.bound(value)[dim] == cstr.getExpr(source, dim);
+      cstr.bound(value)[dim] == cstr.getExpr({source, dim});
   }
 };
 

@@ -473,7 +473,8 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
     FailureOr<OpFoldResult> loopUb = affine::reifyIndexValueBound(
         rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
         /*stopCondition=*/
-        [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
+        [&](ValueDim valueDim, ValueBoundsConstraintSet &cstr) {
+          Value v = valueDim.first;
           if (v == forOp.getUpperBound())
             return false;
           // Compute a bound that is independent of any affine op results.

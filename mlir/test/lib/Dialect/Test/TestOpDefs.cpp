@@ -1059,6 +1059,37 @@ void TestValueWithBoundsOp::populateBoundsForIndexValue(
 }
 
 //===----------------------------------------------------------------------===//
+// TestMergeValuesOp
+//===----------------------------------------------------------------------===//
+
+void TestMergeValuesOp::populateBoundsForIndexValue(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  // Collect the candidates locally and publish the complete relationship in a
+  // single call. A temporary query can therefore never observe only a prefix
+  // of this list and mistake it for a one-candidate equality.
+  ValueDimList candidates;
+  for (Value candidate : getCandidates())
+    candidates.emplace_back(candidate, std::nullopt);
+  cstr.addMerge({value, std::nullopt}, std::move(candidates));
+}
+
+//===----------------------------------------------------------------------===//
+// TestMergeDifferentDimsOp
+//===----------------------------------------------------------------------===//
+
+void TestMergeDifferentDimsOp::populateBoundsForShapedValueDim(
+    Value value, int64_t dim, ValueBoundsConstraintSet &cstr) {
+  if (dim != 0)
+    return;
+
+  // The result side and each candidate side select their dimensions
+  // independently. In particular, the first edge relates dimension 0 to
+  // dimension 1; a single merge-wide dimension parameter could not express it.
+  ValueDimList candidates{{getLhs(), /*dim=*/1}, {getRhs(), /*dim=*/0}};
+  cstr.addMerge({value, /*dim=*/0}, std::move(candidates));
+}
+
+//===----------------------------------------------------------------------===//
 // ReifyBoundOp
 //===----------------------------------------------------------------------===//
 

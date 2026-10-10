@@ -325,7 +325,8 @@ bool mlir::vector::isDisjointTransferIndices(
           return true;
 
         FailureOr<int64_t> computeDelta =
-            ValueBoundsConstraintSet::computeConstantDelta(indexA, indexB);
+            ValueBoundsConstraintSet::computeConstantDelta(
+                {indexA, std::nullopt}, {indexB, std::nullopt});
         if (succeeded(computeDelta)) {
           if (std::abs(computeDelta.value()) >= vectorDim)
             return true;
