@@ -5861,6 +5861,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expands a CTLZ node into a sequence of floating point operations.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLZWithFP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand CTLS (count leading sign bits) nodes.
   /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
   /// \param N Node to expand
