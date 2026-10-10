@@ -8,8 +8,8 @@
 //
 // This file implements Mem2Reg interfaces for promoting a memref to a single
 // vector SSA value. `PromotableMemOpInterface` handles `memref.copy`, and
-// `PromotableAliaserInterface` handles `memref.subview`. Vector transfer ops are
-// handled by the models in the Vector dialect.
+// `PromotableAliaserInterface` handles `memref.subview`. Vector transfer ops
+// are handled by the models in the Vector dialect.
 //
 // A memory slot pairs a memref with the vector type used to represent its
 // contents. Promotion replaces accesses to the slot with uses and definitions
@@ -30,8 +30,9 @@
 //       `vector.insert_strided_slice`.
 //
 //     - A dynamic subview holds the whole parent vector because vector shapes
-//       must be static. `vector.create_mask` and `arith.select` restrict accesses
-//       to the subview's extent. The subview must start at the parent's origin.
+//       must be static. `vector.create_mask` and `arith.select` restrict
+//       accesses to the subview's extent. The subview must start at the
+//       parent's origin.
 //
 // Copies and subviews require a statically shaped parent buffer. A dynamically
 // shaped buffer can instead promote to a 1-D scalable vector through
@@ -112,7 +113,8 @@ static SmallVector<int64_t> getStaticSubViewOffsets(memref::SubViewOp subView) {
 }
 
 /// Returns whether `subView` can be promoted as an alias of the whole parent
-/// vector. Static shapes are handled by `isAliasableStaticShapeSubView` instead.
+/// vector. Static shapes are handled by `isAliasableStaticShapeSubView`
+/// instead.
 static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
   // The parent must be statically shaped so the slot has a fixed-shape vector
   // type; only the subview's sizes may be dynamic.
@@ -173,8 +175,8 @@ static Value buildSubViewMask(OpBuilder &builder, Location loc,
 ///
 /// The padding value does not affect the copy: both operands must have the same
 /// runtime shape. For a whole-buffer slot, the source covers the whole vector.
-/// For a dynamic-subview slot, the aliaser's masked select discards lanes outside
-/// the subview's extent.
+/// For a dynamic-subview slot, the aliaser's masked select discards lanes
+/// outside the subview's extent.
 static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
                                 VectorType vecType) {
   assert(!vecType.isScalable() && "expected a fixed-size vector");
@@ -324,9 +326,9 @@ struct SubViewOpPromotableModel
 /// alias value back into the parent.
 ///
 /// Static subviews use `vector.extract_strided_slice` and
-/// `vector.insert_strided_slice`. Dynamic subviews keep the whole parent vector:
-/// loads use it directly, and stores use `arith.select` with a mask of the
-/// subview's sizes to preserve the parent value outside the subview.
+/// `vector.insert_strided_slice`. Dynamic subviews keep the whole parent
+/// vector: loads use it directly, and stores use `arith.select` with a mask of
+/// the subview's sizes to preserve the parent value outside the subview.
 struct SubViewOpAliasModel
     : public PromotableAliaserInterface::ExternalModel<SubViewOpAliasModel,
                                                        memref::SubViewOp> {

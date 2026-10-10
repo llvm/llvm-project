@@ -23,8 +23,8 @@ void registerMemorySlotOpInterfaceExternalModels(DialectRegistry &registry);
 /// as an alias of the whole parent vector.
 bool isDynamicSubViewSlot(Value slotPtr);
 
-/// Builds a mask for the subview's valid region in the parent vector, or returns
-/// null if `isDynamicSubViewSlot(slotPtr)` is false.
+/// Builds a mask for the subview's valid region in the parent vector, or
+/// returns null if `isDynamicSubViewSlot(slotPtr)` is false.
 Value buildDynamicSubViewMask(OpBuilder &builder, Location loc, Value slotPtr);
 } // namespace memref
 } // namespace mlir
