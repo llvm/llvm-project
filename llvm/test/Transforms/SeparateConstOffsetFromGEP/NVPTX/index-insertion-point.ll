@@ -53,8 +53,8 @@ define void @rebuild_cast_and_index_at_def_across_blocks(ptr %out, i32 %in, i1 %
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[TIDY:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.y()
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TIDY]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TIDY]] to i64
 ; CHECK-NEXT:    [[ADD12:%.*]] = add i64 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
