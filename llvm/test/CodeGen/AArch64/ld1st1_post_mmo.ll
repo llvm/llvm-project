@@ -13,7 +13,7 @@ define { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld1x4
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr128 = COPY [[LD1Fourv16b_POST1]].qsub1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fpr128 = COPY [[LD1Fourv16b_POST1]].qsub2
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fpr128 = COPY [[LD1Fourv16b_POST1]].qsub3
-  ; CHECK-NEXT:   STRXui killed [[LD1Fourv16b_POST]], [[COPY]], 0 :: (store (s64) into %ir.ptr)
+  ; CHECK-NEXT:   STRXui [[LD1Fourv16b_POST]], [[COPY]], 0 :: (store (s64) into %ir.ptr)
   ; CHECK-NEXT:   $q0 = COPY [[COPY2]]
   ; CHECK-NEXT:   $q1 = COPY [[COPY3]]
   ; CHECK-NEXT:   $q2 = COPY [[COPY4]]
@@ -34,7 +34,7 @@ define ptr @test_v1i64_post_imm_st2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64common = COPY $x0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:dd = REG_SEQUENCE [[COPY1]], %subreg.dsub0, [[COPY]], %subreg.dsub1
-  ; CHECK-NEXT:   [[ST1Twov1d_POST:%[0-9]+]]:gpr64sp = ST1Twov1d_POST killed [[REG_SEQUENCE]], [[COPY2]], $xzr :: (store (s128) into %ir.A)
+  ; CHECK-NEXT:   [[ST1Twov1d_POST:%[0-9]+]]:gpr64sp = ST1Twov1d_POST [[REG_SEQUENCE]], [[COPY2]], $xzr :: (store (s128) into %ir.A)
   ; CHECK-NEXT:   $x0 = COPY [[ST1Twov1d_POST]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> %B, <1 x i64> %C, ptr %A)

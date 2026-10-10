@@ -14,9 +14,9 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
@@ -58,7 +58,9 @@ public:
     target.addIllegalOp<tosa::Conv3DOp>();
     target.addIllegalOp<tosa::DepthwiseConv2DOp>();
     target.addIllegalOp<tosa::MaxPool2dOp>();
+    target.addIllegalOp<tosa::MaxPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::AvgPool2dOp>();
+    target.addIllegalOp<tosa::AvgPool2dAdaptiveOp>();
     target.addIllegalOp<tosa::MatMulOp>();
     target.addIllegalOp<tosa::TransposeOp>();
 
@@ -67,6 +69,7 @@ public:
     FunctionOpInterface func = getOperation();
     TosaToLinalgNamedOptions options;
     options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    options.allowNonFinites = allowNonFinites;
     tosa::populateTosaToLinalgNamedConversionPatterns(converter, &patterns,
                                                       options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))

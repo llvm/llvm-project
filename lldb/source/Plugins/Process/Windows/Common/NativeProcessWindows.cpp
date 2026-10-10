@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/windows.h"
 #include <dbghelp.h>
 #include <excpt.h>
+#include <pathcch.h>
 #include <psapi.h>
 
 #include "NativeProcessWindows.h"
@@ -21,11 +22,14 @@
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
@@ -106,6 +110,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
   if (state == eStateStopped || state == eStateCrashed) {
     LLDB_LOG(log, "process {0} is in state {1}.  Resuming...",
              GetDebuggedProcessId(), state);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
     m_pending_library_events = false;
@@ -113,6 +118,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
+      thread->ClearSingleStepping();
       const ResumeAction *const action =
           resume_actions.GetActionForThread(thread->GetID(), true);
       if (action == nullptr)
@@ -299,6 +305,7 @@ void NativeProcessWindows::StopThread(lldb::tid_t thread_id,
     return;
 
   Log *log = GetLog(WindowsLog::Thread);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   for (uint32_t i = 0; i < m_threads.size(); ++i) {
     auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
     if (Status error = t->DoStop(); error.Fail())
@@ -307,7 +314,10 @@ void NativeProcessWindows::StopThread(lldb::tid_t thread_id,
   SetStopReasonForThread(*thread, reason, description);
 }
 
-size_t NativeProcessWindows::UpdateThreads() { return m_threads.size(); }
+size_t NativeProcessWindows::UpdateThreads() {
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+  return m_threads.size();
+}
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 NativeProcessWindows::GetAuxvData() const {
@@ -358,31 +368,99 @@ Status NativeProcessWindows::RemoveBreakpoint(lldb::addr_t addr,
   return RemoveSoftwareBreakpoint(addr);
 }
 
+// Get the path of a module loaded in the target process, as the loader recorded
+// it.
+//
+// Keep the loader's spelling.
+static bool GetLoadedModulePath(HANDLE process, HMODULE module,
+                                std::string &path) {
+  std::vector<wchar_t> name(MAX_PATH);
+  DWORD len = 0;
+  while (true) {
+    len = ::GetModuleFileNameExW(process, module, name.data(),
+                                 static_cast<DWORD>(name.size()));
+    if (len == 0)
+      return false;
+    if (len < name.size())
+      break;
+    if (name.size() >= PATHCCH_MAX_CCH)
+      return false;
+    name.resize(name.size() * 2);
+  }
+
+  std::wstring wpath(name.data(), len);
+  if (!llvm::convertWideToUTF8(wpath, path))
+    return false;
+  path = StripExtendedLengthPrefix(path);
+
+  // The loader's path often differs from the on-disk one only in case (e.g.
+  // C:\windows\System32\KERNEL32.DLL). Open the image file to get its on-disk
+  // spelling, and use it if that's the only difference.
+  AutoHandle file(::CreateFileW(
+      wpath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+
+  if (!file.IsValid())
+    return true;
+
+  // Unlike GetModuleFileNameExW, GetFinalPathNameByHandleW reports the buffer
+  // size it needs instead of truncating, so start empty and let the first call
+  // size the buffer rather than guessing.
+  std::vector<wchar_t> full;
+  while (true) {
+    DWORD needed = ::GetFinalPathNameByHandleW(
+        file.get(), full.data(), static_cast<DWORD>(full.size()),
+        FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    if (needed == 0)
+      break;
+    if (needed < full.size()) {
+      std::string canonical;
+      if (!llvm::convertWideToUTF8(std::wstring_view(full.data(), needed),
+                                   canonical))
+        break;
+      // GetFinalPathNameByHandleW returns an extended-length ("\\?\") path.
+      canonical = StripExtendedLengthPrefix(canonical);
+      if (llvm::StringRef(canonical).equals_insensitive(path))
+        path = std::move(canonical);
+      break;
+    }
+    full.resize(needed);
+  }
+
+  return true;
+}
+
 Status NativeProcessWindows::CacheLoadedModules() {
   Status error;
-  if (!m_loaded_modules.empty())
+  if (!m_loaded_modules.IsEmpty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module-free implementation.
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
-  if (snapshot.IsValid()) {
-    MODULEENTRY32W me;
-    me.dwSize = sizeof(MODULEENTRY32W);
-    if (Module32FirstW(snapshot.get(), &me)) {
-      do {
-        std::string path;
-        if (!llvm::convertWideToUTF8(me.szExePath, path))
-          continue;
+  AutoHandle process(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                                   FALSE, GetID()),
+                     nullptr);
+  if (!process.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-        FileSpec file_spec(path);
-        FileSystem::Instance().Resolve(file_spec);
-        m_loaded_modules[file_spec] = (addr_t)me.modBaseAddr;
-      } while (Module32Next(snapshot.get(), &me));
-    }
+  AutoHandle snapshot(::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
+  if (!snapshot.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-    if (!m_loaded_modules.empty())
-      return Status();
+  MODULEENTRY32W me;
+  me.dwSize = sizeof(MODULEENTRY32W);
+  if (::Module32FirstW(snapshot.get(), &me)) {
+    do {
+      std::string path;
+      if (!GetLoadedModulePath(process.get(), me.hModule, path))
+        continue;
+
+      FileSpec file_spec(path);
+      FileSystem::Instance().Resolve(file_spec);
+      m_loaded_modules.Add(file_spec, reinterpret_cast<addr_t>(me.modBaseAddr));
+    } while (::Module32NextW(snapshot.get(), &me));
   }
+
+  if (!m_loaded_modules.IsEmpty())
+    return Status();
 
   error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
@@ -396,11 +474,9 @@ Status NativeProcessWindows::GetLoadedModuleFileSpec(const char *module_path,
 
   FileSpec module_file_spec(module_path);
   FileSystem::Instance().Resolve(module_file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == module_file_spec) {
-      file_spec = it.first;
-      return Status();
-    }
+  if (const FileSpec *found = m_loaded_modules.FindFile(module_file_spec)) {
+    file_spec = *found;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Module (%s) not found in process %" PRIu64 "!",
@@ -417,11 +493,9 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
   load_addr = LLDB_INVALID_ADDRESS;
   FileSpec file_spec(file_name);
   FileSystem::Instance().Resolve(file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == file_spec) {
-      load_addr = it.second;
-      return Status();
-    }
+  if (std::optional<addr_t> base = m_loaded_modules.GetBaseAddress(file_spec)) {
+    load_addr = *base;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Can't get loaded address of file (%s) in process %" PRIu64 "!",
@@ -434,11 +508,11 @@ NativeProcessWindows::GetLoadedLibraries() {
     return error.ToError();
 
   std::vector<LoadedLibraryInfo> libs;
-  libs.reserve(m_loaded_modules.size());
-  for (const auto &[file_spec, base] : m_loaded_modules) {
+  libs.reserve(m_loaded_modules.GetSize());
+  for (const auto &[file_spec, base_addrs] : m_loaded_modules) {
     LoadedLibraryInfo info;
     info.name = file_spec.GetPath();
-    info.base_addr = base;
+    info.base_addr = base_addrs.front();
     libs.push_back(std::move(info));
   }
   return libs;
@@ -456,14 +530,15 @@ void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   // read thread can exit. Tear it down before the debuggee is destroyed.
   StopStdioForwarding();
 
+  bool started = m_session_data && m_session_data->m_initial_stop_received;
   ProcessDebugger::OnExitProcess(exit_code);
 
   // No signal involved.  It is just an exit event.
   WaitStatus wait_status(WaitStatus::Exit, exit_code);
-  SetExitStatus(wait_status, true);
+  SetExitStatus(wait_status, started);
 
   // Notify the native delegate.
-  SetState(eStateExited, true);
+  SetState(eStateExited, started);
 }
 
 void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -490,16 +565,50 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
   if (got_info) {
     FileSpec exe = info.GetExecutableFile();
+    if (const std::string &image_path =
+            m_session_data->m_debugger->GetImagePath();
+        !image_path.empty() &&
+        !llvm::StringRef(image_path).equals_insensitive(exe.GetPath()))
+      exe = FileSpec(image_path);
     if (exe) {
       FileSystem::Instance().Resolve(exe);
-      m_loaded_modules[exe] = image_base;
+      m_loaded_modules.Add(exe, image_base);
     }
   }
 
   // The very first one shall always be the main thread.
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   assert(m_threads.empty());
   m_threads.push_back(std::make_unique<NativeThreadWindows>(
       *this, m_session_data->m_debugger->GetMainThread()));
+}
+
+bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
+    const ExceptionRecord &record) {
+  if (!m_initial_stop_seen)
+    return false;
+  NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+  if (!thread)
+    return false;
+  const lldb::addr_t trap_addr = record.GetExceptionAddress();
+  llvm::ArrayRef<uint8_t> trap_opcode =
+      cantFail(GetSoftwareBreakpointTrapOpcode(0));
+  NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
+  if (reg_ctx.GetPC() != trap_addr + trap_opcode.size())
+    return false;
+  llvm::SmallVector<uint8_t, 4> bytes(trap_opcode.size(), 0);
+  size_t bytes_read = 0;
+  if (ProcessDebugger::ReadMemory(trap_addr, bytes.data(), bytes.size(),
+                                  bytes_read)
+          .Fail() ||
+      bytes_read != bytes.size() ||
+      llvm::ArrayRef<uint8_t>(bytes) == trap_opcode)
+    return false;
+  LLDB_LOG(GetLog(WindowsLog::Exception),
+           "Trap at {0:x} on thread {1:x} is from a removed breakpoint, "
+           "rewinding the thread onto the original instruction.",
+           trap_addr, thread->GetID());
+  return reg_ctx.SetPC(trap_addr).Success();
 }
 
 ExceptionResult
@@ -525,8 +634,17 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
     }
   }
 #endif
-  if (wp_id == LLDB_INVALID_INDEX32)
+  if (wp_id == LLDB_INVALID_INDEX32) {
+    NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+    if (thread && !thread->IsSingleStepping()) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "ignoring a late single-step trap on thread {0:x}, which this "
+               "resume did not step",
+               record.GetThreadID());
+      return ExceptionResult::MaskException;
+    }
     StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
+  }
 
   SetState(eStateStopped, true);
   return ExceptionResult::MaskException;
@@ -578,6 +696,9 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
         return ExceptionResult::MaskException;
       }
     }
+
+    if (RewindTrapOfRemovedBreakpoint(record))
+      return ExceptionResult::MaskException;
   }
 
   if (!m_initial_stop_seen) {
@@ -611,15 +732,19 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     m_pending_halt = false;
     ThreadStopInfo signal_info;
     signal_info.reason = StopReason::eStopReasonSignal;
-    signal_info.signo = 19; // SIGSTOP on POSIX
+    signal_info.signo =
+        UnixSignals::CreateForHost()->GetSignalNumberFromName("SIGSTOP");
 
     // Halt all threads at the kernel level.
-    for (uint32_t i = 0; i < m_threads.size(); ++i) {
-      auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
-      if (Status err = t->DoStop(); err.Fail()) {
-        LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
-                 err.GetError());
-        exit(1);
+    {
+      std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+      for (uint32_t i = 0; i < m_threads.size(); ++i) {
+        auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
+        if (Status err = t->DoStop(); err.Fail()) {
+          LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
+                   err.GetError());
+          exit(1);
+        }
       }
     }
     SetCurrentThreadID(thread_id);
@@ -722,6 +847,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     thread->SetStopReason(stop_info, "");
   }
 
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   m_threads.push_back(std::move(thread));
 }
 
@@ -742,7 +868,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   FileSpec resolved = module_spec.GetFileSpec();
   if (resolved) {
     FileSystem::Instance().Resolve(resolved);
-    m_loaded_modules[resolved] = module_addr;
+    m_loaded_modules.Add(resolved, module_addr);
   }
   m_pending_library_events = true;
 
@@ -753,21 +879,25 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   if (!resolved || ProcessDebugger::IsSystemDLL(resolved.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
-  NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
-  if (!loader_thread && !m_threads.empty()) {
-    LLDB_LOG(log, "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
-             thread_id);
-    loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
-  }
-  if (loader_thread) {
-    SetCurrentThreadID(loader_thread->GetID());
-    if (loader_thread->DoStop().Fail())
-      LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
-               loader_thread->GetID());
-    ThreadStopInfo info;
-    info.reason = lldb::eStopReasonNone;
-    info.signo = 0;
-    loader_thread->SetStopReason(info, "");
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+    NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
+    if (!loader_thread && !m_threads.empty()) {
+      LLDB_LOG(log,
+               "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+               thread_id);
+      loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    }
+    if (loader_thread) {
+      SetCurrentThreadID(loader_thread->GetID());
+      if (loader_thread->DoStop().Fail())
+        LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
+                 loader_thread->GetID());
+      ThreadStopInfo info;
+      info.reason = lldb::eStopReasonNone;
+      info.signo = 0;
+      loader_thread->SetStopReason(info, "");
+    }
   }
   SetState(eStateStopped, true);
 
@@ -779,15 +909,7 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
 
-  FileSpec unloaded_spec;
-  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
-    if (it->second == module_addr) {
-      unloaded_spec = it->first;
-      it = m_loaded_modules.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  FileSpec unloaded_spec = m_loaded_modules.Remove(module_addr);
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
@@ -796,22 +918,25 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
-  NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
-  if (!unloader_thread && !m_threads.empty()) {
-    LLDB_LOG(log,
-             "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
-             thread_id);
-    unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
-  }
-  if (unloader_thread) {
-    SetCurrentThreadID(unloader_thread->GetID());
-    if (unloader_thread->DoStop().Fail())
-      LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
-               unloader_thread->GetID());
-    ThreadStopInfo info;
-    info.reason = lldb::eStopReasonNone;
-    info.signo = 0;
-    unloader_thread->SetStopReason(info, "");
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+    NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
+    if (!unloader_thread && !m_threads.empty()) {
+      LLDB_LOG(log,
+               "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+               thread_id);
+      unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    }
+    if (unloader_thread) {
+      SetCurrentThreadID(unloader_thread->GetID());
+      if (unloader_thread->DoStop().Fail())
+        LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
+                 unloader_thread->GetID());
+      ThreadStopInfo info;
+      info.reason = lldb::eStopReasonNone;
+      info.signo = 0;
+      unloader_thread->SetStopReason(info, "");
+    }
   }
   SetState(eStateStopped, true);
   return DllEventAction::ParkDebugLoop;
@@ -879,7 +1004,10 @@ NativeProcessWindows::Manager::Attach(
   return std::move(process_up);
 }
 
-NativeProcessWindows::~NativeProcessWindows() { StopStdioForwarding(); }
+NativeProcessWindows::~NativeProcessWindows() {
+  EndDebugSession();
+  StopStdioForwarding();
+}
 
 void NativeProcessWindows::StartStdioForwarding() {
   if (!m_pty || !m_pty->IsConnected())
@@ -898,8 +1026,16 @@ void NativeProcessWindows::StopStdioForwarding() {
   if (!m_stdio_communication.HasConnection())
     return;
 
+  m_stdio_communication.SynchronizeWithReadThread();
+
   if (m_pty)
     m_pty->Close();
+
+  // Close() cancels the read pending on the pipe, but one that the read thread
+  // is about to start would only return at its 5s timeout: EOF cannot come
+  // while the inferior is held at its exit debug event. Wake the thread so that
+  // it sees the closed PTY right away.
+  m_stdio_communication.InterruptRead();
 
   if (m_stdio_communication.ReadThreadIsRunning())
     m_stdio_communication.JoinReadThread();

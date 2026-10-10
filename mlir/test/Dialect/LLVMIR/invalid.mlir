@@ -309,6 +309,117 @@ func.func @call_non_llvm() {
 
 // -----
 
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_unknown_symbol() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'missing_callee' does not reference a symbol in the current scope}}
+  %0 = llvm.invoke @missing_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+func.func private @standard_func_callee()
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_non_llvm() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op 'standard_func_callee' does not reference a valid LLVM function, IFunc, or alias}}
+  %0 = llvm.invoke @standard_func_callee() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_result_mismatch(%arg0: i32) -> i64 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op result type mismatch: 'i64' != 'i32'}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i64
+^bb1:
+  llvm.return %0 : i64
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.func @foo(i32) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_arg_mismatch(%arg0: i64) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op operand type mismatch: expected operand type 'i32', but provided 'i64' for operand number 0}}
+  %0 = llvm.invoke @foo(%arg0) to ^bb1 unwind ^bb2 : (i64) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @bar() -> ()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_void_with_result() -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op calling function with void result must not produce values}}
+  %0 = llvm.invoke @bar() to ^bb1 unwind ^bb2 : () -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @variadic(...)
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_vararg_missing_type(%arg0: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op missing var_callee_type attribute for vararg call}}
+  %0 = llvm.invoke @variadic(%arg0) to ^bb1 unwind ^bb2 : (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invoke_indirect_non_ptr(%arg0: i32, %arg1: i32) -> i32 attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op indirect call expects a pointer as callee: 'i32'}}
+  %0 = llvm.invoke %arg0(%arg1) to ^bb1 unwind ^bb2 : i32, (i32) -> i32
+^bb1:
+  llvm.return %0 : i32
+^bb2:
+  %1 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  %c = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %c : i32
+}
+
+// -----
+
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) <{operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>}> : (tensor<*xi32>) -> ()
@@ -1416,6 +1527,27 @@ func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %a
 
 // -----
 
+func.func @insert_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<536870913xi8> into vector<16xi8>
+}
+
+// -----
+
+func.func @insert_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>, %arg1 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<[4294967296]xi8> into vector<[16]xi8>
+}
+
+// -----
+
+func.func @insert_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<2305843009213693953xi8> into vector<16xi8>
+}
+
+// -----
+
 func.func @insert_vector_invalid_dest_vector_size(%arg0 : vector<16xi8>, %arg1 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16xi8> into vector<[16385]xi8>
@@ -1433,6 +1565,27 @@ func.func @insert_scalable_into_fixed_length_vector(%arg0 : vector<[8]xf32>, %ar
 func.func @extract_vector_invalid_source_vector_size(%arg0 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[16385]xi8>
+}
+
+// -----
+
+func.func @extract_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<536870913xi8>
+}
+
+// -----
+
+func.func @extract_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[4294967296]xi8>
+}
+
+// -----
+
+func.func @extract_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<2305843009213693953xi8>
 }
 
 // -----
@@ -1699,11 +1852,13 @@ llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
 // -----
 
 llvm.func @non_variadic(%arg: i32)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type(%arg: i32)  {
+llvm.func @invalid_var_callee_type(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to be a variadic function type}}
   llvm.invoke @non_variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1712,11 +1867,13 @@ llvm.func @invalid_var_callee_type(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
+llvm.func @invalid_var_callee_type_num_parameters(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1724,10 +1881,13 @@ llvm.func @invalid_var_callee_type_num_parameters(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to have at most 1 parameters}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i32, i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1736,11 +1896,13 @@ llvm.func @invalid_var_callee_type_num_parameters_indirect(%callee : !llvm.ptr, 
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1748,10 +1910,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch(%arg: i32)  {
 
 // -----
 
-llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32)  {
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !llvm.ptr, %arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type parameter type mismatch: 'i64' != 'i32'}}
   llvm.invoke %callee(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<void (i64, ...)>) : !llvm.ptr, (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1760,11 +1925,13 @@ llvm.func @invalid_var_callee_type_parameter_type_mismatch_indirect(%callee : !l
 // -----
 
 llvm.func @variadic(%arg: i32, ...)
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
+llvm.func @invalid_var_callee_type_non_void(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{expected var_callee_type to return void}}
   llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> ()
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -1773,11 +1940,13 @@ llvm.func @invalid_var_callee_type_non_void(%arg: i32)  {
 // -----
 
 llvm.func @variadic(%arg: i32, ...) -> i32
+llvm.func @__gxx_personality_v0(...) -> i32
 
-llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32)  {
+llvm.func @invalid_var_callee_type_return_type_mismatch(%arg: i32) attributes { personality = @__gxx_personality_v0 } {
   // expected-error@below {{var_callee_type return type mismatch: 'i8' != 'i32'}}
   %0 = llvm.invoke @variadic(%arg) to ^bb2 unwind ^bb1 vararg(!llvm.func<i8 (i32, ...)>) : (i32) -> (i32)
 ^bb1:
+  %lp = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
   llvm.return
 ^bb2:
   llvm.return
@@ -2022,6 +2191,42 @@ llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
 
 // -----
 
+llvm.func @gep_inrange_reversed(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 4, -4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_empty(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 1, 1> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_wrong_width(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{'inrange' bitwidth 32 must match the pointer index bitwidth (64) specified in the datalayout}}
+  llvm.getelementptr inrange <i32, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>
+>} {
+  llvm.func @gep_inrange_wrong_width_32(%ptr: !llvm.ptr) {
+    // expected-error@+1 {{'inrange' bitwidth 64 must match the pointer index bitwidth (32) specified in the datalayout}}
+    llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.return
+  }
+}
+
+// -----
+
 llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
   // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
   %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
@@ -2257,22 +2462,43 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_re
 // -----
 
 llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
 }
 
 // -----
 
 llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> f32
 }
 
 // -----
 
 llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+llvm.func @invalid_modf_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_modf_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_modf_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }
 
 // -----

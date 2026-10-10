@@ -194,10 +194,11 @@ public:
       return false;
 
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (m_site_list.empty())
+      return false;
+
     typename collection::const_iterator lower, upper, pos;
     lower = m_site_list.lower_bound(lower_bound);
-    if (lower == m_site_list.end() || (*lower).first >= upper_bound)
-      return false;
 
     // This is one tricky bit.  The site might overlap the bottom end of
     // the range.  So we grab the site prior to the lower bound, and check
@@ -211,6 +212,9 @@ public:
            lower_bound))
         bp_site_list.Add(prev_site);
     }
+
+    if (lower != m_site_list.end() && lower->first >= upper_bound)
+      return !bp_site_list.IsEmpty();
 
     upper = m_site_list.upper_bound(upper_bound);
 

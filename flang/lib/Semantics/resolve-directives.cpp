@@ -35,15 +35,6 @@
 
 namespace Fortran::semantics {
 
-template <typename T>
-static Scope *GetScope(SemanticsContext &context, const T &x) {
-  if (auto source{GetLastSource(x)}) {
-    return &context.FindScope(*source);
-  } else {
-    return nullptr;
-  }
-}
-
 template <typename T> class DirectiveAttributeVisitor {
 public:
   explicit DirectiveAttributeVisitor(SemanticsContext &context)
@@ -414,12 +405,7 @@ public:
 
   static bool HasStaticStorageDuration(const Symbol &symbol) {
     auto &ultSym = symbol.GetUltimate();
-    // Module-scope variable
-    return ultSym.owner().kind() == Scope::Kind::Module ||
-        // Data statement variable
-        ultSym.flags().test(Symbol::Flag::InDataStmt) ||
-        // Save attribute variable
-        ultSym.attrs().test(Attr::SAVE) ||
+    return IsSaved(ultSym) ||
         // Referenced in a common block
         ultSym.flags().test(Symbol::Flag::InCommonBlock);
   }
@@ -457,18 +443,17 @@ public:
 
   // Recognize symbols that are not created as a part of the OpenMP data-
   // sharing processing, and that are declared inside of the construct.
-  // These symbols are predetermined private, but they shouldn't be marked
-  // in any special way, because there is nothing to be done for them.
-  // They are not symbols for which private copies need to be created,
-  // they are already themselves private.
+  // Such symbols are predetermined private if they have automatic storage
+  // duration, or shared if they have static storage duration. They need
+  // no special marking, because there is nothing to be done for them.
+  // They are already themselves private or shared.
   static bool IsLocalInsideScope(const Symbol &symbol, const Scope &scope) {
     // A symbol that is marked with a DSA will be cloned in the construct
     // scope and marked as host-associated. This applies to privatized symbols
     // as well even though they will have their own storage. They should be
     // considered local regardless of the status of the original symbol.
     const Symbol &actual{GetStorageOwner(symbol)};
-    return actual.owner() != scope && scope.Contains(actual.owner()) &&
-        !HasStaticStorageDuration(actual);
+    return actual.owner() != scope && scope.Contains(actual.owner());
   }
 
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
@@ -647,7 +632,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    llvm::omp::ClauseSet reqs;
+    llvm::omp::Clauses reqs;
     std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
@@ -655,7 +640,7 @@ public:
           common::visitors{
               [&](const OmpClause::AtomicDefaultMemOrder &admo) {
                 memOrder = admo.v.v;
-                return llvm::omp::ClauseSet{clause.Id()};
+                return llvm::omp::Clauses{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -667,10 +652,10 @@ public:
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
                   if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
-                    return llvm::omp::ClauseSet{clause.Id()};
+                    return llvm::omp::Clauses{clause.Id()};
                   }
                 }
-                return llvm::omp::ClauseSet{};
+                return llvm::omp::Clauses{};
               },
           },
           clause.u);
@@ -1043,7 +1028,7 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &, const llvm::omp::ClauseSet &,
+  void AddOmpRequiresToScope(Scope &, const llvm::omp::Clauses &,
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
@@ -1058,7 +1043,13 @@ private:
 
 void ResolveAccParts(SemanticsContext &context, const parser::ProgramUnit &node,
     Scope *topScope) {
-  if (context.IsEnabled(common::LanguageFeature::OpenACC)) {
+  // A CUDA Fortran compilation that was not given an OpenACC target still has
+  // to resolve the directives recovered from module files, because they can
+  // describe the device-side call target of a procedure through
+  // `acc routine bind(...)`. The sentinel is not recognized in the main source
+  // in that case, so no user directive can reach this point.
+  if (context.IsEnabled(common::LanguageFeature::OpenACC) ||
+      context.IsEnabled(common::LanguageFeature::CUDA)) {
     AccAttributeVisitor{context, topScope}.Walk(node);
   }
 }
@@ -1958,6 +1949,21 @@ static bool ContainsStructureComponent(const parser::Designator &designator) {
       designator.u);
 }
 
+static bool IsOpenACCDeviceMappingFlag(Symbol::Flag flag) {
+  switch (flag) {
+  case Symbol::Flag::AccCopy:
+  case Symbol::Flag::AccCopyIn:
+  case Symbol::Flag::AccCopyInReadOnly:
+  case Symbol::Flag::AccCopyOut:
+  case Symbol::Flag::AccCreate:
+  case Symbol::Flag::AccPresent:
+  case Symbol::Flag::AccDevicePtr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -1992,6 +1998,11 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
+              if (GetContext().directive == llvm::acc::Directive::ACCD_data &&
+                  IsOpenACCDeviceMappingFlag(accFlag)) {
+                currScope().AddOpenACCMappedSymbol(*symbol);
+                context_.NoteOpenACCDataMapping();
+              }
               if (preciseDesignator &&
                   dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
@@ -2003,6 +2014,11 @@ void AccAttributeVisitor::ResolveAccObject(
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
               CheckMultipleAppearances(
                   name, *symbol, Symbol::Flag::AccCommonBlock);
+              // Members of a named COMMON listed in a data clause are not
+              // recorded as device-mapped. Lowering does not create an
+              // alternate device binding for them, so CUDA generic resolution
+              // must not select a DEVICE specific. A member listed as a
+              // designator is handled in the branch above.
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         ResolveAcc(*object, accFlag, currScope())}) {
@@ -2308,7 +2324,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   }
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  llvm::omp::ClauseSet clauses{llvm::omp::Clause::OMPC_device_type};
+  llvm::omp::Clauses clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
       if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
@@ -2374,7 +2390,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
       [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
         if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
           auto &clauseSet{
-              const_cast<llvm::omp::ClauseSet &>(details[sym].ompDeclTarget())};
+              const_cast<llvm::omp::Clauses &>(details[sym].ompDeclTarget())};
           clauseSet.set(clauseId);
         }
       }};
@@ -2403,7 +2419,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
       proc->flags().set(Symbol::Flag::OmpDeclareTarget);
       auto &clauseSet{
-          const_cast<llvm::omp::ClauseSet &>(details[proc].ompDeclTarget())};
+          const_cast<llvm::omp::Clauses &>(details[proc].ompDeclTarget())};
       clauseSet.set(llvm::omp::Clause::OMPC_enter);
     }
   }
@@ -2417,7 +2433,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
             d.set_version(version);
             auto &clauseSet{
-                const_cast<llvm::omp::ClauseSet &>(d.ompDeclTarget())};
+                const_cast<llvm::omp::Clauses &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
@@ -2738,9 +2754,6 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
-    bool isStaticStorageDuration = HasStaticStorageDuration(*symbol);
-    LLVM_DEBUG(llvm::dbgs()
-        << "HasStaticStorageDuration(" << symbol->name() << "):\n");
 
     const Symbol *crayPtr = nullptr;
     Symbol::Flags crayPtrDSA;
@@ -2867,7 +2880,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
       if (prevDSA.test(Symbol::Flag::OmpShared) ||
-          (isStaticStorageDuration &&
+          (HasStaticStorageDuration(*symbol) &&
               (prevDSA & dataSharingAttributeFlags).none())) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
@@ -2901,6 +2914,10 @@ static bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
+  if (!type)
+    return false;
   // OpenMP categorizes Fortran characters as aggregates.
   if (type->category() == Fortran::semantics::DeclTypeSpec::Category::Character)
     return true;
@@ -2924,6 +2941,8 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||
@@ -3013,8 +3032,9 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     // in the source code was declared outside of the construct. This was
     // always the case before Fortran 2008. F2008 introduced the BLOCK
     // construct, and allowed local variable declarations.
-    // In OpenMP local (non-static) variables are always private in a given
-    // construct, if they are declared inside the construct. In those cases
+    // In OpenMP, local variables in a given construct are private if they
+    // have automatic storage duration or shared if they have static storage
+    // duration, if they are declared inside the construct. In those cases
     // we don't need to do anything here (i.e. no flags are needed or
     // anything else).
     if (!IsLocalInsideScope(*symbol, currScope())) {
@@ -3482,13 +3502,13 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
   if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (ultimateSymbol.has<AssocEntityDetails>()) {
     context_.Say(name.source,
         "Variable '%s' in ASSOCIATE cannot be in a %s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 
   if (stmtFunctionExprSymbols_.find(ultimateSymbol) !=
@@ -3496,12 +3516,12 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     context_.Say(name.source,
         "Variable '%s' in statement function expression cannot be in a "
         "%s clause"_err_en_US,
-        name.ToString(), clauseName.str());
+        name.ToString(), clauseName);
   }
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const llvm::omp::ClauseSet &reqs,
+    const llvm::omp::Clauses &reqs,
     const std::optional<common::OmpMemoryOrderType> &memOrder) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   const Scope &programUnit{omp::GetProgramUnit(scope)};

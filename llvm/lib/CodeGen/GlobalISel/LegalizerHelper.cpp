@@ -1190,6 +1190,7 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const Register DstReg = Cmp->getReg(0);
   LLT DstTy = MRI.getType(DstReg);
   const auto Cond = Cmp->getCond();
+  Type *RetTy = EVT(TLI.getCmpLibcallReturnType()).getTypeForEVT(Ctx);
 
   // Reference:
   // https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html#Comparison-functions-1
@@ -1197,12 +1198,12 @@ LegalizerHelper::createFCMPLibcall(MachineInstr &MI,
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
                                 const CmpInst::Predicate ICmpPred,
                                 const DstOp &Res) -> Register {
-    // FCMP libcall always returns an i32, and needs an ICMP with #0.
-    LLT TempLLT = LLT::integer(32);
+    // FCMP libcall returns an integer, and needs an ICMP with #0.
+    LLT TempLLT = LLT::integer(RetTy->getIntegerBitWidth());
     Register Temp = MRI.createGenericVirtualRegister(TempLLT);
     // Generate libcall, holding result in Temp
     const auto Status = createLibcall(
-        Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
+        Libcall, {Temp, RetTy, 0},
         {{Cmp->getLHSReg(), OpType, 0}, {Cmp->getRHSReg(), OpType, 1}},
         LocObserver, &MI);
     if (Status != Legalized)
@@ -3757,10 +3758,52 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
     SmallVector<Register, 8> SrcRegs;
 
     if (DstTy.isVector()) {
-      int NumDstElt = DstTy.getNumElements();
-      int NumSrcElt = SrcTy.getNumElements();
-
       LLT DstEltTy = DstTy.getElementType();
+      ElementCount DstEC = DstTy.getElementCount();
+      ElementCount SrcEC = SrcTy.getElementCount();
+
+      if (!SrcEC.isKnownMultipleOf(DstEC) && !DstEC.isKnownMultipleOf(SrcEC)) {
+        // Split non-integer element ratio bitcast
+        //
+        // %1:_(<3 x s16>) = G_BITCAST %0:_(<2 x s24>)
+        //
+        // =>
+        //
+        // %2:_(<6 x s8>) = G_BITCAST %0:_(<2 x s24>)
+        // %1:_(<3 x s16>) = G_BITCAST %2:_(<6 x s8>)
+        unsigned SrcEltSize = SrcEltTy.getScalarSizeInBits();
+        unsigned PieceSize =
+            std::gcd(SrcEltSize, DstEltTy.getScalarSizeInBits());
+        LLT PieceTy = LLT::integer(PieceSize);
+
+        if (!PieceTy.isByteSized()) {
+          // Split bitcast whose pieces are not whole bytes through a scalar
+          //
+          // %1:_(<3 x s8>) = G_BITCAST %0:_(<2 x s12>)
+          //
+          // =>
+          //
+          // %2:_(s24) = G_BITCAST %0:_(<2 x s12>)
+          // %1:_(<3 x s8>) = G_BITCAST %2:_(s24)
+          LLT ScalarTy = LLT::integer(SrcTy.getSizeInBits());
+          Register ScalarReg = MIRBuilder.buildBitcast(ScalarTy, Src).getReg(0);
+          MIRBuilder.buildBitcast(Dst, ScalarReg);
+          MI.eraseFromParent();
+          return Legalized;
+        }
+
+        LLT PiecesVecTy =
+            LLT::vector(SrcEC * (SrcEltSize / PieceSize), PieceTy);
+        Register PiecesReg =
+            MIRBuilder.buildBitcast(PiecesVecTy, Src).getReg(0);
+        MIRBuilder.buildBitcast(Dst, PiecesReg);
+        MI.eraseFromParent();
+        return Legalized;
+      }
+
+      unsigned NumDstElt = DstEC.getKnownMinValue();
+      unsigned NumSrcElt = SrcEC.getKnownMinValue();
+
       LLT DstCastTy = DstEltTy; // Intermediate bitcast result type
       LLT SrcPartTy = SrcEltTy; // Original unmerge result type.
 
@@ -3774,7 +3817,7 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
         // %2:_(s16), %3:_(s16) = G_UNMERGE_VALUES %0
         // %3:_(<2 x s8>) = G_BITCAST %2
         // %4:_(<2 x s8>) = G_BITCAST %3
-        // %1:_(<4 x s16>) = G_CONCAT_VECTORS %3, %4
+        // %1:_(<4 x s8>) = G_CONCAT_VECTORS %3, %4
         DstCastTy = DstTy.changeVectorElementCount(
             ElementCount::getFixed(NumDstElt / NumSrcElt));
         SrcPartTy = SrcEltTy;
@@ -4375,15 +4418,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AnyExtSize = PowerOf2Ceil(DstTy.getSizeInBits());
 
-  LLT AnyExtTy;
-  LLT OffsetCstRes;
-  if (EltTy.isPointer()) {
-    AnyExtTy = LLT::scalar(AnyExtSize);
-    OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
-  } else {
-    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
-  }
+  LLT AnyExtTy = LLT::integer(AnyExtSize);
+  LLT OffsetCstRes = LLT::integer(PtrTy.getSizeInBits());
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
                                              PtrReg, *LargeMMO);
@@ -4401,14 +4437,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
   else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-    MIRBuilder.buildTrunc(DstReg, {Or});
-  } else {
-    assert(DstTy.isPointer() && "expected pointer");
+    LLT IntDstTy = DstTy.changeToInteger();
+    if (IntDstTy == DstTy) {
+      MIRBuilder.buildTrunc(DstReg, {Or});
+    } else {
+      auto Trunc = MIRBuilder.buildTrunc(IntDstTy, Or);
+      MIRBuilder.buildBitcast(DstReg, Trunc);
+    }
+  } else if (DstTy.isPointer()) {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
 
     // FIXME: We currently consider this to be illegal for non-integral address
     // spaces, but we need still need a way to reinterpret the bits.
     MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+    MIRBuilder.buildBitcast(DstReg, Or);
   }
 
   LoadMI.eraseFromParent();
@@ -6169,7 +6213,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
           PartialResults.emplace_back(
               MIRBuilder
                   .buildInstr(ScalarOpc, {NarrowTy},
-                              {SplitSrcs[Idx], SplitSrcs[Idx + 1]})
+                              {SplitSrcs[Idx], SplitSrcs[Idx + 1]},
+                              MI.getFlags())
                   .getReg(0));
         }
         SplitSrcs = PartialResults;
@@ -6184,7 +6229,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     // If we can't generate a tree, then just do sequential operations.
     Register Acc = SplitSrcs[0];
     for (unsigned Idx = 1; Idx < NumParts; ++Idx)
-      Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[Idx]})
+      Acc = MIRBuilder
+                .buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[Idx]},
+                            MI.getFlags())
                 .getReg(0);
     MIRBuilder.buildCopy(DstReg, Acc);
     MI.eraseFromParent();
@@ -6192,9 +6239,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   }
   SmallVector<Register> PartialReductions;
   for (unsigned Part = 0; Part < NumParts; ++Part) {
-    PartialReductions.push_back(
-        MIRBuilder.buildInstr(RdxMI.getOpcode(), {DstTy}, {SplitSrcs[Part]})
-            .getReg(0));
+    PartialReductions.push_back(MIRBuilder
+                                    .buildInstr(RdxMI.getOpcode(), {DstTy},
+                                                {SplitSrcs[Part]},
+                                                MI.getFlags())
+                                    .getReg(0));
   }
 
   // If the types involved are powers of 2, we can generate intermediate vector
@@ -6207,11 +6256,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   Register Acc = PartialReductions[0];
   for (unsigned Part = 1; Part < NumParts; ++Part) {
     if (Part == NumParts - 1) {
-      MIRBuilder.buildInstr(ScalarOpc, {DstReg},
-                            {Acc, PartialReductions[Part]});
+      MIRBuilder.buildInstr(ScalarOpc, {DstReg}, {Acc, PartialReductions[Part]},
+                            MI.getFlags());
     } else {
       Acc = MIRBuilder
-                .buildInstr(ScalarOpc, {DstTy}, {Acc, PartialReductions[Part]})
+                .buildInstr(ScalarOpc, {DstTy}, {Acc, PartialReductions[Part]},
+                            MI.getFlags())
                 .getReg(0);
     }
   }
@@ -6241,7 +6291,9 @@ LegalizerHelper::fewerElementsVectorSeqReductions(MachineInstr &MI,
   extractParts(SrcReg, NarrowTy, NumParts, SplitSrcs, MIRBuilder, MRI);
   Register Acc = ScalarReg;
   for (unsigned i = 0; i < NumParts; i++)
-    Acc = MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]})
+    Acc = MIRBuilder
+              .buildInstr(ScalarOpc, {NarrowTy}, {Acc, SplitSrcs[i]},
+                          MI.getFlags())
               .getReg(0);
 
   MIRBuilder.buildCopy(DstReg, Acc);
@@ -6267,7 +6319,9 @@ LegalizerHelper::tryNarrowPow2Reduction(MachineInstr &MI, Register SrcReg,
       Register RHS = SplitSrcs[Idx + 1];
       // Create the intermediate vector op.
       Register Res =
-          MIRBuilder.buildInstr(ScalarOpc, {NarrowTy}, {LHS, RHS}).getReg(0);
+          MIRBuilder
+              .buildInstr(ScalarOpc, {NarrowTy}, {LHS, RHS}, MI.getFlags())
+              .getReg(0);
       PartialRdxs.push_back(Res);
     }
     SplitSrcs = std::move(PartialRdxs);
@@ -6603,7 +6657,7 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // so carry bits aren't needed.
   LLT ShiftAmtTy = MRI.getType(ShiftAmt);
   auto ZeroConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroBitShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, ShiftAmt, ZeroConst);
 
@@ -6727,7 +6781,7 @@ LegalizerHelper::narrowScalarShiftMultiway(MachineInstr &MI, LLT TargetTy) {
 
   // Shifting by zero should be a no-op.
   auto ZeroAmtConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, AmtReg, ZeroAmtConst);
 
@@ -7493,9 +7547,10 @@ LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
   LLT SrcTy = MRI.getType(Src);
 
   // If all finite floats fit into the narrowed integer type, we can just swap
-  // out the result type. This is practically only useful for conversions from
-  // half to at least 16-bits, so just handle the one case.
-  if (SrcTy.getScalarType() != LLT::scalar(16) ||
+  // out the result type. Only IEEE half qualifies: bfloat is also 16 bits wide
+  // but has float's exponent range. LLT::float16() is equivalent to
+  // LLT::scalar(16) on targets without extended LLTs.
+  if (SrcTy.getScalarType() != LLT::float16() ||
       NarrowTy.getScalarSizeInBits() < (IsSigned ? 17u : 16u))
     return UnableToLegalize;
 
@@ -7626,8 +7681,7 @@ LegalizerHelper::narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx,
     } else {
       InsertOffset = OpStart - DstStart;
       ExtractOffset = 0;
-      SegSize =
-        std::min(NarrowSize - InsertOffset, OpStart + OpSize - DstStart);
+      SegSize = std::min(NarrowSize - InsertOffset, OpSize);
     }
 
     Register SegReg = OpReg;

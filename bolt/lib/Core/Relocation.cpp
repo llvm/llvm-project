@@ -293,10 +293,16 @@ static bool canEncodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   case ELF::R_AARCH64_CALL26:
   case ELF::R_AARCH64_JUMP26:
     return isInt<28>(Value - PC);
+  case ELF::R_AARCH64_CONDBR19:
+    return isInt<21>(Value - PC);
+  case ELF::R_AARCH64_TSTBR14:
+    return isInt<16>(Value - PC);
   }
 }
 
-static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
+static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC,
+                                   uint32_t OriginalInst) {
+  // Assume Value and PC are 4-byte aligned to ensure valid bit manipulation.
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -323,6 +329,22 @@ static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
     // Immediate goes in bits 25:0 of B.
     // OP 0001_01 goes in bits 31:26 of B.
     Value = ((Value >> 2) & 0x3ffffff) | 0x14000000ULL;
+    break;
+  case ELF::R_AARCH64_CONDBR19:
+    Value -= PC;
+    assert(isInt<21>(Value) &&
+           "only PC +/- 1MB is allowed for conditional branch");
+    // Immediate goes in bits 23:5, which is taken through masking.
+    // Preserve all other bits from the original instruction.
+    Value =
+        (OriginalInst & ~0x00FFFFE0ULL) | (((Value >> 2) & 0x7FFFFULL) << 5);
+    break;
+  case ELF::R_AARCH64_TSTBR14:
+    Value -= PC;
+    assert(isInt<16>(Value) && "only PC +/- 32KB is allowed for test branch");
+    // Immediate goes in bits 18:5, which is taken through masking.
+    // Preserve all other bits from the original instruction.
+    Value = (OriginalInst & ~0x0007FFE0ULL) | (((Value >> 2) & 0x3FFFULL) << 5);
     break;
   }
   return Value;
@@ -782,12 +804,13 @@ bool Relocation::skipRelocationType(uint32_t Type) {
   }
 }
 
-uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
+uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC,
+                                 uint32_t OriginalInst) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
-    return encodeValueAArch64(Type, Value, PC);
+    return encodeValueAArch64(Type, Value, PC, OriginalInst);
   case Triple::riscv64:
   case Triple::riscv32:
     return encodeValueRISCV(Type, Value, PC);
@@ -992,6 +1015,7 @@ uint32_t Relocation::getRelative() {
   case Triple::aarch64:
     return ELF::R_AARCH64_RELATIVE;
   case Triple::riscv64:
+    return ELF::R_RISCV_RELATIVE;
   case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:

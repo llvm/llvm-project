@@ -8,11 +8,6 @@
 
 # OpenACC Extensions in Flang
 
-```{contents}
----
-local:
----
-```
 
 Flang is more lenient than the OpenACC specification requires for purposes of
 compatibility. This document describes extensions to the OpenACC specification.
@@ -58,6 +53,34 @@ These extensions require no flag.
   `-Wno-portability`).
 
 ## Extensions enabled by default
+
+### `-fopenacc-acc-kernels-do-concurrent-independent` — independent `DO CONCURRENT` in `KERNELS LOOP`
+
+When a `DO CONCURRENT` is associated with a combined OpenACC `KERNELS LOOP`
+construct and no explicit `seq`, `auto`, or `independent` clause is present,
+the iteration-independence assertion of `DO CONCURRENT` is preserved and the
+loop is treated as if the `independent` clause were present.
+
+Disable with
+`-fno-openacc-acc-kernels-do-concurrent-independent` to treat the loop as
+`auto` when no explicit loop parallelism mode is present.
+
+### `-fopenacc-combined-loop-firstprivate` — combined loop firstprivate
+
+`firstprivate` is a compute-construct clause, not a `loop` clause.  On a
+combined `parallel loop` or `serial loop`, Flang keeps the explicit clause on
+the compute construct and also attaches an implicit `firstprivate` on the
+associated `acc.loop` so each thread gets its own initialized copy.
+
+This applies to all types (scalars, arrays, derived types, etc.) and all
+parallelism modes (`independent`, `seq`, `auto`), consistent with how `private`
+and `reduction` are handled on combined constructs.  `kernels loop` is not
+affected because `kernels` cannot take `firstprivate`.  Standalone `acc loop`
+and non-combined `parallel` / `serial` with separate inner `acc loop` are not
+affected.
+
+Disable with `-fno-openacc-combined-loop-firstprivate` to keep firstprivate
+only on the compute construct (spec behavior).
 
 ### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
 

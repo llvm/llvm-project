@@ -22,7 +22,6 @@
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
@@ -121,8 +120,8 @@ struct CUDAKernelTy : public GenericKernelTy {
     if (auto Err = Plugin::check(Res, "error in cuFuncGetAttribute: %s"))
       return Err;
 
-    // The maximum number of threads cannot exceed the maximum of the kernel.
-    MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
+    // The maximum number of threads per block for this kernel's function.
+    MaxNumThreads = (uint32_t)MaxThreads;
 
     int SharedMemSize;
     Res = cuFuncGetAttribute(&SharedMemSize,
@@ -162,12 +161,19 @@ struct CUDAKernelTy : public GenericKernelTy {
                               const uint32_t NumThreads[3],
                               uint32_t DynBlockMemSize) const override;
 
+  /// Return the maximum number of threads per block for this kernel's
+  /// function, as reported by the CUDA driver.
+  uint32_t getMaxThreads() const override { return MaxNumThreads; }
+
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
+  /// The maximum number of threads per block this kernel's function may use,
+  /// as reported by the CUDA driver.
+  uint32_t MaxNumThreads = 0;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -279,7 +285,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   ~CUDADeviceTy() {}
 
   /// Initialize the device, its resources and get its properties.
-  Error initImpl(GenericPluginTy &Plugin) override {
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
     CUresult Res = cuDeviceGet(&Device, DeviceId);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
@@ -288,7 +295,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Res = cuDeviceGetUuid(&UUID, Device);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
       return Err;
-    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
+    setDeviceUidFromVendorUid(
+        toHex(StringRef(UUID.bytes, sizeof(UUID.bytes)), true));
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
@@ -590,7 +598,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUdeviceptr DevicePtr;
     CUresult Res;
 
-    if (Alignment > 0 && Alignment > Granularity) {
+    if (Alignment > Granularity) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported alignment (%lu)",
@@ -1673,6 +1681,61 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    if (Devices.empty())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+
+    // Any device in the context can service the query; use the first.
+    auto &Ctx0 = static_cast<CUDADeviceTy &>(*Devices.front());
+    if (auto Err = Ctx0.setContext())
+      return std::move(Err);
+
+    CUdeviceptr CUPtr = reinterpret_cast<CUdeviceptr>(Ptr);
+
+    CUpointer_attribute Attrs[] = {
+        CU_POINTER_ATTRIBUTE_MEMORY_TYPE,
+        CU_POINTER_ATTRIBUTE_IS_MANAGED,
+        CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL,
+        CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
+        CU_POINTER_ATTRIBUTE_RANGE_SIZE,
+    };
+    unsigned MemType = 0;
+    int IsManaged = 0;
+    int Ordinal = -1;
+    CUdeviceptr RangeStart = 0;
+    size_t RangeSize = 0;
+    void *Data[] = {&MemType, &IsManaged, &Ordinal, &RangeStart, &RangeSize};
+    if (CUresult Res = cuPointerGetAttributes(sizeof(Attrs) / sizeof(Attrs[0]),
+                                              Attrs, Data, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttributes failed: %d", Res);
+
+    TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
+    if (IsManaged)
+      Kind = TARGET_ALLOC_SHARED;
+    else if (MemType == CU_MEMORYTYPE_HOST)
+      Kind = TARGET_ALLOC_HOST;
+
+    // Ordinal is the CUDA driver ordinal (matches CUdevice); compare against
+    // that rather than the offload-side device index, which can differ under
+    // CUDA_VISIBLE_DEVICES or plugin-side device filtering.
+    GenericDeviceTy *OwnerDevice = nullptr;
+    for (auto *D : Devices) {
+      auto &CD = static_cast<CUDADeviceTy &>(*D);
+      if (static_cast<int>(CD.getCUDADevice()) == Ordinal) {
+        OwnerDevice = D;
+        break;
+      }
+    }
+    if (!OwnerDevice)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "allocation owner is not a device of this context");
+
+    return PluginAllocInfoTy{OwnerDevice, Kind,
+                             reinterpret_cast<void *>(RangeStart), RangeSize};
   }
 };
 

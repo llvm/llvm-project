@@ -8,7 +8,11 @@ unittest("ABITests") {
   ]
   sources = [
     "AArch64TargetInfoTest.cpp",
-    "X86TargetInfoTest.cpp",
+    "AMDGPUTargetInfoTest.cpp",
+    "FunctionInfoTest.cpp",
+    "IRTypeMapperTest.cpp",
+    "TargetInfoTest.cpp",
     "TypesTest.cpp",
+    "X86TargetInfoTest.cpp",
   ]
 }
