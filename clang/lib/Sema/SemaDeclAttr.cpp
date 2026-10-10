@@ -4139,8 +4139,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
-  Info->NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
+  Info->NumArgs = getFunctionOrMethodNumParams(D, /*IncludeThis=*/true);
 
   Info->Identifier = AL.getArgAsIdent(0)->getIdentifierInfo();
   StringRef Format = Info->Identifier->getName();
@@ -4176,7 +4175,7 @@ static bool handleFormatAttrCommon(Sema &S, Decl *D, const ParsedAttr &AL,
   // FIXME: Do we need to bounds check?
   unsigned ArgIdx = Info->FormatStringIdx - 1;
 
-  if (HasImplicitThisParam) {
+  if (hasImplicitObjectParameter(D)) {
     if (ArgIdx == 0) {
       S.Diag(AL.getLoc(),
              diag::err_format_attribute_implicit_this_format_string)
