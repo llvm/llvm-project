@@ -11065,7 +11065,7 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   if (SVT != MVT::i32)
     return SDValue();
 
-  EVT FloatVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
   const fltSemantics &Sem = FloatVT.getVectorElementType().getFltSemantics();
   unsigned BitWidth = SVT.getSizeInBits();
   unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
