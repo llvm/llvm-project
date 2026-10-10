@@ -872,8 +872,9 @@ class POOL32A_TLBINV_FM_MMR6<string instr_asm, bits<10> funct>
 class POOL32A_MFTC0_FM_MMR6<string instr_asm, bits<5> funct, bits<6> opcode>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   bits<5> rt;
-  bits<5> rs;
-  bits<3> sel;
+  bits<10> cop0;
+  bits<5> rs = cop0{9-5};
+  bits<3> sel = cop0{2-0};
 
   bits<32> Inst;
 

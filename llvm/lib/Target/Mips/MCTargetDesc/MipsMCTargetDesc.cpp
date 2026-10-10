@@ -48,6 +48,15 @@ using namespace llvm;
 #define GET_REGISTER_MATCHER
 #include "MipsGenAsmMatcher.inc"
 
+MCRegister MIPS_MC::getCOP0Register(const MCRegisterInfo &MRI,
+                                    unsigned Encoding) {
+  unsigned Reg = getCOP0RegNum(Encoding);
+  unsigned Sel = getCOP0Sel(Encoding);
+  assert(Reg < 32 && Sel < 8 && "Invalid COP0 register encoding");
+  // COP0's register class is ordered by selector, then register number.
+  return MRI.getRegClass(Mips::COP0RegClassID).getRegister(Sel * 32 + Reg);
+}
+
 MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
                                       unsigned RegClassID, unsigned AltIdx) {
   MCRegister Reg = MatchRegisterAltName(Name, AltIdx);

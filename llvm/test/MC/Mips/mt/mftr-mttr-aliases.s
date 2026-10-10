@@ -45,3 +45,6 @@
   mttc1 $4, $f5          # CHECK: mttr  $4, $5, 1, 2, 0         # encoding: [0x41,0x84,0x28,0x22]
   mtthc1 $4, $f5         # CHECK: mttr  $4, $5, 1, 2, 1         # encoding: [0x41,0x84,0x28,0x32]
   cttc1  $4, $f9         # CHECK: mttr  $4, $9, 1, 3, 0         # encoding: [0x41,0x84,0x48,0x23]
+
+  mftc0 $4, $config1     # CHECK: mftr  $4, $16, 0, 1, 0         # encoding: [0x41,0x10,0x20,0x01]
+  mttc0 $4, $config1     # CHECK: mttr  $4, $16, 0, 1, 0         # encoding: [0x41,0x84,0x80,0x01]

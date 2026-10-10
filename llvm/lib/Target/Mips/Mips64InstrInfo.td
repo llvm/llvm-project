@@ -630,10 +630,10 @@ def SaadAddr : MipsAsmPseudoInst<(outs), (ins GPR64Opnd:$rt, mem:$addr),
 
 /// Move between CPU and coprocessor registers
 let DecoderNamespace = "Mips64" in {
-def DMFC0 : MFC3OP<"dmfc0", GPR64Opnd, COP0Opnd>,
-            MFC3OP_FM<0x10, 1, 0>, ISA_MIPS3, GPR_64;
-def DMTC0 : MTC3OP<"dmtc0", COP0Opnd, GPR64Opnd>,
-            MFC3OP_FM<0x10, 5, 0>, ISA_MIPS3, GPR_64;
+def DMFC0 : MFC0OP<"dmfc0", GPR64Opnd, COP0Opnd>,
+            MFC0OP_FM<1, 0>, ISA_MIPS3, GPR_64;
+def DMTC0 : MTC0OP<"dmtc0", COP0Opnd, GPR64Opnd>,
+            MFC0OP_FM<5, 0>, ISA_MIPS3, GPR_64;
 def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd>,
             MFC3OP_FM<0x12, 1, 0>, ISA_MIPS3, GPR_64;
 def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd>,
@@ -642,10 +642,10 @@ def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd>,
 
 /// Move between CPU and guest coprocessor registers (Virtualization ASE)
 let DecoderNamespace = "Mips64" in {
-  def DMFGC0 : MFC3OP<"dmfgc0", GPR64Opnd, COP0Opnd>,
-               MFC3OP_FM<0x10, 3, 1>, ISA_MIPS64R5, ASE_VIRT;
-  def DMTGC0 : MTC3OP<"dmtgc0", COP0Opnd, GPR64Opnd>,
-               MFC3OP_FM<0x10, 3, 3>, ISA_MIPS64R5, ASE_VIRT;
+  def DMFGC0 : MFC0OP<"dmfgc0", GPR64Opnd, COP0Opnd>,
+               MFC0OP_FM<3, 1>, ISA_MIPS64R5, ASE_VIRT;
+  def DMTGC0 : MTC0OP<"dmtgc0", COP0Opnd, GPR64Opnd>,
+               MFC0OP_FM<3, 3>, ISA_MIPS64R5, ASE_VIRT;
 }
 
 let AdditionalPredicates = [UseIndirectJumpsHazard] in
@@ -1064,18 +1064,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
                              uimm5_plus1:$size), 0>, ISA_MIPS64R2;
   def : MipsInstAlias<"jalr.hb $rs", (JALR_HB64 RA_64, GPR64Opnd:$rs), 1>,
         ISA_MIPS64;
-// Two operand (implicit 0 selector) versions:
-  def : MipsInstAlias<"dmtc0 $rt, $rd",
-                      (DMTC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
-  def : MipsInstAlias<"dmfc0 $rt, $rd",
-                      (DMFC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>;
-  def : MipsInstAlias<"dmfgc0 $rt, $rd",
-                      (DMFGC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-                      ISA_MIPS64R5, ASE_VIRT;
-  def : MipsInstAlias<"dmtgc0 $rt, $rd",
-                      (DMTGC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>,
-                      ISA_MIPS64R5, ASE_VIRT;
 }
+// Two operand (implicit 0 selector) versions:
 def : MipsInstAlias<"dmfc2 $rt, $rd",
                     (DMFC2 GPR64Opnd:$rt, COP2Opnd:$rd, 0), 0>;
 def : MipsInstAlias<"dmtc2 $rt, $rd",

@@ -219,10 +219,11 @@ static DecodeStatus DecodeMSACtrlRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeCOP0RegisterClass(MCInst &Inst, unsigned RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
-  if (RegNo > 31)
+  if (MIPS_MC::getCOP0RegNum(RegNo) >= 32 || MIPS_MC::getCOP0Sel(RegNo) >= 8)
     return MCDisassembler::Fail;
 
-  MCRegister Reg = getReg(Decoder, Mips::COP0RegClassID, RegNo);
+  MCRegister Reg =
+      MIPS_MC::getCOP0Register(*Decoder->getContext().getRegisterInfo(), RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
