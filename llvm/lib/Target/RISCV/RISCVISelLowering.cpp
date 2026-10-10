@@ -5143,7 +5143,7 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
 
     // Use vmv.v.x with EEW=32.  Use either a vsetivli or vsetvli to change
     // VL.  This can temporarily increase VL if VL less than VLMAX.
-    if (LoC == HiC) {
+    if (LoC == HiC && Passthru.isUndef()) {
       SDValue NewVL;
       if (isa<ConstantSDNode>(VL) && isUInt<4>(VL->getAsZExtVal()))
         NewVL = DAG.getNode(ISD::ADD, DL, VL.getValueType(), VL, VL);
@@ -5155,6 +5155,21 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
                                   DAG.getUNDEF(InterVT), Lo, NewVL);
       return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
     }
+  }
+
+  // With identical nonconstant halves and undefined passthru, use vmv.v.x
+  // with EEW=32. Double small constant VLs; otherwise use VLMAX.
+  if (!isa<ConstantSDNode>(Lo) && Lo == Hi && Passthru.isUndef()) {
+    SDValue NewVL;
+    if (isa<ConstantSDNode>(VL) && isUInt<4>(VL->getAsZExtVal()))
+      NewVL = DAG.getNode(ISD::ADD, DL, VL.getValueType(), VL, VL);
+    else
+      NewVL = DAG.getRegister(RISCV::X0, MVT::i32);
+
+    MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+    SDValue InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT,
+                                   DAG.getUNDEF(InterVT), Lo, NewVL);
+    return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
   }
 
   // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
