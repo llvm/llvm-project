@@ -1741,6 +1741,10 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<UndefValue>(Offset))
     return PoisonValue::get(Base->getType());
 
+  // bitinsert poison, poison, C -> poison
+  if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
+    return Base;
+
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
     return nullptr;
@@ -1756,10 +1760,6 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (Bits == BaseBits)
     return ConstantFoldCastOperand(Instruction::BitCast, Val, Base->getType(),
                                    DL);
-
-  // bitinsert poison, poison, C -> poison
-  if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
-    return Base;
 
   // bitinsert undef, undef, C -> undef
   // Any poison bits are refined to undef.
