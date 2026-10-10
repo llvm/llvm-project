@@ -116,6 +116,7 @@ MACHINE_FUNCTION_ANALYSIS("amdgpu-next-use-analysis", AMDGPUNextUseAnalysisPass(
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("amdgpu-asm-printer", AMDGPUAsmPrinterPass())
+MACHINE_FUNCTION_PASS("amdgpu-form-ssa-memory-clauses", AMDGPUFormSSAMemoryClausesPass())
 MACHINE_FUNCTION_PASS("amdgpu-global-isel-divergence-lowering",
                       AMDGPUGlobalISelDivergenceLoweringPass())
 MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
