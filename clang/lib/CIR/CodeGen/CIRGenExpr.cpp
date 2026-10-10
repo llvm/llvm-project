@@ -2271,6 +2271,18 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
   llvm_unreachable("bad evaluation kind");
 }
 
+// Returns whether \p fn disables the builtin \p name with no_builtin. An empty
+// list disables all builtins.
+static bool hasNoBuiltinAttr(cir::FuncOp fn, StringRef name) {
+  auto noBuiltins = fn->getAttrOfType<mlir::ArrayAttr>(
+      cir::CIRDialect::getNoBuiltinsAttrName());
+  if (!noBuiltins)
+    return false;
+  return noBuiltins.empty() ||
+         llvm::is_contained(noBuiltins,
+                            mlir::StringAttr::get(fn.getContext(), name));
+}
+
 CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
@@ -2280,18 +2292,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // TODO: Read no-builtin function attribute and set this accordingly.
-    // Using false here matches OGCG's default behavior - builtins are called
-    // as builtins unless explicitly disabled. The previous value of true was
-    // overly conservative and caused functions to be marked as no_inline when
-    // they shouldn't be.
-    bool hasAttributeNoBuiltin = false;
-    assert(!cir::MissingFeatures::attributeNoBuiltin());
+    auto fn = dyn_cast<cir::FuncOp>(curFn);
+    bool hasAttributeNoBuiltin = fn && hasNoBuiltinAttr(fn, fd->getName());
 
     // When directly calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    if (auto fn = dyn_cast<cir::FuncOp>(curFn);
-        (!fn || fn.getName() != fdInlineName) &&
+    if ((!fn || fn.getName() != fdInlineName) &&
         CodeGenUtils::onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));

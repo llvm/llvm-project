@@ -338,9 +338,10 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
-    cir::MemCpyOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
+template <typename CIROp, typename LLVMOp>
+static mlir::LogicalResult
+lowerMemTransferOp(CIROp op, typename CIROp::Adaptor adaptor,
+                   mlir::ConversionPatternRewriter &rewriter) {
   mlir::ArrayAttr argAttrs;
   if (op.getDstAlignment() || op.getSrcAlignment()) {
     mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
@@ -354,7 +355,7 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
         /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
     });
   }
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
+  rewriter.replaceOpWithNewOp<LLVMOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
       /*isVolatile=*/false,
       /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -363,13 +364,18 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
+    cir::MemCpyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerMemTransferOp<cir::MemCpyOp, mlir::LLVM::MemcpyOp>(op, adaptor,
+                                                                 rewriter);
+}
+
 mlir::LogicalResult CIRToLLVMMemMoveOpLowering::matchAndRewrite(
     cir::MemMoveOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MemmoveOp>(
-      op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false);
-  return mlir::success();
+  return lowerMemTransferOp<cir::MemMoveOp, mlir::LLVM::MemmoveOp>(op, adaptor,
+                                                                   rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(

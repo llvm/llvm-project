@@ -203,9 +203,12 @@ public:
         getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
-  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
-                               mlir::Value src, mlir::Value len) {
-    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  cir::MemMoveOp createMemMove(mlir::Location loc, Address dst, Address src,
+                               mlir::Value len) {
+    return cir::MemMoveOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
