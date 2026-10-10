@@ -394,6 +394,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* Fixed incorrect compilation-unit selection in `llvm-symbolizer`,
+  `llvm-addr2line`, and `llvm-dwarfdump --lookup` when DWARF ranges left by
+  discarded sections overlap live code in another compilation unit in a linked
+  ELF image. Ranges starting below the lowest nonempty allocated section are
+  now ignored during compilation-unit lookup.
+  ([#40469](https://github.com/llvm/llvm-project/issues/40469))
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
