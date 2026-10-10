@@ -679,11 +679,23 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   M->setTargetTriple(TheTriple);
 
-  std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
-  if (!CM && CM_IR)
+  if (CM)
+    M->setCodeModel(*CM);
+  else if (std::optional<CodeModel::Model> CM_IR = M->getCodeModel())
     Target->setCodeModel(*CM_IR);
-  if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
+  if (TheTriple.isX86() && RM) {
+    if (*RM == Reloc::Static)
+      M->setPICLevel(PICLevel::NotPIC);
+    else if (*RM == Reloc::PIC_)
+      M->setPICLevel(TheTriple.isArch64Bit() ? PICLevel::BigPIC
+                                             : PICLevel::SmallPIC);
+  }
+  if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold()) {
+    M->setLargeDataThreshold(*LDT);
     Target->setLargeDataThreshold(*LDT);
+  } else if (std::optional<uint64_t> LDT_IR = M->getLargeDataThreshold()) {
+    Target->setLargeDataThreshold(*LDT_IR);
+  }
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());

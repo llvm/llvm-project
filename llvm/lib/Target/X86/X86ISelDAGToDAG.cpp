@@ -2022,7 +2022,7 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
 
   // Can't use an addressing mode with large globals.
   if (Subtarget->is64Bit() && !IsRIPRel && AM.GV &&
-      TM.isLargeGlobalValue(AM.GV)) {
+      AM.GV->isLargeGlobalValue()) {
     AM = Backup;
     return true;
   }
@@ -2075,7 +2075,7 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
   // Post-processing: Convert foo to foo(%rip), even in non-PIC mode,
   // because it has a smaller encoding.
   if (TM.getCodeModel() != CodeModel::Large &&
-      (!AM.GV || !TM.isLargeGlobalValue(AM.GV)) && Subtarget->is64Bit() &&
+      (!AM.GV || !AM.GV->isLargeGlobalValue()) && Subtarget->is64Bit() &&
       AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
       AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
@@ -3267,7 +3267,7 @@ bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
   if (std::optional<ConstantRange> CR = GV->getAbsoluteSymbolRange())
     return CR->getUnsignedMax().ult(1ull << 32);
 
-  return !TM.isLargeGlobalValue(GV);
+  return !GV->isLargeGlobalValue();
 }
 
 bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
@@ -3528,7 +3528,7 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
   // In other code models, small globals are in the low 2GB of the address
   // space, so sign extending them is equivalent to zero extending them.
   return TM.getCodeModel() != CodeModel::Large && Width == 32 &&
-         !TM.isLargeGlobalValue(GV);
+         !GV->isLargeGlobalValue();
 }
 
 X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
