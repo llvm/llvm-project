@@ -513,6 +513,82 @@ gpu.module @xevm_test {
 }
 
 // -----
+// Nested slice layout: source effective lane layout is [16, 1], so dim 1
+// (intra-lane) reduces first, then the cross-lane dim 0.
+// CHECK-LABEL: gpu.func @nested_slice_reduce_order(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: vector<4x16x8xi32>) -> i32 {
+// CHECK:         %[[ACC_VEC:.*]] = arith.constant dense<0> : vector<16xi32>
+// CHECK:         %[[ACC_SCALAR:.*]] = arith.constant 0 : i32
+// CHECK:         %[[EXTRACTED:.*]] = vector.extract %[[ARG0]][0] : vector<16x8xi32> from vector<4x16x8xi32>
+// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[EXTRACTED]], %[[ACC_VEC]] [1] : vector<16x8xi32> to vector<16xi32>
+// CHECK:         %[[REDUCE_2:.*]] = vector.multi_reduction <add>, %[[REDUCE_1]], %[[ACC_SCALAR]] [0] : vector<16xi32> to i32
+// CHECK:         xegpu.convert_layout %[[REDUCE_2]]
+#root = #xegpu.layout<lane_layout = [1, 16, 1], lane_data = [1, 1, 1]>
+#src = #xegpu.slice<#root, dims = [0]>
+#res = #xegpu.slice<#src, dims = [0, 1]>
+gpu.module @xevm_module {
+  gpu.func @nested_slice_reduce_order(%arg: vector<4x16x8xi32>) -> i32 {
+    %v = vector.extract %arg[0]
+      {layout_operand_0 = #root, layout_result_0 = #src}
+      : vector<16x8xi32> from vector<4x16x8xi32>
+    %zero = arith.constant 0 : i32
+    %r = vector.multi_reduction <add>, %v, %zero
+      {layout_result_0 = #res}
+      [0, 1] : vector<16x8xi32> to i32
+    gpu.return %r : i32
+  }
+}
+
+// -----
+// Reducing non-leading dims [1, 2]: source effective lane layout is [1, 16, 1],
+// so dim 2 (intra-lane) reduces first, then dim 1.
+// CHECK-LABEL: gpu.func @nested_slice_reduce_dims_12(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: vector<2x2x16x8xi32>) -> vector<2xi32> {
+// CHECK:         %[[ACC_2D:.*]] = arith.constant dense<0> : vector<2x16xi32>
+// CHECK:         %[[ACC_1D:.*]] = arith.constant dense<0> : vector<2xi32>
+// CHECK:         %[[EXTRACTED:.*]] = vector.extract %[[ARG0]][0] : vector<2x16x8xi32> from vector<2x2x16x8xi32>
+// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[EXTRACTED]], %[[ACC_2D]] [2] : vector<2x16x8xi32> to vector<2x16xi32>
+// CHECK:         %[[REDUCE_2:.*]] = vector.multi_reduction <add>, %[[REDUCE_1]], %[[ACC_1D]] [1] : vector<2x16xi32> to vector<2xi32>
+// CHECK:         xegpu.convert_layout %[[REDUCE_2]]
+#root3 = #xegpu.layout<lane_layout = [1, 1, 16, 1], lane_data = [1, 1, 1, 1]>
+#src3 = #xegpu.slice<#root3, dims = [0]>
+#res3 = #xegpu.slice<#src3, dims = [1, 2]>
+gpu.module @xevm_module {
+  gpu.func @nested_slice_reduce_dims_12(%arg: vector<2x2x16x8xi32>) -> vector<2xi32> {
+    %v = vector.extract %arg[0]
+      {layout_operand_0 = #root3, layout_result_0 = #src3}
+      : vector<2x16x8xi32> from vector<2x2x16x8xi32>
+    %zero = arith.constant dense<0> : vector<2xi32>
+    %r = vector.multi_reduction <add>, %v, %zero
+      {layout_result_0 = #res3}
+      [1, 2] : vector<2x16x8xi32> to vector<2xi32>
+    gpu.return %r : vector<2xi32>
+  }
+}
+
+// -----
+// Both dims are cross-lane ([2, 8]), so order is irrelevant; fall back to
+// reducing dims[0] then dims[1] without reading an uninitialized intra dim.
+// CHECK-LABEL: gpu.func @reduce_both_cross(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: vector<4x8xi32>) -> i32 {
+// CHECK-DAG:     %[[ACC_VEC:.*]] = arith.constant dense<0> : vector<8xi32>
+// CHECK-DAG:     %[[ACC_SCALAR:.*]] = arith.constant 0 : i32
+// CHECK:         %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[ARG0]], %[[ACC_VEC]] [0] : vector<4x8xi32> to vector<8xi32>
+// CHECK:         %[[REDUCE_2:.*]] = vector.multi_reduction <add>, %[[REDUCE_1]], %[[ACC_SCALAR]] [0] : vector<8xi32> to i32
+// CHECK:         xegpu.convert_layout %[[REDUCE_2]]
+#root4 = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>
+#res4 = #xegpu.slice<#root4, dims = [0, 1]>
+gpu.module @xevm_module {
+  gpu.func @reduce_both_cross(%arg: vector<4x8xi32>) -> i32 {
+    %zero = arith.constant 0 : i32
+    %r = vector.multi_reduction <add>, %arg, %zero
+      {layout_result_0 = #res4}
+      [0, 1] : vector<4x8xi32> to i32
+    gpu.return %r : i32
+  }
+}
+
+// -----
 // Transpose optimization on a >2D descriptor with unit leading dims.
 // CHECK-LABEL: gpu.func @transpose_4d(
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<?x?x64x64xf16>) -> vector<1x1x16x16xf16> {
