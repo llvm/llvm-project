@@ -14243,6 +14243,9 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 // -> partial_reduce_*mla(acc, sel(p, a, splat(0)), splat(C))
 //
 // `sel` could either be VSELECT or VP_MERGE.
+//
+// partial_reduce_fmla(acc, fmul(a, b), splat(1))
+// -> fma(a, b, acc)
 SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   SDLoc DL(N);
   auto *Context = DAG.getContext();
@@ -14308,8 +14311,19 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   };
 
   unsigned LHSOpcode = LHS->getOpcode();
-  if (!IsIntOrFPExtOpcode(LHSOpcode))
+  if (!IsIntOrFPExtOpcode(LHSOpcode)) {
+    EVT AccTy = Acc.getValueType();
+    // If we're not extending the inputs, just combine them normally. This
+    // already happens for integer ops, but fp requires separate handling.
+    if (N->getOpcode() == ISD::PARTIAL_REDUCE_FMLA &&
+        N->getFlags().hasAllowContract() &&
+        Op1->getFlags().hasAllowContract() &&
+        TLI.isOperationLegalOrCustom(ISD::FMA, AccTy) &&
+        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), AccTy))
+      return DAG.getNode(ISD::FMA, DL, AccTy, LHS, RHS, Acc);
+
     return SDValue();
+  }
 
   SDValue LHSExtOp = LHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
