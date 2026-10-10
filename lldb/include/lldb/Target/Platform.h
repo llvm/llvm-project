@@ -24,11 +24,9 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
-#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -58,6 +56,10 @@ public:
 
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
+
+  /// The timeout to use when expanding launch arguments via the shell.
+  /// A value of std::nullopt means no timeout should be enforced.
+  Timeout<std::micro> GetShellExpandTimeout() const;
 
 private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
@@ -329,6 +331,24 @@ public:
       const ModuleSpec &module_spec, Target &target, lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
+  /// Find a module's files on this host.
+  ///
+  /// The symbol locator plugins have no Platform to consult, so a platform
+  /// that knows where its binaries live answers here instead.
+  ///
+  /// An answer ends the search, so an override owns what the plugins would
+  /// otherwise have been asked for: the files it names have to exist, and have
+  /// to be the ones \a module_spec describes.
+  ///
+  /// \return
+  ///     Where the files are, or std::nullopt if this platform has nothing to
+  ///     say about this module.
+  virtual std::optional<ModuleSpec>
+  FindModuleFiles(const ModuleSpec &module_spec,
+                  const FileSpecList &search_paths, StatisticsMap &statistics) {
+    return std::nullopt;
+  }
+
   void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
                                      lldb::ModuleSP &module_sp,
                                      FileSpec &symbol_file_spec,
@@ -481,31 +501,26 @@ public:
   // process control.
   virtual lldb::BreakpointSP SetThreadCreationBreakpoint(Target &target);
 
-  // Given a target, find the local SDK directory if one exists on the current
-  // host.
-  virtual lldb_private::ConstString
-  GetSDKDirectory(lldb_private::Target &target) {
-    return lldb_private::ConstString();
-  }
-
   /// Search each CU associated with the specified 'module' for
   /// the SDK paths the CUs were compiled against. In the presence
   /// of different SDKs, we try to pick the most appropriate one
-  /// using \ref XcodeSDK::Merge.
+  /// using \ref XcodeSDKAndSysroot::Merge.
+  ///
+  /// Note that a Module's CompileUnits may have been built against
+  /// different SDKs, so this merged result is inherently lossy; use the
+  /// \ref GetSDKPathFromDebugInfo(CompileUnit&) overload for accuracy.
   ///
   /// \param[in] module Module whose debug-info CUs to parse for
   ///                   which SDK they were compiled against.
   ///
-  /// \returns If successful, returns a pair of a parsed XcodeSDK
+  /// \returns If successful, returns a pair of a parsed XcodeSDKAndSysroot
   ///          object and a boolean that is 'true' if we encountered
   ///          a conflicting combination of SDKs when parsing the CUs
-  ///          (e.g., a public and internal SDK).
-  virtual llvm::Expected<std::pair<XcodeSDK, bool>>
-  GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  ///          (e.g., a public and internal SDK). Only Darwin SDKs come in
+  ///          public and internal flavors, so the generic implementation
+  ///          never reports a conflict.
+  virtual llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
+  GetSDKPathFromDebugInfo(Module &module);
 
   /// Returns the full path of the most appropriate SDK for the
   /// specified 'module'. This function gets this path by parsing
@@ -517,23 +532,15 @@ public:
   /// \returns If successful, returns the full path to an
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  ResolveSDKPathFromDebugInfo(Module &module);
 
   /// Search CU for the SDK path the CUs was compiled against.
   ///
   /// \param[in] unit The CU
   ///
   /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
-  virtual llvm::Expected<XcodeSDK>
-  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  virtual llvm::Expected<XcodeSDKAndSysroot>
+  GetSDKPathFromDebugInfo(CompileUnit &unit);
 
   /// Returns the full path of the most appropriate SDK for the
   /// specified compile unit. This function gets this path by parsing
@@ -544,11 +551,7 @@ public:
   /// \returns If successful, returns the full path to an
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::make_error<UnimplementedError>(
-        llvm::formatv("{0} not implemented for '{1}' platform.",
-                      LLVM_PRETTY_FUNCTION, GetName()));
-  }
+  ResolveSDKPathFromDebugInfo(CompileUnit &unit);
 
   bool IsHost() const {
     return m_is_host; // Is this the default host platform?
@@ -829,7 +832,7 @@ public:
   ///
   /// \return
   ///     A list of symbol names.  The list may be empty.
-  virtual const std::vector<ConstString> &GetTrapHandlerSymbolNames();
+  virtual const std::vector<std::string> &GetTrapHandlerSymbolNames();
 
   /// Try to get a specific unwind plan for a named trap handler.
   /// The default is not to have specific unwind plans for trap handlers.
@@ -845,7 +848,7 @@ public:
   ///     shared pointer. The latter means there is no specific plan,
   ///     unwind as normal.
   virtual lldb::UnwindPlanSP GetTrapHandlerUnwindPlan(const ArchSpec &arch,
-                                                      ConstString name) {
+                                                      llvm::StringRef name) {
     return {};
   }
 
@@ -1071,7 +1074,6 @@ protected:
   llvm::VersionTuple m_os_version;
   ArchSpec
       m_system_arch; // The architecture of the kernel or the remote platform
-  typedef std::map<uint32_t, ConstString> IDToNameMap;
   // Mutex for modifying Platform data structures that should only be used for
   // non-reentrant code
   std::mutex m_mutex;
@@ -1084,7 +1086,7 @@ protected:
   std::string m_ssh_opts;
   bool m_ignores_remote_hostname;
   std::string m_local_cache_directory;
-  std::vector<ConstString> m_trap_handlers;
+  std::vector<std::string> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
   LocateModuleCallback m_locate_module_callback;

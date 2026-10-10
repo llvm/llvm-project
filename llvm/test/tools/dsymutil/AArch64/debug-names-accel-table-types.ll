@@ -1,12 +1,12 @@
 ; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t < %s
-; RUN: dsymutil %t -o %t.dSYM
-; RUN: dsymutil --linker parallel %t -o %t.parallel.dSYM
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=SAME-NAME %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=DIFFERENT-NAME %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=UNIQUE-DIFFERENT-NAME %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
 
+; This checks the compiler's output. For a linked dSYM, see
+; X86/DWARFLinkerParallel/debug-names-swift-mangled-type.s.
 
 ; CHECK: DW_TAG_structure_type
 ; CHECK: DW_AT_name ("SameName")
@@ -16,7 +16,7 @@
 ; CHECK: DW_AT_name ("DifferentName")
 ; CHECK: DW_AT_linkage_name ("UniqueDifferentName")
 
-; The name count should be 5 (the two variables, "int", "SameName", "DifferentName", "UniqueDifferentName").
+; The name count should be 6 (the two variables, "int", "SameName", "DifferentName", "UniqueDifferentName").
 ; SAME-NAME: Name count: 6
 
 ; The accelarator should only have one entry for the three following names.

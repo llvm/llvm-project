@@ -103,7 +103,12 @@ public:
   kmp_trait &operator=(const kmp_trait &) = delete;
   kmp_trait &operator=(kmp_trait &&) = delete;
 
-  virtual bool match(int device) const = 0;
+  // Not pure virtual to avoid a dependency on __cxa_pure_virtual, which lives
+  // in libsupc++ and is not linked into libomp. Derived classes must override.
+  virtual bool match([[maybe_unused]] int device) const {
+    KMP_ASSERT2(0, "kmp_trait::match() must be overridden");
+    return false;
+  }
 
   // Use KMP_INTERNAL_MALLOC/KMP_INTERNAL_FREE for memory management.
   void *operator new(size_t size) { return KMP_INTERNAL_MALLOC(size); }
@@ -199,7 +204,13 @@ protected:
   kmp_trait_expr(expr_type type, bool negated)
       : _type(type), negated(negated) {}
 
-  virtual bool match_impl(int device, int num_devices) const = 0;
+  // Not pure virtual to avoid a dependency on __cxa_pure_virtual, which lives
+  // in libsupc++ and is not linked into libomp. Derived classes must override.
+  virtual bool match_impl([[maybe_unused]] int device,
+                          [[maybe_unused]] int num_devices) const {
+    KMP_ASSERT2(0, "kmp_trait_expr::match_impl() must be overridden");
+    return false;
+  }
 
 public:
   virtual ~kmp_trait_expr() = default;
@@ -426,6 +437,14 @@ public:
   // source of the trait specification.
   static kmp_trait_context *parse_from_spec(kmp_str_ref spec,
                                             const char *dbg_name = nullptr);
+
+  // Parse only a single device number from the spec.
+  // This is useful for backward compatibility with legacy code.
+  // If dbg_name is provided, it will be used in error messages to identify the
+  // source of the device number.
+  static int parse_single_device(kmp_str_ref spec, int device_num_min,
+                                 int device_num_max,
+                                 const char *dbg_name = nullptr);
 
   void add_clause(kmp_trait_clause *clause) {
     assert(clause);

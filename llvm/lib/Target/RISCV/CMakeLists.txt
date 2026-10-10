@@ -28,6 +28,12 @@ tablegen(LLVM RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
 tablegen(LLVM RISCVGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPostLegalizerCombiner")
 
+set(LLVM_TARGET_DEFINITIONS RISCVOptions.td)
+tablegen(LLVM RISCVOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/RISCVMCOptions.td)
+tablegen(LLVM RISCVMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(RISCVCommonTableGen)
 
 add_llvm_target(RISCVCodeGen
@@ -37,8 +43,11 @@ add_llvm_target(RISCVCodeGen
   RISCVCodeGenPrepare.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
-  RISCVExpandAtomicPseudoInsts.cpp
-  RISCVExpandPseudoInsts.cpp
+  RISCVExpandPseudoAtomics.cpp
+  RISCVExpandPseudoBase.cpp
+  RISCVExpandPseudoPostRA.cpp
+  RISCVExpandPseudoPreEmit.cpp
+  RISCVExpandPseudoPreRA.cpp
   RISCVFoldMemOffset.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
@@ -59,7 +68,6 @@ add_llvm_target(RISCVCodeGen
   RISCVMergeBaseOffset.cpp
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
-  RISCVPostRAExpandPseudoInsts.cpp
   RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
   RISCVQCRelaxMarking.cpp
@@ -94,9 +102,8 @@ add_llvm_target(RISCVCodeGen
   Core
   GlobalISel
   IPO
-  IRPrinter
   MC
-  ObjCARC
+  Option
   Passes
   RISCVDesc
   RISCVInfo

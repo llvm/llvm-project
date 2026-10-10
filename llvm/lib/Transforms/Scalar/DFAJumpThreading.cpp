@@ -58,9 +58,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -72,7 +74,6 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
@@ -90,54 +91,6 @@ using namespace llvm;
 STATISTIC(NumTransforms, "Number of transformations done");
 STATISTIC(NumCloned, "Number of blocks cloned");
 STATISTIC(NumPaths, "Number of individual paths threaded");
-
-namespace llvm {
-static cl::opt<bool>
-    ClViewCfgBefore("dfa-jump-view-cfg-before",
-                    cl::desc("View the CFG before DFA Jump Threading"),
-                    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> EarlyExitHeuristic(
-    "dfa-early-exit-heuristic",
-    cl::desc("Exit early if an unpredictable value come from the same loop"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<unsigned> MaxPathLength(
-    "dfa-max-path-length",
-    cl::desc("Max number of blocks searched to find a threading path"),
-    cl::Hidden, cl::init(20));
-
-static cl::opt<unsigned> MaxNumVisitiedPaths(
-    "dfa-max-num-visited-paths",
-    cl::desc(
-        "Max number of blocks visited while enumerating paths around a switch"),
-    cl::Hidden, cl::init(2500));
-
-static cl::opt<unsigned>
-    MaxNumPaths("dfa-max-num-paths",
-                cl::desc("Max number of paths enumerated around a switch"),
-                cl::Hidden, cl::init(200));
-
-static cl::opt<unsigned>
-    CostThreshold("dfa-cost-threshold",
-                  cl::desc("Maximum cost accepted for the transformation"),
-                  cl::Hidden, cl::init(50));
-
-static cl::opt<double> MaxClonedRate(
-    "dfa-max-cloned-rate",
-    cl::desc(
-        "Maximum cloned instructions rate accepted for the transformation"),
-    cl::Hidden, cl::init(7.5));
-
-static cl::opt<unsigned>
-    MaxOuterUseBlocks("dfa-max-out-use-blocks",
-                      cl::desc("Maximum unduplicated blocks with outer uses "
-                               "accepted for the transformation"),
-                      cl::Hidden, cl::init(40));
-
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
-} // namespace llvm
 
 namespace {
 class SelectInstToUnfold {
@@ -157,7 +110,8 @@ class DFAJumpThreading {
 public:
   DFAJumpThreading(AssumptionCache *AC, DomTreeUpdater *DTU, LoopInfo *LI,
                    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : AC(AC), DTU(DTU), LI(LI), TTI(TTI), ORE(ORE) {}
+      : Opts(ScalarOptions::Global), AC(AC), DTU(DTU), LI(LI), TTI(TTI),
+        ORE(ORE) {}
 
   bool run(Function &F);
   bool LoopInfoBroken;
@@ -184,6 +138,7 @@ private:
                      std::vector<SelectInstToUnfold> *NewSIsToUnfold,
                      std::vector<BasicBlock *> *NewBBs);
 
+  const ScalarOptions &Opts;
   AssumptionCache *AC;
   DomTreeUpdater *DTU;
   LoopInfo *LI;
@@ -276,9 +231,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     auto *BI =
         CondBrInst::Create(SI->getCondition(), EndBlock, NewBlock, StartBlock);
     BI->setDebugLoc(SelectBranchLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
@@ -319,9 +273,8 @@ void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
     DebugLoc SelectLoc = SI->getDebugLoc();
     NewFToEnd->setDebugLoc(SelectLoc);
     BI->setDebugLoc(SelectLoc);
-    if (!ProfcheckDisableMetadataFixes)
-      BI->setMetadata(LLVMContext::MD_prof,
-                      SI->getMetadata(LLVMContext::MD_prof));
+    BI->setMetadata(LLVMContext::MD_prof,
+                    SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});
@@ -454,9 +407,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ThreadingPath &TPath) {
 #endif
 
 struct MainSwitch {
-  MainSwitch(SwitchInst *SI, LoopInfo *LI, OptimizationRemarkEmitter *ORE)
+  MainSwitch(const ScalarOptions &Opts, SwitchInst *SI, LoopInfo *LI,
+             OptimizationRemarkEmitter *ORE)
       : LI(LI) {
-    if (isCandidate(SI)) {
+    if (isCandidate(SI, Opts)) {
       Instr = SI;
     } else {
       ORE->emit([&]() {
@@ -478,7 +432,7 @@ private:
   /// \p SI is a potential condidate.
   ///
   /// Also, collect select instructions to unfold.
-  bool isCandidate(const SwitchInst *SI) {
+  bool isCandidate(const SwitchInst *SI, const ScalarOptions &Opts) {
     std::deque<std::pair<Value *, BasicBlock *>> Q;
     SmallPtrSet<Value *, 16> SeenValues;
     SelectInsts.clear();
@@ -528,7 +482,7 @@ private:
         // likely that it will also be on the enumerated paths, causing us to
         // exit after we have enumerated all the paths. This heuristic save
         // compile time because a search for all the paths can become expensive.
-        if (EarlyExitHeuristic &&
+        if (Opts.dfa_early_exit_heuristic &&
             L->contains(LI->getLoopFor(CurrentIncomingBB))) {
           LLVM_DEBUG(dbgs()
                      << "\tExiting early due to unpredictability heuristic.\n");
@@ -591,10 +545,11 @@ private:
 };
 
 struct AllSwitchPaths {
-  AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE,
-                 LoopInfo *LI, Loop *L)
-      : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()), ORE(ORE),
-        LI(LI), SwitchOuterLoop(L) {}
+  AllSwitchPaths(const ScalarOptions &Opts, const MainSwitch *MSwitch,
+                 OptimizationRemarkEmitter *ORE, LoopInfo *LI, Loop *L)
+      : Opts(Opts), Switch(MSwitch->getInstr()),
+        SwitchBlock(Switch->getParent()), ORE(ORE), LI(LI), SwitchOuterLoop(L) {
+  }
 
   std::vector<ThreadingPath> &getThreadingPaths() { return TPaths; }
   unsigned getNumThreadingPaths() { return TPaths.size(); }
@@ -705,18 +660,19 @@ private:
     PathsType Res;
 
     // Stop exploring paths after visiting MaxPathLength blocks
-    if (PathDepth > MaxPathLength) {
+    if (PathDepth > Opts.dfa_max_path_length) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysis(DEBUG_TYPE, "MaxPathLengthReached",
                                           Switch)
                << "Exploration stopped after visiting MaxPathLength="
-               << ore::NV("MaxPathLength", MaxPathLength) << " blocks.";
+               << ore::NV("MaxPathLength", Opts.dfa_max_path_length)
+               << " blocks.";
       });
       return Res;
     }
 
     Visited.insert(BB);
-    if (++NumVisited > MaxNumVisitiedPaths)
+    if (++NumVisited > Opts.dfa_max_num_visited_paths)
       return Res;
 
     // Stop if we have reached the BB out of loop, since its successors have no
@@ -831,15 +787,16 @@ private:
     auto *SwitchPhiDefBB = SwitchPhi->getParent();
     VisitedBlocks VB;
     // Get paths from the determinator BBs to SwitchPhiDefBB
-    std::vector<ThreadingPath> PathsToPhiDef =
-        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
+    std::vector<ThreadingPath> PathsToPhiDef = getPathsFromStateDefMap(
+        StateDef, SwitchPhi, VB, Opts.dfa_max_num_paths);
     if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
       TPaths = std::move(PathsToPhiDef);
       return;
     }
 
-    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
-    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
+    assert(Opts.dfa_max_num_paths >= PathsToPhiDef.size() &&
+           !PathsToPhiDef.empty());
+    auto PathsLimit = Opts.dfa_max_num_paths / PathsToPhiDef.size();
     // Find and append paths from SwitchPhiDefBB to SwitchBlock.
     PathsType PathsToSwitchBB =
         paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
@@ -896,6 +853,7 @@ private:
     }
   }
 
+  const ScalarOptions &Opts;
   unsigned NumVisited = 0;
   SwitchInst *Switch;
   BasicBlock *SwitchBlock;
@@ -907,12 +865,12 @@ private:
 };
 
 struct TransformDFA {
-  TransformDFA(AllSwitchPaths *SwitchPaths, DomTreeUpdater *DTU,
-               AssumptionCache *AC, TargetTransformInfo *TTI,
-               OptimizationRemarkEmitter *ORE,
+  TransformDFA(const ScalarOptions &Opts, AllSwitchPaths *SwitchPaths,
+               DomTreeUpdater *DTU, AssumptionCache *AC,
+               TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
                SmallPtrSet<const Value *, 32> EphValues)
-      : SwitchPaths(SwitchPaths), DTU(DTU), AC(AC), TTI(TTI), ORE(ORE),
-        EphValues(EphValues) {}
+      : Opts(Opts), SwitchPaths(SwitchPaths), DTU(DTU), AC(AC), TTI(TTI),
+        ORE(ORE), EphValues(EphValues) {}
 
   bool run() {
     if (isLegalAndProfitableToTransform()) {
@@ -1019,7 +977,8 @@ private:
           NumOuterUseBlock++;
     }
 
-    if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
+    if (double(NumClonedInst) / double(NumOrigInst) >
+        Opts.dfa_max_cloned_rate) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
                            "instructions wll be cloned\n");
       ORE->emit([&]() {
@@ -1033,7 +992,7 @@ private:
     // insertions of phi nodes for duplicated definitions. TODO: Drop this
     // threshold if we come up with another way to reduce the number of inserted
     // phi nodes.
-    if (NumOuterUseBlock > MaxOuterUseBlocks) {
+    if (NumOuterUseBlock > Opts.dfa_max_out_use_blocks) {
       LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
                            "blocks with outer uses\n");
       ORE->emit([&]() {
@@ -1071,14 +1030,14 @@ private:
                       << SwitchPaths->getSwitchBlock()->getName()
                       << " is: " << DuplicationCost << "\n\n");
 
-    if (DuplicationCost > CostThreshold) {
+    if (DuplicationCost > Opts.dfa_cost_threshold) {
       LLVM_DEBUG(dbgs() << "Not jump threading, duplication cost exceeds the "
                         << "cost threshold.\n");
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
                << "Duplication cost exceeds the cost threshold (cost="
-               << ore::NV("Cost", DuplicationCost)
-               << ", threshold=" << ore::NV("Threshold", CostThreshold) << ").";
+               << ore::NV("Cost", DuplicationCost) << ", threshold="
+               << ore::NV("Threshold", Opts.dfa_cost_threshold) << ").";
       });
       return false;
     }
@@ -1106,7 +1065,7 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
+    SmallSetVector<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
     for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -1135,7 +1094,7 @@ private:
   /// the predecessors, and phis in the successor blocks.
   void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallSetVector<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
@@ -1468,6 +1427,7 @@ private:
     return llvm::is_contained(predecessors(BB), IncomingBB);
   }
 
+  const ScalarOptions &Opts;
   AllSwitchPaths *SwitchPaths;
   DomTreeUpdater *DTU;
   AssumptionCache *AC;
@@ -1486,7 +1446,7 @@ bool DFAJumpThreading::run(Function &F) {
     return false;
   }
 
-  if (ClViewCfgBefore)
+  if (Opts.dfa_jump_view_cfg_before)
     F.viewCFG();
 
   SmallVector<AllSwitchPaths, 2> ThreadableLoops;
@@ -1500,7 +1460,7 @@ bool DFAJumpThreading::run(Function &F) {
 
     LLVM_DEBUG(dbgs() << "\nCheck if SwitchInst in BB " << BB.getName()
                       << " is a candidate\n");
-    MainSwitch Switch(SI, LI, ORE);
+    MainSwitch Switch(Opts, SI, LI, ORE);
 
     if (!Switch.getInstr()) {
       LLVM_DEBUG(dbgs() << "\nSwitchInst in BB " << BB.getName() << " is not a "
@@ -1516,7 +1476,7 @@ bool DFAJumpThreading::run(Function &F) {
     if (!Switch.getSelectInsts().empty())
       MadeChanges = true;
 
-    AllSwitchPaths SwitchPaths(&Switch, ORE, LI,
+    AllSwitchPaths SwitchPaths(Opts, &Switch, ORE, LI,
                                LI->getLoopFor(&BB)->getOutermostLoop());
     SwitchPaths.run();
 
@@ -1542,7 +1502,7 @@ bool DFAJumpThreading::run(Function &F) {
     CodeMetrics::collectEphemeralValues(&F, AC, EphValues);
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
-    TransformDFA Transform(&SwitchPaths, DTU, AC, TTI, ORE, EphValues);
+    TransformDFA Transform(Opts, &SwitchPaths, DTU, AC, TTI, ORE, EphValues);
     if (Transform.run())
       MadeChanges = LoopInfoBroken = true;
   }

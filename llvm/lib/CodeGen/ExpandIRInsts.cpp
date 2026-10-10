@@ -13,8 +13,8 @@
 // useful for targets like x86_64 that cannot lower fp convertions
 // with more than 128 bits.
 //
-// - Expansion of ‘frem‘ for types MVT::f16, MVT::f32, and MVT::f64 for
-// targets which use "Expand" as the legalization action for the
+// - Expansion of ‘frem‘ for types MVT::f16, MVT::bf16, MVT::f32, and MVT::f64
+// for targets which use "Expand" as the legalization action for the
 // corresponding type.
 //
 // - Expansion of ‘udiv‘, ‘sdiv‘, ‘urem‘, and ‘srem‘ instructions with
@@ -35,6 +35,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -218,8 +219,8 @@ class FRemExpander {
   /// The frem argument/return types that can be expanded by this class.
   // TODO: The expansion could work for other floating point types
   // as well, but this would require additional testing.
-  static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
-                                                      MVT::f64};
+  static constexpr std::array<MVT, 4> ExpandableTypes{MVT::f16, MVT::bf16,
+                                                      MVT::f32, MVT::f64};
 
 public:
   static bool canExpandType(Type *Ty) {
@@ -229,24 +230,40 @@ public:
     return is_contained(ExpandableTypes, VT.getSimpleVT());
   }
 
-  static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
+  static bool shouldExpandFremType(const TargetLowering &TLI,
+                                   const LibcallLoweringInfo &Libcalls,
+                                   EVT VT) {
     assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
-    return TLI.getOperationAction(ISD::FREM, VT) ==
-           TargetLowering::LegalizeAction::Expand;
+    switch (TLI.getOperationAction(ISD::FREM, VT)) {
+    case TargetLowering::LegalizeAction::Expand:
+      return true;
+    case TargetLowering::LegalizeAction::LibCall:
+      // The target expects a libcall, but expand inline for the supported
+      // types when that libcall is unavailable.
+      return VT.isSimple() && is_contained(ExpandableTypes, VT.getSimpleVT()) &&
+             Libcalls.getLibcallImpl(RTLIB::getREM(VT)) == RTLIB::Unsupported;
+    default:
+      return false;
+    }
   }
 
-  static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
+  static bool shouldExpandFremType(const TargetLowering &TLI,
+                                   const LibcallLoweringInfo &Libcalls,
+                                   Type *Ty) {
     // Consider scalar type for simplicity.  It seems unlikely that a
     // vector type can be legalized without expansion if the scalar
     // type cannot.
-    return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
+    return shouldExpandFremType(TLI, Libcalls,
+                                EVT::getEVT(Ty->getScalarType()));
   }
 
   /// Return true if the pass should expand frem instructions of any type
   /// for the target represented by \p TLI.
-  static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
-    return any_of(ExpandableTypes,
-                  [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });
+  static bool shouldExpandAnyFremType(const TargetLowering &TLI,
+                                      const LibcallLoweringInfo &Libcalls) {
+    return any_of(ExpandableTypes, [&](MVT V) {
+      return shouldExpandFremType(TLI, Libcalls, EVT(V));
+    });
   }
 
   static FRemExpander create(IRBuilder<> &B, Type *Ty) {
@@ -260,7 +277,7 @@ public:
     // uses the same input/result type.
     unsigned MaxIter = 2;
 
-    if (Ty->isHalfTy()) {
+    if (Ty->is16bitFPTy()) {
       // Use the wider type and less iterations.
       ComputeTy = B.getFloatTy();
       MaxIter = 1;
@@ -775,7 +792,7 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
   Builder.CreateBr(End);
 
   // cleanup:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(FPToI->getType(), 3 + IsSaturating);
 
   if (IsSaturating)
@@ -1200,7 +1217,7 @@ static void expandIToFP(Instruction *IToFP) {
   Builder.CreateBr(End);
 
   // return:
-  Builder.SetInsertPoint(End, End->begin());
+  Builder.SetInsertPoint(End->begin());
   PHINode *Retval0 = Builder.CreatePHI(IToFP->getType(), 2);
   Retval0->addIncoming(A4, IfEnd26);
   Retval0->addIncoming(ConstantFP::getZero(IToFP->getType(), false), Entry);
@@ -1274,7 +1291,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       MaxLegalFpConvertBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableExpandLargeDivRem =
       MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
-  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI);
+  bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI, Libcalls);
 
   if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
     return false;
@@ -1287,7 +1304,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      return !DisableFrem && FRemExpander::shouldExpandFremType(TLI, Ty);
+      return !DisableFrem &&
+             FRemExpander::shouldExpandFremType(TLI, Libcalls, Ty);
     case Instruction::FPToUI:
     case Instruction::FPToSI:
       return !DisableExpandLargeFp &&
@@ -1341,8 +1359,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
-          auto Res = std::make_optional<SimplifyQuery>(
-              I->getModule()->getDataLayout(), I);
+          auto Res = std::make_optional<SimplifyQuery>(I->getDataLayout(), I);
           Res->AC = AC;
           return Res;
         }
@@ -1469,7 +1486,7 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      LibcallLowering->getLibcallLowering(*STI);
+      getLibcallLowering(*LibcallLowering, *STI);
 
   return runImpl(F, TLI, Libcalls, AC) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();

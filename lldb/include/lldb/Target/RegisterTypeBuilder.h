@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REGISTERTYPEBUILDER_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -18,6 +19,8 @@ class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;
 
+  /// Do not cache the returned CompilerType. A target may replace its scratch
+  /// type system, so callers must request the type again whenever needed.
   virtual CompilerType GetRegisterType(const RegisterInfo &reg_info) = 0;
 
 protected:

@@ -9,14 +9,13 @@
 #include "mlir/Conversion/ArithToAMDGPU/ArithToAMDGPU.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -33,10 +32,6 @@ using namespace mlir;
 using namespace mlir::amdgpu;
 
 namespace {
-// Define commonly used chipsets versions for convenience.
-constexpr Chipset kGfx942 = Chipset(9, 4, 2);
-constexpr Chipset kGfx950 = Chipset(9, 5, 0);
-
 struct ArithToAMDGPUConversionPass final
     : impl::ArithToAMDGPUConversionPassBase<ArithToAMDGPUConversionPass> {
   using impl::ArithToAMDGPUConversionPassBase<
@@ -48,10 +43,10 @@ struct ArithToAMDGPUConversionPass final
 struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
   using Base::Base;
 
-  Chipset chipset;
-  ExtFOnFloat8RewritePattern(MLIRContext *ctx, Chipset chipset,
+  ROCDL::TargetInfo target;
+  ExtFOnFloat8RewritePattern(MLIRContext *ctx, const ROCDL::TargetInfo &target,
                              PatternBenefit benefit)
-      : OpRewritePattern::OpRewritePattern(ctx, benefit), chipset(chipset) {}
+      : OpRewritePattern::OpRewritePattern(ctx, benefit), target(target) {}
 
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -60,10 +55,11 @@ struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
 struct TruncFToFloat8RewritePattern final : OpRewritePattern<arith::TruncFOp> {
   bool saturateFP8 = false;
   TruncFToFloat8RewritePattern(MLIRContext *ctx, bool saturateFP8,
-                               Chipset chipset, PatternBenefit benefit)
+                               const ROCDL::TargetInfo &target,
+                               PatternBenefit benefit)
       : OpRewritePattern::OpRewritePattern(ctx, benefit),
-        saturateFP8(saturateFP8), chipset(chipset) {}
-  Chipset chipset;
+        saturateFP8(saturateFP8), target(target) {}
+  ROCDL::TargetInfo target;
 
   LogicalResult matchAndRewrite(arith::TruncFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -93,13 +89,12 @@ struct ScalingTruncFRewritePattern final
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const override;
 };
-
 } // end namespace
 
-static bool isSupportedF8(Type elementType, Chipset chipset) {
-  if (chipset == kGfx942)
+static bool isSupportedF8(Type elementType, const ROCDL::TargetInfo &target) {
+  if (target.hasFnuzFp8())
     return isa<Float8E4M3FNUZType, Float8E5M2FNUZType>(elementType);
-  if (hasOcpFp8(chipset))
+  if (target.hasOcpFp8())
     return isa<Float8E4M3FNType, Float8E5M2Type>(elementType);
   return false;
 }
@@ -112,7 +107,8 @@ static Value castF32To(Type desType, Value f32, Location loc,
   if (elementType.getIntOrFloatBitWidth() < 32)
     return arith::TruncFOp::create(rewriter, loc, desType, f32);
   if (elementType.getIntOrFloatBitWidth() > 32)
-    return arith::ExtFOp::create(rewriter, loc, desType, f32);
+    return arith::ExtFOp::create(rewriter, loc, TypeRange{desType},
+                                 ValueRange{f32}, arith::ExtFOp::Properties{});
   llvm_unreachable("The only 32-bit float type is f32");
 }
 
@@ -126,7 +122,7 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
       return failure();
     inType = inVecType.getElementType();
   }
-  if (!isSupportedF8(inType, chipset))
+  if (!isSupportedF8(inType, target))
     return failure();
 
   Location loc = op.getLoc();
@@ -151,8 +147,9 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
         rewriter.createOrFold<vector::BroadcastOp>(loc, outType, zero);
     Value scalarIn =
         vector::ExtractOp::create(rewriter, loc, in, ArrayRef<int64_t>{});
-    Value scalarExt =
-        arith::ExtFOp::create(rewriter, loc, outElemType, scalarIn);
+    Value scalarExt = arith::ExtFOp::create(
+        rewriter, loc, TypeRange{outElemType}, ValueRange{scalarIn},
+        arith::ExtFOp::Properties{});
     Value result = vector::InsertOp::create(rewriter, loc, scalarExt,
                                             zerodSplat, ArrayRef<int64_t>{});
     rewriter.replaceOp(op, result);
@@ -203,7 +200,9 @@ static Value castToF32(Value value, Location loc, PatternRewriter &rewriter) {
   if (type.isF32())
     return value;
   if (type.getIntOrFloatBitWidth() < 32)
-    return arith::ExtFOp::create(rewriter, loc, rewriter.getF32Type(), value);
+    return arith::ExtFOp::create(
+        rewriter, loc, TypeRange{rewriter.getF32Type()}, ValueRange{value},
+        arith::ExtFOp::Properties{});
   if (type.getIntOrFloatBitWidth() > 32)
     return arith::TruncFOp::create(rewriter, loc, rewriter.getF32Type(), value);
   llvm_unreachable("The only 32-bit float type is f32");
@@ -275,7 +274,7 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
     // Conversion between 8-bit floats is not supported with truncation enabled.
     return failure();
 
-  if (!isSupportedF8(outType, chipset))
+  if (!isSupportedF8(outType, target))
     return failure();
 
   Location loc = op.getLoc();
@@ -472,7 +471,9 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   Type scaleF32Type =
       scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
   if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
+    scale =
+        arith::ExtFOp::create(rewriter, loc, TypeRange{scaleF32Type},
+                              ValueRange{scale}, arith::ExtFOp::Properties{});
   else if (scaleType.getIntOrFloatBitWidth() > 32)
     scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
 
@@ -590,7 +591,9 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   Type scaleF32Type =
       scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
   if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
+    scale =
+        arith::ExtFOp::create(rewriter, loc, TypeRange{scaleF32Type},
+                              ValueRange{scale}, arith::ExtFOp::Properties{});
   else if (scaleType.getIntOrFloatBitWidth() > 32)
     scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
 
@@ -697,13 +700,13 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 void mlir::arith::populateArithToAMDGPUConversionPatterns(
     RewritePatternSet &patterns, bool convertFP8Arithmetic,
     bool saturateFP8Truncf, bool allowPackedF16Rtz, bool supportsScaledExtTrunc,
-    Chipset chipset, PatternBenefit benefit) {
+    const ROCDL::TargetInfo &target, PatternBenefit benefit) {
 
   if (convertFP8Arithmetic) {
-    patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext(), chipset,
+    patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext(), target,
                                              benefit);
     patterns.add<TruncFToFloat8RewritePattern>(
-        patterns.getContext(), saturateFP8Truncf, chipset, benefit);
+        patterns.getContext(), saturateFP8Truncf, target, benefit);
   }
   if (allowPackedF16Rtz)
     patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext(), benefit);
@@ -718,18 +721,19 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(op->getContext());
-  FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
-  if (failed(maybeChipset)) {
-    emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+  FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
+      ROCDL::resolveArchOption(arch, chipset), /*waveSize=*/0,
+      [&] { return emitError(UnknownLoc::get(ctx)); });
+  if (failed(targetInfo))
     return signalPassFailure();
-  }
 
   bool convertFP8Arithmetic =
-      *maybeChipset == kGfx942 || hasOcpFp8(*maybeChipset);
-  bool supportsScaledExtTrunc = *maybeChipset == kGfx950;
+      targetInfo->has(llvm::AMDGPU::FEAT_FP8_CONVERSION_INSTS);
+  bool supportsScaledExtTrunc =
+      targetInfo->has(llvm::AMDGPU::FEAT_GFX950_INSTS);
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
-      supportsScaledExtTrunc, *maybeChipset);
+      supportsScaledExtTrunc, *targetInfo);
   if (failed(applyPatternsGreedily(op, std::move(patterns))))
     return signalPassFailure();
 }

@@ -11,11 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 def olCreateProgram : Function {
-    let desc = "Create a program for the device from the binary image pointed to by `ProgData`.";
+    let desc = "Create a program for the device from the binary image pointed to by `ProgData` within the given context.";
     let details = [
         "The provided `ProgData` will be copied and need not outlive the returned handle",
+        "The program is scoped to `Context` and `Device` must belong to it.",
+        "The program can only be used with queues that were created in the same context."
     ];
     let params = [
+        Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
         Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
         Param<"const void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
         Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
@@ -24,6 +27,9 @@ def olCreateProgram : Function {
     let returns = [
         Return<"OL_ERRC_INVALID_BINARY", [
             "If the buffer described by `ProgData` and `ProgDataSize` is not a valid binary image for the platform."
+        ]>,
+        Return<"OL_ERRC_INVALID_DEVICE", [
+            "Device does not belong to `Context`"
         ]>,
     ];
 }
@@ -36,6 +42,22 @@ def olIsValidBinary : Function {
         Param<"const void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
         Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
         Param<"bool*", "Valid", "output is true if the image is compatible", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def olIterateCompatibleDevices : Function {
+    let desc = "Iterates over all available devices that are compatible with the binary image pointed to by `ProgData`, calling the callback for each device.";
+    let details = [
+        "The provided `ProgData` will not be loaded onto any device",
+        "If the user-provided callback returns `false`, the iteration is stopped.",
+        "Only platforms that are compatible with the binary image will be initialized"
+    ];
+    let params = [
+        Param<"const void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
+        Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
+        Param<"ol_device_iterate_cb_t", "Callback", "user-provided function called for each compatible device", PARAM_IN>,
+        Param<"void*", "UserData", "optional user data to pass to the callback", PARAM_IN_OPTIONAL>
     ];
     let returns = [];
 }

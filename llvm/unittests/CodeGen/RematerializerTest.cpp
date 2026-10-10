@@ -167,8 +167,7 @@ body:             |
 
     RegisterOperands RegOpers;
     RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
-    SlotIndex Slot = LIS.getInstructionIndex(MI).getRegSlot();
-    RegOpers.adjustLaneLiveness(LIS, MRI, Slot, &MI);
+    RegOpers.adjustLaneLiveness(LIS, MRI, MI);
   };
 };
 } // namespace

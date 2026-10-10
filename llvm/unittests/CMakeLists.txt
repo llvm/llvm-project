@@ -28,6 +28,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   list(APPEND LLVM_COMPILE_FLAGS "-Wno-dangling-else")
 endif ()
 
+add_subdirectory(ABI)
 add_subdirectory(ADT)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)

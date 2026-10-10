@@ -28,7 +28,7 @@ define i1 @xor_logic_and_logic_or2(i1 %c, i1 %x, i1 %y) !prof !0 {
 define i1 @xor_logic_and_logic_or2_commuted(i1 %c, i1 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @xor_logic_and_logic_or2_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c, !prof !1
@@ -41,7 +41,7 @@ define i1 @xor_logic_and_logic_or3(i1 %c, i1 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @xor_logic_and_logic_or3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 [[Y:%.*]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 [[Y:%.*]], !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c, !prof !1
@@ -111,13 +111,13 @@ define <3 x i1> @xor_logic_and_logic_or_vector_poison2(<3 x i1> %c, <3 x i1> %x,
   ret <3 x i1> %r
 }
 
-define i1 @xor_and_logic_or1(i1 %c, i1 %x, i1 %y) {
+define i1 @xor_and_logic_or1(i1 %c, i1 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @xor_and_logic_or1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %o = select i1 %c, i1 true, i1 %y
+  %o = select i1 %c, i1 true, i1 %y, !prof !1
   %a = and i1 %c, %x
   %r = xor i1 %a, %o
   ret i1 %r
@@ -211,10 +211,10 @@ define <2 x i1> @xor_logic_and_or_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i
 
 ;; even through we save a instruction here, select is heavier than normal
 ;; and/or/xor on most backend,  do we really need to do this transform?
-define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
+define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @xor_and_or(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = or i1 %y, %c
@@ -261,6 +261,6 @@ declare void @use(i1)
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 5, i32 7}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 2, i32 3}
-; CHECK: [[PROF3]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF2]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 2, i32 3}
 ;.

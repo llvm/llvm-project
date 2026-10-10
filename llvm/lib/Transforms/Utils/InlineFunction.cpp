@@ -985,9 +985,13 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
     if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
       continue;
     // Fill missing only: never overwrite a more specific token the wrapper
-    // already set on an internal allocation.
-    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
-      continue;
+    // already set on an internal allocation. An unknown type (empty type name
+    // with function name) is not more specific.
+    if (MDNode *MD = ClonedCall->getMetadata(LLVMContext::MD_alloc_token)) {
+      if (MD->getNumOperands() != 3 ||
+          !cast<MDString>(MD->getOperand(0))->getString().empty())
+        continue;
+    }
     ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
@@ -1533,7 +1537,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         // attributes to byval arguments. Even if CalledFunction
         // doesn't e.g. write to the argument (readonly), the call to
         // NewInnerCB may write to its by-value copy.
-        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
+        if (NewInnerCB->isByValArgument(I))
           continue;
 
         // Don't bother propagating attrs to constants.
@@ -1824,7 +1828,7 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
                                     BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI,
                                     Function *CalledFunc) {
-  IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
+  IRBuilder<> Builder(InsertBlock->begin());
 
   Value *Size =
       Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
@@ -1932,13 +1936,21 @@ static bool allocaWouldBeStaticInEntry(const AllocaInst *AI ) {
 
 /// Returns a DebugLoc for a new DILocation which is a clone of \p OrigDL
 /// inlined at \p InlinedAt. \p IANodes is an inlined-at cache.
-static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
-                               LLVMContext &Ctx,
-                               DenseMap<const MDNode *, MDNode *> &IANodes) {
-  auto IA = DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes);
-  return DILocation::get(Ctx, OrigDL.getLine(), OrigDL.getCol(),
-                         OrigDL.getScope(), IA, OrigDL.isImplicitCode(),
-                         OrigDL->getAtomGroup(), OrigDL->getAtomRank());
+static DebugLoc inlineDebugLoc(
+    DebugLoc OrigDL, DILocation *InlinedAt, LLVMContext &Ctx,
+    DenseMap<const MDNode *, MDNode *> &IANodes,
+    SmallDenseMap<const DILocation *, DILocation *, 16> &InlineLocs) {
+  if (DILocation *Cached = InlineLocs.lookup(OrigDL.get()))
+    return DebugLoc(Cached);
+  DILocation *IA =
+      OrigDL->getInlinedAt()
+          ? DebugLoc::appendInlinedAt(OrigDL, InlinedAt, Ctx, IANodes).get()
+          : InlinedAt;
+  DILocation *Result = DILocation::getDistinct(
+      Ctx, OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(), IA,
+      OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank());
+  InlineLocs[OrigDL.get()] = Result;
+  return DebugLoc(Result);
 }
 
 /// Update inlined instructions' line numbers to
@@ -1955,6 +1967,19 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   // nodebug functions (which is different to existing behaviour).
   DebugLoc TheCallDL = TheCall->getDebugLoc()->getWithoutAtom();
 
+  // A call receiving the outer callsite's fallback location has no usable
+  // callsite probe of its own. Do not let it inherit the outer call's probe
+  // discriminator, but preserve any packed DWARF base discriminator.
+  DebugLoc TheCallDLForInlinedCall = TheCallDL;
+  uint32_t Discriminator = TheCallDLForInlinedCall->getDiscriminator();
+  if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+    std::optional<uint32_t> DwarfDiscriminator =
+        PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
+            Discriminator);
+    TheCallDLForInlinedCall = TheCallDLForInlinedCall->cloneWithDiscriminator(
+        DwarfDiscriminator.value_or(0));
+  }
+
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;
 
@@ -1968,6 +1993,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   // this every instruction's inlined-at chain would become distinct from each
   // other.
   DenseMap<const MDNode *, MDNode *> IANodes;
+  SmallDenseMap<const DILocation *, DILocation *, 16> InlineLocs;
 
   // Check if we are not generating inline line tables and want to use
   // the call site location instead.
@@ -1977,18 +2003,19 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   auto UpdateInst = [&](Instruction &I) {
     // Loop metadata needs to be updated so that the start and end locs
     // reference inlined-at locations.
-    auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
-                              &IANodes](Metadata *MD) -> Metadata * {
+    auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode, &IANodes,
+                              &InlineLocs](Metadata *MD) -> Metadata * {
       if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-        return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
+        return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes, InlineLocs)
+            .get();
       return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
 
     if (!NoInlineLineTables)
       if (DebugLoc DL = I.getDebugLoc()) {
-        DebugLoc IDL =
-            inlineDebugLoc(DL, InlinedAtNode, I.getContext(), IANodes);
+        DebugLoc IDL = inlineDebugLoc(DL, InlinedAtNode, I.getContext(),
+                                      IANodes, InlineLocs);
         I.setDebugLoc(IDL);
         return;
       }
@@ -2013,7 +2040,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     if (isa<PseudoProbeInst>(I))
       return;
 
-    I.setDebugLoc(TheCallDL);
+    I.setDebugLoc(isa<CallBase>(I) ? TheCallDLForInlinedCall : TheCallDL);
   };
 
   // Helper-util for updating debug-info records attached to instructions.
@@ -2024,9 +2051,9 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
       return;
     }
     DebugLoc DL = DVR->getDebugLoc();
-    DebugLoc IDL =
-        inlineDebugLoc(DL, InlinedAtNode,
-                       DVR->getMarker()->getParent()->getContext(), IANodes);
+    DebugLoc IDL = inlineDebugLoc(DL, InlinedAtNode,
+                                  DVR->getMarker()->getParent()->getContext(),
+                                  IANodes, InlineLocs);
     DVR->setDebugLoc(IDL);
   };
 
@@ -2257,7 +2284,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
     bool InsertRetainCall = IsRetainRV;
-    IRBuilder<> Builder(RI->getContext());
+    IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
     // autoreleaseRV call or an unannotated call.
@@ -3133,7 +3160,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
-    IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
+    IRBuilder<> builder(FirstNewBlock->begin());
     for (AllocaInst *AI : IFI.StaticAllocas) {
       // Don't mark swifterror allocas. They can't have bitcast uses.
       if (AI->isSwiftError())
@@ -3167,8 +3194,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // code with llvm.stacksave/llvm.stackrestore intrinsics.
   if (InlinedFunctionInfo.ContainsDynamicAllocas) {
     // Insert the llvm.stacksave.
-    CallInst *SavedPtr = IRBuilder<>(&*FirstNewBlock, FirstNewBlock->begin())
-                             .CreateStackSave("savedstack");
+    CallInst *SavedPtr =
+        IRBuilder<>(FirstNewBlock->begin()).CreateStackSave("savedstack");
 
     // Insert a call to llvm.stackrestore before any return instructions in the
     // inlined function.

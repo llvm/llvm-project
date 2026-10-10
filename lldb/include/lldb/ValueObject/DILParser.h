@@ -10,7 +10,7 @@
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
 #include "lldb/Host/common/DiagnosticsRendering.h"
-#include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
@@ -36,7 +36,7 @@ enum class ErrorCode : unsigned char {
 };
 
 CompilerType ResolveTypeByName(const std::string &name,
-                               ExecutionContextScope &ctx_scope);
+                               ExecutionContext &exe_ctx);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -67,26 +67,33 @@ public:
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
+  /// Parse the lexed tokens.
+  /// \returns An ASTNode tree or an error.
   static llvm::Expected<ASTNodeUP>
-  Parse(llvm::StringRef dil_input_expr, DILLexer lexer, StackFrame &stack_frame,
-        lldb::DynamicValueType use_dynamic, lldb::DILMode mode);
+  Parse(ExecutionContext &exe_ctx, llvm::StringRef dil_input_expr,
+        DILLexer lexer, lldb::DynamicValueType use_dynamic, lldb::DILMode mode);
 
   ~DILParser() = default;
 
 private:
-  explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     StackFrame &stack_frame,
-                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
-                     lldb::DILMode mode);
+  explicit DILParser(ExecutionContext &exe_ctx, llvm::StringRef dil_input_expr,
+                     DILLexer lexer, lldb::DynamicValueType use_dynamic,
+                     llvm::Error &error, lldb::DILMode mode);
 
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
-
   ASTNodeUP ParseAssignmentExpression();
+  ASTNodeUP ParsePureExpression();
+  ASTNodeUP ParseConditionalExpression();
+  ASTNodeUP ParseConditionalBranches(ASTNodeUP condition);
+  ASTNodeUP ParseLogicalOrExpression();
+  ASTNodeUP ParseLogicalAndExpression();
   ASTNodeUP ParseInclusiveOrExpression();
   ASTNodeUP ParseExclusiveOrExpression();
   ASTNodeUP ParseAndExpression();
+  ASTNodeUP ParseEqualityExpression();
+  ASTNodeUP ParseRelationalExpression();
   ASTNodeUP ParseShiftExpression();
   ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseMultiplicativeExpression();
@@ -129,7 +136,7 @@ private:
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
   // context will outlive the parser.
-  StackFrame &m_stack_frame;
+  ExecutionContext m_exe_ctx;
 
   llvm::StringRef m_input_expr;
 

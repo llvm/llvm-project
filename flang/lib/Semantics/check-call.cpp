@@ -132,6 +132,29 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
 
 // F'2023 15.5.2.12p1: "Sequence association only applies when the dummy
 // argument is an explicit-shape or assumed-size array."
+// Total size in bytes of a whole object for storage-sequence checks.
+// A named constant has no storage assignment (symbol.size() is zero), so
+// measure it from its type and constant extents instead.
+static std::optional<std::int64_t> ObjectTotalBytes(
+    const Symbol &symbol, evaluate::FoldingContext &foldingContext) {
+  if (std::size_t bytes{symbol.size()}) {
+    return static_cast<std::int64_t>(bytes);
+  }
+  if (const Symbol &ultimate{symbol.GetUltimate()}; IsNamedConstant(ultimate)) {
+    if (auto type{evaluate::DynamicType::From(ultimate)}) {
+      if (auto extents{
+              evaluate::GetConstantExtents(foldingContext, &ultimate)}) {
+        if (auto bytes{evaluate::ToInt64(evaluate::Fold(foldingContext,
+                type->MeasureSizeInBytes(
+                    foldingContext, evaluate::GetRank(*extents) > 0)))}) {
+          return *bytes * evaluate::GetSize(*extents);
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static bool CanAssociateWithStorageSequence(
     const characteristics::DummyDataObject &dummy) {
   return !dummy.type.attrs().test(
@@ -186,14 +209,17 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                   foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
             if (actualType.Rank() == 0 && !actualIsAssumedRank) {
-              evaluate::DesignatorFolder folder{
-                  context.foldingContext(), /*getLastComponent=*/true};
+              evaluate::DesignatorFolder folder{context.foldingContext(),
+                  /*getLastComponent=*/true, /*foldNamedConstants=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
                 std::int64_t actualChars{*actualLength};
+                auto totalBytes{
+                    ObjectTotalBytes(actualOffset->symbol(), foldingContext)};
                 if (IsAllocatableOrPointer(actualOffset->symbol())) {
-                  // don't use actualOffset->symbol().size()!
-                } else if (static_cast<std::size_t>(actualOffset->offset()) >=
-                        actualOffset->symbol().size() ||
+                  // don't use the symbol's size!
+                } else if (!totalBytes ||
+                    static_cast<std::int64_t>(actualOffset->offset()) >=
+                        *totalBytes ||
                     !evaluate::IsContiguous(
                         actualOffset->symbol(), foldingContext)
                         .value_or(false)) {
@@ -204,9 +230,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                         *actualLength;
                   }
                 } else {
-                  actualChars = (static_cast<std::int64_t>(
-                                     actualOffset->symbol().size()) -
-                                    actualOffset->offset()) /
+                  actualChars = (*totalBytes - actualOffset->offset()) /
                       actualType.type().kind();
                 }
                 if (actualChars < dummyChars) {
@@ -354,8 +378,8 @@ static bool DefersSameTypeParameters(
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
     "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
-    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
-    "size", "sizeof", "ubound"};
+    "allocated", "associated", "kind", "len", "lbound", "loc", "present",
+    "shape", "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -405,8 +429,17 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
-    if (auto converted{evaluate::HollerithToBOZ(
-            foldingContext, actual, dummy.type.type())}) {
+    auto converted{
+        evaluate::HollerithToBOZ(foldingContext, actual, dummy.type.type())};
+    if (!converted && evaluate::IsNamedConstantDesignator(actual)) {
+      // The actual may be a designator of a named constant retained for
+      // storage association; the extension inspects constant values, so
+      // retry with its folded value.
+      auto copy{actual};
+      converted = evaluate::HollerithToBOZ(foldingContext,
+          evaluate::Fold(foldingContext, std::move(copy)), dummy.type.type());
+    }
+    if (converted) {
       foldingContext.Warn(common::LanguageFeature::HollerithOrCharacterAsBOZ,
           "passing Hollerith or character literal as if it were BOZ"_port_en_US);
       actual = *converted;
@@ -648,6 +681,19 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Polymorphic scalar may not be associated with a %s array"_err_en_US,
               dummyName);
         }
+        if (actualIsArrayElement &&
+            dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
+            evaluate::IsNamedConstantDesignator(actual)) {
+          // TODO(llvm-project#224636): lowering does not yet create a
+          // temporary covering the whole storage sequence for an array
+          // VALUE dummy argument, so the element sequence association
+          // that retaining the named constant designator enables would
+          // be miscompiled. Keep rejecting it until that is fixed.
+          basicError = true;
+          messages.Say(
+              "sequence association of a named constant array element with a VALUE %s array"_todo_en_US,
+              dummyName);
+        }
         bool isOkBecauseContiguous{
             context.IsEnabled(
                 common::LanguageFeature::ContiguousOkForSeqAssociation) &&
@@ -706,14 +752,17 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         } else if (actualRank == 0) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
-            evaluate::DesignatorFolder folder{
-                context.foldingContext(), /*getLastComponent=*/true};
+            evaluate::DesignatorFolder folder{context.foldingContext(),
+                /*getLastComponent=*/true, /*foldNamedConstants=*/true};
             if (auto actualOffset{folder.FoldDesignator(actual)}) {
               std::optional<std::int64_t> actualElements;
+              auto totalBytes{
+                  ObjectTotalBytes(actualOffset->symbol(), foldingContext)};
               if (IsAllocatableOrPointer(actualOffset->symbol())) {
-                // don't use actualOffset->symbol().size()!
-              } else if (static_cast<std::size_t>(actualOffset->offset()) >=
-                      actualOffset->symbol().size() ||
+                // don't use the symbol's size!
+              } else if (!totalBytes ||
+                  static_cast<std::int64_t>(actualOffset->offset()) >=
+                      *totalBytes ||
                   !evaluate::IsContiguous(
                       actualOffset->symbol(), foldingContext)
                       .value_or(false)) {
@@ -725,9 +774,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                             actualSymType->MeasureSizeInBytes(
                                 foldingContext, false)))};
                     actualSymTypeBytes && *actualSymTypeBytes > 0) {
-                  actualElements = (static_cast<std::int64_t>(
-                                        actualOffset->symbol().size()) -
-                                       actualOffset->offset()) /
+                  actualElements = (*totalBytes - actualOffset->offset()) /
                       *actualSymTypeBytes;
                 }
               }
@@ -832,6 +879,25 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         (intrinsic && intrinsic->name == "loc")) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
+      }
+    }
+  }
+
+  // An INTENT(IN) dummy argument must not be defined during the invocation
+  // and execution of its procedure (F'2023 8.5.10 p2), but a dummy argument
+  // with no INTENT attribute may be defined by its procedure.  Passing the
+  // former to the latter is thus a latent violation of INTENT(IN), and the
+  // optimizer is entitled to assume that it doesn't happen.
+  if (dummy.intent == common::Intent::Default && !dummyIsValue && !intrinsic &&
+      !procedure.IsPure() && actualFirstSymbol) {
+    const Symbol &actualRoot{GetAssociationRoot(*actualFirstSymbol)};
+    if (IsIntentIn(actualRoot) && !IsValue(actualRoot)) {
+      if (auto *msg{foldingContext.Warn(
+              common::UsageWarning::IntentInActualForDefaultIntent,
+              "INTENT(IN) dummy argument '%s' is associated with %s, which has no INTENT attribute and could be defined"_warn_en_US,
+              actualRoot.name(), dummyName)}) {
+        msg->Attach(
+            actualRoot.name(), "Declaration of '%s'"_en_US, actualRoot.name());
       }
     }
   }
@@ -1140,6 +1206,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           }
         }
       }
+      // Variables listed in a structured !$acc data mapping clause are
+      // host-resident, but their device copies should match DEVICE dummies.
+      if (!actualDataAttr && context.AnyOpenACCDataMapping()) {
+        const Scope *effectiveScope{scope};
+        if (!effectiveScope) {
+          if (std::optional<parser::CharBlock> source{arg.sourceLocation()}) {
+            effectiveScope = context.FindScopeIfAny(*source);
+          }
+        }
+        if (effectiveScope) {
+          for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
+            if (IsOpenACCMapped(s, *effectiveScope)) {
+              actualDataAttr = common::CUDADataAttr::UseDevice;
+              break;
+            }
+          }
+        }
+      }
     }
     dummyDataAttr = dummy.cudaDataAttr;
     // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
@@ -1192,13 +1276,23 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool isHostDeviceProc{procedure.cudaSubprogramAttrs &&
         *procedure.cudaSubprogramAttrs ==
             common::CUDASubprogramAttrs::HostDevice};
+    bool actualIsAllocatableOrPointer{false};
+    if (actualIsVariable) {
+      for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
+        if (IsAllocatableOrPointer(ResolveAssociations(s))) {
+          actualIsAllocatableOrPointer = true;
+          break;
+        }
+      }
+    }
     // TYPE(*) assumed-size/rank dummies are opaque buffers (e.g. MPI) and do
     // not impose a CUDA address space on their actual argument.
     bool skipCudaDataAttrCheck{IsCUDAAddressSpaceAgnostic(dummy)};
     if (!skipCudaDataAttrCheck &&
         !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
-            isHostDeviceProc, &context.languageFeatures(), actualIsVariable)) {
+            isHostDeviceProc, &context.languageFeatures(), actualIsVariable,
+            actualIsAllocatableOrPointer)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
@@ -1418,8 +1512,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   }
 }
 
-// F2023 C1540-C1543, C1545: Check conditional argument against dummy data
-// object
+// F2023 C1540-C1543: Check a conditional argument against a dummy data object.
+// C1544 is absent by design: it is a grammar disambiguation rule that the
+// parser satisfies automatically, see "consequent" in program-parsers.cpp.
 static void CheckConditionalArg(
     const evaluate::ActualArgument::ConditionalArg &condArg,
     const characteristics::DummyDataObject &object,
@@ -1460,54 +1555,69 @@ static void CheckConditionalArg(
           "Each consequent-arg in conditional argument associated with a coarray %s must be a coarray"_err_en_US,
           dummyName);
     }
-    // C1544: the requirement that each consequent-arg match the dummy's
-    // ALLOCATABLE/POINTER attribute is enforced by the standard
-    // explicit-interface check (checkOneExpr) run on each non-.NIL.
-    // consequent below.
   }};
   condArg.ForEachConsequent(checkOneConsequent);
-  // C1545: in a reference to a generic procedure, each consequent-arg shall
-  // have the same corank, and if any has the ALLOCATABLE or POINTER attribute,
-  // each shall have it.  Strictly, this requirement applies only to references
-  // to generic procedures, where it avoids ambiguity when resolving the generic
-  // to a specific procedure; for a specific procedure reference these
-  // combinations are otherwise allowed.  For now it is enforced unconditionally
-  // here.
-  // TODO: move this check into generic resolution (ResolveGeneric) and enforce
-  // it precisely, i.e. only for references to generic procedures, where the
-  // ambiguity it guards against can actually arise.
-  std::optional<int> firstCorank;
-  std::optional<bool> firstIsAllocatable;
-  std::optional<bool> firstIsPointer;
-  auto checkConsistency{[&](const evaluate::ActualArgument::ConditionalArg::
-                                Consequent &cons) {
-    if (!cons) {
-      return;
+}
+
+// F2023 C1545: in a reference to a generic procedure, each consequent-arg
+// shall have the same corank, and if any consequent-arg has the ALLOCATABLE
+// or POINTER attribute, each consequent-arg shall have that attribute.
+// These properties decide which specific procedures an actual argument may be
+// associated with, so letting them differ would make generic resolution depend
+// on a condition whose value is not known until run time.  A reference to a
+// specific procedure has nothing to resolve, and these combinations are
+// allowed there.
+bool CheckConditionalArgsInGenericReference(
+    const evaluate::ActualArguments &actuals,
+    parser::ContextualMessages &messages) {
+  bool anyReported{false};
+  for (const std::optional<evaluate::ActualArgument> &arg : actuals) {
+    const auto *condArg{arg ? arg->GetConditionalArg() : nullptr};
+    if (!condArg) {
+      continue;
     }
-    auto &consExpr{cons->value()};
-    int corank{evaluate::GetCorank(consExpr)};
-    bool isAlloc{evaluate::IsAllocatableDesignator(consExpr)};
-    bool isPtr{evaluate::IsObjectPointer(consExpr)};
-    if (!firstCorank) {
-      firstCorank = corank;
-      firstIsAllocatable = isAlloc;
-      firstIsPointer = isPtr;
-    } else {
-      if (corank != *firstCorank) {
-        messages.Say(
-            "All consequent-args in a conditional argument must have the same corank"_err_en_US);
-      }
-      if (isAlloc != *firstIsAllocatable) {
-        messages.Say(
-            "If any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it"_err_en_US);
-      }
-      if (isPtr != *firstIsPointer) {
-        messages.Say(
-            "If any consequent-arg in a conditional argument has the POINTER attribute, each must have it"_err_en_US);
-      }
+    const auto *first{condArg->FirstNonNilConsequent()};
+    if (!first) { // every consequent-arg is .NIL.
+      continue;
     }
-  }};
-  condArg.ForEachConsequent(checkConsistency);
+    const int firstCorank{evaluate::GetCorank(*first)};
+    const bool firstIsAllocatable{evaluate::IsAllocatableDesignator(*first)};
+    // Use the same POINTER test as generic resolution, which accepts a
+    // pointer-valued function reference.
+    const bool firstIsPointer{evaluate::IsObjectPointer(*first)};
+    bool corankDiffers{false};
+    bool allocatableDiffers{false};
+    bool pointerDiffers{false};
+    // Comparing the first consequent-arg against itself is a no-op, so it needs
+    // no special case here.
+    condArg->ForEachConsequent(
+        [&](const evaluate::ActualArgument::ConditionalArg::Consequent &cons) {
+          if (!cons) { // .NIL. has no corank or attributes to compare
+            return;
+          }
+          const auto &consExpr{cons->value()};
+          corankDiffers |= evaluate::GetCorank(consExpr) != firstCorank;
+          allocatableDiffers |=
+              evaluate::IsAllocatableDesignator(consExpr) != firstIsAllocatable;
+          pointerDiffers |=
+              evaluate::IsObjectPointer(consExpr) != firstIsPointer;
+        });
+    // Report each violated requirement once, however long the chain is.
+    if (corankDiffers) {
+      messages.Say(arg->sourceLocation(),
+          "In a reference to a generic procedure, all consequent-args in a conditional argument must have the same corank"_err_en_US);
+    }
+    if (allocatableDiffers) {
+      messages.Say(arg->sourceLocation(),
+          "In a reference to a generic procedure, if any consequent-arg in a conditional argument has the ALLOCATABLE attribute, each must have it"_err_en_US);
+    }
+    if (pointerDiffers) {
+      messages.Say(arg->sourceLocation(),
+          "In a reference to a generic procedure, if any consequent-arg in a conditional argument has the POINTER attribute, each must have it"_err_en_US);
+    }
+    anyReported |= corankDiffers || allocatableDiffers || pointerDiffers;
+  }
+  return anyReported;
 }
 
 // Allow BOZ literal actual arguments when they can be converted to a known
@@ -1629,8 +1739,9 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
               }};
               if (auto *condArg{arg.GetConditionalArg()}) {
                 CheckConditionalArg(*condArg, object, dummyName, messages);
-                // Also run standard explicit-interface checks on each
-                // non-.NIL. consequent expression (recursive).
+                // Each non-.NIL. consequent-arg is itself an actual argument,
+                // so these checks are what enforce the dummy's ALLOCATABLE and
+                // POINTER requirements (F2023 15.5.2.6, 15.5.2.7).
                 condArg->ForEachConsequent(
                     [&](evaluate::ActualArgument::ConditionalArg::Consequent
                             &cons) {
@@ -2538,7 +2649,14 @@ bool CheckArgumentIsConstantExprInRange(
   // for the intrinsic's argument should have been check prior. This is just
   // a conversion so that we can read the constant value.
   auto scalarValue{evaluate::ToInt64(argExpr)};
-  CHECK(scalarValue.has_value());
+  if (!scalarValue) {
+    // A constant expression whose value is not statically known here (e.g.
+    // a designator that was not folded); diagnose rather than crash.
+    messages.Say(
+        "Actual argument #%d must be a constant integer expression"_err_en_US,
+        index + 1);
+    return false;
+  }
 
   if (*scalarValue < lowerBound || *scalarValue > upperBound) {
     messages.Say(

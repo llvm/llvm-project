@@ -14,12 +14,15 @@
 #ifndef LLVM_FRONTEND_HLSL_SEMANTICSIGNATURES_H
 #define LLVM_FRONTEND_HLSL_SEMANTICSIGNATURES_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {
@@ -29,7 +32,77 @@ class MDNode;
 
 namespace hlsl {
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
 // Definitions of the in-memory data layout structures
+
+// Bitmask denoting whether a semantic is an input, output, inout or a value
+// that is constant across a patch (hull/domain shaders) or primitive
+// (mesh shaders).
+enum class IOType {
+  In = 0b001,
+  Out = 0b010,
+  InOut = 0b011,
+  PatchConstantOrPrimitive = 0b100,
+  All = 0b111,
+
+  LLVM_MARK_AS_BITMASK_ENUM(PatchConstantOrPrimitive),
+};
+
+// Keywords written on a declaration, before sampling-location precedence and
+// stage/type defaults are applied.
+enum class InterpolationModifier : uint32_t {
+  None = 0,
+  NoInterpolation = 1 << 0,
+  Linear = 1 << 1,
+  NoPerspective = 1 << 2,
+  // Sampling-location bits are ordered by increasing precedence for min/max.
+  Center = 1 << 3,
+  Centroid = 1 << 4,
+  Sample = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Sample),
+};
+
+static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
+                  InterpolationModifier::Center <
+                      InterpolationModifier::Centroid &&
+                  InterpolationModifier::Centroid <
+                      InterpolationModifier::Sample,
+              "sampling-location bits must increase in precedence");
+
+// Select the highest-precedence sampling-location bit (sample > centroid >
+// center), ignoring other modifiers. Returns None if no location is explicit,
+// keeping it distinct from Center so diagnostics can detect location overrides.
+LLVM_ABI InterpolationModifier
+getInterpolationSamplingLocation(InterpolationModifier Modifiers);
+
+// Returns Invalid for nointerpolation combined with any other modifier.
+LLVM_ABI dxbc::PSV::InterpolationMode
+getInterpolationMode(InterpolationModifier Modifiers);
+
+// Apply component-type defaults and SV_Position's noperspective requirement.
+// Vertex outputs carry interpolation modes so they pack compatibly with pixel
+// inputs; other signature points do not use interpolation modes.
+LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage, IOType IO);
+
+enum class SemanticInterpretation {
+  Invalid,
+  NotAllocated,
+  Arbitrary,
+  SV,
+  SGV,
+  ClipCull,
+  TessFactor,
+  Target,
+};
+
+struct SemanticStageInfo {
+  Triple::EnvironmentType Stage;
+  IOType AllowedIOTypesMask;
+  SemanticInterpretation Interpretation;
+};
 
 // Sentinel values denoting that an element is unallocated
 static constexpr uint32_t UnallocatedRow = ~0U;
@@ -52,6 +125,15 @@ struct SemanticSignatureElement {
   uint8_t UsageMask = 0;
   uint8_t DynIndexMask = 0;
   uint32_t GSStream = 0;
+
+  SemanticSignatureElement() = default;
+  SemanticSignatureElement(uint32_t SigId, StringRef SemanticName,
+                           dxil::ElementType CompType,
+                           dxbc::PSV::SemanticKind SemanticKind,
+                           ArrayRef<uint32_t> SemanticIndices, uint8_t Cols)
+      : SigId(SigId), SemanticName(SemanticName), CompType(CompType),
+        SemanticKind(SemanticKind), SemanticIndices(SemanticIndices),
+        Rows(static_cast<uint32_t>(SemanticIndices.size())), Cols(Cols) {}
 
   bool isAllocated() const {
     return StartRow != UnallocatedRow && StartCol != UnallocatedCol;
@@ -91,6 +173,15 @@ struct SemanticSignatureElement {
   // Build the metadata representation of this signature element
   LLVM_ABI MDNode *toMetadata(LLVMContext &Ctx) const;
 };
+
+LLVM_ABI dxbc::PSV::SemanticKind getSemanticKind(StringRef SemanticName);
+
+LLVM_ABI ArrayRef<SemanticStageInfo>
+getAvailableStages(dxbc::PSV::SemanticKind SemanticKind);
+
+LLVM_ABI SemanticInterpretation
+getInterpretationKind(dxbc::PSV::SemanticKind SemanticKind,
+                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 } // namespace hlsl
 } // namespace llvm

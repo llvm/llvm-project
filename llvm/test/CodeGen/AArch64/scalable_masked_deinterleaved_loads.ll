@@ -45,6 +45,50 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @foo_ld2_nxv2f64(<vscale
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %deinterleaved.vec
 }
 
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld3_nxv16i8(<vscale x 16 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_ld3_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 48 x i1> @llvm.vector.interleave3.nxv48i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  %wide.masked.vec = call <vscale x 48 x i8> @llvm.masked.load.nxv48i8(ptr %p, i32 1, <vscale x 48 x i1> %interleaved.mask, <vscale x 48 x i8> poison)
+  %deinterleaved.vec = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave3.nxv48i8(<vscale x 48 x i8> %wide.masked.vec)
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.vec
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @foo_ld3_nxv8i16(<vscale x 8 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_ld3_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 24 x i1> @llvm.vector.interleave3.nxv24i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
+  %wide.masked.vec = call <vscale x 24 x i16> @llvm.masked.load.nxv24i16(ptr %p, i32 1, <vscale x 24 x i1> %interleaved.mask, <vscale x 24 x i16> poison)
+  %deinterleaved.vec = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.vector.deinterleave3.nxv24i16(<vscale x 24 x i16> %wide.masked.vec)
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleaved.vec
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @foo_ld3_nxv4i32(<vscale x 4 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_ld3_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 12 x i1> @llvm.vector.interleave3.nxv12i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)
+  %wide.masked.vec = call <vscale x 12 x i32> @llvm.masked.load.nxv12i32(ptr %p, i32 1, <vscale x 12 x i1> %interleaved.mask, <vscale x 12 x i32> poison)
+  %deinterleaved.vec = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave3.nxv12i32(<vscale x 12 x i32> %wide.masked.vec)
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %deinterleaved.vec
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @foo_ld3_nxv2i64(<vscale x 2 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_ld3_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 6 x i1> @llvm.vector.interleave3.nxv6i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %mask)
+  %wide.masked.vec = call <vscale x 6 x i64> @llvm.masked.load.nxv6i64(ptr %p, i32 1, <vscale x 6 x i1> %interleaved.mask, <vscale x 6 x i64> poison)
+  %deinterleaved.vec = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave3.nxv6i64(<vscale x 6 x i64> %wide.masked.vec)
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleaved.vec
+}
+
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @foo_ld4_nxv16i8(<vscale x 16 x i1> %mask, ptr %p) {
 ; CHECK-LABEL: foo_ld4_nxv16i8:
 ; CHECK:       // %bb.0:

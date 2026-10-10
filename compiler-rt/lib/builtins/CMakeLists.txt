@@ -940,6 +940,14 @@ set(hexagon_SOURCES
   hexagon/udivsi3.S
   hexagon/umoddi3.S
   hexagon/umodsi3.S
+  hexagon/ieee_qfloat_conv_hf_to_b_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_b_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_h_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_h_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_ub_rne.S
+  hexagon/ieee_qfloat_conv_hf_to_uh_rne.S
+  hexagon/ieee_qfloat_fast_convert_hf_to_uh_rne.S
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
 )
@@ -1216,7 +1224,7 @@ else ()
           get_compiler_rt_install_dir(${arch} BUILTIN_INSTALL_DIR)
           install(FILES "${SPIRV64_BC_OUTPUT}"
                   DESTINATION "${BUILTIN_INSTALL_DIR}"
-                  COMPONENT builtins)
+                  COMPONENT clang_rt.builtins-${arch})
         else()
           message(WARNING
             "llvm-link not found (LLVM_TOOLS_BINARY_DIR='${LLVM_TOOLS_BINARY_DIR}'); "

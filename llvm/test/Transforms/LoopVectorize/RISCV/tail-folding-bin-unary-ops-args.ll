@@ -8,7 +8,7 @@
 ; RUN: -mtriple=riscv64 -mattr=+v -S %s | FileCheck %s --check-prefix=NO-VP
 
 
-define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_and(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -17,8 +17,8 @@ define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -63,20 +63,18 @@ define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -86,7 +84,7 @@ define void @test_and(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = and <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -126,7 +124,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_or(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -135,8 +133,8 @@ define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -181,20 +179,18 @@ define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -204,7 +200,7 @@ define void @test_or(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = or <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -244,7 +240,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_xor(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -253,8 +249,8 @@ define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -299,20 +295,18 @@ define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -322,7 +316,7 @@ define void @test_xor(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = xor <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -362,7 +356,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_shl(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -371,8 +365,8 @@ define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -417,20 +411,18 @@ define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -440,7 +432,7 @@ define void @test_shl(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = shl <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -480,7 +472,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_lshr(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -489,8 +481,8 @@ define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -535,20 +527,18 @@ define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -558,7 +548,7 @@ define void @test_lshr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = lshr <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -598,7 +588,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_ashr(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -607,8 +597,8 @@ define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -653,20 +643,18 @@ define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -676,7 +664,7 @@ define void @test_ashr(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = ashr <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -716,7 +704,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_add(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -725,8 +713,8 @@ define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -771,20 +759,18 @@ define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -794,7 +780,7 @@ define void @test_add(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = add <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -834,7 +820,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sub(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -843,8 +829,8 @@ define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -889,20 +875,18 @@ define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -912,7 +896,7 @@ define void @test_sub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -952,7 +936,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_mul(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -961,8 +945,8 @@ define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -1007,20 +991,18 @@ define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1030,7 +1012,7 @@ define void @test_mul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = mul <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1070,7 +1052,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_sdiv(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1079,8 +1061,8 @@ define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -1125,20 +1107,18 @@ define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1148,7 +1128,7 @@ define void @test_sdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sdiv <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1188,7 +1168,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_udiv(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1197,8 +1177,8 @@ define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -1243,20 +1223,18 @@ define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1266,7 +1244,7 @@ define void @test_udiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = udiv <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1306,7 +1284,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_srem(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1315,8 +1293,8 @@ define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -1361,20 +1339,18 @@ define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1384,7 +1360,7 @@ define void @test_srem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = srem <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1424,7 +1400,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_urem(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1433,8 +1409,8 @@ define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP4]]
@@ -1479,20 +1455,18 @@ define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; NO-VP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 32)
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP14]]
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP2]], 4
-; NO-VP-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], -1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP3]], -1
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP4]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], [[TMP13]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP7]], 4
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP6]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1502,7 +1476,7 @@ define void @test_urem(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP10:%.*]] = urem <vscale x 16 x i8> [[WIDE_LOAD]], splat (i8 3)
 ; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 16 x i8> [[TMP10]], ptr [[TMP11]], align 1
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1544,7 +1518,7 @@ finish.loopexit:
 
 ; Floating point tests
 
-define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_fadd(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1553,8 +1527,8 @@ define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
@@ -1604,15 +1578,14 @@ define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP9]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP8]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1622,7 +1595,7 @@ define void @test_fadd(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1662,7 +1635,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_fsub(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1671,8 +1644,8 @@ define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
@@ -1722,15 +1695,14 @@ define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP9]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP8]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1740,7 +1712,7 @@ define void @test_fsub(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = fsub fast <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1780,7 +1752,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_fmul(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1789,8 +1761,8 @@ define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
@@ -1840,15 +1812,14 @@ define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP9]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP8]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1858,7 +1829,7 @@ define void @test_fmul(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = fmul fast <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -1898,7 +1869,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_fdiv(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -1907,8 +1878,8 @@ define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
@@ -1958,15 +1929,14 @@ define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP9]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP8]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -1976,7 +1946,7 @@ define void @test_fdiv(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = fdiv fast <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:
@@ -2016,7 +1986,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_frem(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_frem(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_frem(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*]]:
@@ -2069,7 +2039,7 @@ finish.loopexit:
   ret void
 }
 
-define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
+define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) vscale_range(2, 1024) {
 ; IF-EVL-LABEL: define void @test_fneg(
 ; IF-EVL-SAME: ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; IF-EVL-NEXT:  [[LOOP_PREHEADER:.*:]]
@@ -2078,8 +2048,8 @@ define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
 ; IF-EVL-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; IF-EVL:       [[VECTOR_MEMCHECK]]:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; IF-EVL-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+; IF-EVL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = sub i64 [[B1]], [[A2]]
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; IF-EVL-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
@@ -2129,15 +2099,14 @@ define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; NO-VP:       [[VECTOR_MEMCHECK]]:
 ; NO-VP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; NO-VP-NEXT:    [[TMP15:%.*]] = add i64 [[TMP4]], -1
+; NO-VP-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
+; NO-VP-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP4]], -1
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[B1]], [[A2]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP6]], 1
 ; NO-VP-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NO-VP-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP9]], 2
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP8]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -2147,7 +2116,7 @@ define void @test_fneg(ptr nocapture %a, ptr nocapture readonly %b) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = fneg fast <vscale x 4 x float> [[WIDE_LOAD]]
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; NO-VP-NEXT:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP13]], align 4
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP8]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; NO-VP:       [[MIDDLE_BLOCK]]:

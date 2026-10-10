@@ -18,7 +18,7 @@ function(add_benchmark benchmark_name)
     ${benchmark_name}
     IS_GPU_BENCHMARK
     LINK_LIBRARIES
-      LibcGpuBenchmark.hermetic
+      LibcGpuBenchmark
       ${BENCHMARK_LINK_LIBRARIES}
     DEPENDS
       libc.src.stdio.printf
@@ -46,33 +46,23 @@ function(add_benchmark_framework_library name)
       "header only libraries, use 'add_header_library'")
   endif()
 
-  foreach(lib IN ITEMS ${name}.hermetic)
-    add_library(
-      ${lib}
-      STATIC
-      EXCLUDE_FROM_ALL
-        ${TEST_LIB_SRCS}
-        ${TEST_LIB_HDRS}
-    )
-    target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
-    if(TARGET libc.src.time.clock)
-      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
-    endif()
-  endforeach()
+  add_library(
+    ${name}
+    STATIC
+    EXCLUDE_FROM_ALL
+      ${TEST_LIB_SRCS}
+      ${TEST_LIB_HDRS}
+  )
+  target_include_directories(${name} PRIVATE ${LIBC_SOURCE_DIR})
+  if(TARGET libc.src.time.clock)
+    target_compile_definitions(${name} PRIVATE TARGET_SUPPORTS_CLOCK)
+  endif()
 
   _get_hermetic_test_compile_options(compile_options "")
-  target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
-  target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
+  target_include_directories(${name} PRIVATE ${LIBC_INCLUDE_DIR})
+  target_compile_options(${name} PRIVATE ${compile_options} -nostdinc++)
 
-  if(TEST_LIB_DEPENDS)
-    foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
-      if(TARGET ${dep}.hermetic)
-        add_dependencies(${name}.hermetic ${dep}.hermetic)
-      else()
-        add_dependencies(${name}.hermetic ${dep})
-      endif()
-    endforeach()
-  endif()
+  add_dependencies(${name} ${TEST_LIB_DEPENDS})
 endfunction()
 
 add_benchmark_framework_library(

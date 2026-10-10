@@ -205,3 +205,73 @@ define i32 @read_ifunc_metadata() {
 }
 
 !0 = !{ptr @ifunc}
+
+; // -----
+
+; A null pointer constant metadata operand must be preserved.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+; CHECK-LABEL: llvm.func @read_null_metadata
+define i32 @read_null_metadata() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_null<0>
+  ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr null}
+
+; // -----
+
+; The address space of a null pointer constant must be preserved.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+; CHECK-LABEL: llvm.func @read_null_addrspace_metadata
+define i32 @read_null_addrspace_metadata() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_null<1>
+  ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr addrspace(1) null}
+
+; // -----
+
+; An addrspacecast constant expression metadata operand must be preserved.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+@addrspace_global = addrspace(1) global i32 0
+
+; CHECK: llvm.mlir.global external @[[$GLOBAL:addrspace_global]]
+; CHECK-LABEL: llvm.func @read_addrspacecast_metadata
+define i32 @read_addrspacecast_metadata() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_global_value<@[[$GLOBAL]]>, 0>
+  ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr addrspacecast (ptr addrspace(1) @addrspace_global to ptr)}
+
+; // -----
+
+; Pointer constants nested inside a multi-operand metadata node.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+@nested_global = addrspace(1) global i32 0
+
+; CHECK: llvm.mlir.global external @[[$GLOBAL:nested_global]]
+; CHECK-LABEL: llvm.func @read_pointer_constants_in_node
+define i32 @read_pointer_constants_in_node() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_null<0>, #llvm.md_addrspacecast<#llvm.md_global_value<@[[$GLOBAL]]>, 0>>
+  ; CHECK: llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{ptr null, ptr addrspacecast (ptr addrspace(1) @nested_global to ptr)}
