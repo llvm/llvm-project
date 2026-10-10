@@ -24,7 +24,7 @@ void testSwitchWithCleanup(int n) {
 // CIR:     %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:     %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:     cir.store{{.*}} %[[VAL]], %[[EXN]] : !s32i, !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXN]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR:     cir.yield
 // CIR:   } cleanup all {
@@ -47,7 +47,7 @@ void testSwitchWithCleanup(int n) {
 // CIR-FLAT:   %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR-FLAT:   %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-FLAT:   cir.store{{.*}} %[[VAL]], %[[EXN]]
-// CIR-FLAT:   cir.try_throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi ^[[UNREACH:.+]], ^[[UNWIND:.+]]
+// CIR-FLAT:   cir.try_throw %[[EXN]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void> ^[[UNREACH:.+]], ^[[UNWIND:.+]]
 // CIR-FLAT-NEXT: ^[[UNREACH]]:
 // CIR-FLAT-NEXT:   cir.unreachable
 // CIR-FLAT: ^[[UNWIND]]:

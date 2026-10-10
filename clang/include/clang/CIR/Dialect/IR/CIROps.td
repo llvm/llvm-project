@@ -8747,20 +8747,23 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 //===----------------------------------------------------------------------===//
 
 // Common base class shared by `cir.throw` and its EH counterpart
-// `cir.try_throw`. Both operations carry the same operands and attributes
-// (an optional exception pointer, an optional RTTI symbol and an optional
-// destructor symbol) and use the same verifier logic; subclasses contribute
-// any additional traits, successors and assembly format pieces.
+// `cir.try_throw`. A normal throw carries an exception pointer, an RTTI pointer
+// and a destructor pointer as SSA operands. Null RTTI and destructor pointers
+// are represented by typed null values. The zero-operand form represents a
+// rethrow. Since every normal throw lowers to the same `__cxa_throw` symbol,
+// the exception and destructor pointers use the module's default address space
+// and the RTTI pointer uses its global address space. Subclasses contribute any
+// additional traits, successors and assembly format pieces.
 class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
-    : CIR_Op<mnemonic, traits> {
+    : CIR_Op<mnemonic, !listconcat(traits, [AttrSizedOperandSegments])> {
   let arguments = (ins
     Optional<CIR_PointerType>:$exception_ptr,
-    OptionalAttr<FlatSymbolRefAttr>:$type_info,
-    OptionalAttr<FlatSymbolRefAttr>:$dtor
+    Optional<CIR_PointerType>:$type_info,
+    Optional<CIR_PointerType>:$dtor
   );
 
   let extraClassDeclaration = [{
-    bool rethrows() { return getNumOperands() == 0; }
+    bool rethrows() { return !getExceptionPtr(); }
   }];
 
   let hasVerifier = 1;
@@ -8776,12 +8779,12 @@ def CIR_ThrowOp : CIR_ThrowOpBase<"throw"> {
     This operation is equivalent to either __cxa_throw or __cxa_rethrow,
     depending on the arguments.
 
-    The absense of arguments for `cir.throw` means it rethrows.
+    The absence of arguments for `cir.throw` means it rethrows.
 
-    For the no-rethrow version, it must have at least two operands, the RTTI
-    information, a pointer to the exception object (likely allocated via
-    `cir.alloc_exception`) and finally an optional dtor, which might run as
-    part of this operation.
+    For the non-rethrow version, it has three operands: a pointer to the
+    exception object (likely allocated via `cir.alloc_exception`), the RTTI
+    pointer and the destructor pointer. The latter two may be typed null
+    pointers.
 
     Example:
 
@@ -8800,15 +8803,16 @@ def CIR_ThrowOp : CIR_ThrowOpBase<"throw"> {
       // Store string addr for "Division by zero condition!"
       cir.store %string_addr, %exception_addr : !cir.ptr<!s8i>,
         !cir.ptr<!cir.ptr<!s8i>>
-      cir.throw %exception_addr : !cir.ptr<!cir.ptr<!u8i>>,
-        @_ZTIPKc
+      %type_info = cir.const #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>
+      %dtor = cir.const #cir.ptr<null> : !cir.ptr<!void>
+      cir.throw %exception_addr, %type_info, %dtor :
+        !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>, !cir.ptr<!void>
     ```
   }];
 
   let assemblyFormat = [{
-    ($exception_ptr^ `:` type($exception_ptr))?
-    (`,` $type_info^)?
-    (`,` $dtor^)?
+    ($exception_ptr^ `,` $type_info `,` $dtor `:`
+      type($exception_ptr) `,` type($type_info) `,` type($dtor))?
     attr-dict
   }];
 }
@@ -8828,8 +8832,8 @@ def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
     analogous to how `cir.try_call` is the EH counterpart of `cir.call`.
 
     Like `cir.throw`, the absence of operands means rethrow. With operands,
-    it carries the same exception pointer, type info, and optional
-    destructor as `cir.throw`.
+    it carries the same exception pointer, type-info pointer, and destructor
+    pointer as `cir.throw`.
 
     This operation is produced by the FlattenCFG pass for `cir.throw`
     operations that appear inside a cleanup scope or try region. It is
@@ -8839,7 +8843,8 @@ def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
     Example:
 
     ```
-    cir.try_throw %exception_addr : !cir.ptr<!s32i>, @_ZTIi
+    cir.try_throw %exception_addr, %type_info, %dtor :
+        !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
         ^normalDest, ^unwindDest
     ^normalDest:
       cir.unreachable
@@ -8854,9 +8859,8 @@ def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
   );
 
   let assemblyFormat = [{
-    ($exception_ptr^ `:` type($exception_ptr))?
-    (`,` $type_info^)?
-    (`,` $dtor^)?
+    ($exception_ptr^ `,` $type_info `,` $dtor `:`
+      type($exception_ptr) `,` type($type_info) `,` type($dtor))?
     $normalDest `,` $unwindDest
     attr-dict
   }];

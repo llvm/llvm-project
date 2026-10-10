@@ -120,6 +120,8 @@ private:
 
   cir::VoidType voidType;
   cir::PointerType voidPtrType;
+  cir::PointerType cxaThrowVoidPtrType;
+  cir::PointerType globalVoidPtrType;
   cir::PointerType u8PtrType;
   cir::IntType u32Type;
   cir::IntType s32Type;
@@ -167,6 +169,11 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   // TODO(cir): Move these to the base class if they are also needed for MSVC.
   voidType = cir::VoidType::get(ctx);
   voidPtrType = cir::PointerType::get(voidType);
+  cir::CIRDataLayout dataLayout(mod);
+  auto defaultAddrSpace = dataLayout.getDefaultAddrSpace(ctx);
+  auto globalAddrSpace = dataLayout.getGlobalAddrSpace(ctx);
+  cxaThrowVoidPtrType = cir::PointerType::get(voidType, defaultAddrSpace);
+  globalVoidPtrType = cir::PointerType::get(voidType, globalAddrSpace);
   auto u8Type = cir::IntType::get(ctx, 8, /*isSigned=*/false);
   u8PtrType = cir::PointerType::get(u8Type);
   u32Type = cir::IntType::get(ctx, 32, /*isSigned=*/false);
@@ -270,12 +277,16 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
 
 /// Ensure the __cxa_throw runtime function is declared in the module.
 ///
-///   void __cxa_throw(void *exception, void *type_info, void *dtor);
+///   void __cxa_throw(void *exception, global void *type_info, void *dtor);
+///
+/// The type-info pointer may use a target-specific global address space. The
+/// exception and destructor pointers use the target's default address space.
 void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc) {
   if (cxaThrowFunc)
     return;
-  auto throwFuncTy = cir::FuncType::get({voidPtrType, voidPtrType, voidPtrType},
-                                        voidType, /*isVarArg=*/false);
+  auto throwFuncTy = cir::FuncType::get(
+      {cxaThrowVoidPtrType, globalVoidPtrType, cxaThrowVoidPtrType}, voidType,
+      /*isVarArg=*/false);
   cxaThrowFunc =
       getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_throw", throwFuncTy);
 }
@@ -917,9 +928,9 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
 }
 
 /// Lower a cir.try_throw to a cir.try_call of __cxa_throw (or
-/// __cxa_rethrow for the no-operand rethrow form). Materializes the
-/// type_info and dtor pointers from their symbol attributes, bitcasting
-/// each to !cir.ptr<!void> as required by the runtime function signature.
+/// __cxa_rethrow for the no-operand rethrow form). Bitcast each typed pointer
+/// operand to a void pointer in the same address space to match the runtime
+/// function signature.
 mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
   // TODO(cir): set the runtime calling convention on the runtime calls below.
   assert(!cir::MissingFeatures::opFuncCallingConv());
@@ -937,45 +948,19 @@ mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
     return mlir::success();
   }
 
+  auto castToVoidPtr = [&](mlir::Value value,
+                           cir::PointerType targetType) -> mlir::Value {
+    if (value.getType() == targetType)
+      return value;
+    return cir::CastOp::create(builder, loc, targetType, cir::CastKind::bitcast,
+                               value);
+  };
+
+  mlir::Value exnPtr = castToVoidPtr(op.getExceptionPtr(), cxaThrowVoidPtrType);
+  mlir::Value typeInfo = castToVoidPtr(op.getTypeInfo(), globalVoidPtrType);
+  mlir::Value dtor = castToVoidPtr(op.getDtor(), cxaThrowVoidPtrType);
+
   ensureCxaThrowDecl(loc);
-
-  // Bitcast the exception pointer to void* if necessary.
-  mlir::Value exnPtr = op.getExceptionPtr();
-  if (exnPtr.getType() != voidPtrType)
-    exnPtr = cir::CastOp::create(builder, loc, voidPtrType,
-                                 cir::CastKind::bitcast, exnPtr);
-
-  // Materialize the type_info pointer, looking up the typed symbol in the
-  // module so we get the correct pointer type for cir.get_global, then
-  // bitcasting to void* to match the runtime signature.
-  mlir::FlatSymbolRefAttr typeInfoAttr = op.getTypeInfoAttr();
-  auto typeInfoGlobal = mod.lookupSymbol<cir::GlobalOp>(typeInfoAttr);
-  if (!typeInfoGlobal)
-    return op.emitError("type_info symbol not found in module");
-  auto typeInfoPtrTy = cir::PointerType::get(typeInfoGlobal.getSymType());
-  mlir::Value typeInfo = cir::GetGlobalOp::create(builder, loc, typeInfoPtrTy,
-                                                  typeInfoAttr.getValue());
-  if (typeInfo.getType() != voidPtrType)
-    typeInfo = cir::CastOp::create(builder, loc, voidPtrType,
-                                   cir::CastKind::bitcast, typeInfo);
-
-  // Materialize the dtor pointer (or null if no dtor).
-  mlir::Value dtor;
-  if (mlir::FlatSymbolRefAttr dtorAttr = op.getDtorAttr()) {
-    auto dtorFunc = mod.lookupSymbol<cir::FuncOp>(dtorAttr);
-    if (!dtorFunc)
-      return op.emitError("dtor symbol not found in module");
-    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
-    dtor =
-        cir::GetGlobalOp::create(builder, loc, dtorPtrTy, dtorAttr.getValue());
-    if (dtor.getType() != voidPtrType)
-      dtor = cir::CastOp::create(builder, loc, voidPtrType,
-                                 cir::CastKind::bitcast, dtor);
-  } else {
-    dtor = cir::ConstantOp::create(
-        builder, loc,
-        cir::ConstPtrAttr::get(voidPtrType, builder.getI64IntegerAttr(0)));
-  }
 
   cir::TryCallOp::create(
       builder, loc, mlir::FlatSymbolRefAttr::get(cxaThrowFunc), voidType,

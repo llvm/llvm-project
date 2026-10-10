@@ -604,6 +604,15 @@ public:
              getTriple().isNVPTX());
   }
 
+  /// Return an i8 pointer in the target's address space for global variables.
+  /// RTTI descriptors use this type, including the null descriptor passed to
+  /// the exception runtime when device compilation suppresses RTTI emission.
+  cir::PointerType getGlobalsUInt8PtrTy() {
+    return builder.getPointerTo(
+        builder.getUInt8Ty(),
+        getDataLayout().getGlobalAddrSpace(&getMLIRContext()));
+  }
+
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
   void emitExplicitCastExprType(const ExplicitCastExpr *e,
