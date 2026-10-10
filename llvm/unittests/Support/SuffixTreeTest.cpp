@@ -320,6 +320,19 @@ TEST(SuffixTreeTest, UniqueTerminatorsPreserveRepeatedSubstrings) {
   }
 }
 
+TEST(SuffixTreeTest, PrunedSingletonRanges) {
+  // Pruning leaves empty internal nodes alongside a retained repeated range.
+  std::vector<unsigned> Input = {1, 100, 1, 101, 2, 3, 102, 2, 3, 103};
+  const SubstringResults Expected = {{2, {4, 7}}};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Default(Input, LeafDescendants);
+    SuffixTree Boundaries(Input, LeafDescendants, /*BoundaryStart=*/100);
+    EXPECT_EQ(collectSubstrings(Default), Expected);
+    EXPECT_EQ(collectSubstrings(Boundaries), Expected);
+  }
+}
+
 TEST(SuffixTreeTest, MaxUnsignedBoundary) {
   const unsigned Max = std::numeric_limits<unsigned>::max();
   std::vector<unsigned> Input = {1, 2, 1, 2, Max};

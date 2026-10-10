@@ -9,7 +9,8 @@
 // This file defines nodes for use within a SuffixTree.
 //
 // Each node has either no children or at least two children, with the root
-// being a exception in the empty tree.
+// being an exception in the empty tree. Pruning boundary leaves can leave
+// internal nodes with fewer children.
 //
 // Children are represented as a map between unsigned integers and nodes. If
 // a node N has a child M on unsigned integer k, then the mapping represented
@@ -94,7 +95,7 @@ public:
   virtual ~SuffixTreeNode() = default;
 };
 
-// A node with two or more children, or the root.
+// A node with two or more children before pruning, or the root.
 struct LLVM_ABI SuffixTreeInternalNode : SuffixTreeNode {
 private:
   /// The end index of this node's substring in the main string.
