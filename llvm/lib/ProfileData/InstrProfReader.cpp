@@ -1673,17 +1673,20 @@ IndexedMemProfReader::getMemProfCallerCalleePairs() const {
 
 memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
   memprof::AllMemProfData AllMemProfData;
-  AllMemProfData.HeapProfileRecords.reserve(
-      MemProfRecordTable->getNumEntries());
-  for (uint64_t Key : MemProfRecordTable->keys()) {
-    auto Record = getMemProfRecord(Key);
-    if (Record.takeError())
-      continue;
-    memprof::GUIDMemProfRecordPair Pair;
-    Pair.GUID = Key;
-    Pair.Record = std::move(*Record);
-    AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+  if (MemProfRecordTable) {
+    AllMemProfData.HeapProfileRecords.reserve(
+        MemProfRecordTable->getNumEntries());
+    for (uint64_t Key : MemProfRecordTable->keys()) {
+      auto Record = getMemProfRecord(Key);
+      if (Record.takeError())
+        continue;
+      memprof::GUIDMemProfRecordPair Pair;
+      Pair.GUID = Key;
+      Pair.Record = std::move(*Record);
+      AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
+    }
   }
+
   // Populate the data access profiles for yaml output.
   if (DataAccessProfileData != nullptr) {
     AllMemProfData.YamlifiedDataAccessProfiles.Records.reserve(
