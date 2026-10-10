@@ -2452,6 +2452,22 @@ let Predicates = [HasStdExtP] in {
   // 16-bit permute patterns
   def : Pat<(XLenVecI16VT (bswap GPR:$rs)),
             (PPAIROE_B GPR:$rs, GPR:$rs)>;
+
+  // Packed pair: pair the even/odd-position elements of rs1 and rs2.
+  def : Pat<(XLenVecI8VT (riscv_ppaire (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
+            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_ppaireo (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
+            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_ppairoe (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
+            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_ppairo (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2))),
+            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_ppaireo (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
+            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_ppairoe (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_ppairo (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
+            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
@@ -2643,12 +2659,6 @@ let append Predicates = [IsRV32] in {
 
   def : Pat<(v2i16 (riscv_ppaire (v2i16 GPR:$lo), (v2i16 GPR:$hi))),
             (PACK GPR:$lo, GPR:$hi)>;
-  def : Pat<(v2i16 (riscv_ppaireo (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i16 (riscv_ppairoe (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i16 (riscv_ppairo (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
@@ -2795,14 +2805,6 @@ let append Predicates = [IsRV32] in {
             (WZIP16P GPR:$rs1, GPR:$rs2)>;
 
   // Packed pair: pair the even/odd-position elements of rs1 and rs2.
-  def : Pat<(v4i8 (riscv_ppaire (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i8 (riscv_ppaireo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i8 (riscv_ppairoe (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i8 (riscv_ppairo (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v8i8 (riscv_ppaire GPRPair:$rs1, GPRPair:$rs2)),
             (PPAIRE_DB GPRPair:$rs1, GPRPair:$rs2)>;
   def : Pat<(v8i8 (riscv_ppaireo GPRPair:$rs1, GPRPair:$rs2)),
@@ -3648,21 +3650,7 @@ let append Predicates = [IsRV64] in {
             (PACK GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_ppairoe (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
             (PPAIROE_W GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppaire (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PPAIRE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppaireo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PPAIREO_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppairoe (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PPAIROE_B GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v8i8 (riscv_ppairo (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-            (PPAIRO_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_ppaire (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PPAIRE_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppaireo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppairoe (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v4i16 (riscv_ppairo (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtP]
