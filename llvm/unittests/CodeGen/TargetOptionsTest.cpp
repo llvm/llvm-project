@@ -1,8 +1,14 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -17,6 +23,7 @@ namespace llvm {
 namespace {
 
 void initLLVM() {
+  InitializeAllTargetInfos();
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
@@ -68,6 +75,38 @@ TEST(TargetOptionsTest, IPRASetToOff) {
 
 TEST(TargetOptionsTest, IPRASetToOn) {
   targetOptionsTest(true);
+}
+
+TEST(TargetOptionsTest, SubtargetCopyPreservesHwMode) {
+  for (StringRef TripleName :
+       {"x86_64-unknown-linux-gnu", "riscv64-unknown-elf"}) {
+    SCOPED_TRACE(TripleName);
+    Triple TT(TripleName);
+    std::string Error;
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+    if (!TheTarget)
+      continue;
+    TargetOptions Options;
+    std::unique_ptr<TargetMachine> TM(
+        TheTarget->createTargetMachine(TT, "", "", Options, std::nullopt));
+    ASSERT_TRUE(TM);
+    LLVMContext LLVMCtx;
+    Module M("test", LLVMCtx);
+    Function *F =
+        Function::Create(FunctionType::get(Type::getVoidTy(LLVMCtx), false),
+                         Function::ExternalLinkage, "foo", M);
+    const TargetSubtargetInfo *TST = TM->getSubtargetImpl(*F);
+    ASSERT_TRUE(TST);
+    ASSERT_NE(TST->getHwMode(), 0u);
+    ASSERT_NE(TST->getHwModeSet(), 0u);
+    MCContext Ctx(TT, TM->getMCAsmInfo(), TM->getMCRegisterInfo(), *TST);
+    MCSubtargetInfo &TSTCopy = Ctx.getSubtargetCopy(*TST);
+    // FIXME: MCContext::getSubtargetCopy invokes the base MCSubtargetInfo copy
+    // constructor, resetting the vtable to MCSubtargetInfo and losing the
+    // <Target>GenSubtargetInfo overrides for getHwMode() and getHwModeSet().
+    EXPECT_NE(TSTCopy.getHwMode(), TST->getHwMode());
+    EXPECT_NE(TSTCopy.getHwModeSet(), TST->getHwModeSet());
+  }
 }
 
 int main(int argc, char **argv) {
