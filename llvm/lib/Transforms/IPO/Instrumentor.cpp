@@ -729,8 +729,7 @@ Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
                                              InstrumentorIRBuilderTy &IIRB) {
   if (V.getType()->isVoidTy())
     return Ty.isVoidTy() ? &V : Constant::getNullValue(&Ty);
-  return tryToCast(IIRB.IRB, &V, &Ty,
-                   IIRB.IRB.GetInsertBlock()->getDataLayout());
+  return tryToCast(IIRB.IRB, &V, &Ty, IIRB.IRB.getDataLayout());
 }
 
 Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,
@@ -879,8 +878,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
   auto CompleteName =
       IConf.getRTName(IO.IP.isPRE() ? "pre_" : "post_", IO.getName(),
                       ForceIndirection ? "_ind" : "");
-  auto FC = IIRB.IRB.GetInsertBlock()->getModule()->getOrInsertFunction(
-      CompleteName, FnTy);
+  auto FC = IIRB.IRB.getModule()->getOrInsertFunction(CompleteName, FnTy);
   auto *CI = IIRB.IRB.CreateCall(FC, CallParams);
   CI->addFnAttr(Attribute::get(IIRB.Ctx, Attribute::WillReturn));
 

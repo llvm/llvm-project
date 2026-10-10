@@ -572,6 +572,21 @@ static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
   return true;
 }
 
+/// Returns true if \p I does not use a swifterror value, otherwise reports a
+/// vectorization failure for \p TheLoop and returns false.
+/// TODO: Allow unmasked uniform accesses through loop-invariant swifterror
+/// pointers once memory operations on them are guaranteed to stay scalar.
+static bool canVectorizeSwiftErrorUses(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  if (none_of(I.operands(), [](Value *Op) { return Op->isSwiftError(); }))
+    return true;
+  reportVectorizationFailure("Found a use of a swifterror value",
+                             "swifterror value cannot be vectorized",
+                             "CantVectorizeSwiftError", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -582,8 +597,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
+    // Uses of swifterror values must remain scalar.
     for (Instruction &I : *BB) {
-      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop))
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
         continue;
       if (!DoExtraAnalysis)
         return false;
@@ -910,6 +927,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                                Phi);
     return false;
   } // end of PHI handling
+
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+    return false;
 
   // We handle calls that:
   //   * Have a mapping to an IR intrinsic.
@@ -1270,39 +1290,40 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
   // If the EnableStrictReductions flag is set, first check if we have any
   // Exact FP induction vars, which we cannot vectorize.
   if (!EnableStrictReductions ||
-      any_of(getInductionVars(), [&](auto &Induction) -> bool {
-        InductionDescriptor IndDesc = Induction.second;
-        return IndDesc.getExactFPMathInst();
-      }))
+      any_of(getInductionVars().values(),
+             [](const InductionDescriptor &IndDesc) -> bool {
+               return IndDesc.getExactFPMathInst();
+             }))
     return false;
 
   // We can now only vectorize if all reductions with Exact FP math also
   // have the isOrdered flag set, which indicates that we can move the
   // reduction operations in-loop.
-  return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
-  }));
+  return (all_of(getReductionVars().values(),
+                 [](const RecurrenceDescriptor &RdxDesc) -> bool {
+                   return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
+                 }));
 }
 
 bool LoopVectorizationLegality::isInvariantStoreOfReduction(StoreInst *SI) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return RdxDesc.IntermediateStore == SI;
-  });
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  return RdxDesc.IntermediateStore == SI;
+                });
 }
 
 bool LoopVectorizationLegality::isInvariantAddressOfReduction(Value *V) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    if (!RdxDesc.IntermediateStore)
-      return false;
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  if (!RdxDesc.IntermediateStore)
+                    return false;
 
-    ScalarEvolution *SE = PSE.getSE();
-    Value *InvariantAddress = RdxDesc.IntermediateStore->getPointerOperand();
-    return V == InvariantAddress ||
-           SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
-  });
+                  ScalarEvolution *SE = PSE.getSE();
+                  Value *InvariantAddress =
+                      RdxDesc.IntermediateStore->getPointerOperand();
+                  return V == InvariantAddress ||
+                         SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
+                });
 }
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {

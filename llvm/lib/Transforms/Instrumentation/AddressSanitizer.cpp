@@ -449,9 +449,6 @@ static cl::list<unsigned> ClAddrSpaces(
 
 // Debug flags.
 
-static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
-                            cl::init(0));
-
 static cl::opt<int> ClDebugStack("asan-debug-stack", cl::desc("debug stack"),
                                  cl::Hidden, cl::init(0));
 
@@ -2115,8 +2112,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
 
 void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit) {
   // Set up the arguments to our poison/unpoison functions.
-  IRBuilder<> IRB(&GlobalInit.front(),
-                  GlobalInit.front().getFirstInsertionPt());
+  IRBuilder<> IRB(GlobalInit.front().getFirstInsertionPt());
 
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr =
@@ -2362,7 +2358,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 }
 
 void ModuleAddressSanitizer::initializeCallbacks() {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2911,7 +2907,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
       IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
       instrumentGlobals(IRB, &CtorComdat);
     } else {
-      IRBuilder<> IRB(*C);
+      IRBuilder<> IRB(M);
       instrumentGlobals(IRB, &CtorComdat);
     }
   }
@@ -2941,7 +2937,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 }
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -3030,7 +3026,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }
@@ -3274,8 +3270,8 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   return true;
 }
 
-void FunctionStackPoisoner::initializeCallbacks(Module &) {
-  IRBuilder<> IRB(*C);
+void FunctionStackPoisoner::initializeCallbacks(Module &M) {
+  IRBuilder<> IRB(M);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =

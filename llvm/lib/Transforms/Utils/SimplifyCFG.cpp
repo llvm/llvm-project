@@ -1811,6 +1811,15 @@ static void hoistConditionalLoadsStores(
         }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range)) {
+        ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+        if (PassThru && !isa<PoisonValue>(PassThru)) {
+          auto *C = dyn_cast<Constant>(PassThru);
+          CR = C ? CR.unionWith(C->toConstantRange())
+                 : ConstantRange::getFull(CR.getBitWidth());
+        }
+        MaskedLoadStore->addRangeRetAttr(CR);
+      }
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
       if (PN)
         PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
@@ -1826,12 +1835,8 @@ static void hoistConditionalLoadsStores(
     // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
     //
     // !nonnull, !align : Not support pointer type, no need to keep.
-    // !range: Load type is changed from scalar to vector, but the metadata on
-    //         vector specifies a per-element range, so the semantics stay the
-    //         same. Keep it.
+    // !range: Kept as a return attribute, widened over PassThru (see above).
     // !annotation: Not impact semantics. Keep it.
-    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
-      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
     I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
     // FIXME: DIAssignID is not supported for masked store yet.
     // (Verifier::visitDIAssignIDMetadata)
@@ -4139,7 +4144,7 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
   IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
-      BB->getContext(), ConstantFolder{},
+      *BB->getModule(), ConstantFolder{},
       IRBuilderCallbackInserter([&BB](Instruction *I) {
         // The builder is used to create instructions to eliminate the branch in
         // BB. If BB's terminator has !annotation metadata, add it to the new
@@ -4562,9 +4567,7 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
-  IRBuilder<> QB(PostBB, PostBBFirst);
-  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
+  IRBuilder<> QB(PostBB->getFirstInsertionPt());
 
   InvertPCond ^= (PStore->getParent() != PTB);
   InvertQCond ^= (QStore->getParent() != QTB);

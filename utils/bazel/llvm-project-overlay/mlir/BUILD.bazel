@@ -1850,6 +1850,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":ROCDLDialect",
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
@@ -4059,11 +4060,13 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":SCFDialect",
         ":SCFUtils",
+        ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
@@ -5861,6 +5864,7 @@ cc_library(
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":Pass",
+        ":ROCDLDialect",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":Transforms",
@@ -6749,6 +6753,7 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/ROCDLDialect.cpp",
         "lib/Dialect/LLVMIR/IR/ROCDLOps.h",
+        "lib/Dialect/LLVMIR/IR/ROCDLTargetInfo.cpp",
     ] + gentbl_sharded_op_defs(
         name = "ROCDLOps_sharded_defs",
         shard_count = 8,
@@ -6757,6 +6762,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/LLVMIR/ROCDLDialect.h",
         "include/mlir/Dialect/LLVMIR/ROCDLDialectDecl.h",
+        "include/mlir/Dialect/LLVMIR/ROCDLTargetInfo.h",
     ],
     includes = [
         "include",
@@ -6771,9 +6777,11 @@ cc_library(
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -13838,6 +13846,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
+        ":MemorySlotInterfaces",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",

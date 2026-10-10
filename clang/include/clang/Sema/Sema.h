@@ -15346,6 +15346,12 @@ public:
   QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
                           unsigned Quals, SourceRange Brackets,
                           DeclarationName Entity);
+
+  /// Diagnose an array of \p NumElements elements of type \p ElementType
+  /// that is too large. Returns true if a diagnostic was emitted.
+  bool checkArrayTooLarge(QualType ElementType, const llvm::APSInt &NumElements,
+                          SourceLocation Loc,
+                          SourceRange Range = SourceRange());
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
 
   /// Build an ext-vector type.
