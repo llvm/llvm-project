@@ -466,29 +466,106 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
   return TargetSU;
 }
 
+/// Counts the registers scheduling \p SU frees, i.e. those it reads whose
+/// defining SU has \p SU as its only remaining unscheduled data successor.
+///
+/// TODO: weight by register size and split per bank (ArchVGPR/AGPR/SGPR have
+/// separate budgets), charging SU for its own defs, so the result is a signed
+/// pressure delta rather than a count.
+static unsigned countRegFrees(const SUnit *SU) {
+  SmallDenseMap<Register, unsigned, 8> RegMaxUnsched;
+
+  for (const SDep &Pred : SU->Preds) {
+    if (Pred.getKind() != SDep::Data)
+      continue;
+    Register Reg = Pred.getReg();
+    if (!Reg)
+      continue;
+    const SUnit *PredSU = Pred.getSUnit();
+    unsigned Unscheduled = 0;
+    // Only successors that read Reg keep it live; PredSU may define other
+    // registers whose edges say nothing about when Reg dies.
+    for (const SDep &Succ : PredSU->Succs)
+      if (Succ.getKind() == SDep::Data && Succ.getReg() == Reg &&
+          !Succ.getSUnit()->isScheduled)
+        ++Unscheduled;
+
+    LLVM_DEBUG({
+      dbgs() << "        pred SU(" << PredSU->NodeNum
+             << ") reg=" << printReg(Reg) << " unschedSuccs=" << Unscheduled
+             << " ";
+      if (PredSU->getInstr())
+        PredSU->getInstr()->print(dbgs(), /*IsStandalone=*/true,
+                                  /*SkipOpers=*/false, /*SkipDebugLoc=*/true);
+      else
+        dbgs() << "<no instr>";
+      dbgs() << "\n";
+    });
+    auto &MaxUnsched = RegMaxUnsched[Reg];
+    MaxUnsched = std::max(MaxUnsched, Unscheduled);
+  }
+
+  // SU itself is always counted, so MaxUnsched >= 1 and freed means == 1.
+  unsigned Frees = 0;
+  for (const auto &[Reg, MaxUnsched] : RegMaxUnsched)
+    if (MaxUnsched < 2)
+      ++Frees;
+  LLVM_DEBUG(dbgs() << "        => frees=" << Frees
+                    << " (regs=" << RegMaxUnsched.size() << ")\n");
+  return Frees;
+}
+
+void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
+  if (PrioritySUs.empty()) {
+    PrioritySUs.insert(Cand);
+    return;
+  }
+
+  SUnit *Existing = *PrioritySUs.begin();
+
+  LLVM_DEBUG(dbgs() << "    updatePrioritySUs: SU(" << Cand->NodeNum
+                    << ") vs existing SU(" << Existing->NodeNum << ")\n");
+
+  if (PriorityHeadFreesFor != Existing) {
+    PriorityHeadFrees = countRegFrees(Existing);
+    PriorityHeadFreesFor = Existing;
+  }
+  unsigned CandFrees = countRegFrees(Cand);
+  LLVM_DEBUG(dbgs() << "      Existing: frees=" << PriorityHeadFrees
+                    << "  Candidate: frees=" << CandFrees << "\n");
+
+  if (CandFrees < PriorityHeadFrees)
+    return;
+
+  // Keep every tied SU so the candidate heuristics can pick among them.
+  if (CandFrees == PriorityHeadFrees) {
+    PrioritySUs.insert(Cand);
+    return;
+  }
+
+  PrioritySUs.clear();
+  PrioritySUs.insert(Cand);
+  // Cand is the new head; reuse the count just computed for it.
+  PriorityHeadFrees = CandFrees;
+  PriorityHeadFreesFor = Cand;
+}
+
+void HardwareUnitInfo::rebuildPrioritySUs() {
+  if (AllSUs.empty())
+    return;
+  PrioritySUs.clear();
+  PriorityHeadFreesFor = nullptr;
+  for (auto *SU : AllSUs)
+    updatePrioritySUsWith(SU);
+}
+
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
   if (!AllSUs.insert(SU))
     llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;
 
-  if (PrioritySUs.empty()) {
-    PrioritySUs.insert(SU);
-    return;
-  }
-  unsigned SUDepth = SU->getDepth();
-  unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
-  if (SUDepth > CurrDepth)
-    return;
-
-  if (SUDepth == CurrDepth) {
-    PrioritySUs.insert(SU);
-    return;
-  }
-
-  // SU is lower depth and should be prioritized.
-  PrioritySUs.clear();
-  PrioritySUs.insert(SU);
+  updatePrioritySUsWith(SU);
 }
 
 void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
@@ -501,6 +578,8 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
+  // The cached count was derived from unscheduled-successor counts SU changes.
+  PriorityHeadFreesFor = nullptr;
 
   // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
   // either case, each SU uses the HardwareUnit for BlockingCycles.
@@ -509,27 +588,8 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 
   if (AllSUs.empty())
     return;
-  if (PrioritySUs.empty()) {
-    for (auto SU : AllSUs) {
-      if (PrioritySUs.empty()) {
-        PrioritySUs.insert(SU);
-        continue;
-      }
-      unsigned SUDepth = SU->getDepth();
-      unsigned CurrDepth = (*PrioritySUs.begin())->getDepth();
-      if (SUDepth > CurrDepth)
-        continue;
-
-      if (SUDepth == CurrDepth) {
-        PrioritySUs.insert(SU);
-        continue;
-      }
-
-      // SU is lower depth and should be prioritized.
-      PrioritySUs.clear();
-      PrioritySUs.insert(SU);
-    }
-  }
+  if (PrioritySUs.empty())
+    rebuildPrioritySUs();
 }
 
 void HardwareUnitInfo::finalizeCycles() {
@@ -1185,6 +1245,10 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
       AGPRPressure = DownwardTracker.getPressure().getAGPRNum();
     }
   }
+
+  // countRegFrees() depends on what is already scheduled, so the ranking goes
+  // stale after every pick.
+  Heurs.rebuildAllPrioritySUs();
 
   auto EvaluateQueue = [&](ReadyQueue &Q, bool FromPending) {
     for (SUnit *SU : Q) {

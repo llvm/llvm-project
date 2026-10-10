@@ -70,8 +70,8 @@ private:
   /// tryCriticalResourceDependency and tryCriticalResource: we schedule the
   /// dependencies for a SU on critical resource, then schedule that same SU on
   /// the critical resource. This agreement results in shorter live ranges and
-  /// more regular HardwareUnit access patterns. SUs are prioritized based on
-  /// depth for top-down scheduling.
+  /// more regular HardwareUnit access patterns. SUs are prioritized by how
+  /// many registers scheduling them frees; see countRegFrees().
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
@@ -107,8 +107,19 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
+  /// Cached countRegFrees() of the head of PrioritySUs, valid only while
+  /// PriorityHeadFreesFor is still the head.
+  const SUnit *PriorityHeadFreesFor = nullptr;
+  unsigned PriorityHeadFrees = 0;
+
+  /// Try to update PrioritySUs with a new \p SU.
+  void updatePrioritySUsWith(SUnit *SU);
+
 public:
   HardwareUnitInfo() {}
+
+  /// Rebuild PrioritySUs from AllSUs.
+  void rebuildPrioritySUs();
 
   unsigned size() { return AllSUs.size(); }
 
@@ -172,6 +183,7 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
+    PriorityHeadFreesFor = nullptr;
     ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
@@ -307,6 +319,11 @@ public:
                                 SchedBoundary *Zone) const;
 
   void dumpRegionSummary();
+
+  void rebuildAllPrioritySUs() {
+    for (auto &HWUI : HWUInfo)
+      HWUI.rebuildPrioritySUs();
+  }
 };
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
