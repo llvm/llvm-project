@@ -93,6 +93,7 @@ next1:
   ]
 
 next2:
+  ; Make sure the noop inline asm below doesn't reuse the moved result of this call.
   call i32 @llvm.ctpop.i32(i32 0)
   ; call blackbox
   call void asm sideeffect "", ""()
