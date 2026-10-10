@@ -1082,6 +1082,7 @@ set(files
   fstream
   functional
   future
+  generator
   initializer_list
   iomanip
   ios
