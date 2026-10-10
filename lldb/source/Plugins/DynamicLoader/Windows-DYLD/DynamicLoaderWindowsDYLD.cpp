@@ -9,6 +9,7 @@
 #include "DynamicLoaderWindowsDYLD.h"
 
 #include "MSVCRTCFrameRecognizer.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -68,8 +69,8 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
   // Resolve the module unless we already have one.
   if (!module_sp) {
     Status error;
-    module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, 
-                                             true /* notify */, &error);
+    module_sp = m_process->GetTarget().GetOrCreateModule(
+        module_spec, true /* notify */, &error);
     if (error.Fail())
       return;
   }
@@ -246,4 +247,118 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
   return ThreadPlanSP(new ThreadPlanStepInstruction(
       thread, false, false, eVoteNoOpinion, eVoteNoOpinion));
+}
+
+lldb::addr_t
+DynamicLoaderWindowsDYLD::GetThreadLocalData(const lldb::ModuleSP module,
+                                             lldb::ThreadSP thread,
+                                             lldb::addr_t tls_file_addr) {
+  Log *log = GetLog(LLDBLog::DynamicLoader);
+  ObjectFile *obj = module->GetObjectFile();
+  if (!obj) {
+    LLDB_LOG(log, "no object file for module");
+    return LLDB_INVALID_ADDRESS;
+  }
+  std::string object_name;
+  if (log)
+    object_name = obj->GetObjectName();
+
+  StructuredData::ObjectSP extended_info = thread->GetExtendedInfo();
+  if (!extended_info) {
+    LLDB_LOG(log, "missing extended info of thread");
+    return LLDB_INVALID_ADDRESS;
+  }
+  StructuredData::Dictionary *dict = extended_info->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOG(log, "extended info of thread is not a dictionary");
+    return LLDB_INVALID_ADDRESS;
+  }
+  addr_t teb_base = 0;
+  if (!dict->GetValueForKeyAsInteger("teb_address", teb_base) || !teb_base ||
+      teb_base == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "missing 'teb_address' in extended thread info");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  ProcessSP process = thread->GetProcess();
+  if (!process) {
+    LLDB_LOG(log, "missing process");
+    return LLDB_INVALID_ADDRESS;
+  }
+  uint32_t addr_byte_size = process->GetAddressByteSize();
+  addr_t tls_array_addr = teb_base + 11 * addr_byte_size;
+  llvm::Expected<addr_t> tls_array =
+      process->ReadPointerFromMemory(tls_array_addr);
+  if (!tls_array || *tls_array == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG_ERROR(log, tls_array.takeError(),
+                   "failed to read TLS array from {1:x16}: {0}",
+                   tls_array_addr);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Address tls_index_addr;
+  if (!GetTlsIndexAddressForModule(module, tls_index_addr)) {
+    LLDB_LOG(log, "failed to resolve tls index for {0}", object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Target &target = process->GetTarget();
+  addr_t tls_index_load_addr = tls_index_addr.GetLoadAddress(&target);
+  if (tls_index_load_addr == LLDB_INVALID_ADDRESS) {
+    LLDB_LOG(log, "failed to resolve load address of '_tls_index' in {0}",
+             object_name);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Status error;
+  uint64_t tls_index =
+      process->ReadUnsignedIntegerFromMemory(tls_index_load_addr, 4, 0, error);
+  if (error.Fail()) {
+    LLDB_LOG_ERROR(log, error.takeError(),
+                   "failed to read '_tls_index' in {1} from {2:x8}: {0}",
+                   object_name, tls_index_load_addr);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  addr_t tls_index_item = *tls_array + tls_index * addr_byte_size;
+  LLDB_LOG(log, "tls base address for {0} is at {1:x8} + {2:x8} * {3} = {4:x8}",
+           object_name, *tls_array, tls_index, addr_byte_size, tls_index_item);
+
+  llvm::Expected<addr_t> tls_base =
+      process->ReadPointerFromMemory(tls_index_item);
+  if (!tls_base || *tls_base == LLDB_INVALID_ADDRESS || *tls_base == 0) {
+    LLDB_LOG_ERROR(log, tls_base.takeError(),
+                   "failed to read tls array in {1} at index {2} ({3:x8}): {0}",
+                   object_name, tls_index, tls_index_item);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return *tls_base + tls_file_addr;
+}
+
+bool DynamicLoaderWindowsDYLD::GetTlsIndexAddressForModule(
+    const ModuleSP &module, Address &addr) const {
+  ObjectFilePECOFF *obj =
+      llvm::dyn_cast_or_null<ObjectFilePECOFF>(module->GetObjectFile());
+  if (obj) {
+    addr_t tls_index_file_addr = obj->GetTlsIndexAddress();
+    if (tls_index_file_addr != LLDB_INVALID_ADDRESS &&
+        module->ResolveFileAddress(tls_index_file_addr, addr))
+      return true;
+  }
+
+  // If we can't get the tls index from the object file, try the _tls_index
+  // symbol.
+  Symtab *symtab = module->GetSymtab();
+  if (!symtab)
+    return false;
+
+  Symbol *tls_index_sym = symtab->FindFirstSymbolWithNameAndType(
+      ConstString("_tls_index"), eSymbolTypeAny, Symtab::eDebugAny,
+      Symtab::eVisibilityAny);
+  if (!tls_index_sym)
+    return false;
+
+  addr = tls_index_sym->GetAddress();
+  return addr.IsValid();
 }

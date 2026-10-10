@@ -39,6 +39,10 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
+  lldb::addr_t GetThreadLocalData(const lldb::ModuleSP module,
+                                  const lldb::ThreadSP thread,
+                                  lldb::addr_t tls_file_addr) override;
+
 protected:
   /// Returns the load address for the given executable module.
   ///
@@ -72,6 +76,10 @@ protected:
   /// its own reference, keeping the file locked and blocking recompilation
   /// during an active debug session.
   llvm::DenseMap<lldb::addr_t, lldb::ModuleWP> m_loaded_modules;
+
+private:
+  bool GetTlsIndexAddressForModule(const lldb::ModuleSP &module,
+                                   Address &addr) const;
 };
 
 } // namespace lldb_private
