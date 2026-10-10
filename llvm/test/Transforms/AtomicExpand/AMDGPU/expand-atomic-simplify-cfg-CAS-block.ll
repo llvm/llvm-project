@@ -10,7 +10,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, float %in) #0 {
 ; GFX90A-NEXT:    [[D_CMP:%.*]] = icmp ult i32 [[TID]], 16
 ; GFX90A-NEXT:    br i1 [[D_CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; GFX90A:       if:
-; GFX90A-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX90A-NEXT:    [[TMP0:%.*]] = load atomic float, ptr addrspace(1) [[OUT:%.*]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ [[TMP4:%.*]], [[ATOMICRMW_START]] ]
@@ -25,7 +25,7 @@ define amdgpu_kernel void @divergent_cfg(ptr addrspace(1) %out, float %in) #0 {
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    br label [[ENDIF:%.*]]
 ; GFX90A:       else:
-; GFX90A-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(1) [[OUT]], align 4
+; GFX90A-NEXT:    [[TMP5:%.*]] = load atomic float, ptr addrspace(1) [[OUT]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START2:%.*]]
 ; GFX90A:       atomicrmw.start2:
 ; GFX90A-NEXT:    [[LOADED3:%.*]] = phi float [ [[TMP5]], [[ELSE]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START2]] ]

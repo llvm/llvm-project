@@ -154,6 +154,8 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-32-NEXT:    pushl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-32-NEXT:    subl $12, %esp
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-32-NEXT:    .cfi_offset %esi, -20
 ; CHECK-32-NEXT:    .cfi_offset %edi, -16
 ; CHECK-32-NEXT:    .cfi_offset %ebx, -12
@@ -161,8 +163,10 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; CHECK-32-NEXT:    movl (%ebp), %eax
-; CHECK-32-NEXT:    movl 4(%ebp), %edx
+; CHECK-32-NEXT:    fildll (%ebp)
+; CHECK-32-NEXT:    fistpll (%esp)
+; CHECK-32-NEXT:    movl (%esp), %eax
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    jmp .LBB3_1
 ; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB3_3: # %atomicrmw.start
@@ -182,6 +186,8 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl %eax, %ebx
 ; CHECK-32-NEXT:    jmp .LBB3_3
 ; CHECK-32-NEXT:  .LBB3_4: # %atomicrmw.end
+; CHECK-32-NEXT:    addl $12, %esp
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 20
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-32-NEXT:    popl %edi
@@ -373,13 +379,17 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-32-NEXT:    pushl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-32-NEXT:    subl $12, %esp
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-32-NEXT:    .cfi_offset %esi, -20
 ; CHECK-32-NEXT:    .cfi_offset %edi, -16
 ; CHECK-32-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-32-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; CHECK-32-NEXT:    movl (%ebp), %esi
-; CHECK-32-NEXT:    movl 4(%ebp), %edi
+; CHECK-32-NEXT:    fildll (%ebp)
+; CHECK-32-NEXT:    fistpll (%esp)
+; CHECK-32-NEXT:    movl (%esp), %esi
+; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-32-NEXT:    jmp .LBB7_1
 ; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB7_3: # %atomicrmw.start
@@ -407,6 +417,8 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:  .LBB7_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    movl %edi, %edx
+; CHECK-32-NEXT:    addl $12, %esp
+; CHECK-32-NEXT:    .cfi_def_cfa_offset 20
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-32-NEXT:    popl %edi

@@ -63,7 +63,7 @@ define double @test_atomicrmw_xchg_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -85,7 +85,7 @@ define double @test_atomicrmw_fadd_f64_global_system(ptr addrspace(1) %ptr, doub
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -102,7 +102,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -119,7 +119,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -146,7 +146,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -163,7 +163,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -180,7 +180,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -202,7 +202,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -219,7 +219,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -236,7 +236,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -253,7 +253,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -275,7 +275,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -292,7 +292,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -309,7 +309,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -331,7 +331,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -348,7 +348,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -365,7 +365,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -392,7 +392,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -409,7 +409,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -426,7 +426,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -448,7 +448,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(ptr addrspace(1) %ptr, double %value) #0 {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -465,7 +465,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -482,7 +482,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -509,7 +509,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -526,7 +526,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -543,7 +543,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -565,7 +565,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(ptr addrspace(1) %ptr, double %value) #1 {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -582,7 +582,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -599,7 +599,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -626,7 +626,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -643,7 +643,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -660,7 +660,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -682,7 +682,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP3:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -704,7 +704,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -721,7 +721,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -738,7 +738,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -765,7 +765,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -782,7 +782,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -799,7 +799,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -821,7 +821,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -838,7 +838,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -855,7 +855,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -872,7 +872,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -894,7 +894,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -911,7 +911,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -928,7 +928,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -950,7 +950,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -967,7 +967,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -984,7 +984,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1011,7 +1011,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1028,7 +1028,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1045,7 +1045,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1067,7 +1067,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, double %value) #0 {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1084,7 +1084,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1101,7 +1101,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1128,7 +1128,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1145,7 +1145,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1162,7 +1162,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1184,7 +1184,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, double %value) #1 {
 ; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1201,7 +1201,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1218,7 +1218,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1245,7 +1245,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1262,7 +1262,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1279,7 +1279,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1305,7 +1305,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fsub_f64_global_system(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1327,7 +1327,7 @@ define double @test_atomicrmw_fsub_f64_global_system(ptr addrspace(1) %ptr, doub
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1349,7 +1349,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1371,7 +1371,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_remote_memory(pt
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1393,7 +1393,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1415,7 +1415,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1437,7 +1437,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1459,7 +1459,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1485,7 +1485,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmax_f64_global_system(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1507,7 +1507,7 @@ define double @test_atomicrmw_fmax_f64_global_system(ptr addrspace(1) %ptr, doub
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1524,7 +1524,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1541,7 +1541,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1573,7 +1573,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1590,7 +1590,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1612,7 +1612,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1629,7 +1629,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1646,7 +1646,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1663,7 +1663,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1685,7 +1685,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1702,7 +1702,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1719,7 +1719,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1741,7 +1741,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1758,7 +1758,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1775,7 +1775,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1807,7 +1807,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1824,7 +1824,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1846,7 +1846,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1868,7 +1868,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1885,7 +1885,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1902,7 +1902,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1934,7 +1934,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1951,7 +1951,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1973,7 +1973,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1990,7 +1990,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2007,7 +2007,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2024,7 +2024,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2046,7 +2046,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2063,7 +2063,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2080,7 +2080,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2102,7 +2102,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2119,7 +2119,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2136,7 +2136,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2168,7 +2168,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2185,7 +2185,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2211,7 +2211,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmin_f64_global_system(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2233,7 +2233,7 @@ define double @test_atomicrmw_fmin_f64_global_system(ptr addrspace(1) %ptr, doub
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2250,7 +2250,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2267,7 +2267,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2299,7 +2299,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2316,7 +2316,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2338,7 +2338,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2355,7 +2355,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2372,7 +2372,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2389,7 +2389,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -2411,7 +2411,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -2428,7 +2428,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2445,7 +2445,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2467,7 +2467,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2484,7 +2484,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2501,7 +2501,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2533,7 +2533,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2550,7 +2550,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2572,7 +2572,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2594,7 +2594,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2611,7 +2611,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2628,7 +2628,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2660,7 +2660,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2677,7 +2677,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2699,7 +2699,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2716,7 +2716,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2733,7 +2733,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2750,7 +2750,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2772,7 +2772,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2789,7 +2789,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2806,7 +2806,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2828,7 +2828,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2845,7 +2845,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2862,7 +2862,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2894,7 +2894,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -2911,7 +2911,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mod
 ;
 ; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) {
-; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX12:       atomicrmw.start:
 ; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]

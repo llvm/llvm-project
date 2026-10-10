@@ -18,7 +18,7 @@ define i16 @test_atomicrmw_xchg_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; GFX90A-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX90A-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE]] to i32
 ; GFX90A-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GFX90A-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4, !mmra [[META0:![0-9]+]]
+; GFX90A-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4, !mmra [[META0:![0-9]+]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -44,7 +44,7 @@ define i16 @test_atomicrmw_xchg_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; GFX1100-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GFX1100-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE]] to i32
 ; GFX1100-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GFX1100-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4, !mmra [[META0:![0-9]+]]
+; GFX1100-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4, !mmra [[META0:![0-9]+]]
 ; GFX1100-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX1100:       atomicrmw.start:
 ; GFX1100-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -69,7 +69,7 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
 ; GFX90A-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 4
 ; GFX90A-NEXT:    [[TMP1:%.*]] = zext i16 [[IN]] to i32
 ; GFX90A-NEXT:    [[TMP2:%.*]] = zext i16 [[OLD]] to i32
-; GFX90A-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !mmra [[META0]]
+; GFX90A-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[GEP]] monotonic, align 4, !mmra [[META0]]
 ; GFX90A-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], -65536
 ; GFX90A-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; GFX90A:       partword.cmpxchg.loop:
@@ -96,7 +96,7 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
 ; GFX1100-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 4
 ; GFX1100-NEXT:    [[TMP1:%.*]] = zext i16 [[IN]] to i32
 ; GFX1100-NEXT:    [[TMP2:%.*]] = zext i16 [[OLD]] to i32
-; GFX1100-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4, !mmra [[META0]]
+; GFX1100-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[GEP]] monotonic, align 4, !mmra [[META0]]
 ; GFX1100-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], -65536
 ; GFX1100-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; GFX1100:       partword.cmpxchg.loop:

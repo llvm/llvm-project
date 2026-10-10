@@ -112,7 +112,7 @@ define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_sub_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -166,7 +166,7 @@ define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_and_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -220,7 +220,7 @@ define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_nand_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -240,7 +240,7 @@ define i64 @test_atomicrmw_nand_i64_global_system(ptr addrspace(1) %ptr, i64 %va
 define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -260,7 +260,7 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -280,7 +280,7 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory(ptr a
 define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -305,7 +305,7 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_or_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -359,7 +359,7 @@ define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__
 define i64 @test_atomicrmw_xor_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -413,7 +413,7 @@ define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_max_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_max_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -468,7 +468,7 @@ define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_min_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_min_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -523,7 +523,7 @@ define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory_
 define i64 @test_atomicrmw_umax_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_umax_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -578,7 +578,7 @@ define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_umin_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_umin_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -633,7 +633,7 @@ define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory
 define i64 @test_atomicrmw_uinc_wrap_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -689,7 +689,7 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_udec_wrap_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -747,7 +747,7 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_usub_cond_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -768,7 +768,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_system(ptr addrspace(1) %ptr, i6
 define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -789,7 +789,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -810,7 +810,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_remote_memory(
 define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -836,7 +836,7 @@ define i64 @test_atomicrmw_usub_cond_i64_global_system__amdgpu_no_fine_grained_m
 define i64 @test_atomicrmw_usub_sat_i64_global_system(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_system(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -855,7 +855,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_system(ptr addrspace(1) %ptr, i64
 define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -874,7 +874,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_fine_grained_me
 define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -893,7 +893,7 @@ define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_remote_memory(p
 define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
 ; COMMON-LABEL: define i64 @test_atomicrmw_usub_sat_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] monotonic, align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

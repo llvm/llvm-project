@@ -43,7 +43,7 @@
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -60,7 +60,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -77,7 +77,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -94,7 +94,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -116,7 +116,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -133,7 +133,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -160,7 +160,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -177,7 +177,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -194,7 +194,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -211,7 +211,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -233,7 +233,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -250,7 +250,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -277,7 +277,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -294,7 +294,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -311,7 +311,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -328,7 +328,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -350,7 +350,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -367,7 +367,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -394,7 +394,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_remote_m
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -411,7 +411,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -428,7 +428,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -445,7 +445,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -467,7 +467,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -484,7 +484,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -511,7 +511,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -528,7 +528,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -545,7 +545,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -562,7 +562,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -584,7 +584,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -601,7 +601,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -628,7 +628,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -645,7 +645,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -662,7 +662,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -679,7 +679,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -701,7 +701,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -718,7 +718,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_v2bf16_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -745,7 +745,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -762,7 +762,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -779,7 +779,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -796,7 +796,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -818,7 +818,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -835,7 +835,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -862,7 +862,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -879,7 +879,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -896,7 +896,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -913,7 +913,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -935,7 +935,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -952,7 +952,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -979,7 +979,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -996,7 +996,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1013,7 +1013,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1030,7 +1030,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1052,7 +1052,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1069,7 +1069,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1096,7 +1096,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1113,7 +1113,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1130,7 +1130,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1147,7 +1147,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1169,7 +1169,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1186,7 +1186,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1213,7 +1213,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, <2 x bfloat> %value) #0 {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1230,7 +1230,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1247,7 +1247,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1264,7 +1264,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1286,7 +1286,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1303,7 +1303,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1330,7 +1330,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, <2 x bfloat> %value) #1 {
 ; GFX803-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX803-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX803-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX803:       atomicrmw.start:
 ; GFX803-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1347,7 +1347,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX906-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX906-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX906-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX906:       atomicrmw.start:
 ; GFX906-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1364,7 +1364,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX908-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1381,7 +1381,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX90A-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1403,7 +1403,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX10-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX10:       atomicrmw.start:
 ; GFX10-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1420,7 +1420,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 ;
 ; GFX11-LABEL: define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1451,7 +1451,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1473,7 +1473,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent(ptr addrspace(1) %p
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1495,7 +1495,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1517,7 +1517,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_remote_m
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1539,7 +1539,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1561,7 +1561,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1583,7 +1583,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1605,7 +1605,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1631,7 +1631,7 @@ define <2 x bfloat> @test_atomicrmw_fsub_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1653,7 +1653,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent(ptr addrspace(1) %p
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1675,7 +1675,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1697,7 +1697,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_remote_m
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1719,7 +1719,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1741,7 +1741,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1763,7 +1763,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1785,7 +1785,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1811,7 +1811,7 @@ define <2 x bfloat> @test_atomicrmw_fmax_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1833,7 +1833,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent(ptr addrspace(1) %p
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1855,7 +1855,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1877,7 +1877,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_remote_m
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -1899,7 +1899,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_no_fine_gra
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1921,7 +1921,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1943,7 +1943,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1965,7 +1965,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_deno
 define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; COMMON-LABEL: define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x bfloat> [[VALUE:%.*]]) {
-; COMMON-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR]] syncscope("agent") monotonic, align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]

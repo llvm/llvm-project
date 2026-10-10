@@ -62,7 +62,7 @@ define void @atomic_fetch_and32() nounwind {
 ; X64-LABEL: atomic_fetch_and32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock andl $3, sc32(%rip)
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -114,7 +114,7 @@ define void @atomic_fetch_or32() nounwind {
 ; X64-LABEL: atomic_fetch_or32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock orl $3, sc32(%rip)
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB3_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -166,7 +166,7 @@ define void @atomic_fetch_xor32() nounwind {
 ; X64-LABEL: atomic_fetch_xor32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    lock xorl $3, sc32(%rip)
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB4_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -218,7 +218,7 @@ define void @atomic_fetch_nand32(i32 %x) nounwind {
 ; X64-LABEL: atomic_fetch_nand32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB5_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -267,7 +267,7 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X64-LABEL: atomic_fetch_max32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB6_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -384,7 +384,7 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X64-LABEL: atomic_fetch_min32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB7_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -501,7 +501,7 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X64-LABEL: atomic_fetch_umax32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -618,7 +618,7 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X64-LABEL: atomic_fetch_umin32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movl sc32, %eax
+; X64-NEXT:    movl sc32(%rip), %eax
 ; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:  .LBB9_1: # %atomicrmw.start
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1

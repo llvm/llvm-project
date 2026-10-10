@@ -7,8 +7,9 @@
 define void @t(ptr nocapture %p) nounwind ssp {
 entry:
 ; CHECK-LABEL: t:
-; CHECK: movl ([[REG:%[a-z]+]]), %eax
-; CHECK: movl 4([[REG]]), %edx
+; CHECK: movq ([[REG:%[a-z]+]]), %xmm0
+; CHECK: pextrd $1, %xmm0, %edx
+; CHECK: movd %xmm0, %eax
 ; CHECK: LBB0_1:
 ; CHECK: movl %eax, %ebx
 ; CHECK: addl $1, %ebx

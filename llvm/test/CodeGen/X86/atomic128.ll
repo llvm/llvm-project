@@ -53,238 +53,468 @@ entry:
 }
 
 define void @fetch_and_nand(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_nand:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB2_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    andq %r8, %rcx
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    andq %rsi, %rbx
-; CHECK-NEXT:    notq %rbx
-; CHECK-NEXT:    notq %rcx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB2_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_nand:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB2_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    andq %r8, %rcx
+; CHECK-NOAVX-NEXT:    movq %rax, %rbx
+; CHECK-NOAVX-NEXT:    andq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    notq %rbx
+; CHECK-NOAVX-NEXT:    notq %rcx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB2_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_nand:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB2_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    movq %rdx, %rcx
+; CHECK-AVX-NEXT:    andq %r8, %rcx
+; CHECK-AVX-NEXT:    movq %rax, %rbx
+; CHECK-AVX-NEXT:    andq %rsi, %rbx
+; CHECK-AVX-NEXT:    notq %rbx
+; CHECK-AVX-NEXT:    notq %rcx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB2_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw nand ptr %p, i128 %bits release
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_or(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_or:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB3_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    orq %rsi, %rbx
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    orq %r8, %rcx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB3_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_or:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB3_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %rax, %rbx
+; CHECK-NOAVX-NEXT:    orq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    orq %r8, %rcx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB3_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_or:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB3_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    movq %rax, %rbx
+; CHECK-AVX-NEXT:    orq %rsi, %rbx
+; CHECK-AVX-NEXT:    movq %rdx, %rcx
+; CHECK-AVX-NEXT:    orq %r8, %rcx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB3_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw or ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_add(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_add:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB4_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    addq %rsi, %rbx
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    adcq %r8, %rcx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB4_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_add:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB4_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %rax, %rbx
+; CHECK-NOAVX-NEXT:    addq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    adcq %r8, %rcx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB4_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_add:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB4_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    movq %rax, %rbx
+; CHECK-AVX-NEXT:    addq %rsi, %rbx
+; CHECK-AVX-NEXT:    movq %rdx, %rcx
+; CHECK-AVX-NEXT:    adcq %r8, %rcx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB4_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw add ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_sub(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_sub:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB5_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    subq %rsi, %rbx
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    sbbq %r8, %rcx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB5_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_sub:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB5_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %rax, %rbx
+; CHECK-NOAVX-NEXT:    subq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    sbbq %r8, %rcx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB5_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_sub:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB5_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    movq %rax, %rbx
+; CHECK-AVX-NEXT:    subq %rsi, %rbx
+; CHECK-AVX-NEXT:    movq %rdx, %rcx
+; CHECK-AVX-NEXT:    sbbq %r8, %rcx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB5_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw sub ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_min(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_min:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB6_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovgeq %rdx, %rcx
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovgeq %rax, %rbx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB6_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_min:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB6_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    cmpq %rax, %rsi
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    cmovgeq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    cmovgeq %rax, %rbx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB6_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_min:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB6_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    cmpq %rax, %rsi
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    cmovgeq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %rsi, %rbx
+; CHECK-AVX-NEXT:    cmovgeq %rax, %rbx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB6_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw min ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_max(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_max:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB7_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovlq %rdx, %rcx
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovlq %rax, %rbx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB7_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_max:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB7_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    cmpq %rax, %rsi
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    cmovlq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    cmovlq %rax, %rbx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB7_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_max:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB7_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    cmpq %rax, %rsi
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    cmovlq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %rsi, %rbx
+; CHECK-AVX-NEXT:    cmovlq %rax, %rbx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB7_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw max ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_umin(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_umin:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB8_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovaeq %rdx, %rcx
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovaeq %rax, %rbx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB8_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_umin:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB8_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    cmpq %rax, %rsi
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    cmovaeq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    cmovaeq %rax, %rbx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB8_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_umin:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB8_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    cmpq %rax, %rsi
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    cmovaeq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %rsi, %rbx
+; CHECK-AVX-NEXT:    cmovaeq %rax, %rbx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB8_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw umin ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
 }
 
 define void @fetch_and_umax(ptr %p, i128 %bits) {
-; CHECK-LABEL: fetch_and_umax:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rdx, %r8
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB9_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq %rax, %rsi
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    sbbq %rdx, %rcx
-; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovbq %rdx, %rcx
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovbq %rax, %rbx
-; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    jne LBB9_1
-; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, _var(%rip)
-; CHECK-NEXT:    movq %rdx, _var+8(%rip)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    retq
+; CHECK-NOAVX-LABEL: fetch_and_umax:
+; CHECK-NOAVX:       ## %bb.0:
+; CHECK-NOAVX-NEXT:    pushq %rbx
+; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    .p2align 4
+; CHECK-NOAVX-NEXT:  LBB9_1: ## %atomicrmw.start
+; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    cmpq %rax, %rsi
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    cmovbq %rdx, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
+; CHECK-NOAVX-NEXT:    cmovbq %rax, %rbx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-NOAVX-NEXT:    jne LBB9_1
+; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-NOAVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-NOAVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-NOAVX-NEXT:    popq %rbx
+; CHECK-NOAVX-NEXT:    retq
+;
+; CHECK-AVX-LABEL: fetch_and_umax:
+; CHECK-AVX:       ## %bb.0:
+; CHECK-AVX-NEXT:    pushq %rbx
+; CHECK-AVX-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-AVX-NEXT:    .cfi_offset %rbx, -16
+; CHECK-AVX-NEXT:    movq %rdx, %r8
+; CHECK-AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-AVX-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-AVX-NEXT:    vmovq %xmm0, %rax
+; CHECK-AVX-NEXT:    .p2align 4
+; CHECK-AVX-NEXT:  LBB9_1: ## %atomicrmw.start
+; CHECK-AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-AVX-NEXT:    cmpq %rax, %rsi
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    sbbq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %r8, %rcx
+; CHECK-AVX-NEXT:    cmovbq %rdx, %rcx
+; CHECK-AVX-NEXT:    movq %rsi, %rbx
+; CHECK-AVX-NEXT:    cmovbq %rax, %rbx
+; CHECK-AVX-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-AVX-NEXT:    jne LBB9_1
+; CHECK-AVX-NEXT:  ## %bb.2: ## %atomicrmw.end
+; CHECK-AVX-NEXT:    movq %rax, _var(%rip)
+; CHECK-AVX-NEXT:    movq %rdx, _var+8(%rip)
+; CHECK-AVX-NEXT:    popq %rbx
+; CHECK-AVX-NEXT:    retq
   %val = atomicrmw umax ptr %p, i128 %bits seq_cst
   store i128 %val, ptr @var, align 16
   ret void
@@ -344,13 +574,17 @@ define void @atomic_store_seq_cst(ptr %p, i128 %in) {
 ; CHECK-NOAVX-NEXT:    pushq %rbx
 ; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
-; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
-; CHECK-NOAVX-NEXT:    movq (%rdi), %rax
-; CHECK-NOAVX-NEXT:    movq 8(%rdi), %rdx
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    .p2align 4
 ; CHECK-NOAVX-NEXT:  LBB12_1: ## %atomicrmw.start
 ; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
 ; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    jne LBB12_1
 ; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
@@ -375,13 +609,17 @@ define void @atomic_store_release(ptr %p, i128 %in) {
 ; CHECK-NOAVX-NEXT:    pushq %rbx
 ; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
-; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
-; CHECK-NOAVX-NEXT:    movq (%rdi), %rax
-; CHECK-NOAVX-NEXT:    movq 8(%rdi), %rdx
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    .p2align 4
 ; CHECK-NOAVX-NEXT:  LBB13_1: ## %atomicrmw.start
 ; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
 ; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    jne LBB13_1
 ; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end
@@ -405,13 +643,17 @@ define void @atomic_store_relaxed(ptr %p, i128 %in) {
 ; CHECK-NOAVX-NEXT:    pushq %rbx
 ; CHECK-NOAVX-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NOAVX-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NOAVX-NEXT:    movq %rdx, %rcx
-; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
-; CHECK-NOAVX-NEXT:    movq (%rdi), %rax
-; CHECK-NOAVX-NEXT:    movq 8(%rdi), %rdx
+; CHECK-NOAVX-NEXT:    movq %rdx, %r8
+; CHECK-NOAVX-NEXT:    xorl %eax, %eax
+; CHECK-NOAVX-NEXT:    xorl %edx, %edx
+; CHECK-NOAVX-NEXT:    xorl %ecx, %ecx
+; CHECK-NOAVX-NEXT:    xorl %ebx, %ebx
+; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    .p2align 4
 ; CHECK-NOAVX-NEXT:  LBB14_1: ## %atomicrmw.start
 ; CHECK-NOAVX-NEXT:    ## =>This Inner Loop Header: Depth=1
+; CHECK-NOAVX-NEXT:    movq %r8, %rcx
+; CHECK-NOAVX-NEXT:    movq %rsi, %rbx
 ; CHECK-NOAVX-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NOAVX-NEXT:    jne LBB14_1
 ; CHECK-NOAVX-NEXT:  ## %bb.2: ## %atomicrmw.end

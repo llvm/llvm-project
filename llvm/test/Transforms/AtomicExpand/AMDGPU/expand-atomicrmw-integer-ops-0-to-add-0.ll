@@ -123,7 +123,7 @@ define i32 @test_atomicrmw_or_0_local(ptr addrspace(3) %ptr) {
 define i32 @test_atomicrmw_or_1_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_1_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
@@ -142,7 +142,7 @@ define i32 @test_atomicrmw_or_1_global_system(ptr addrspace(1) %ptr) {
 define i32 @test_atomicrmw_or_var_global_system(ptr addrspace(1) %ptr, i32 %val) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_var_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VAL:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]

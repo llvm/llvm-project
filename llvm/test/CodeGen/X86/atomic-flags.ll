@@ -139,11 +139,17 @@ define zeroext i1 @xadd_cmp0_i64(ptr %x) nounwind {
 ;
 ; X86-LABEL: xadd_cmp0_i64:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl (%esi), %eax
-; X86-NEXT:    movl 4(%esi), %edx
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %esi
+; X86-NEXT:    fildll (%esi)
+; X86-NEXT:    fistpll (%esp)
+; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB2_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -156,8 +162,10 @@ define zeroext i1 @xadd_cmp0_i64(ptr %x) nounwind {
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    orl %edx, %eax
 ; X86-NEXT:    sete %al
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %add = atomicrmw add ptr %x, i64 1 seq_cst
   %cmp = icmp eq i64 %add, 0

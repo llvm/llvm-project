@@ -9,8 +9,9 @@ define void @atomic_fetch_add64() nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $40, %esp
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB0_1
@@ -28,8 +29,9 @@ define void @atomic_fetch_add64() nounwind {
 ; X32-NEXT:    jne .LBB0_1
 ; X32-NEXT:    jmp .LBB0_2
 ; X32-NEXT:  .LBB0_2: # %atomicrmw.end13
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB0_3
@@ -47,8 +49,9 @@ define void @atomic_fetch_add64() nounwind {
 ; X32-NEXT:    jne .LBB0_3
 ; X32-NEXT:    jmp .LBB0_4
 ; X32-NEXT:  .LBB0_4: # %atomicrmw.end7
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB0_5
@@ -68,8 +71,9 @@ define void @atomic_fetch_add64() nounwind {
 ; X32-NEXT:    jne .LBB0_5
 ; X32-NEXT:    jmp .LBB0_6
 ; X32-NEXT:  .LBB0_6: # %atomicrmw.end1
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB0_7
@@ -107,8 +111,9 @@ define void @atomic_fetch_sub64() nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $40, %esp
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB1_1
@@ -126,8 +131,9 @@ define void @atomic_fetch_sub64() nounwind {
 ; X32-NEXT:    jne .LBB1_1
 ; X32-NEXT:    jmp .LBB1_2
 ; X32-NEXT:  .LBB1_2: # %atomicrmw.end13
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB1_3
@@ -145,8 +151,9 @@ define void @atomic_fetch_sub64() nounwind {
 ; X32-NEXT:    jne .LBB1_3
 ; X32-NEXT:    jmp .LBB1_4
 ; X32-NEXT:  .LBB1_4: # %atomicrmw.end7
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB1_5
@@ -166,8 +173,9 @@ define void @atomic_fetch_sub64() nounwind {
 ; X32-NEXT:    jne .LBB1_5
 ; X32-NEXT:    jmp .LBB1_6
 ; X32-NEXT:  .LBB1_6: # %atomicrmw.end1
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB1_7
@@ -204,8 +212,9 @@ define void @atomic_fetch_and64() nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB2_1
@@ -222,8 +231,9 @@ define void @atomic_fetch_and64() nounwind {
 ; X32-NEXT:    jne .LBB2_1
 ; X32-NEXT:    jmp .LBB2_2
 ; X32-NEXT:  .LBB2_2: # %atomicrmw.end7
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB2_3
@@ -243,8 +253,9 @@ define void @atomic_fetch_and64() nounwind {
 ; X32-NEXT:    jne .LBB2_3
 ; X32-NEXT:    jmp .LBB2_4
 ; X32-NEXT:  .LBB2_4: # %atomicrmw.end1
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB2_5
@@ -280,8 +291,9 @@ define void @atomic_fetch_or64() nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB3_1
@@ -298,8 +310,9 @@ define void @atomic_fetch_or64() nounwind {
 ; X32-NEXT:    jne .LBB3_1
 ; X32-NEXT:    jmp .LBB3_2
 ; X32-NEXT:  .LBB3_2: # %atomicrmw.end7
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB3_3
@@ -319,8 +332,9 @@ define void @atomic_fetch_or64() nounwind {
 ; X32-NEXT:    jne .LBB3_3
 ; X32-NEXT:    jmp .LBB3_4
 ; X32-NEXT:  .LBB3_4: # %atomicrmw.end1
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB3_5
@@ -356,8 +370,9 @@ define void @atomic_fetch_xor64() nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $32, %esp
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB4_1
@@ -374,8 +389,9 @@ define void @atomic_fetch_xor64() nounwind {
 ; X32-NEXT:    jne .LBB4_1
 ; X32-NEXT:    jmp .LBB4_2
 ; X32-NEXT:  .LBB4_2: # %atomicrmw.end7
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB4_3
@@ -395,8 +411,9 @@ define void @atomic_fetch_xor64() nounwind {
 ; X32-NEXT:    jne .LBB4_3
 ; X32-NEXT:    jmp .LBB4_4
 ; X32-NEXT:  .LBB4_4: # %atomicrmw.end1
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB4_5
@@ -437,8 +454,9 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB5_1
@@ -479,8 +497,9 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB6_1
@@ -520,8 +539,9 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB7_1
@@ -561,8 +581,9 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB8_1
@@ -602,8 +623,9 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB9_1
@@ -670,8 +692,9 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    movl sc64+4, %edx
-; X32-NEXT:    movl sc64, %eax
+; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    pextrd $1, %xmm0, %edx
+; X32-NEXT:    movd %xmm0, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    jmp .LBB12_1

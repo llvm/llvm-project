@@ -4,7 +4,7 @@
 
 define float @test_atomicrmw_fsub_f32_flat(ptr %ptr, float %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f32_flat(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -25,7 +25,7 @@ define float @test_atomicrmw_fsub_f32_flat(ptr %ptr, float %value) {
 
 define float @test_atomicrmw_fsub_f32_global(ptr addrspace(1) %ptr, float %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f32_global(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -46,7 +46,7 @@ define float @test_atomicrmw_fsub_f32_global(ptr addrspace(1) %ptr, float %value
 
 define float @test_atomicrmw_fsub_f32_local(ptr addrspace(3) %ptr, float %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f32_local(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -74,7 +74,7 @@ define half @test_atomicrmw_fsub_f16_flat(ptr %ptr, half %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -110,7 +110,7 @@ define half @test_atomicrmw_fsub_f16_global(ptr addrspace(1) %ptr, half %value) 
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -139,7 +139,7 @@ define half @test_atomicrmw_fsub_f16_global(ptr addrspace(1) %ptr, half %value) 
 
 define half @test_atomicrmw_fsub_f16_global_align4(ptr addrspace(1) %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_global_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -171,7 +171,7 @@ define half @test_atomicrmw_fsub_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GCN-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -200,7 +200,7 @@ define half @test_atomicrmw_fsub_f16_local(ptr addrspace(3) %ptr, half %value) {
 
 define double @test_atomicrmw_fsub_f64_flat__noprivate(ptr %ptr, double %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f64_flat__noprivate(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -230,7 +230,7 @@ define double @test_atomicrmw_fsub_f64_flat(ptr %ptr, double %value) {
 ; GCN-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GCN:       atomicrmw.global:
-; GCN-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GCN-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -256,7 +256,7 @@ define double @test_atomicrmw_fsub_f64_flat(ptr %ptr, double %value) {
 
 define double @test_atomicrmw_fsub_f64_global(ptr addrspace(1) %ptr, double %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f64_global(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -277,7 +277,7 @@ define double @test_atomicrmw_fsub_f64_global(ptr addrspace(1) %ptr, double %val
 
 define double @test_atomicrmw_fsub_f64_local(ptr addrspace(3) %ptr, double %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f64_local(
-; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -298,11 +298,11 @@ define double @test_atomicrmw_fsub_f64_local(ptr addrspace(3) %ptr, double %valu
 
 define float @test_atomicrmw_fsub_f32_global_strictfp(ptr addrspace(1) %ptr, float %value) strictfp {
 ; GCN-LABEL: @test_atomicrmw_fsub_f32_global_strictfp(
-; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4:[0-9]+]]
+; GCN-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0:[0-9]+]]
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
 ; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
@@ -325,7 +325,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; GCN-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -354,7 +354,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 
 define bfloat @test_atomicrmw_fadd_bf16_local_align4(ptr addrspace(3) %ptr, bfloat %value) {
 ; GCN-LABEL: @test_atomicrmw_fadd_bf16_local_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -387,7 +387,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -416,7 +416,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 
 define bfloat @test_atomicrmw_fadd_bf16_global_agent_align4(ptr addrspace(1) %ptr, bfloat %value) {
 ; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_agent_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -449,7 +449,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system(ptr addrspace(1) %ptr, bfl
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -478,7 +478,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system(ptr addrspace(1) %ptr, bfl
 
 define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %ptr, bfloat %value) {
 ; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_system_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -510,7 +510,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GCN-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -546,7 +546,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_agent(ptr %ptr, bfloat %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -575,7 +575,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_agent(ptr %ptr, bfloat %value) {
 
 define bfloat @test_atomicrmw_fadd_bf16_flat_agent_align4(ptr %ptr, bfloat %value) {
 ; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_agent_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -608,7 +608,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_system(ptr %ptr, bfloat %value) {
 ; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -637,7 +637,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_system(ptr %ptr, bfloat %value) {
 
 define bfloat @test_atomicrmw_fadd_bf16_flat_system_align4(ptr %ptr, bfloat %value) {
 ; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_system_align4(
-; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

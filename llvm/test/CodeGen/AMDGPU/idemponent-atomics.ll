@@ -281,7 +281,7 @@ define i32 @global_agent_monotonic_idempotent_and(ptr addrspace(1) %in) {
 ; OPT-LABEL: define i32 @global_agent_monotonic_idempotent_and(
 ; OPT-SAME: ptr addrspace(1) [[IN:%.*]]) {
 ; OPT-NEXT:  [[ENTRY:.*]]:
-; OPT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
+; OPT-NEXT:    [[TMP0:%.*]] = load atomic i32, ptr addrspace(1) [[IN]] syncscope("singlethread") monotonic, align 4
 ; OPT-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; OPT:       [[ATOMICRMW_START]]:
 ; OPT-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], %[[ENTRY]] ], [ [[VAL:%.*]], %[[ATOMICRMW_START]] ]
@@ -393,7 +393,7 @@ define i16 @global_agent_monotonic_idempotent_sub_i16(ptr addrspace(1) %in) {
 ; OPT-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP1]] to i32
 ; OPT-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; OPT-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; OPT-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent-one-as") monotonic, align 4
 ; OPT-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; OPT:       [[ATOMICRMW_START]]:
 ; OPT-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], %[[ENTRY]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
@@ -414,7 +414,7 @@ define i16 @global_agent_monotonic_idempotent_sub_i16(ptr addrspace(1) %in) {
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX942-NEXT:    v_and_b32_e32 v0, -4, v2
-; GFX942-NEXT:    global_load_dword v3, v[0:1], off
+; GFX942-NEXT:    global_load_dword v3, v[0:1], off sc1
 ; GFX942-NEXT:    v_and_b32_e32 v2, 3, v2
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 3, v2
 ; GFX942-NEXT:    s_mov_b32 s0, 0xffff

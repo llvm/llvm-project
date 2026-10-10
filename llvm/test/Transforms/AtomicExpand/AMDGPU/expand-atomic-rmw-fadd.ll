@@ -8,7 +8,7 @@
 
 define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -24,7 +24,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -40,7 +40,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -56,7 +56,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -76,7 +76,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -97,7 +97,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe(ptr addrspace(1) %ptr,
 
 define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(7) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -113,7 +113,7 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -129,7 +129,7 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -145,7 +145,7 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -165,7 +165,7 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -186,7 +186,7 @@ define void @test_atomicrmw_fadd_f32_buffer_fat_ptr_no_use_unsafe(ptr addrspace(
 
 define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -202,7 +202,7 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -218,7 +218,7 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -234,7 +234,7 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -254,7 +254,7 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_as999_no_use_unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -275,7 +275,7 @@ define void @test_atomicrmw_fadd_f32_as999_no_use_unsafe(ptr addrspace(999) %ptr
 
 define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -291,7 +291,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -307,7 +307,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 ; GFX9-NEXT:    ret float [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_global_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -340,7 +340,7 @@ define float @test_atomicrmw_fadd_f32_global_unsafe(ptr addrspace(1) %ptr, float
 
 define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -356,7 +356,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -372,7 +372,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 ; GFX9-NEXT:    ret float [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -405,7 +405,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr_unsafe(ptr addrspace(7) %pt
 
 define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -421,7 +421,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -437,7 +437,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 ; GFX9-NEXT:    ret float [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_as999_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -470,7 +470,7 @@ define float @test_atomicrmw_fadd_f32_as999_unsafe(ptr addrspace(999) %ptr, floa
 
 define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, double %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -486,7 +486,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -502,7 +502,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -526,7 +526,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_global_unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -547,7 +547,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe(ptr addrspace(1) %ptr, doub
 
 define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -563,7 +563,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -579,7 +579,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 ; GFX9-NEXT:    ret float [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -634,7 +634,7 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(ptr %ptr, float %value) #3 {
 
 define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %value) #3 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -650,7 +650,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -666,7 +666,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -690,7 +690,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(ptr %ptr, double %
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_flat_unsafe__noprivate(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -720,7 +720,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; CI-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; CI-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; CI:       atomicrmw.global:
-; CI-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; CI-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] syncscope("wavefront") monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -750,7 +750,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX9-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX9:       atomicrmw.global:
-; GFX9-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX9-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] syncscope("wavefront") monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -780,7 +780,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX908-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.global:
-; GFX908-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX908-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] syncscope("wavefront") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -862,7 +862,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 ; GFX11-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX11:       atomicrmw.global:
-; GFX11-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX11-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] syncscope("wavefront") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -888,7 +888,7 @@ define double @test_atomicrmw_fadd_f64_flat_unsafe(ptr %ptr, double %value) #3 {
 
 define float @test_atomicrmw_fadd_f32_flat(ptr %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_flat(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -909,7 +909,7 @@ define float @test_atomicrmw_fadd_f32_flat(ptr %ptr, float %value) {
 
 define float @test_atomicrmw_fadd_f32_global(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -930,7 +930,7 @@ define float @test_atomicrmw_fadd_f32_global(ptr addrspace(1) %ptr, float %value
 
 define float @test_atomicrmw_fadd_f32_buffer_fat_ptr(ptr addrspace(7) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_buffer_fat_ptr(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(7) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(7) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -951,7 +951,7 @@ define float @test_atomicrmw_fadd_f32_buffer_fat_ptr(ptr addrspace(7) %ptr, floa
 
 define float @test_atomicrmw_fadd_f32_as999(ptr addrspace(999) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_as999(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(999) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(999) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -972,7 +972,7 @@ define float @test_atomicrmw_fadd_f32_as999(ptr addrspace(999) %ptr, float %valu
 
 define void @test_atomicrmw_fadd_f32_global_no_use_ieee(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_no_use_ieee(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -993,7 +993,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_ieee(ptr addrspace(1) %ptr, f
 
 define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1) %ptr, float %value) #4 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1009,7 +1009,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1025,7 +1025,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1041,7 +1041,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1070,7 +1070,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_denorm_flush(ptr addrspace(1)
 
 define float @test_atomicrmw_fadd_f32_local(ptr addrspace(3) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1118,7 +1118,7 @@ define half @test_atomicrmw_fadd_f16_flat(ptr %ptr, half %value) {
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1154,7 +1154,7 @@ define half @test_atomicrmw_fadd_f16_global(ptr addrspace(1) %ptr, half %value) 
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1183,7 +1183,7 @@ define half @test_atomicrmw_fadd_f16_global(ptr addrspace(1) %ptr, half %value) 
 
 define half @test_atomicrmw_fadd_f16_global_align4(ptr addrspace(1) %ptr, half %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f16_global_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1215,7 +1215,7 @@ define half @test_atomicrmw_fadd_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1253,7 +1253,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; CI-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; CI-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; CI:       atomicrmw.global:
-; CI-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; CI-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1283,7 +1283,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX9-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX9:       atomicrmw.global:
-; GFX9-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX9-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1313,7 +1313,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX908-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.global:
-; GFX908-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX908-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1351,7 +1351,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX90A-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -1389,7 +1389,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX942-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX942:       atomicrmw.global:
 ; GFX942-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX942-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX942-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -1419,7 +1419,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 ; GFX11-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX11:       atomicrmw.global:
-; GFX11-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX11-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -1445,7 +1445,7 @@ define double @test_atomicrmw_fadd_f64_flat(ptr %ptr, double %value) {
 
 define double @test_atomicrmw_fadd_f64_flat__noprivate(ptr %ptr, double %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_flat__noprivate(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1466,7 +1466,7 @@ define double @test_atomicrmw_fadd_f64_flat__noprivate(ptr %ptr, double %value) 
 
 define double @test_atomicrmw_fadd_f64_global(ptr addrspace(1) %ptr, double %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_global(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1487,7 +1487,7 @@ define double @test_atomicrmw_fadd_f64_global(ptr addrspace(1) %ptr, double %val
 
 define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_local(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1503,7 +1503,7 @@ define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %valu
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_local(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1519,7 +1519,7 @@ define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %valu
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_local(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1543,7 +1543,7 @@ define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %valu
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_local(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1564,7 +1564,7 @@ define double @test_atomicrmw_fadd_f64_local(ptr addrspace(3) %ptr, double %valu
 
 define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1580,7 +1580,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; CI-NEXT:    ret float [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1596,7 +1596,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX9-NEXT:    ret float [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1612,7 +1612,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX908-NEXT:    ret float [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1632,7 +1632,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f32_global_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1653,7 +1653,7 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 
 define float @test_atomicrmw_fadd_f32_global_one_as(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_one_as(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("one-as") monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1674,7 +1674,7 @@ define float @test_atomicrmw_fadd_f32_global_one_as(ptr addrspace(1) %ptr, float
 
 define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace(1) %ptr, float %value) #1 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1690,7 +1690,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(
-; GFX9-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1727,7 +1727,7 @@ define void @test_atomicrmw_fadd_f32_global_no_use_unsafe_strictfp(ptr addrspace
 
 define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %ptr, double %value) #1 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1743,7 +1743,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1759,7 +1759,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1783,7 +1783,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 ; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_global_unsafe_strictfp(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] syncscope("wavefront") monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1804,7 +1804,7 @@ define double @test_atomicrmw_fadd_f64_global_unsafe_strictfp(ptr addrspace(1) %
 
 define float @test_atomicrmw_fadd_f32_local_strictfp(ptr addrspace(3) %ptr, float %value) #2 {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local_strictfp(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -1851,7 +1851,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 ; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1880,7 +1880,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %val
 
 define bfloat @test_atomicrmw_fadd_bf16_local_align4(ptr addrspace(3) %ptr, bfloat %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_local_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1913,7 +1913,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1942,7 +1942,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 
 define bfloat @test_atomicrmw_fadd_bf16_global_agent_align4(ptr addrspace(1) %ptr, bfloat %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_global_agent_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1975,7 +1975,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system(ptr addrspace(1) %ptr, bfl
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2004,7 +2004,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system(ptr addrspace(1) %ptr, bfl
 
 define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %ptr, bfloat %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_global_system_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2036,7 +2036,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2072,7 +2072,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_agent(ptr %ptr, bfloat %value) {
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2101,7 +2101,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_agent(ptr %ptr, bfloat %value) {
 
 define bfloat @test_atomicrmw_fadd_bf16_flat_agent_align4(ptr %ptr, bfloat %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_flat_agent_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2134,7 +2134,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_system(ptr %ptr, bfloat %value) {
 ; ALL-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; ALL-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; ALL-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; ALL-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; ALL-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2163,7 +2163,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_system(ptr %ptr, bfloat %value) {
 
 define bfloat @test_atomicrmw_fadd_bf16_flat_system_align4(ptr %ptr, bfloat %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_flat_system_align4(
-; ALL-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2189,7 +2189,7 @@ define bfloat @test_atomicrmw_fadd_bf16_flat_system_align4(ptr %ptr, bfloat %val
 
 define void @test_atomicrmw_fadd_f32_global_system_noret(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_system_noret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2210,7 +2210,7 @@ define void @test_atomicrmw_fadd_f32_global_system_noret(ptr addrspace(1) %ptr, 
 
 define float @test_atomicrmw_fadd_f32_global_system_ret(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_system_ret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2231,7 +2231,7 @@ define float @test_atomicrmw_fadd_f32_global_system_ret(ptr addrspace(1) %ptr, f
 
 define void @test_atomicrmw_fadd_f32_global_system_noret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2252,7 +2252,7 @@ define void @test_atomicrmw_fadd_f32_global_system_noret__amdgpu_ignore_denormal
 
 define float @test_atomicrmw_fadd_f32_global_system_ret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_global_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2273,7 +2273,7 @@ define float @test_atomicrmw_fadd_f32_global_system_ret__amdgpu_ignore_denormal_
 
 define void @test_atomicrmw_fadd_f32_daz_global_system_noret(ptr addrspace(1) %ptr, float %value) #3 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_daz_global_system_noret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2294,7 +2294,7 @@ define void @test_atomicrmw_fadd_f32_daz_global_system_noret(ptr addrspace(1) %p
 
 define float @test_atomicrmw_fadd_f32_daz_global_system_ret(ptr addrspace(1) %ptr, float %value) #3 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_daz_global_system_ret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2315,7 +2315,7 @@ define float @test_atomicrmw_fadd_f32_daz_global_system_ret(ptr addrspace(1) %pt
 
 define void @test_atomicrmw_fadd_f32_daz_global_system_noret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) #3 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_daz_global_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2336,7 +2336,7 @@ define void @test_atomicrmw_fadd_f32_daz_global_system_noret__amdgpu_ignore_deno
 
 define float @test_atomicrmw_fadd_f32_daz_global_system_ret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) #3 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_daz_global_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2357,7 +2357,7 @@ define float @test_atomicrmw_fadd_f32_daz_global_system_ret__amdgpu_ignore_denor
 
 define void @test_atomicrmw_fadd_f32_dyndenorm_global_system_noret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) #4 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_dyndenorm_global_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2378,7 +2378,7 @@ define void @test_atomicrmw_fadd_f32_dyndenorm_global_system_noret__amdgpu_ignor
 
 define float @test_atomicrmw_fadd_f32_dyndenorm_global_system_ret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, float %value) #4 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_dyndenorm_global_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(1) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2399,7 +2399,7 @@ define float @test_atomicrmw_fadd_f32_dyndenorm_global_system_ret__amdgpu_ignore
 
 define void @test_atomicrmw_fadd_f32_local_noret(ptr addrspace(3) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2440,7 +2440,7 @@ define void @test_atomicrmw_fadd_f32_local_noret(ptr addrspace(3) %ptr, float %v
 
 define float @test_atomicrmw_fadd_f32_local_ret(ptr addrspace(3) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local_ret(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2481,7 +2481,7 @@ define float @test_atomicrmw_fadd_f32_local_ret(ptr addrspace(3) %ptr, float %va
 
 define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2522,7 +2522,7 @@ define void @test_atomicrmw_fadd_f32_local_noret__amdgpu_ignore_denormal_mode(pt
 
 define float @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr, float %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(
-; CI-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2563,7 +2563,7 @@ define float @test_atomicrmw_fadd_f32_local_ret__amdgpu_ignore_denormal_mode(ptr
 
 define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret(ptr addrspace(1) %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2584,7 +2584,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret(ptr addrspace
 
 define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret(ptr addrspace(1) %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2605,7 +2605,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret(ptr addrspace
 
 define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2626,7 +2626,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_global_system_noret__amdgpu_ignor
 
 define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) #5 {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(1) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2647,7 +2647,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_global_system_ret__amdgpu_ignor
 
 define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(3) %ptr, double %value) #5 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2663,7 +2663,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2679,7 +2679,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2703,7 +2703,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2724,7 +2724,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret(ptr addrspace(
 
 define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(3) %ptr, double %value) #5 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2740,7 +2740,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2756,7 +2756,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2780,7 +2780,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(
 ; GFX942-NEXT:    ret double [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2801,7 +2801,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret(ptr addrspace(
 
 define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr, double %value) #5 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2817,7 +2817,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2833,7 +2833,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2857,7 +2857,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore_denormal_mode(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2878,7 +2878,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_local_system_noret__amdgpu_ignore
 
 define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr, double %value) #5 {
 ; CI-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; CI-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; CI-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2894,7 +2894,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; CI-NEXT:    ret double [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX9-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2910,7 +2910,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX9-NEXT:    ret double [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2934,7 +2934,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 ; GFX942-NEXT:    ret double [[RET]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore_denormal_mode(
-; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(3) [[PTR:%.*]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2955,7 +2955,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_local_system_ret__amdgpu_ignore
 
 define void @test_atomicrmw_fadd_f32_flat_system_noret__amdgpu_ignore_denormal_mode(ptr %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_flat_system_noret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -2976,7 +2976,7 @@ define void @test_atomicrmw_fadd_f32_flat_system_noret__amdgpu_ignore_denormal_m
 
 define float @test_atomicrmw_fadd_f32_flat_system_ret__amdgpu_ignore_denormal_mode(ptr %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_flat_system_ret__amdgpu_ignore_denormal_mode(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3006,7 +3006,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; CI-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; CI-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; CI:       atomicrmw.global:
-; CI-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; CI-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3035,7 +3035,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX9-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX9:       atomicrmw.global:
-; GFX9-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX9-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3064,7 +3064,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX908-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.global:
-; GFX908-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX908-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3101,7 +3101,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX90A-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -3138,7 +3138,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX942-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX942:       atomicrmw.global:
 ; GFX942-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX942-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX942-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -3167,7 +3167,7 @@ define void @test_atomicrmw_fadd_f64_dyndenorm_flat_system_noret__amdgpu_ignore_
 ; GFX11-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX11:       atomicrmw.global:
-; GFX11-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX11-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3201,7 +3201,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; CI-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; CI-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; CI:       atomicrmw.global:
-; CI-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; CI-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3231,7 +3231,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX9-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX9:       atomicrmw.global:
-; GFX9-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX9-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3261,7 +3261,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX908-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX908:       atomicrmw.global:
-; GFX908-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX908-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3299,7 +3299,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX90A-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -3337,7 +3337,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX942-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX942:       atomicrmw.global:
 ; GFX942-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
-; GFX942-NEXT:    [[TMP5:%.*]] = load double, ptr addrspace(1) [[TMP4]], align 8
+; GFX942-NEXT:    [[TMP5:%.*]] = load atomic double, ptr addrspace(1) [[TMP4]] monotonic, align 8
 ; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX942:       atomicrmw.start:
 ; GFX942-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP5]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP9:%.*]], [[ATOMICRMW_START]] ]
@@ -3367,7 +3367,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 ; GFX11-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP1]], align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX11:       atomicrmw.global:
-; GFX11-NEXT:    [[TMP2:%.*]] = load double, ptr [[PTR]], align 8
+; GFX11-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] monotonic, align 8
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -3393,7 +3393,7 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
 
 define void @test_atomicrmw_fadd_f32_region_noret(ptr addrspace(2) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_region_noret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(2) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(2) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3414,7 +3414,7 @@ define void @test_atomicrmw_fadd_f32_region_noret(ptr addrspace(2) %ptr, float %
 
 define float @test_atomicrmw_fadd_f32_region_ret(ptr addrspace(2) %ptr, float %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f32_region_ret(
-; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(2) [[PTR:%.*]], align 4
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic float, ptr addrspace(2) [[PTR:%.*]] monotonic, align 4
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3435,7 +3435,7 @@ define float @test_atomicrmw_fadd_f32_region_ret(ptr addrspace(2) %ptr, float %v
 
 define void @test_atomicrmw_fadd_f64_region_noret(ptr addrspace(2) %ptr, double %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_region_noret(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(2) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(2) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3456,7 +3456,7 @@ define void @test_atomicrmw_fadd_f64_region_noret(ptr addrspace(2) %ptr, double 
 
 define double @test_atomicrmw_fadd_f64_region_ret(ptr addrspace(2) %ptr, double %value) {
 ; ALL-LABEL: @test_atomicrmw_fadd_f64_region_ret(
-; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(2) [[PTR:%.*]], align 8
+; ALL-NEXT:    [[TMP1:%.*]] = load atomic double, ptr addrspace(2) [[PTR:%.*]] monotonic, align 8
 ; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; ALL:       atomicrmw.start:
 ; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3477,7 +3477,7 @@ define double @test_atomicrmw_fadd_f64_region_ret(ptr addrspace(2) %ptr, double 
 
 define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3493,7 +3493,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 ; CI-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3509,7 +3509,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 ; GFX9-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3525,7 +3525,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 ; GFX908-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3545,7 +3545,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3566,7 +3566,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %va
 
 define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3582,7 +3582,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3598,7 +3598,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3614,7 +3614,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3634,7 +3634,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3655,7 +3655,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %va
 
 define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3671,7 +3671,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ; CI-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3687,7 +3687,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ; GFX9-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3703,7 +3703,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ; GFX908-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3723,7 +3723,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3744,7 +3744,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 
 define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3760,7 +3760,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3776,7 +3776,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3792,7 +3792,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3812,7 +3812,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3833,7 +3833,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, 
 
 define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3849,7 +3849,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 ; CI-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3865,7 +3865,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 ; GFX9-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3881,7 +3881,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 ; GFX908-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3901,7 +3901,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3922,7 +3922,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, 
 
 define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3938,7 +3938,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3954,7 +3954,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3970,7 +3970,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -3990,7 +3990,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4011,7 +4011,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <
 
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4027,7 +4027,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 ; CI-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4043,7 +4043,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 ; GFX9-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4059,7 +4059,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 ; GFX908-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4079,7 +4079,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4100,7 +4100,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat
 
 define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4116,7 +4116,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4132,7 +4132,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4148,7 +4148,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4168,7 +4168,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4189,7 +4189,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> 
 
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4205,7 +4205,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ; CI-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4221,7 +4221,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ; GFX9-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4237,7 +4237,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ; GFX908-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4257,7 +4257,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4278,7 +4278,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %p
 
 define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4294,7 +4294,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4310,7 +4310,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4326,7 +4326,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4346,7 +4346,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4367,7 +4367,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr,
 
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4383,7 +4383,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 ; CI-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4399,7 +4399,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 ; GFX9-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4415,7 +4415,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 ; GFX908-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4435,7 +4435,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4456,7 +4456,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %pt
 
 define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4472,7 +4472,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4488,7 +4488,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4504,7 +4504,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4524,7 +4524,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4545,7 +4545,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, 
 
 define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4561,7 +4561,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 ; CI-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4577,7 +4577,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 ; GFX9-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4593,7 +4593,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 ; GFX908-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4613,7 +4613,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4634,7 +4634,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent__unsafe(ptr %ptr, <2 x h
 
 define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4650,7 +4650,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4666,7 +4666,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4682,7 +4682,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4702,7 +4702,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4723,7 +4723,7 @@ define void @test_atomicrmw_fadd_v2f16_flat_agent_noret__unsafe(ptr %ptr, <2 x h
 
 define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4739,7 +4739,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; CI-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4755,7 +4755,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX9-NEXT:    ret <2 x half> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4779,7 +4779,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 ; GFX942-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4800,7 +4800,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__unsafe(ptr addrspace(
 
 define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(1) %ptr, <2 x half> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4816,7 +4816,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4844,7 +4844,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x half>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4865,7 +4865,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4881,7 +4881,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; CI-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4897,7 +4897,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX9-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4913,7 +4913,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX908-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4933,7 +4933,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4954,7 +4954,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent__unsafe(ptr %ptr, <2 
 
 define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4970,7 +4970,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -4986,7 +4986,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5002,7 +5002,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5022,7 +5022,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5043,7 +5043,7 @@ define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret__unsafe(ptr %ptr, <2 x 
 
 define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5059,7 +5059,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; CI-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5075,7 +5075,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX9-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5091,7 +5091,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX908-NEXT:    ret <2 x bfloat> [[TMP5]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5111,7 +5111,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 ; GFX942-NEXT:    ret <2 x bfloat> [[RES]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5132,7 +5132,7 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent__unsafe(ptr addrspa
 
 define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; CI-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; CI-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CI-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CI:       atomicrmw.start:
 ; CI-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5148,7 +5148,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; CI-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; GFX9-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX9-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX9:       atomicrmw.start:
 ; GFX9-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5164,7 +5164,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX908-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX908:       atomicrmw.start:
 ; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5180,7 +5180,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX90A:       atomicrmw.start:
 ; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
@@ -5200,7 +5200,7 @@ define void @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(ptr addrspace
 ; GFX942-NEXT:    ret void
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent_noret__unsafe(
-; GFX11-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load atomic <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GFX11:       atomicrmw.start:
 ; GFX11-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]

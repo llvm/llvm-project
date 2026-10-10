@@ -632,10 +632,11 @@ define void @store_i128_volatile_syncscope(ptr %p, i128 %x) {
 ;
 ; CX16-LABEL: define void @store_i128_volatile_syncscope(
 ; CX16-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) #[[ATTR0]] {
-; CX16-NEXT:    [[TMP1:%.*]] = load volatile i128, ptr [[P]], align 16
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[P]], i128 0, i128 0 syncscope("singlethread") monotonic monotonic, align 16
+; CX16-NEXT:    [[LOADED1:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
 ; CX16-NEXT:    br label %[[ATOMICRMW_START:.*]]
 ; CX16:       [[ATOMICRMW_START]]:
-; CX16-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
+; CX16-NEXT:    [[LOADED:%.*]] = phi i128 [ [[LOADED1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg volatile ptr [[P]], i128 [[LOADED]], i128 [[X]] syncscope("singlethread") seq_cst seq_cst, align 16
 ; CX16-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1
 ; CX16-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0

@@ -11,8 +11,10 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_align4(ptr addrspace(1) %ptr, <2 x 
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    psrld $16, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    pinsrw $0, 2(%rdi), %xmm1
-; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    pinsrw $0, %eax, %xmm1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -65,7 +67,7 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_align4(ptr addrspace(1) %ptr, <2 x 
 define <2 x float> @test_atomicrmw_fadd_v2f32_align8(ptr addrspace(1) %ptr, <2 x float> %value) #0 {
 ; CHECK-LABEL: test_atomicrmw_fadd_v2f32_align8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movq (%rdi), %xmm1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -76,7 +78,7 @@ define <2 x float> @test_atomicrmw_fadd_v2f32_align8(ptr addrspace(1) %ptr, <2 x
 ; CHECK-NEXT:    movq %rax, %xmm1
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x float> %value seq_cst, align 8
   ret <2 x float> %res

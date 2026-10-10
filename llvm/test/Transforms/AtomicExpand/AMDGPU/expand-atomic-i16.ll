@@ -12,7 +12,7 @@ define i16 @test_atomicrmw_xchg_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -34,7 +34,7 @@ define i16 @test_atomicrmw_xchg_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 define i16 @test_atomicrmw_xchg_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_i16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -63,7 +63,7 @@ define i16 @test_atomicrmw_add_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -87,7 +87,7 @@ define i16 @test_atomicrmw_add_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 define i16 @test_atomicrmw_add_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_add_i16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -118,7 +118,7 @@ define i16 @test_atomicrmw_sub_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -151,7 +151,7 @@ define i16 @test_atomicrmw_and_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -188,7 +188,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4(ptr addrspace(1) %ptr, i1
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -224,7 +224,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_drop_md(ptr addrspace(1) %ptr, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -262,7 +262,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_drop_md(ptr addrspace(1) 
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_drop_md(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -298,7 +298,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_preserve_mmra(ptr addrspace(1) %
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4, !mmra [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -336,7 +336,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(ptr addrspa
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4, !mmra [[META0]]
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -363,7 +363,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(ptr 
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -390,7 +390,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(ptr addr
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -417,7 +417,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(ptr 
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -444,7 +444,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(ptr addrspa
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -586,7 +586,7 @@ define i16 @test_atomicrmw_nand_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -619,7 +619,7 @@ define i16 @test_atomicrmw_or_i16_global_agent(ptr addrspace(1) %ptr, i16 %value
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -662,7 +662,7 @@ define i16 @test_atomicrmw_xor_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -703,7 +703,7 @@ define i16 @test_atomicrmw_max_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -737,7 +737,7 @@ define i16 @test_atomicrmw_min_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -771,7 +771,7 @@ define i16 @test_atomicrmw_umax_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -805,7 +805,7 @@ define i16 @test_atomicrmw_umin_i16_global_agent(ptr addrspace(1) %ptr, i16 %val
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -844,7 +844,7 @@ define i16 @test_cmpxchg_i16_global_agent(ptr addrspace(1) %out, i16 %in, i16 %o
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -878,7 +878,7 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[IN:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[OLD:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[GEP]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], -65536
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -916,7 +916,7 @@ define i16 @test_atomicrmw_xchg_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -948,7 +948,7 @@ define i16 @test_cmpxchg_i16_local(ptr addrspace(3) %out, i16 %in, i16 %old) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[OLD:%.*]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], [[INV_MASK]]
 ; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
 ; CHECK:       partword.cmpxchg.loop:
@@ -997,7 +997,7 @@ define i16 @test_atomicrmw_inc_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1025,7 +1025,7 @@ define i16 @test_atomicrmw_inc_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 
 define i16 @test_atomicrmw_inc_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1056,7 +1056,7 @@ define i16 @test_atomicrmw_inc_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1084,7 +1084,7 @@ define i16 @test_atomicrmw_inc_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_inc_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1116,7 +1116,7 @@ define i16 @test_atomicrmw_inc_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1144,7 +1144,7 @@ define i16 @test_atomicrmw_inc_i16_flat_agent(ptr %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_inc_i16_flat_agent_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1176,7 +1176,7 @@ define i16 @test_atomicrmw_dec_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1206,7 +1206,7 @@ define i16 @test_atomicrmw_dec_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 
 define i16 @test_atomicrmw_dec_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1239,7 +1239,7 @@ define i16 @test_atomicrmw_dec_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1269,7 +1269,7 @@ define i16 @test_atomicrmw_dec_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_dec_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1303,7 +1303,7 @@ define i16 @test_atomicrmw_dec_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1333,7 +1333,7 @@ define i16 @test_atomicrmw_dec_i16_flat_agent(ptr %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_dec_i16_flat_agent_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1370,7 +1370,7 @@ define half @test_atomicrmw_xchg_f16_global_agent(ptr addrspace(1) %ptr, half %v
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1394,7 +1394,7 @@ define half @test_atomicrmw_xchg_f16_global_agent_align4(ptr addrspace(1) %ptr, 
 ; CHECK-LABEL: @test_atomicrmw_xchg_f16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1425,7 +1425,7 @@ define half @test_atomicrmw_xchg_f16_flat_agent(ptr %ptr, half %value) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1449,7 +1449,7 @@ define half @test_atomicrmw_xchg_f16_flat_agent_align4(ptr %ptr, half %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_f16_flat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1480,7 +1480,7 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1504,7 +1504,7 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent_align4(ptr addrspace(1) %pt
 ; CHECK-LABEL: @test_atomicrmw_xchg_bf16_global_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1533,7 +1533,7 @@ define i16 @test_atomicrmw_xchg_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(7) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1555,7 +1555,7 @@ define i16 @test_atomicrmw_xchg_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 
 define i16 @test_atomicrmw_xchg_i16_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_i16_buffer_fat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(7) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1583,7 +1583,7 @@ define i16 @test_atomicrmw_add_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 %
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(7) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(7) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1607,7 +1607,7 @@ define i16 @test_atomicrmw_add_i16_buffer_fat_agent(ptr addrspace(7) %ptr, i16 %
 define i16 @test_atomicrmw_add_i16_buffer_fat_agent_align4(ptr addrspace(7) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_add_i16_buffer_fat_agent_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(7) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, ptr addrspace(7) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1638,7 +1638,7 @@ define i16 @test_atomicrmw_sub_i16_global_agent__amdgpu_no_remote_memory(ptr add
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1670,7 +1670,7 @@ define i16 @test_atomicrmw_sub_i16_global_agent__amdgpu_no_fine_grained_memory(p
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1702,7 +1702,7 @@ define i16 @test_atomicrmw_sub_i16_global_agent__amdgpu_no_fine_grained_memory__
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1732,7 +1732,7 @@ define i16 @test_atomicrmw_usub_cond_i16_global_agent(ptr addrspace(1) %ptr, i16
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1760,7 +1760,7 @@ define i16 @test_atomicrmw_usub_cond_i16_global_agent(ptr addrspace(1) %ptr, i16
 
 define i16 @test_atomicrmw_usub_cond_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1791,7 +1791,7 @@ define i16 @test_atomicrmw_usub_cond_i16_local(ptr addrspace(3) %ptr, i16 %value
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1819,7 +1819,7 @@ define i16 @test_atomicrmw_usub_cond_i16_local(ptr addrspace(3) %ptr, i16 %value
 
 define i16 @test_atomicrmw_usub_cond_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1851,7 +1851,7 @@ define i16 @test_atomicrmw_usub_cond_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1879,7 +1879,7 @@ define i16 @test_atomicrmw_usub_cond_i16_flat_agent(ptr %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_usub_cond_i16_flat_agent_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_cond_i16_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1911,7 +1911,7 @@ define i16 @test_atomicrmw_usub_sat_i16_global_agent(ptr addrspace(1) %ptr, i16 
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(1) [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1937,7 +1937,7 @@ define i16 @test_atomicrmw_usub_sat_i16_global_agent(ptr addrspace(1) %ptr, i16 
 
 define i16 @test_atomicrmw_usub_sat_i16_global_agent_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_global_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1966,7 +1966,7 @@ define i16 @test_atomicrmw_usub_sat_i16_local(ptr addrspace(3) %ptr, i16 %value)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr addrspace(3) [[ALIGNEDADDR]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -1992,7 +1992,7 @@ define i16 @test_atomicrmw_usub_sat_i16_local(ptr addrspace(3) %ptr, i16 %value)
 
 define i16 @test_atomicrmw_usub_sat_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_local_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR:%.*]] monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2022,7 +2022,7 @@ define i16 @test_atomicrmw_usub_sat_i16_flat_agent(ptr %ptr, i16 %value) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[ALIGNEDADDR]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
@@ -2048,7 +2048,7 @@ define i16 @test_atomicrmw_usub_sat_i16_flat_agent(ptr %ptr, i16 %value) {
 
 define i16 @test_atomicrmw_usub_sat_i16_flat_agent_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_usub_sat_i16_flat_agent_align4(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR:%.*]] syncscope("agent") monotonic, align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]

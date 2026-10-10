@@ -19,6 +19,7 @@
 ; AMD targets enable SPV_KHR_untyped_pointers by default, so pointers are untyped.
 ; CHECK-DAG: %[[#PointerType:]] = OpTypeUntypedPointerKHR CrossWorkgroup
 ; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 528
+; CHECK-DAG: %[[#MemSem_Relaxed:]] = OpConstant %[[#Int]] 512
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
 ; CHECK-DAG: %[[#Pointer:]] = OpUntypedVariableKHR %[[#PointerType]] CrossWorkgroup %[[#Int]]
@@ -43,7 +44,7 @@ entry:
   ret void
 }
 
-; CHECK:      %[[#Load:]] = OpLoad %[[#Int]] %[[#Pointer]] Aligned 4
+; CHECK:      %[[#Load:]] = OpAtomicLoad %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Relaxed]]
 ; CHECK:      OpBranch %[[#Loop:]]
 ; CHECK:      %[[#Loop]] = OpLabel
 ; CHECK:      %[[#Phi:]] = OpPhi %[[#Int]] %[[#Load]] %[[#Entry:]] %[[#PhiNext:]] %[[#Loop]]
