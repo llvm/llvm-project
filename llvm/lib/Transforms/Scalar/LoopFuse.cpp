@@ -1191,9 +1191,6 @@ private:
       LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << "\n");
     }
 #endif
-    auto DepResult = DI.depends(&I0, &I1);
-    if (!DepResult)
-      return true;
     // If two stores write the same SSA value, fusion is safe regardless of
     // aliasing - writing the same value twice is idempotent.
     if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
@@ -1202,6 +1199,9 @@ private:
       if (S0->getValueOperand() == S1->getValueOperand())
         return true;
     }
+    auto DepResult = DI.depends(&I0, &I1);
+    if (!DepResult)
+      return true;
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
