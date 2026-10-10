@@ -7524,8 +7524,14 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
-        } else
-          VPI->setOperand(0, ResumeVPV);
+        } else {
+          // The start vector may be shared by multiple reductions, so create
+          // a new one using the resume.
+          auto *NewStart = cast<VPInstruction>(VPI->clone());
+          NewStart->setOperand(0, ResumeVPV);
+          NewStart->insertBefore(VPI);
+          ReductionPhi->setStartValue(NewStart);
+        }
         continue;
       }
     } else {
