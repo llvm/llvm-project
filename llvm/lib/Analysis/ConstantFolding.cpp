@@ -53,6 +53,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1817,6 +1818,14 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  case Intrinsic::aarch64_crc32b:
+  case Intrinsic::aarch64_crc32h:
+  case Intrinsic::aarch64_crc32w:
+  case Intrinsic::aarch64_crc32x:
+  case Intrinsic::aarch64_crc32cb:
+  case Intrinsic::aarch64_crc32ch:
+  case Intrinsic::aarch64_crc32cw:
+  case Intrinsic::aarch64_crc32cx:
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
@@ -1824,6 +1833,10 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -2003,9 +2016,11 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !IsStrictFP;
 
-  // NVVM add intrinsics with explicit rounding modes
+  // NVVM fadd/fmul intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
 
   // NVVM div intrinsics with explicit rounding modes
   case Intrinsic::nvvm_div_rm_d:
@@ -2020,20 +2035,6 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_div_rn_ftz_f:
   case Intrinsic::nvvm_div_rp_ftz_f:
   case Intrinsic::nvvm_div_rz_ftz_f:
-
-  // NVVM mul intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_mul_rm_d:
-  case Intrinsic::nvvm_mul_rn_d:
-  case Intrinsic::nvvm_mul_rp_d:
-  case Intrinsic::nvvm_mul_rz_d:
-  case Intrinsic::nvvm_mul_rm_f:
-  case Intrinsic::nvvm_mul_rn_f:
-  case Intrinsic::nvvm_mul_rp_f:
-  case Intrinsic::nvvm_mul_rz_f:
-  case Intrinsic::nvvm_mul_rm_ftz_f:
-  case Intrinsic::nvvm_mul_rn_ftz_f:
-  case Intrinsic::nvvm_mul_rp_ftz_f:
-  case Intrinsic::nvvm_mul_rz_ftz_f:
 
   // NVVM fma intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fma_rm_d:
@@ -3488,6 +3489,17 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   return nullptr;
 }
 
+static Constant *ConstantFoldCRC32(Type *Ty, const APInt *CrcArg,
+                                   const APInt *DataArg, unsigned DataBytes,
+                                   uint32_t Poly) {
+  if (!CrcArg || !DataArg)
+    return nullptr;
+  uint32_t Crc = CrcArg->getZExtValue();
+  uint64_t Data = DataArg->getZExtValue();
+  uint32_t Result = calculateReflectedCRC32(Crc, Data, DataBytes, Poly);
+  return ConstantInt::get(Ty, Result);
+}
+
 static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                             ArrayRef<Constant *> Operands,
                                             const CallBase *Call = nullptr) {
@@ -3673,37 +3685,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           Res.changeSign();
 
         return ConstantFP::get(Ty, Res);
-      }
-
-      case Intrinsic::nvvm_mul_rm_f:
-      case Intrinsic::nvvm_mul_rn_f:
-      case Intrinsic::nvvm_mul_rp_f:
-      case Intrinsic::nvvm_mul_rz_f:
-      case Intrinsic::nvvm_mul_rm_d:
-      case Intrinsic::nvvm_mul_rn_d:
-      case Intrinsic::nvvm_mul_rp_d:
-      case Intrinsic::nvvm_mul_rz_d:
-      case Intrinsic::nvvm_mul_rm_ftz_f:
-      case Intrinsic::nvvm_mul_rn_ftz_f:
-      case Intrinsic::nvvm_mul_rp_ftz_f:
-      case Intrinsic::nvvm_mul_rz_ftz_f: {
-
-        bool IsFTZ = nvvm::FMulShouldFTZ(IntrinsicID);
-        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
-        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
-
-        APFloat::roundingMode RoundMode =
-            nvvm::GetFMulRoundingMode(IntrinsicID);
-
-        APFloat Res = A;
-        APFloat::opStatus Status = Res.multiply(B, RoundMode);
-
-        if (!Res.isNaN() &&
-            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-          return ConstantFP::get(Ty, Res);
-        }
-        return nullptr;
       }
 
       case Intrinsic::nvvm_div_rm_f:
@@ -3969,6 +3950,26 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
+    case Intrinsic::aarch64_crc32b:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
+    case Intrinsic::aarch64_crc32h:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
+    case Intrinsic::aarch64_crc32w:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
+    case Intrinsic::aarch64_crc32x:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
+    case Intrinsic::aarch64_crc32cb:
+    case Intrinsic::x86_sse42_crc32_32_8:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
+    case Intrinsic::aarch64_crc32ch:
+    case Intrinsic::x86_sse42_crc32_32_16:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cw:
+    case Intrinsic::x86_sse42_crc32_32_32:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cx:
+    case Intrinsic::x86_sse42_crc32_64_64:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0x82F63B78);
     }
 
     return nullptr;
@@ -4240,17 +4241,24 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
       }
 
       // TODO: Add constant folding for the _sat variants.
-      if (IntrinsicID == Intrinsic::nvvm_fadd ||
-          IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
-        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+      const bool IsFAdd = IntrinsicID == Intrinsic::nvvm_fadd ||
+                          IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+      const bool IsFMul = IntrinsicID == Intrinsic::nvvm_fmul ||
+                          IntrinsicID == Intrinsic::nvvm_fmul_ftz;
+      if (IsFAdd || IsFMul) {
+        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz ||
+                     IntrinsicID == Intrinsic::nvvm_fmul_ftz;
         APFloat A =
             IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
         APFloat B =
             IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
 
+        APFloat::roundingMode RoundMode =
+            nvvm::GetRoundingModeFromImmArg(Operands[2]);
+
         APFloat Res = A;
         APFloat::opStatus Status =
-            Res.add(B, nvvm::GetRoundingModeFromImmArg(Operands[2]));
+            IsFAdd ? Res.add(B, RoundMode) : Res.multiply(B, RoundMode);
 
         if (!Res.isNaN() &&
             (Status == APFloat::opOK || Status == APFloat::opInexact)) {
@@ -4549,6 +4557,8 @@ static Constant *ConstantFoldFixedVectorCall(
   }
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
     // The rounding mode operand is a scalar, so the lane-wise folding below
     // does not apply.
     // TODO: Fold these by passing the rounding mode through to every lane.

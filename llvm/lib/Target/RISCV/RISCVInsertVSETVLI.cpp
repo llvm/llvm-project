@@ -623,10 +623,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     }
 
     if (MI.isInlineAsm()) {
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ true,
-                                              /*isImp*/ true));
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ true,
-                                              /*isImp*/ true));
+      MI.addRegisterDefined(RISCV::VL, /*RegInfo=*/nullptr);
+      MI.addRegisterDefined(RISCV::VTYPE, /*RegInfo=*/nullptr);
     }
 
     if (MI.isCall() || MI.isInlineAsm() ||

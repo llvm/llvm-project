@@ -4,7 +4,7 @@
 ;; Profile for version 0.
 ; RUN: echo 'v1' > %t1
 ; RUN: echo 'f _Z3asm_goto' >> %t1
-; RUN: echo 'c 0' >> %t1
+; RUN: echo 'c 0 3' >> %t1
 ; RUN: echo 'f _Z3jump_table' >> %t1
 ; RUN: echo 'c 0' >> %t1
 ; RUN: echo 'f _Z3red_zone' >> %t1
@@ -15,14 +15,20 @@
 ; RUN: llc < %s -mtriple=aarch64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=RED-ZONE
 
 define void @_Z3asm_goto(i1 zeroext %0, i1 zeroext %1) nounwind {
-  ;; Check that blocks containing or targeted by asm goto aren't split.
-  ; CHECK-LABEL:  _Z3asm_goto
+  ;; Check that blocks containing or targeted by asm goto aren't split. They are
+  ;; placed after all the blocks of the hot cluster.
+  ; CHECK-LABEL:  _Z3asm_goto:
+  ; CHECK-NOT:    .section
+  ; CHECK:          bl bam
+  ; CHECK-NOT:    .section
+  ; CHECK:          bl bar
+  ; CHECK:          nop
+  ; CHECK:        // Inline asm indirect target
+  ; CHECK:          bl bar
   ; CHECK:        .section	.text.unlikely._Z3asm_goto,"ax",@progbits
   ; CHECK-NEXT:     _Z3asm_goto.cold:
-  ; CHECK-NEXT:       bl bam
-  ; CHECK:          .LBB0_4:
-  ; CHECK:            ret
-  ; CHECK:          .LBB_END0_4:
+  ; CHECK-NEXT:       ldp
+  ; CHECK-NEXT:       ret
 
   br i1 %0, label %3, label %5
 

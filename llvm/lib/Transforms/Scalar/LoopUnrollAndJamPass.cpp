@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -33,7 +34,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -65,24 +65,6 @@ static const char *const LLVMLoopUnrollAndJamFollowupRemainderInner =
 static const char *const LLVMLoopUnrollAndJamFollowupRemainderOuter =
     "llvm.loop.unroll_and_jam.followup_remainder_outer";
 /// @}
-
-static cl::opt<bool>
-    AllowUnrollAndJam("allow-unroll-and-jam", cl::Hidden,
-                      cl::desc("Allows loops to be unroll-and-jammed."));
-
-static cl::opt<unsigned> UnrollAndJamCount(
-    "unroll-and-jam-count", cl::Hidden,
-    cl::desc("Use this unroll count for all loops including those with "
-             "unroll_and_jam_count pragma values, for testing purposes"));
-
-static cl::opt<unsigned> UnrollAndJamThreshold(
-    "unroll-and-jam-threshold", cl::init(60), cl::Hidden,
-    cl::desc("Threshold to use for inner loop when doing unroll and jam."));
-
-static cl::opt<unsigned> PragmaUnrollAndJamThreshold(
-    "pragma-unroll-and-jam-threshold", cl::init(1024), cl::Hidden,
-    cl::desc("Unrolled size limit for loops with an unroll_and_jam(full) or "
-             "unroll_count pragma."));
 
 // Returns true if the loop has any metadata starting with Prefix. For example a
 // Prefix of "llvm.loop.unroll." returns true if we have any unroll metadata.
@@ -140,8 +122,9 @@ getUnrollAndJammedLoopSize(unsigned LoopSize,
 
 // Calculates unroll and jam count.
 static unsigned computeUnrollAndJamCount(
-    Loop *L, Loop *SubLoop, const TargetTransformInfo &TTI, DominatorTree &DT,
-    LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
+    const ScalarOptions &Opts, Loop *L, Loop *SubLoop,
+    const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
+    AssumptionCache *AC, ScalarEvolution &SE,
     const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned OuterTripCount,
     unsigned OuterTripMultiple, const UnrollCostEstimator &OuterUCE,
@@ -161,9 +144,9 @@ static unsigned computeUnrollAndJamCount(
                          OuterTripMultiple, OuterUCE, UP, PP);
 
   // Override with any explicit count from the "unroll-and-jam-count" option.
-  bool UserUnrollCount = UnrollAndJamCount.getNumOccurrences() > 0;
+  bool UserUnrollCount = Opts.unroll_and_jam_count.has_value();
   if (UserUnrollCount) {
-    Count = UnrollAndJamCount;
+    Count = *Opts.unroll_and_jam_count;
     UP.Force = true;
     if (UP.AllowRemainder &&
         getUnrollAndJammedLoopSize(OuterLoopSize, UP, Count) < UP.Threshold &&
@@ -196,7 +179,7 @@ static unsigned computeUnrollAndJamCount(
   // If the loop has an unrolling pragma, we want to be more aggressive with
   // unrolling limits.
   if (ExplicitUnrollAndJam)
-    UP.UnrollAndJamInnerLoopThreshold = PragmaUnrollAndJamThreshold;
+    UP.UnrollAndJamInnerLoopThreshold = Opts.pragma_unroll_and_jam_threshold;
 
   if (!UP.AllowRemainder &&
       getUnrollAndJammedLoopSize(InnerLoopSize, UP, Count) >=
@@ -265,6 +248,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                       ScalarEvolution &SE, const TargetTransformInfo &TTI,
                       AssumptionCache &AC, DependenceInfo &DI,
                       OptimizationRemarkEmitter &ORE, int OptLevel) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
       L, SE, TTI, nullptr, nullptr, ORE, OptLevel, std::nullopt, std::nullopt,
       std::nullopt, std::nullopt, std::nullopt);
@@ -277,10 +261,9 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (EnableMode & TM_ForcedByUser)
     UP.UnrollAndJam = true;
 
-  if (AllowUnrollAndJam.getNumOccurrences() > 0)
-    UP.UnrollAndJam = AllowUnrollAndJam;
-  if (UnrollAndJamThreshold.getNumOccurrences() > 0)
-    UP.UnrollAndJamInnerLoopThreshold = UnrollAndJamThreshold;
+  UP.UnrollAndJam = valueOr(Opts.allow_unroll_and_jam, UP.UnrollAndJam);
+  if (Opts.unroll_and_jam_threshold)
+    UP.UnrollAndJamInnerLoopThreshold = *Opts.unroll_and_jam_threshold;
   // Exit early if unrolling is disabled.
   if (!UP.UnrollAndJam || UP.UnrollAndJamInnerLoopThreshold == 0)
     return LoopUnrollResult::Unmodified;
@@ -357,7 +340,7 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Decide if, and by how much, to unroll
   bool IsExplicitUnrollAndJam = false;
   unsigned Count = computeUnrollAndJamCount(
-      L, SubLoop, TTI, DT, LI, &AC, SE, EphValues, &ORE, OuterTripCount,
+      Opts, L, SubLoop, TTI, DT, LI, &AC, SE, EphValues, &ORE, OuterTripCount,
       OuterTripMultiple, OuterUCE, InnerTripCount, InnerLoopSize,
       IsExplicitUnrollAndJam, UP, PP);
   if (Count <= 1)
