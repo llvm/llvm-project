@@ -309,3 +309,28 @@ int aliasing_ptrs_via_mutable_and_const_ptrs() {
   return 100 / (x - 1);
   // expected-warning@-1 {{Division by zero}} FIXME: We shouldn't report this.
 }
+
+void gh222438_opaque(int *p, const int *q);
+void gh222438_opaque_cb(int *p, const int *q, void (*cb)());
+void cb();
+
+void testNoCallbackWithConstArg() {
+  int x = 0, y = 0;
+  gh222438_opaque(&x, &y);
+  clang_analyzer_eval(x == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
+}
+
+void testCallbackWithConstArg() {
+  int x = 1, y = 1;
+  gh222438_opaque_cb(&x, &y, cb);
+  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
+}
+
+void testNullCallbackWithConstArg() {
+  int x = 1, y = 1;
+  gh222438_opaque_cb(&x, &y, 0);
+  clang_analyzer_eval(x == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
+}

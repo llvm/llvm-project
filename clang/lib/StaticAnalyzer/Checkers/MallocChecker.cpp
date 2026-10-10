@@ -3725,86 +3725,20 @@ ProgramStateRef MallocChecker::evalAssume(ProgramStateRef state,
   return state;
 }
 
-bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
-                                              const CallEvent *Call,
-                                              ProgramStateRef State,
-                                              SymbolRef &EscapingSymbol) const {
-  assert(Call);
-  EscapingSymbol = nullptr;
-
-  // For now, assume that any C++ or block call can free memory.
-  // TODO: If we want to be more optimistic here, we'll need to make sure that
-  // regions escape to C++ containers. They seem to do that even now, but for
-  // mysterious reasons.
-  if (!isa<SimpleFunctionCall, ObjCMethodCall>(Call))
-    return true;
-
-  // Check Objective-C messages by selector name.
-  if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
-    // If it's not a framework call, or if it takes a callback, assume it
-    // can free memory.
-    if (!Call->isInSystemHeader() || Call->argumentsMayEscape())
-      return true;
-
-    // If it's a method we know about, handle it explicitly post-call.
-    // This should happen before the "freeWhenDone" check below.
-    if (isKnownDeallocObjCMethodName(*Msg))
-      return false;
-
-    // If there's a "freeWhenDone" parameter, but the method isn't one we know
-    // about, we can't be sure that the object will use free() to deallocate the
-    // memory, so we can't model it explicitly. The best we can do is use it to
-    // decide whether the pointer escapes.
-    if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
-      return *FreeWhenDone;
-
-    // If the first selector piece ends with "NoCopy", and there is no
-    // "freeWhenDone" parameter set to zero, we know ownership is being
-    // transferred. Again, though, we can't be sure that the object will use
-    // free() to deallocate the memory, so we can't model it explicitly.
-    StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
-    if (FirstSlot.ends_with("NoCopy"))
-      return true;
-
-    // If the first selector starts with addPointer, insertPointer,
-    // or replacePointer, assume we are dealing with NSPointerArray or similar.
-    // This is similar to C++ containers (vector); we still might want to check
-    // that the pointers get freed by following the container itself.
-    if (FirstSlot.starts_with("addPointer") ||
-        FirstSlot.starts_with("insertPointer") ||
-        FirstSlot.starts_with("replacePointer") ||
-        FirstSlot == "valueWithPointer") {
-      return true;
-    }
-
-    // We should escape receiver on call to 'init'. This is especially relevant
-    // to the receiver, as the corresponding symbol is usually not referenced
-    // after the call.
-    if (Msg->getMethodFamily() == OMF_init) {
-      EscapingSymbol = Msg->getReceiverSVal().getAsSymbol();
-      return true;
-    }
-
-    // Otherwise, assume that the method does not free memory.
-    // Most framework methods do not free memory.
+// Returns true if an argument may escape through this call: this
+// covers callees that take ownership of a buffer and may free it
+// later and callees that let an argument escape even through a
+// pointer to a const parameter. Also returns true for a non-null
+// callback argument or a void pointer to non-const argument.
+static bool mayFreeOrLetArgumentsEscape(const CallEvent *Call) {
+  const Decl *D = Call->getDecl();
+  if (!D)
     return false;
-  }
 
-  // At this point the only thing left to handle is straight function calls.
-  const FunctionDecl *FD = cast<SimpleFunctionCall>(Call)->getDecl();
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
-    return true;
-
-  // If it's one of the allocation functions we can reason about, we model
-  // its behavior explicitly.
-  if (isMemCall(*Call))
     return false;
 
-  // If it's not a system call, assume it frees memory.
-  if (!Call->isInSystemHeader())
-    return true;
-
-  // White list the system functions whose arguments escape.
   const IdentifierInfo *II = FD->getIdentifier();
   if (!II)
     return true;
@@ -3831,15 +3765,17 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   // 'closefn' is specified (and if that function does free memory),
   // but it will not if closefn is not specified.
   // Currently, we do not inspect the 'closefn' function (PR12101).
-  if (FName == "funopen")
+  if (FName == "funopen") {
     if (Call->getNumArgs() >= 4 && Call->getArgSVal(4).isConstant(0))
       return false;
+    return true;
+  }
 
   // Do not warn on pointers passed to 'setbuf' when used with std streams,
   // these leaks might be intentional when setting the buffer for stdio.
   // http://stackoverflow.com/questions/2671151/who-frees-setvbuf-buffer
-  if (FName == "setbuf" || FName =="setbuffer" ||
-      FName == "setlinebuf" || FName == "setvbuf") {
+  if (FName == "setbuf" || FName == "setbuffer" || FName == "setlinebuf" ||
+      FName == "setvbuf") {
     if (Call->getNumArgs() >= 1) {
       const Expr *ArgE = Call->getArgExpr(0)->IgnoreParenCasts();
       if (const DeclRefExpr *ArgDRE = dyn_cast<DeclRefExpr>(ArgE))
@@ -3886,11 +3822,126 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     return true;
   }
 
+  // 'int pthread_setspecific(ptheread_key k, const void *)' stores a
+  // value into thread local storage. The value can later be retrieved with
+  // 'void *ptheread_getspecific(pthread_key)'. So even thought the
+  // parameter is 'const void *', the region escapes through the call.
+  if (II->isStr("pthread_setspecific"))
+    return true;
+
+  // xpc_connection_set_context stores a value which can be retrieved later
+  // with xpc_connection_get_context.
+  if (II->isStr("xpc_connection_set_context"))
+    return true;
+
+  // __cxa_demangle can reallocate memory and can return the pointer to
+  // the input buffer.
+  if (II->isStr("__cxa_demangle"))
+    return true;
+
+  // NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
+  // be deallocated by NSMapRemove.
+  if (FName.starts_with("NS") && FName.contains("Insert"))
+    return true;
+
+  // Many CF containers allow objects to escape through custom
+  // allocators/deallocators upon container construction. (PR12101)
+  if (FName.starts_with("CF") || FName.starts_with("CG")) {
+    return FName.contains_insensitive("InsertValue") ||
+           FName.contains_insensitive("AddValue") ||
+           FName.contains_insensitive("SetValue") ||
+           FName.contains_insensitive("WithData") ||
+           FName.contains_insensitive("AppendValue") ||
+           FName.contains_insensitive("SetAttribute");
+  }
+
+  if (Call->argumentsMayEscape() || Call->hasVoidPointerToNonConstArg())
+    return true;
+  return false;
+}
+
+static bool mayEscapeThroughKnownObjCAPI(const CallEvent *Call,
+                                         SymbolRef &EscapingSymbol) {
+  // Check Objective-C messages by selector name.
+  if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
+    EscapingSymbol = nullptr;
+    // If it takes a callback, assume it can free memory.
+    if (Call->argumentsMayEscape())
+      return true;
+
+    // If it's a method we know about, handle it explicitly post-call.
+    // This should happen before the "freeWhenDone" check below.
+    if (isKnownDeallocObjCMethodName(*Msg))
+      return false;
+
+    // If there's a "freeWhenDone" parameter, but the method isn't one we know
+    // about, we can't be sure that the object will use free() to deallocate the
+    // memory, so we can't model it explicitly. The best we can do is use it to
+    // decide whether the pointer escapes.
+    if (std::optional<bool> FreeWhenDone = getFreeWhenDoneArg(*Msg))
+      return *FreeWhenDone;
+
+    // If the first selector piece ends with "NoCopy", and there is no
+    // "freeWhenDone" parameter set to zero, we know ownership is being
+    // transferred. Again, though, we can't be sure that the object will use
+    // free() to deallocate the memory, so we can't model it explicitly.
+    StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
+    if (FirstSlot.ends_with("NoCopy"))
+      return true;
+
+    // If the first selector starts with addPointer, insertPointer,
+    // or replacePointer, assume we are dealing with NSPointerArray or similar.
+    // This is similar to C++ containers (vector); we still might want to check
+    // that the pointers get freed by following the container itself.
+    if (FirstSlot.starts_with("addPointer") ||
+        FirstSlot.starts_with("insertPointer") ||
+        FirstSlot.starts_with("replacePointer") ||
+        FirstSlot == "valueWithPointer") {
+      return true;
+    }
+
+    // We should escape receiver on call to 'init'. This is especially relevant
+    // to the receiver, as the corresponding symbol is usually not referenced
+    // after the call.
+    if (Msg->getMethodFamily() == OMF_init) {
+      EscapingSymbol = Msg->getReceiverSVal().getAsSymbol();
+      return true;
+    }
+    // Otherwise, assume that the method does not free memory.
+    // Most framework methods do not free memory.
+    return false;
+  }
+  return false;
+}
+
+bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
+    const CallEvent *Call, ProgramStateRef State,
+    SymbolRef &EscapingSymbol) const {
+  assert(Call);
+  EscapingSymbol = nullptr;
+
+  // For now, assume that any C++ or block call can free memory.
+  // TODO: If we want to be more optimistic here, we'll need to make sure that
+  // regions escape to C++ containers. They seem to do that even now, but for
+  // mysterious reasons.
+  if (!isa<SimpleFunctionCall, ObjCMethodCall>(Call))
+    return true;
+
+  // If it's one of the allocation functions we can reason about, we model
+  // its behavior explicitly.
+  if (isMemCall(*Call))
+    return false;
+
+  // If it's not a system call, assume it frees memory.
+  if (!Call->isInSystemHeader())
+    return true;
+
   // Handle cases where we know a buffer's /address/ can escape.
   // Note that the above checks handle some special cases where we know that
   // even though the address escapes, it's still our responsibility to free the
   // buffer.
-  if (Call->argumentsMayEscape())
+  if (mayFreeOrLetArgumentsEscape(Call) ||
+      mayEscapeThroughKnownObjCAPI(Call, EscapingSymbol))
     return true;
 
   // Otherwise, assume that the function does not free memory.
@@ -3898,10 +3949,9 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
   return false;
 }
 
-ProgramStateRef MallocChecker::checkPointerEscape(ProgramStateRef State,
-                                             const InvalidatedSymbols &Escaped,
-                                             const CallEvent *Call,
-                                             PointerEscapeKind Kind) const {
+ProgramStateRef MallocChecker::checkPointerEscape(
+    ProgramStateRef State, const InvalidatedSymbols &Escaped,
+    const CallEvent *Call, PointerEscapeKind Kind) const {
   return checkPointerEscapeAux(State, Escaped, Call, Kind,
                                /*IsConstPointerEscape*/ false);
 }
@@ -3940,7 +3990,9 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
 
     if (const RefState *RS = State->get<RegionState>(sym))
       if (RS->isAllocated() || RS->isAllocatedOfSizeZero())
-        if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS))
+        if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS) ||
+            (Call && mayFreeOrLetArgumentsEscape(Call)) ||
+            (Call && mayEscapeThroughKnownObjCAPI(Call, EscapingSymbol)))
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
   return State;

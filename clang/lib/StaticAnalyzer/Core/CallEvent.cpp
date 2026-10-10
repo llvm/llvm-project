@@ -250,7 +250,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
 
   // Indexes of arguments whose values will be preserved by the call.
   llvm::SmallSet<unsigned, 4> PreserveArgs;
-  if (!argumentsMayEscape())
+  if (!hasVoidPointerToNonConstArg())
     findPtrToConstParams(PreserveArgs, *this);
 
   // We should not preserve the contents of the region pointed by "this" when
@@ -632,67 +632,6 @@ void AnyFunctionCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
   const auto *D = cast<FunctionDecl>(CalleeSF->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, D->parameters());
-}
-
-bool AnyFunctionCall::argumentsMayEscape() const {
-  if (CallEvent::argumentsMayEscape() || hasVoidPointerToNonConstArg())
-    return true;
-
-  const FunctionDecl *D = getDecl();
-  if (!D)
-    return true;
-
-  const IdentifierInfo *II = D->getIdentifier();
-  if (!II)
-    return false;
-
-  // This set of "escaping" APIs is
-
-  // - 'int pthread_setspecific(ptheread_key k, const void *)' stores a
-  //   value into thread local storage. The value can later be retrieved with
-  //   'void *ptheread_getspecific(pthread_key)'. So even thought the
-  //   parameter is 'const void *', the region escapes through the call.
-  if (II->isStr("pthread_setspecific"))
-    return true;
-
-  // - xpc_connection_set_context stores a value which can be retrieved later
-  //   with xpc_connection_get_context.
-  if (II->isStr("xpc_connection_set_context"))
-    return true;
-
-  // - funopen - sets a buffer for future IO calls.
-  if (II->isStr("funopen"))
-    return true;
-
-  // - __cxa_demangle - can reallocate memory and can return the pointer to
-  // the input buffer.
-  if (II->isStr("__cxa_demangle"))
-    return true;
-
-  StringRef FName = II->getName();
-
-  // - CoreFoundation functions that end with "NoCopy" can free a passed-in
-  //   buffer even if it is const.
-  if (FName.ends_with("NoCopy"))
-    return true;
-
-  // - NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
-  //   be deallocated by NSMapRemove.
-  if (FName.starts_with("NS") && FName.contains("Insert"))
-    return true;
-
-  // - Many CF containers allow objects to escape through custom
-  //   allocators/deallocators upon container construction. (PR12101)
-  if (FName.starts_with("CF") || FName.starts_with("CG")) {
-    return FName.contains_insensitive("InsertValue") ||
-           FName.contains_insensitive("AddValue") ||
-           FName.contains_insensitive("SetValue") ||
-           FName.contains_insensitive("WithData") ||
-           FName.contains_insensitive("AppendValue") ||
-           FName.contains_insensitive("SetAttribute");
-  }
-
-  return false;
 }
 
 const FunctionDecl *SimpleFunctionCall::getDecl() const {
