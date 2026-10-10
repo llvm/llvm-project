@@ -381,6 +381,11 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
+  /// Check if the input module is compatible with the current setting.
+  /// Otherwise the interpreter might crash on some untrusted inputs, even if it
+  /// passes IRVerifier.
+  bool isValid(raw_ostream &OS) const;
+
   /// Returns a pointer to an evaluated constant \p C. If it cannot be
   /// evaluated, returns nullptr. Note that it returns a pointer to a temporary
   /// buffer when \p C is not context-free. The caller is responsible for

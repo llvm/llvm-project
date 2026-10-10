@@ -1274,6 +1274,142 @@ uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
   return getEffectiveTypeSize(DL.getTypeStoreSize(Ty));
 }
 
+bool Context::isValid(raw_ostream &OS) const {
+  assert(isPowerOf2_32(VScale) && "VScale must be a power of two.");
+  uint32_t MaxNumElements = UINT32_MAX / VScale;
+
+  SmallPtrSet<Type *, 16> ValidAggTys;
+  auto IsSupportedType = [&](auto &&Self, Type *Ty) {
+    switch (Ty->getTypeID()) {
+    case Type::X86_AMXTyID:
+    case Type::TargetExtTyID:
+    case Type::TokenTyID:
+      OS << "Unsupported type " << *Ty << '\n';
+      return false;
+    case Type::ScalableVectorTyID:
+      // Avoid overflow when computing EVL.
+      if (cast<VectorType>(Ty)->getElementCount().getKnownMinValue() >=
+          MaxNumElements) {
+        OS << "The number of elements of " << *Ty << " is too large!\n";
+        return false;
+      }
+      [[fallthrough]];
+    case Type::FixedVectorTyID:
+      if (cast<VectorType>(Ty)->getElementType()->isTargetExtTy()) {
+        OS << "Unsupported type " << *Ty << '\n';
+        return false;
+      }
+      return true;
+    case Type::ArrayTyID:
+      // The number of elements is used as uint32_t in the value
+      // representation. Reject arrays with too many elements to avoid
+      // truncation.
+      if (cast<ArrayType>(Ty)->getNumElements() > UINT32_MAX) {
+        OS << "The number of elements of " << *Ty << " is too large!\n";
+        return false;
+      }
+      [[fallthrough]];
+    case Type::StructTyID:
+      if (auto *STy = dyn_cast<StructType>(Ty); STy && STy->isOpaque()) {
+        OS << "Unsupported opaque struct type %" << STy->getName() << "\n";
+        return false;
+      }
+      if (ValidAggTys.contains(Ty))
+        return true;
+      for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I)
+        if (!Self(Self, Ty->getContainedType(I)))
+          return false;
+      ValidAggTys.insert(Ty);
+      return true;
+    default:
+      return true;
+    }
+  };
+
+  StringRef ModuleFileName = M.getModuleIdentifier();
+
+  auto DumpFunction = [&](Function *F) {
+    OS << "  at ";
+    F->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getFunctionLocation(F))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpArg = [&](Argument *Arg) {
+    OS << "  " << *Arg << " at ";
+    Arg->getParent()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Arg))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpInst = [&](Instruction *Inst) {
+    OS << *Inst << " at ";
+    Inst->getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+    if (ParserContext) {
+      if (auto Loc = ParserContext->getInstructionOrArgumentLocation(Inst))
+        OS << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+    }
+    OS << '\n';
+
+    return false;
+  };
+
+  auto DumpGlobal = [&](GlobalObject *GO) {
+    OS << "  at ";
+    GO->printAsOperand(errs(), /*PrintType=*/false);
+    OS << '\n';
+
+    return false;
+  };
+
+#define CHECK(TYPE, LOC)                                                       \
+  if (!IsSupportedType(IsSupportedType, TYPE))                                 \
+    return LOC;
+
+  for (auto &F : M) {
+    CHECK(F.getReturnType(), DumpFunction(&F));
+    for (auto &Arg : F.args())
+      CHECK(Arg.getType(), DumpArg(&Arg));
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        CHECK(I.getType(), DumpInst(&I));
+        switch (I.getOpcode()) {
+        case Instruction::Call:
+        case Instruction::Invoke:
+          for (auto &Op : I.operands())
+            CHECK(Op->getType(), DumpInst(&I));
+          break;
+        case Instruction::Store:
+        case Instruction::ExtractElement:
+        case Instruction::ExtractValue:
+        case Instruction::BitCast:
+        case Instruction::ShuffleVector:
+          CHECK(I.getOperand(0)->getType(), DumpInst(&I));
+          break;
+        default:
+          break;
+        }
+      }
+  }
+
+  for (auto &G : M.globals())
+    CHECK(G.getValueType(), DumpGlobal(&G));
+
+#undef CHECK
+
+  return true;
+}
+
 RoundingMode Context::getCurrentRoundingMode() const {
   return CurrentRoundingMode;
 }
