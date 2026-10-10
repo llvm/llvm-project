@@ -2378,22 +2378,6 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   if (!isReadable(Ptr))
     return false;
 
-  if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
-    int64_t DesiredTrunc;
-    if (S.getASTContext().CharTy->isSignedIntegerType())
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue();
-    else
-      DesiredTrunc =
-          Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
-    // strchr compares directly to the passed integer, and therefore
-    // always fails if given an int that is not a char.
-    if (Desired != DesiredTrunc) {
-      S.Stk.push<Pointer>();
-      return true;
-    }
-  }
-
   uint64_t DesiredVal;
   if (ID == Builtin::BIwmemchr || ID == Builtin::BI__builtin_wmemchr ||
       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr) {

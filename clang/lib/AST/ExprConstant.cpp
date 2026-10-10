@@ -10877,13 +10877,6 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     switch (BuiltinOp) {
     case Builtin::BIstrchr:
     case Builtin::BI__builtin_strchr:
-      // strchr compares directly to the passed integer, and therefore
-      // always fails if given an int that is not a char.
-      if (!APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
-                                                  E->getArg(1)->getType(),
-                                                  Desired),
-                               Desired))
-        return ZeroInitialization(E);
       StopAtNull = true;
       [[fallthrough]];
     case Builtin::BImemchr:
