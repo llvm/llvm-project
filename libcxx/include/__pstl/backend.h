@@ -30,7 +30,13 @@ _LIBCPP_PUSH_MACROS
 #  elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 #    include <__pstl/backends/default.h>
 #    include <__pstl/backends/libdispatch.h>
+#  elif defined(_LIBCPP_PSTL_BACKEND_STATPART)
+#    include <__pstl/backends/default.h>
+#    include <__pstl/backends/statpart.h>
 #  endif
+
+// statpart pulls <cerrno> in transitively via __thread/thread.h, make sure this include is not is conditional/flaky
+#  include <cerrno>
 
 #endif // _LIBCPP_STD_VER >= 17
 

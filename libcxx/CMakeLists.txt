@@ -321,7 +321,7 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
 option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
 if (APPLE)
-  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
+  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "statpart")
 elseif(LIBCXX_ENABLE_THREADS)
   set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
 else()
@@ -803,6 +803,8 @@ elseif(LIBCXX_PSTL_BACKEND STREQUAL "std_thread")
   config_define(1 _LIBCPP_PSTL_BACKEND_STD_THREAD)
 elseif(LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   config_define(1 _LIBCPP_PSTL_BACKEND_LIBDISPATCH)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "statpart")
+  config_define(1 _LIBCPP_PSTL_BACKEND_STATPART)
 else()
   message(FATAL_ERROR "LIBCXX_PSTL_BACKEND is set to ${LIBCXX_PSTL_BACKEND}, which is not a valid backend.
                        Valid backends are: serial, std_thread and libdispatch")
