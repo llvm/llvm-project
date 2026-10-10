@@ -728,6 +728,9 @@ features cannot lower the translation-unit ABI level;
   `alias` are now correctly diagnosed as definitions when followed by an
   out-of-line definition. (#GH204762)
 
+- `#pragma weak X = Y` no longer drops an explicit visibility on the declaration
+  of `X`; as in GCC, the alias takes `X`'s visibility rather than `Y`'s.
+
 #### Bug Fixes to C++ Support
 
 - Fixed lambdas with specifiers or attributes after the capture list being

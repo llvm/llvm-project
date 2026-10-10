@@ -8835,6 +8835,13 @@ void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
   if (W.getAlias()) { // clone decl, impersonate __attribute(weak,alias(...))
     IdentifierInfo *NDId = ND->getIdentifier();
     NamedDecl *NewD = DeclClonePragmaWeak(ND, W.getAlias(), W.getLocation());
+    // The clone does not redeclare an earlier declaration of the weak name, so
+    // copy its visibility, as GCC does. Look it up before PushOnScopeChains()
+    // below, which would make the lookup find NewD.
+    if (NamedDecl *WeakND = LookupSingleName(S, W.getAlias(), W.getLocation(),
+                                             LookupOrdinaryName))
+      if (const auto *VA = WeakND->getAttr<VisibilityAttr>())
+        NewD->addAttr(VA->clone(Context));
     NewD->addAttr(
         AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
     NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
