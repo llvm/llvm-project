@@ -79,20 +79,27 @@ const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
 }
 
 // TODO: not to create it every time
-std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
+std::unique_ptr<LowerModule>
+createLowerModule(mlir::ModuleOp module,
+                  llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
   // If the triple is not present, e.g. CIR modules parsed from text, we
   // cannot init LowerModule properly.
   assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
-    return nullptr;
 
   // Fetch target information.
-  llvm::Triple triple(mlir::cast<mlir::StringAttr>(
-                          module->getAttr(cir::CIRDialect::getTripleAttrName()))
-                          .getValue());
+  std::optional<llvm::Triple> triple =
+      cir::getTripleFromModule(module, emitDiag);
+  if (!triple)
+    return nullptr;
   clang::TargetOptions targetOptions;
-  targetOptions.Triple = triple.str();
-  auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
+  targetOptions.Triple = triple->str();
+  auto targetInfo = clang::targets::AllocateTarget(*triple, targetOptions);
+  if (!targetInfo) {
+    if (emitDiag)
+      emitDiag() << "unknown triple '" << triple->str() << "' in "
+                 << cir::CIRDialect::getTripleAttrName() << " attribute";
+    return nullptr;
+  }
 
   // Populate the lowering-relevant LangOptions from the module's
   // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
@@ -120,8 +127,14 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   assert(!cir::MissingFeatures::lowerModuleCodeGenOpts());
   clang::CodeGenOptions codeGenOpts;
 
-  if (auto optInfo = mlir::cast_if_present<cir::OptInfoAttr>(
-          module->getAttr(cir::CIRDialect::getOptInfoAttrName()))) {
+  if (auto optAttr = module->getAttr(cir::CIRDialect::getOptInfoAttrName())) {
+    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(optAttr);
+    if (!optInfo) {
+      if (emitDiag)
+        emitDiag() << "malformed " << cir::CIRDialect::getOptInfoAttrName()
+                   << " attribute";
+      return nullptr;
+    }
     codeGenOpts.OptimizationLevel = optInfo.getLevel();
     codeGenOpts.OptimizeSize = optInfo.getSize();
   }

@@ -405,6 +405,28 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
   return success();
 }
 
+std::optional<llvm::Triple> cir::getTripleFromModule(
+    mlir::ModuleOp mod,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag) {
+  if (!mod->hasAttr(cir::CIRDialect::getTripleAttrName())) {
+    if (emitDiag)
+      emitDiag() << "module is missing " << cir::CIRDialect::getTripleAttrName()
+                 << " attribute";
+    return std::nullopt;
+  }
+
+  auto tripleAttr = mod->getAttrOfType<mlir::StringAttr>(
+      cir::CIRDialect::getTripleAttrName());
+  if (!tripleAttr) {
+    if (emitDiag)
+      emitDiag() << "expected a string from module attribute "
+                 << cir::CIRDialect::getTripleAttrName();
+    return std::nullopt;
+  }
+
+  return llvm::Triple{tripleAttr.getValue()};
+}
+
 //===----------------------------------------------------------------------===//
 // InlineKindAttr (FIXME: remove once FuncOp uses assembly format)
 //===----------------------------------------------------------------------===//

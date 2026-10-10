@@ -99,6 +99,13 @@ RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Same lookup as getRecordLayout, but returns a null attribute instead of
 /// asserting when the record has no layout entry.
 RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Attempts to construct an llvm::Triple from a module's cir.triple attribute.
+/// If emitDiag is not null, additional diagnostics information is passed into
+/// emitDiag upon failure.
+std::optional<llvm::Triple> getTripleFromModule(
+    mlir::ModuleOp mod,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitDiag = nullptr);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when

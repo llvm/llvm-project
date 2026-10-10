@@ -1,0 +1,130 @@
+// RUN: cir-opt %s -cir-lowering-prepare -verify-diagnostics -split-input-file
+// RUN: not cir-opt %s -cir-lowering-prepare -split-input-file 2>/dev/null \
+// RUN:   | FileCheck %s --implicit-check-not=cir.func
+
+// Check that missing or malformed module attributes required/used by
+// -cir-lowering-prepare do not cause asserts or compiler crashes, and are
+// diagnosed properly. The pass should fail on bad attributes, so only modules
+// with valid attributes are printed.
+
+
+// Missing cir.triple.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: module is missing cir.triple attribute}}
+module {
+  cir.func @missing_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Non-string cir.triple.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: expected a string from module attribute cir.triple}}
+module attributes {cir.triple = 42 : i32} {
+  cir.func @non_string_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Empty cir.triple.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: unknown triple '' in cir.triple attribute}}
+module attributes {cir.triple = ""} {
+  cir.func @empty_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Malformed cir.triple.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: unknown triple 'garbage' in cir.triple attribute}}
+module attributes {cir.triple = "garbage"} {
+  cir.func @malformed_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Well-formed cir.triple with an unknown target.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: unknown triple 'foobar-unknown-unknown' in cir.triple attribute}}
+module attributes {cir.triple = "foobar-unknown-unknown"} {
+  cir.func @unknown_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple without cir.opt_info.
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // CHECK-LABEL: cir.func @valid_triple(
+  cir.func @valid_triple() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple with a valid cir.opt_info.
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.opt_info = #cir.opt_info<level = 2, size = 1>
+} {
+  // CHECK-LABEL: cir.func @valid_opt_info(
+  cir.func @valid_opt_info() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple with a cir.opt_info that is not an OptInfoAttr.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: malformed cir.opt_info attribute}}
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.opt_info = 1 : i32
+} {
+  cir.func @malformed_opt_info() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple with a string cir.opt_info.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: malformed cir.opt_info attribute}}
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.opt_info = "O2"
+} {
+  cir.func @string_opt_info() {
+    cir.return
+  }
+}
+
+// -----
+
+// Valid cir.triple with a dictionary cir.opt_info that mimics OptInfoAttr's
+// fields.
+
+// expected-error @below {{cannot create a CIR lower module for LoweringPrepare pass: malformed cir.opt_info attribute}}
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.opt_info = {level = 2 : i32, size = 1 : i32}
+} {
+  cir.func @dict_opt_info() {
+    cir.return
+  }
+}

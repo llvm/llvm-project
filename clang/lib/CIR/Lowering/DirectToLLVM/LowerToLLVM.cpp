@@ -6007,11 +6007,14 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
 
   StringRef asmString, constraints;
   mlir::ModuleOp moduleOp = op->getParentOfType<mlir::ModuleOp>();
-  llvm::Triple triple(
-      mlir::cast<mlir::StringAttr>(
-          moduleOp->getAttr(cir::CIRDialect::getTripleAttrName()))
-          .getValue());
-  if (triple.getArch() == llvm::Triple::x86) {
+  auto diag = [&] {
+    return moduleOp.emitError("cannot lower ")
+           << op.getOperationName() << " op: ";
+  };
+  std::optional<llvm::Triple> triple = cir::getTripleFromModule(moduleOp, diag);
+  if (!triple)
+    return mlir::failure();
+  if (triple->getArch() == llvm::Triple::x86) {
     asmString = "cpuid";
     constraints = "={ax},={bx},={cx},={dx},{ax},{cx}";
   } else {

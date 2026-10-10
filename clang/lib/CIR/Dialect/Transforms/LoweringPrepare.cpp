@@ -3313,12 +3313,13 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
 
-  lowerModule = cir::createLowerModule(mlirModule);
-  if (!lowerModule) {
-    mlirModule.emitError() << getArgument()
-                           << " requires a module with a triple";
+  auto diag = [&] {
+    return mlirModule.emitError("cannot create a CIR lower module for ")
+           << getName() << " pass: ";
+  };
+  lowerModule = cir::createLowerModule(mlirModule, diag);
+  if (!lowerModule)
     return signalPassFailure();
-  }
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
