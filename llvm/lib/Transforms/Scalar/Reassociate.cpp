@@ -898,10 +898,10 @@ static Value *NegateValue(Value *V, Instruction *BI,
     }
 
     // Check that if TheNeg is moved out of its parent block, we drop its
-    // source location to avoid extra coverage.
+    // source position to avoid extra coverage.
     // See test dropping_debugloc_the_neg.ll for a detailed example.
     if (TheNeg->getParent() != InsertPt->getParent())
-      TheNeg->updateLocationAfterMove();
+      TheNeg->dropSourcePosition();
     TheNeg->moveBefore(*InsertPt->getParent(), InsertPt);
 
     if (TheNeg->getOpcode() == Instruction::Sub) {

@@ -1457,8 +1457,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     // The PHI must be trivially replaceable.
     Instruction *New = sinkThroughTriviallyReplaceablePHI(
         PN, &I, LI, SunkCopies, SafetyInfo, CurLoop, MSSAU);
-    // As we sink the instruction out of the BB, drop its source location.
-    New->updateLocationAfterMove();
+    // As we sink the instruction out of the BB, drop its source position.
+    New->dropSourcePosition();
     PN->replaceAllUsesWith(New);
     eraseInstruction(*PN, *SafetyInfo, MSSAU);
     Changed = true;
@@ -1504,7 +1504,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
     moveInstructionBefore(I, Dest->getTerminator()->getIterator(), *SafetyInfo,
                           MSSAU, SE);
 
-  I.updateLocationAfterMove();
+  I.dropSourcePosition();
 
   if (isa<LoadInst>(I))
     ++NumMovedLoads;

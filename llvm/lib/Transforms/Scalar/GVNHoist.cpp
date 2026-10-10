@@ -1113,13 +1113,13 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
       DFSNumber[Repl] = DFSNumber[Last]++;
     }
 
-    // Drop the source location as per the debug info update guide, keeping
+    // Drop the source position as per the debug info update guide, keeping
     // only the intermediate-IR layers all the hoisted instructions share.
     SmallVector<DebugLoc> Locs;
     for (Instruction *I : InstructionsToHoist)
       Locs.push_back(I->getDebugLoc());
     Repl->setDebugLoc(DebugLoc::getMergedLocations(Locs));
-    Repl->updateLocationAfterMove();
+    Repl->dropSourcePosition();
     NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
 
     if (isa<LoadInst>(Repl))

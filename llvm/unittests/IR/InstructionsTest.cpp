@@ -1885,7 +1885,7 @@ TEST(InstructionsTest, DropLocation) {
   }
 }
 
-TEST(InstructionsTest, UpdateLocationAfterMove) {
+TEST(InstructionsTest, DropSourcePosition) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
@@ -1932,7 +1932,7 @@ TEST(InstructionsTest, UpdateLocationAfterMove) {
     Instruction *Own = &*F->front().getFirstNonPHIIt();
     ASSERT_TRUE(Own->getDebugLoc()->getIRLayers());
     // No function scope to hold a line 0 location, so the layers go too.
-    Own->updateLocationAfterMove();
+    Own->dropSourcePosition();
     EXPECT_EQ(Own->getDebugLoc(), DebugLoc());
   }
 
@@ -1963,21 +1963,21 @@ TEST(InstructionsTest, UpdateLocationAfterMove) {
       EXPECT_EQ(DL->getIRLayers(), Layers);
     };
 
-    Own->updateLocationAfterMove();
+    Own->dropSourcePosition();
     ExpectLine0WithLayers(Own, OwnLayers);
 
     // Nothing to keep, so the location is dropped as by dropLocation().
-    None->updateLocationAfterMove();
+    None->dropSourcePosition();
     EXPECT_EQ(None->getDebugLoc(), DebugLoc());
 
     // The layers come from the innermost location in the chain that has any.
-    Outer->updateLocationAfterMove();
+    Outer->dropSourcePosition();
     ExpectLine0WithLayers(Outer, OuterLayers);
 
-    Both->updateLocationAfterMove();
+    Both->dropSourcePosition();
     ExpectLine0WithLayers(Both, OwnLayers);
 
-    Call->updateLocationAfterMove();
+    Call->dropSourcePosition();
     ExpectLine0WithLayers(Call, OwnLayers);
   }
 }
