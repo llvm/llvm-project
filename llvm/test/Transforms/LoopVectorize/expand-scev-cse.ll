@@ -9,7 +9,6 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_expanded_twice(
 ; CHECK-SAME: ptr [[BOUND:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[BOUND1:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[LOOP1_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
@@ -19,12 +18,12 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[COND_CMP]], label %[[LOOP1_LATCH]], label %[[LOOP2_PREHEADER:.*]]
 ; CHECK:       [[LOOP2_PREHEADER]]:
 ; CHECK-NEXT:    [[READ_LCSSA:%.*]] = phi ptr [ [[READ]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[BOUND1:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND1]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 3, [[BOUND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP16]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMAX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
@@ -51,7 +50,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[READ_LCSSA]], %[[LOOP2_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[LOOP2_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[LOOP2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    [[READ_NEXT]] = getelementptr i8, ptr [[READ]], i64 4
@@ -59,7 +58,7 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    br label %[[LOOP1]]
 ; CHECK:       [[LOOP2]]:
 ; CHECK-NEXT:    [[SCAN:%.*]] = phi ptr [ [[SCAN_NEXT:%.*]], %[[LOOP2_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[DST_IV:%.*]] = phi ptr [ [[DST_IV_NEXT:%.*]], %[[LOOP2_LATCH]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[DST_IV:%.*]] = phi ptr [ [[DST_IV_NEXT:%.*]], %[[LOOP2_LATCH]] ], [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ult ptr [[SCAN]], [[BOUND]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP2_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP2_LATCH]]:
@@ -108,10 +107,9 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i64 [ [[IV_OUTER_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[IV_OUTER]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[IV_OUTER]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[SMAX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[SMAX]], [[IV_OUTER]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK2:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK2]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH3:.*]]
 ; CHECK:       [[VECTOR_PH3]]:
@@ -141,8 +139,9 @@ define void @sibling_loops_recompute_min_iters_check(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp slt i64 [[IV0_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP0]], label %[[INNER0]], label %[[INNER1_PREHEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[INNER1_PREHEADER]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw i64 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP8]])
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP13]], [[IV_OUTER]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP14]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -223,8 +222,6 @@ define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[COUNT:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[COUNT_NEXT:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 2, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp ne i64 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[OUTER_BODY:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[OUTER_BODY]]:
@@ -235,14 +232,13 @@ define i32 @nested_loop_min_iters_check_expanded_repeatedly(i64 %n) {
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    [[K_START:%.*]] = shl nuw i64 [[I]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 [[K_START]])
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP28]], [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP29]], i64 1)
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[TMP28]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP31]], [[TMP30]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP5]], [[I]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP30]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP9]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP32]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

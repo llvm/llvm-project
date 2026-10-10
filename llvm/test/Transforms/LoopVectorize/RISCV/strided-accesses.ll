@@ -2061,10 +2061,10 @@ define void @iv_start_is_addrec(ptr %p, ptr noalias %q) vscale_range(2, 1024) {
 ; CHECK-NEXT:    br label %[[PH:.*]]
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[IND_INCOMING:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IND_INCOMING_NEXT:%.*]], %[[EXIT:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IND_INCOMING]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IND_INCOMING]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x ptr> poison, ptr [[Q]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 8 x ptr> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2093,8 +2093,6 @@ define void @iv_start_is_addrec(ptr %p, ptr noalias %q) vscale_range(2, 1024) {
 ; CHECK-UF2-NEXT:    br label %[[PH:.*]]
 ; CHECK-UF2:       [[PH]]:
 ; CHECK-UF2-NEXT:    [[IND_INCOMING:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IND_INCOMING_NEXT:%.*]], %[[EXIT:.*]] ]
-; CHECK-UF2-NEXT:    [[TMP6:%.*]] = shl i64 [[IND_INCOMING]], 2
-; CHECK-UF2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
 ; CHECK-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 129, [[TMP1]]
@@ -2106,6 +2104,8 @@ define void @iv_start_is_addrec(ptr %p, ptr noalias %q) vscale_range(2, 1024) {
 ; CHECK-UF2-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], -2
 ; CHECK-UF2-NEXT:    [[TMP5:%.*]] = add i64 [[IND_INCOMING]], [[TMP4]]
 ; CHECK-UF2-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-UF2-NEXT:    [[TMP6:%.*]] = shl i64 [[IND_INCOMING]], 2
+; CHECK-UF2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
 ; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-UF2:       [[VECTOR_BODY]]:
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

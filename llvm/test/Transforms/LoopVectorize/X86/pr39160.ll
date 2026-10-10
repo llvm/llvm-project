@@ -14,7 +14,7 @@ define i32 @foo(ptr addrspace(1) %p) {
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[INDVAR]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
