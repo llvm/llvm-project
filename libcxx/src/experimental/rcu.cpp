@@ -182,7 +182,7 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    rcu_atomic_list_view& stage0_queue = retired_queue_stage0_threadlocal_cache::get_current_thread_instance(
+    rcu_atomic_list_view& thread_local_stage0_cache = retired_queue_stage0_threadlocal_cache::get_current_thread_instance(
         function_ref(std::cw<&rcu_domain_impl::move_to_global_stage0_list_on_destruction>, this));
     stage0_queue.push_front(node);
   }
