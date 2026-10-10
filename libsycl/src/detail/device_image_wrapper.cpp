@@ -34,16 +34,10 @@ ProgramWrapper::~ProgramWrapper() {
   // TODO: define a way to report errors from dtors.
 }
 
-ol_symbol_handle_t
-ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
-  auto It = MKernels.find(KernelName);
-  if (It != MKernels.end())
-    return It->second;
-
+ol_symbol_handle_t ProgramWrapper::getKernel(std::string_view KernelName) {
   ol_symbol_handle_t Kernel{};
-  callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
-               OL_SYMBOL_KIND_KERNEL, &Kernel);
-  MKernels.emplace(KernelName, Kernel);
+  callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
+               &Kernel);
   return Kernel;
 }
 
