@@ -4852,7 +4852,14 @@ MachineInstr *AArch64InstructionSelector::emitCarryIn(MachineInstr &I,
   // instruction is deleted by the calling function, otherwise the previous
   // instruction might become dead and would get deleted.
   MachineInstr *SrcMI = MRI->getVRegDef(CarryReg);
-  if (SrcMI == I.getPrevNode()) {
+
+  // Debug instructions (e.g., DBG_VALUE) do not modify NZCV, so skip all that
+  // immediately precede I.
+  MachineInstr *PrevMI = I.getPrevNode();
+  while (PrevMI && PrevMI->isDebugInstr())
+    PrevMI = PrevMI->getPrevNode();
+
+  if (SrcMI == PrevMI) {
     if (auto *CarrySrcMI = dyn_cast<GAddSubCarryOut>(SrcMI)) {
       bool ProducesNegatedCarry = CarrySrcMI->isSub();
       if (NeedsNegatedCarry == ProducesNegatedCarry &&
