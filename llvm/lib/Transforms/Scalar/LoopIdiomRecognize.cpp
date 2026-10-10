@@ -1067,8 +1067,8 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
-/// Add a range to newly formed memset/memmove/memcpy intrinsic with an upper
-/// bound derived from the loop's constant max trip count.
+/// Add a range to newly formed memset/memset.pattern/memmove/memcpy intrinsic
+/// with an upper bound derived from the loop's constant max trip count.
 static void addRangeAttrFromTripCount(CallInst *NewCall, unsigned ArgNo,
                                       uint64_t ElemsPerIter, Loop *L,
                                       ScalarEvolution *SE) {
