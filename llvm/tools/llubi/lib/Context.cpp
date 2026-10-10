@@ -829,6 +829,25 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   llvm_unreachable("Unsupported first class type.");
 }
 
+AnyValue Context::extractBits(const ByteValue &Src, uint32_t OffsetInBits,
+                              Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Src.getBitWidth() &&
+         "Bit range out of bounds");
+  return fromBytes(ConstBytesView(Src.bytes(), DL), Ty, OffsetInBits,
+                   /*CheckPaddingBits=*/false,
+                   /*ContainsUndefinedBits=*/nullptr);
+}
+
+void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
+                         const AnyValue &Val, Type *Ty) {
+  assert(OffsetInBits + DL.getTypeSizeInBits(Ty).getFixedValue() <=
+             Base.getBitWidth() &&
+         "Bit range out of bounds");
+  toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
+          /*PaddingBits=*/false);
+}
+
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
                        bool *ContainsUndefinedBits) {
   return fromBytes(
