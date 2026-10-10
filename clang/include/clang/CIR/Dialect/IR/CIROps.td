@@ -2859,12 +2859,12 @@ def CIR_SubOp
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
+def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2877,11 +2877,13 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
     %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.mul %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 
   let arguments = (ins
-    CIR_AnyIntOrVecOfIntType:$lhs, CIR_AnyIntOrVecOfIntType:$rhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$lhs,
+    CIR_AnyIntOrVecOrMatrixOfIntType:$rhs,
     UnitProp:$no_signed_wrap,
     UnitProp:$no_unsigned_wrap
   );
@@ -2997,7 +2999,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
   let description = [{
     The `cir.fsub` operation performs floating-point subtraction on its
     operands. Both operands and the result must have the same floating-point
-    scalar or vector-of-float type.
+    scalar or vector-of-float or matrix-of-float type..
 
     Example:
 
@@ -3005,6 +3007,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
     %0 = cir.fsub %a, %b : !cir.float
     %1 = cir.fsub %a, %b : !cir.double
     %2 = cir.fsub %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fsub %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -3015,7 +3018,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
 // FMulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FMulOp : CIR_FPBinaryOp<"fmul"> {
+def CIR_FMulOp : CIR_FPBinaryOp<"fmul", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point multiplication";
   let description = [{
     The `cir.fmul` operation performs floating-point multiplication on its

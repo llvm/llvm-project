@@ -2252,9 +2252,18 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     }
   }
   if (ops.fullType->isConstantMatrixType()) {
-    assert(!cir::MissingFeatures::matrixType());
-    cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix types");
-    return {};
+    if (isa<cir::MatrixType>(ops.lhs.getType()) &&
+        isa<cir::MatrixType>(ops.rhs.getType())) {
+      cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix matrix multiplication");
+      return {};
+    }
+
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, ops.fpFeatures);
+    auto [lhs, rhs] =
+        builder.splatMatrixOpOperandsIfNecessary(loc, ops.lhs, ops.rhs);
+    if (cir::isFPOrVectorOrMatrixOfFPType(lhs.getType()))
+      return builder.createFMul(loc, lhs, rhs);
+    return builder.createMul(loc, lhs, rhs);
   }
   if (ops.compType->isUnsignedIntegerType() &&
       cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
