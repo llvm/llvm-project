@@ -3911,18 +3911,9 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
 
-    if (Pattern->isModed()) {
-      // The mode attribute changes the underlying type without updating the
-      // type source information.
-      CanonType =
-          SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
-                    AliasTemplate->getLocation(), AliasTemplate->getDeclName());
-    } else {
-      TypeSourceInfo *SubstTypeInfo =
-          SubstType(Pattern->getTypeSourceInfo(), TemplateArgLists,
-                    AliasTemplate->getLocation(), AliasTemplate->getDeclName());
-      CanonType = SubstTypeInfo ? SubstTypeInfo->getType() : QualType();
-    }
+    CanonType =
+        SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
+                  AliasTemplate->getLocation(), AliasTemplate->getDeclName());
     if (CanonType.isNull()) {
       // If this was enable_if and we failed to find the nested type
       // within enable_if in a SFINAE context, dig out the specific

@@ -696,9 +696,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to Attribute Support
 
-- Fixed missing source locations for diagnostics when instantiating
-  `ext_vector_type` with a fixed length and a dependent element type. (#GH229300)
-
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
 
