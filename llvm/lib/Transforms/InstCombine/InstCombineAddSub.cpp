@@ -2572,6 +2572,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         auto *SubUser = dyn_cast<Instruction>(U);
         if (!SubUser || SubUser->getOpcode() != Instruction::Sub) continue;
         if (SubUser->getOperand(0) != Op0) continue;
+        if (!DT.dominates(SubUser, &I)) continue;
         Value *SubRHS = SubUser->getOperand(1);
         if (SubRHS == B) {
           // (A - B) exists, rewrite A - (B + C) as (A - B) - C
