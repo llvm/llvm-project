@@ -1197,3 +1197,35 @@ define i8 @scmp_zero_of_sext_memcmp(ptr %x, ptr %y) {
 
 declare void @use64(i64 %value)
 declare i32 @memcmp(ptr, ptr, i64)
+
+declare i8 @llvm.scmp.i8.i32(i32, i32)
+
+define i1 @scmp_eq_zext_ne_same(i32 %x) {
+; CHECK-LABEL: define i1 @scmp_eq_zext_ne_same(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[X]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cmp = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  %ne = icmp ne i32 %x, 0
+  %zext = zext i1 %ne to i8
+  %r = icmp eq i8 %cmp, %zext
+  ret i1 %r
+}
+
+define i1 @scmp_eq_zext_ne_trunc(i64 %v) {
+; CHECK-LABEL: define i1 @scmp_eq_zext_ne_trunc(
+; CHECK-SAME: i64 [[V:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = trunc i64 [[V]] to i32
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne i64 [[V]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[NE]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = trunc i64 %v to i32
+  %cmp = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  %ne = icmp ne i64 %v, 0
+  %zext = zext i1 %ne to i8
+  %r = icmp eq i8 %cmp, %zext
+  ret i1 %r
+}

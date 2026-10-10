@@ -7457,6 +7457,38 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
     }
   }
 
+  // icmp eq (scmp X, 0), (zext (icmp ne V, 0)) --> xor (icmp ne V, 0), (X <s 1)
+  // icmp ne (scmp X, 0), (zext (icmp ne V, 0)) --> not (xor (icmp ne V, 0), (X <s 1))
+  // where X is V or obtained from V by truncation(s), i.e. V==0 implies X==0.
+  {
+    Value *ScmpX, *V, *ZextSrc;
+    CmpPredicate OuterPred;
+    if (match(&I, m_c_ICmp(OuterPred,
+           m_OneUse(m_Intrinsic<Intrinsic::scmp>(m_Value(ScmpX), m_Zero())),
+           m_OneUse(m_ZExt(m_Value(ZextSrc))))) &&
+        ICmpInst::isEquality(OuterPred) &&
+        ScmpX->getType()->isIntOrIntVectorTy()) {
+      if (auto *ZextIcmp = dyn_cast<ICmpInst>(ZextSrc)) {
+        if (ZextIcmp->getPredicate() == ICmpInst::ICMP_NE &&
+            match(ZextIcmp->getOperand(1), m_Zero())) {
+          V = ZextIcmp->getOperand(0);
+          // Check that ScmpX is V or obtained by truncating V
+          Value *Base = ScmpX;
+          while (auto *TI = dyn_cast<TruncInst>(Base))
+            Base = TI->getOperand(0);
+          if (Base == V) {
+            Value *XLe0 = Builder.CreateICmpSLT(
+                ScmpX, ConstantInt::get(ScmpX->getType(), 1));
+            Value *XorVal = Builder.CreateXor(ZextSrc, XLe0);
+            if (OuterPred == ICmpInst::ICMP_NE)
+              XorVal = Builder.CreateNot(XorVal);
+            return replaceInstUsesWith(I, XorVal);
+          }
+        }
+      }
+    }
+  }
+
   return nullptr;
 }
 
