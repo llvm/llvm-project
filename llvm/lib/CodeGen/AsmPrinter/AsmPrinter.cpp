@@ -2001,27 +2001,40 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   return Name;
 }
 
+/// Returns the operand that references the callee of \p MI if \p MI is a
+/// direct call, or null if \p MI is an indirect call.
+static const MachineOperand *getDirectCalleeOperand(const TargetInstrInfo &TII,
+                                                    const MachineInstr &MI) {
+  const MachineOperand &CalleeOperand = TII.getCalleeOperand(MI);
+  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol())
+    return &CalleeOperand;
+  // Direct calls to callees that are reached through the GOT (e.g., `-fno-plt`
+  // or `nonlazybind` callees) are lowered to calls through a memory operand
+  // whose displacement references the callee, e.g.,
+  // `call *callee@GOTPCREL(%rip)` on X86. A call through the GOT entry of a
+  // function can only reach that function, so treat such calls as direct calls.
+  if (!MI.mayLoad())
+    return nullptr;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isSymbol() ||
+        (MO.isGlobal() && MO.getGlobal()->getValueType()->isFunctionTy()))
+      return &MO;
+  }
+  return nullptr;
+}
+
 void AsmPrinter::handleCallsiteForCallgraph(
     FunctionCallGraphInfo &FuncCGInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
     const MachineInstr &MI) {
   assert(MI.isCall() && "This method is meant for call instructions only.");
-  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
-  const MachineOperand &CalleeOperand = TII->getCalleeOperand(MI);
-  if (CalleeOperand.isGlobal() || CalleeOperand.isSymbol()) {
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+  if (const MachineOperand *CalleeOperand = getDirectCalleeOperand(TII, MI)) {
     // Handle direct calls.
-    MCSymbol *CalleeSymbol = nullptr;
-    switch (CalleeOperand.getType()) {
-    case llvm::MachineOperand::MO_GlobalAddress:
-      CalleeSymbol = getSymbol(CalleeOperand.getGlobal());
-      break;
-    case llvm::MachineOperand::MO_ExternalSymbol:
-      CalleeSymbol = GetExternalSymbolSymbol(CalleeOperand.getSymbolName());
-      break;
-    default:
-      llvm_unreachable(
-          "Expected to only handle direct call instructions here.");
-    }
+    MCSymbol *CalleeSymbol =
+        CalleeOperand->isGlobal()
+            ? getSymbol(CalleeOperand->getGlobal())
+            : GetExternalSymbolSymbol(CalleeOperand->getSymbolName());
     FuncCGInfo.DirectCallees.insert(CalleeSymbol);
     return; // Early exit after handling the direct call instruction.
   }
