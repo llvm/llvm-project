@@ -1611,6 +1611,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+)
+
+add_fp_unittest(
   ilogb_test
   SUITE
     libc-math-unittests
@@ -1651,6 +1666,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ilogbl
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbf128_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    ilogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1732,6 +1763,20 @@ add_fp_unittest(
     LogbTest.h
   DEPENDS
     libc.src.math.logbl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf128_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    logbf128_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
 )
 
