@@ -173,6 +173,14 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
+  // Builtin bitcode is internalized into the module that links it, so each
+  // PTU of an incremental session needs its own copy. Plain bitcode files are
+  // still linked once.
+  if (LangOpts.IncrementalExtensions && LinkModules.empty() &&
+      loadLinkModules(CI, M->getContext(), LinkModules,
+                      /*OnlyInternalized=*/true))
+    return true;
+
   for (auto &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
 
