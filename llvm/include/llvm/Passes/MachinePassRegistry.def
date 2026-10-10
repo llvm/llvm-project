@@ -256,7 +256,6 @@ DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfi
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
 DUMMY_MACHINE_FUNCTION_PASS("fs-profile-loader", MIRProfileLoaderNewPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
-DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prolog-epilog-code", PrologEpilogCodeInserterPass)
