@@ -139,3 +139,37 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Regression test for a crash in the lowering of a contraction with a scalar result 
+// see https://github.com/llvm/llvm-project/issues/228971
+
+// CHECK-LABEL: func.func @contract_scalar_result_unit_dims_lowering
+//  CHECK-SAME:   %[[X:.*]]: vector<2xbf16>, %{{.*}}: bf16, %[[ACC:.*]]: bf16) -> bf16
+//       CHECK:   %[[M:.*]] = arith.mulf %[[X]], %{{.*}} : vector<2xbf16>
+//       CHECK:   %[[R:.*]] = vector.reduction <add>, %[[M]], %[[ACC]] : vector<2xbf16> into bf16
+//  CHECK-NEXT:   return %[[R]] : bf16
+func.func @contract_scalar_result_unit_dims_lowering(%x: vector<2xbf16>, %scale: bf16, %acc: bf16) -> bf16 {
+  %lhs = vector.shape_cast %x : vector<2xbf16> to vector<1x1x2xbf16>
+  %rhs = vector.broadcast %scale : bf16 to vector<1x1x2xbf16>
+  %out = vector.contract {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                     affine_map<(d0, d1, d2) -> ()>],
+    iterator_types = ["reduction", "reduction", "reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %acc : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+  return %out : bf16
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.reduction_to_contract
+      transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
+    } : !transform.any_op
+    transform.yield
+  }
+}
