@@ -101,11 +101,20 @@ static mlir::Attribute getAttrIfConstant(mlir::Value val,
     return mlir::LLVM::UndefAttr::get(val.getContext());
   if (mlir::Operation *op = val.getDefiningOp()) {
     unsigned resNum = llvm::cast<mlir::OpResult>(val).getResultNumber();
-    llvm::SmallVector<mlir::Value> results;
-    if (mlir::succeeded(rewriter.tryFold(op, results)) &&
-        results.size() > resNum) {
-      if (auto cst = results[resNum].getDefiningOp<mlir::LLVM::ConstantOp>())
-        return cst.getValue();
+    mlir::NormalizedOpFoldResults foldResults = rewriter.tryFold(op);
+    if (foldResults.replacesAll()) {
+      mlir::OpFoldResult foldResult = foldResults[resNum];
+      if (auto value = llvm::dyn_cast<mlir::Value>(foldResult)) {
+        if (auto cst = value.getDefiningOp<mlir::LLVM::ConstantOp>())
+          return cst.getValue();
+      } else if (llvm::isa_and_present<mlir::LLVM::LLVMDialect>(
+                     op->getDialect())) {
+        // Only an attribute that the LLVM dialect materializes as
+        // llvm.mlir.constant counts.
+        auto attr = llvm::cast<mlir::Attribute>(foldResult);
+        if (mlir::LLVM::ConstantOp::isBuildableWith(attr, val.getType()))
+          return attr;
+      }
     }
   }
   if (auto trunc = val.getDefiningOp<mlir::LLVM::TruncOp>())
