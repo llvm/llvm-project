@@ -2254,7 +2254,8 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   if (ops.fullType->isConstantMatrixType()) {
     if (isa<cir::MatrixType>(ops.lhs.getType()) &&
         isa<cir::MatrixType>(ops.rhs.getType())) {
-      cgf.cgm.errorNYI("ScalarExprEmitter::emitMul: matrix matrix multiplication");
+      cgf.cgm.errorNYI(
+          "ScalarExprEmitter::emitMul: matrix matrix multiplication");
       return {};
     }
 
