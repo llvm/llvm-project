@@ -646,6 +646,14 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     CodeGenFunction(CGM).generateThunk(ThunkFn, FnInfo, GD, TI, IsUnprototyped);
   }
 
+  // A return adjusting thunk fills the vtable slot created by the overridden
+  // method recorded in the thunk info, so it is reached by virtual calls typed
+  // after that method rather than after the thunk's target. Identify it in the
+  // call graph section accordingly (see
+  // CodeGenModule::GetCallGraphFunctionType).
+  if (CGM.getCodeGenOpts().CallGraphSection && TI.Method)
+    CGM.createIndirectFunctionTypeMD(TI.Method, ThunkFn);
+
   setThunkProperties(CGM, TI, ThunkFn, ForVTable, GD);
   return ThunkFn;
 }

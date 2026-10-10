@@ -6406,7 +6406,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     *callOrInvoke = CI;
     if (CGM.getCodeGenOpts().CallGraphSection) {
       QualType CST;
-      if (TargetDecl && TargetDecl->getFunctionType())
+      if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+        CST = CGM.GetCallGraphFunctionType(FD);
+      else if (TargetDecl && TargetDecl->getFunctionType())
         CST = QualType(TargetDecl->getFunctionType(), 0);
       else if (const auto *FPT =
                    Callee.getAbstractInfo().getCalleeFunctionProtoType())

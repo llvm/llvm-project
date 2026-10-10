@@ -3633,6 +3633,29 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
+/// Returns the method that introduced the virtual function that \p MD
+/// overrides, i.e., the root of its (first) override chain.
+static const CXXMethodDecl *GetRootOverriddenMethod(const CXXMethodDecl *MD) {
+  while (MD->size_overridden_methods() > 0)
+    MD = *MD->begin_overridden_methods();
+  return MD;
+}
+
+QualType CodeGenModule::GetCallGraphFunctionType(const FunctionDecl *FD) const {
+  // A virtual call is typed after the method named at the call site, but it
+  // can reach any overrider of that method, whose type may differ from it only
+  // in a covariant return type. Identify every method of an override chain by
+  // the type of the method that introduced the virtual function, so that calls
+  // through a pointer to any class of the hierarchy match the overriders they
+  // can reach. Methods that override several virtual functions with different
+  // (covariant) return types are identified after the first one; the thunks
+  // that fill the vtable slots of the others are identified after those (see
+  // CodeGenVTables::maybeEmitThunk).
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isVirtual())
+    return GetRootOverriddenMethod(MD)->getType();
+  return FD->getType();
+}
+
 void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
                                                  llvm::Function *F) {
   // All functions which are not internal linkage could be indirect targets.
@@ -3646,7 +3669,7 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
     if (!HasBody || !Def)
       Def = FD;
 
-    QualType QT = Def->getType();
+    QualType QT = GetCallGraphFunctionType(Def);
     if (const auto *FNPT = QT->getAs<FunctionNoProtoType>()) {
       // If there is no definition available in this TU for an unprototyped
       // function declaration, skip generating incomplete callgraph metadata.
@@ -3664,10 +3687,12 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
-    F->addMetadata(
+    // A function is identified by a single type identifier: replace any
+    // callgraph metadata attached to a previous declaration of the function.
+    F->setMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(getLLVMContext(),
-                            {CreateMetadataIdentifierForCallGraphType(QT)}));
+        llvm::MDTuple::get(getLLVMContext(),
+                           {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
