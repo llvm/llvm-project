@@ -1050,6 +1050,8 @@ public:
   }
 
   void returnFromCallee() {
+    if (hasProgramExited())
+      return;
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
