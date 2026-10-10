@@ -236,6 +236,7 @@
 // CHECK-NEXT: Weak (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: WeakRef (SubjectMatchRule_variable, SubjectMatchRule_function)
 // CHECK-NEXT: WebAssemblyExportName (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
+// CHECK-NEXT: WebAssemblyGlobal (SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: WebAssemblyImportModule (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: WebAssemblyImportName (SubjectMatchRule_function, SubjectMatchRule_variable_is_global)
 // CHECK-NEXT: WorkGroupSizeHint (SubjectMatchRule_function)

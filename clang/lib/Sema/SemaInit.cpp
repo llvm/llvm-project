@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -4029,6 +4030,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_ReferenceAddrspaceMismatchTemporary:
   case FK_ReferenceInitDropsQualifiers:
   case FK_ReferenceInitFailed:
+  case FK_WasmGlobalReferenceBinding:
   case FK_ConversionFailed:
   case FK_ConversionFromPropertyFailed:
   case FK_TooManyInitsForScalar:
@@ -5495,6 +5497,12 @@ static bool isNonReferenceableGLValue(Expr *E) {
          E->refersToMatrixElement();
 }
 
+static bool isWebAssemblyGlobalReference(Sema &S, const Expr *E) {
+  return S.Context.getTargetInfo().getTriple().isWasm() && E->isGLValue() &&
+         E->getType().getAddressSpace() ==
+             getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR);
+}
+
 /// Reference initialization without resolving overloaded functions.
 ///
 /// We also can get here in C if we call a builtin which is declared as
@@ -5537,6 +5545,12 @@ static void TryReferenceInitializationCore(Sema &S,
         (RefRelationship == Sema::Ref_Compatible ||
          (Kind.isCStyleOrFunctionalCast() &&
           RefRelationship == Sema::Ref_Related))) {
+      if (isWebAssemblyGlobalReference(S, Initializer)) {
+        Sequence.SetFailed(
+            InitializationSequence::FK_WasmGlobalReferenceBinding);
+        return;
+      }
+
       //   - is an lvalue (but is not a bit-field), and "cv1 T1" is
       //     reference-compatible with "cv2 T2," or
       if (RefConv & (Sema::ReferenceConversions::DerivedToBase |
@@ -5657,6 +5671,11 @@ static void TryReferenceInitializationCore(Sema &S,
        (InitCategory.isPRValue() &&
         (S.getLangOpts().CPlusPlus17 || T2->isRecordType() ||
          T2->isArrayType())))) {
+    if (isWebAssemblyGlobalReference(S, Initializer)) {
+      Sequence.SetFailed(InitializationSequence::FK_WasmGlobalReferenceBinding);
+      return;
+    }
+
     ExprValueKind ValueKind = InitCategory.isXValue() ? VK_XValue : VK_PRValue;
     if (InitCategory.isPRValue() && T2->isRecordType()) {
       // The corresponding bullet in C++03 [dcl.init.ref]p5 gives the
@@ -9279,6 +9298,11 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   }
 
+  case FK_WasmGlobalReferenceBinding:
+    S.Diag(Kind.getLocation(), diag::err_wasm_global_reference_binding)
+        << Args[0]->getSourceRange();
+    break;
+
   case FK_ReferenceInitFailed:
     S.Diag(Kind.getLocation(), diag::err_reference_bind_failed)
       << DestType.getNonReferenceType()
@@ -9650,6 +9674,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_ReferenceAddrspaceMismatchTemporary:
       OS << "reference with mismatching address space bound to temporary";
+      break;
+
+    case FK_WasmGlobalReferenceBinding:
+      OS << "reference bound to WebAssembly global";
       break;
 
     case FK_ReferenceInitFailed:

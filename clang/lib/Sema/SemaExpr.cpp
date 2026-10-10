@@ -70,6 +70,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 #include <limits>
 #include <optional>
 
@@ -15439,6 +15440,12 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     if (OpTy->isWebAssemblyTableType()) {
       Diag(OpLoc, diag::err_wasm_table_pr)
           << 1 << OrigOp.get()->getSourceRange();
+      return QualType();
+    }
+    if (OpTy.getAddressSpace() ==
+        getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)) {
+      Diag(OpLoc, diag::err_wasm_global_address_taken)
+          << OrigOp.get()->getSourceRange();
       return QualType();
     }
   }

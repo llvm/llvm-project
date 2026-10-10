@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 namespace clang {
 
@@ -455,6 +456,47 @@ void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (Context) WebAssemblyExportNameAttr(Context, AL, Str));
   D->addAttr(UsedAttr::CreateImplicit(Context));
+}
+
+void SemaWasm::handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL) {
+  ASTContext &Context = getASTContext();
+  auto *VD = cast<VarDecl>(D);
+  if (VD->getType().getAddressSpace() != LangAS::Default) {
+    Diag(AL.getLoc(), diag::err_wasm_global_with_address_space);
+    VD->setInvalidDecl();
+    return;
+  }
+  if (VD->getTLSKind() != VarDecl::TLS_None) {
+    Diag(AL.getLoc(), diag::err_wasm_global_thread_local);
+    VD->setInvalidDecl();
+    return;
+  }
+  VD->setType(Context.getAddrSpaceQualType(
+      VD->getType(),
+      getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)));
+  D->addAttr(::new (Context) WebAssemblyGlobalAttr(Context, AL));
+}
+
+bool SemaWasm::checkWebAssemblyGlobalType(VarDecl *VD) {
+  QualType Type = VD->getType();
+  SourceLocation Loc = VD->getAttr<WebAssemblyGlobalAttr>()->getLocation();
+  LangAS GlobalAS =
+      getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR);
+  if (Type.getAddressSpace() != GlobalAS) {
+    if (Type.getAddressSpace() != LangAS::Default)
+      return Diag(Loc, diag::err_wasm_global_with_address_space);
+    VD->setType(getASTContext().getAddrSpaceQualType(Type, GlobalAS));
+  }
+
+  if (Type->isDependentType() || Type->isUndeducedType())
+    return false;
+
+  if (!Type->isScalarType())
+    return Diag(Loc, diag::err_wasm_global_non_scalar);
+  if (Type->isAnyComplexType() || Type->isMemberPointerType() ||
+      getASTContext().getTypeSize(Type) > 64)
+    return Diag(Loc, diag::err_wasm_global_unsupported_type) << Type;
+  return false;
 }
 
 } // namespace clang
