@@ -2458,12 +2458,8 @@ class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
   VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
-                    VPValue *Start, DebugLoc DL = DebugLoc::getUnknown())
-      : VPHeaderPHIRecipe(VPRecipeID, UnderlyingInstr, Start,
-                          Start->getScalarType(), DL) {}
-
-  VPHeaderPHIRecipe(VPRecipeTy VPRecipeID, Instruction *UnderlyingInstr,
-                    VPValue *Start, Type *ResultTy, DebugLoc DL)
+                    VPValue *Start, Type *ResultTy,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPSingleDefRecipe(VPRecipeID, Start, ResultTy, UnderlyingInstr, DL) {}
 
   const VPRecipeBase *getAsRecipe() const override { return this; }
@@ -2808,7 +2804,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   VPFirstOrderRecurrencePHIRecipe(PHINode *Phi, VPValue &Start,
                                   VPValue &BackedgeValue)
       : VPHeaderPHIRecipe(VPRecipeBase::VPFirstOrderRecurrencePHISC, Phi,
-                          &Start) {
+                          &Start, Start.getScalarType()) {
     addOperand(&BackedgeValue);
   }
 
@@ -2893,7 +2889,8 @@ public:
                        VPValue &BackedgeValue, ReductionStyle Style,
                        const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
+      : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start,
+                          Start.getScalarType()),
         VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
@@ -4084,7 +4081,7 @@ class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPActiveLaneMaskPHISC, nullptr,
-                          StartMask, DL) {}
+                          StartMask, StartMask->getScalarType(), DL) {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
@@ -4116,7 +4113,7 @@ class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
   VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
       : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
-                          StartIV, DL) {}
+                          StartIV, StartIV->getScalarType(), DL) {}
 
   ~VPCurrentIterationPHIRecipe() override = default;
 
