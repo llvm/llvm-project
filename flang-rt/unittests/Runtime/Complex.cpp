@@ -8,6 +8,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
+#include <cstring>
 #include <limits>
 
 #ifdef __clang__
@@ -95,6 +96,20 @@ MATCHER_P(ExpectComplexDoubleEq, c, "") {
 #define EXPECT_COMPLEX_DOUBLE_EQ(val1, val2) \
   EXPECT_THAT(val1, ExpectComplexDoubleEq(val2))
 
+// Bit-for-bit, unlike the FloatEq above: the COMPLEX(4) power tests below
+// check the exact result, not a result within a few ULPs of it. Eq() alone
+// would not do -- it is numeric equality, so it cannot tell +0.0f from
+// -0.0f -- hence the explicit bit-pattern comparison.
+MATCHER_P(ExpectComplexFloatExactlyEq, c, "") {
+  auto sameBits = [](float a, float b) {
+    return std::memcmp(&a, &b, sizeof(float)) == 0;
+  };
+  return sameBits(arg.real(), c.real()) && sameBits(arg.imag(), c.imag());
+}
+
+#define EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(val1, val2) \
+  EXPECT_THAT(val1, ExpectComplexFloatExactlyEq(val2))
+
 using namespace std::literals::complex_literals;
 
 TEST(Complex, cpowi) {
@@ -168,4 +183,41 @@ TEST(Complex, zpowk) {
 
   EXPECT_COMPLEX_DOUBLE_EQ(
       zpowk(0. + 1i, std::numeric_limits<std::int64_t>::min()), 1. + 0i);
+}
+
+// Exact bit-pattern check, unlike FloatEq above: folded constants and
+// runtime evaluation must agree bit for bit (complex-powi.cpp). Reference
+// values are the double-precision powers rounded once to single; each
+// differs from what per-step single-precision rounding produces.
+TEST(Complex, cpowiRoundsToSingleOnce) {
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(1.234567f + 1.234567if, 7),
+      0x1.17c216p+5f - 0x1.17c216p+5if); // (34.9697685, -34.9697685)
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(0.5f + 0.6if, -10),
+      -0x1.2a557cp+3f - 0x1.d31a54p+2if); // (-9.3229351, -7.29848194)
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(0.5f + 0.6if, -5),
+      -0x1.1f30bap+0f + 0x1.a05f82p+1if); // (-1.12183726, 3.25291467)
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(1.1f - 0.7if, 13),
+      0x1.d6d9e8p+3f - 0x1.bd1ecap+4if); // (14.7140999, -27.8200169)
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(1.0625f + 0.8125if, 21),
+      0x1.747dfap+7f + 0x1.98ea74p+8if); // (186.246048, 408.915833)
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(cpowi(-1.75f + 0.375if, -7),
+      -0x1.9e870cp-10f - 0x1.15590ap-6if); // (-0.00158129702, -0.0169279668)
+}
+
+// The exponent's kind does not select the accumulation precision -- the
+// COMPLEX(4) result type does -- so cpowk must produce exactly the values
+// above, not merely values close to them.
+TEST(Complex, cpowkRoundsToSingleOnce) {
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(1.234567f + 1.234567if, 7), 0x1.17c216p+5f - 0x1.17c216p+5if);
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(0.5f + 0.6if, -10), -0x1.2a557cp+3f - 0x1.d31a54p+2if);
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(0.5f + 0.6if, -5), -0x1.1f30bap+0f + 0x1.a05f82p+1if);
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(1.1f - 0.7if, 13), 0x1.d6d9e8p+3f - 0x1.bd1ecap+4if);
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(1.0625f + 0.8125if, 21), 0x1.747dfap+7f + 0x1.98ea74p+8if);
+  EXPECT_COMPLEX_FLOAT_EXACTLY_EQ(
+      cpowk(-1.75f + 0.375if, -7), -0x1.9e870cp-10f - 0x1.15590ap-6if);
 }
