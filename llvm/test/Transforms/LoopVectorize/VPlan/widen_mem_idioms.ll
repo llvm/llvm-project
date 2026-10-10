@@ -23,7 +23,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.indices> = getelementptr inbounds ir<%indices>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l.idx> = load ir<%gep.indices>
-; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom1> = zext ir<%l.idx> to i64
+; CHECK-NEXT:      EMIT ir<%idxprom1> = zext ir<%l.idx> to i64
 ; CHECK-NEXT:      EMIT ir<%gep.bucket> = getelementptr inbounds ir<%buckets>, ir<%idxprom1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%l.bucket> = load ir<%gep.bucket>
 ; CHECK-NEXT:      EMIT ir<%inc> = add nsw ir<%l.bucket>, ir<1>
