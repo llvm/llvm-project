@@ -3246,6 +3246,10 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   SMLoc TypeLoc = Lex.getLoc();
   switch (Lex.getKind()) {
   default:
+    if (InConstantVector &&
+        (Lex.getKind() == lltok::APSInt || Lex.getKind() == lltok::APFloat))
+      return error(Lex.getLoc(),
+                   "constant vector elements must begin with a type");
     return tokError(Msg);
   case lltok::Type:
     // Type ::= 'float' | 'void' (etc)
@@ -3298,6 +3302,11 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
         return true;
     } else if (parseArrayVectorType(Result, true))
       return true;
+    if (InConstantVector && Result && Result->isVectorTy())
+      return error(
+          TypeLoc,
+          "unexpected vector type; constant vector elements should not "
+          "repeat the type");
     break;
   case lltok::LocalVar: {
     // Type ::= %foo
@@ -4271,6 +4280,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     ID.Kind = ValID::t_LocalName;
     break;
   case lltok::APSInt:
+    if (InConstantVector && !ExpectedTy)
+      return error(ID.Loc, "constant vector elements must begin with a type");
     ID.APSIntVal = Lex.getAPSIntVal();
     ID.Kind = ValID::t_APSInt;
     break;
@@ -4343,11 +4354,16 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     // ValID ::= '<' ConstVector '>'         --> Vector.
     // ValID ::= '<' '{' ConstVector '}' '>' --> Packed Struct.
     Lex.Lex();
+
     bool isPackedStruct = EatIfPresent(lltok::lbrace);
 
     SmallVector<Constant*, 16> Elts;
     LocTy FirstEltLoc = Lex.getLoc();
-    if (parseGlobalValueVector(Elts) ||
+    bool SavedInConstantVector = InConstantVector;
+    InConstantVector = true;
+    bool ParseRes = parseGlobalValueVector(Elts);
+    InConstantVector = SavedInConstantVector;
+    if (ParseRes ||
         (isPackedStruct &&
          parseToken(lltok::rbrace, "expected end of packed struct")) ||
         parseToken(lltok::greater, "expected end of constant"))
@@ -4999,13 +5015,24 @@ bool LLParser::parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts) {
     return false;
 
   do {
-    // Let the caller deal with inrange.
     if (Lex.getKind() == lltok::kw_inrange)
       return false;
 
     Constant *C;
-    if (parseGlobalTypeAndValue(C))
-      return true;
+    if (InConstantVector) {
+      Type *Ty = nullptr;
+      bool Saved = InConstantVector;
+      if (parseType(Ty))
+        return true;
+      InConstantVector = false;
+      bool Res = parseGlobalValue(Ty, C);
+      InConstantVector = Saved;
+      if (Res)
+        return true;
+    } else {
+      if (parseGlobalTypeAndValue(C))
+        return true;
+    }
     Elts.push_back(C);
   } while (EatIfPresent(lltok::comma));
 
