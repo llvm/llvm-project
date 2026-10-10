@@ -2467,24 +2467,22 @@ define void @reverse4_shuffle_1024(ptr noalias %out, ptr noalias readonly %in) {
 ;
 ; CHECK-GI-LABEL: reverse4_shuffle_1024:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #1024 // =0x400
-; CHECK-GI-NEXT:    add x9, x0, #32
-; CHECK-GI-NEXT:    add x10, x1, #32
+; CHECK-GI-NEXT:    adrp x8, .LCPI7_0
+; CHECK-GI-NEXT:    add x9, x1, #32
+; CHECK-GI-NEXT:    mov w10, #1024 // =0x400
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
+; CHECK-GI-NEXT:    add x8, x0, #32
 ; CHECK-GI-NEXT:  .LBB7_1: // %loop
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldp q0, q1, [x10, #-32]
-; CHECK-GI-NEXT:    subs x8, x8, #1
-; CHECK-GI-NEXT:    ldp q2, q3, [x10], #64
-; CHECK-GI-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-GI-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-GI-NEXT:    rev64 v2.16b, v2.16b
-; CHECK-GI-NEXT:    rev64 v3.16b, v3.16b
-; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-GI-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-GI-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-GI-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-GI-NEXT:    stp q0, q1, [x9, #-32]
-; CHECK-GI-NEXT:    stp q2, q3, [x9], #64
+; CHECK-GI-NEXT:    ldp q1, q2, [x9, #-32]
+; CHECK-GI-NEXT:    subs x10, x10, #1
+; CHECK-GI-NEXT:    ldp q3, q4, [x9], #64
+; CHECK-GI-NEXT:    tbl v1.16b, { v1.16b }, v0.16b
+; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
+; CHECK-GI-NEXT:    tbl v3.16b, { v3.16b }, v0.16b
+; CHECK-GI-NEXT:    tbl v4.16b, { v4.16b }, v0.16b
+; CHECK-GI-NEXT:    stp q1, q2, [x8, #-32]
+; CHECK-GI-NEXT:    stp q3, q4, [x8], #64
 ; CHECK-GI-NEXT:    b.ne .LBB7_1
 ; CHECK-GI-NEXT:  // %bb.2: // %exit
 ; CHECK-GI-NEXT:    ret

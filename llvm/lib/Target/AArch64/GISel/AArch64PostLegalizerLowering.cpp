@@ -425,6 +425,23 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MI.eraseFromParent();
 }
 
+static bool preferTBLToMultiInstrShuffle(MachineBasicBlock *MBB) {
+  if (MBB->getParent()->getFunction().hasOptSize())
+    return false;
+  // Look for a simple single block loop.
+  return is_contained(successors(MBB), MBB);
+}
+
+bool matchFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  if (preferTBLToMultiInstrShuffle(MI.getParent()))
+    return false;
+
+  auto &Shuf = cast<GShuffleVector>(MI);
+  ArrayRef<int> Mask = Shuf.getMask();
+  return mi_match(Shuf.getSrc2Reg(), MRI, m_GImplicitDef()) &&
+         ShuffleVectorInst::isReverseMask(Mask, Mask.size());
+}
+
 void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
