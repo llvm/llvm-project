@@ -42,7 +42,7 @@ body:             |
   ; GCN8-NEXT:   S_NOP 7
   ; GCN8-NEXT:   S_NOP 0
   ; GCN8-NEXT:   S_NOP 7
-  ; GCN8-NEXT:   renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+  ; GCN8-NEXT:   renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
   ; GCN8-NEXT:   S_NOP 7
   ; GCN8-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
   ; GCN8-NEXT:   S_NOP 7
@@ -84,7 +84,7 @@ body:             |
   ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   S_NOP 0
   ; GCN16-NEXT:   S_NOP 15
-  ; GCN16-NEXT:   renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+  ; GCN16-NEXT:   renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
   ; GCN16-NEXT:   S_NOP 15
   ; GCN16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
   ; GCN16-NEXT:   S_NOP 15
@@ -110,7 +110,7 @@ body:             |
     liveins: $sgpr6, $sgpr10_sgpr11
     SI_SPILL_S32_SAVE killed $sgpr6, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_NOP 0
-    renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    renamable $sgpr6 = SI_SPILL_S32_RESTORE %stack.0, 0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     %0:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
     S_BRANCH %bb.3
   bb.3:
