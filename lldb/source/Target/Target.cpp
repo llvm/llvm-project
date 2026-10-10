@@ -58,6 +58,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/SystemRuntime.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnixSignals.h"
@@ -387,6 +389,9 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
 }
 
 void Target::Destroy() {
+  TargetSP target_sp = shared_from_this();
+  for (const TargetGroupSP &group_sp : GetTargetGroups())
+    group_sp->RemoveTarget(target_sp);
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_valid = false;
   DeleteCurrentProcess();
@@ -409,6 +414,43 @@ void Target::Destroy() {
   m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
+}
+
+std::vector<TargetGroupSP> Target::GetTargetGroups() const {
+  const auto &mutex = m_debugger.GetTargetGroupList().m_mutex;
+  std::lock_guard<std::recursive_mutex> guard(*mutex);
+  std::vector<TargetGroupSP> groups;
+  groups.reserve(m_target_groups.size());
+  for (const TargetGroupWP &group_wp : m_target_groups) {
+    if (TargetGroupSP group_sp = group_wp.lock())
+      groups.push_back(std::move(group_sp));
+  }
+  return groups;
+}
+
+void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
+  const auto &mutex = m_debugger.GetTargetGroupList().m_mutex;
+  std::lock_guard<std::recursive_mutex> guard(*mutex);
+  for (auto it = m_target_groups.begin(); it != m_target_groups.end();) {
+    TargetGroupSP current_group_sp = it->lock();
+    if (!current_group_sp) {
+      it = m_target_groups.erase(it);
+      continue;
+    }
+    if (current_group_sp == group_sp)
+      return;
+    ++it;
+  }
+  m_target_groups.push_back(group_sp);
+}
+
+void Target::RemoveTargetGroup(const TargetGroup *group) {
+  const auto &mutex = m_debugger.GetTargetGroupList().m_mutex;
+  std::lock_guard<std::recursive_mutex> guard(*mutex);
+  llvm::erase_if(m_target_groups, [group](const TargetGroupWP &group_wp) {
+    TargetGroupSP group_sp = group_wp.lock();
+    return !group_sp || group_sp.get() == group;
+  });
 }
 
 llvm::StringRef Target::GetABIName() const {

@@ -2073,7 +2073,15 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+  /// Return the target groups this target belongs to.
+  std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
+
 protected:
+  friend class TargetGroup;
+
+  void AddTargetGroup(const lldb::TargetGroupSP &group_sp);
+  void RemoveTargetGroup(const TargetGroup *group);
+
   /// The mutex the calling thread must serialize on for its current policy, or
   /// nullptr when that policy bypasses the API mutex entirely.
   std::recursive_mutex *GetAPIMutexForCurrentPolicy();
@@ -2191,6 +2199,8 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  std::vector<lldb::TargetGroupWP> m_target_groups;
 
   lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 
