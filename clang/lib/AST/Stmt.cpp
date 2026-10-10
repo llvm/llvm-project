@@ -699,12 +699,19 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
   bool HasVariants = !C.getTargetInfo().hasNoAsmVariants();
 
+  // Offset of the '{' opening the current {a|b|c} dialect alternative, if any.
+  std::optional<unsigned> VariantStartOffs;
+
   unsigned LastAsmStringToken = 0;
   unsigned LastAsmStringOffset = 0;
 
   while (true) {
     // Done with the string?
     if (CurPtr == StrEnd) {
+      if (VariantStartOffs) {
+        DiagOffs = *VariantStartOffs;
+        return diag::err_asm_unterminated_dialect_alternative;
+      }
       if (!CurStringPiece.empty())
         Pieces.push_back(AsmStringPiece(CurStringPiece));
       return 0;
@@ -713,9 +720,27 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
     char CurChar = *CurPtr++;
     switch (CurChar) {
     case '$': CurStringPiece += "$$"; continue;
-    case '{': CurStringPiece += (HasVariants ? "$(" : "{"); continue;
+    case '{':
+      if (!HasVariants) {
+        CurStringPiece += '{';
+        continue;
+      }
+      if (VariantStartOffs) {
+        DiagOffs = CurPtr - StrStart - 1;
+        return diag::err_asm_nested_dialect_alternatives;
+      }
+      VariantStartOffs = CurPtr - StrStart - 1;
+      CurStringPiece += "$(";
+      continue;
     case '|': CurStringPiece += (HasVariants ? "$|" : "|"); continue;
-    case '}': CurStringPiece += (HasVariants ? "$)" : "}"); continue;
+    case '}':
+      if (!HasVariants) {
+        CurStringPiece += '}';
+        continue;
+      }
+      VariantStartOffs.reset();
+      CurStringPiece += "$)";
+      continue;
     case '%':
       break;
     default:
