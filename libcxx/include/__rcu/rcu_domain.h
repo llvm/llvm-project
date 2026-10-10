@@ -28,23 +28,27 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
 struct __rcu_node;
+class rcu_domain;
+struct _LIBCPP_EXPORTED_FROM_ABI __rcu_domain_export {
+
+  static rcu_domain& __rcu_default_domain() noexcept;
+
+  static void __retire(rcu_domain& __dom, __rcu_node*) noexcept;
+
+  static void __synchronize(rcu_domain& __dom) noexcept;
+
+  static void __barrier(rcu_domain& __dom) noexcept;
+
+  static void __lock(rcu_domain& __dom) noexcept;
+
+  static void __unlock(rcu_domain& __dom) noexcept;
+};
 
 class rcu_domain {
   class __impl;
   unique_ptr<__impl> __pimpl_;
 
-  friend struct __rcu_domain_access;
-
-  template <class, class>
-  friend class rcu_obj_base;
-
-  _LIBCPP_EXPORTED_FROM_ABI static rcu_domain& __rcu_default_domain() noexcept;
-
-  _LIBCPP_EXPORTED_FROM_ABI void __retire(__rcu_node*) noexcept;
-
-  _LIBCPP_EXPORTED_FROM_ABI void __lock() noexcept;
-
-  _LIBCPP_EXPORTED_FROM_ABI void __unlock() noexcept;
+  friend __rcu_domain_export;
 
   _LIBCPP_EXPORTED_FROM_ABI rcu_domain();
 
@@ -54,30 +58,14 @@ public:
 
   _LIBCPP_EXPORTED_FROM_ABI ~rcu_domain();
 
-  _LIBCPP_HIDE_FROM_ABI void lock() noexcept { __lock(); }
+  _LIBCPP_HIDE_FROM_ABI void lock() noexcept { __rcu_domain_export::__lock(*this); }
 
   _LIBCPP_HIDE_FROM_ABI bool try_lock() noexcept {
     lock();
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void unlock() noexcept { __unlock(); }
-};
-
-_LIBCPP_EXPORTED_FROM_ABI void __rcu_synchronize(rcu_domain& __dom) noexcept;
-
-_LIBCPP_EXPORTED_FROM_ABI void __rcu_barrier(rcu_domain& __dom) noexcept;
-
-struct __rcu_domain_access {
-  _LIBCPP_HIDE_FROM_ABI static void __retire(rcu_domain& __dom, __rcu_node* __node) noexcept { __dom.__retire(__node); }
-
-  _LIBCPP_HIDE_FROM_ABI static rcu_domain& __rcu_default_domain() noexcept {
-    return rcu_domain::__rcu_default_domain();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static unique_ptr<rcu_domain::__impl>& __get_impl(rcu_domain& __dom) noexcept {
-    return __dom.__pimpl_;
-  }
+  _LIBCPP_HIDE_FROM_ABI void unlock() noexcept { __rcu_domain_export::__unlock(*this); }
 };
 
 struct __rcu_node {
@@ -103,15 +91,15 @@ struct __rcu_node_with_deleter : __rcu_node {
 };
 
 inline _LIBCPP_HIDE_FROM_ABI rcu_domain& rcu_default_domain() noexcept {
-  return __rcu_domain_access::__rcu_default_domain();
+  return __rcu_domain_export::__rcu_default_domain();
 }
 
 inline _LIBCPP_HIDE_FROM_ABI void rcu_synchronize(rcu_domain& __dom = rcu_default_domain()) noexcept {
-  std::__rcu_synchronize(__dom);
+  __rcu_domain_export::__synchronize(__dom);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI void rcu_barrier(rcu_domain& __dom = rcu_default_domain()) noexcept {
-  std::__rcu_barrier(__dom);
+  __rcu_domain_export::__barrier(__dom);
 }
 
 template <class _Tp, class _Dp = default_delete<_Tp>>
@@ -120,7 +108,7 @@ _LIBCPP_HIDE_FROM_ABI void rcu_retire(_Tp* __tp, _Dp __deleter = _Dp(), rcu_doma
   static_assert(requires(_Dp __dp, _Tp* __ptr) { __dp(__ptr); }, "Deleter must be callable with a pointer");
 
   auto* __node = new __rcu_node_with_deleter<_Tp, _Dp>(__tp, std::move(__deleter));
-  __rcu_domain_access::__retire(__dom, __node);
+  __rcu_domain_export::__retire(__dom, __node);
 }
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
