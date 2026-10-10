@@ -88,26 +88,27 @@ bool parseArgValue(StringRef S, T &V, BumpPtrAllocator &, F Parse) {
 // A list member appends the comma-separated values of each occurrence. Its
 // storage comes from Alloc, keeping the options struct trivially destructible.
 template <typename T, typename F>
-bool parseArgValue(StringRef S, ArrayRef<T> &V, BumpPtrAllocator &Alloc,
-                   F Parse) {
+bool parseArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc,
+                   F ParseElem) {
   static_assert(std::is_trivially_copyable_v<T>);
-  SmallVector<T, 4> L(V.begin(), V.end());
-  for (StringRef Part : split(S, ',')) {
-    T X{};
-    if (!Parse(Part, X))
+  SmallVector<T, 4> Elems(List.begin(), List.end());
+  for (StringRef Item : split(S, ',')) {
+    T Elem{};
+    if (!ParseElem(Item, Elem))
       return false;
-    L.push_back(X);
+    Elems.push_back(Elem);
   }
-  T *P = Alloc.Allocate<T>(L.size());
-  llvm::copy(L, P);
-  V = ArrayRef(P, L.size());
+  T *Storage = Alloc.Allocate<T>(Elems.size());
+  llvm::copy(Elems, Storage);
+  List = ArrayRef(Storage, Elems.size());
   return true;
 }
 
 template <typename T>
-bool parseArgValue(StringRef S, ArrayRef<T> &V, BumpPtrAllocator &Alloc) {
-  return parseArgValue(S, V, Alloc,
-                       [](StringRef S, T &X) { return parseArgValue(S, X); });
+bool parseArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc) {
+  return parseArgValue(S, List, Alloc, [](StringRef Item, T &Elem) {
+    return parseArgValue(Item, Elem);
+  });
 }
 
 /// An OptTable with a public constructor, shared by every options struct.
