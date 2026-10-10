@@ -12,6 +12,7 @@ class TestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
     @requireExpressionEvaluation
+    @skipIf(debug_info=["pdb"], bugnumber="llvm.org/pr149498")  # Asserts in CodeGen
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
