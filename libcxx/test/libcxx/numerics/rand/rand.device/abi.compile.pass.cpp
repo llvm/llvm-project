@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-random-device
+// UNSUPPORTED: no-random-device, libcpp-abi-no-random-device-compatibility-layout
 
 // Ensure layout of std::random_device is compatible.
 
@@ -14,8 +14,7 @@
 
 #include "test_macros.h"
 
-#if defined(_LIBCPP_USING_DEV_RANDOM) ||                                                                               \
-    (!defined(_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT) && (defined(__APPLE__) || defined(__GLIBC__)))
+#if defined(_LIBCPP_USING_DEV_RANDOM) || defined(__APPLE__) || defined(__GLIBC__)
 
 static_assert(sizeof(std::random_device) == sizeof(int), "");
 static_assert(TEST_ALIGNOF(std::random_device) == TEST_ALIGNOF(int), "");

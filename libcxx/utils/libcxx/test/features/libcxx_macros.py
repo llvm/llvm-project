@@ -36,6 +36,9 @@ macros = {
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
     "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
     "_LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE": "libcpp-abi-vectorized-mersenne-twister-engine",
+    "_LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT": "libcpp-abi-no-random-device-compatibility-layout",
+    "_LIBCPP_USING_ARC4_RANDOM": "libcpp-using-arc4-random",
+    "_LIBCPP_USING_DEV_RANDOM": "libcpp-using-dev-random",
 }
 for macro, feature in macros.items():
     features.append(
