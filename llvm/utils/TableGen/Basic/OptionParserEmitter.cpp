@@ -308,6 +308,7 @@ static void emitOptionsStruct(const Record &Struct,
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
@@ -356,11 +357,14 @@ static void emitOptionsStruct(const Record &Struct,
       if (Values.size() != Enumerators.size())
         PrintFatalError(R->getLoc(), "an EnumField needs one enumerator per "
                                      "value");
-      OS << "    {\n      llvm::StringRef V = A.getValue();\n";
+      // The generic lambda sets a scalar, a std::optional, or a list element.
+      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+         << ", [](llvm::StringRef V, auto &X) {\n";
       for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
-        OS << "      if (V == \"" << Value << "\") {\n        " << Member
-           << " = " << Enumerator << ";\n        return true;\n      }\n";
-      OS << "      return false;\n    }\n";
+        OS << "      if (V == \"" << Value
+           << "\") {\n        X = " << Enumerator
+           << ";\n        return true;\n      }\n";
+      OS << "      return false;\n    });\n";
       continue;
     }
     // A FlagOrEq without a value means =true.

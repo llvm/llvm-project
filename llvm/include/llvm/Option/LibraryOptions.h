@@ -15,7 +15,9 @@
 #ifndef LLVM_OPTION_LIBRARYOPTIONS_H
 #define LLVM_OPTION_LIBRARYOPTIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BoolOrDefault.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptTable.h"
@@ -70,6 +72,39 @@ template <typename T> bool parseArgValue(StringRef S, std::optional<T> &V) {
   return true;
 }
 
+// An enum member is set by Parse, the generated value-to-enumerator mapping.
+template <typename T, typename F>
+bool parseArgValue(StringRef S, T &V, F Parse) {
+  return Parse(S, V);
+}
+
+// Allocates storage that lives until the process exits.
+LLVM_ABI void *allocateListStorage(size_t Size, size_t Alignment);
+
+// A list member appends the comma-separated values of each occurrence. It is
+// an ArrayRef so that an options struct stays trivially destructible.
+template <typename T, typename F>
+bool parseArgValue(StringRef S, ArrayRef<T> &V, F Parse) {
+  static_assert(std::is_trivially_copyable_v<T>);
+  SmallVector<T, 4> L(V.begin(), V.end());
+  for (StringRef Part : split(S, ',')) {
+    T X{};
+    if (!Parse(Part, X))
+      return false;
+    L.push_back(X);
+  }
+  T *P =
+      static_cast<T *>(allocateListStorage(L.size() * sizeof(T), alignof(T)));
+  llvm::copy(L, P);
+  V = ArrayRef(P, L.size());
+  return true;
+}
+
+template <typename T> bool parseArgValue(StringRef S, ArrayRef<T> &V) {
+  return parseArgValue(S, V,
+                       [](StringRef S, T &X) { return parseArgValue(S, X); });
+}
+
 /// An OptTable with a public constructor, shared by every options struct.
 class LLVM_ABI LibraryOptTable : public OptTable {
 public:
@@ -100,6 +135,8 @@ private:
 /// defines one static instance in the file that includes the struct's
 /// definitions.
 template <typename T> class RegisterLibraryOptions {
+  static_assert(std::is_trivially_destructible_v<T>,
+                "an options struct must not need an exit-time destructor");
   LibraryOptionsParser Parser{T::optTable,
                               [](const Arg &A) { return T::Global.apply(A); },
                               [] { T::Global = T(); }};

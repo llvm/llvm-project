@@ -10,12 +10,19 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
 using namespace llvm::opt;
 
 LibraryOptTable::~LibraryOptTable() = default;
+
+void *llvm::opt::allocateListStorage(size_t Size, size_t Alignment) {
+  // Never destroyed: list members refer to it until exit.
+  static BumpPtrAllocator &Alloc = *new BumpPtrAllocator;
+  return Alloc.Allocate(Size, Align(Alignment));
+}
 
 void LibraryOptionsParser::forEachOption(
     function_ref<void(StringRef, StringRef, StringRef)> Fn) const {
