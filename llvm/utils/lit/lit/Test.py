@@ -331,6 +331,8 @@ class Test:
         return self.getSourcePath()
 
     def getSourcePath(self):
+        if self.file_path and self.gtest_json_file is None:
+            return self.file_path
         return self.suite.getSourcePath(self.path_in_suite)
 
     def getExecPath(self):
