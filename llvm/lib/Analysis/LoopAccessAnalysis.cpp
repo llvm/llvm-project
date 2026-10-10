@@ -570,10 +570,17 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   const PointerInfo *Src = &Pointers[CGI.Members[0]];
   const PointerInfo *Sink = &Pointers[CGJ.Members[0]];
 
-  // If either pointer is read and written, multiple checks may be needed. Bail
-  // out.
-  if (!DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty() ||
-      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty())
+  bool SrcHasOppositeAccess =
+      !DC.getOrderForAccess(Src->PointerValue, !Src->IsWritePtr).empty();
+  bool SinkHasOppositeAccess =
+      !DC.getOrderForAccess(Sink->PointerValue, !Sink->IsWritePtr).empty();
+  // A read-modify-write pointer against a read-only pointer only needs the
+  // write/read check. Other combinations may need multiple checks.
+  if (SrcHasOppositeAccess &&
+      !(Src->IsWritePtr && !Sink->IsWritePtr && !SinkHasOppositeAccess))
+    return false;
+  if (SinkHasOppositeAccess &&
+      !(Sink->IsWritePtr && !Src->IsWritePtr && !SrcHasOppositeAccess))
     return false;
 
   ArrayRef<unsigned> AccSrc =
@@ -630,26 +637,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
 
-  // If the start values for both Src and Sink also vary according to an outer
-  // loop, then it's probably better to avoid creating diff checks because
-  // they may not be hoisted. We should instead let llvm::addRuntimeChecks
-  // do the expanded full range overlap checks, which can be hoisted.
+  // Prefer a hoistable full-range check if the distance varies in the parent
+  // loop. An invariant difference check is cheaper and can also be hoisted.
   if (HoistRuntimeChecks && InnerLoop->getParentLoop() &&
-      isa<SCEVAddRecExpr>(SinkStartInt) && isa<SCEVAddRecExpr>(SrcStartInt)) {
-    auto *SrcStartAR = cast<SCEVAddRecExpr>(SrcStartInt);
-    auto *SinkStartAR = cast<SCEVAddRecExpr>(SinkStartInt);
-    const Loop *StartARLoop = SrcStartAR->getLoop();
-    if (StartARLoop == SinkStartAR->getLoop() &&
-        StartARLoop == InnerLoop->getParentLoop() &&
-        // If the diff check would already be loop invariant (due to the
-        // recurrences being the same), then we prefer to keep the diff checks
-        // because they are cheaper.
-        SrcStartAR->getStepRecurrence(*SE) !=
-            SinkStartAR->getStepRecurrence(*SE)) {
-      LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
-                           "cannot be hoisted out of the outer loop\n");
-      return false;
-    }
+      !SE->isLoopInvariant(SE->getMinusSCEV(SinkStartInt, SrcStartInt),
+                           InnerLoop->getParentLoop())) {
+    LLVM_DEBUG(dbgs() << "LAA: Not creating diff runtime check, since these "
+                         "cannot be hoisted out of the outer loop\n");
+    return false;
   }
 
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
