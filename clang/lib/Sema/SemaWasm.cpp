@@ -461,6 +461,10 @@ void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
 void SemaWasm::handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
   auto *VD = cast<VarDecl>(D);
+  if (VD->getType().getAddressSpace() != LangAS::Default) {
+    Diag(AL.getLoc(), diag::err_wasm_global_with_address_space);
+    return;
+  }
   VD->setType(Context.getAddrSpaceQualType(
       VD->getType(),
       getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)));

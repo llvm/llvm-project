@@ -14023,6 +14023,8 @@ def err_builtin_pass_in_regs_non_class : Error<
 
 
 // WebAssembly reference type and table diagnostics.
+def err_wasm_global_with_address_space : Error<
+  "'wasm_global' attribute cannot be used with an explicit address space">;
 def err_wasm_reference_pr : Error<
   "%select{pointer|reference}0 to WebAssembly reference type is not allowed">;
 def err_wasm_ca_reference : Error<
