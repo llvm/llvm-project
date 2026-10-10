@@ -3260,21 +3260,26 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
-InstructionCost
-VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
-                                           VPCostContext &Ctx) const {
+InstructionCost VPWidenIntOrFpInductionRecipe::computeWidenInductionCost(
+    const InductionDescriptor &ID, Type *StepScalarTy, ElementCount VF,
+    VPCostContext &Ctx) {
   // A widened induction generates a vector phi and increments it by the
   // splatted step each iteration.
-  const InductionDescriptor &ID = getInductionDescriptor();
   InstructionCost Cost = Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-  Type *StepTy = getScalarType();
   unsigned IncOpc = ID.getKind() == InductionDescriptor::IK_IntInduction
                         ? Instruction::Add
                         : ID.getInductionOpcode();
   assert(IncOpc != Instruction::BinaryOpsEnd &&
          "induction must have a valid increment opcode");
-  return Cost + Ctx.TTI.getArithmeticInstrCost(IncOpc, toVectorTy(StepTy, VF),
-                                               Ctx.CostKind);
+  return Cost + Ctx.TTI.getArithmeticInstrCost(
+                    IncOpc, toVectorTy(StepScalarTy, VF), Ctx.CostKind);
+}
+
+InstructionCost
+VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  return computeWidenInductionCost(getInductionDescriptor(), getScalarType(),
+                                   VF, Ctx);
 }
 
 /// Returns the ConstantFP \p V wraps, or nullptr if it does not wrap one.

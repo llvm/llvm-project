@@ -194,8 +194,8 @@ define void @cast_variable_step(i64 %step) {
 ; IC2-NEXT:    [[TMP2:%.*]] = mul i64 [[INDEX]], [[STEP]]
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP2]]
 ; IC2-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:    [[TMP4:%.*]] = mul i32 1, [[TMP0]]
-; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
+; IC2-NEXT:    [[TMP9:%.*]] = mul i32 1, [[TMP0]]
+; IC2-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP9]]
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[TMP1]]
 ; IC2-NEXT:    store i32 [[TMP3]], ptr [[TMP6]], align 4

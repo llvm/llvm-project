@@ -396,14 +396,11 @@ define i16 @iv_and_step_trunc(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <8 x i16> [ <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i16> [[VEC_IND]], splat (i16 8)
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i16> [[VEC_IND1]], splat (i16 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = mul <8 x i16> [[VEC_IND]], [[VEC_IND1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i16> [[STEP_ADD]], [[STEP_ADD2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <8 x i16> [[VEC_IND1]], [[VEC_IND1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i16> [[STEP_ADD2]], [[STEP_ADD2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[STEP_ADD]], splat (i16 8)
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <8 x i16> [[STEP_ADD2]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]

@@ -1316,11 +1316,11 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
-; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
-; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
-; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP16:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP16]], 0
+; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP16]], 1
+; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP16]], 2
+; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i32 [[TMP16]], 3
 ; CHECK-VF1IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-VF1IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
 ; CHECK-VF1IC4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP5]]

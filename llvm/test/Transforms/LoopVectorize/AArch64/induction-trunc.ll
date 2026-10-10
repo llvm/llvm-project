@@ -34,12 +34,11 @@ define void @non_primary_iv_trunc_free(i64 %n, ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[INDEX]], 5
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], 5
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP13]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP14]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP16]], 5
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP15]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP17]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -77,10 +76,10 @@ define void @wide_iv_has_other_users(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP7]], align 4
@@ -128,22 +127,22 @@ define void @multiple_truncs(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP17]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP17]] to i32
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP10]], align 4
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP17]] to i16
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store i32 [[TMP18]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP17]] to i16
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP4]] to i16
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i16 [[TMP6]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    store i16 [[TMP7]], ptr [[TMP13]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP17]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP17]] to i8
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP4]] to i8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i8 [[TMP8]], ptr [[TMP14]], align 1

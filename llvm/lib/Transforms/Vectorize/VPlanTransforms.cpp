@@ -6357,13 +6357,24 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                               const TargetTransformInfo &TTI) {
+                                               VPCostContext &Ctx) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+
+  // WidenIntOrFpInduction recipes are narrowing candidates. The necessary
+  // information is their truncates as equivalence classes, along with the
+  // loop-invariant Offset that is either added or subtracted.
+  struct NarrowingCandidateInfo {
+    EquivalenceClasses<VPInstruction *> EquivTruncs;
+    VPValue *Offset;
+    bool IsSub;
+  };
+  SmallDenseMap<VPWidenIntOrFpInductionRecipe *, NarrowingCandidateInfo, 4>
+      NarrowingCandidates;
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
-    for (VPInstruction &VPI :
-         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
       // Only truncates are handled, as sext/zext may wrap, FP conversions lose
       // precision and other casts depend on the pointer size.
       if (VPI.getOpcode() != Instruction::Trunc)
@@ -6401,35 +6412,80 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // Replacing a free truncate would add an induction update instruction to
-      // each iteration of the loop. The canonical induction is exempt, as it
-      // needs an update instruction regardless.
-      auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return match(WideIV, m_CanonicalWidenIV()) ||
-               !TTI.isTruncateFree(
-                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
-                   toVectorTy(VPI.getScalarType(), VF));
-      };
-      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-              IsNarrowingProfitable, Range))
+      // Truncates are equivalent according to their scalar type.
+      EquivalenceClasses<VPInstruction *> &EquivTruncs =
+          NarrowingCandidates[WideIV].EquivTruncs;
+      auto *Trunc = find_if(EquivTruncs, [&VPI](auto *Trunc) {
+        return Trunc->getData()->getScalarType() == VPI.getScalarType();
+      });
+      if (Trunc == EquivTruncs.end())
+        EquivTruncs.insert(&VPI);
+      else
+        EquivTruncs.unionSets((*Trunc)->getData(), &VPI);
+
+      NarrowingCandidates[WideIV].Offset = Offset;
+      NarrowingCandidates[WideIV].IsSub = IsSub;
+    }
+  }
+
+  for (const auto &Candidate : NarrowingCandidates) {
+    VPWidenIntOrFpInductionRecipe *WideIV = Candidate.first;
+    const NarrowingCandidateInfo &NI = Candidate.second;
+    auto IsNarrowingProfitable = [&WideIV, &NI, &Ctx](ElementCount VF) {
+      // NarrowCost costs the WidenIntOrFp recipes created for each leader
+      // truncate.
+      InstructionCost NarrowCost = accumulate(
+          NI.EquivTruncs, InstructionCost(0),
+          [&](InstructionCost Acc, auto *Trunc) {
+            return Acc +
+                   (Trunc->isLeader()
+                        ? VPWidenIntOrFpInductionRecipe::
+                              computeWidenInductionCost(
+                                  WideIV->getInductionDescriptor(),
+                                  Trunc->getData()->getScalarType(), VF, Ctx)
+                        : 0);
+          });
+
+      // WideCost is the cost of the original WideIV + all the truncates, which
+      // would be removed on optimization.
+      InstructionCost WideCost =
+          WideIV->computeCost(VF, Ctx) +
+          accumulate(NI.EquivTruncs, InstructionCost(0),
+                     [&](InstructionCost Acc, auto *Trunc) {
+                       return Acc + Trunc->getData()->computeCost(VF, Ctx);
+                     });
+
+      return NarrowCost <= WideCost;
+    };
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+            IsNarrowingProfitable, Range))
+      continue;
+
+    for (auto *Trunc : NI.EquivTruncs) {
+      if (!Trunc->isLeader())
         continue;
 
       VPValue *Start = WideIV->getStartValue();
-      if (Offset) {
+      if (NI.Offset) {
         VPBuilder PHBuilder(Plan.getVectorPreheader());
-        Start = IsSub ? PHBuilder.createSub(Start, Offset)
-                      : PHBuilder.createAdd(Start, Offset);
+        Start = NI.IsSub ? PHBuilder.createSub(Start, NI.Offset)
+                         : PHBuilder.createAdd(Start, NI.Offset);
       }
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), Start, WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(),
-          VPI.getScalarType(), VPIRFlags::WrapFlagsTy(false, false),
-          VPI.getDebugLoc());
+          Trunc->getData()->getScalarType(),
+          VPIRFlags::WrapFlagsTy(false, false),
+          Trunc->getData()->getDebugLoc());
       NarrowIV->insertBefore(HeaderVPBB->getFirstNonPhi());
-      VPI.replaceAllUsesWith(NarrowIV);
-      VPI.eraseFromParent();
+
+      // Replace all members with NarrowIV.
+      for (auto *Member : NI.EquivTruncs.members(Trunc->getData())) {
+        Member->replaceAllUsesWith(NarrowIV);
+        Member->eraseFromParent();
+      }
     }
   }
 }
