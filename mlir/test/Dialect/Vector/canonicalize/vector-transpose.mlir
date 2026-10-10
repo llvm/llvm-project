@@ -342,11 +342,11 @@ func.func @transpose_shape_cast_broadcast_drop_unit_dim(%arg: vector<1x32x1xf32>
 
 // Moving the prepended dimension of size 3 to the end preserves inherited
 // dimension order and places size 8 at the same index as a direct broadcast.
-// CHECK-LABEL: func @transpose_shape_cast_broadcast_prepended_dim_in_middle
+// CHECK-LABEL: func @transpose_shape_cast_broadcast_split_prepended_dims
 //  CHECK-SAME: (%[[ARG:.+]]: vector<8x1xf32>)
 //       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<8x1xf32> to vector<2x1x8x3xf32>
 //       CHECK:   return %[[V]] : vector<2x1x8x3xf32>
-func.func @transpose_shape_cast_broadcast_prepended_dim_in_middle(%arg: vector<8x1xf32>) -> vector<2x1x8x3xf32> {
+func.func @transpose_shape_cast_broadcast_split_prepended_dims(%arg: vector<8x1xf32>) -> vector<2x1x8x3xf32> {
   %sc = vector.shape_cast %arg : vector<8x1xf32> to vector<1x8xf32>
   %bc = vector.broadcast %sc : vector<1x8xf32> to vector<2x3x1x8xf32>
   %t = vector.transpose %bc, [0, 2, 3, 1] : vector<2x3x1x8xf32> to vector<2x1x8x3xf32>

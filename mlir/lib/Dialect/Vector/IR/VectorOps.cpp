@@ -7893,7 +7893,6 @@ public:
     return success();
   }
 };
-
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
