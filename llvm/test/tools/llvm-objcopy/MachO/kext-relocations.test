@@ -1,0 +1,170 @@
+## Check that the external and local relocations of a kext bundle are kept,
+## and that the symbols and sections they refer to are renumbered.
+
+## The input is linked from:
+##   .text
+##   .globl _f
+##   _f:
+##     callq _ext_func
+##     retq
+##   _local_fn:
+##     retq
+##   .section __TEXT,__unused
+##     .quad 0
+##   .data
+##   .globl _p
+##   _p:
+##     .quad _ext_data
+##   _q:
+##     .quad _local_fn
+##   _r:
+##     .quad _q
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-objcopy %t %t.copy
+# RUN: llvm-objdump --macho -r %t.copy | FileCheck %s -DDATA=3
+
+## Stripping removes the local symbols, but keeps the external ones, which the
+## kernel linker looks up.
+# RUN: llvm-strip %t -o %t.strip
+# RUN: llvm-objdump --macho -r %t.strip | FileCheck %s -DDATA=3
+# RUN: llvm-nm -m %t.strip | FileCheck %s --check-prefix=SYMS
+# RUN: llvm-strip -x %t -o %t.strip-x
+# RUN: cmp %t.strip %t.strip-x
+
+# CHECK:      External relocation information 2 entries
+# CHECK-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# CHECK-NEXT: 00000271 True  long   True   BRANCH  False     _ext_func
+# CHECK-NEXT: 00001000 False quad   True   UNSIGND False     _ext_data
+# CHECK-NEXT: Local relocation information 2 entries
+# CHECK-NEXT: address  pcrel length extern type    scattered symbolnum/value
+# CHECK-NEXT: 00001008 False quad   False  UNSIGND False     1 (__TEXT,__text)
+# CHECK-NEXT: 00001010 False quad   False  UNSIGND False     [[DATA]] (__DATA,__data)
+
+# SYMS:      (undefined) external _ext_data
+# SYMS-NEXT: (undefined) external _ext_func
+# SYMS-NEXT: (__TEXT,__text) external _f
+# SYMS-NEXT: (__DATA,__data) external _p
+# SYMS-EMPTY:
+
+# RUN: llvm-objcopy --remove-section __TEXT,__unused %t %t.removed
+# RUN: llvm-objdump --macho -r %t.removed | FileCheck %s -DDATA=2
+
+# RUN: not llvm-objcopy --remove-section __TEXT,__text %t /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t
+# ERROR: error: '[[FILE]]': section '__TEXT,__text' cannot be removed because it is referenced by a local relocation
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0xB
+  ncmds:           5
+  sizeofcmds:      560
+  flags:           0x85
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x270
+        size:            7
+        offset:          0x270
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         E800000000C3C3
+      - sectname:        __unused
+        segname:         __TEXT
+        addr:            0x277
+        size:            8
+        offset:          0x277
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4096
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x1000
+        size:            24
+        offset:          0x1000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '000000000000000076020000000000000810000000000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          8192
+    vmsize:          192
+    fileoff:         8192
+    filesize:        192
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8208
+    nsyms:           7
+    stroff:          8336
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       3
+    iextdefsym:      3
+    nextdefsym:      2
+    iundefsym:       5
+    nundefsym:       2
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       8320
+    nextrel:         2
+    locreloff:       8192
+    nlocrel:         2
+__LINKEDIT:      08100000010000061010000003000006020000000E01000076020000000000000C0000000E03000008100000000000000F0000000E0300001010000000000000120000000F0100007002000000000000150000000F030000001000000000000018000000010000FE000000000000000022000000010000FE0000000000000000710200000600002D001000000500000E20005F6C6F63616C5F666E005F71005F72005F66005F70005F6578745F64617461005F6578745F66756E630000000000
+...

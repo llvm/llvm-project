@@ -102,6 +102,14 @@ size_t MachOWriter::totalSize() const {
     if (DySymTabCommand.indirectsymoff)
       Ends.push_back(DySymTabCommand.indirectsymoff +
                      sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
+    if (DySymTabCommand.extreloff)
+      Ends.push_back(DySymTabCommand.extreloff +
+                     sizeof(MachO::any_relocation_info) *
+                         O.ExternalRelocations.size());
+    if (DySymTabCommand.locreloff)
+      Ends.push_back(DySymTabCommand.locreloff +
+                     sizeof(MachO::any_relocation_info) *
+                         O.LocalRelocations.size());
   }
 
   for (std::optional<size_t> LinkEditDataCommandIndex :
@@ -260,22 +268,27 @@ void MachOWriter::writeSections() {
       assert((Sec->Size == Sec->Content.size()) && "Incorrect section size");
       memcpy(Buf->getBufferStart() + Sec->Offset, Sec->Content.data(),
              Sec->Content.size());
-      for (size_t Index = 0; Index < Sec->Relocations.size(); ++Index) {
-        RelocationInfo RelocInfo = Sec->Relocations[Index];
-        if (!RelocInfo.Scattered && !RelocInfo.IsAddend) {
-          const uint32_t SymbolNum = RelocInfo.Extern
-                                         ? (*RelocInfo.Symbol)->Index
-                                         : (*RelocInfo.Sec)->Index;
-          RelocInfo.setPlainRelocationSymbolNum(SymbolNum, IsLittleEndian);
-        }
-        if (IsLittleEndian != sys::IsLittleEndianHost)
-          MachO::swapStruct(
-              reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));
-        memcpy(Buf->getBufferStart() + Sec->RelOff +
-                   Index * sizeof(MachO::any_relocation_info),
-               &RelocInfo.Info, sizeof(RelocInfo.Info));
-      }
+      writeRelocations(Sec->Relocations, Sec->RelOff);
     }
+}
+
+void MachOWriter::writeRelocations(ArrayRef<RelocationInfo> Relocations,
+                                   uint64_t Offset) {
+  for (size_t Index = 0; Index < Relocations.size(); ++Index) {
+    RelocationInfo RelocInfo = Relocations[Index];
+    if (!RelocInfo.Scattered && !RelocInfo.IsAddend &&
+        (RelocInfo.Extern || RelocInfo.Sec)) {
+      const uint32_t SymbolNum = RelocInfo.Extern ? (*RelocInfo.Symbol)->Index
+                                                  : (*RelocInfo.Sec)->Index;
+      RelocInfo.setPlainRelocationSymbolNum(SymbolNum, IsLittleEndian);
+    }
+    if (IsLittleEndian != sys::IsLittleEndianHost)
+      MachO::swapStruct(
+          reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));
+    memcpy(Buf->getBufferStart() + Offset +
+               Index * sizeof(MachO::any_relocation_info),
+           &RelocInfo.Info, sizeof(RelocInfo.Info));
+  }
 }
 
 template <typename NListType>
@@ -405,6 +418,26 @@ void MachOWriter::writeIndirectSymbolTable() {
       sys::swapByteOrder(Entry);
     *Out++ = Entry;
   }
+}
+
+void MachOWriter::writeExternalRelocations() {
+  if (!O.DySymTabCommandIndex)
+    return;
+
+  const MachO::dysymtab_command &DySymTabCommand =
+      O.LoadCommands[*O.DySymTabCommandIndex]
+          .MachOLoadCommand.dysymtab_command_data;
+  writeRelocations(O.ExternalRelocations, DySymTabCommand.extreloff);
+}
+
+void MachOWriter::writeLocalRelocations() {
+  if (!O.DySymTabCommandIndex)
+    return;
+
+  const MachO::dysymtab_command &DySymTabCommand =
+      O.LoadCommands[*O.DySymTabCommandIndex]
+          .MachOLoadCommand.dysymtab_command_data;
+  writeRelocations(O.LocalRelocations, DySymTabCommand.locreloff);
 }
 
 void MachOWriter::writeLinkData(std::optional<size_t> LCIndex,
@@ -641,6 +674,12 @@ void MachOWriter::writeTail() {
     if (DySymTabCommand.indirectsymoff)
       Queue.emplace_back(DySymTabCommand.indirectsymoff,
                          &MachOWriter::writeIndirectSymbolTable);
+    if (DySymTabCommand.extreloff)
+      Queue.emplace_back(DySymTabCommand.extreloff,
+                         &MachOWriter::writeExternalRelocations);
+    if (DySymTabCommand.locreloff)
+      Queue.emplace_back(DySymTabCommand.locreloff,
+                         &MachOWriter::writeLocalRelocations);
   }
 
   std::initializer_list<std::pair<std::optional<size_t>, WriteHandlerType>>
