@@ -263,9 +263,9 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
 
   // The order of LINKEDIT elements is as follows:
   // rebase info, binding info, weak binding info, lazy binding info, export
-  // trie, chained fixups, dyld exports trie, function starts, data-in-code,
-  // symbol table, indirect symbol table, symbol table strings,
-  // dylib codesign drs, and code signature.
+  // trie, chained fixups, dyld exports trie, local relocations, function
+  // starts, data-in-code, symbol table, external relocations, indirect symbol
+  // table, symbol table strings, dylib codesign drs, and code signature.
   auto updateOffset = [&Offset, LinkEditAlign](uint64_t Size) {
     uint64_t PreviousOffset = Offset;
     // Match ld64 and lld-macho behavior by aligning all LINKEDIT entries to
@@ -289,6 +289,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       updateOffset(O.ChainedFixups.Data.size());
   auto [StartOfDyldExportsTrie, DyldExportsTrieSize] =
       updateOffset(DyldExportsTrieRawSize);
+  uint64_t StartOfLocalRelocations =
+      updateOffset(sizeof(MachO::any_relocation_info) *
+                   O.LocalRelocations.size())
+          .first;
   auto [StartOfFunctionStarts, FunctionStartsSize] =
       updateOffset(O.FunctionStarts.Data.size());
   auto [StartOfDataInCode, DataInCodeSize] =
@@ -297,6 +301,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       updateOffset(O.LinkerOptimizationHint.Data.size());
   uint64_t StartOfSymbols =
       updateOffset(NListSize * O.SymTable.Symbols.size()).first;
+  uint64_t StartOfExternalRelocations =
+      updateOffset(sizeof(MachO::any_relocation_info) *
+                   O.ExternalRelocations.size())
+          .first;
   uint64_t StartOfIndirectSymbols =
       updateOffset(sizeof(uint32_t) * O.IndirectSymTable.Symbols.size()).first;
   auto [StartOfSymbolStrings, SymbolStringsSize] =
@@ -372,13 +380,23 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       MLC.symtab_command_data.strsize = SymbolStringsSize;
       break;
     case MachO::LC_DYSYMTAB: {
+      // Dynamic relocations are only read from linked images; relocations of
+      // an MH_OBJECT file are attached to its sections.
+      const bool IsObjectFile =
+          O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
       if (MLC.dysymtab_command_data.ntoc != 0 ||
           MLC.dysymtab_command_data.nmodtab != 0 ||
           MLC.dysymtab_command_data.nextrefsyms != 0 ||
-          MLC.dysymtab_command_data.nlocrel != 0 ||
-          MLC.dysymtab_command_data.nextrel != 0)
+          (IsObjectFile && (MLC.dysymtab_command_data.nlocrel != 0 ||
+                            MLC.dysymtab_command_data.nextrel != 0)))
         return createStringError(llvm::errc::not_supported,
                                  "shared library is not yet supported");
+      MLC.dysymtab_command_data.extreloff =
+          O.ExternalRelocations.size() ? StartOfExternalRelocations : 0;
+      MLC.dysymtab_command_data.nextrel = O.ExternalRelocations.size();
+      MLC.dysymtab_command_data.locreloff =
+          O.LocalRelocations.size() ? StartOfLocalRelocations : 0;
+      MLC.dysymtab_command_data.nlocrel = O.LocalRelocations.size();
       MLC.dysymtab_command_data.indirectsymoff =
           O.IndirectSymTable.Symbols.size() ? StartOfIndirectSymbols : 0;
       MLC.dysymtab_command_data.nindirectsyms =

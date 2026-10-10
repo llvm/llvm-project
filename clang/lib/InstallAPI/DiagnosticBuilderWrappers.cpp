@@ -57,6 +57,9 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   case FileType::MachO_Bundle:
     DB.AddString("mach-o bundle");
     return DB;
+  case FileType::MachO_KextBundle:
+    DB.AddString("mach-o kext bundle");
+    return DB;
   case FileType::MachO_DynamicLibrary:
     DB.AddString("mach-o dynamic library");
     return DB;

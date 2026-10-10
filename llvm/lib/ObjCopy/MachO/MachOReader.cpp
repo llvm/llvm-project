@@ -45,6 +45,22 @@ static Section constructSectionCommon(const SectionType &Sec, uint32_t Index) {
   return S;
 }
 
+static RelocationInfo
+constructRelocationInfo(const object::MachOObjectFile &MachOObj,
+                        object::DataRefImpl Rel) {
+  RelocationInfo R;
+  R.Symbol = nullptr; // We'll fill this field later.
+  R.Info = MachOObj.getRelocation(Rel);
+  R.Scattered = MachOObj.isRelocationScattered(R.Info);
+  unsigned Type = MachOObj.getAnyRelocationType(R.Info);
+  // TODO Support CPU_TYPE_ARM.
+  R.IsAddend =
+      !R.Scattered && (MachOObj.getHeader().cputype == MachO::CPU_TYPE_ARM64 &&
+                       Type == MachO::ARM64_RELOC_ADDEND);
+  R.Extern = !R.Scattered && MachOObj.getPlainRelocationExternal(R.Info);
+  return R;
+}
+
 Section constructSection(const MachO::section &Sec, uint32_t Index) {
   return constructSectionCommon(Sec, Index);
 }
@@ -90,22 +106,12 @@ Expected<std::vector<std::unique_ptr<Section>>> static extractSections(
     S.Content =
         StringRef(reinterpret_cast<const char *>(Data->data()), Data->size());
 
-    const uint32_t CPUType = MachOObj.getHeader().cputype;
     S.Relocations.reserve(S.NReloc);
     for (auto RI = MachOObj.section_rel_begin(SecRef->getRawDataRefImpl()),
               RE = MachOObj.section_rel_end(SecRef->getRawDataRefImpl());
-         RI != RE; ++RI) {
-      RelocationInfo R;
-      R.Symbol = nullptr; // We'll fill this field later.
-      R.Info = MachOObj.getRelocation(RI->getRawDataRefImpl());
-      R.Scattered = MachOObj.isRelocationScattered(R.Info);
-      unsigned Type = MachOObj.getAnyRelocationType(R.Info);
-      // TODO Support CPU_TYPE_ARM.
-      R.IsAddend = !R.Scattered && (CPUType == MachO::CPU_TYPE_ARM64 &&
-                                    Type == MachO::ARM64_RELOC_ADDEND);
-      R.Extern = !R.Scattered && MachOObj.getPlainRelocationExternal(R.Info);
-      S.Relocations.push_back(R);
-    }
+         RI != RE; ++RI)
+      S.Relocations.push_back(
+          constructRelocationInfo(MachOObj, RI->getRawDataRefImpl()));
 
     assert(S.NReloc == S.Relocations.size() &&
            "Incorrect number of relocations");
@@ -243,6 +249,22 @@ void MachOReader::readSymbolTable(Object &O) const {
   }
 }
 
+void MachOReader::readDynamicRelocations(Object &O) const {
+  // In an MH_OBJECT file, getRelocation() interprets the reference as a
+  // section relocation, and such files have no dynamic relocations anyway.
+  if (!O.DySymTabCommandIndex ||
+      O.Header.FileType == MachO::HeaderFileType::MH_OBJECT)
+    return;
+
+  for (const object::RelocationRef &Rel : MachOObj.external_relocations())
+    O.ExternalRelocations.push_back(
+        constructRelocationInfo(MachOObj, Rel.getRawDataRefImpl()));
+  for (auto RI = MachOObj.locrel_begin(), RE = MachOObj.locrel_end(); RI != RE;
+       ++RI)
+    O.LocalRelocations.push_back(
+        constructRelocationInfo(MachOObj, RI->getRawDataRefImpl()));
+}
+
 void MachOReader::setSymbolInRelocationInfo(Object &O) const {
   std::vector<const Section *> Sections;
   for (auto &LC : O.LoadCommands)
@@ -265,6 +287,20 @@ void MachOReader::setSymbolInRelocationInfo(Object &O) const {
             Reloc.Sec = Sections[SymbolNum - 1];
           }
         }
+
+  // A local relocation may use R_ABS instead of a section number; such
+  // entries have no section and are written back unchanged.
+  for (std::vector<RelocationInfo> *Relocs :
+       {&O.ExternalRelocations, &O.LocalRelocations})
+    for (RelocationInfo &Reloc : *Relocs)
+      if (!Reloc.Scattered && !Reloc.IsAddend) {
+        const uint32_t SymbolNum =
+            Reloc.getPlainRelocationSymbolNum(MachOObj.isLittleEndian());
+        if (Reloc.Extern)
+          Reloc.Symbol = O.SymTable.getSymbolByIndex(SymbolNum);
+        else if (SymbolNum >= 1 && SymbolNum <= Sections.size())
+          Reloc.Sec = Sections[SymbolNum - 1];
+      }
 }
 
 void MachOReader::readRebaseInfo(Object &O) const {
@@ -368,6 +404,7 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   if (Error E = readLoadCommands(*Obj))
     return std::move(E);
   readSymbolTable(*Obj);
+  readDynamicRelocations(*Obj);
   setSymbolInRelocationInfo(*Obj);
   readRebaseInfo(*Obj);
   readBindInfo(*Obj);

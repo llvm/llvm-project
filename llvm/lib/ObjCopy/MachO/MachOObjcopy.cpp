@@ -89,6 +89,11 @@ static void markSymbols(const CommonConfig &Config, Object &Obj) {
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
 
+  // Nor those referenced from external relocations, which --strip-all keeps.
+  for (const RelocationInfo &R : Obj.ExternalRelocations)
+    if (R.Symbol && *R.Symbol)
+      (*R.Symbol)->Referenced = true;
+
   // --strip-all removes relocations, so their symbols need not be preserved.
   if (Config.StripAll)
     return;
@@ -143,6 +148,11 @@ static void updateAndRemoveSymbols(const CommonConfig &Config,
     if (MachOConfig.KeepUndefined && N->isUndefinedSymbol())
       return false;
     if (N->n_desc & MachO::REFERENCED_DYNAMICALLY)
+      return false;
+    // The kernel linker looks up the external symbols of a kext, such as
+    // _kmod_info, and binds other kexts to them.
+    if (Obj.Header.FileType == MachO::HeaderFileType::MH_KEXT_BUNDLE &&
+        N->isExternalSymbol())
       return false;
     if (Config.StripAll)
       return true;

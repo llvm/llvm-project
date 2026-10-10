@@ -39,6 +39,7 @@ class MachOWriter {
   void writeLoadCommands();
   template <typename StructType>
   void writeSectionInLoadCommand(const Section &Sec, uint8_t *&Out);
+  void writeRelocations(ArrayRef<RelocationInfo> Relocations, uint64_t Offset);
   void writeSections();
   void writeSymbolTable();
   void writeStringTable();
@@ -48,6 +49,8 @@ class MachOWriter {
   void writeLazyBindInfo();
   void writeExportInfo();
   void writeIndirectSymbolTable();
+  void writeExternalRelocations();
+  void writeLocalRelocations();
   void writeLinkData(std::optional<size_t> LCIndex, const LinkData &LD);
   void writeCodeSignatureData();
   void writeDataInCodeData();
