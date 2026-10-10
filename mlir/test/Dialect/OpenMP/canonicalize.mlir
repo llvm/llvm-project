@@ -143,3 +143,34 @@ func.func @constant_hoisting_target(%x : !llvm.ptr) {
 // CHECK-NOT: arith.constant
 // CHECK: omp.target
 // CHECK: arith.constant
+
+// -----
+
+// Master has no implicit barrier, so a body without side effects can be removed.
+// CHECK-LABEL: func.func @master_no_side_effects
+// CHECK-NEXT: return
+func.func @master_no_side_effects(%a: i32, %b: i32) {
+  omp.master {
+    %unused = arith.addi %a, %b : i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// Master must consider recursive side effects.
+// CHECK-LABEL: func.func @master_store
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[VALUE:.*]]: i32)
+// CHECK-NEXT: omp.master {
+// CHECK-NEXT: memref.store %[[VALUE]], %[[X]][] : memref<i32>
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @master_store(%x: memref<i32>, %value: i32) {
+  omp.master {
+    memref.store %value, %x[] : memref<i32>
+    omp.terminator
+  }
+  return
+}
