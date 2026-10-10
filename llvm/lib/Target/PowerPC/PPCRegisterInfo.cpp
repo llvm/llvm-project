@@ -88,7 +88,7 @@ ReportAccMoves("ppc-report-acc-moves",
                cl::Hidden, cl::init(false));
 #endif
 
-extern cl::opt<bool> DisableAutoPairedVecSt;
+extern cl::opt<bool> EnableAutoPairedVecSt;
 
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
 
@@ -1248,11 +1248,11 @@ void PPCRegisterInfo::spillRegPair(MachineBasicBlock &MBB,
 }
 
 /// Remove any STXVP[X] instructions and split them out into a pair of
-/// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
+/// STXV[X] instructions if --ppc-auto-paired-vec-st=false is specified on
 /// the command line.
 void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                                            unsigned FrameIndex) const {
-  assert(DisableAutoPairedVecSt &&
+  assert(!EnableAutoPairedVecSt &&
          "Expecting to do this only if paired vector stores are disabled.");
   MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1310,7 +1310,7 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  if (DisableAutoPairedVecSt) {
+  if (!EnableAutoPairedVecSt) {
     spillRegPair(MBB, II, DL, TII, FrameIndex, IsLittleEndian, IsKilled,
                  TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
                  IsLittleEndian ? 48 : 0);
@@ -1730,7 +1730,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     lowerACCRestore(II, FrameIndex);
     return true;
   case PPC::STXVP: {
-    if (DisableAutoPairedVecSt) {
+    if (!EnableAutoPairedVecSt) {
       lowerOctWordSpilling(II, FrameIndex);
       return true;
     }

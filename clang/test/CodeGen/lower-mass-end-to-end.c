@@ -1,18 +1,18 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -O3 -fapprox-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -Ofast --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-FAST
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -O3 -fapprox-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -Ofast --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass -O3 -fapprox-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass -Ofast --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass -O3 -fapprox-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass -Ofast --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-MASS-FAST
 
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass=false -O3 -fapprox-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass=false -Ofast --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass=false -O3 -fapprox-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass=false -Ofast --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass=false -O3 -fapprox-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass=false -Ofast --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass=false -O3 -fapprox-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass=false -Ofast --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
 
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -O3 -fno-approx-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -fno-fast-math --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -O3 -fno-approx-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
-// RUN: %clang -mllvm -enable-ppc-gen-scalar-mass -fno-fast-math --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass -O3 -fno-approx-func --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass -fno-fast-math --target=powerpc64le-unknown-linux-gnu -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
+// RUN: %clang -mllvm -ppc-scalar-mass -O3 -fno-approx-func --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-AFN
+// RUN: %clang -mllvm -ppc-scalar-mass -fno-fast-math --target=powerpc-ibm-aix-xcoff -S %s -o -| FileCheck %s -check-prefix=CHECK-NO-MASS-FAST
 
 extern double sin(double a);
 extern double cos(double a);
