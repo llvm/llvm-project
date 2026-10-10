@@ -2,6 +2,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -mcpu=skylake-avx512 -passes=slp-vectorizer -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -mcpu=skylake-avx512 -passes=inject-tli-mappings,slp-vectorizer -vector-library=SVML -S | FileCheck %s --check-prefix=VECLIB
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -mcpu=skylake-avx512 -passes=inject-tli-mappings,slp-vectorizer -vector-library=AMDLIBM -S | FileCheck %s --check-prefix=AMDLIBM
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -mcpu=skylake-avx512 -passes=inject-tli-mappings,slp-vectorizer -vector-library=HVML -S | FileCheck %s --check-prefix=HVML
 
 @src = common global [8 x double] zeroinitializer, align 64
 @dst = common global [8 x double] zeroinitializer, align 64
@@ -57,6 +58,22 @@ define void @test() {
 ; AMDLIBM-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
 ; AMDLIBM-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8
 ; AMDLIBM-NEXT:    ret void
+;
+; HVML-LABEL: @test(
+; HVML-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
+; HVML-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 2, i32 6>
+; HVML-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @hvml_vd2_sin(<2 x double> [[TMP2]])
+; HVML-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 3, i32 7>
+; HVML-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @hvml_vd2_sin(<2 x double> [[TMP4]])
+; HVML-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 0, i32 4>
+; HVML-NEXT:    [[TMP7:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP6]])
+; HVML-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <2 x i32> <i32 1, i32 5>
+; HVML-NEXT:    [[TMP9:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP8]])
+; HVML-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP7]], [[TMP5]]
+; HVML-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP9]]
+; HVML-NEXT:    [[TMP12:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP11]]
+; HVML-NEXT:    store <2 x double> [[TMP12]], ptr @dst, align 8
+; HVML-NEXT:    ret void
 ;
   %a0 = load double, ptr @src, align 8
   %a1 = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 1), align 8
