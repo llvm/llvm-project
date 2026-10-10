@@ -1167,26 +1167,26 @@ static Instruction *foldAddIntoDotAccumulator(IntrinsicInst &II,
   if (!match(AccumUser, m_c_Add(m_Specific(&II), m_Value(AccumDelta))))
     return nullptr;
 
+  // Avoid sinking the dot into a loop or other block.
+  if (AccumUser->getParent() != II.getParent())
+    return nullptr;
+
   Value *NewAcc = nullptr;
   const APInt *AccumDeltaC = nullptr;
-  if (match(AccumDelta, m_APInt(AccumDeltaC)))
-    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDeltaC);
-  else if (Acc->isZero())
+  if (Acc->isZero())
     NewAcc = AccumDelta;
+  else if (match(AccumDelta, m_APInt(AccumDeltaC)))
+    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDeltaC);
   else
     return nullptr;
 
-  auto *NewAccI = dyn_cast<Instruction>(NewAcc);
-  if (NewAccI && !IC.getDominatorTree().dominates(NewAccI, &II)) {
-    // Avoid sinking the dot into a loop or other block.
-    if (AccumUser->getParent() != II.getParent())
-      return nullptr;
-    II.moveBefore(AccumUser->getIterator());
-  }
+  Instruction *NewII =
+      IC.InsertNewInstWith(II.clone(), AccumUser->getIterator());
+  NewII->setOperand(AccIdx, NewAcc);
 
-  IC.replaceInstUsesWith(*AccumUser, &II);
+  IC.replaceInstUsesWith(*AccumUser, NewII);
   IC.eraseInstFromFunction(*AccumUser);
-  return IC.replaceOperand(II, AccIdx, NewAcc);
+  return &II;
 }
 
 std::optional<Instruction *>
