@@ -100,7 +100,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -146,19 +145,6 @@ static const unsigned RetvalTLSSize = 800;
 // will make all shadow and return values set zero labels.
 // Functions should never be labelled with both "force_zero_labels" and
 // "uninstrumented" or any of the unistrumented wrapper kinds.
-static cl::list<std::string> ClABIListFiles(
-    "dfsan-abilist",
-    cl::desc("File listing native ABI functions and how the pass treats them"),
-    cl::Hidden);
-
-static cl::list<std::string> ClCombineTaintLookupTables(
-    "dfsan-combine-taint-lookup-table",
-    cl::desc(
-        "When dfsan-combine-offset-labels-on-gep and/or "
-        "dfsan-combine-pointer-labels-on-load are false, this flag can "
-        "be used to re-enable combining offset and/or pointer taint when "
-        "loading specific constant global variables (i.e. lookup tables)."),
-    cl::Hidden);
 
 static StringRef getGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
@@ -790,10 +776,11 @@ DataFlowSanitizer::DataFlowSanitizer(
     IntrusiveRefCntPtr<vfs::FileSystem> FS)
     : Opts(Opts) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
-  llvm::append_range(AllABIListFiles, ClABIListFiles);
+  llvm::append_range(AllABIListFiles, Opts.dfsan_abilist);
   ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles, *FS));
 
-  CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
+  CombineTaintLookupTableNames.insert_range(
+      Opts.dfsan_combine_taint_lookup_table);
 }
 
 TransformedFunction

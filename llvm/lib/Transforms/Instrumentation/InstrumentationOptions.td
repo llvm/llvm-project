@@ -13,7 +13,7 @@ def InstrumentationOptions : OptionsStruct;
 // AddressSanitizer.cpp
 defm : BoolField<"asan-always-slow-path", "false",
   "Use instrumentation with slow path for all accesses">;
-defm : EnumField<"asan-constructor-kind", "std::optional<AsanCtorKind>", "std::nullopt",
+defm : OptionalEnumField<"asan-constructor-kind", "AsanCtorKind",
   "none,global",
   ["AsanCtorKind::None", "AsanCtorKind::Global"],
   "Sets the ASan constructor kind">;
@@ -25,7 +25,7 @@ defm : ValueField<"asan-debug-min", "int", "-1",
   "With -asan-debug-max, instrument only the memory accesses whose index within the function is in [min, max]">;
 defm : BoolField<"asan-debug-stack", "false",
   "Print each function after stack instrumentation (with -debug-only=asan)">;
-defm : EnumField<"asan-destructor-kind", "std::optional<AsanDtorKind>", "std::nullopt",
+defm : OptionalEnumField<"asan-destructor-kind", "AsanDtorKind",
   "none,global",
   ["AsanDtorKind::None", "AsanDtorKind::Global"],
   "Sets the ASan destructor kind. The default is to use the value provided to the pass constructor">;
@@ -48,6 +48,8 @@ defm : OptionalBoolField<"asan-guard-against-version-mismatch",
   "Guard against compiler/runtime version mismatch">;
 defm : BoolField<"asan-initialization-order", "true",
   "Handle C++ initializer order">;
+defm : ListField<"asan-instrument-address-spaces", "unsigned",
+  "Only instrument variables in the specified address spaces">;
 defm : BoolField<"asan-instrument-atomics", "true",
   "Instrument atomic instructions (rmw, cmpxchg)">;
 defm : BoolField<"asan-instrument-byval", "true",
@@ -59,7 +61,7 @@ defm : BoolField<"asan-instrument-reads", "true",
   "Instrument read instructions">;
 defm : BoolField<"asan-instrument-writes", "true",
   "Instrument write instructions">;
-defm : ValueField<"asan-instrumentation-with-call-threshold", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"asan-instrumentation-with-call-threshold", "int",
   "If the function being instrumented contains more than this number of memory accesses, use callbacks instead of inline checks (-1 means never use callbacks)">;
 defm : OptionalBoolField<"asan-kernel",
   "Enable KernelAddressSanitizer instrumentation">;
@@ -67,11 +69,11 @@ defm : BoolField<"asan-kernel-mem-intrinsic-prefix", "false",
   "Use prefix for memory intrinsics in KASAN mode">;
 // The shadow mapping looks like
 //    Shadow = (Mem >> scale) + offset
-defm : ValueField<"asan-mapping-offset", "std::optional<uint64_t>", "std::nullopt",
+defm : OptionalValueField<"asan-mapping-offset", "uint64_t",
   "Offset of asan shadow mapping [EXPERIMENTAL]">;
-defm : ValueField<"asan-mapping-scale", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"asan-mapping-scale", "int",
   "Scale of asan shadow mapping">;
-defm : ValueField<"asan-max-inline-poisoning-size", "std::optional<uint32_t>", "std::nullopt",
+defm : OptionalValueField<"asan-max-inline-poisoning-size", "uint32_t",
   "Inline shadow poisoning for blocks up to the given size in bytes">;
 // This flag limits the number of instructions to be instrumented in any given
 // BB. Normally, this should be set to unlimited (INT_MAX), but due to
@@ -105,7 +107,7 @@ defm : BoolField<"asan-stack", "true",
   "Handle stack memory">;
 defm : BoolField<"asan-stack-dynamic-alloca", "true",
   "Use dynamic alloca to represent stack variables">;
-defm : EnumField<"asan-use-after-return", "std::optional<AsanDetectStackUseAfterReturnMode>", "std::nullopt",
+defm : OptionalEnumField<"asan-use-after-return", "AsanDetectStackUseAfterReturnMode",
   "never,runtime,always",
   ["AsanDetectStackUseAfterReturnMode::Never", "AsanDetectStackUseAfterReturnMode::Runtime", "AsanDetectStackUseAfterReturnMode::Always"],
   "Sets the mode of detection for stack-use-after-return">;
@@ -142,7 +144,7 @@ defm : ValueField<"alloc-token-fallback", "uint64_t", "0",
   "The default fallback token where none could be determined">;
 defm : OptionalBoolField<"alloc-token-fast-abi",
   "The token ID is encoded in the function name">;
-defm : ValueField<"alloc-token-max", "std::optional<uint64_t>", "std::nullopt",
+defm : OptionalValueField<"alloc-token-max", "uint64_t",
   "Maximum number of tokens (0 = target SIZE_MAX)">;
 defm : ValueField<"alloc-token-prefix", "StringRef", "\"__alloc_token_\"",
   "The allocation function prefix">;
@@ -168,6 +170,8 @@ defm : BoolField<"force-chr", "false",
   "Apply CHR for all functions">;
 
 // DataFlowSanitizer.cpp
+defm : ListField<"dfsan-abilist", "StringRef",
+  "File listing native ABI functions and how the pass treats them">;
 defm : BoolField<"dfsan-add-global-name-suffix", "true",
   "Whether to add .dfsan suffix to global names">;
 // Controls whether the pass propagates labels of offsets in GEP instructions.
@@ -181,6 +185,8 @@ defm : BoolField<"dfsan-combine-pointer-labels-on-load", "true",
 // stores instructions.
 defm : BoolField<"dfsan-combine-pointer-labels-on-store", "false",
   "Combine the label of the pointer with the label of the data when storing in memory">;
+defm : ListField<"dfsan-combine-taint-lookup-table", "StringRef",
+  "When dfsan-combine-offset-labels-on-gep and/or dfsan-combine-pointer-labels-on-load are false, this flag can be used to re-enable combining offset and/or pointer taint when loading specific constant global variables (i.e. lookup tables)">;
 // Experimental feature that inserts callbacks for conditionals, including:
 // conditional branch, switch, select. This must be true for
 // dfsan_set_conditional_callback() to have effect.
@@ -270,15 +276,15 @@ defm : OptionalBoolField<"hwasan-kernel",
   "Enable KernelHWAddressSanitizer instrumentation">;
 defm : BoolField<"hwasan-kernel-mem-intrinsic-prefix", "false",
   "Use prefix for memory intrinsics in KASAN mode">;
-defm : ValueField<"hwasan-match-all-tag", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"hwasan-match-all-tag", "int",
   "Don't report bad accesses via pointers with this tag">;
 defm : ValueField<"hwasan-max-lifetimes-for-alloca", "size_t", "3",
   "How many lifetime ends to handle for a single alloca">;
 defm : ValueField<"hwasan-memory-access-callback-prefix", "StringRef", "\"__hwasan_\"",
   "Prefix for memory access callbacks">;
-defm : ValueField<"hwasan-percentile-cutoff-hot", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"hwasan-percentile-cutoff-hot", "int",
   "Hot percentile cutoff">;
-defm : ValueField<"hwasan-random-rate", "std::optional<float>", "std::nullopt",
+defm : OptionalValueField<"hwasan-random-rate", "float",
   "Probability value in the range [0.0, 1.0] to keep instrumentation of a function. Note: instrumentation can be skipped randomly OR because of the hot percentile cutoff, if both are supplied">;
 defm : EnumField<"hwasan-record-stack-history", "RecordStackHistoryMode", "RecordStackHistoryMode::instr",
   "none,instr,libcall",
@@ -336,6 +342,8 @@ defm : ValueField<"icp-cutoff", "unsigned", "0",
 // For debug use only.
 defm : BoolField<"icp-dumpafter", "false",
   "Dump IR after transformation happens">;
+defm : ListField<"icp-ignored-base-types", "StringRef",
+  "A list of mangled vtable type info names. Classes specified by the type info names and their derived ones will not be vtable-ICP'ed. Useful when the profiled types and actual types in the optimized binary could be different due to profiling limitations. Type info names are those string literals used in LLVM type metadata">;
 // If the option is set to true, only invoke instructions will be considered for
 // transformation -- call instructions will be ignored.
 defm : BoolField<"icp-invoke-only", "false",
@@ -415,9 +423,9 @@ defm : BoolField<"vp-static-alloc", "true",
   "Do static counter allocation for value profiler">;
 
 // LowerAllowCheckPass.cpp
-defm : ValueField<"lower-allow-check-percentile-cutoff-hot", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"lower-allow-check-percentile-cutoff-hot", "int",
   "Hot percentile cutoff">;
-defm : ValueField<"lower-allow-check-random-rate", "std::optional<float>", "std::nullopt",
+defm : OptionalValueField<"lower-allow-check-random-rate", "float",
   "Probability value in the range [0.0, 1.0] of unconditional pseudo-random checks">;
 
 // MemorySanitizer.cpp
@@ -469,7 +477,7 @@ defm : OptionalBoolField<"msan-keep-going",
   "Keep going after reporting a UMR">;
 defm : OptionalBoolField<"msan-kernel",
   "Enable KernelMemorySanitizer instrumentation">;
-defm : ValueField<"msan-origin-base", "std::optional<uint64_t>", "std::nullopt",
+defm : OptionalValueField<"msan-origin-base", "uint64_t",
   "Define custom MSan OriginBase">;
 defm : BoolField<"msan-poison-stack", "true",
   "Poison uninitialized stack variables">;
@@ -485,7 +493,7 @@ defm : BoolField<"msan-precise-disjoint-or", "false",
   "Precisely poison disjoint OR. If false (legacy behavior), disjointedness is ignored (i.e., 1|1 is initialized)">;
 defm : BoolField<"msan-print-stack-names", "true",
   "Print name of local stack variable">;
-defm : ValueField<"msan-shadow-base", "std::optional<uint64_t>", "std::nullopt",
+defm : OptionalValueField<"msan-shadow-base", "uint64_t",
   "Define custom MSan ShadowBase">;
 defm : ValueField<"msan-switch-precision", "int", "99",
   "Controls the number of cases considered by MSan for LLVM switch instructions. 0 means no UUMs detected. Higher values lead to fewer false negatives but may impact compiler and/or application performance. N.B. LLVM switch instructions do not correspond exactly to C++ switch statements">;
@@ -493,7 +501,7 @@ defm : ValueField<"msan-switch-precision", "int", "99",
 //
 // Adds a section to MemorySanitizer report that points to the allocation (stack
 // or heap) the uninitialized bits came from originally.
-defm : ValueField<"msan-track-origins", "std::optional<int>", "std::nullopt",
+defm : OptionalValueField<"msan-track-origins", "int",
   "Track origins (allocation sites) of poisoned memory">;
 // This is off by default because of a bug in gold:
 // https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -593,7 +601,13 @@ defm : ValueField<"nsan-shadow-type-mapping", "StringRef", "\"dqq\"",
 defm : BoolField<"nsan-truncate-fcmp-eq", "true",
   "This flag controls the behaviour of fcmp equality comparisons.For equality comparisons such as `x == 0.0f`, we can perform the shadow check in the shadow (`x_shadow == 0.0) == (x == 0.0f)`) or app  domain (`(trunc(x_shadow) == 0.0f) == (x == 0.0f)`). This helps catch the case when `x_shadow` is accurate enough (and therefore close enough to zero) so that `trunc(x_shadow)` is zero even though both `x` and `x_shadow` are not">;
 
+// PGOCtxProfLowering.cpp
+defm : ListField<"profile-context-root", "StringRef",
+  "A function name, assumed to be global, which will be treated as the root of an interesting graph, which will be profiled independently from other similar graphs">;
+
 // PGOInstrumentation.cpp
+defm : ListField<"ctx-prof-skip-callsite-instr", "StringRef",
+  "Do not instrument callsites to functions in this list. Intended for testing">;
 // Command line option to disable value profiling. The default is false: i.e.
 // value profiling is enabled by default. This is for debug purpose.
 defm : BoolField<"disable-vp", "false",

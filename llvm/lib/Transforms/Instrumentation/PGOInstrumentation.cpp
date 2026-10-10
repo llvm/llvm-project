@@ -168,11 +168,6 @@ cl::opt<bool>
                       cl::desc("Use this option to turn off/on "
                                "warnings about profile cfg mismatch."));
 
-cl::list<std::string> CtxPGOSkipCallsiteInstrument(
-    "ctx-prof-skip-callsite-instr", cl::Hidden,
-    cl::desc("Do not instrument callsites to functions in this list. Intended "
-             "for testing."));
-
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
 // Command line option to turn on CFG dot dump after profile annotation.
@@ -811,7 +806,8 @@ void FunctionInstrumenter::instrument() {
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   if (IsCtxProf) {
-    StringSet<> SkipCSInstr(llvm::from_range, CtxPGOSkipCallsiteInstrument);
+    StringSet<> SkipCSInstr(llvm::from_range,
+                            Opts.ctx_prof_skip_callsite_instr);
 
     auto *CSIntrinsic =
         Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);

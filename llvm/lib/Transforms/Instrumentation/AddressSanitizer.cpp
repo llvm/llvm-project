@@ -67,7 +67,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -194,11 +193,6 @@ constexpr size_t kAccessSizeIndexShift = 1;
 constexpr size_t kAccessSizeIndexMask = 0xf;
 constexpr size_t kIsWriteShift = 5;
 constexpr size_t kIsWriteMask = 0x1;
-
-static cl::list<unsigned> ClAddrSpaces(
-    "asan-instrument-address-spaces",
-    cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated);
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -1137,12 +1131,13 @@ static bool isUnsupportedAMDGPUAddrspace(Value *Addr) {
   return false;
 }
 
-static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
+static bool isSupportedAddrspace(const InstrumentationOptions &Opts,
+                                 const Triple &TargetTriple, Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
 
-  if (!ClAddrSpaces.empty())
-    return is_contained(ClAddrSpaces, AddrSpace);
+  if (!Opts.asan_instrument_address_spaces.empty())
+    return is_contained(Opts.asan_instrument_address_spaces, AddrSpace);
 
   if (TargetTriple.isAMDGPU())
     return !isUnsupportedAMDGPUAddrspace(Addr);
@@ -1219,7 +1214,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
 bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // Check whether the target supports sanitizing the address space
   // of the pointer.
-  if (!isSupportedAddrspace(TargetTriple, Ptr))
+  if (!isSupportedAddrspace(Opts, TargetTriple, Ptr))
     return true;
 
   // Ignore swifterror addresses.
@@ -1928,7 +1923,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
-  if (!isSupportedAddrspace(TargetTriple, G))
+  if (!isSupportedAddrspace(Opts, TargetTriple, G))
     return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
   // Two problems with thread-locals:

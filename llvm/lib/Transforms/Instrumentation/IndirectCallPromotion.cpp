@@ -62,15 +62,6 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
-static cl::list<std::string> ICPIgnoredBaseTypes(
-    "icp-ignored-base-types", cl::Hidden,
-    cl::desc(
-        "A list of mangled vtable type info names. Classes specified by the "
-        "type info names and their derived ones will not be vtable-ICP'ed. "
-        "Useful when the profiled types and actual types in the optimized "
-        "binary could be different due to profiling limitations. Type info "
-        "names are those string literals used in LLVM type metadata"));
-
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
@@ -988,7 +979,7 @@ static bool promoteIndirectCalls(const InstrumentationOptions &Opts, Module &M,
   if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-    IgnoredBaseTypes.insert_range(ICPIgnoredBaseTypes);
+    IgnoredBaseTypes.insert_range(Opts.icp_ignored_base_types);
   }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable
