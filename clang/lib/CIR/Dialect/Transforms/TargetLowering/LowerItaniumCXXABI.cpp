@@ -153,7 +153,9 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::Microsoft:
     llvm_unreachable("Microsoft ABI is not Itanium-based");
   default:
-    llvm_unreachable("Other Itanium ABI?");
+    // FIXME: not all ABIS are implemented. The error is reported by consumers
+    // of LowerModule/CIRCXXABI when missing CIRCXXABI is encountered.
+    return nullptr;
   }
 }
 

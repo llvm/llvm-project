@@ -920,6 +920,14 @@ void CXXABILoweringPass::runOnOperation() {
     return;
   }
 
+  if (!lowerModule->hasCXXABI()) {
+    mod.emitError() << "C++ ABI '"
+                    << clang::TargetCXXABI::getSpelling(
+                           lowerModule->getCXXABIKind())
+                    << "' is not yet supported by CIR";
+    return signalPassFailure();
+  }
+
   mlir::DataLayout dataLayout(mod);
   CIRABITypeConverter typeConverter(*ctx, dataLayout, *lowerModule);
 
