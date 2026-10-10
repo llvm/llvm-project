@@ -9,10 +9,6 @@
 //   3. implicitBacking   - no @synthesize at all; the compiler
 //                           auto-synthesizes both the accessors and a
 //                           default-named ivar (_implicitBacking).
-// It also verifies that no DIProperty is emitted when an accessor is
-// hand-written (class HandwrittenAccessor), because such an accessor may do
-// more than forward to the ivar, so a debugger must not bypass it. The legacy
-// DIObjCProperty is still emitted in that case.
 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o %t.ll
 // RUN: FileCheck %s < %t.ll
@@ -31,16 +27,11 @@
 // CHECK-DAG: ![[IMPLICIT_IVAR:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "_implicitBacking", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[IMPLICIT_PROP]])
 // CHECK-DAG: !DIProperty(name: "implicitBacking", file: ![[FILE]], line: {{[0-9]+}}, type: ![[INT_TY]], backing_storage: ![[IMPLICIT_IVAR]])
 
-//
-// Hand-written accessors: the legacy DIObjCProperty is still emitted and
-// linked from the ivar...
 // CHECK-DAG: ![[COMPUTED_PROP:[0-9]+]] = !DIObjCProperty(name: "computed", file: ![[FILE]], line: {{[0-9]+}}, attributes: 2124, type: ![[INT_TY]])
 // CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_computed", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[COMPUTED_PROP]])
 // CHECK-DAG: ![[CLAMPED_PROP:[0-9]+]] = !DIObjCProperty(name: "clamped", file: ![[FILE]], line: {{[0-9]+}}, attributes: 2124, type: ![[INT_TY]])
 // CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_clamped", {{.*}}file: ![[FILE]], {{.*}}extraData: ![[CLAMPED_PROP]])
-//
-// ...but no DIProperty is. These use a separate prefix with only NOT lines so
-// they scan the whole output, not just the text after the last CHECK-DAG match.
+
 // NO-DIPROPERTY-NOT: !DIProperty(name: "computed"
 // NO-DIPROPERTY-NOT: !DIProperty(name: "clamped"
 
