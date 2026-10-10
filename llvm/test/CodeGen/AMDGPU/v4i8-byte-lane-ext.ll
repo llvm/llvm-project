@@ -239,20 +239,18 @@ define void @sitofp_2x_v4i8_to_v4f32(ptr addrspace(1) noalias %p, ptr addrspace(
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
-; GFX10-NEXT:    v_ashrrev_i16 v7, 8, v0
+; GFX10-NEXT:    v_ashrrev_i16 v5, 8, v0
+; GFX10-NEXT:    v_ashrrev_i16 v7, 8, v0 op_sel:[0,1,0]
+; GFX10-NEXT:    v_ashrrev_i16 v9, 8, v1
+; GFX10-NEXT:    v_ashrrev_i16 v11, 8, v1 op_sel:[0,1,0]
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v6, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v4, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX10-NEXT:    v_ashrrev_i16 v0, 8, v5
-; GFX10-NEXT:    v_ashrrev_i16 v9, 8, v1
-; GFX10-NEXT:    v_ashrrev_i16 v11, 8, v8
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v5, sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v7) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v5, sext(v5) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v10, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v7, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v8, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
-; GFX10-NEXT:    v_cvt_f32_i32_sdwa v9, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
 ; GFX10-NEXT:    v_cvt_f32_i32_sdwa v11, sext(v11) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
+; GFX10-NEXT:    v_cvt_f32_i32_sdwa v9, sext(v9) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0
 ; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
 ; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
