@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -129,17 +130,6 @@ static const Align MinOriginAlignment = Align(4);
 static const unsigned ArgTLSSize = 800;
 static const unsigned RetvalTLSSize = 800;
 
-// The -dfsan-preserve-alignment flag controls whether this pass assumes that
-// alignment requirements provided by the input IR are correct.  For example,
-// if the input IR contains a load with alignment 8, this flag will cause
-// the shadow load to have alignment 16.  This flag is disabled by default as
-// we have unfortunately encountered too much code (including Clang itself;
-// see PR14291) which performs misaligned access.
-static cl::opt<bool> ClPreserveAlignment(
-    "dfsan-preserve-alignment",
-    cl::desc("respect alignment requirements provided by input IR"), cl::Hidden,
-    cl::init(false));
-
 // The ABI list files control how shadow parameters are passed. The pass treats
 // every function labelled "uninstrumented" in the ABI list file as conforming
 // to the "native" (i.e. unsanitized) ABI.  Unless the ABI list contains
@@ -161,30 +151,6 @@ static cl::list<std::string> ClABIListFiles(
     cl::desc("File listing native ABI functions and how the pass treats them"),
     cl::Hidden);
 
-// Controls whether the pass includes or ignores the labels of pointers in load
-// instructions.
-static cl::opt<bool> ClCombinePointerLabelsOnLoad(
-    "dfsan-combine-pointer-labels-on-load",
-    cl::desc("Combine the label of the pointer with the label of the data when "
-             "loading from memory."),
-    cl::Hidden, cl::init(true));
-
-// Controls whether the pass includes or ignores the labels of pointers in
-// stores instructions.
-static cl::opt<bool> ClCombinePointerLabelsOnStore(
-    "dfsan-combine-pointer-labels-on-store",
-    cl::desc("Combine the label of the pointer with the label of the data when "
-             "storing in memory."),
-    cl::Hidden, cl::init(false));
-
-// Controls whether the pass propagates labels of offsets in GEP instructions.
-static cl::opt<bool> ClCombineOffsetLabelsOnGEP(
-    "dfsan-combine-offset-labels-on-gep",
-    cl::desc(
-        "Combine the label of the offset with the label of the pointer when "
-        "doing pointer arithmetic."),
-    cl::Hidden, cl::init(true));
-
 static cl::list<std::string> ClCombineTaintLookupTables(
     "dfsan-combine-taint-lookup-table",
     cl::desc(
@@ -193,78 +159,6 @@ static cl::list<std::string> ClCombineTaintLookupTables(
         "be used to re-enable combining offset and/or pointer taint when "
         "loading specific constant global variables (i.e. lookup tables)."),
     cl::Hidden);
-
-static cl::opt<bool> ClDebugNonzeroLabels(
-    "dfsan-debug-nonzero-labels",
-    cl::desc("Insert calls to __dfsan_nonzero_label on observing a parameter, "
-             "load or return with a nonzero label"),
-    cl::Hidden);
-
-// Experimental feature that inserts callbacks for certain data events.
-// Currently callbacks are only inserted for loads, stores, memory transfers
-// (i.e. memcpy and memmove), and comparisons.
-//
-// If this flag is set to true, the user must provide definitions for the
-// following callback functions:
-//   void __dfsan_load_callback(dfsan_label Label, void* addr);
-//   void __dfsan_store_callback(dfsan_label Label, void* addr);
-//   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
-//   void __dfsan_cmp_callback(dfsan_label CombinedLabel);
-static cl::opt<bool> ClEventCallbacks(
-    "dfsan-event-callbacks",
-    cl::desc("Insert calls to __dfsan_*_callback functions on data events."),
-    cl::Hidden, cl::init(false));
-
-// Experimental feature that inserts callbacks for conditionals, including:
-// conditional branch, switch, select.
-// This must be true for dfsan_set_conditional_callback() to have effect.
-static cl::opt<bool> ClConditionalCallbacks(
-    "dfsan-conditional-callbacks",
-    cl::desc("Insert calls to callback functions on conditionals."), cl::Hidden,
-    cl::init(false));
-
-// Experimental feature that inserts callbacks for data reaching a function,
-// either via function arguments and loads.
-// This must be true for dfsan_set_reaches_function_callback() to have effect.
-static cl::opt<bool> ClReachesFunctionCallbacks(
-    "dfsan-reaches-function-callbacks",
-    cl::desc("Insert calls to callback functions on data reaching a function."),
-    cl::Hidden, cl::init(false));
-
-// Controls whether the pass tracks the control flow of select instructions.
-static cl::opt<bool> ClTrackSelectControlFlow(
-    "dfsan-track-select-control-flow",
-    cl::desc("Propagate labels from condition values of select instructions "
-             "to results."),
-    cl::Hidden, cl::init(true));
-
-// TODO: This default value follows MSan. DFSan may use a different value.
-static cl::opt<int> ClInstrumentWithCallThreshold(
-    "dfsan-instrument-with-call-threshold",
-    cl::desc("If the function being instrumented requires more than "
-             "this number of origin stores, use callbacks instead of "
-             "inline checks (-1 means never use callbacks)."),
-    cl::Hidden, cl::init(3500));
-
-// Controls how to track origins.
-// * 0: do not track origins.
-// * 1: track origins at memory store operations.
-// * 2: track origins at memory load and store operations.
-//      TODO: track callsites.
-static cl::opt<int> ClTrackOrigins("dfsan-track-origins",
-                                   cl::desc("Track origins of labels"),
-                                   cl::Hidden, cl::init(0));
-
-static cl::opt<bool> ClIgnorePersonalityRoutine(
-    "dfsan-ignore-personality-routine",
-    cl::desc("If a personality routine is marked uninstrumented from the ABI "
-             "list, do not create a wrapper for it."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClAddGlobalNameSuffix(
-    "dfsan-add-global-name-suffix",
-    cl::desc("Whether to add .dfsan suffix to global names"), cl::Hidden,
-    cl::init(true));
 
 static StringRef getGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
@@ -465,6 +359,7 @@ class DataFlowSanitizer {
     WK_Custom
   };
 
+  const InstrumentationOptions &Opts;
   Module *Mod;
   LLVMContext *Ctx;
   Type *Int8Ptr;
@@ -592,7 +487,8 @@ class DataFlowSanitizer {
   const uint64_t NumOfElementsInArgOrgTLS = ArgTLSSize / OriginWidthBytes;
 
 public:
-  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles,
+  DataFlowSanitizer(const InstrumentationOptions &Opts,
+                    const std::vector<std::string> &ABIListFiles,
                     IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   bool runImpl(Module &M,
@@ -600,6 +496,7 @@ public:
 };
 
 struct DFSanFunction {
+  const InstrumentationOptions &Opts;
   DataFlowSanitizer &DFS;
   Function *F;
   DominatorTree DT;
@@ -630,15 +527,15 @@ struct DFSanFunction {
   /// Maps a value to its latest shadow value in terms of domination tree.
   DenseMap<std::pair<Value *, Value *>, CachedShadow> CachedShadows;
   /// Maps a value to its latest collapsed shadow value it was converted to in
-  /// terms of domination tree. When ClDebugNonzeroLabels is on, this cache is
-  /// used at a post process where CFG blocks are split. So it does not cache
-  /// BasicBlock like CachedShadows, but uses domination between values.
+  /// terms of domination tree. When -dfsan-debug-nonzero-labels is on, this
+  /// cache is used at a post process where CFG blocks are split. So it does not
+  /// cache BasicBlock like CachedShadows, but uses domination between values.
   DenseMap<Value *, Value *> CachedCollapsedShadows;
   DenseMap<Value *, std::set<Value *>> ShadowElements;
 
   DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI,
                 bool IsForceZeroLabels, TargetLibraryInfo &TLI)
-      : DFS(DFS), F(F), IsNativeABI(IsNativeABI),
+      : Opts(DFS.Opts), DFS(DFS), F(F), IsNativeABI(IsNativeABI),
         IsForceZeroLabels(IsForceZeroLabels), TLI(TLI) {
     DT.recalculate(*F);
   }
@@ -720,11 +617,11 @@ struct DFSanFunction {
 
   Align getShadowAlign(Align InstAlignment);
 
-  // If ClConditionalCallbacks is enabled, insert a callback after a given
+  // If -dfsan-conditional-callbacks is enabled, insert a callback after a given
   // branch instruction using the given conditional expression.
   void addConditionalCallbacksIfEnabled(Instruction &I, Value *Condition);
 
-  // If ClReachesFunctionCallbacks is enabled, insert a callback for each
+  // If -dfsan-reaches-function-callbacks is enabled, insert a callback for each
   // argument and load instruction.
   void addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB, Instruction &I,
                                             Value *Data);
@@ -888,8 +785,10 @@ bool LibAtomicFunction(const Function &F) {
 } // end anonymous namespace
 
 DataFlowSanitizer::DataFlowSanitizer(
+    const InstrumentationOptions &Opts,
     const std::vector<std::string> &ABIListFiles,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+    IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : Opts(Opts) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   llvm::append_range(AllABIListFiles, ClABIListFiles);
   ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles, *FS));
@@ -962,8 +861,7 @@ bool DataFlowSanitizer::hasLoadSizeForFastPath(uint64_t Size) {
 }
 
 bool DataFlowSanitizer::shouldTrackOrigins() {
-  static const bool ShouldTrackOrigins = ClTrackOrigins;
-  return ShouldTrackOrigins;
+  return Opts.dfsan_track_origins;
 }
 
 Constant *DataFlowSanitizer::getZeroShadow(Type *OrigTy) {
@@ -1006,8 +904,8 @@ static Value *expandFromPrimitiveShadowRecursive(
 }
 
 bool DFSanFunction::shouldInstrumentWithCall() {
-  return ClInstrumentWithCallThreshold >= 0 &&
-         NumOriginStores >= ClInstrumentWithCallThreshold;
+  return Opts.dfsan_instrument_with_call_threshold >= 0 &&
+         NumOriginStores >= Opts.dfsan_instrument_with_call_threshold;
 }
 
 Value *DFSanFunction::expandFromPrimitiveShadow(Type *T, Value *PrimitiveShadow,
@@ -1080,7 +978,7 @@ Value *DFSanFunction::collapseToPrimitiveShadow(Value *Shadow,
 
 void DFSanFunction::addConditionalCallbacksIfEnabled(Instruction &I,
                                                      Value *Condition) {
-  if (!ClConditionalCallbacks) {
+  if (!Opts.dfsan_conditional_callbacks) {
     return;
   }
   IRBuilder<> IRB(&I);
@@ -1100,7 +998,7 @@ void DFSanFunction::addConditionalCallbacksIfEnabled(Instruction &I,
 void DFSanFunction::addReachesFunctionCallbacksIfEnabled(IRBuilder<> &IRB,
                                                          Instruction &I,
                                                          Value *Data) {
-  if (!ClReachesFunctionCallbacks) {
+  if (!Opts.dfsan_reaches_function_callbacks) {
     return;
   }
   const DebugLoc &dbgloc = I.getDebugLoc();
@@ -1298,7 +1196,7 @@ DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
 }
 
 void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
-  if (!ClAddGlobalNameSuffix)
+  if (!Opts.dfsan_add_global_name_suffix)
     return;
 
   std::string GVName = std::string(GV->getName()), Suffix = ".dfsan";
@@ -1592,8 +1490,7 @@ bool DataFlowSanitizer::runImpl(
     Changed = true;
     return new GlobalVariable(
         M, OriginTy, true, GlobalValue::WeakODRLinkage,
-        ConstantInt::getSigned(OriginTy,
-                               shouldTrackOrigins() ? ClTrackOrigins : 0),
+        ConstantInt::getSigned(OriginTy, Opts.dfsan_track_origins),
         "__dfsan_track_origins");
   });
 
@@ -1613,7 +1510,7 @@ bool DataFlowSanitizer::runImpl(
         PersonalityFns.insert(F.getPersonalityFn()->stripPointerCasts());
     }
 
-  if (ClIgnorePersonalityRoutine) {
+  if (Opts.dfsan_ignore_personality_routine) {
     for (auto *C : PersonalityFns) {
       assert(isa<Function>(C) && "Personality routine is not a function!");
       Function *F = cast<Function>(C);
@@ -1757,7 +1654,7 @@ bool DataFlowSanitizer::runImpl(
     DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F),
                        FnsWithForceZeroLabel.count(F), GetTLI(*F));
 
-    if (ClReachesFunctionCallbacks) {
+    if (Opts.dfsan_reaches_function_callbacks) {
       // Add callback for arguments reaching this function.
       for (auto &FArg : F->args()) {
         Instruction *Next = &F->getEntryBlock().front();
@@ -1823,7 +1720,7 @@ bool DataFlowSanitizer::runImpl(
     // places (i.e. instructions in basic blocks we haven't even begun visiting
     // yet).  To make our life easier, do this work in a pass after the main
     // instrumentation.
-    if (ClDebugNonzeroLabels) {
+    if (Opts.dfsan_debug_nonzero_labels) {
       for (Value *V : DFSF.NonZeroChecks) {
         BasicBlock::iterator Pos;
         if (Instruction *I = dyn_cast<Instruction>(V))
@@ -2157,7 +2054,8 @@ void DFSanVisitor::visitInstOperandOrigins(Instruction &I) {
 }
 
 Align DFSanFunction::getShadowAlign(Align InstAlignment) {
-  const Align Alignment = ClPreserveAlignment ? InstAlignment : Align(1);
+  const Align Alignment =
+      Opts.dfsan_preserve_alignment ? InstAlignment : Align(1);
   return Align(Alignment.value() * DFS.ShadowWidthBytes);
 }
 
@@ -2178,7 +2076,7 @@ bool DFSanFunction::useCallbackLoadLabelAndOrigin(uint64_t Size,
                                                   Align InstAlignment) {
   // When enabling tracking load instructions, we always use
   // __dfsan_load_label_and_origin to reduce code size.
-  if (ClTrackOrigins == 2)
+  if (Opts.dfsan_track_origins == 2)
     return true;
 
   assert(Size != 0);
@@ -2406,7 +2304,7 @@ DFSanFunction::loadShadowOrigin(Value *Addr, uint64_t Size, Align InstAlignment,
   std::tie(PrimitiveShadow, Origin) =
       loadShadowOriginSansLoadTracking(Addr, Size, InstAlignment, Pos);
   if (DFS.shouldTrackOrigins()) {
-    if (ClTrackOrigins == 2) {
+    if (Opts.dfsan_track_origins == 2) {
       IRBuilder<> IRB(Pos);
       auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
       if (!ConstantShadow || !ConstantShadow->isNullValue())
@@ -2488,7 +2386,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     Shadows.push_back(PrimitiveShadow);
     Origins.push_back(Origin);
   }
-  if (ClCombinePointerLabelsOnLoad ||
+  if (DFSF.Opts.dfsan_combine_pointer_labels_on_load ||
       DFSF.isLookupTableConstant(
           StripPointerGEPsAndCasts(LI.getPointerOperand()))) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
@@ -2509,7 +2407,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     DFSF.setOrigin(&LI, DFSF.combineOrigins(Shadows, Origins, Pos));
   }
 
-  if (ClEventCallbacks) {
+  if (DFSF.Opts.dfsan_event_callbacks) {
     IRBuilder<> IRB(Pos);
     Value *Addr = LI.getPointerOperand();
     CallInst *CI =
@@ -2752,7 +2650,7 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   }
 
   Value *PrimitiveShadow;
-  if (ClCombinePointerLabelsOnStore) {
+  if (DFSF.Opts.dfsan_combine_pointer_labels_on_store) {
     Value *PtrShadow = DFSF.getShadow(SI.getPointerOperand());
     if (ShouldTrackOrigins) {
       Shadows.push_back(PtrShadow);
@@ -2767,7 +2665,7 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Origin = DFSF.combineOrigins(Shadows, Origins, SI.getIterator());
   DFSF.storePrimitiveShadowOrigin(SI.getPointerOperand(), Size, SI.getAlign(),
                                   PrimitiveShadow, Origin, SI.getIterator());
-  if (ClEventCallbacks) {
+  if (DFSF.Opts.dfsan_event_callbacks) {
     IRBuilder<> IRB(&SI);
     Value *Addr = SI.getPointerOperand();
     CallInst *CI =
@@ -2831,7 +2729,7 @@ void DFSanVisitor::visitCastInst(CastInst &CI) { visitInstOperands(CI); }
 
 void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   visitInstOperands(CI);
-  if (ClEventCallbacks) {
+  if (DFSF.Opts.dfsan_event_callbacks) {
     IRBuilder<> IRB(&CI);
     Value *CombinedShadow = DFSF.getShadow(&CI);
     CallInst *CallI =
@@ -2858,7 +2756,7 @@ void DFSanVisitor::visitLandingPadInst(LandingPadInst &LPI) {
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  if (ClCombineOffsetLabelsOnGEP ||
+  if (DFSF.Opts.dfsan_combine_offset_labels_on_gep ||
       DFSF.isLookupTableConstant(
           StripPointerGEPsAndCasts(GEPI.getPointerOperand()))) {
     visitInstOperands(GEPI);
@@ -2970,12 +2868,13 @@ void DFSanVisitor::visitSelectInst(SelectInst &I) {
       }
     }
   }
-  DFSF.setShadow(&I, ClTrackSelectControlFlow ? DFSF.combineShadowsThenConvert(
-                                                    I.getType(), CondShadow,
-                                                    ShadowSel, I.getIterator())
-                                              : ShadowSel);
+  DFSF.setShadow(&I, DFSF.Opts.dfsan_track_select_control_flow
+                         ? DFSF.combineShadowsThenConvert(I.getType(),
+                                                          CondShadow, ShadowSel,
+                                                          I.getIterator())
+                         : ShadowSel);
   if (ShouldTrackOrigins) {
-    if (ClTrackSelectControlFlow) {
+    if (DFSF.Opts.dfsan_track_select_control_flow) {
       Shadows.push_back(CondShadow);
       Origins.push_back(DFSF.getOrigin(I.getCondition()));
     }
@@ -3016,7 +2915,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
   MTI->setDestAlignment(DFSF.getShadowAlign(I.getDestAlign().valueOrOne()));
   MTI->setSourceAlignment(DFSF.getShadowAlign(I.getSourceAlign().valueOrOne()));
-  if (ClEventCallbacks) {
+  if (DFSF.Opts.dfsan_event_callbacks) {
     IRB.CreateCall(
         DFSF.DFS.DFSanMemTransferCallbackFn,
         {DestShadow, IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
@@ -3283,8 +3182,8 @@ void DFSanVisitor::visitLibAtomicLoad(CallBase &CB) {
   IRBuilder<> NextIRB(CB.getNextNode());
   NextIRB.SetCurrentDebugLocation(CB.getDebugLoc());
 
-  // TODO: Support ClCombinePointerLabelsOnLoad
-  // TODO: Support ClEventCallbacks
+  // TODO: Support -dfsan-combine-pointer-labels-on-load
+  // TODO: Support -dfsan-event-callbacks
 
   NextIRB.CreateCall(
       DFSF.DFS.DFSanMemShadowOriginTransferFn,
@@ -3320,8 +3219,8 @@ void DFSanVisitor::visitLibAtomicStore(CallBase &CB) {
       IRB.CreateExtractElement(makeAddReleaseOrderingTable(IRB), Ordering);
   CB.setArgOperand(3, NewOrdering);
 
-  // TODO: Support ClCombinePointerLabelsOnStore
-  // TODO: Support ClEventCallbacks
+  // TODO: Support -dfsan-combine-pointer-labels-on-store
+  // TODO: Support -dfsan-event-callbacks
 
   IRB.CreateCall(
       DFSF.DFS.DFSanMemShadowOriginTransferFn,
@@ -3542,7 +3441,8 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  if (!DataFlowSanitizer(ABIListFiles, FS).runImpl(M, GetTLI))
+  if (!DataFlowSanitizer(InstrumentationOptions::Global, ABIListFiles, FS)
+           .runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

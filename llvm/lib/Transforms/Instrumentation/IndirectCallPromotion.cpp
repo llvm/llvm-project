@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
@@ -61,97 +62,6 @@ extern cl::opt<unsigned> MaxNumVTableAnnotations;
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
-// Command line option to disable indirect-call promotion with the default as
-// false. This is for debug purpose.
-static cl::opt<bool> DisableICP("disable-icp", cl::init(false), cl::Hidden,
-                                cl::desc("Disable indirect call promotion"));
-
-// Set the cutoff value for the promotion. If the value is other than 0, we
-// stop the transformation once the total number of promotions equals the cutoff
-// value.
-// For debug use only.
-static cl::opt<unsigned>
-    ICPCutOff("icp-cutoff", cl::init(0), cl::Hidden,
-              cl::desc("Max number of promotions for this compilation"));
-
-// If ICPCSSkip is non zero, the first ICPCSSkip callsites will be skipped.
-// For debug use only.
-static cl::opt<unsigned>
-    ICPCSSkip("icp-csskip", cl::init(0), cl::Hidden,
-              cl::desc("Skip Callsite up to this number for this compilation"));
-
-// ICP the candidate function even when only a declaration is present.
-static cl::opt<bool> ICPAllowDecls(
-    "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the definition "
-             " is not available"));
-
-// ICP hot candidate functions only. When setting to false, non-cold functions
-// (warm functions) can also be promoted.
-static cl::opt<bool>
-    ICPAllowHotOnly("icp-allow-hot-only", cl::init(true), cl::Hidden,
-                    cl::desc("Promote the target candidate only if it is a "
-                             "hot function. Otherwise, warm functions can "
-                             "also be promoted"));
-
-// If one target cannot be ICP'd, proceed with the remaining targets instead
-// of exiting the callsite.
-static cl::opt<bool> ICPAllowCandidateSkip(
-    "icp-allow-candidate-skip", cl::init(false), cl::Hidden,
-    cl::desc("Continue with the remaining targets instead of exiting "
-             "when failing in a candidate"));
-
-// Set if the pass is called in LTO optimization. The difference for LTO mode
-// is the pass won't prefix the source module name to the internal linkage
-// symbols.
-static cl::opt<bool> ICPLTOMode("icp-lto", cl::init(false), cl::Hidden,
-                                cl::desc("Run indirect-call promotion in LTO "
-                                         "mode"));
-
-// Set if the pass is called in SamplePGO mode. The difference for SamplePGO
-// mode is it will add prof metadatato the created direct call.
-static cl::opt<bool>
-    ICPSamplePGOMode("icp-samplepgo", cl::init(false), cl::Hidden,
-                     cl::desc("Run indirect-call promotion in SamplePGO mode"));
-
-// If the option is set to true, only call instructions will be considered for
-// transformation -- invoke instructions will be ignored.
-static cl::opt<bool>
-    ICPCallOnly("icp-call-only", cl::init(false), cl::Hidden,
-                cl::desc("Run indirect-call promotion for call instructions "
-                         "only"));
-
-// If the option is set to true, only invoke instructions will be considered for
-// transformation -- call instructions will be ignored.
-static cl::opt<bool> ICPInvokeOnly("icp-invoke-only", cl::init(false),
-                                   cl::Hidden,
-                                   cl::desc("Run indirect-call promotion for "
-                                            "invoke instruction only"));
-
-// Dump the function level IR if the transformation happened in this
-// function. For debug use only.
-static cl::opt<bool>
-    ICPDUMPAFTER("icp-dumpafter", cl::init(false), cl::Hidden,
-                 cl::desc("Dump IR after transformation happens"));
-
-// Indirect call promotion pass will fall back to function-based comparison if
-// vtable-count / function-count is smaller than this threshold.
-static cl::opt<float> ICPVTablePercentageThreshold(
-    "icp-vtable-percentage-threshold", cl::init(0.995), cl::Hidden,
-    cl::desc("The percentage threshold of vtable-count / function-count for "
-             "cost-benefit analysis."));
-
-// Although comparing vtables can save a vtable load, we may need to compare
-// vtable pointer with multiple vtable address points due to class inheritance.
-// Comparing with multiple vtables inserts additional instructions on hot code
-// path, and doing so for an earlier candidate delays the comparisons for later
-// candidates. For the last candidate, only the fallback path is affected.
-// We allow multiple vtable comparison for the last function candidate and use
-// the option below to cap the number of vtables.
-static cl::opt<int> ICPMaxNumVTableLastCandidate(
-    "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
-    cl::desc("The maximum number of vtable for the last candidate."));
-
 static cl::list<std::string> ICPIgnoredBaseTypes(
     "icp-ignored-base-types", cl::Hidden,
     cl::desc(
@@ -161,14 +71,6 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "binary could be different due to profiling limitations. Type info "
         "names are those string literals used in LLVM type metadata"));
 
-static cl::opt<int> HotFuncCutoffForICP(
-    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(-1),
-    cl::desc("A count is hot for indirect call promotion if it exceeds "
-             "the minimum count to reach this percentile of total counts."
-             "Note that this percentile is specified as "
-             "percentile * 10000 = HotFuncCutoffForICP."
-             "Default value -1 means that if the flag is unspecified then "
-             "the value of ProfileSummaryCutoffHot will be used instead."));
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
@@ -336,6 +238,7 @@ static int tryToSinkInstructions(BasicBlock *OriginalBB,
 // thresholds.
 class IndirectCallPromoter {
 private:
+  const InstrumentationOptions &Opts;
   Function &F;
   Module &M;
 
@@ -433,12 +336,13 @@ private:
 
 public:
   IndirectCallPromoter(
-      Function &Func, Module &M, InstrProfSymtab *Symtab, bool SamplePGO,
+      const InstrumentationOptions &Opts, Function &Func, Module &M,
+      InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
       const DenseSet<StringRef> &IgnoredBaseTypes,
       OptimizationRemarkEmitter &ORE)
-      : F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
+      : Opts(Opts), F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
         VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE),
         IgnoredBaseTypes(IgnoredBaseTypes) {}
@@ -471,7 +375,7 @@ bool IndirectCallPromoter::isValidTarget(uint64_t Target,
     });
     return false;
   }
-  if (!ICPAllowDecls && TargetFunction->isDeclaration()) {
+  if (!Opts.icp_allow_decls && TargetFunction->isDeclaration()) {
     LLVM_DEBUG(dbgs() << " Not promote: target definition is not available\n");
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "NoTargetDef", &CB)
@@ -509,7 +413,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
                     << " Num_targets: " << ValueDataRef.size()
                     << " Num_candidates: " << NumCandidates << "\n");
   NumOfPGOICallsites++;
-  if (ICPCSSkip != 0 && NumOfPGOICallsites <= ICPCSSkip) {
+  if (Opts.icp_csskip != 0 && NumOfPGOICallsites <= Opts.icp_csskip) {
     LLVM_DEBUG(dbgs() << " Skip: User options.\n");
     return Ret;
   }
@@ -522,7 +426,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                       << "  Target_func: " << Target << "\n");
 
-    if (ICPInvokeOnly && isa<CallInst>(CB)) {
+    if (Opts.icp_invoke_only && isa<CallInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User options.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
@@ -530,7 +434,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
       });
       break;
     }
-    if (ICPCallOnly && isa<InvokeInst>(CB)) {
+    if (Opts.icp_call_only && isa<InvokeInst>(CB)) {
       LLVM_DEBUG(dbgs() << " Not promote: User option.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UserOptions", &CB)
@@ -538,7 +442,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
       });
       break;
     }
-    if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
+    if (Opts.icp_cutoff != 0 && NumOfPGOICallPromotion >= Opts.icp_cutoff) {
       LLVM_DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "CutOffReached", &CB)
@@ -549,7 +453,7 @@ IndirectCallPromoter::getPromotionCandidatesForCallSite(
 
     Function *TargetFunction = Symtab->getFunction(Target);
     if (!isValidTarget(Target, TargetFunction, CB, Count)) {
-      if (ICPAllowCandidateSkip)
+      if (Opts.icp_allow_candidate_skip)
         continue;
       else
         break;
@@ -890,13 +794,13 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
                           << TotalCount << "\n");
         continue;
       }
-      // Only promote hot if ICPAllowHotOnly is true. ICP has its own cutoff
+      // Only promote hot if -icp-allow-hot-only is true. ICP has its own cutoff
       // threshold for hotness, which defaults to ProfileSummaryCutoffHot if
       // unspecified.
-      if (ICPAllowHotOnly &&
-          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP == -1
+      if (Opts.icp_allow_hot_only &&
+          !PSI->isHotCountNthPercentile(Opts.hot_func_cutoff_for_icp == -1
                                             ? ProfileSummaryCutoffHot
-                                            : HotFuncCutoffForICP,
+                                            : Opts.hot_func_cutoff_for_icp,
                                         TotalCount)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
@@ -954,7 +858,8 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
         return false;
     }
 
-    if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
+    if (CandidateVTableCount <
+        Candidate.Count * Opts.icp_vtable_percentage_threshold) {
       LLVM_DEBUG(
           dbgs() << "    function count " << Candidate.Count
                  << " and its vtable sum count " << CandidateVTableCount
@@ -970,7 +875,7 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     // candidate and allow option to override it for the last candidate.
     int MaxNumVTable = 1;
     if (I == CandidateSize - 1)
-      MaxNumVTable = ICPMaxNumVTableLastCandidate;
+      MaxNumVTable = Opts.icp_max_num_vtable_last_candidate;
 
     if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
       LLVM_DEBUG(dbgs() << "    allow at most " << MaxNumVTable << " and got "
@@ -1064,9 +969,10 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
 }
 
 // A wrapper function that does the actual work.
-static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
+static bool promoteIndirectCalls(const InstrumentationOptions &Opts, Module &M,
+                                 ProfileSummaryInfo *PSI, bool InLTO,
                                  bool SamplePGO, ModuleAnalysisManager &MAM) {
-  if (DisableICP)
+  if (Opts.disable_icp)
     return false;
   InstrProfSymtab Symtab;
   if (Error E = Symtab.create(M, InLTO)) {
@@ -1102,16 +1008,16 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    IndirectCallPromoter CallPromoter(F, M, &Symtab, SamplePGO, VirtualCSInfo,
-                                      VTableAddressPointOffsetVal,
-                                      IgnoredBaseTypes, ORE);
+    IndirectCallPromoter CallPromoter(
+        Opts, F, M, &Symtab, SamplePGO, VirtualCSInfo,
+        VTableAddressPointOffsetVal, IgnoredBaseTypes, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
-    if (ICPDUMPAFTER && FuncChanged) {
+    if (Opts.icp_dumpafter && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
     }
     Changed |= FuncChanged;
-    if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
+    if (Opts.icp_cutoff != 0 && NumOfPGOICallPromotion >= Opts.icp_cutoff) {
       LLVM_DEBUG(dbgs() << " Stop: Cutoff reached.\n");
       break;
     }
@@ -1123,8 +1029,9 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (!promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
-                            SamplePGO | ICPSamplePGOMode, MAM))
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
+                            SamplePGO | Opts.icp_samplepgo, MAM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

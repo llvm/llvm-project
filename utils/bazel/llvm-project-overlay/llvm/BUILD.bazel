@@ -1942,6 +1942,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InstrumentationOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Instrumentation",
+    tbl_outs = {
+        "lib/Transforms/Instrumentation/InstrumentationOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Instrumentation/InstrumentationOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Instrumentation",
     srcs = glob([
@@ -1959,7 +1970,9 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOffloading",
+        ":InstrumentationOptionsTableGen",
         ":MC",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
