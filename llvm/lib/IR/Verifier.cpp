@@ -7145,6 +7145,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::vector_shuffle: {
+    auto *RetTy = cast<VectorType>(Call.getType());
+    auto *MaskTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+
+    Check(MaskTy->getElementCount() == RetTy->getElementCount(),
+          "vector_shuffle mask must have the same number of elements as the "
+          "result.",
+          &Call);
+    break;
+  }
   case Intrinsic::vector_insert: {
     Value *Vec = Call.getArgOperand(0);
     Value *SubVec = Call.getArgOperand(1);
