@@ -30,6 +30,11 @@ using namespace mlir::dataflow;
 // AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
+void AbstractDenseForwardDataFlowAnalysis::getDependentAnalyses(
+    AnalysisDependencies &deps) const {
+  deps.insert<DeadCodeAnalysis>();
+}
+
 void AbstractDenseForwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
     Operation *top) {
   LDBG() << "initializeEquivalentLatticeAnchor: "
@@ -48,6 +53,8 @@ void AbstractDenseForwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
 }
 
 LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
+  assert(getSolver().lookupAnalysis<DeadCodeAnalysis>() &&
+         "DeadCodeAnalysis must be loaded alongside a dense forward analysis");
   LDBG() << "initialize (forward): "
          << OpWithFlags(top, OpPrintingFlags().skipRegions());
   // Visit every operation and block.
@@ -356,6 +363,11 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
 // AbstractDenseBackwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
+void AbstractDenseBackwardDataFlowAnalysis::getDependentAnalyses(
+    AnalysisDependencies &deps) const {
+  deps.insert<DeadCodeAnalysis>();
+}
+
 void AbstractDenseBackwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
     Operation *top) {
   LDBG() << "initializeEquivalentLatticeAnchor (backward): "
@@ -375,6 +387,8 @@ void AbstractDenseBackwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
 
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
+  assert(getSolver().lookupAnalysis<DeadCodeAnalysis>() &&
+         "DeadCodeAnalysis must be loaded alongside a dense backward analysis");
   LDBG() << "initialize (backward): "
          << OpWithFlags(top, OpPrintingFlags().skipRegions());
   // Visit every operation and block.
