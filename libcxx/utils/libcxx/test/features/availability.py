@@ -216,6 +216,7 @@ features += [
         name="availability-debugging-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-24)",
+            cfg.available_features,
         ),
     ),
     # Tests that require rcu support in the built library
