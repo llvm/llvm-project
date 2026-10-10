@@ -146,7 +146,7 @@ public:
   bool setABI(const std::string &Name) override;
 
   bool isBranchProtectionSupportedArch(StringRef Arch) const override;
-  bool validateBranchProtection(const ParsedTargetAttr &Attr,
+  bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
                                 const LangOptions &LO,
                                 StringRef &Err) const override;

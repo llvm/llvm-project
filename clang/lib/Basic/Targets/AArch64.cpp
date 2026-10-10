@@ -248,13 +248,13 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
          getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
-bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
+bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
-                                        getTriple(), HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
+                                        HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -275,27 +275,10 @@ bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
   else
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
-  if (Attr.SignReturnAddrHardening.empty())
-    BPI.SignReturnAddressHardening =
-        LangOptions::SignReturnAddressHardeningKind::None;
-  else if (auto Hardening =
-               parseSignReturnAddressHardening(Attr.SignReturnAddrHardening))
-    BPI.SignReturnAddressHardening = *Hardening;
-
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
-}
-
-std::optional<LangOptions::SignReturnAddressHardeningKind>
-AArch64TargetInfo::parseSignReturnAddressHardening(StringRef Spec) const {
-  return llvm::StringSwitch<
-             std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
-      .Case("load-return-address",
-            LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress)
-      .Case("none", LangOptions::SignReturnAddressHardeningKind::None)
-      .Default(std::nullopt);
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
@@ -415,6 +398,12 @@ void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.7-A does not have a v8.* equivalent, but is a superset of v9.6-A.
   getTargetDefinesARMV96A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.8-A does not have a v8.* equivalent, but is a superset of v9.7-A.
+  getTargetDefinesARMV97A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -783,6 +772,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV96A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_7A)
     getTargetDefinesARMV97A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_8A)
+    getTargetDefinesARMV98A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -1296,6 +1287,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.7a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_7A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_7A;
+    if (Feature == "+v9.8a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_8A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_8A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1425,11 +1419,6 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
     if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
-      continue;
-    }
-
-    if (Feature.starts_with("harden-pac-ret=")) {
-      Ret.SignReturnAddrHardening = Feature.split('=').second.trim();
       continue;
     }
 
