@@ -13820,13 +13820,10 @@ define double @flat_atomic_fmax_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[2:3], v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[4:5], v[0:1]
+; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX1250-GISEL-NEXT:    s_branch .LBB112_3
 ; GFX1250-GISEL-NEXT:  .LBB112_2: ; %atomicrmw.global
@@ -13937,12 +13934,9 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
@@ -14048,13 +14042,10 @@ define double @flat_atomic_fmin_f64_saddr_rtn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[4:5], v[2:3], v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[4:5], v[0:1]
+; GFX1250-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX1250-GISEL-NEXT:    s_branch .LBB114_3
 ; GFX1250-GISEL-NEXT:  .LBB114_2: ; %atomicrmw.global
@@ -14165,12 +14156,9 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s2, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    s_cmp_lg_u64 s[2:3], 0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, -1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[2:3], off, s0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[2:3], v[0:1]
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 off, v[0:1], s0
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
