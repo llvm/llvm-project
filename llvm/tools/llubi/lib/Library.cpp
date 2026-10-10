@@ -162,9 +162,8 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
   // function comes from a different family (C++ delete, etc.)
 
   if (!Ctx.free(*Obj)) {
-    Executor.reportImmediateUB()
-        << "freeing an invalid pointer at 0x"
-        << Twine::utohexstr(Ptr.address().getZExtValue()) << ".";
+    Executor.reportImmediateUB() << "freeing an invalid pointer at 0x"
+                                 << Twine::utohexstr(Obj->getAddress()) << ".";
     return AnyValue::poison();
   }
 
