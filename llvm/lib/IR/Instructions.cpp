@@ -3143,11 +3143,18 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (2), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
-      // ptrtoint/ptrtoaddr can only fold through a bitcast if the source was
-      // already a pointer. A byte-to-pointer bitcast must stay as a separate
-      // bitcast.
-      if (!SrcTy->isPtrOrPtrVectorTy())
+      // bitcast, ptrtoaddr -> bitcast, if SrcTy is a byte and the address is
+      //                                the whole pointer
+      // ptrtoint can only fold through a bitcast if the source was already a
+      // pointer, as ptrtoint exposes the provenance.
+      if (!SrcTy->isPtrOrPtrVectorTy()) {
+        // ptrtoaddr yields the address width, so the sizes only match if the
+        // address is the whole pointer.
+        if (secondOp == Instruction::PtrToAddr &&
+            SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits())
+          return Instruction::BitCast;
         return 0;
+      }
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3163,6 +3170,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // bitcast, bitcast -> bitcast, if neither SrcTy nor DstTy is a pointer,
       //                              both are pointers in the same addrspace,
       //                              or one is a pointer and the other a byte
+      // bitcast, bitcast -> ptrtoint, if a pointer goes through a byte to an
+      //                               integer of the pointer width
+      // bitcast, bitcast -> inttoptr, if an integer of the pointer width goes
+      //                               through a byte to a pointer
       // A pair of bitcasts through a byte must stay separate otherwise.
       if (!SrcTy->isPtrOrPtrVectorTy() && !DstTy->isPtrOrPtrVectorTy())
         return Instruction::BitCast;
@@ -3171,6 +3182,14 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
         return Instruction::BitCast;
       if (SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy())
         return Instruction::BitCast;
+      if (SrcTy->isVectorTy() == DstTy->isVectorTy() && DL) {
+        if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy() &&
+            DL->getPointerTypeSizeInBits(SrcTy) == DstTy->getScalarSizeInBits())
+          return Instruction::PtrToInt;
+        if (SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+            SrcTy->getScalarSizeInBits() == DL->getPointerTypeSizeInBits(DstTy))
+          return Instruction::IntToPtr;
+      }
       return 0;
     case 99:
       // Cast combination can't happen (error in input). This is for all cases
