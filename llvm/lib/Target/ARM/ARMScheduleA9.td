@@ -1992,6 +1992,11 @@ def : WriteRes<WriteVST2, []>;
 def : WriteRes<WriteVST3, []>;
 def : WriteRes<WriteVST4, []>;
 
+// Override the generic NEON SchedRW lists with empty lists so that the ItinRW
+// mappings below provide the resources and latencies for structure loads and
+// stores instead of the resource-free WriteRes definitions above.
+def : InstRW<[], (instregex "VLD[1-4].*", "VST[1-4].*")>;
+
 // Reserve A9UnitFP for 2 consecutive cycles.
 def A9Write2V4 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> {
   let Latency = 4;
