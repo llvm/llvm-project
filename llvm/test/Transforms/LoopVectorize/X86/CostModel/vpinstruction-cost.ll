@@ -315,8 +315,8 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 0 for VF 2: IR store i64 %add, ptr %g.dst, align 8
 ; CHECK:  Cost of 0 for VF 2: IR %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, 1000
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%a> = extractvalue ir<%sv>
-; CHECK:  Cost of 0 for VF 2: CLONE ir<%b> = extractvalue ir<%sv>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CHECK:  Cost of 0 for VF 2: CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CHECK:  Cost of 1 for VF 2: CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
@@ -337,8 +337,8 @@ define void @test_vpinstruction_extractvalue_cost(ptr noalias %dst, {i64, i64} %
 ; CHECK:  Cost of 0 for VF 4: IR store i64 %add, ptr %g.dst, align 8
 ; CHECK:  Cost of 0 for VF 4: IR %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i64 %iv.next, 1000
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%a> = extractvalue ir<%sv>
-; CHECK:  Cost of 0 for VF 4: CLONE ir<%b> = extractvalue ir<%sv>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%a> = extractvalue ir<%sv>, ir<0>
+; CHECK:  Cost of 0 for VF 4: CLONE ir<%b> = extractvalue ir<%sv>, ir<1>
 ; CHECK:  Cost of 1 for VF 4: CLONE ir<%add> = add ir<%a>, ir<%b>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
