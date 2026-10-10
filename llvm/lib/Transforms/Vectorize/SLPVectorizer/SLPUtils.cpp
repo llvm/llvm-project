@@ -633,8 +633,8 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
       auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
       if (!Idx)
         return std::nullopt;
-      // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
+      // Undefined behavior if Idx is negative or out of bounds.
+      if (Idx->getValue().uge(getNumElements(Vec->getType())))
         continue;
       unsigned IntIdx = Idx->getValue().getZExtValue();
       Mask[I] = IntIdx;
@@ -661,6 +661,9 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
     }
     CommonShuffleMode = Select;
   }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
   // If we're not crossing lanes in different vectors, consider it as blending.
   if (CommonShuffleMode == Select && Vec2)
     return TargetTransformInfo::SK_Select;
@@ -857,6 +860,19 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
     Conditions[Idx] = Sel->getCondition();
   }
   return TrueBase != nullptr;
+}
+
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL) {
+  assert(all_of(VL, IsaPred<LoadInst>) &&
+         "Expected only load lanes in a blended load.");
+  const uint64_t ScalarSize = DL.getTypeStoreSize(VL.front()->getType());
+  Align BaseAlignment = cast<LoadInst>(VL.front())->getAlign();
+  for (auto [Idx, V] : enumerate(VL))
+    BaseAlignment =
+        std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
+                                                Idx * ScalarSize));
+  return BaseAlignment;
 }
 
 Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,

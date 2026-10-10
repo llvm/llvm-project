@@ -411,6 +411,18 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Done unregistering library!";
 }
 
+/// Get the maximum number of threads per team the device supports, further
+/// limited by OMP_TEAMS_THREAD_LIMIT if the user set it.
+static uint32_t getDeviceThreadLimit(
+    llvm::omp::target::plugin::GenericDeviceTy &GenericDevice) {
+  static Int32Envar OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT");
+
+  uint32_t ThreadLimit = GenericDevice.getThreadLimit();
+  if (OMP_TeamsThreadLimit > 0)
+    return std::min(ThreadLimit, uint32_t(OMP_TeamsThreadLimit));
+  return ThreadLimit;
+}
+
 /// Map global data and execute pending ctors
 static int loadImagesOntoDevice(DeviceTy &Device) {
   /*
@@ -529,11 +541,11 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max,
             // further clamped to the kernel function's own driver-reported
             // maximum.
+            uint32_t DeviceThreadLimit = getDeviceThreadLimit(GenericDevice);
             LaunchInfo.MaxNumThreads =
-                std::min(Cfg.MaxThreads > 0
-                             ? std::min(Cfg.MaxThreads,
-                                        int32_t(GenericDevice.getThreadLimit()))
-                             : GenericDevice.getThreadLimit(),
+                std::min(Cfg.MaxThreads > 0 ? std::min(uint32_t(Cfg.MaxThreads),
+                                                       DeviceThreadLimit)
+                                            : DeviceThreadLimit,
                          Kernel->getMaxThreads());
             LaunchInfo.PreferredNumThreads =
                 Cfg.MinThreads > 0
@@ -651,4 +663,20 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
       return createError(ErrorCode::BackendFailure,
                          "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
+}
+
+int PluginManager::getNumActivePlugins() const {
+  int count = 0;
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              ++(*static_cast<int *>(Data));
+          },
+          static_cast<void *>(&count))) {
+    consumeError(std::move(Err));
+  }
+  return count;
 }

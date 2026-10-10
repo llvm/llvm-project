@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.03 -mattr=-flat-for-global < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.03 -mattr=-flat-for-global < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=VI %s
 
 ; FIXME: Can the SI case form the mac through the casts?
 
@@ -359,35 +359,20 @@ entry:
 ; SI: v_add_f32
 ; SI: v_add_f32
 
-; VI: {{buffer|flat}}_load_dword v[[A_V2_F16:[0-9]+]]
-; VI: {{buffer|flat}}_load_dword v[[B_V2_F16:[0-9]+]]
-; VI: {{buffer|flat}}_load_dword v[[C_V2_F16:[0-9]+]]
-; VI-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
-; VI-DAG: v_mac_f16_sdwa v[[C_F16_1]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-DAG: v_mac_f16_e32 v[[C_V2_F16]], v[[A_V2_F16]], v[[B_V2_F16]]
+; VI-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v2
+; VI-DAG: v_mac_f16_sdwa v[[C_F16_1]], v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mac_f16_e32 v2, v0, v1
 ; VI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[C_F16_1]]
 ; VI-NOT: and
-; VI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[C_V2_F16]], v[[R_F16_HI]]
+; VI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v2, v[[R_F16_HI]]
 
-; VI: {{buffer|flat}}_store_dword v[[R_V2_F16]]
-; VI: s_endpgm
-define amdgpu_kernel void @mac_v2f16(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
+; VI: s_setpc_b64
+define <2 x half> @mac_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
   call void @llvm.amdgcn.s.barrier() #2
-  %b.val = load <2 x half>, ptr addrspace(1) %b
   call void @llvm.amdgcn.s.barrier() #2
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %t.val = fmul <2 x half> %a.val, %b.val
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+  %t.val = fmul <2 x half> %a, %b
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_same_add:
@@ -415,11 +400,17 @@ define amdgpu_kernel void @mac_v2f16_same_add(
     ptr addrspace(1) %d,
     ptr addrspace(1) %e) #0 {
 entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-  %d.val = load <2 x half>, ptr addrspace(1) %d
-  %e.val = load <2 x half>, ptr addrspace(1) %e
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %a.tid = getelementptr inbounds <2 x half>, ptr addrspace(1) %a, i32 %tid
+  %b.tid = getelementptr inbounds <2 x half>, ptr addrspace(1) %b, i32 %tid
+  %c.tid = getelementptr inbounds <2 x half>, ptr addrspace(1) %c, i32 %tid
+  %d.tid = getelementptr inbounds <2 x half>, ptr addrspace(1) %d, i32 %tid
+  %e.tid = getelementptr inbounds <2 x half>, ptr addrspace(1) %e, i32 %tid
+  %a.val = load <2 x half>, ptr addrspace(1) %a.tid
+  %b.val = load <2 x half>, ptr addrspace(1) %b.tid
+  %c.val = load <2 x half>, ptr addrspace(1) %c.tid
+  %d.val = load <2 x half>, ptr addrspace(1) %d.tid
+  %e.val = load <2 x half>, ptr addrspace(1) %e.tid
 
   %t0.val = fmul <2 x half> %a.val, %b.val
   %r0.val = fadd <2 x half> %t0.val, %c.val
@@ -443,23 +434,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_a(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %a.neg = fneg <2 x half> %a.val
-  %t.val = fmul <2 x half> %a.neg, %b.val
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_a(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %a.neg = fneg <2 x half> %a
+  %t.val = fmul <2 x half> %a.neg, %b
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_b
@@ -477,23 +457,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_b(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %b.neg = fneg <2 x half> %b.val
-  %t.val = fmul <2 x half> %a.val, %b.neg
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_b(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %b.neg = fneg <2 x half> %b
+  %t.val = fmul <2 x half> %a, %b.neg
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_c:
@@ -510,23 +479,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[0-9]+}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_c(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %c.neg = fneg <2 x half> %c.val
-  %t.val = fmul <2 x half> %a.val, %b.val
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_c(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %c.neg = fneg <2 x half> %c
+  %t.val = fmul <2 x half> %a, %b
   %r.val = fadd <2 x half> %t.val, %c.neg
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_a_safe_fp_math:
@@ -547,23 +505,12 @@ entry:
 ; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v[[NEG_A0]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v[[NEG_A1]], v{{[0-9]+}}
 
-; GCN: s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_a_safe_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %a.neg = fsub <2 x half> <half 0.0, half 0.0>, %a.val
-  %t.val = fmul <2 x half> %a.neg, %b.val
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN: s_setpc_b64
+define <2 x half> @mac_v2f16_neg_a_safe_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %a.neg = fsub <2 x half> <half 0.0, half 0.0>, %a
+  %t.val = fmul <2 x half> %a.neg, %b
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_b_safe_fp_math:
@@ -582,23 +529,12 @@ entry:
 ; VI-DAG:  v_mac_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG:  v_mac_f16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[NEG_A1]]
 
-; GCN: s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_b_safe_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %b.neg = fsub <2 x half> <half 0.0, half 0.0>, %b.val
-  %t.val = fmul <2 x half> %a.val, %b.neg
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN: s_setpc_b64
+define <2 x half> @mac_v2f16_neg_b_safe_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %b.neg = fsub <2 x half> <half 0.0, half 0.0>, %b
+  %t.val = fmul <2 x half> %a, %b.neg
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_c_safe_fp_math:
@@ -615,23 +551,12 @@ entry:
 ; VI-DAG:  v_mac_f16_sdwa v[[NEG_A0]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG:  v_mac_f16_e32 v[[NEG_A1]], v{{[0-9]+}}, v{{[0-9]+}}
 
-; GCN: s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_c_safe_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #0 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %c.neg = fsub <2 x half> <half 0.0, half 0.0>, %c.val
-  %t.val = fmul <2 x half> %a.val, %b.val
+; GCN: s_setpc_b64
+define <2 x half> @mac_v2f16_neg_c_safe_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #0 {
+  %c.neg = fsub <2 x half> <half 0.0, half 0.0>, %c
+  %t.val = fmul <2 x half> %a, %b
   %r.val = fadd <2 x half> %t.val, %c.neg
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_a_nsz_fp_math:
@@ -649,23 +574,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_a_nsz_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %a.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %a.val
-  %t.val = fmul <2 x half> %a.neg, %b.val
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_a_nsz_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #1 {
+  %a.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %a
+  %t.val = fmul <2 x half> %a.neg, %b
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_b_nsz_fp_math:
@@ -683,23 +597,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_b_nsz_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %b.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %b.val
-  %t.val = fmul <2 x half> %a.val, %b.neg
-  %r.val = fadd <2 x half> %t.val, %c.val
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_b_nsz_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #1 {
+  %b.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %b
+  %t.val = fmul <2 x half> %a, %b.neg
+  %r.val = fadd <2 x half> %t.val, %c
+  ret <2 x half> %r.val
 }
 
 ; GCN-LABEL: {{^}}mac_v2f16_neg_c_nsz_fp_math:
@@ -717,23 +620,12 @@ entry:
 ; VI-NOT: v_mac_f16
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
 ; VI:     v_mad_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, -v{{[-0-9]}}
-; GCN:    s_endpgm
-define amdgpu_kernel void @mac_v2f16_neg_c_nsz_fp_math(
-    ptr addrspace(1) %r,
-    ptr addrspace(1) %a,
-    ptr addrspace(1) %b,
-    ptr addrspace(1) %c) #1 {
-entry:
-  %a.val = load <2 x half>, ptr addrspace(1) %a
-  %b.val = load <2 x half>, ptr addrspace(1) %b
-  %c.val = load <2 x half>, ptr addrspace(1) %c
-
-  %c.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %c.val
-  %t.val = fmul <2 x half> %a.val, %b.val
+; GCN:    s_setpc_b64
+define <2 x half> @mac_v2f16_neg_c_nsz_fp_math(<2 x half> %a, <2 x half> %b, <2 x half> %c) #1 {
+  %c.neg = fsub nsz <2 x half> <half 0.0, half 0.0>, %c
+  %t.val = fmul <2 x half> %a, %b
   %r.val = fadd <2 x half> %t.val, %c.neg
-
-  store <2 x half> %r.val, ptr addrspace(1) %r
-  ret void
+  ret <2 x half> %r.val
 }
 
 declare void @llvm.amdgcn.s.barrier() #2

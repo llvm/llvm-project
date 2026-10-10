@@ -216,6 +216,8 @@ LLVMInitializeAMDGPUTargetMC() {
                                         createR600MCCodeEmitter);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheR600Target(),
+                                             createAMDGPUNullTargetStreamer);
 
   // GCN specific registration
   for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {
