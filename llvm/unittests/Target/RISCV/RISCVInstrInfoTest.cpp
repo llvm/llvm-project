@@ -383,6 +383,23 @@ TEST_P(RISCVInstrInfoTest, GetDestEEW) {
   EXPECT_EQ(RISCV::getDestLog2EEW(TII->get(RISCV::TH_VMAQA_VV), 5), 5u);
 }
 
+TEST_P(RISCVInstrInfoTest, ZvbdotaFPProperties) {
+  const RISCVInstrInfo *TII = ST->getInstrInfo();
+
+  auto CheckProperties = [&](unsigned Opcode, bool UsesFRM) {
+    const MCInstrDesc &Desc = TII->get(Opcode);
+    EXPECT_TRUE(Desc.mayRaiseFPException());
+    EXPECT_EQ(Desc.hasImplicitUseOfPhysReg(RISCV::FRM), UsesFRM);
+    EXPECT_TRUE(Desc.hasImplicitUseOfPhysReg(RISCV::VL));
+    EXPECT_TRUE(Desc.hasImplicitUseOfPhysReg(RISCV::VTYPE));
+  };
+
+  CheckProperties(RISCV::VFWBDOTA_VV, false);
+  CheckProperties(RISCV::VFQWBDOTA_VV, false);
+  CheckProperties(RISCV::VFQWBDOTA_ALT_VV, false);
+  CheckProperties(RISCV::VFBDOTA_VV, true);
+}
+
 TEST_P(RISCVXQCIInstrInfoTest, XQCIEInstSize) {
   const RISCVInstrInfo *TII = ST->getInstrInfo();
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
