@@ -1279,11 +1279,22 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   return true;
 }
 
-void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
+void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan,
+                                                bool EpilogueAllowed) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  auto EarlyExits = vputils::getEarlyExits(Plan, MiddleVPBB);
+  // There are no countable early exits.
+  if (EarlyExits.empty())
+    return;
+
+  // A countable early exit requires a scalar epilogue. If the middle block
+  // still has a branch to the scalar preheader, force it to always be taken.
+  if (EpilogueAllowed)
+    vputils::forceScalarEpilogue(Plan);
+
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+  for (auto [EarlyExitingVPBB, EB] : EarlyExits) {
     // Remove phi operands for the early exiting block.
     for (VPRecipeBase &R : EB->phis())
       cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);

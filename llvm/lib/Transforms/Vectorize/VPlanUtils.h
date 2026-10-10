@@ -184,6 +184,10 @@ VPValue *findIncomingAliasMask(const VPlan &Plan);
 SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
 getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
+/// If \p Plan's middle block still has a branch to the scalar preheader,
+/// force it to always be taken, i.e. force a scalar epilogue to execute.
+void forceScalarEpilogue(VPlan &Plan);
+
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
 /// StartV and step \p Step, truncated to \p TruncI's type if \p TruncI is

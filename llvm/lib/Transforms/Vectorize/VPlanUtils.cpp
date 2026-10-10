@@ -626,6 +626,19 @@ vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
   return Exits;
 }
 
+void vputils::forceScalarEpilogue(VPlan &Plan) {
+  VPBasicBlock *MiddleVPBB = Plan.getVectorLoopRegion()
+                                 ? Plan.getMiddleBlock()
+                                 : VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  if (MiddleVPBB->getNumSuccessors() != 2)
+    return;
+
+  auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+  assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
+         "second successor must be scalar preheader");
+  BranchOnCond->setOperand(0, Plan.getFalse());
+}
+
 VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
