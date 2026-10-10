@@ -807,3 +807,94 @@ Symbols:
     Section:  .text
     Value:    0x1011
 ...
+
+## Check that direct callees are listed in section order and that a callee
+## address that appears more than once is listed once.
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-DUP-CALLEE
+
+# LLVM-DUP-CALLEE:      CallGraph [
+# LLVM-DUP-CALLEE-NEXT:   Function {
+# LLVM-DUP-CALLEE-NEXT:     Names: [main]
+# LLVM-DUP-CALLEE-NEXT:     Address: 0x17C0
+# LLVM-DUP-CALLEE-NEXT:     Version: 0
+# LLVM-DUP-CALLEE-NEXT:     IsIndirectTarget: No
+# LLVM-DUP-CALLEE-NEXT:     TypeID: 0x0
+# LLVM-DUP-CALLEE-NEXT:     DirectCallees [
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [bar]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x17A0
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [foo]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x1790
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [baz]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x17B0
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [qux]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x1780
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:       {
+# LLVM-DUP-CALLEE-NEXT:         Names: [quux]
+# LLVM-DUP-CALLEE-NEXT:         Address: 0x17D0
+# LLVM-DUP-CALLEE-NEXT:       }
+# LLVM-DUP-CALLEE-NEXT:     ]
+# LLVM-DUP-CALLEE-NEXT:     IndirectTypeIDs: []
+# LLVM-DUP-CALLEE-NEXT:   }
+# LLVM-DUP-CALLEE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+  Machine:  EM_X86_64
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Version
+      0x02, ## Flags (HasDirectCallees)
+      0xC0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17C0 (main)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionTypeID: 0
+      0x06, ## NumDirectCallees
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x17A0 (bar)
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: 0x1790 (foo)
+      0xB0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 3: 0x17B0 (baz)
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 4: 0x17A0 (bar again)
+      0x80, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 5: 0x1780 (qux)
+      0xD0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee 6: 0x17D0 (quux)
+    ]
+Symbols:
+  - Name:     qux
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1780
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17A0
+  - Name:     baz
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17B0
+  - Name:     main
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17C0
+  - Name:     quux
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17D0
+...
