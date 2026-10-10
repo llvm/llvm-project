@@ -149,6 +149,10 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
+    return AtomicExpansionKind::None;
+  }
+
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 

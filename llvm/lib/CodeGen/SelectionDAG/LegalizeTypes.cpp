@@ -867,6 +867,23 @@ SDValue DAGTypeLegalizer::BitConvertToInteger(SDValue Op) {
                      EVT::getIntegerVT(*DAG.getContext(), BitWidth), Op);
 }
 
+/// Convert an atomic swap to operate on an integer of the same size.
+SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
+  AtomicSDNode *AM = cast<AtomicSDNode>(N);
+  SDLoc SL(N);
+
+  SDValue CastVal = BitConvertToInteger(AM->getVal());
+  EVT CastVT = CastVal.getValueType();
+  SDValue NewAtomic = DAG.getAtomic(
+      ISD::ATOMIC_SWAP, SL, CastVT, DAG.getVTList(CastVT, MVT::Other),
+      {AM->getChain(), AM->getBasePtr(), CastVal}, AM->getMemOperand());
+
+  // Legalize the chain result by replacing uses of the old value chain with
+  // the new one.
+  ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
+  return NewAtomic;
+}
+
 /// Convert to a vector of integers of the same size.
 SDValue DAGTypeLegalizer::BitConvertVectorToIntegerVector(SDValue Op) {
   assert(Op.getValueType().isVector() && "Only applies to vectors!");

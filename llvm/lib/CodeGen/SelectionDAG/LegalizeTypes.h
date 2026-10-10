@@ -849,6 +849,7 @@ private:
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
+  SDValue ScalarizeVecRes_ATOMIC_SWAP(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
@@ -946,6 +947,7 @@ private:
   void SplitVecRes_IS_FPCLASS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_ATOMIC_SWAP(AtomicSDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo, SDValue &Hi);
@@ -1059,6 +1061,7 @@ private:
   SDValue WidenVecRes_INSERT_SUBVECTOR(SDNode *N);
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
   SDValue WidenVecRes_ATOMIC_LOAD(AtomicSDNode *N);
+  SDValue WidenVecRes_ATOMIC_SWAP(AtomicSDNode *N);
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
   SDValue WidenVecRes_VP_LOAD_FF(VPLoadFFSDNode *N);
