@@ -14,7 +14,7 @@
 //
 // A suffix tree can be seen as a type of state machine where each state is a
 // substring of the full string. The tree is structured so that, for a string
-// of length N, there are exactly N leaves in the tree. This structure allows
+// of length N, there are exactly N leaves before pruning. This structure allows
 // us to quickly find repeated substrings of the input string.
 //
 // In this implementation, a "string" is a vector of unsigned integers.
@@ -57,6 +57,12 @@ public:
   };
 
 private:
+  /// The minimum length of a repeated substring to find.
+  /// Since we're outlining, we want at least two instructions in the range.
+  /// FIXME: This may not be true for targets like X86 which support many
+  /// instruction lengths.
+  static constexpr unsigned MinLength = 2;
+
   const std::optional<unsigned> BoundaryStart;
 
   bool isBoundary(unsigned Value) const {
@@ -173,12 +179,6 @@ public:
 
     /// The nodes left to visit.
     SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
-
-    /// The minimum length of a repeated substring to find.
-    /// Since we're outlining, we want at least two instructions in the range.
-    /// FIXME: This may not be true for targets like X86 which support many
-    /// instruction lengths.
-    const unsigned MinLength = 2;
 
     /// Vector of leaf nodes of the suffix tree.
     const std::vector<SuffixTreeLeafNode *> &LeafNodes;
