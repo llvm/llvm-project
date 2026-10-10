@@ -60,9 +60,13 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
   if (m_objfile_sp) {
     const Symtab *symtab = m_objfile_sp->GetSymtab();
     if (symtab) {
-      // The snippet of code below will get the indexes the module symbol table
-      // entries that are code, data, or function related (debug info), sort
-      // them by value (address) and dump the sorted symbols.
+      // Get the indexes of source, code, data, and function-related entries in
+      // the module symbol table. Only source-file entries provide a genuine
+      // debug-info ability. Code and data entries remain available as symbols
+      // but are not equivalent to debug-info functions or global variables.
+      if (symtab->GetNumSymbols() > 0)
+        abilities |= Symbols;
+
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile,
                                               m_source_indexes)) {
         abilities |= CompileUnits;
@@ -72,20 +76,17 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
               eSymbolTypeCode, Symtab::eDebugYes, Symtab::eVisibilityAny,
               m_func_indexes)) {
         symtab->SortSymbolIndexesByValue(m_func_indexes, true);
-        abilities |= Functions;
       }
 
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugNo,
                                               Symtab::eVisibilityAny,
                                               m_code_indexes)) {
         symtab->SortSymbolIndexesByValue(m_code_indexes, true);
-        abilities |= Functions;
       }
 
       if (symtab->AppendSymbolIndexesWithType(eSymbolTypeData,
                                               m_data_indexes)) {
         symtab->SortSymbolIndexesByValue(m_data_indexes, true);
-        abilities |= GlobalVariables;
       }
 
       lldb_private::Symtab::IndexCollection objc_class_indexes;
