@@ -2951,9 +2951,7 @@ define i32 @sub_const_or_no_disjoint(i32 %x) {
 
 define i8 @sub_and_add(i8 %x) {
 ; CHECK-LABEL: @sub_and_add(
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -2
-; CHECK-NEXT:    [[RET:%.*]] = sub i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %add = add i8 %x, 1
@@ -2968,7 +2966,7 @@ define i8 @sub_and_add_multi_use(i8 %x) {
 ; CHECK-NEXT:    call void @use8(i8 [[ADD]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], -3
 ; CHECK-NEXT:    call void @use8(i8 [[AND]])
-; CHECK-NEXT:    [[RET:%.*]] = sub i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X]], 2
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %add = add i8 %x, 2
@@ -2981,9 +2979,7 @@ define i8 @sub_and_add_multi_use(i8 %x) {
 
 define <2 x i8> @sub_and_add_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_and_add_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[ADD]], splat (i8 -2)
-; CHECK-NEXT:    [[RET:%.*]] = sub <2 x i8> [[AND]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %add = add <2 x i8> %x, <i8 1, i8 1>
