@@ -10,69 +10,41 @@
 @wgbarr = internal addrspace(15) global target("amdgcn.named.barrier", 0) poison, !absolute_symbol !0
 
 define void @func1() {
-; GFX12-SDAG-LABEL: func1:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 3
-; GFX12-SDAG-NEXT:    s_barrier_join m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0x70003
-; GFX12-SDAG-NEXT:    s_barrier_signal m0
-; GFX12-SDAG-NEXT:    s_barrier_wait 1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: func1:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_mov_b32 m0, 0x70003
-; GFX12-GISEL-NEXT:    s_barrier_join 3
-; GFX12-GISEL-NEXT:    s_barrier_signal m0
-; GFX12-GISEL-NEXT:    s_barrier_wait 1
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar3)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar3, i32 7)
-    call void @llvm.amdgcn.s.barrier.wait(i16 1)
-    ret void
+; GFX12-LABEL: func1:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 m0, 0x70003
+; GFX12-NEXT:    s_barrier_join 3
+; GFX12-NEXT:    s_barrier_signal m0
+; GFX12-NEXT:    s_barrier_wait 1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar3)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar3, i32 7)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  ret void
 }
 
 define void @func2() {
-; GFX12-SDAG-LABEL: func2:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
-; GFX12-SDAG-NEXT:    s_barrier_join m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0x70002
-; GFX12-SDAG-NEXT:    s_barrier_signal m0
-; GFX12-SDAG-NEXT:    s_barrier_wait 1
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: func2:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_mov_b32 m0, 0x70002
-; GFX12-GISEL-NEXT:    s_barrier_join 2
-; GFX12-GISEL-NEXT:    s_barrier_signal m0
-; GFX12-GISEL-NEXT:    s_barrier_wait 1
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar2)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar2, i32 7)
-    call void @llvm.amdgcn.s.barrier.wait(i16 1)
-    ret void
+; GFX12-LABEL: func2:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 m0, 0x70002
+; GFX12-NEXT:    s_barrier_join 2
+; GFX12-NEXT:    s_barrier_signal m0
+; GFX12-NEXT:    s_barrier_wait 1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar2)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar2, i32 7)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  ret void
 }
 
 define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in) #0 {
@@ -102,12 +74,11 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX12-SDAG-NEXT:    s_barrier_signal -1
 ; GFX12-SDAG-NEXT:    s_barrier_join m0
 ; GFX12-SDAG-NEXT:    s_barrier_signal_isfirst -1
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 1
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_barrier_leave
-; GFX12-SDAG-NEXT:    s_get_barrier_state s3, m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
+; GFX12-SDAG-NEXT:    s_get_barrier_state s2, 1
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s2, m0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[2:3]
@@ -189,22 +160,22 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, -1
 ; GFX12-GISEL-NEXT:    s_endpgm
-    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) @bar, i32 12)
-    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %in, i32 9)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 12)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %in, i32 9)
-    call void @llvm.amdgcn.s.barrier.signal(i32 -1)
-    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) %in)
-    %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
-    call void @llvm.amdgcn.s.barrier.wait(i16 1)
-    call void @llvm.amdgcn.s.barrier.leave(i16 1)
-    %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) @bar)
-    %state2 = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %in)
-    call void @llvm.amdgcn.s.barrier()
-    call void @func1()
-    call void @func2()
-    %state3 = call i32 @llvm.amdgcn.s.get.barrier.state(i32 -1)
-    ret void
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) @bar, i32 12)
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %in, i32 9)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 12)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %in, i32 9)
+  call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) %in)
+  %isfirst = call i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32 -1)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  call void @llvm.amdgcn.s.barrier.leave(i16 1)
+  %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) @bar)
+  %state2 = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %in)
+  call void @llvm.amdgcn.s.barrier()
+  call void @func1()
+  call void @func2()
+  %state3 = call i32 @llvm.amdgcn.s.get.barrier.state(i32 -1)
+  ret void
 }
 
 define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(15) %in) #0 {
@@ -219,12 +190,11 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX12-SDAG-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 0x70001
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 48
-; GFX12-SDAG-NEXT:    s_barrier_signal m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 1
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_barrier_join m0
+; GFX12-SDAG-NEXT:    s_barrier_signal m0
+; GFX12-SDAG-NEXT:    s_barrier_join 1
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[12:13]
@@ -251,12 +221,12 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(15) %in)
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-GISEL-NEXT:    s_endpgm
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 7)
-    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar)
-    call void @llvm.amdgcn.s.barrier.wait(i16 1)
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 7)
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar)
+  call void @llvm.amdgcn.s.barrier.wait(i16 1)
 
-    call void @func2()
-    ret void
+  call void @func2()
+  ret void
 }
 
 define void @signal_var_cnt0_const_bar() {
@@ -269,8 +239,8 @@ define void @signal_var_cnt0_const_bar() {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_barrier_signal 1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 0)
-    ret void
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @bar, i32 0)
+  ret void
 }
 
 define void @signal_var_cnt0_dynamic_bar(ptr addrspace(15) inreg %bar) {
@@ -284,8 +254,8 @@ define void @signal_var_cnt0_dynamic_bar(ptr addrspace(15) inreg %bar) {
 ; GFX12-NEXT:    s_and_b32 m0, s0, 63
 ; GFX12-NEXT:    s_barrier_signal m0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %bar, i32 0)
-    ret void
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %bar, i32 0)
+  ret void
 }
 
 define void @barrier_init_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt) {
@@ -320,8 +290,8 @@ define void @barrier_init_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %c
 ; GFX12-GISEL-NEXT:    s_or_b32 m0, s0, s1
 ; GFX12-GISEL-NEXT:    s_barrier_init m0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %bar, i32 %cnt)
-    ret void
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %bar, i32 %cnt)
+  ret void
 }
 
 define void @signal_var_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt) {
@@ -356,8 +326,8 @@ define void @signal_var_dynamic_cnt(ptr addrspace(15) inreg %bar, i32 inreg %cnt
 ; GFX12-GISEL-NEXT:    s_or_b32 m0, s0, s1
 ; GFX12-GISEL-NEXT:    s_barrier_signal m0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %bar, i32 %cnt)
-    ret void
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %bar, i32 %cnt)
+  ret void
 }
 
 define amdgpu_ps void @test_barrier_leave_write_to_scc(i32 inreg %val, ptr addrspace(1) %out) {
@@ -387,9 +357,9 @@ define amdgpu_kernel void @wgbarr_as_gv() {
 ; GFX12-NEXT:    s_barrier_signal m0
 ; GFX12-NEXT:    s_barrier_wait -1
 ; GFX12-NEXT:    s_endpgm
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @wgbarr, i32 7)
-    call void @llvm.amdgcn.s.barrier.wait(i16 -1)
-    ret void
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) @wgbarr, i32 7)
+  call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  ret void
 }
 
 define amdgpu_kernel void @null_barrier() {
@@ -397,8 +367,147 @@ define amdgpu_kernel void @null_barrier() {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_barrier_join 0
 ; GFX12-NEXT:    s_endpgm
-    call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) null)
-    ret void
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) null)
+  ret void
+}
+
+define void @signal_var_cnt0_null_bar() {
+; GFX12-LABEL: signal_var_cnt0_null_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_signal 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) null, i32 0)
+  ret void
+}
+
+define void @barrier_join_null_bar() {
+; GFX12-LABEL: barrier_join_null_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_join 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) null)
+  ret void
+}
+
+define void @barrier_init_null_bar() {
+; GFX12-LABEL: barrier_init_null_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 m0, 0x30000
+; GFX12-NEXT:    s_barrier_init m0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) null, i32 3)
+  ret void
+}
+
+define void @get_named_barrier_state_null_bar() {
+; GFX12-LABEL: get_named_barrier_state_null_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_get_barrier_state s0, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) null)
+  ret void
+}
+
+define amdgpu_kernel void @poison_barrier() {
+; GFX12-LABEL: poison_barrier:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_barrier_join 0
+; GFX12-NEXT:    s_endpgm
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) poison)
+  ret void
+}
+
+define void @signal_var_cnt0_poison_bar() {
+; GFX12-LABEL: signal_var_cnt0_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_signal 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) poison, i32 0)
+  ret void
+}
+
+define void @barrier_join_poison_bar() {
+; GFX12-LABEL: barrier_join_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_join 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) poison)
+  ret void
+}
+
+define void @barrier_init_poison_bar() {
+; GFX12-SDAG-LABEL: barrier_init_poison_bar:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_barrier_init m0
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: barrier_init_poison_bar:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, 63
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_or_b32 m0, s0, 0x30000
+; GFX12-GISEL-NEXT:    s_barrier_init m0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) poison, i32 3)
+  ret void
+}
+
+define void @get_named_barrier_state_poison_bar() {
+; GFX12-LABEL: get_named_barrier_state_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_get_barrier_state s0, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) poison)
+  ret void
 }
 
 declare void @llvm.amdgcn.s.barrier() #1
