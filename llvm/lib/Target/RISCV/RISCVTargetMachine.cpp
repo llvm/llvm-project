@@ -305,7 +305,9 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
+      ST.getPostMachineSchedulerAntiDepBreakMode();
+  ScheduleDAGMI *DAG = createSchedPostRA(C, AntiDepMode);
 
   // Add MacroFusion mutation first with a higher priority than later clustering
   const auto &MacroFusions = ST.getMacroFusions();
