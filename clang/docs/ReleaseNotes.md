@@ -234,10 +234,11 @@ features cannot lower the translation-unit ABI level;
     // ...
   }
 ```
+
 - Implemented the C2y `<stdbit.h>` endian-aware 8-bit load functions
   `stdc_load8_{le,be}{u,s}{8,16,32,64}` and their aligned counterparts
   `stdc_load8_aligned_{le,be}{u,s}{8,16,32,64}` with constexpr evaluation
-  support. These functions read N bytes from a `const unsigned char *`
+  support. These functions read N/8 bytes from a `const unsigned char *`
   and assemble them into an integer using little-endian or big-endian
   byte order.
 
