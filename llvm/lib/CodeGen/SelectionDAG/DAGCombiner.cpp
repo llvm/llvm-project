@@ -26271,10 +26271,10 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // If Idx was -1 above, Elt is going to be -1, so just return poison.
   if (Elt == -1)
-    return DAG.getPOISON(LVT);
+    return DAG.getPOISON(ScalarVT);
 
-  if (SDValue Scalarized =
-          TLI.scalarizeExtractedVectorLoad(LVT, DL, VecVT, Index, LN0, DAG)) {
+  if (SDValue Scalarized = TLI.scalarizeExtractedVectorLoad(ScalarVT, DL, VecVT,
+                                                            Index, LN0, DAG)) {
     ++OpsNarrowed;
     if (IsFrozen)
       return DAG.getFreeze(Scalarized);
