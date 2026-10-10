@@ -48,12 +48,12 @@ index z17.d, x9, #16
 // Invalid register
 
 index z17.s, x9, w7
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: index z17.s, x9, w7
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 index z17.d, w9, w7
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: index z17.d, w9, w7
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
