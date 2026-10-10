@@ -2106,6 +2106,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Instrumentation",
         ":ProfileData",
         ":Support",
         ":TargetParser",
