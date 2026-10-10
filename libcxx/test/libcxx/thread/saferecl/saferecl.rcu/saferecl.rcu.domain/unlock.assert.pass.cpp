@@ -17,13 +17,15 @@
 #include <rcu>
 #include <thread>
 
+#include "make_test_thread.h"
 #include "check_assertion.h"
 
 int main(int, char**) {
   {
     auto l = [] { std::rcu_default_domain().lock(); };
     TEST_LIBCPP_ASSERT_FAILURE(
-        std::jthread(l), "rcu_domain::unlock must be called before exiting a thread if rcu_domain::lock is called");
+        support::make_test_jthread(l),
+        "rcu_domain::unlock must be called before exiting a thread if rcu_domain::lock is called");
   }
 
   return 0;

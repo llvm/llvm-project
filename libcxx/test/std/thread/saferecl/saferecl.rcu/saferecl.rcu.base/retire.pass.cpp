@@ -134,7 +134,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> reader_threads;
     for (int i = 0; i < num_readers; ++i) {
-      reader_threads.emplace_back([&] {
+      reader_threads.emplace_back(support::make_test_jthread([&] {
         auto& dom = std::rcu_default_domain();
         dom.lock();
         ++reader_locked;
@@ -142,7 +142,7 @@ int main(int, char**) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         dom.unlock();
-      });
+      }));
     }
 
     auto writer_thread = support::make_test_jthread([&] {
@@ -172,7 +172,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&] {
+      writer_threads.emplace_back(support::make_test_jthread([&] {
         int destruction_count = 0;
         auto* ptr             = new TestClass1(destruction_count);
         // note that with objects can be reclaimed by any threads
@@ -189,7 +189,7 @@ int main(int, char**) {
 
         std::rcu_barrier();
         assert(destruction_count == 1);
-      });
+      }));
     }
 
     unlock_latch.wait();
@@ -206,7 +206,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> reader_threads;
     for (int i = 0; i < num_readers; ++i) {
-      reader_threads.emplace_back([&] {
+      reader_threads.emplace_back(support::make_test_jthread([&] {
         auto& dom = std::rcu_default_domain();
         dom.lock();
         ++reader_locked;
@@ -214,12 +214,12 @@ int main(int, char**) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         dom.unlock();
-      });
+      }));
     };
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&] {
+      writer_threads.emplace_back(support::make_test_jthread([&] {
         int destruction_count = 0;
         auto* ptr             = new TestClass1(destruction_count);
         // note that with objects can be reclaimed by any threads
@@ -237,7 +237,7 @@ int main(int, char**) {
 
         std::rcu_barrier();
         assert(destruction_count == 1);
-      });
+      }));
     }
   }
   {
@@ -250,7 +250,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&] {
+      writer_threads.emplace_back(support::make_test_jthread([&] {
         std::atomic<int> destruction_count = 0;
         auto* ptr                          = new TestClassAtomic(destruction_count);
         ptr->retire();
@@ -263,7 +263,7 @@ int main(int, char**) {
 
         std::rcu_barrier();
         assert(destruction_count.load(std::memory_order_relaxed) == 1);
-      });
+      }));
     }
 
     unlock_latch.wait();
@@ -280,7 +280,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> reader_threads;
     for (int i = 0; i < num_readers; ++i) {
-      reader_threads.emplace_back([&] {
+      reader_threads.emplace_back(support::make_test_jthread([&] {
         auto& dom = std::rcu_default_domain();
         dom.lock();
         ++reader_locked;
@@ -288,12 +288,12 @@ int main(int, char**) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         dom.unlock();
-      });
+      }));
     };
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&] {
+      writer_threads.emplace_back(support::make_test_jthread([&] {
         std::atomic<int> destruction_count = 0;
         auto* ptr                          = new TestClassAtomic(destruction_count);
         ptr->retire();
@@ -306,7 +306,7 @@ int main(int, char**) {
 
         std::rcu_barrier();
         assert(destruction_count.load(std::memory_order_relaxed) == 1);
-      });
+      }));
     }
   }
   {

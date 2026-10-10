@@ -65,7 +65,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> reader_threads;
     for (int i = 0; i < num_readers; ++i) {
-      reader_threads.emplace_back([&](std::stop_token stop_token) {
+      reader_threads.emplace_back(support::make_test_jthread([&](std::stop_token stop_token) {
         while (!stop_token.stop_requested()) {
           auto& dom = std::rcu_default_domain();
           dom.lock();
@@ -73,28 +73,28 @@ int main(int, char**) {
           assert(!ObjectStore::is_destroyed(ptr->index_));
           dom.unlock();
         }
-      });
+      }));
     }
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&]() {
+      writer_threads.emplace_back(support::make_test_jthread([&]() {
         TestClass* ptr = ObjectStore::create();
         for (; ptr != nullptr; ptr = ObjectStore::create()) {
           auto old = global_ptr.exchange(ptr);
           std::rcu_retire(old);
         }
-      });
+      }));
     }
 
     std::vector<std::jthread> collector_threads;
     for (int i = 0; i < num_collectors; ++i) {
-      collector_threads.emplace_back([&](std::stop_token st) {
+      collector_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           std::rcu_barrier();
         }
         std::rcu_barrier();
-      });
+      }));
     }
 
     reader_threads.clear();
