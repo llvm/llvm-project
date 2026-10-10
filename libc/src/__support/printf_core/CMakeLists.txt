@@ -152,11 +152,14 @@ add_header_library(
     libc.include.inttypes
     libc.hdr.limits_macros
     libc.src.string.string_utils
-    libc.src.__support.big_int
-    libc.src.__support.common
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.__support.big_int
+    libc.src.__support.common
+    libc.src.__support.ctype_utils
     libc.src.__support.float_to_string
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -164,7 +167,7 @@ add_header_library(
     libc.src.__support.integer_to_string
     libc.src.__support.libc_assert
     libc.src.__support.uint128
-    libc.src.__support.StringUtil.error_to_string
+    libc.src.__support.wctype_utils
     libc.src.string.memory_utils.inline_memcpy
     ${wchar_deps}
 )

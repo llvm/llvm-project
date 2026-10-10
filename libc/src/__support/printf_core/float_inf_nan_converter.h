@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_PRINTF_CORE_FLOAT_INF_NAN_CONVERTER_H
 #define LLVM_LIBC_SRC___SUPPORT_PRINTF_CORE_FLOAT_INF_NAN_CONVERTER_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/converter_utils.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/writer.h"
+#include "src/__support/wctype_utils.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -27,21 +29,22 @@ struct InfNanFPBitsProperties {
   bool mantissa_is_zero;
 };
 
-template <OverflowMode mode>
-LIBC_INLINE int convert_inf_nan(Writer<mode> *writer,
+template <OverflowMode mode, typename CharT>
+LIBC_INLINE int convert_inf_nan(Writer<mode, CharT> *writer,
                                 InfNanFPBitsProperties fp_bits_properties,
-                                const FormatSection &to_conv) {
+                                const FormatSection<CharT> &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
   // the appropriate case based on the case of the conversion.
-  char sign_char = 0;
+  CharT sign_char = 0;
 
   if (fp_bits_properties.is_negative)
-    sign_char = '-';
+    sign_char = CharT{'-'};
   else if ((to_conv.flags & FormatFlags::FORCE_SIGN) == FormatFlags::FORCE_SIGN)
-    sign_char = '+'; // FORCE_SIGN has precedence over SPACE_PREFIX
+    sign_char = CharT{'+'}; // FORCE_SIGN has precedence over
+                            // SPACE_PREFIX
   else if ((to_conv.flags & FormatFlags::SPACE_PREFIX) ==
            FormatFlags::SPACE_PREFIX)
-    sign_char = ' ';
+    sign_char = CharT{' '};
 
   // Both "inf" and "nan" are the same number of characters, being 3.
   int padding = to_conv.min_width - (sign_char > 0 ? 1 : 0) - 3;
@@ -51,21 +54,33 @@ LIBC_INLINE int convert_inf_nan(Writer<mode> *writer,
 
   if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) !=
                       FormatFlags::LEFT_JUSTIFIED))
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
+    RET_IF_RESULT_NEGATIVE(writer->write(CharT{' '}, padding));
 
   if (sign_char)
     RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
   if (fp_bits_properties.mantissa_is_zero) { // inf
-    RET_IF_RESULT_NEGATIVE(
-        writer->write(internal::islower(to_conv.conv_name) ? "inf" : "INF"));
+    if constexpr (cpp::is_same_v<CharT, char>) {
+      RET_IF_RESULT_NEGATIVE(
+          writer->write(internal::islower(to_conv.conv_name) ? "inf" : "INF"));
+    } else {
+      static_assert(cpp::is_same_v<CharT, wchar_t>);
+      RET_IF_RESULT_NEGATIVE(writer->write(
+          internal::islower(to_conv.conv_name) ? L"inf" : L"INF"));
+    }
   } else { // nan
-    RET_IF_RESULT_NEGATIVE(
-        writer->write(internal::islower(to_conv.conv_name) ? "nan" : "NAN"));
+    if constexpr (cpp::is_same_v<CharT, char>) {
+      RET_IF_RESULT_NEGATIVE(
+          writer->write(internal::islower(to_conv.conv_name) ? "nan" : "NAN"));
+    } else {
+      static_assert(cpp::is_same_v<CharT, wchar_t>);
+      RET_IF_RESULT_NEGATIVE(writer->write(
+          internal::islower(to_conv.conv_name) ? L"nan" : L"NAN"));
+    }
   }
 
   if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) ==
                       FormatFlags::LEFT_JUSTIFIED))
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
+    RET_IF_RESULT_NEGATIVE(writer->write(CharT{' '}, padding));
 
   return WRITE_OK;
 }
