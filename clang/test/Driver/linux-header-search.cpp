@@ -56,6 +56,43 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin[[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 //
+// Test an installation of libc++ with per-target runtime directories, which
+// has a __config_site only in the per-target include path of each target it
+// has libc++ for. For another target, the sysroot's libc++ is preferred.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/per_target_libcxx_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-PER-TARGET-LIBCXX-INSTALL %s
+// CHECK-PER-TARGET-LIBCXX-INSTALL: "-cc1"
+// CHECK-PER-TARGET-LIBCXX-INSTALL: "-internal-isystem" "[[INSTALL:[^"]+]]/per_target_libcxx_tree/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu[[SEP]]c++[[SEP]]v1"
+// CHECK-PER-TARGET-LIBCXX-INSTALL: "-internal-isystem" "[[INSTALL]]/per_target_libcxx_tree/usr/bin[[SEP]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=aarch64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/per_target_libcxx_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-PER-TARGET-LIBCXX-SYSROOT %s
+// CHECK-PER-TARGET-LIBCXX-SYSROOT: "-cc1"
+// CHECK-PER-TARGET-LIBCXX-SYSROOT: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-PER-TARGET-LIBCXX-SYSROOT-NOT: "-internal-isystem" "{{[^"]*}}per_target_libcxx_tree{{[^"]*}}c++
+// CHECK-PER-TARGET-LIBCXX-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP:/|\\\\]]usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
+// CHECK-PER-TARGET-LIBCXX-SYSROOT-NOT: "-internal-isystem" "{{[^"]*}}per_target_libcxx_tree{{[^"]*}}c++
+//
+// Without libc++ in the sysroot, the headers of the installation are used.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=aarch64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/per_target_libcxx_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-PER-TARGET-LIBCXX-NO-SYSROOT %s
+// CHECK-PER-TARGET-LIBCXX-NO-SYSROOT: "-cc1"
+// CHECK-PER-TARGET-LIBCXX-NO-SYSROOT: "-internal-isystem" "{{[^"]*}}per_target_libcxx_tree/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
+//
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \

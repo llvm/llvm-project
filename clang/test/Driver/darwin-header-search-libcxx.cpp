@@ -92,6 +92,36 @@
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
+// Check with headers alongside the installation that have no __config_site,
+// those of a toolchain built with per-target runtime directories (the headers
+// in the sysroot should be preferred, and those in the toolchain used only
+// without them).
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/per_target_libcxx_tree/usr/bin \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:               -DTOOLCHAIN=%S/Inputs/per_target_libcxx_tree \
+// RUN:               --check-prefix=CHECK-LIBCXX-PER-TARGET-SYSROOT %s
+// CHECK-LIBCXX-PER-TARGET-SYSROOT: "-cc1"
+// CHECK-LIBCXX-PER-TARGET-SYSROOT-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-PER-TARGET-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-PER-TARGET-SYSROOT-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/per_target_libcxx_tree/usr/bin \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_no_libcxx \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
+// RUN:               -DTOOLCHAIN=%S/Inputs/per_target_libcxx_tree \
+// RUN:               --check-prefix=CHECK-LIBCXX-PER-TARGET-TOOLCHAIN %s
+// CHECK-LIBCXX-PER-TARGET-TOOLCHAIN: "-cc1"
+// CHECK-LIBCXX-PER-TARGET-TOOLCHAIN: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-PER-TARGET-TOOLCHAIN-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+
 // Make sure that using -nostdinc, -nostdinc++ or -nostdlib will drop both the toolchain
 // C++ include path and the sysroot one.
 //
