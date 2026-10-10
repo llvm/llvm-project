@@ -2897,12 +2897,12 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
 // DivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
+def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer division";
   let description = [{
     The `cir.div` operation performs division on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type.
+    or matrix-of-integer type.
 
     Example:
 
@@ -2910,6 +2910,7 @@ def CIR_DivOp : CIR_BinaryOp<"div", CIR_AnyIntOrVecOfIntType> {
     %0 = cir.div %a, %b : !s32i
     %1 = cir.div %a, %b : !u32i
     %2 = cir.div %va, %vb : !cir.vector<4 x !s32i>
+    %3 = cir.div %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -3038,12 +3039,12 @@ def CIR_FMulOp : CIR_FPBinaryOp<"fmul"> {
 // FDivOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
+def CIR_FDivOp : CIR_FPBinaryOp<"fdiv", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point division";
   let description = [{
     The `cir.fdiv` operation performs floating-point division on its operands.
     Both operands and the result must have the same floating-point scalar or
-    vector-of-float type.
+    ector-of-float or matrix-of-float type.
 
     Example:
 
@@ -3051,6 +3052,7 @@ def CIR_FDivOp : CIR_FPBinaryOp<"fdiv"> {
     %0 = cir.fdiv %a, %b : !cir.float
     %1 = cir.fdiv %a, %b : !cir.double
     %2 = cir.fdiv %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fdiv %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
