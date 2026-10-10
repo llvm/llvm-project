@@ -21199,8 +21199,9 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
       isFixedVectorShuffle(GatheredExtracts, Mask, AC);
   if (!Res || all_of(Mask, equal_to(PoisonMaskElem))) {
     // TODO: try to check other subsets if possible.
-    // Restore the original VL if attempt was not successful.
+    // Restore the original VL and mask if attempt was not successful.
     copy(SavedVL, VL.begin());
+    Mask.assign(VL.size(), PoisonMaskElem);
     return std::nullopt;
   }
   // Restore unused scalars from mask, if some of the extractelements were not

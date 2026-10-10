@@ -4,15 +4,8 @@
 define void @test(<4 x i32> %a, <4 x i32> %b, ptr %pc, ptr %out, <8 x i32> %w) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[PC:%.*]], ptr [[OUT:%.*]], <8 x i32> [[W:%.*]]) {
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[A]], i64 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[B]], i64 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[W]], i64 9
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[A]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PC]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 5, i32 poison, i32 2>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -45,15 +38,8 @@ define void @test(<4 x i32> %a, <4 x i32> %b, ptr %pc, ptr %out, <8 x i32> %w) {
 define void @wrong_lane(<4 x i32> %a, <4 x i32> %b, ptr %pc, ptr %out, <6 x i32> %w) {
 ; CHECK-LABEL: define void @wrong_lane(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[PC:%.*]], ptr [[OUT:%.*]], <6 x i32> [[W:%.*]]) {
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[A]], i64 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[B]], i64 0
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <6 x i32> [[W]], i64 7
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[A]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PC]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[E0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[E1]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[E2]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[E3]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 4, i32 poison, i32 2>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -115,4 +101,57 @@ define void @oob_single_vec(<2 x i32> %a, <8 x i32> %w, ptr %pc, ptr %out) {
   %o3 = getelementptr i32, ptr %out, i64 3
   store i32 %r3, ptr %o3
   ret void
+}
+
+define i32 @oob_wider_vec_two_vecs(ptr %pc, <8 x i32> %a, <8 x i32> %b) {
+; CHECK-LABEL: define i32 @oob_wider_vec_two_vecs(
+; CHECK-SAME: ptr [[PC:%.*]], <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CP2:%.*]] = getelementptr i32, ptr [[PC]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[CP2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[B]], <8 x i32> [[A]], <4 x i32> <i32 1, i32 8, i32 8, i32 9>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 undef, i32 0, i32 0, i32 1>, <4 x i32> [[TMP2]], <8 x i32> <i32 poison, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    ret i32 [[OP_RDX3]]
+;
+  %cp2 = getelementptr i32, ptr %pc, i64 2
+  %cp3 = getelementptr i32, ptr %pc, i64 3
+  %cp4 = getelementptr i32, ptr %pc, i64 4
+  %cp5 = getelementptr i32, ptr %pc, i64 5
+  %cp6 = getelementptr i32, ptr %pc, i64 6
+  %cp7 = getelementptr i32, ptr %pc, i64 7
+  %cp8 = getelementptr i32, ptr %pc, i64 8
+  %cp9 = getelementptr i32, ptr %pc, i64 9
+  %c2 = load i32, ptr %cp2, align 4
+  %e2 = extractelement <16 x i32> zeroinitializer, i64 20
+  %m2 = mul i32 %c2, %e2
+  %c3 = load i32, ptr %cp3, align 4
+  %e3 = extractelement <8 x i32> zeroinitializer, i64 0
+  %m3 = mul i32 %c3, %e3
+  %s3 = or i32 %m2, %m3
+  %c4 = load i32, ptr %cp4, align 4
+  %e4 = extractelement <8 x i32> zeroinitializer, i64 1
+  %m4 = mul i32 %c4, %e4
+  %s4 = or i32 %s3, %m4
+  %c5 = load i32, ptr %cp5, align 4
+  %e5 = extractelement <8 x i32> splat (i32 1), i64 1
+  %m5 = mul i32 %c5, %e5
+  %s5 = or i32 %s4, %m5
+  %c6 = load i32, ptr %cp6, align 4
+  %e6 = extractelement <8 x i32> %b, i64 1
+  %m6 = mul i32 %c6, %e6
+  %s6 = or i32 %s5, %m6
+  %c7 = load i32, ptr %cp7, align 4
+  %e7 = extractelement <8 x i32> %a, i64 0
+  %m7 = mul i32 %c7, %e7
+  %s7 = or i32 %s6, %m7
+  %c8 = load i32, ptr %cp8, align 4
+  %e8 = extractelement <8 x i32> %a, i64 0
+  %m8 = mul i32 %c8, %e8
+  %s8 = or i32 %s7, %m8
+  %c9 = load i32, ptr %cp9, align 4
+  %e9 = extractelement <8 x i32> %a, i64 1
+  %m9 = mul i32 %c9, %e9
+  %s9 = or i32 %s8, %m9
+  ret i32 %s9
 }
