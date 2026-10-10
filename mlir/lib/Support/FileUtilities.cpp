@@ -23,7 +23,7 @@ static std::unique_ptr<llvm::MemoryBuffer>
 openInputFileImpl(StringRef inputFilename, std::string *errorMessage,
                   std::optional<llvm::Align> alignment) {
   auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(
-      inputFilename, /*IsText=*/false, /*RequiresNullTerminator=*/true,
+      inputFilename, llvm::sys::fs::OF_None, /*RequiresNullTerminator=*/true,
       alignment);
   if (std::error_code error = fileOrErr.getError()) {
     if (errorMessage)

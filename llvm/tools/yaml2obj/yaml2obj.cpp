@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFileOrSTDIN(Input, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(Input, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = Buf.getError()) {
     WithColor::error(errs(), ProgName) << Input << ": " << EC.message() << '\n';
     return 1;

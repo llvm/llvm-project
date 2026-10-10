@@ -39,6 +39,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -823,7 +824,7 @@ Error RawMemProfReader::readNextRecord(
 
 Expected<std::unique_ptr<YAMLMemProfReader>>
 YAMLMemProfReader::create(const Twine &Path) {
-  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = BufferOr.getError())
     return report(errorCodeToError(EC), Path.getSingleStringRef());
 
@@ -839,7 +840,7 @@ YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 }
 
 bool YAMLMemProfReader::hasFormat(const StringRef Path) {
-  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, sys::fs::OF_TextWithCRLF);
   if (!BufferOr)
     return false;
 

@@ -186,7 +186,7 @@ bool DXContainerPDB::runOnModule(Module &M) {
     return false;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
-      DebugFileName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+      DebugFileName, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (!Buf)
     reportFatalInternalError("Failed to read PDB for PRIV embedding");
 
