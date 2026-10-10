@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 using namespace clang;
@@ -408,8 +409,9 @@ void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  const llvm::Triple &T = getTriple();
   // Target identification.
-  if (getTriple().isWindowsArm64EC()) {
+  if (T.isWindowsArm64EC()) {
     // Define the same set of macros as would be defined on x86_64 to ensure that
     // ARM64EC datatype layouts match those of x86_64 compiled code
     Builder.defineMacro("__amd64__");
@@ -421,7 +423,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__aarch64__");
   }
 
-  if (getTriple().isLFI())
+  // For bare-metal none-elf.
+  if (T.getOS() == llvm::Triple::UnknownOS &&
+      T.getEnvironment() == llvm::Triple::UnknownEnvironment &&
+      T.getObjectFormat() == llvm::Triple::ELF && Opts.CPlusPlus) {
+    Builder.defineMacro("_GNU_SOURCE");
+  }
+
+  if (T.isLFI())
     Builder.defineMacro("__LFI__");
 
   // Inline assembly supports AArch64 flag outputs.
