@@ -517,6 +517,12 @@ public:
   /// Returns the SCEV no-wrap flags that apply to StepInst.
   SCEVFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
 
+  // Returns an over-approximation of the conditional induction as a SCEVAddRec
+  // assuming the condition is always true. The loop \p L is assumed to be the
+  // loop containing the conditional induction.
+  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
+                                              const Loop &L) const;
+
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
                                  Instruction *StepInst, const SCEV *StartSCEV,
