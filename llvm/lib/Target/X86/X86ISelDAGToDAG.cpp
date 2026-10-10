@@ -975,19 +975,16 @@ static bool needBWI(MVT VT) {
   return (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v64i8);
 }
 
-// Return true if V is a compare that an AND can fold as a masked compare.
-static bool isSingleUseMaskCompare(SDValue V) {
-  return (V.getOpcode() == ISD::SETCC || V.getOpcode() == X86ISD::CMPM) &&
-         V.hasOneUse();
-}
-
 // Return the single-use wider compare that V is the low subvector of, if any.
-static SDValue getLowSubvectorMaskCompare(SDValue V) {
+static SDValue getLowSubvectorMaskCompare(SDValue V,
+                                          const X86Subtarget *Subtarget) {
   if (V.getOpcode() != ISD::EXTRACT_SUBVECTOR || !V.hasOneUse() ||
       !isNullConstant(V.getOperand(1)))
     return SDValue();
   SDValue Src = V.getOperand(0);
-  return isSingleUseMaskCompare(Src) ? Src : SDValue();
+  if (!Src.hasOneUse() || !isLegalMaskCompare(Src.getNode(), Subtarget))
+    return SDValue();
+  return Src;
 }
 
 void X86DAGToDAGISel::PreprocessISelDAG() {
@@ -1409,17 +1406,17 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       MVT VT = N->getSimpleValueType(0);
       if (!VT.isVectorOf(MVT::i1))
         break;
+      assert(Subtarget->hasAVX512() && "Mask vectors need AVX512");
 
       // Isel already folds this AND, or relies on its upper bits being zero.
-      SDValue N0 = N->getOperand(0);
-      SDValue N1 = N->getOperand(1);
-      if (isSingleUseMaskCompare(N0) || isSingleUseMaskCompare(N1) ||
-          isMaskZeroExtended(N))
+      if (isMaskZeroExtended(N))
         break;
 
-      SDValue Cmp = getLowSubvectorMaskCompare(N1);
+      SDValue N0 = N->getOperand(0);
+      SDValue N1 = N->getOperand(1);
+      SDValue Cmp = getLowSubvectorMaskCompare(N1, Subtarget);
       if (!Cmp)
-        Cmp = getLowSubvectorMaskCompare(N0);
+        Cmp = getLowSubvectorMaskCompare(N0, Subtarget);
       if (!Cmp)
         break;
 
