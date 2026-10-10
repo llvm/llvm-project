@@ -26,6 +26,34 @@ static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
                 : CountAttributedType::CountedBy;
 }
 
+BoundsAttributedType::BoundsAttrKind
+Sema::getBoundsAttrKind(const BoundsAttrFlags &Flags) {
+  // Clang does not yet implement __ended_by (see BoundsSafety.md).
+  assert(!Flags.IsEndedBy && "ended_by is not implemented");
+  return getCountAttrKind(Flags.CountInBytes, Flags.OrNull);
+}
+
+Sema::BoundsAttrFlags Sema::BoundsAttrFlags::get(AttributeCommonInfo::Kind K) {
+  BoundsAttrFlags Flags;
+  switch (K) {
+  case ParsedAttr::AT_SizedBy:
+    Flags.CountInBytes = true;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    Flags.CountInBytes = true;
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_CountedBy:
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    Flags.OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected bounds attribute kind");
+  }
+  return Flags;
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -48,6 +76,123 @@ enum class CountedByInvalidPointeeTypeKind {
   FLEXIBLE_ARRAY_MEMBER,
   VALID,
 };
+
+/// Check type conflicts under the -fbounds-safety attribute model.
+/// Return std::nullopt if validation should continue with the shared checks.
+static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
+    Sema &S, QualType Ty, SourceLocation AttrLoc,
+    const Sema::BoundsAttrFlags &Flags, StringRef AttrSpelling,
+    bool AllowRedecl, Expr *AttrArg) {
+  // The -fbounds-safety model's checks for conflicting attributes, atomic
+  // pointers and array shapes are not upstream yet.
+  return std::nullopt;
+}
+
+bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                       SourceRange AttrRange,
+                                       BoundsAttrFlags &Flags,
+                                       StringRef AttrSpelling, bool AllowRedecl,
+                                       Expr *AttrArg, bool UpdateFlags) {
+  if (getLangOpts().hasBoundsSafetyAttributes())
+    if (std::optional<bool> Result = checkBoundsAttrTypeConflictsAndMisc(
+            *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl, AttrArg))
+      return *Result;
+
+  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
+
+  // counted_by and sized_by require a pointer or array.
+  if (!Ty->isPointerType() && !Ty->isArrayType()) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << 0;
+    return false;
+  }
+
+  // Arrays only support counted_by outside the -fbounds-safety attribute model.
+  if (!getLangOpts().hasBoundsSafetyAttributes() && Ty->isArrayType() &&
+      (Flags.CountInBytes || Flags.OrNull)) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << /*suggest counted_by*/ 1;
+    return false;
+  }
+
+  // Check the pointee or element type.
+  QualType PointeeTy;
+  int SelectPtrOrArr;
+  if (Ty->isPointerType()) {
+    PointeeTy = Ty->getPointeeType();
+    SelectPtrOrArr = 0;
+  } else {
+    const ArrayType *AT = getASTContext().getAsArrayType(Ty);
+    PointeeTy = AT->getElementType();
+    SelectPtrOrArr = 1;
+  }
+
+  auto InvalidTypeKind = CountedByInvalidPointeeTypeKind::VALID;
+  bool ShouldWarn = false;
+  if (!Flags.CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
+    // GNU void pointer arithmetic treats each element as one byte, so allow
+    // counted_by on void pointers outside the -fbounds-safety attribute model.
+    if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
+      Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
+      Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
+      if (UpdateFlags)
+        Flags.CountInBytes = true;
+      return true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+  } else if (PointeeTy->isSizelessType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
+  } else if (PointeeTy->isFunctionType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
+  } else if (!Flags.CountInBytes &&
+             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (Ty->isArrayType()) {
+      // Warn for compatibility with Linux kernel code using counted_by on a FAM
+      // of structs with FAMs. Computing these bounds requires traversing the
+      // elements at runtime.
+      ShouldWarn = true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
+  }
+
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    Diag(AttrLoc, DiagID) << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
+                          << (ShouldWarn ? 1 : 0) << Kind << AttrRange;
+    return false;
+  }
+
+  return true;
+}
+
+bool Sema::ValidateBoundsAttrTypeForTypePosition(
+    QualType Ty, AttributeCommonInfo::Kind AttrKind, SourceLocation AttrLoc,
+    SourceRange AttrRange, unsigned PointerNestLevel, BoundsAttrFlags &Flags) {
+  Flags = BoundsAttrFlags::get(AttrKind);
+
+  // Preserve the counted_by kind for the GNU void pointer extension to match
+  // the field path. The count is still interpreted as a byte size.
+  if (!ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Flags,
+                                   /*AttrSpelling=*/{}, /*AllowRedecl=*/false,
+                                   /*AttrArg=*/nullptr, /*UpdateFlags=*/false))
+    return false;
+
+  // Currently, only attributes at the outermost level of the declared type
+  // are supported.
+  //
+  // FIXME: Support indirect parameters such as:
+  //   void f(int *__counted_by(*len) *buf, int *len);
+  // See https://github.com/llvm/llvm-project/issues/166411.
+  if (PointerNestLevel > 0) {
+    Diag(AttrLoc, diag::err_counted_by_on_nested_pointer)
+        << getBoundsAttrKind(Flags);
+    return false;
+  }
+
+  return true;
+}
 
 bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                      bool OrNull) {

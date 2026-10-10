@@ -710,6 +710,12 @@ public:
     return ConvergentFunctions;
   }
 
+  /// Return true if bounds attributes follow the -fbounds-safety programming
+  /// model. Downstream, which has the full -fbounds-safety implementation, uses
+  /// this predicate to gate behavior that differs from upstream. Remove it once
+  /// that divergence is resolved.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
+
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
   bool threadPrivateMemoryAtomicsAreUndefined() const {
