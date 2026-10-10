@@ -236,7 +236,9 @@ struct LateParsedTypeAttribute : public LateParsedAttribute {
   /// the argument that hasn't been parsed yet. Filled in by
   /// `Parser::ProcessLateParsedTypeAttrCallback` and completed once the
   /// enclosing scope makes the argument parseable. Null if type construction
-  /// rejected the attribute.
+  /// rejected the attribute, or if it is on a return type and was parsed as an
+  /// ordinary attribute instead (see
+  /// `Parser::ParseLateParsedReturnTypeAttributes`).
   ///
   /// Held as the base class so the parser stays agnostic about which bounds
   /// attribute this is; Sema dispatches on the concrete kind when completing.
@@ -293,6 +295,8 @@ public:
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
+  friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
 
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;
@@ -1954,10 +1958,12 @@ private:
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
 
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal) {
-    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr) {
+    ParseSpecifierQualifierList(DS, getImplicitTypenameContext(DSC), AS, DSC,
+                                LateAttrs);
   }
 
   /// ParseSpecifierQualifierList
@@ -1968,10 +1974,12 @@ private:
   /// [GNU]    attributes     specifier-qualifier-list[opt]
   /// \endverbatim
   ///
-  void ParseSpecifierQualifierList(
-      DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal);
+  void
+  ParseSpecifierQualifierList(DeclSpec &DS,
+                              ImplicitTypenameContext AllowImplicitTypename,
+                              AccessSpecifier AS = AS_none,
+                              DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                              LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseEnumSpecifier
   /// \verbatim
@@ -2243,6 +2251,8 @@ private:
       ParsedAttributes Attrs(AttrFactory);
       ParseGNUAttributes(Attrs, LateAttrs, &D);
       D.takeAttributesAppending(Attrs);
+      if (LateAttrs)
+        Parser::TakeTypeAttrsAppendingFrom(D.getLateAttributes(), *LateAttrs);
     }
   }
 
@@ -2678,7 +2688,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      llvm::function_ref<void()> CodeCompletionHandler = {});
+      llvm::function_ref<void()> CodeCompletionHandler = {},
+      LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -2755,7 +2766,7 @@ private:
   ///
   /// If FirstArgAttrs is non-null, then the caller parsed those attributes
   /// immediately after the open paren - they will be applied to the DeclSpec
-  /// of the first parameter.
+  /// of the first parameter. FirstArgLateAttrs holds the late-parsed ones.
   ///
   /// If RequiresArg is true, then the first argument of the function is
   /// required to be present and required to not be an identifier list.
@@ -2774,7 +2785,8 @@ private:
   ///
   void ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
                                BalancedDelimiterTracker &Tracker,
-                               bool IsAmbiguous, bool RequiresArg = false);
+                               bool IsAmbiguous, bool RequiresArg = false,
+                               LateParsedAttrList *FirstArgLateAttrs = nullptr);
   void InitCXXThisScopeForDeclaratorIfRelevant(
       const Declarator &D, const DeclSpec &DS,
       std::optional<Sema::CXXThisScopeRAII> &ThisScope);
@@ -2808,11 +2820,13 @@ private:
   void ParseParameterDeclarationClause(
       Declarator &D, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc) {
+      SourceLocation &EllipsisLoc,
+      LateParsedAttrList *FirstArgLateAttrs = nullptr) {
     return ParseParameterDeclarationClause(
         D.getContext(), attrs, ParamInfo, EllipsisLoc,
         D.getCXXScopeSpec().isSet() &&
-            D.isFunctionDeclaratorAFunctionDeclaration());
+            D.isFunctionDeclaratorAFunctionDeclaration(),
+        FirstArgLateAttrs);
   }
 
   /// ParseParameterDeclarationClause - Parse a (possibly empty) parameter-list
@@ -2822,7 +2836,7 @@ private:
   /// DeclContext is the context of the declarator being parsed.  If
   /// FirstArgAttrs is non-null, then the caller parsed those attributes
   /// immediately after the open paren - they will be applied to the DeclSpec of
-  /// the first parameter.
+  /// the first parameter. FirstArgLateAttrs holds the late-parsed ones.
   ///
   /// After returning, ParamInfo will hold the parsed parameters. EllipsisLoc
   /// will be the location of the ellipsis, if any was parsed.
@@ -2853,7 +2867,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false);
+      SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration = false,
+      LateParsedAttrList *FirstArgLateAttrs = nullptr);
 
   /// \verbatim
   /// [C90]   direct-declarator '[' constant-expression[opt] ']'
@@ -8160,6 +8175,53 @@ private:
   void ParseLateTemplatedFuncDef(LateParsedTemplate &LPT);
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
+
+  /// Validate \p LA as a late-parsed type attribute and, if valid, wrap \p type
+  /// in a \c CountAttributedType whose count expression is not yet known,
+  /// recording the node on \p LA so it can be completed later.
+  ///
+  /// \p LA is downcast to \c LateParsedTypeAttribute; if the cast fails the
+  /// attribute is not applicable here and the function returns \c true to skip.
+  /// \p pointerNestLevel is the number of pointer/array/function declarator
+  /// chunks that precede the current chunk (see \c getPointerNestLevel).
+  /// Returns \c true on success and \c false if the attribute is invalid for
+  /// \p type.
+  static bool ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                                QualType &type,
+                                                unsigned pointerNestLevel);
+
+  /// Parse the late-parsed attributes in a function type's return type in
+  /// \p D, now that the function type's parameters are known, into ordinary
+  /// attributes on their chunks. Those in the declaration specifiers stay
+  /// late-parsed.
+  void ParseLateParsedReturnTypeAttributes(Declarator &D);
+
+  /// Complete the late-parsed type attributes of a parameter clause, each on
+  /// the parameter it was written in, while the parameters are in scope.
+  /// Consumes and clears \p LateTypeAttrs.
+  void CompleteLateParsedParamTypeAttributes(
+      SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs);
+
+  /// The late-parsed type attributes of the record currently being parsed, so a
+  /// nested anonymous record can hand its unresolved attributes to the
+  /// enclosing record whose scope makes their arguments visible. Null outside a
+  /// record body, and inside a parameter clause nested in one.
+  SmallVectorImpl<LateParsedTypeAttribute *> *CurRecordLateParsedTypeAttrs =
+      nullptr;
+
+  /// The late-parsed type attributes of the parameter clause currently being
+  /// parsed, completed at its closing parenthesis. Null outside a parameter
+  /// clause, inside a record body nested in one, and in C++.
+  SmallVectorImpl<LateParsedTypeAttribute *> *CurPrototypeLateParsedTypeAttrs =
+      nullptr;
+
+  /// The list that completes a late-parsed type attribute written here: the
+  /// innermost record body or parameter clause, or null outside both.
+  SmallVectorImpl<LateParsedTypeAttribute *> *
+  getCurLateParsedTypeAttrs() const {
+    return CurPrototypeLateParsedTypeAttrs ? CurPrototypeLateParsedTypeAttrs
+                                           : CurRecordLateParsedTypeAttrs;
+  }
 
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't

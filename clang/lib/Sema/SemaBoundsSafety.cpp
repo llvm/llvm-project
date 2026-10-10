@@ -26,6 +26,62 @@ static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
                 : CountAttributedType::CountedBy;
 }
 
+BoundsAttributedType::BoundsAttrKind
+Sema::getBoundsAttrKind(const BoundsAttrFlags &Flags) {
+  // `ended_by` (Flags.IsEndedBy) has no home on this base; the field exists for
+  // struct parity with the downstream API but is never set here.
+  return getCountAttrKind(Flags.CountInBytes, Flags.OrNull);
+}
+
+Sema::BoundsAttrFlags Sema::getBoundsAttrFlags(AttributeCommonInfo::Kind K) {
+  BoundsAttrFlags Flags;
+  switch (K) {
+  case ParsedAttr::AT_SizedBy:
+    Flags.CountInBytes = true;
+    break;
+  case ParsedAttr::AT_SizedByOrNull:
+    Flags.CountInBytes = true;
+    Flags.OrNull = true;
+    break;
+  case ParsedAttr::AT_CountedBy:
+    break;
+  case ParsedAttr::AT_CountedByOrNull:
+    Flags.OrNull = true;
+    break;
+  default:
+    llvm_unreachable("unexpected bounds attribute kind");
+  }
+  return Flags;
+}
+
+DeclRefExpr *Sema::getCountDeclRef(Expr *E, bool &IsDeref) {
+  IsDeref = false;
+  if (auto *UO = dyn_cast<UnaryOperator>(E);
+      UO && UO->getOpcode() == UO_Deref) {
+    E = UO->getSubExpr()->IgnoreImpCasts();
+    IsDeref = true;
+  }
+  return dyn_cast<DeclRefExpr>(E);
+}
+
+const CountAttributedType *Sema::getWrittenCountAttributedType(QualType T) {
+  const Type *Ty = T.getTypePtr();
+  while (true) {
+    if (const auto *CATy = dyn_cast<CountAttributedType>(Ty))
+      return CATy;
+    if (const auto *A = dyn_cast<AttributedType>(Ty))
+      Ty = A->getModifiedType().getTypePtr();
+    else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *P = dyn_cast<ParenType>(Ty))
+      Ty = P->getInnerType().getTypePtr();
+    else if (const auto *M = dyn_cast<MacroQualifiedType>(Ty))
+      Ty = M->getUnderlyingType().getTypePtr();
+    else
+      return nullptr;
+  }
+}
+
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
   // An unnamed struct is treated as anonymous struct at this point.
@@ -49,6 +105,90 @@ enum class CountedByInvalidPointeeTypeKind {
   VALID,
 };
 
+bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                       SourceRange AttrRange,
+                                       BoundsAttrFlags &Flags,
+                                       StringRef AttrSpelling, bool AllowRedecl,
+                                       Expr *AttrArg) {
+  // The downstream leaf runs a `hasBoundsSafetyAttributes()`-gated
+  // `checkBoundsAttrTypeConflictsAndMisc` preamble and an `ended_by` early
+  // path; both depend on machinery (`DynamicRangePointerType`,
+  // `ValueTerminatedType`, the `err_bounds_safety_*` diagnostics) that does not
+  // exist here, so they are the omitted bounds-safety arms. The rest matches.
+  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
+
+  // counted_by/sized_by: must be pointer or array.
+  if (!Ty->isPointerType() && !Ty->isArrayType()) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << 0;
+    return false;
+  }
+
+  // Arrays with sized_by or _or_null variants are not allowed under the
+  // non -fbounds-safety path; emit the "did you mean to use 'counted_by'" hint.
+  if (!getLangOpts().hasBoundsSafetyAttributes() && Ty->isArrayType() &&
+      (Flags.CountInBytes || Flags.OrNull)) {
+    Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
+        << Kind << /*suggest counted_by*/ 1;
+    return false;
+  }
+
+  // Pointee/element type validation.
+  QualType PointeeTy;
+  int SelectPtrOrArr;
+  if (Ty->isPointerType()) {
+    PointeeTy = Ty->getPointeeType();
+    SelectPtrOrArr = 0;
+  } else {
+    const ArrayType *AT = getASTContext().getAsArrayType(Ty);
+    PointeeTy = AT->getElementType();
+    SelectPtrOrArr = 1;
+  }
+
+  auto InvalidTypeKind = CountedByInvalidPointeeTypeKind::VALID;
+  bool ShouldWarn = false;
+  if (!Flags.CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
+    // and behaves equivalently to sized_by (treating the count as bytes).
+    if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
+      // Emit a warning that this is a GNU extension.
+      Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
+      Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
+      Flags.CountInBytes = true;
+      return true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+  } else if (PointeeTy->isSizelessType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
+  } else if (PointeeTy->isFunctionType()) {
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
+  } else if (!Flags.CountInBytes &&
+             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
+    if (Ty->isArrayType() && !getLangOpts().BoundsSafety) {
+      // This is a workaround for the Linux kernel that has already adopted
+      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
+      // should be an error because computing the bounds of the array cannot
+      // be done correctly without manually traversing every struct object in
+      // the array at runtime. To allow the code to be built this error is
+      // downgraded to a warning.
+      ShouldWarn = true;
+    }
+    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
+  }
+
+  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
+    unsigned DiagID = ShouldWarn
+                          ? diag::warn_counted_by_attr_elt_type_unknown_size
+                          : diag::err_counted_by_attr_pointee_unknown_size;
+    Diag(AttrLoc, DiagID) << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
+                          << (ShouldWarn ? 1 : 0) << Kind << AttrRange;
+    return false;
+  }
+
+  return true;
+}
+
 bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                      bool OrNull) {
   // Check the context the attribute is used in
@@ -61,20 +201,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  const auto FieldTy = FD->getType();
-  if (FieldTy->isArrayType() && (CountInBytes || OrNull)) {
-    Diag(FD->getBeginLoc(),
-         diag::err_count_attr_not_on_ptr_or_flexible_array_member)
-        << Kind << FD->getLocation() << /* suggest counted_by */ 1;
-    return true;
-  }
-  if (!FieldTy->isArrayType() && !FieldTy->isPointerType()) {
-    Diag(FD->getBeginLoc(),
-         diag::err_count_attr_not_on_ptr_or_flexible_array_member)
-        << Kind << FD->getLocation() << /* do not suggest counted_by */ 0;
-    return true;
-  }
-
+  const QualType FieldTy = FD->getType();
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
   if (FieldTy->isArrayType() &&
@@ -86,98 +213,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  CountedByInvalidPointeeTypeKind InvalidTypeKind =
-      CountedByInvalidPointeeTypeKind::VALID;
-  QualType PointeeTy;
-  int SelectPtrOrArr = 0;
-  if (FieldTy->isPointerType()) {
-    PointeeTy = FieldTy->getPointeeType();
-    SelectPtrOrArr = 0;
-  } else {
-    assert(FieldTy->isArrayType());
-    const ArrayType *AT = getASTContext().getAsArrayType(FieldTy);
-    PointeeTy = AT->getElementType();
-    SelectPtrOrArr = 1;
-  }
-  // Note: The `Decl::isFlexibleArrayMemberLike` check earlier on means
-  // only `PointeeTy->isStructureTypeWithFlexibleArrayMember()` is reachable
-  // when `FieldTy->isArrayType()`.
-  bool ShouldWarn = false;
-  if (!CountInBytes && PointeeTy->isAlwaysIncompleteType()) {
-    // In general using `counted_by` or `counted_by_or_null` on
-    // pointers where the pointee is an incomplete type are problematic. This is
-    // because it isn't possible to compute the pointer's bounds without knowing
-    // the pointee type size. At the same time it is common to forward declare
-    // types in header files.
-    //
-    // E.g.:
-    //
-    // struct Handle;
-    // struct Wrapper {
-    //   size_t count;
-    //   struct Handle* __counted_by(count) handles;
-    // }
-    //
-    // To allow the above code pattern but still prevent the pointee type from
-    // being incomplete in places where bounds checks are needed the following
-    // scheme is used:
-    //
-    // * When the pointee type might not always be an incomplete type (i.e.
-    // a type that is currently incomplete but might be completed later
-    // on in the translation unit) the attribute is allowed by this method
-    // but later uses of the FieldDecl are checked that the pointee type
-    // is complete see `BoundsSafetyCheckAssignmentToCountAttrPtr`,
-    // `BoundsSafetyCheckInitialization`, and
-    // `BoundsSafetyCheckUseOfCountAttrPtr`
-    //
-    // * When the pointee type is always an incomplete type (e.g.
-    // `void` in strict C mode) the attribute is disallowed by this method
-    // because we know the type can never be completed so there's no reason
-    // to allow it.
-    //
-    // Exception: void has an implicit size of 1 byte for pointer arithmetic
-    // (following GNU convention). Therefore, counted_by on void* is allowed
-    // and behaves equivalently to sized_by (treating the count as bytes).
-    bool IsVoidPtr = PointeeTy->isVoidType();
-    if (IsVoidPtr) {
-      // Emit a warning that this is a GNU extension.
-      Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
-      Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
-          << Kind;
-      assert(InvalidTypeKind == CountedByInvalidPointeeTypeKind::VALID);
-    } else {
-      InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
-    }
-  } else if (PointeeTy->isSizelessType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
-  } else if (PointeeTy->isFunctionType()) {
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FUNCTION;
-  } else if (!CountInBytes &&
-             PointeeTy->isStructureTypeWithFlexibleArrayMember()) {
-    if (FieldTy->isArrayType() && !getLangOpts().BoundsSafety) {
-      // This is a workaround for the Linux kernel that has already adopted
-      // `counted_by` on a FAM where the pointee is a struct with a FAM. This
-      // should be an error because computing the bounds of the array cannot be
-      // done correctly without manually traversing every struct object in the
-      // array at runtime. To allow the code to be built this error is
-      // downgraded to a warning.
-      ShouldWarn = true;
-    }
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::FLEXIBLE_ARRAY_MEMBER;
-  }
-
-  if (InvalidTypeKind != CountedByInvalidPointeeTypeKind::VALID) {
-    unsigned DiagID = ShouldWarn
-                          ? diag::warn_counted_by_attr_elt_type_unknown_size
-                          : diag::err_counted_by_attr_pointee_unknown_size;
-    Diag(FD->getBeginLoc(), DiagID)
-        << SelectPtrOrArr << PointeeTy << (int)InvalidTypeKind
-        << (ShouldWarn ? 1 : 0) << Kind << FD->getSourceRange();
-    return true;
-  }
-
-  // Check the expression
-
+  // Validate the expression type
   if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
     Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
         << Kind << E->getSourceRange();
@@ -192,6 +228,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
+  // Validate count field references
   auto *CountDecl = DRE->getDecl();
   FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
   if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
@@ -213,9 +250,6 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
           << Kind << CountFD->getSourceRange();
       return true;
     }
-    // Whether CountRD is an anonymous struct is not determined at this
-    // point. Thus, an additional diagnostic in case it's not anonymous struct
-    // is done later in `Parser::ParseStructDeclaration`.
     auto *RD = GetEnclosingNamedOrTopAnonRecord(FD);
     auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
 
@@ -227,6 +261,195 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
           << CountFD << CountFD->getSourceRange();
       return true;
     }
+  }
+  return false;
+}
+
+/// The checks shared by the counts in a function declaration: \p E must be an
+/// integer naming a declaration, or if \p AllowDeref, dereferencing one.
+/// Returns that declaration, or null on error.
+static ValueDecl *checkCountRefersToDecl(Sema &S, Expr *E, unsigned Kind,
+                                         bool AllowDeref) {
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    S.Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+
+  bool IsDeref;
+  auto *DRE = Sema::getCountDeclRef(E, IsDeref);
+  if (!DRE || (IsDeref && !AllowDeref)) {
+    S.Diag(E->getBeginLoc(),
+           diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << E->getSourceRange();
+    return nullptr;
+  }
+  return DRE->getDecl();
+}
+
+bool Sema::CheckCountedByAttrOnParam(QualType ParamTy, Expr *E,
+                                     bool CountInBytes, bool OrNull) {
+  // An invalid count was already diagnosed.
+  if (E->containsErrors())
+    return true;
+
+  // A second count would replace the first, or hide it.
+  if (ParamTy->getAs<CountAttributedType>()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_more_than_one);
+    return true;
+  }
+
+  // An array parameter adjusts to a pointer, which the count then describes.
+  // An array with an explicit size is not supported: in the -fbounds-safety
+  // programming model, its size becomes that pointer's count.
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  if (ParamTy->isArrayType() && !ParamTy->isIncompleteArrayType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_on_sized_array_param) << Kind;
+    return true;
+  }
+
+  ValueDecl *VD = checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/true);
+  if (!VD)
+    return true;
+
+  // The parameters of an enclosing function declarator are in scope too.
+  if (!isa<ParmVarDecl>(VD)) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_non_param)
+        << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+bool Sema::CheckCountedByAttrOnReturn(
+    Expr *E, bool CountInBytes, bool OrNull,
+    ArrayRef<DeclaratorChunk::ParamInfo> Params) {
+  // Already diagnosed where it failed to parse.
+  if (E->containsErrors())
+    return true;
+
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+  ValueDecl *VD = checkCountRefersToDecl(*this, E, Kind, /*AllowDeref=*/false);
+  if (!VD)
+    return true;
+
+  if (llvm::none_of(Params, [&](const DeclaratorChunk::ParamInfo &PI) {
+        return PI.Param == VD;
+      })) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_refer_to_different_scope)
+        << Kind << E->getSourceRange();
+    return true;
+  }
+  return false;
+}
+
+void Sema::AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                       const CountAttributedType *CATy) {
+  if (!CATy->desugar()->isArrayType())
+    return;
+  // The parameter's type is already adjusted, with the qualifiers written
+  // outside the count moved to the element (C99 6.7.3p8), but the decayed
+  // pointer does not carry the count. Put it back on the pointer.
+  PVD->setType(Context.getCountAttributedType(
+      PVD->getType(), CATy->getCountExpr(), CATy->isCountInBytes(),
+      CATy->isOrNull(), CATy->getCoupledDecls()));
+}
+
+/// Whether the count \p E in a declaration of \p FD names a parameter of a
+/// function, block or method whose body encloses that declaration.
+static bool namesEnclosingParam(Expr *E, const FunctionDecl *FD) {
+  bool IsDeref;
+  const DeclRefExpr *DRE = Sema::getCountDeclRef(E, IsDeref);
+  const auto *PVD = DRE ? dyn_cast<ParmVarDecl>(DRE->getDecl()) : nullptr;
+  if (!PVD)
+    return false;
+  // The parameters of a prototype written in that body, such as a typedef's,
+  // have the same context, so check that this is one of the body's own.
+  const DeclContext *DC = PVD->getDeclContext();
+  ArrayRef<ParmVarDecl *> Params;
+  if (const auto *F = dyn_cast<FunctionDecl>(DC))
+    Params = F->parameters();
+  else if (const auto *B = dyn_cast<BlockDecl>(DC))
+    Params = B->parameters();
+  else if (const auto *M = dyn_cast<ObjCMethodDecl>(DC))
+    Params = M->parameters();
+  return llvm::is_contained(Params, PVD) &&
+         DC->LexicallyEncloses(FD->getLexicalDeclContext());
+}
+
+/// Whether \p New and \p Old, counts in two declarations \p NewFD and \p OldFD
+/// of a function, name the same thing. A parameter compares by its position
+/// and type, so the counts of both declarations can name their own parameters,
+/// or those of the typedef they were declared with, if those have the same
+/// type, qualifiers included. A parameter of an enclosing body is not in
+/// either function's parameter list, so it compares by identity.
+static bool isSameCount(const ASTContext &Ctx, Expr *New, Expr *Old,
+                        const FunctionDecl *NewFD, const FunctionDecl *OldFD) {
+  if (!namesEnclosingParam(New, NewFD) && !namesEnclosingParam(Old, OldFD))
+    return Ctx.hasSameExpr(New, Old);
+  bool NewIsDeref, OldIsDeref;
+  const DeclRefExpr *NewDRE = Sema::getCountDeclRef(New, NewIsDeref);
+  const DeclRefExpr *OldDRE = Sema::getCountDeclRef(Old, OldIsDeref);
+  return NewDRE && OldDRE && NewIsDeref == OldIsDeref &&
+         NewDRE->getDecl() == OldDRE->getDecl();
+}
+
+/// Of \p New and \p Old, the types of one parameter or return value in two
+/// declarations \p NewFD and \p OldFD of a function, the count at the
+/// outermost pointer level where they differ, or null if they agree. Only
+/// pointers are followed, so counts below an _Atomic pointer or in a
+/// callback's parameters are not compared.
+static const CountAttributedType *
+findConflictingCount(const ASTContext &Ctx, QualType New, QualType Old,
+                     const FunctionDecl *NewFD, const FunctionDecl *OldFD) {
+  for (; New->isPointerType() && Old->isPointerType();
+       New = New->getPointeeType(), Old = Old->getPointeeType()) {
+    const auto *NewCATy = New->getAs<CountAttributedType>();
+    const auto *OldCATy = Old->getAs<CountAttributedType>();
+    if (!NewCATy && !OldCATy)
+      continue;
+    if (!NewCATy || !OldCATy)
+      return NewCATy ? NewCATy : OldCATy;
+
+    if (NewCATy->isOrNull() != OldCATy->isOrNull())
+      return NewCATy;
+    // A count of one-byte elements is a size.
+    if (NewCATy->isCountInBytes() != OldCATy->isCountInBytes()) {
+      QualType Pointee = NewCATy->getPointeeType();
+      if (!Pointee->isVoidType() && (Pointee->isIncompleteType() ||
+                                     !Ctx.getTypeSizeInChars(Pointee).isOne()))
+        return NewCATy;
+    }
+    assert(NewCATy->getCountExpr() && OldCATy->getCountExpr());
+    if (!isSameCount(Ctx, NewCATy->getCountExpr(), OldCATy->getCountExpr(),
+                     NewFD, OldFD))
+      return NewCATy;
+  }
+  return nullptr;
+}
+
+bool Sema::CheckCountAttributedRedeclaration(const FunctionDecl *New,
+                                             const FunctionDecl *Old) {
+  auto Diagnose = [&](const CountAttributedType *CATy, SourceLocation Loc) {
+    if (!CATy)
+      return false;
+    Diag(Loc, diag::err_count_attr_conflicting_redeclaration)
+        << CATy->getKind();
+    return true;
+  };
+
+  if (Diagnose(findConflictingCount(Context, New->getReturnType(),
+                                    Old->getReturnType(), New, Old),
+               New->getBeginLoc()))
+    return true;
+  for (unsigned I = 0, E = std::min(New->getNumParams(), Old->getNumParams());
+       I != E; ++I) {
+    const ParmVarDecl *NewParam = New->getParamDecl(I);
+    if (Diagnose(findConflictingCount(Context, NewParam->getType(),
+                                      Old->getParamDecl(I)->getType(), New,
+                                      Old),
+                 NewParam->getBeginLoc()))
+      return true;
   }
   return false;
 }

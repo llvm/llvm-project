@@ -142,6 +142,8 @@ class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
 enum class LangAS : unsigned int;
+struct LateParsedAttribute;
+struct LateParsedTypeAttribute;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
@@ -1382,6 +1384,27 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callback to the parser to interact with late-parsed type attributes. This
+  /// allows Sema to call back into Parser without including Parser.h.
+  ///
+  /// Processes a single late-parsed type attribute: validates the attribute
+  /// kind/type and wraps \p type in a CountAttributedType whose count is not
+  /// yet known, if appropriate. Returns false if the attribute is invalid.
+  typedef bool ProcessLateParsedTypeAttrCB(LateParsedAttribute *LA,
+                                           QualType &type,
+                                           unsigned pointerNestLevel);
+  ProcessLateParsedTypeAttrCB *ProcessLateParsedTypeAttrCallback = nullptr;
+
+  /// Called from the Parser's ProcessLateParsedTypeAttrCallback to validate a
+  /// counted_by-family attribute type and, if valid, wrap \p type in a
+  /// CountAttributedType whose count expression is not yet known. Returns false
+  /// if the attribute should be dropped, otherwise sets \p BATy to the node the
+  /// caller must complete once the argument is parseable.
+  bool ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                               SourceLocation AttrNameLoc, QualType &type,
+                               unsigned pointerNestLevel,
+                               BoundsAttributedType **BATy);
+
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
       ParseTypeFromStringCallback;
@@ -2521,31 +2544,72 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
-  /// Check if applying the specified attribute variant from the "counted by"
-  /// family of attributes to FieldDecl \p FD is semantically valid. If
-  /// semantically invalid diagnostics will be emitted explaining the problems.
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+  };
+  static BoundsAttrFlags getBoundsAttrFlags(AttributeCommonInfo::Kind K);
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// The reference that the count \p E of a counted_by-family attribute is
+  /// made of: \p E itself, or the operand of `*` in \p E, which sets \p IsDeref
+  /// (a parameter's count may be a dereferenced parameter, `*len`). Null if
+  /// \p E is neither.
+  static DeclRefExpr *getCountDeclRef(Expr *E, bool &IsDeref);
+
+  /// The count written on \p T itself: a CountAttributedType under at most the
+  /// parentheses, type attributes and macro qualifiers written with it, which
+  /// Type::getAsAdjusted also looks through. Null if there is none.
+  static const CountAttributedType *getWrittenCountAttributedType(QualType T);
+
+  /// Validates that a type is eligible for an "externally counted" bounds
+  /// attribute (counted_by/sized_by and their _or_null variants).
   ///
-  /// \param FD The FieldDecl to apply the attribute to
-  /// \param E The count expression on the attribute
-  /// \param CountInBytes If true the attribute is from the "sized_by" family of
-  ///                     attributes. If the false the attribute is from
-  ///                     "counted_by" family of attributes.
-  /// \param OrNull If true the attribute is from the "_or_null" suffixed family
-  ///               of attributes. If false the attribute does not have the
-  ///               suffix.
+  /// \p Flags selects the attribute variant. \returns true if the type is
+  /// valid, false on error (diagnostics emitted). For `void *__counted_by(n)`
+  /// it warns that the count is treated as a byte size and sets
+  /// \p Flags.CountInBytes; callers that want to preserve a counted_by node
+  /// pass a scratch copy (see validateBoundsAttrTypeForTypePosition).
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr);
+
+  /// Perform semantic validation on a FieldDecl with a "counted_by" family
+  /// attribute. This is called after the attribute has been attached to the
+  /// field's type (as a CountAttributedType) to validate the attribute is
+  /// correctly applied.
   ///
-  /// Together \p CountInBytes and \p OrNull decide the attribute variant. E.g.
-  /// \p CountInBytes and \p OrNull both being true indicates the
-  /// `counted_by_or_null` attribute.
+  /// This performs declaration-level checks that require the FieldDecl to
+  /// exist, complementing the type-level checks performed in
+  /// HandleCountedByAttrOnType during type processing. Specifically, this
+  /// validates:
+  /// - Field is not in a union
+  /// - For array fields, the field is a flexible array member
+  /// - Count expression is an integer type (not bool)
+  /// - Count expression references a field in the same struct
+  /// - Count field is not in a union
+  ///
+  /// \param FD The FieldDecl with the attribute
+  /// \param E The count expression from the attribute
+  /// \param CountInBytes If true the attribute is from the "sized_by" family.
+  ///                     If false the attribute is from the "counted_by"
+  ///                     family.
+  /// \param OrNull If true the attribute has the "_or_null" suffix.
   ///
   /// \returns false iff semantically valid.
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
-  /// Late-parsed bounds types dropped while their declarator was built. The
-  /// attribute has already been diagnosed and its node is no longer part of
-  /// any type, so the completion pass must skip it rather than parse its
-  /// argument and complete it.
+  /// Late-parsed bounds types dropped while their declarator was built, either
+  /// rejected as nested or lost with a declarator chunk that failed; both are
+  /// already diagnosed. The completion pass must skip such a node rather than
+  /// parse its argument, unless another declarator sharing its declaration
+  /// specifiers still holds it.
   llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
@@ -2563,6 +2627,45 @@ public:
   /// if the attribute was rejected.
   bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
                                        FieldDecl *FD, Expr *Arg);
+
+  /// Check the count \p E of a counted_by-family attribute on \p ParamTy, the
+  /// declared type of a parameter or the pointer it points to: it must be a
+  /// non-boolean integer naming a parameter or dereferencing one, \p ParamTy
+  /// may not already have a count, and an array parameter may not also have a
+  /// size.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnParam(QualType ParamTy, Expr *E, bool CountInBytes,
+                                 bool OrNull);
+
+  /// Check the count \p E of a counted_by-family attribute on a function
+  /// type's return type: it must be an integer naming one of that function
+  /// type's \p Params.
+  ///
+  /// \returns false iff semantically valid.
+  bool CheckCountedByAttrOnReturn(Expr *E, bool CountInBytes, bool OrNull,
+                                  ArrayRef<DeclaratorChunk::ParamInfo> Params);
+
+  /// A parameter declared as an array adjusts to a pointer to its element type.
+  /// Move the valid count \p CATy on the array to that pointer.
+  void AdjustCountedArrayParamType(ParmVarDecl *PVD,
+                                   const CountAttributedType *CATy);
+
+  /// Diagnose a redeclaration \p New of \p Old whose return type or parameters
+  /// differ from \p Old's in a count, on the type's own pointer or on one it
+  /// reaches through pointers alone.
+  ///
+  /// \returns true iff a difference was diagnosed.
+  bool CheckCountAttributedRedeclaration(const FunctionDecl *New,
+                                         const FunctionDecl *Old);
+
+  /// Supply the argument of a late-parsed bounds attribute to the type built
+  /// for it on the type of parameter \p PVD, or on the pointer that it points
+  /// to, and check it. \p Arg is null if the argument failed to parse; the
+  /// count is then an error expression at \p AttrLoc.
+  void ActOnLateParsedParamTypeAttrArgument(BoundsAttributedType *BATy,
+                                            ParmVarDecl *PVD, Expr *Arg,
+                                            SourceLocation AttrLoc);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.

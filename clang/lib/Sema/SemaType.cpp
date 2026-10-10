@@ -181,6 +181,13 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
+// Bounds attributes of the counted_by family.
+#define COUNTED_BY_TYPE_ATTRS_CASELIST                                         \
+  case ParsedAttr::AT_CountedBy:                                               \
+  case ParsedAttr::AT_CountedByOrNull:                                         \
+  case ParsedAttr::AT_SizedBy:                                                 \
+  case ParsedAttr::AT_SizedByOrNull
+
 namespace {
   /// An object which stores processing state for the entire
   /// GetTypeForDeclarator process.
@@ -283,7 +290,7 @@ namespace {
 
     /// Get an attributed type for the given attribute, and remember the Attr
     /// object so that we can attach it to the AttributedTypeLoc.
-    QualType getAttributedType(Attr *A, QualType ModifiedType,
+    QualType getAttributedType(const Attr *A, QualType ModifiedType,
                                QualType EquivType) {
       QualType T =
           sema.Context.getAttributedType(A, ModifiedType, EquivType);
@@ -408,6 +415,14 @@ static void
 processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
                  CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
+
+static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex = 0);
+
+static void
+BuildTypeCoupledDecls(Expr *E,
+                      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type, CUDAFunctionTarget CFT);
@@ -1516,6 +1531,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // are never distributed.
     processTypeAttrs(state, Result, TAL_DeclSpec, SlidingAttrs);
     processTypeAttrs(state, Result, TAL_DeclSpec, DS.getAttributes());
+
+    // Process the late attributes that appeared after the type name
+    processLateTypeAttrs(state, Result, DS.getLateAttributes());
   }
 
   // Apply const/volatile/restrict qualifiers to T.
@@ -4367,6 +4385,81 @@ static bool shouldHaveNullability(QualType T) {
              T->getCanonicalTypeInternal());
 }
 
+/// Whether the count on declarator chunk \p ChunkIndex of \p D (on its
+/// declaration specifiers if \p ChunkIndex is the number of chunks) is on the
+/// pointer that a parameter's own pointer or array points to, as for an out
+/// parameter: `int *__counted_by(*len) *buf`. Only that one level may have a
+/// count, so the parameter's own type may not have one too.
+static bool isIndirectParamCount(const Declarator &D, unsigned ChunkIndex) {
+  if (D.getContext() != DeclaratorContext::Prototype)
+    return false;
+
+  auto IsCount = [](const ParsedAttr &A) {
+    switch (A.getKind()) {
+    COUNTED_BY_TYPE_ATTRS_CASELIST:
+      return true;
+    default:
+      return false;
+    }
+  };
+  // Late-parsed type attributes are all counts.
+  auto HasCount = [&](const ParsedAttributesView &Attrs,
+                      const LateParsedAttrList &LateAttrs) {
+    return !LateAttrs.empty() || llvm::any_of(Attrs, IsCount);
+  };
+  if (HasCount(D.getAttributes(), D.getLateAttributes()))
+    return false;
+
+  unsigned Levels = 0;
+  for (unsigned I = 0; I != ChunkIndex; ++I) {
+    const DeclaratorChunk &Chunk = D.getTypeObject(I);
+    if (Chunk.isParen())
+      continue;
+    if ((Chunk.Kind != DeclaratorChunk::Pointer &&
+         Chunk.Kind != DeclaratorChunk::Array) ||
+        ++Levels > 1 || HasCount(Chunk.getAttrs(), Chunk.LateAttrList))
+      return false;
+  }
+  return Levels == 1;
+}
+
+/// Remove the count \p CATy from \p T, which is \p CATy under the parentheses
+/// and type attributes the declarator wrote around it, as
+/// Sema::getWrittenCountAttributedType finds it. Those are rebuilt through
+/// \p State, so that the type still matches its declarator.
+static QualType removeCountAttributedType(TypeProcessingState &State,
+                                          QualType T,
+                                          const CountAttributedType *CATy) {
+  ASTContext &Ctx = State.getSema().Context;
+  auto Remove = [&](QualType Inner) {
+    return removeCountAttributedType(State, Inner, CATy);
+  };
+  const Type *Ty = T.getTypePtr();
+  QualType Result;
+  if (Ty == CATy) {
+    Result = CATy->desugar();
+  } else if (const auto *PT = dyn_cast<ParenType>(Ty)) {
+    Result = Ctx.getParenType(Remove(PT->getInnerType()));
+  } else if (const auto *AT = dyn_cast<AttributedType>(Ty)) {
+    QualType Modified = Remove(AT->getModifiedType());
+    QualType Equivalent = AT->getEquivalentType() == AT->getModifiedType()
+                              ? Modified
+                              : Remove(AT->getEquivalentType());
+    Result = State.getAttributedType(AT->getAttr(), Modified, Equivalent);
+  } else if (const auto *BT = dyn_cast<BTFTagAttributedType>(Ty)) {
+    Result = State.getBTFTagAttributedType(BT->getAttr(),
+                                           Remove(BT->getWrappedType()));
+  } else {
+    const auto *MQT = cast<MacroQualifiedType>(Ty);
+    Result = Ctx.getMacroQualifiedType(Remove(MQT->getUnderlyingType()),
+                                       MQT->getMacroIdentifier());
+    State.setExpansionLocForMacroQualifiedType(
+        cast<MacroQualifiedType>(Result.getTypePtr()),
+        State.getExpansionLocForMacroQualifiedType(MQT));
+  }
+  return Ctx.getQualifiedType(Result, T.getLocalQualifiers());
+}
+
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -4751,6 +4844,55 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     state.setCurrentChunkIndex(chunkIndex);
     DeclaratorChunk &DeclType = D.getTypeObject(chunkIndex);
     IsQualifiedFunction &= DeclType.Kind == DeclaratorChunk::Paren;
+
+    // A counted_by-family attribute has to end up at the outermost level of the
+    // declared type. `int *__counted_by(n) *p` would bury the
+    // CountAttributedType under another pointer, where the bounds can't be
+    // maintained, so diagnose as soon as a chunk is about to wrap one. The
+    // eager path diagnoses the nesting where it applies the attribute, so only
+    // late-parsed counts are rejected here.
+    //
+    // Only this declarator's own count is checked, under the parentheses and
+    // type attributes of the Paren chunks around it. One reached through a
+    // typedef or `__typeof__(p)` belongs to another declaration and was
+    // checked there.
+    //
+    // Two nested positions may have a count. The pointer that a parameter
+    // points to may, as for an out parameter. A function's return type may,
+    // which the parser has already parsed with the function's parameters; only
+    // one in declaration specifiers, which other declarators may share, is
+    // still late-parsed here.
+    const CountAttributedType *WrappedLateCount = nullptr;
+    if (DeclType.Kind == DeclaratorChunk::Pointer ||
+        DeclType.Kind == DeclaratorChunk::Array ||
+        DeclType.Kind == DeclaratorChunk::Function) {
+      const CountAttributedType *CATy = Sema::getWrittenCountAttributedType(T);
+      bool Allowed =
+          CATy && (DeclType.Kind == DeclaratorChunk::Function
+                       ? CATy->getCountExpr() != nullptr
+                       : CATy->desugar()->isPointerType() &&
+                             isIndirectParamCount(D, chunkIndex + 1));
+      if (CATy && !Allowed) {
+        // A counted_by-family attribute buried under another pointer or array
+        // can't maintain its bounds. Diagnose it and drop it from the type,
+        // keeping what was written around it -- matching the eager path, which
+        // drops the attribute rather than applying it. Because this fires just
+        // before the enclosing chunk wraps the node, replacing T here needs no
+        // enclosing-type rebuild.
+        //
+        // Record the rejection so the completion pass skips this node without
+        // parsing its argument, which would otherwise diagnose the argument of
+        // an attribute that has already been rejected. Declarators that share
+        // the node through declaration specifiers still complete it.
+        S.Diag(DeclType.Loc, diag::err_counted_by_on_nested_pointer)
+            << CATy->getKind();
+        S.markLateParsedBoundsTypeRejected(CATy);
+        T = removeCountAttributedType(state, T, CATy);
+      } else if (Allowed && !CATy->getCountExpr()) {
+        WrappedLateCount = CATy;
+      }
+    }
+
     switch (DeclType.Kind) {
     case DeclaratorChunk::Paren:
       if (i == 0)
@@ -5512,11 +5654,21 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       D.setInvalidType(true);
       T = Context.IntTy;
       AreDeclaratorChunksValid = false;
+      // A late-parsed count that this chunk wrapped is dropped with it.
+      if (WrappedLateCount)
+        S.markLateParsedBoundsTypeRejected(WrappedLateCount);
     }
 
     // See if there are any attributes on this declarator chunk.
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));
+
+    // The pointer-nest-level check for late-parsed attributes is intentionally
+    // deferred: it is done as each enclosing Pointer, Array or Function chunk
+    // is about to wrap the CountAttributedType (see the
+    // err_counted_by_on_nested_pointer diagnostic above). processLateTypeAttrs
+    // therefore passes pointerNestLevel == 0 here.
+    processLateTypeAttrs(state, T, DeclType.LateAttrList, chunkIndex);
 
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
@@ -5697,6 +5849,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
   processTypeAttrs(state, T, TAL_DeclName, NonSlidingAttrs);
   processTypeAttrs(state, T, TAL_DeclName, D.getAttributes());
+
+  processLateTypeAttrs(state, T, D.getLateAttributes());
 
   // Diagnose any ignored type attributes.
   state.diagnoseIgnoredTypeAttrs(T);
@@ -6457,6 +6611,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
         break;
       }
 
+      case TypeLoc::CountAttributed:
       case TypeLoc::Adjusted:
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
@@ -9074,6 +9229,214 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
+                                                            bool OrNull) {
+  if (CountInBytes)
+    return OrNull ? CountAttributedType::SizedByOrNull
+                  : CountAttributedType::SizedBy;
+  return OrNull ? CountAttributedType::CountedByOrNull
+                : CountAttributedType::CountedBy;
+}
+
+/// Calculate the pointer nesting level for counted_by attribute validation.
+/// Counts the number of pointer/array declarator chunks before the specified
+/// chunk index, from the nearest function chunk, whose return type the chunk
+/// forms.
+///
+/// For example, given \c "int * __counted_by(n) *pp" the declarator chunks
+/// are (outermost first): [0]=Pointer(\c int **), [1]=Pointer(\c int *).
+/// When processing the inner pointer at \p chunkIndex=1, one Pointer chunk
+/// precedes it, so the function returns 1.
+///
+/// \param state The type processing state
+/// \param chunkIndex The index of the current declarator chunk
+/// \return The number of pointer/array chunks before chunkIndex, from the
+/// nearest function chunk
+static unsigned getPointerNestLevel(TypeProcessingState &state,
+                                    unsigned chunkIndex) {
+  unsigned pointerNestLevel = 0;
+  const auto &stateDeclarator = state.getDeclarator();
+  assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
+  // DeclChunks are ordered identifier out. Index 0 is the outer most type
+  // object. Find outer pointer or array, inside the nearest function's return
+  // type.
+  for (unsigned i = 0; i < chunkIndex; ++i) {
+    const DeclaratorChunk &TypeObject = stateDeclarator.getTypeObject(i);
+    switch (TypeObject.Kind) {
+    case DeclaratorChunk::Function:
+      pointerNestLevel = 0;
+      break;
+    case DeclaratorChunk::Array:
+    case DeclaratorChunk::Pointer:
+      pointerNestLevel++;
+      break;
+    default:
+      break;
+    }
+  }
+  return pointerNestLevel;
+}
+
+/// The single "is this type valid for a counted_by-family attribute in type
+/// position" leaf, shared by the eager path (HandleCountedByAttrOnType) and the
+/// late-parsed path (Sema::ActOnLateParsedTypeAttr).
+///
+/// Delegates the type-shape checks to Sema::ValidateBoundsAttrTypeShape so
+/// there is exactly one copy of those diagnostics, and adds the nested-pointer
+/// rejection that only applies in type position.
+///
+/// \p Flags is set from \p AttrKind and returned to the caller for building the
+/// type. \p IsParameter is set for a count in a parameter's declarator.
+static bool validateBoundsAttrTypeForTypePosition(
+    Sema &S, QualType Ty, ParsedAttr::Kind AttrKind, SourceLocation AttrLoc,
+    SourceRange AttrRange, unsigned PointerNestLevel,
+    Sema::BoundsAttrFlags &Flags, bool IsParameter) {
+  Flags = Sema::getBoundsAttrFlags(AttrKind);
+
+  // An array parameter adjusts to a pointer, which is what the attribute
+  // describes. Whether the array may have a size is checked on the parameter.
+  if (IsParameter && Ty->isArrayType())
+    Ty = S.getASTContext().getArrayDecayedType(Ty);
+
+  // ValidateBoundsAttrTypeShape may rewrite Flags.CountInBytes: for
+  // `void *__counted_by(n)` it warns "treated as 'sized_by'" and sets
+  // CountInBytes so the -fbounds-safety path builds a SizedBy node. The
+  // pre-existing non-BoundsSafety field path discards that rewrite and builds a
+  // CountedBy node, so absorb it in a scratch copy to keep this
+  // diagnostics-only.
+  //
+  // FIXME: Reconcile with the -fbounds-safety path, which honors the rewrite.
+  Sema::BoundsAttrFlags Scratch = Flags;
+  if (!S.ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Scratch))
+    return false;
+
+  // A counted_by-family attribute has to end up at the outermost level of the
+  // declared type; a nested one would be buried where the bounds cannot be
+  // maintained.
+  if (PointerNestLevel > 0) {
+    S.Diag(AttrLoc, diag::err_counted_by_on_nested_pointer)
+        << Sema::getBoundsAttrKind(Flags);
+    return false;
+  }
+
+  return true;
+}
+
+static void HandleCountedByAttrOnType(TypeProcessingState &State,
+                                      QualType &CurType, ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
+  // such that it handles type attributes, and then call that from
+  // processTypeAttrs() instead of one-off checks like this.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  auto *CountExpr = Attr.getArgAsExpr(0);
+  if (!CountExpr)
+    return;
+
+  // Counts are not supported on K&R parameter declarations, which C23
+  // removed; drop the count.
+  const Declarator &D = State.getDeclarator();
+  if (D.getContext() == DeclaratorContext::KNRTypeList)
+    return;
+
+  // The eager path checks the nesting here, where the count is applied: it is
+  // nested under the pointer and array chunks before the current one, which
+  // for the declaration specifiers is all of them. A late-parsed count is
+  // checked instead as the enclosing chunks wrap it, in
+  // GetFullTypeForDeclarator.
+  unsigned chunkIndex = State.getCurrentChunkIndex();
+  unsigned pointerNestLevel = getPointerNestLevel(State, chunkIndex);
+
+  // A parameter may point to a counted pointer, as an out parameter does:
+  // `int *__counted_by(*len) *buf`. That count is nested, but allowed.
+  if (pointerNestLevel == 1 && CurType->isPointerType() &&
+      isIndirectParamCount(D, chunkIndex))
+    pointerNestLevel = 0;
+
+  // A count in a function type's return type names that function type's
+  // parameters.
+  const DeclaratorChunk *FnChunk = D.getFunctionChunkForReturnType(chunkIndex);
+  bool IsParameter = !FnChunk && D.getContext() == DeclaratorContext::Prototype;
+
+  Sema::BoundsAttrFlags Flags;
+  if (!validateBoundsAttrTypeForTypePosition(
+          S, CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
+          pointerNestLevel, Flags, IsParameter)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  // Unlike a field's count, these need no declaration to be checked, so a
+  // rejected one is not applied.
+  bool Rejected = false;
+  if (FnChunk)
+    Rejected = S.CheckCountedByAttrOnReturn(
+        CountExpr, Flags.CountInBytes, Flags.OrNull,
+        ArrayRef(FnChunk->Fun.Params, FnChunk->Fun.NumParams));
+  else if (IsParameter)
+    Rejected = S.CheckCountedByAttrOnParam(CurType, CountExpr,
+                                           Flags.CountInBytes, Flags.OrNull);
+  if (Rejected) {
+    Attr.setInvalid();
+    return;
+  }
+
+  QualType NewType = S.BuildCountAttributedArrayOrPointerType(
+      CurType, CountExpr, Flags.CountInBytes, Flags.OrNull);
+  if (NewType.isNull()) {
+    Attr.setInvalid();
+    return;
+  }
+  CurType = NewType;
+}
+
+bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                                   SourceLocation AttrNameLoc, QualType &type,
+                                   unsigned pointerNestLevel,
+                                   BoundsAttributedType **BATy) {
+  // A parameter's type is built while its prototype scope is current.
+  bool IsParameter = getCurScope() && getCurScope()->isFunctionPrototypeScope();
+  BoundsAttrFlags Flags;
+  if (!validateBoundsAttrTypeForTypePosition(
+          *this, type, AttrKind, AttrNameLoc, SourceRange(AttrNameLoc),
+          pointerNestLevel, Flags, IsParameter))
+    return false;
+
+  // The argument hasn't been parsed yet, so build the type without it and hand
+  // the node back for completion. Because enclosing types refer to it by
+  // pointer, filling the argument in later leaves them untouched — no rebuild
+  // of the type chain and no TypeLoc re-emission.
+  auto *CATy = getASTContext().getIncompleteCountAttributedType(
+      type, Flags.CountInBytes, Flags.OrNull);
+  type = QualType(CATy, 0);
+  *BATy = CATy;
+  return true;
+}
+static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex) {
+
+  if (LateAttrs.empty())
+    return true;
+
+  Sema &S = state.getSema();
+  unsigned pointerNestLevel = 0;
+
+  assert(S.ProcessLateParsedTypeAttrCallback);
+
+  for (auto *LA : LateAttrs)
+    if (!S.ProcessLateParsedTypeAttrCallback(LA, type, pointerNestLevel))
+      return false;
+
+  return true;
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
@@ -9312,6 +9675,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       HandleSwiftAttr(state, TAL, type, attr);
       break;
     }
+
+    COUNTED_BY_TYPE_ATTRS_CASELIST:
+      HandleCountedByAttrOnType(state, type, attr);
+      attr.setUsedAsTypeAttr();
+      break;
 
     MS_TYPE_ATTRS_CASELIST:
       if (!handleMSPointerTypeQualifierAttr(state, attr, type))
@@ -10041,9 +10409,10 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
 static void
 BuildTypeCoupledDecls(Expr *E,
                       llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
-  // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
-  auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
-  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+  bool IsDeref;
+  DeclRefExpr *DRE = Sema::getCountDeclRef(E, IsDeref);
+  assert(DRE && "count is not a reference");
+  Decls.push_back(TypeCoupledDeclRefInfo(DRE->getDecl(), IsDeref));
 }
 
 bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
@@ -10080,11 +10449,52 @@ bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
   return true;
 }
 
+void Sema::ActOnLateParsedParamTypeAttrArgument(BoundsAttributedType *BATy,
+                                                ParmVarDecl *PVD, Expr *Arg,
+                                                SourceLocation AttrLoc) {
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  // The node is already in the parameter's type, so an argument that failed to
+  // parse still has to fill it. CreateRecoveryExpr gives nothing under
+  // -fno-recovery-ast, so build the error expression directly.
+  if (!Arg)
+    Arg = RecoveryExpr::Create(Context, Context.IntTy, AttrLoc, AttrLoc, {});
+
+  // As for a field, the node is already part of the type, so a rejected count
+  // completes it without coupled declarations and invalidates the parameter.
+  if (CheckCountedByAttrOnParam(CATy->desugar(), Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull())) {
+    Context.completeCountAttributedType(CATy, Arg, {});
+    PVD->setInvalidDecl();
+    return;
+  }
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  Context.completeCountAttributedType(CATy, Arg, Decls);
+  AdjustCountedArrayParamType(PVD, CATy);
+}
+
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
+  // Accept any array or pointer type here. For a field's array, validation that
+  // it's a flexible array member is deferred until CheckCountedByAttrOnField;
+  // a parameter's array is checked by CheckCountedByAttrOnParam.
+  assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
+
+  // Reject anything but a reference early, for BuildTypeCoupledDecls. The
+  // checks of the positions that do not allow a dereferenced one reject it.
+  bool IsDeref;
+  if (!getCountDeclRef(CountExpr, IsDeref)) {
+    unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+    Diag(CountExpr->getBeginLoc(),
+         diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << CountExpr->getSourceRange();
+    return QualType();
+  }
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);

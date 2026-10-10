@@ -7201,6 +7201,16 @@ def err_counted_by_attr_refer_to_itself : Error<
   "'counted_by' cannot refer to the flexible array member %0">;
 def err_count_attr_must_be_in_structure : Error<
   "field %0 in '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' not inside structure">;
+def err_count_attr_refer_to_non_param : Error<
+  "count expression in function declaration may only reference function parameters">;
+def err_count_attr_refer_to_different_scope : Error<
+  "argument of '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute cannot refer to declaration from a different scope">;
+def err_count_attr_on_sized_array_param : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' cannot be applied to an array parameter with an explicit size">;
+def err_count_attr_more_than_one : Error<
+  "pointer cannot have more than one count attribute">;
+def err_count_attr_conflicting_redeclaration : Error<
+  "conflicting '%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute with the previous function declaration">;
 def err_count_attr_argument_not_integer : Error<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' requires a non-boolean integer type argument">;
 def err_count_attr_only_support_simple_decl_reference : Error<
@@ -7266,6 +7276,9 @@ def err_builtin_counted_by_ref_cannot_leak_reference : Error<
 def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
+
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
 
 let CategoryName = "ARC Semantic Issue" in {
 

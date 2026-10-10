@@ -4056,6 +4056,17 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
+  // Counts are part of the function's interface, so a redeclaration has to
+  // repeat those on its return type's and parameters' pointers. Library
+  // functions, declared implicitly or in system headers, are exempt: a program
+  // may redeclare them with counts.
+  if (!Old->isImplicit() && !SourceMgr.isInSystemHeader(Old->getLocation()) &&
+      !SourceMgr.isInSystemHeader(New->getLocation()) &&
+      CheckCountAttributedRedeclaration(New, Old)) {
+    Diag(OldLocation, PrevDiag) << Old << Old->getType();
+    return true;
+  }
+
   QualType OldQTypeForComparison = OldQType;
   if (Context.hasAnyFunctionEffects()) {
     const auto OldFX = Old->getFunctionEffects();
@@ -16032,6 +16043,33 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
 
   ProcessDeclAttributes(S, New, D);
 
+  // A count written on an array parameter, also under other type attributes
+  // written with it, moves to the pointer the parameter adjusts to; it was
+  // checked where it was applied. A late-parsed one is completed at the end of
+  // the parameter clause and moves then. One that comes with the array's type
+  // through a typedef or `__typeof__` belongs to another declaration and stays
+  // behind.
+  if (const CountAttributedType *CATy =
+          getWrittenCountAttributedType(TInfo->getType());
+      CATy && CATy->getCountExpr())
+    AdjustCountedArrayParamType(New, CATy);
+
+  // A parameter of function type adjusts to a function pointer. As with an
+  // array parameter, a count written in its declarator is taken to describe
+  // that pointer, whose pointee has no size. The count is already part of the
+  // type, so the parameter is invalid. One that comes with the function type or
+  // its return type through a typedef or `__typeof__` belongs to another
+  // declaration and stays on the return type.
+  if (const auto *FT = TInfo->getType()->getAsAdjusted<FunctionType>())
+    if (const CountAttributedType *CATy =
+            getWrittenCountAttributedType(FT->getReturnType())) {
+      Expr *E = CATy->getCountExpr();
+      BoundsAttrFlags Flags{CATy->isCountInBytes(), CATy->isOrNull()};
+      if (!ValidateBoundsAttrTypeShape(New->getType(), E->getBeginLoc(),
+                                       E->getSourceRange(), Flags))
+        New->setInvalidDecl();
+    }
+
   if (D.getDeclSpec().isModulePrivateSpecified())
     Diag(New->getLocation(), diag::err_module_private_local)
         << 1 << New << SourceRange(D.getDeclSpec().getModulePrivateSpecLoc())
@@ -17417,7 +17455,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, Attrs, ProcessDeclAttributeOptions());
   ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
@@ -20205,6 +20243,27 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (const auto *IFD = dyn_cast<IndirectFieldDecl>(I))
         if (IFD->getDeclName())
           ++NumNamedMembers;
+    }
+  }
+
+  if (!getLangOpts().ExperimentalLateParseAttributes) {
+    // Perform FieldDecl-dependent validation for counted_by family attributes.
+    for (auto *D : Fields) {
+      FieldDecl *FD = cast<FieldDecl>(D);
+      if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+        if (CheckCountedByAttrOnField(FD, CAT->getCountExpr(),
+                                      CAT->isCountInBytes(), CAT->isOrNull())) {
+          // Rejected. Strip the CountAttributedType so the field keeps its
+          // plain wrapped type. The pre-refactor eager path built the type only
+          // after this check passed, so on failure no CAT ever existed; leaving
+          // it here would flow an invalid CAT downstream. Mirrors the late path
+          // in Sema::ActOnLateParsedTypeAttrArgument.
+          QualType Wrapped = CAT->desugar();
+          FD->setType(Wrapped);
+          FD->setTypeSourceInfo(
+              Context.getTrivialTypeSourceInfo(Wrapped, FD->getLocation()));
+        }
+      }
     }
   }
 

@@ -710,6 +710,13 @@ public:
     return ConvergentFunctions;
   }
 
+  /// Returns true when the -fbounds-safety attribute programming model is in
+  /// effect. There is no attributes-only mode on this base, so this is always
+  /// false; it exists so the shared Sema::ValidateBoundsAttrTypeShape leaf can
+  /// gate its -fbounds-safety-only branches with the same predicate used
+  /// downstream (where those branches carry the extra diagnostics).
+  bool hasBoundsSafetyAttributes() const { return false; }
+
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
   bool threadPrivateMemoryAtomicsAreUndefined() const {
