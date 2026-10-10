@@ -180,6 +180,102 @@ gpu.module @test_module_4 {
 
     func.return %shfl, %shflu, %shfld, %shfli : f32, f32,f32, f32
   }
+
+  // CHECK-LABEL: func @gpu_shuffle_decompose
+  // CHECK-SAME: (%[[F64VEC:.*]]: vector<2xf64>, %[[F16VEC:.*]]: vector<4xf16>, %[[SHFL_OFFSET:.*]]: i32, %[[SHFL_WIDTH:.*]]: i32)
+  func.func @gpu_shuffle_decompose(%arg0: vector<2xf64>,
+                                   %arg1: vector<4xf16>, %arg2: i32,
+                                   %arg3: i32)
+      -> (vector<2xf64>, vector<4xf16>, i1) {
+    // CHECK: %[[D_NUM_LANES:.*]] = llvm.sub %{{.*}}, %[[SHFL_WIDTH]] : i32
+    // CHECK: %[[D_MASK:.*]] = llvm.lshr %{{.*}}, %[[D_NUM_LANES]] : i32
+    // CHECK: %[[D_CLAMP:.*]] = llvm.sub %[[SHFL_WIDTH]], %{{.*}} : i32
+    // CHECK: %[[F64_CAST:.*]] = llvm.bitcast %[[F64VEC]] : vector<2xf64> to vector<4xi32>
+    // CHECK-COUNT-4: llvm.extractelement %[[F64_CAST]]
+    // 4 shuffles produce 4 validity bits, AND-reduced via 3 ANDs (interleaved
+    // with the shuffles in the lowering, so use CHECK-DAG).
+    // CHECK-DAG: nvvm.shfl.sync bfly %[[D_MASK]], %{{.*}}, %[[SHFL_OFFSET]], %[[D_CLAMP]] {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+    // CHECK-DAG: nvvm.shfl.sync bfly %[[D_MASK]], %{{.*}}, %[[SHFL_OFFSET]], %[[D_CLAMP]] {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+    // CHECK-DAG: nvvm.shfl.sync bfly %[[D_MASK]], %{{.*}}, %[[SHFL_OFFSET]], %[[D_CLAMP]] {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+    // CHECK-DAG: nvvm.shfl.sync bfly %[[D_MASK]], %{{.*}}, %[[SHFL_OFFSET]], %[[D_CLAMP]] {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+    // CHECK-DAG: llvm.and {{.*}} : i1
+    // CHECK-DAG: llvm.and {{.*}} : i1
+    // CHECK-DAG: llvm.and {{.*}} : i1
+    // CHECK: llvm.bitcast %{{.*}} : vector<4xi32> to vector<2xf64>
+    %shfl0, %pred0 = gpu.shuffle xor %arg0, %arg2, %arg3 : vector<2xf64>
+
+    // CHECK: %[[F16_MASK:.*]] = llvm.lshr %{{.*}}, %{{.*}} : i32
+    // CHECK: %[[F16_CAST:.*]] = llvm.bitcast %[[F16VEC]] : vector<4xf16> to vector<2xi32>
+    // CHECK-COUNT-2: llvm.extractelement %[[F16_CAST]]
+    // CHECK-COUNT-2: nvvm.shfl.sync up %[[F16_MASK]], %{{.*}}, %[[SHFL_OFFSET]], %{{.*}} : i32 -> i32
+    // CHECK: llvm.bitcast %{{.*}} : vector<2xi32> to vector<4xf16>
+    %shfl1, %pred1 = gpu.shuffle up %arg1, %arg2, %arg3 : vector<4xf16>
+    func.return %shfl0, %shfl1, %pred0
+      : vector<2xf64>, vector<4xf16>, i1
+  }
+
+  // Scalar wide types (f64, i64) decompose to 2 i32 chunks (the
+  // bitcast-to-vector + extractelement is folded to bitcast + trunc/shift).
+  // Sub-i32 scalars (i16, i8, i1) take the ZExt-to-i32 path (single chunk).
+  // Padded non-power-of-two vectors round up before bitcasting to <N x i32>.
+  // None of these use the predicate result, so the no-validity-bit path is
+  // taken (no `return_value_and_is_valid`, no AND-reduction).
+  // CHECK-LABEL: func @gpu_shuffle_decompose_extra
+  // CHECK-SAME: (%[[F64:.*]]: f64, %[[I64:.*]]: i64, %[[I16:.*]]: i16, %[[I8:.*]]: i8, %[[I1:.*]]: i1, %[[V3F16:.*]]: vector<3xf16>, %[[E_OFFSET:.*]]: i32, %[[E_WIDTH:.*]]: i32)
+  func.func @gpu_shuffle_decompose_extra(%f64: f64, %i64: i64, %i16: i16,
+                                         %i8: i8, %i1: i1,
+                                         %v3f16: vector<3xf16>,
+                                         %offset: i32, %width: i32)
+      -> (f64, i64, i16, i8, i1, vector<3xf16>) {
+    // f64 scalar via xor: bitcast f64 -> i64, two i32 chunks via trunc+shift,
+    // 2 shuffles, recompose via zext/shl/or, bitcast back to f64.
+    // CHECK: llvm.bitcast %[[F64]] : f64 to i64
+    // CHECK: llvm.trunc %{{.*}} : i64 to i32
+    // CHECK: llvm.lshr %{{.*}} : i64
+    // CHECK: llvm.trunc %{{.*}} : i64 to i32
+    // CHECK-COUNT-2: nvvm.shfl.sync bfly {{.*}} : i32 -> i32
+    // CHECK: llvm.bitcast %{{.*}} : i64 to f64
+    %sf64, %p0 = gpu.shuffle xor %f64, %offset, %width : f64
+
+    // i64 scalar via down: trunc/shift directly on i64 (no leading bitcast).
+    // CHECK: llvm.trunc %[[I64]] : i64 to i32
+    // CHECK: llvm.lshr %[[I64]], %{{.*}} : i64
+    // CHECK: llvm.trunc %{{.*}} : i64 to i32
+    // CHECK-COUNT-2: nvvm.shfl.sync down {{.*}} : i32 -> i32
+    %si64, %p1 = gpu.shuffle down %i64, %offset, %width : i64
+
+    // i16 scalar via idx: ZExt to i32, single shuffle, trunc back to i16.
+    // CHECK: llvm.zext %[[I16]] : i16 to i32
+    // CHECK: nvvm.shfl.sync idx {{.*}} : i32 -> i32
+    // CHECK: llvm.trunc %{{.*}} : i32 to i16
+    %si16, %p2 = gpu.shuffle idx %i16, %offset, %width : i16
+
+    // i8 scalar: same ZExt path.
+    // CHECK: llvm.zext %[[I8]] : i8 to i32
+    // CHECK: nvvm.shfl.sync bfly {{.*}} : i32 -> i32
+    // CHECK: llvm.trunc %{{.*}} : i32 to i8
+    %si8, %p3 = gpu.shuffle xor %i8, %offset, %width : i8
+
+    // i1 scalar: same ZExt path.
+    // CHECK: llvm.zext %[[I1]] : i1 to i32
+    // CHECK: nvvm.shfl.sync up {{.*}} : i32 -> i32
+    // CHECK: llvm.trunc %{{.*}} : i32 to i1
+    %si1, %p4 = gpu.shuffle up %i1, %offset, %width : i1
+
+    // vector<3xf16> (48 bits) is padded to 64 bits before splitting into
+    // 2 i32 chunks; recompose truncates back.
+    // CHECK: llvm.bitcast %[[V3F16]] : vector<3xf16> to i48
+    // CHECK: llvm.zext %{{.*}} : i48 to i64
+    // CHECK: llvm.bitcast %{{.*}} : i64 to vector<2xi32>
+    // CHECK-COUNT-2: nvvm.shfl.sync down {{.*}} : i32 -> i32
+    // CHECK: llvm.bitcast %{{.*}} : vector<2xi32> to i64
+    // CHECK: llvm.trunc %{{.*}} : i64 to i48
+    // CHECK: llvm.bitcast %{{.*}} : i48 to vector<3xf16>
+    %sv3f16, %p5 = gpu.shuffle down %v3f16, %offset, %width : vector<3xf16>
+
+    func.return %sf64, %si64, %si16, %si8, %si1, %sv3f16
+      : f64, i64, i16, i8, i1, vector<3xf16>
+  }
 }
 
 gpu.module @test_module_5 {
