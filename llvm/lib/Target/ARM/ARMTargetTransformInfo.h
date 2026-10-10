@@ -331,9 +331,6 @@ public:
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
 
-  unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                       Type *ArrayType) const override;
-
   /// @}
 };
 
