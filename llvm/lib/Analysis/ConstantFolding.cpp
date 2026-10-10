@@ -570,6 +570,12 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     return true;
   }
 
+  // Read a `ConstantByte` as an integer with the same bits.
+  auto *CB = dyn_cast<ConstantByte>(C);
+  if (CB && CB->getType()->isByteTy())
+    return ReadDataFromGlobal(ConstantInt::get(C->getContext(), CB->getValue()),
+                              ByteOffset, CurPtr, BytesLeft, DL, IsByteLoad);
+
   auto *CFP = dyn_cast<ConstantFP>(C);
   if (CFP && CFP->getType()->isFloatingPointTy()) {
     if (CFP->getType()->isDoubleTy()) {
@@ -629,7 +635,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C) || isa<ConstantInt>(C) ||
-      isa<ConstantFP>(C)) {
+      isa<ConstantFP>(C) || isa<ConstantByte>(C)) {
     uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
