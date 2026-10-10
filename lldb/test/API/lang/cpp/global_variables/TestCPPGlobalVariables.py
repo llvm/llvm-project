@@ -7,6 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class GlobalVariablesCppTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.source = lldb.SBFileSpec("main.cpp")
