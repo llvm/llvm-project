@@ -34,6 +34,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 #if CLANG_ENABLE_CIR
 #include "mlir/IR/AsmState.h"
@@ -307,9 +308,13 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Clang->getFrontendOpts().MLIRArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(),
-                                      /*Description=*/"", /*Errs=*/nullptr,
-                                      &Clang->getVirtualFileSystem());
+    // With no stream to report to, the parser calls exit(), which ends the
+    // process that embeds clang. Keep its output where it already went.
+    if (!llvm::cl::ParseCommandLineOptions(
+            NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
+            /*VFS=*/&Clang->getVirtualFileSystem()))
+      Clang->getDiagnostics().Report(diag::err_fe_invalid_forwarded_option)
+          << 1;
   }
 #endif
 
