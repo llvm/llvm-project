@@ -45,10 +45,9 @@ uint64_t CGObjCRuntime::ComputeIvarBaseOffset(CodeGen::CodeGenModule &CGM,
          CGM.getContext().getCharWidth();
 }
 
-unsigned CGObjCRuntime::ComputeBitfieldBitOffset(
-    CodeGen::CodeGenModule &CGM,
-    const ObjCInterfaceDecl *ID,
-    const ObjCIvarDecl *Ivar) {
+unsigned CGObjCRuntime::ComputeBitfieldBitOffset(CodeGen::CodeGenModule &CGM,
+                                                 const ObjCInterfaceDecl *ID,
+                                                 const ObjCIvarDecl *Ivar) {
   return CGM.getContext().lookupFieldBitOffset(ID, Ivar);
 }
 
@@ -101,10 +100,11 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
   // layout object. However, this is blocked on other cleanups to the
   // Objective-C code, so for now we just live with allocating a bunch of these
   // objects.
-  CGBitFieldInfo *Info = new (CGF.CGM.getContext()) CGBitFieldInfo(
-    CGBitFieldInfo::MakeInfo(CGF.CGM.getTypes(), Ivar, BitOffset, BitFieldSize,
-                             CGF.CGM.getContext().toBits(StorageSize),
-                             CharUnits::fromQuantity(0)));
+  CGBitFieldInfo *Info =
+      new (CGF.CGM.getContext()) CGBitFieldInfo(CGBitFieldInfo::MakeInfo(
+          CGF.CGM.getTypes(), Ivar, BitOffset, BitFieldSize,
+          CGF.CGM.getContext().toBits(StorageSize),
+          CharUnits::fromQuantity(0)));
 
   Address Addr =
       Address(V, llvm::Type::getIntNTy(CGF.getLLVMContext(), Info->StorageSize),
@@ -116,29 +116,29 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
 }
 
 namespace {
-  struct CatchHandler {
-    const VarDecl *Variable;
-    const Stmt *Body;
-    llvm::BasicBlock *Block;
-    llvm::Constant *TypeInfo;
-    /// Flags used to differentiate cleanups and catchalls in Windows SEH
-    unsigned Flags;
-  };
+struct CatchHandler {
+  const VarDecl *Variable;
+  const Stmt *Body;
+  llvm::BasicBlock *Block;
+  llvm::Constant *TypeInfo;
+  /// Flags used to differentiate cleanups and catchalls in Windows SEH
+  unsigned Flags;
+};
 
-  struct CallObjCEndCatch final : EHScopeStack::Cleanup {
-    CallObjCEndCatch(bool MightThrow, llvm::FunctionCallee Fn)
-        : MightThrow(MightThrow), Fn(Fn) {}
-    bool MightThrow;
-    llvm::FunctionCallee Fn;
+struct CallObjCEndCatch final : EHScopeStack::Cleanup {
+  CallObjCEndCatch(bool MightThrow, llvm::FunctionCallee Fn)
+      : MightThrow(MightThrow), Fn(Fn) {}
+  bool MightThrow;
+  llvm::FunctionCallee Fn;
 
-    void Emit(CodeGenFunction &CGF, Flags flags) override {
-      if (MightThrow)
-        CGF.EmitRuntimeCallOrInvoke(Fn);
-      else
-        CGF.EmitNounwindRuntimeCall(Fn);
-    }
-  };
-}
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    if (MightThrow)
+      CGF.EmitRuntimeCallOrInvoke(Fn);
+    else
+      CGF.EmitNounwindRuntimeCall(Fn);
+  }
+};
+} // namespace
 
 void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
                                      const ObjCAtTryStmt &S,
@@ -156,16 +156,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
 
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
-    if (!useFunclets) {
+    if (!IsMSVC) {
       // The finally statement is executed as a cleanup for the normal and
       // exceptional control flow out of a try-catch block. This is all
       // implemented in FinallyInfo. Here we enter a new EHCatchScope.
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
-    } else if (IsWasm) {
-      CGF.ErrorUnsupported(Finally,
-                           "@finally is not implemented for WebAssembly");
-    } else if (IsMSVC) {
+    } else {
       CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
       if (!CGF.CurSEHParent)
         CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
@@ -179,7 +176,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     }
   }
 
-  if (useFunclets)
+  if (useFunclets && IsMSVC)
     if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
       CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
       if (!CGF.CurSEHParent)
@@ -228,7 +225,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     // Create a new catch scope
     EHCatchScope *Catch = CGF.EHStack.pushCatch(Handlers.size());
     for (unsigned I = 0, E = Handlers.size(); I != E; ++I)
-      Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
+      Catch->setHandler(I, {Handlers[I].TypeInfo, Handlers[I].Flags},
+                        Handlers[I].Block);
   }
 
   // Emit the try body.
@@ -244,96 +242,98 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   }
 
   // We save the old funclet pad here before we traverse each catch handler.
-  SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
-  llvm::BasicBlock *WasmCatchStartBlock = nullptr;
-  llvm::CatchPadInst *CPI = nullptr;
-  if (DispatchBlock && IsWasm) {
-    auto *CatchSwitch =
-        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
-    WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
-                              ? CatchSwitch->getSuccessor(1)
-                              : CatchSwitch->getSuccessor(0);
-    CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
-    CGF.CurrentFuncletPad = CPI;
-  }
+  {
+    SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
+    llvm::BasicBlock *WasmCatchStartBlock = nullptr;
+    llvm::CatchPadInst *CPI = nullptr;
+    if (DispatchBlock && IsWasm) {
+      auto *CatchSwitch =
+          cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
+      WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
+                                ? CatchSwitch->getSuccessor(1)
+                                : CatchSwitch->getSuccessor(0);
+      CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
+      CGF.CurrentFuncletPad = CPI;
+    }
 
-  // Remember where we were.
-  CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
+    // Remember where we were.
+    CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
 
-  // Emit the handlers. If there is no catch-all handler, we need to emit a
-  // fallthrough block in WASM. We therefore need to know if we have a
-  // catch-all handler in this catch scope.
-  bool HasCatchAll = false;
-  for (CatchHandler &Handler : Handlers) {
-    HasCatchAll |= Handler.TypeInfo == nullptr;
-    CGF.EmitBlock(Handler.Block);
+    // Emit the handlers. If there is no catch-all handler, we need to emit a
+    // fallthrough block in WASM. We therefore need to know if we have a
+    // catch-all handler in this catch scope.
+    bool HasCatchAll = false;
+    for (CatchHandler &Handler : Handlers) {
+      HasCatchAll |= Handler.TypeInfo == nullptr;
+      CGF.EmitBlock(Handler.Block);
 
-    CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
-    SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
-    if (IsMSVC) {
-      llvm::BasicBlock::iterator CPICandidate =
-          Handler.Block->getFirstNonPHIIt();
-      if (CPICandidate != Handler.Block->end()) {
-        if ((CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate))) {
-          CGF.CurrentFuncletPad = CPI;
-          CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
+      CodeGenFunction::LexicalScope Cleanups(CGF,
+                                             Handler.Body->getSourceRange());
+      SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
+      if (IsMSVC) {
+        llvm::BasicBlock::iterator CPICandidate =
+            Handler.Block->getFirstNonPHIIt();
+        if (CPICandidate != Handler.Block->end()) {
+          if ((CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate))) {
+            CGF.CurrentFuncletPad = CPI;
+            CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
+          }
         }
       }
+
+      if (CPI) {
+        // A catchpad requires a matching catchret instruction. We emit this in
+        // form of a cleanup.
+        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+      }
+
+      llvm::Value *RawExn = CGF.getExceptionFromSlot();
+
+      // Enter the catch.
+      llvm::Value *Exn = RawExn;
+      if (beginCatchFn)
+        Exn = CGF.EmitNounwindRuntimeCall(beginCatchFn, RawExn, "exn.adjusted");
+
+      if (endCatchFn) {
+        // Add a cleanup to leave the catch.
+        bool EndCatchMightThrow = (Handler.Variable == nullptr);
+
+        CGF.EHStack.pushCleanup<CallObjCEndCatch>(
+            NormalAndEHCleanup, EndCatchMightThrow, endCatchFn);
+      }
+
+      // Bind the catch parameter if it exists.
+      if (const VarDecl *CatchParam = Handler.Variable) {
+        llvm::Type *CatchType = CGF.ConvertType(CatchParam->getType());
+        llvm::Value *CastExn = CGF.Builder.CreateBitCast(Exn, CatchType);
+
+        CGF.EmitAutoVarDecl(*CatchParam);
+        EmitInitOfCatchParam(CGF, CastExn, CatchParam);
+      }
+
+      // The body of the handler might have more try-catch blocks, so we need to
+      // save the current exception before emitting the body.
+      CGF.ObjCEHValueStack.push_back(Exn);
+      CGF.EmitStmt(Handler.Body);
+      CGF.ObjCEHValueStack.pop_back();
+
+      // Leave any cleanups associated with the catch.
+      Cleanups.ForceCleanup();
+
+      CGF.EmitBranchThroughCleanup(Cont);
     }
 
-    if (CPI) {
-      // A catchpad requires a matching catchret instruction. We emit this in
-      // form of a cleanup.
-      CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+    if (IsWasm && !HasCatchAll && WasmCatchStartBlock) {
+      CGF.WasmEmitFallthroughRethrow(WasmCatchStartBlock);
     }
 
-    llvm::Value *RawExn = CGF.getExceptionFromSlot();
-
-    // Enter the catch.
-    llvm::Value *Exn = RawExn;
-    if (beginCatchFn)
-      Exn = CGF.EmitNounwindRuntimeCall(beginCatchFn, RawExn, "exn.adjusted");
-
-    if (endCatchFn) {
-      // Add a cleanup to leave the catch.
-      bool EndCatchMightThrow = (Handler.Variable == nullptr);
-
-      CGF.EHStack.pushCleanup<CallObjCEndCatch>(NormalAndEHCleanup,
-                                                EndCatchMightThrow,
-                                                endCatchFn);
-    }
-
-    // Bind the catch parameter if it exists.
-    if (const VarDecl *CatchParam = Handler.Variable) {
-      llvm::Type *CatchType = CGF.ConvertType(CatchParam->getType());
-      llvm::Value *CastExn = CGF.Builder.CreateBitCast(Exn, CatchType);
-
-      CGF.EmitAutoVarDecl(*CatchParam);
-      EmitInitOfCatchParam(CGF, CastExn, CatchParam);
-    }
-
-    // The body of the handler might have more try-catch blocks, so we need to
-    // save the current exception before emitting the body.
-    CGF.ObjCEHValueStack.push_back(Exn);
-    CGF.EmitStmt(Handler.Body);
-    CGF.ObjCEHValueStack.pop_back();
-
-    // Leave any cleanups associated with the catch.
-    Cleanups.ForceCleanup();
-
-    CGF.EmitBranchThroughCleanup(Cont);
+    // Go back to the try-statement fallthrough.
+    CGF.Builder.restoreIP(SavedIP);
   }
-
-  if (IsWasm && !HasCatchAll && WasmCatchStartBlock) {
-    CGF.WasmEmitFallthroughRethrow(WasmCatchStartBlock);
-  }
-
-  // Go back to the try-statement fallthrough.
-  CGF.Builder.restoreIP(SavedIP);
 
   // Pop out of the finally.
   if (S.getFinallyStmt()) {
-    if (useFunclets) {
+    if (IsMSVC) {
       CGF.PopCleanupBlock();
     } else {
       FinallyInfo.exit(CGF);
@@ -344,8 +344,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CGF.EmitBlock(Cont.getBlock());
 }
 
-void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF,
-                                         llvm::Value *exn,
+void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF, llvm::Value *exn,
                                          const VarDecl *paramDecl) {
 
   Address paramAddr = CGF.GetAddrOfLocalVar(paramDecl);
@@ -369,17 +368,17 @@ void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF,
 }
 
 namespace {
-  struct CallSyncExit final : EHScopeStack::Cleanup {
-    llvm::FunctionCallee SyncExitFn;
-    llvm::Value *SyncArg;
-    CallSyncExit(llvm::FunctionCallee SyncExitFn, llvm::Value *SyncArg)
-        : SyncExitFn(SyncExitFn), SyncArg(SyncArg) {}
+struct CallSyncExit final : EHScopeStack::Cleanup {
+  llvm::FunctionCallee SyncExitFn;
+  llvm::Value *SyncArg;
+  CallSyncExit(llvm::FunctionCallee SyncExitFn, llvm::Value *SyncArg)
+      : SyncExitFn(SyncExitFn), SyncArg(SyncArg) {}
 
-    void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitNounwindRuntimeCall(SyncExitFn, SyncArg);
-    }
-  };
-}
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    CGF.EmitNounwindRuntimeCall(SyncExitFn, SyncArg);
+  }
+};
+} // namespace
 
 void CGObjCRuntime::EmitAtSynchronizedStmt(CodeGenFunction &CGF,
                                            const ObjCAtSynchronizedStmt &S,
@@ -418,8 +417,7 @@ void CGObjCRuntime::EmitAtSynchronizedStmt(CodeGenFunction &CGF,
 /// \param callArgs - the actual arguments, including implicit ones
 CGObjCRuntime::MessageSendInfo
 CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
-                                  QualType resultType,
-                                  CallArgList &callArgs) {
+                                  QualType resultType, CallArgList &callArgs) {
   unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
 
   llvm::PointerType *signatureType =
@@ -430,7 +428,7 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
   // If there's a method, use information from that.
   if (method) {
     const CGFunctionInfo &signature =
-      CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
+        CGM.getTypes().arrangeObjCMessageSendSignature(method, callArgs[0].Ty);
 
     const CGFunctionInfo &signatureForCall =
         CGM.getTypes().arrangeCall(signature, callArgs, /*ABIInfoFD=*/nullptr);
@@ -440,7 +438,7 @@ CGObjCRuntime::getMessageSendInfo(const ObjCMethodDecl *method,
 
   // There's no method;  just use a default CC.
   const CGFunctionInfo &argsInfo =
-    CGM.getTypes().arrangeUnprototypedObjCMessageSend(resultType, callArgs);
+      CGM.getTypes().arrangeUnprototypedObjCMessageSend(resultType, callArgs);
 
   return MessageSendInfo(argsInfo, signatureType);
 }
@@ -492,17 +490,16 @@ bool CGObjCRuntime::isWeakLinkedClass(const ObjCInterfaceDecl *ID) {
   return false;
 }
 
-void CGObjCRuntime::destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
-                                              const ObjCMethodDecl *method,
-                                              const CallArgList &callArgs) {
+void CGObjCRuntime::destroyCalleeDestroyedArguments(
+    CodeGenFunction &CGF, const ObjCMethodDecl *method,
+    const CallArgList &callArgs) {
   CallArgList::const_iterator I = callArgs.begin();
-  for (auto i = method->param_begin(), e = method->param_end();
-         i != e; ++i, ++I) {
+  for (auto i = method->param_begin(), e = method->param_end(); i != e;
+       ++i, ++I) {
     const ParmVarDecl *param = (*i);
     if (param->hasAttr<NSConsumedAttr>()) {
       RValue RV = I->getRValue(CGF);
-      assert(RV.isScalar() &&
-             "NullReturnState::complete - arg not on object");
+      assert(RV.isScalar() && "NullReturnState::complete - arg not on object");
       CGF.EmitARCRelease(RV.getScalarVal(), ARCImpreciseLifetime);
     } else {
       QualType QT = param->getType();
