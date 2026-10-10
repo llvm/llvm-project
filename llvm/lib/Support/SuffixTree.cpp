@@ -193,19 +193,17 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       // insert a new node.
       SuffixTreeNode *NextNode = It->second;
 
-      unsigned SubstringLen = numElementsInSubstring(NextNode);
+      // A leaf edge reaches the current prefix end, so it cannot be consumed.
+      if (auto *NextInternalNode = dyn_cast<SuffixTreeInternalNode>(NextNode)) {
+        unsigned SubstringLen = numElementsInSubstring(NextInternalNode);
 
-      // Is the current suffix we're trying to insert longer than the size of
-      // the child we want to move to?
-      if (Active.Len >= SubstringLen) {
-        // If yes, then consume the characters we've seen and move to the next
-        // node.
-        assert(isa<SuffixTreeInternalNode>(NextNode) &&
-               "Expected an internal node?");
-        Active.Idx += SubstringLen;
-        Active.Len -= SubstringLen;
-        Active.Node = cast<SuffixTreeInternalNode>(NextNode);
-        continue;
+        // Consume the edge only when the active suffix reaches its end.
+        if (Active.Len >= SubstringLen) {
+          Active.Idx += SubstringLen;
+          Active.Len -= SubstringLen;
+          Active.Node = NextInternalNode;
+          continue;
+        }
       }
 
       // Otherwise, the suffix we're trying to insert must be contained in the
