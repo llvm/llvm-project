@@ -11206,6 +11206,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   // that type width, and then generate a corresponding store to the dest buffer
   // of that value loaded. This can result in a sequence of loads and stores
   // mixed types, depending on what the target specifies as good types to use.
+  LLT SrcTy = MRI.getType(Src);
+  LLT DstTy = MRI.getType(Dst);
+  unsigned SrcIndexSize = DL.getIndexSizeInBits(SrcTy.getAddressSpace());
+  unsigned DstIndexSize = DL.getIndexSizeInBits(DstTy.getAddressSpace());
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
@@ -11228,10 +11232,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register LoadPtr = Src;
     Register Offset;
     if (CurrOffset != 0) {
-      LLT SrcTy = MRI.getType(Src);
       Offset =
-          MIB.buildConstant(LLT::integer(SrcTy.getSizeInBits()), CurrOffset)
-              .getReg(0);
+          MIB.buildConstant(LLT::integer(SrcIndexSize), CurrOffset).getReg(0);
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
@@ -11239,7 +11241,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // Create the store.
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
-      LLT DstTy = MRI.getType(Dst);
+      if (SrcIndexSize != DstIndexSize) {
+        Offset =
+            MIB.buildConstant(LLT::integer(DstIndexSize), CurrOffset).getReg(0);
+      }
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
