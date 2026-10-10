@@ -4,7 +4,8 @@
 
 define swiftcc { ptr, ptr } @"coroutine"(ptr noalias %0, ptr %1, ptr swiftself %2) #0 !dbg !39 {
 entry:
-  %3 = call token @llvm.coro.id.retcon.once(i32 -1, i32 16, ptr %0, ptr @"$s4test1SVSiIetMIlYl_TC", ptr @_swift_coro_alloc, ptr @_swift_coro_dealloc), !dbg !48
+  %coro.ret = alloca { ptr, ptr }
+  %3 = call token @llvm.coro.id.retcon.once(i32 -1, i32 16, ptr %0, ptr @"$s4test1SVSiIetMIlYl_TC", ptr @_swift_coro_alloc, ptr @_swift_coro_dealloc, ptr %coro.ret), !dbg !48
   %4 = call ptr @llvm.coro.begin(token %3, ptr null), !dbg !48
   call swiftcc void @"$s4test6FINISHyyF"(), !dbg !50
   %.member_int = getelementptr inbounds nuw <{ <{ i64 }> }>, ptr %2, i32 0, i32 0, !dbg !51
@@ -27,7 +28,8 @@ entry:
 
 coro.end:
   call void @llvm.coro.end(ptr %4, i1 false, token none), !dbg !54
-  unreachable, !dbg !54
+  %coro.ret.load = load { ptr, ptr }, ptr %coro.ret
+  ret { ptr, ptr } %coro.ret.load, !dbg !54
 }
 
 declare swiftcc void @"$s4test6FINISHyyF"()

@@ -1329,7 +1329,8 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 
 declare token @llvm.coro.id.retcon(i32 <size>, i32 <align>, ptr <buffer>,
                                    ptr <continuation prototype>,
-                                   ptr <alloc>, ptr <dealloc>)
+                                   ptr <alloc>, ptr <dealloc>,
+                                   ptr <return.slot>)
 ```
 
 ##### Overview:
@@ -1372,6 +1373,20 @@ or throwing an exception.  It must take an integer and return a pointer.
 The sixth argument must be a reference to a global function that will
 be used to deallocate memory.  It must take a pointer and return `void`.
 
+The seventh argument points to an alloca in the coroutine function with
+sufficient size and alignment for its return type.  The allocated type need
+not match the return type.  A non-unwind `llvm.coro.end` is followed by a load
+from this alloca and an explicit return.  This makes the return visible to
+interprocedural optimizations before the coroutine is split.  The alloca
+is not stored in the coroutine frame; `coro-split` replaces the load with
+the ABI-specific return value.
+For a void-returning function, the seventh argument is null and a non-unwind
+`coro.end` is followed by `ret void` instead.
+
+Bitcode and assembly using the older six-argument form, with an implicit
+return and `unreachable` after a non-unwind `coro.end`, are upgraded when
+read by LLVM.
+
 ##### Semantics:
 
 A frontend should emit function attribute `presplitcoroutine` for the coroutine.
@@ -1381,7 +1396,8 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 
 declare token @llvm.coro.id.retcon.once(i32 <size>, i32 <align>, ptr <buffer>,
                                         ptr <prototype>,
-                                        ptr <alloc>, ptr <dealloc>)
+                                        ptr <alloc>, ptr <dealloc>,
+                                        ptr <return.slot>)
 ```
 
 ##### Overview:
@@ -1391,7 +1407,7 @@ unique-suspend returned-continuation coroutine.
 
 ##### Arguments:
 
-As for `llvm.core.id.retcon`, except that the return type of the
+As for `llvm.coro.id.retcon`, except that the return type of the
 continuation prototype must represent the normal return type of the continuation
 (instead of matching the coroutine's return type).
 
@@ -1439,10 +1455,13 @@ The purposes of `coro.end` are:
   optimizations from erasing stores to frame before returning.
 
 In returned-continuation lowering, `llvm.coro.end` fully destroys the
-coroutine frame.  If the second argument is `false`, it also returns from
-the coroutine with a null continuation pointer, and the next instruction
-will be unreachable.  If the second argument is `true`, it falls through
-so that the following logic can resume unwinding.  In a yield-once
+coroutine frame.  If the second argument is `false`, it falls through to
+a load from the return slot supplied to `llvm.coro.id.retcon` or
+`llvm.coro.id.retcon.once`, followed by an explicit return.  `coro-split`
+replaces that return with the ABI-specific value, including a null
+continuation on completion for the multiple-suspend ABI.  If the second
+argument is `true`, it falls through so that the following logic can
+resume unwinding.  In a yield-once
 coroutine, reaching a non-unwind `llvm.coro.end` without having first
 reached a `llvm.coro.suspend.retcon` has undefined behavior.
 
@@ -1537,9 +1556,11 @@ The number of arguments must match the return type of the continuation function:
 ```llvm
 define {ptr, ptr} @g(ptr %buffer, ptr %ptr, i8 %val) presplitcoroutine {
 entry:
+  %return.slot = alloca {ptr, ptr}
   %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer,
                                              ptr @prototype,
-                                             ptr @allocate, ptr @deallocate)
+                                             ptr @allocate, ptr @deallocate,
+                                             ptr %return.slot)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
 
 ...
@@ -1547,7 +1568,8 @@ entry:
 cleanup:
   %tok = call token (...) @llvm.coro.end.results(i8 %val)
   call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
-  unreachable
+  %result = load {ptr, ptr}, ptr %return.slot
+  ret {ptr, ptr} %result
 
 ...
 

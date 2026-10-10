@@ -79,11 +79,10 @@ define void @unreachable() {
 
 ; CHECK-NOT: Function Attrs: {{.*}}noreturn
 ; CHECK: @coro
+; CHECK: call token @llvm.coro.id.async(i32 128, i32 16, i32 0, ptr null)
+; CHECK: unreachable
 define void @coro() presplitcoroutine {
-  call token @llvm.coro.id.retcon.once(i32 0, i32 0, ptr null, ptr @coro, ptr null, ptr null)
+  call token @llvm.coro.id.async(i32 128, i32 16, i32 0, ptr null)
   call void (ptr, i1, ...) @llvm.coro.end(ptr null, i1 false)
   unreachable
 }
-
-declare token @llvm.coro.id.retcon.once(i32 %size, i32 %align, ptr %buffer, ptr %prototype, ptr %alloc, ptr %free)
-declare void @llvm.coro.end(ptr, i1, ...)

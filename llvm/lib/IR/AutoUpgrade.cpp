@@ -1817,6 +1817,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
   }
   case 'c': {
+    if ((Name == "coro.id.retcon" || Name == "coro.id.retcon.once") &&
+        F->arg_size() == 6) {
+      Intrinsic::ID ID = Name == "coro.id.retcon"
+                             ? Intrinsic::coro_id_retcon
+                             : Intrinsic::coro_id_retcon_once;
+      rename(F);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+      return true;
+    }
+
     if (F->arg_size() == 1) {
       if (Name.consume_front("convert.")) {
         if (convertIntrinsicValidType(Name, F->getFunctionType())) {
@@ -5887,6 +5897,71 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     DefaultCase();
     return;
+  }
+  case Intrinsic::coro_id_retcon:
+  case Intrinsic::coro_id_retcon_once: {
+    // Older frontends emitted an implicit return at coro.end. Keep their
+    // bitcode usable by making that return explicit before any IPO passes.
+    Function *Coro = CI->getFunction();
+    // An older optimizer could have inferred these from the unreachable that
+    // used to follow coro.end. They are not valid for the explicit return.
+    Coro->removeFnAttr(Attribute::NoReturn);
+    Coro->removeRetAttr(Attribute::NoAlias);
+    Coro->removeRetAttr(Attribute::NonNull);
+    for (User *U : Coro->users()) {
+      auto *Call = dyn_cast<CallBase>(U);
+      if (!Call || Call->getCalledOperand() != Coro)
+        continue;
+      Call->removeFnAttr(Attribute::NoReturn);
+      Call->removeRetAttr(Attribute::NoAlias);
+      Call->removeRetAttr(Attribute::NonNull);
+    }
+    Value *ReturnSlot;
+    if (Coro->getReturnType()->isVoidTy()) {
+      // Legacy IR can use retcon in a void function. There is no result to
+      // store in that case, but it still needs the new operand.
+      ReturnSlot = ConstantPointerNull::get(Builder.getPtrTy());
+    } else {
+      IRBuilder<> EntryBuilder(&*Coro->getEntryBlock().getFirstInsertionPt());
+      ReturnSlot =
+          EntryBuilder.CreateAlloca(Coro->getReturnType(), nullptr, "coro.ret");
+    }
+
+    SmallVector<Value *, 7> Args(CI->args());
+    Args.push_back(ReturnSlot);
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->setAttributes(CI->getAttributes());
+    NewCall->copyMetadata(*CI);
+    NewCall->setDebugLoc(CI->getDebugLoc());
+
+    for (BasicBlock &BB : *Coro) {
+      auto *Unreachable = dyn_cast<UnreachableInst>(BB.getTerminator());
+      if (!Unreachable)
+        continue;
+      auto *End = dyn_cast_or_null<CallBase>(Unreachable->getPrevNode());
+      if (!End)
+        continue;
+      Function *EndFn = End->getCalledFunction();
+      // The legacy i1-returning coro.end emitted by older frontends may be
+      // upgraded later in the same module read. Recognize it before its own
+      // auto-upgrade has run as well as after it has been renamed to .old.
+      if (End->getIntrinsicID() != Intrinsic::coro_end &&
+          (!EndFn || (EndFn->getName() != "llvm.coro.end" &&
+                      !EndFn->getName().starts_with("llvm.coro.end.old"))))
+        continue;
+      auto *Unwind = dyn_cast<ConstantInt>(End->getArgOperand(1));
+      if (!Unwind || !Unwind->isZero())
+        continue;
+
+      IRBuilder<> ReturnBuilder(Unreachable);
+      if (Coro->getReturnType()->isVoidTy())
+        ReturnBuilder.CreateRetVoid();
+      else
+        ReturnBuilder.CreateRet(
+            ReturnBuilder.CreateLoad(Coro->getReturnType(), ReturnSlot));
+      Unreachable->eraseFromParent();
+    }
+    break;
   }
   case Intrinsic::arm_neon_vst1:
   case Intrinsic::arm_neon_vst2:
