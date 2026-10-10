@@ -417,6 +417,11 @@ static void assertAPValueKind(const ConstantExpr *E, const APValue &V) {
     return;
   }
 
+  if (T->isArrayType()) {
+    assert(V.isArray() && "an array ConstantExpr needs an array APValue");
+    return;
+  }
+
   llvm_unreachable("");
 }
 
