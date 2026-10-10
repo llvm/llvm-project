@@ -458,6 +458,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lchown
+  SRCS
+    lchown.cpp
+  HDRS
+    ../lchown.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.uid_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lchown
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   link
   SRCS
     link.cpp
