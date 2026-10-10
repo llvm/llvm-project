@@ -417,7 +417,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // Matrix B scale operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
       // Matrix B reuse operand reuses op_sel_hi.
-      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse) &&
+      // Encode op_sel_hi as zero based on SP3 for some VOP3P instructions.
+      !AMDGPU::zeroesOutOpSelHi(Opcode)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
