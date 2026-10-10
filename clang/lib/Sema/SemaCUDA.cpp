@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
@@ -1013,6 +1014,94 @@ Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
     }
   }();
   return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, CurFunContext, SemaRef);
+}
+
+bool SemaCUDA::isDeviceVarInit() const {
+  return CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
+         CurCUDATargetCtx.Target == CUDAFunctionTarget::Device;
+}
+
+void SemaCUDA::checkRTTIUse(SourceLocation Loc, StringRef Op) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  // A default argument is checked where it is used.
+  if (isa_and_present<ParmVarDecl>(
+          SemaRef.currentEvaluationContext().ManglingContextDecl))
+    return;
+
+  if (SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    DiagIfDeviceCode(Loc, diag::err_cuda_device_rtti) << Op << CurrentTarget();
+    return;
+  }
+
+  // Outside a function, only the initializer of a device variable is device
+  // code. A default member initializer is checked where it is used.
+  if (isDeviceVarInit())
+    Diag(Loc, diag::err_cuda_device_rtti_var_init) << Op;
+}
+
+namespace {
+/// Finds a use of RTTI, as diagnosed by checkRTTIUse, in a default argument or
+/// default member initializer.
+struct RTTIUseFinder : ConstDynamicRecursiveASTVisitor {
+  const Expr *Use = nullptr;
+
+  RTTIUseFinder() {
+    // Look into nested default arguments and default member initializers.
+    ShouldVisitImplicitCode = true;
+    // Lambda bodies are checked as functions of their own.
+    ShouldVisitLambdaBody = false;
+  }
+
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E) override {
+    Use = E;
+    return false;
+  }
+
+  bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) override {
+    // As with -fno-rtti, upcasts and dynamic_cast to void* don't use RTTI.
+    QualType DestTy = E->getType();
+    if (E->getCastKind() != CK_Dynamic ||
+        (DestTy->isPointerType() && DestTy->getPointeeType()->isVoidType()))
+      return true;
+    Use = E;
+    return false;
+  }
+};
+} // namespace
+
+void SemaCUDA::checkRTTIInDefaultInit(const ValueDecl *D, const Expr *Init,
+                                      SourceLocation UseLoc) {
+  assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
+  assert((isa<FieldDecl, ParmVarDecl>(D)) &&
+         "Expected a default member initializer or default argument");
+  const FunctionDecl *CurFn = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  if (!CurFn && !isDeviceVarInit())
+    return;
+  RTTIUseFinder Finder;
+  Finder.TraverseStmt(Init);
+  const Expr *Use = Finder.Use;
+  if (!Use)
+    return;
+  // An initializer can be built more than once for the same use.
+  if (!RTTICheckedDefaultInits.insert({D, CurFn}).second)
+    return;
+
+  StringRef Op = isa<CXXTypeidExpr>(Use) ? "typeid" : "dynamic_cast";
+  bool IsDefaultArg = isa<ParmVarDecl>(D);
+  if (!CurFn) {
+    Diag(Use->getBeginLoc(), diag::err_cuda_device_rtti_var_init) << Op;
+    Diag(UseLoc, diag::note_cuda_device_rtti_default_used_here) << IsDefaultArg;
+    return;
+  }
+  {
+    SemaDiagnosticBuilder DB =
+        DiagIfDeviceCode(Use->getBeginLoc(), diag::err_cuda_device_rtti);
+    DB << Op << CurrentTarget();
+    // Let the note below follow the error, as SemaBase::Diag does.
+    SemaRef.IsLastErrorImmediate = DB.isImmediate();
+  }
+  DiagIfDeviceCode(UseLoc, diag::note_cuda_device_rtti_default_used_here)
+      << IsDefaultArg;
 }
 
 bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
