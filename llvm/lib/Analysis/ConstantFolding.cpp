@@ -1754,7 +1754,8 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
 
   // Overwriting every bit of the base is a bitcast of the value.
   if (Bits == BaseBits)
-    return ConstantExpr::getBitCast(Val, Base->getType());
+    return ConstantFoldCastOperand(Instruction::BitCast, Val, Base->getType(),
+                                   DL);
 
   // bitinsert poison, poison, C -> poison
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
