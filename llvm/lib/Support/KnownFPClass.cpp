@@ -959,10 +959,9 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
     Known.knownNot(fcPosSubnormal | fcPosNormal);
 
-  // -0.0 only ever arises from a negative-finite input (atan(-0.0) = -0.0,
-  // and a flushed negative subnormal may become -0.0). atan(-inf) is never
-  // -0.0, so this check does not need to exclude fcNegInf.
-  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegZero))
+  // atan(-0.0) = -0.0, and a negative subnormal may be flushed to -0.0.
+  // Negative normal values and -inf cannot produce -0.0.
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegZero))
     Known.knownNot(fcNegZero);
 
   Known.propagateNonNaN(KnownSrc);
