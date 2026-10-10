@@ -869,8 +869,8 @@ llvm::json::Value toJSON(const SourceBreakpoint &SB) {
     result.insert({"column", *SB.column});
   if (SB.condition)
     result.insert({"condition", *SB.condition});
-  if (SB.hitCondition)
-    result.insert({"hitCondition", *SB.hitCondition});
+  if (!SB.hitCondition.empty())
+    result.insert({"hitCondition", SB.hitCondition});
   if (!SB.logMessage.empty())
     result.insert({"logMessage", SB.logMessage});
   if (SB.mode)
@@ -892,8 +892,8 @@ llvm::json::Value toJSON(const FunctionBreakpoint &FB) {
 
   if (FB.condition)
     result.insert({"condition", *FB.condition});
-  if (FB.hitCondition)
-    result.insert({"hitCondition", *FB.hitCondition});
+  if (!FB.hitCondition.empty())
+    result.insert({"hitCondition", FB.hitCondition});
 
   return result;
 }
@@ -947,8 +947,8 @@ llvm::json::Value toJSON(const DataBreakpoint &DBI) {
     result.insert({"accessType", *DBI.accessType});
   if (DBI.condition)
     result.insert({"condition", *DBI.condition});
-  if (DBI.hitCondition)
-    result.insert({"hitCondition", *DBI.hitCondition});
+  if (!DBI.hitCondition.empty())
+    result.insert({"hitCondition", DBI.hitCondition});
 
   return result;
 }
