@@ -22,5 +22,5 @@ target dump typesystem
 
 # CHECK:      expression
 # CHECK:      target dump typesystem
-# CHECK-NOT:  FunctionDecl
+# CHECK-NOT:  RecordDecl
 # CHECK-NOT:  LambdaExpr
