@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Tp must be thread-safe itself between
 // - the operation that is done by the object from get_current_thread_instance calls
-// - and the operation that for_each
+// - and the operation that is passed to a for_each operating on the _Tp object
 // since there is no mutex guarding between them
 template <class Tp, class Tag>
 class thread_local_container {
