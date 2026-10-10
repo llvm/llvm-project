@@ -13,11 +13,20 @@
 #ifndef OMPTARGET_OPENMP_OFFLOADRTL_H
 #define OMPTARGET_OPENMP_OFFLOADRTL_H
 
+#include "OpenMP/InteropAPI.h"
 #include "PluginManager.h"
 
 #include <atomic>
 
-extern PluginManager *PM;
+namespace llvm::omp::target {
+class OmpPluginManager : public PluginManager {
+public:
+  /// Table of cached implicit interop objects.
+  InteropTblTy InteropTbl;
+};
+} // namespace llvm::omp::target
+
+extern llvm::omp::target::OmpPluginManager *PM;
 extern std::atomic<bool> RTLAlive; // Indicates if the RTL has been initialized
 extern std::atomic<int> RTLOngoingSyncs; // Counts ongoing external syncs
 
