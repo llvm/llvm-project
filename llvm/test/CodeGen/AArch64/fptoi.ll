@@ -431,36 +431,18 @@ entry:
 }
 
 define i128 @fptos_f16_i128(half %a) {
-; CHECK-NOFP16-SD-LABEL: fptos_f16_i128:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-NOFP16-SD-NEXT:    bl __fixhfti
-; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NOFP16-SD-NEXT:    ret
+; CHECK-NOFP16-LABEL: fptos_f16_i128:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-NOFP16-NEXT:    fcvtzs x0, s0
+; CHECK-NOFP16-NEXT:    asr x1, x0, #63
+; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: fptos_f16_i128:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-FP16-SD-NEXT:    bl __fixhfti
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: fptos_f16_i128:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    fcvt s0, h0
-; CHECK-NOFP16-GI-NEXT:    fcvtzs x0, s0
-; CHECK-NOFP16-GI-NEXT:    asr x1, x0, #63
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: fptos_f16_i128:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtzs x0, h0
-; CHECK-FP16-GI-NEXT:    asr x1, x0, #63
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-FP16-LABEL: fptos_f16_i128:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    asr x1, x0, #63
+; CHECK-FP16-NEXT:    ret
 entry:
   %c = fptosi half %a to i128
   ret i128 %c
@@ -469,20 +451,15 @@ entry:
 define i128 @fptou_f16_i128(half %a) {
 ; CHECK-NOFP16-SD-LABEL: fptou_f16_i128:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-NOFP16-SD-NEXT:    bl __fixunshfti
-; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP16-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP16-SD-NEXT:    mov x1, xzr
+; CHECK-NOFP16-SD-NEXT:    fcvtzs x0, s0
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: fptou_f16_i128:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-FP16-SD-NEXT:    bl __fixunshfti
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FP16-SD-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-SD-NEXT:    mov x1, xzr
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: fptou_f16_i128:
@@ -6385,81 +6362,27 @@ entry:
 }
 
 define <2 x i128> @fptos_v2f16_v2i128(<2 x half> %a) {
-; CHECK-NOFP16-SD-LABEL: fptos_v2f16_v2i128:
-; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    sub sp, sp, #48
-; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-NOFP16-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -32
-; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NOFP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-NOFP16-SD-NEXT:    bl __fixhfti
-; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NOFP16-SD-NEXT:    mov x19, x0
-; CHECK-NOFP16-SD-NEXT:    mov x20, x1
-; CHECK-NOFP16-SD-NEXT:    mov h0, v0.h[1]
-; CHECK-NOFP16-SD-NEXT:    bl __fixhfti
-; CHECK-NOFP16-SD-NEXT:    mov x2, x0
-; CHECK-NOFP16-SD-NEXT:    mov x3, x1
-; CHECK-NOFP16-SD-NEXT:    mov x0, x19
-; CHECK-NOFP16-SD-NEXT:    mov x1, x20
-; CHECK-NOFP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-NOFP16-SD-NEXT:    add sp, sp, #48
-; CHECK-NOFP16-SD-NEXT:    ret
+; CHECK-NOFP16-LABEL: fptos_v2f16_v2i128:
+; CHECK-NOFP16:       // %bb.0: // %entry
+; CHECK-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NOFP16-NEXT:    mov h1, v0.h[1]
+; CHECK-NOFP16-NEXT:    fcvt s0, h0
+; CHECK-NOFP16-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-NEXT:    fcvtzs x0, s0
+; CHECK-NOFP16-NEXT:    fcvtzs x2, s1
+; CHECK-NOFP16-NEXT:    asr x1, x0, #63
+; CHECK-NOFP16-NEXT:    asr x3, x2, #63
+; CHECK-NOFP16-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: fptos_v2f16_v2i128:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    sub sp, sp, #48
-; CHECK-FP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-FP16-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-FP16-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-FP16-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -32
-; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-FP16-SD-NEXT:    bl __fixhfti
-; CHECK-FP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-FP16-SD-NEXT:    mov x19, x0
-; CHECK-FP16-SD-NEXT:    mov x20, x1
-; CHECK-FP16-SD-NEXT:    mov h0, v0.h[1]
-; CHECK-FP16-SD-NEXT:    bl __fixhfti
-; CHECK-FP16-SD-NEXT:    mov x2, x0
-; CHECK-FP16-SD-NEXT:    mov x3, x1
-; CHECK-FP16-SD-NEXT:    mov x0, x19
-; CHECK-FP16-SD-NEXT:    mov x1, x20
-; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-FP16-SD-NEXT:    add sp, sp, #48
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-GI-LABEL: fptos_v2f16_v2i128:
-; CHECK-NOFP16-GI:       // %bb.0: // %entry
-; CHECK-NOFP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-NOFP16-GI-NEXT:    fcvt s0, h0
-; CHECK-NOFP16-GI-NEXT:    fcvt s1, h1
-; CHECK-NOFP16-GI-NEXT:    fcvtzs x0, s0
-; CHECK-NOFP16-GI-NEXT:    fcvtzs x2, s1
-; CHECK-NOFP16-GI-NEXT:    asr x1, x0, #63
-; CHECK-NOFP16-GI-NEXT:    asr x3, x2, #63
-; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: fptos_v2f16_v2i128:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-FP16-GI-NEXT:    fcvtzs x0, h0
-; CHECK-FP16-GI-NEXT:    fcvtzs x2, h1
-; CHECK-FP16-GI-NEXT:    asr x1, x0, #63
-; CHECK-FP16-GI-NEXT:    asr x3, x2, #63
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-FP16-LABEL: fptos_v2f16_v2i128:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    fcvtzs x2, h1
+; CHECK-FP16-NEXT:    asr x1, x0, #63
+; CHECK-FP16-NEXT:    asr x3, x2, #63
+; CHECK-FP16-NEXT:    ret
 entry:
   %c = fptosi <2 x half> %a to <2 x i128>
   ret <2 x i128> %c
@@ -6468,56 +6391,24 @@ entry:
 define <2 x i128> @fptou_v2f16_v2i128(<2 x half> %a) {
 ; CHECK-NOFP16-SD-LABEL: fptou_v2f16_v2i128:
 ; CHECK-NOFP16-SD:       // %bb.0: // %entry
-; CHECK-NOFP16-SD-NEXT:    sub sp, sp, #48
-; CHECK-NOFP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-NOFP16-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NOFP16-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-NOFP16-SD-NEXT:    .cfi_offset w30, -32
 ; CHECK-NOFP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NOFP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NOFP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-NOFP16-SD-NEXT:    bl __fixunshfti
-; CHECK-NOFP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NOFP16-SD-NEXT:    mov x19, x0
-; CHECK-NOFP16-SD-NEXT:    mov x20, x1
-; CHECK-NOFP16-SD-NEXT:    mov h0, v0.h[1]
-; CHECK-NOFP16-SD-NEXT:    bl __fixunshfti
-; CHECK-NOFP16-SD-NEXT:    mov x2, x0
-; CHECK-NOFP16-SD-NEXT:    mov x3, x1
-; CHECK-NOFP16-SD-NEXT:    mov x0, x19
-; CHECK-NOFP16-SD-NEXT:    mov x1, x20
-; CHECK-NOFP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NOFP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-NOFP16-SD-NEXT:    add sp, sp, #48
+; CHECK-NOFP16-SD-NEXT:    mov h1, v0.h[1]
+; CHECK-NOFP16-SD-NEXT:    mov x1, xzr
+; CHECK-NOFP16-SD-NEXT:    mov x3, xzr
+; CHECK-NOFP16-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP16-SD-NEXT:    fcvt s1, h1
+; CHECK-NOFP16-SD-NEXT:    fcvtzs x0, s0
+; CHECK-NOFP16-SD-NEXT:    fcvtzs x2, s1
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: fptou_v2f16_v2i128:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    sub sp, sp, #48
-; CHECK-FP16-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
-; CHECK-FP16-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-FP16-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-FP16-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-FP16-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-FP16-SD-NEXT:    .cfi_offset w30, -32
 ; CHECK-FP16-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-FP16-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-FP16-SD-NEXT:    bl __fixunshfti
-; CHECK-FP16-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-FP16-SD-NEXT:    mov x19, x0
-; CHECK-FP16-SD-NEXT:    mov x20, x1
-; CHECK-FP16-SD-NEXT:    mov h0, v0.h[1]
-; CHECK-FP16-SD-NEXT:    bl __fixunshfti
-; CHECK-FP16-SD-NEXT:    mov x2, x0
-; CHECK-FP16-SD-NEXT:    mov x3, x1
-; CHECK-FP16-SD-NEXT:    mov x0, x19
-; CHECK-FP16-SD-NEXT:    mov x1, x20
-; CHECK-FP16-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-FP16-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
-; CHECK-FP16-SD-NEXT:    add sp, sp, #48
+; CHECK-FP16-SD-NEXT:    mov h1, v0.h[1]
+; CHECK-FP16-SD-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-SD-NEXT:    mov x1, xzr
+; CHECK-FP16-SD-NEXT:    mov x3, xzr
+; CHECK-FP16-SD-NEXT:    fcvtzs x2, h1
 ; CHECK-FP16-SD-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: fptou_v2f16_v2i128:
