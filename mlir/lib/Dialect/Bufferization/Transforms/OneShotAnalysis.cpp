@@ -719,44 +719,45 @@ static bool matchesInsertDestination(const AnalysisState &state,
   return llvm::all_of(backwardSlice, matchingSubset);
 }
 
-/// Find the nearest subset extractions from which `opOperand` may originate.
-/// Only equivalent alias edges may be crossed: an unknown alias does not
-/// guarantee that an access through the alias stays within the extracted
-/// subset. Return "false" if any origin is not a subset extraction.
+/// Return "true" if every reverse use-def path reaches an extraction satisfying
+/// `isDisjoint`. An extraction bounds all accesses through its result. If its
+/// subset cannot be compared, continue through its source to try a larger
+/// bound. Other alias edges must be equivalent: an unknown alias does not
+/// guarantee containment. Unproven leaves and cycles conservatively fail the
+/// proof.
 static bool
-findSubsetExtractionOrigins(const AnalysisState &state, OpOperand *opOperand,
-                            SmallVectorImpl<SubsetOpInterface> &subsetOrigins) {
-  auto isSubsetExtraction = [](Value value) {
-    return !!value.getDefiningOp<SubsetExtractionOpInterface>();
-  };
-  TraversalConfig config;
-  config.followEquivalentOnly = true;
-  SetVector<Value> origins = state.findValueInReverseUseDefChain(
-      opOperand, isSubsetExtraction, config);
-  if (origins.empty())
-    return false;
+hasDisjointSubsetOrigins(const AnalysisState &state, OpOperand *opOperand,
+                         function_ref<bool(SubsetOpInterface)> isDisjoint) {
+  SetVector<Value> worklist;
+  DenseSet<Value> visited;
+  worklist.insert(opOperand->get());
+  while (!worklist.empty()) {
+    Value value = worklist.pop_back_val();
+    auto extraction = value.getDefiningOp<SubsetExtractionOpInterface>();
+    if (extraction &&
+        isDisjoint(cast<SubsetOpInterface>(extraction.getOperation())))
+      continue;
 
-  for (Value origin : origins) {
-    auto extraction = origin.getDefiningOp<SubsetExtractionOpInterface>();
-    if (!extraction)
+    if (!visited.insert(value).second)
       return false;
-    subsetOrigins.push_back(cast<SubsetOpInterface>(extraction.getOperation()));
+
+    if (!state.getOptions().dynCastBufferizableOp(value))
+      return false;
+    if (extraction) {
+      worklist.insert(extraction.getSourceOperand().get());
+      continue;
+    }
+
+    AliasingOpOperandList aliases = state.getAliasingOpOperands(value);
+    if (aliases.getNumAliases() == 0)
+      return false;
+    for (AliasingOpOperand alias : aliases) {
+      if (alias.relation != BufferRelation::Equivalent)
+        return false;
+      worklist.insert(alias.opOperand->get());
+    }
   }
   return true;
-}
-
-/// Return "true" if every read subset is disjoint from every written subset.
-static bool areAllDisjointSubsets(ArrayRef<SubsetOpInterface> readSubsets,
-                                  ArrayRef<SubsetOpInterface> writtenSubsets,
-                                  const AnalysisState &state) {
-  return llvm::all_of(readSubsets, [&](SubsetOpInterface readSubset) {
-    return llvm::all_of(writtenSubsets, [&](SubsetOpInterface writtenSubset) {
-      return readSubset.operatesOnDisjointSubset(
-          writtenSubset, [&](Value v1, Value v2) {
-            return state.areEquivalentBufferizedValues(v1, v2);
-          });
-    });
-  });
 }
 
 /// Return "true" if the read and write are confined to provably disjoint
@@ -769,35 +770,25 @@ static bool areDisjointSubsetAccesses(OpOperand *uRead,
   Operation *readingOp = uRead->getOwner();
   Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
-  SmallVector<SubsetOpInterface, 1> directReadSubsets;
-  if (auto extraction = dyn_cast<SubsetExtractionOpInterface>(readingOp))
-    if (uRead == &extraction.getSourceOperand())
-      directReadSubsets.push_back(cast<SubsetOpInterface>(readingOp));
-
-  SmallVector<SubsetOpInterface> readOrigins;
-  bool readOriginsInitialized = false;
-  bool hasValidReadOrigins = false;
-  auto readsAreDisjoint = [&](ArrayRef<SubsetOpInterface> writtenSubsets) {
-    if (!directReadSubsets.empty() &&
-        areAllDisjointSubsets(directReadSubsets, writtenSubsets, state))
-      return true;
-
-    if (!readOriginsInitialized) {
-      hasValidReadOrigins =
-          findSubsetExtractionOrigins(state, uRead, readOrigins);
-      readOriginsInitialized = true;
-    }
-    return hasValidReadOrigins &&
-           areAllDisjointSubsets(readOrigins, writtenSubsets, state);
+  auto readsAreDisjoint = [&](SubsetOpInterface writtenSubset) {
+    auto isDisjoint = [&](SubsetOpInterface readSubset) {
+      return readSubset.operatesOnDisjointSubset(
+          writtenSubset, [&](Value v1, Value v2) {
+            return state.areEquivalentBufferizedValues(v1, v2);
+          });
+    };
+    if (auto extraction = dyn_cast<SubsetExtractionOpInterface>(readingOp))
+      if (uRead == &extraction.getSourceOperand() &&
+          isDisjoint(cast<SubsetOpInterface>(readingOp)))
+        return true;
+    return hasDisjointSubsetOrigins(state, uRead, isDisjoint);
   };
 
   // First try the exact subset written by an insertion op.
   if (auto insertion =
           dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp)) {
     if (uConflictingWrite == &insertion.getDestinationOperand()) {
-      SmallVector<SubsetOpInterface, 1> writtenSubset = {
-          cast<SubsetOpInterface>(conflictingWritingOp)};
-      if (readsAreDisjoint(writtenSubset))
+      if (readsAreDisjoint(cast<SubsetOpInterface>(conflictingWritingOp)))
         return true;
     }
   }
@@ -806,20 +797,16 @@ static bool areDisjointSubsetAccesses(OpOperand *uRead,
   // extraction. The extraction is a safe (possibly imprecise) bound for every
   // access through that view. There may be multiple possible origins, e.g.,
   // after an arith.select; all of them must be disjoint from every read origin.
-  SmallVector<SubsetOpInterface> writtenOrigins;
-  if (!findSubsetExtractionOrigins(state, uConflictingWrite, writtenOrigins))
-    return false;
-  return readsAreDisjoint(writtenOrigins);
+  return hasDisjointSubsetOrigins(state, uConflictingWrite, readsAreDisjoint);
 }
 
 /// Return "true" if the given "read" and potentially conflicting "write" are
 /// not conflicting due to their subset relationship. The comments in this
 /// function are expressed in terms of tensor.extract_slice/tensor.insert_slice
-/// pairs, but apply to any subset ops that implement the
-/// `SubsetInsertionOpInterface`.
+/// pairs, but apply to any ops implementing the subset interfaces.
 static bool areNonConflictingSubsets(OpOperand *uRead,
                                      OpOperand *uConflictingWrite,
-                                     const AnalysisState &state) {
+                                     OneShotAnalysisState &state) {
   Operation *readingOp = uRead->getOwner();
   Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
@@ -866,8 +853,22 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
   // A read from a subset does not conflict with a write to a disjoint subset
   // of an equivalent tensor. The actual read or write may be further down an
   // aliasing use-def chain. Trace such accesses back to subset extractions,
-  // crossing only equivalent alias edges.
-  if (areDisjointSubsetAccesses(uRead, uConflictingWrite, state))
+  // crossing only equivalent alias edges or extraction source edges.
+  //
+  // %lhs = tensor.extract_slice %t[0][4][1]
+  // %rhs = tensor.extract_slice %t[4][4][1]
+  // %written = linalg.fill ins(%cst) outs(%lhs)
+  // return %written, %rhs
+  //
+  // Disjointness describes a single execution of the subset ops. If a read
+  // can observe writes from another iteration, the subset coordinates may
+  // differ across executions. Reuse the dominance checks to conservatively
+  // exclude such repetitive-region and CFG cases. Matching subset rules above
+  // and below do not rely on a disjointness proof and remain applicable.
+  const SetVector<Value> &definitions = state.findDefinitionsCached(uRead);
+  if ((definitions.empty() ||
+       canUseOpDominance(uRead, uConflictingWrite, definitions, state)) &&
+      areDisjointSubsetAccesses(uRead, uConflictingWrite, state))
     return true;
 
   // If uConflictingWrite is an InsertSliceOp...
