@@ -13,9 +13,9 @@ define i32 @add_sub_shared_const_i32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-NEXT:    add w0, w0, w8
-; CHECK-NEXT:    sub w1, w1, w8
+; CHECK-NEXT:    mov w8, #-4097 // =0xffffefff
+; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    add w1, w1, w8
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -32,9 +32,9 @@ define i64 @add_sub_shared_const_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w8, #4097 // =0x1001
-; CHECK-NEXT:    add x0, x0, x8
-; CHECK-NEXT:    sub x1, x1, x8
+; CHECK-NEXT:    mov x8, #-4097 // =0xffffffffffffefff
+; CHECK-NEXT:    sub x0, x0, x8
+; CHECK-NEXT:    add x1, x1, x8
 ; CHECK-NEXT:    bl use64
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -56,12 +56,12 @@ define i32 @add_sub_shared_const_multi_use(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov w20, #4097 // =0x1001
+; CHECK-NEXT:    mov w20, #-4097 // =0xffffefff
 ; CHECK-NEXT:    mov w19, w2
-; CHECK-NEXT:    add w0, w0, w20
-; CHECK-NEXT:    sub w1, w1, w20
+; CHECK-NEXT:    sub w0, w0, w20
+; CHECK-NEXT:    add w1, w1, w20
 ; CHECK-NEXT:    bl use32
-; CHECK-NEXT:    sub w1, w19, w20
+; CHECK-NEXT:    add w1, w19, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
