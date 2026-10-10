@@ -2171,7 +2171,7 @@ bool isValidNfmt(unsigned Id, const MCSubtargetInfo &STI) {
   return !getNfmtName(Id, STI).empty();
 }
 
-int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt) {
+int64_t encodeDfmtNfmt(uint64_t Dfmt, uint64_t Nfmt) {
   return (Dfmt << DFMT_SHIFT) | (Nfmt << NFMT_SHIFT);
 }
 
@@ -2205,7 +2205,7 @@ bool isValidUnifiedFormat(unsigned Id, const MCSubtargetInfo &STI) {
   return isGFX10(STI) ? Id <= UfmtGFX10::UFMT_LAST : Id <= UfmtGFX11::UFMT_LAST;
 }
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+int64_t convertDfmtNfmt2Ufmt(uint64_t Dfmt, uint64_t Nfmt,
                              const MCSubtargetInfo &STI) {
   int64_t Fmt = encodeDfmtNfmt(Dfmt, Nfmt);
   if (isGFX11Plus(STI)) {
@@ -2222,7 +2222,7 @@ int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
   return UFMT_UNDEF;
 }
 
-bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI) {
+bool isValidFormatEncoding(uint64_t Val, const MCSubtargetInfo &STI) {
   return isGFX10Plus(STI) ? (Val <= UFMT_MAX) : (Val <= DFMT_NFMT_MAX);
 }
 

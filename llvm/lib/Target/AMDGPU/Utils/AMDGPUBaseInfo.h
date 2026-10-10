@@ -1307,7 +1307,7 @@ bool isSupportedTgtId(unsigned Id, const MCSubtargetInfo &STI);
 namespace MTBUFFormat {
 
 LLVM_READNONE
-int64_t encodeDfmtNfmt(unsigned Dfmt, unsigned Nfmt);
+int64_t encodeDfmtNfmt(uint64_t Dfmt, uint64_t Nfmt);
 
 void decodeDfmtNfmt(unsigned Format, unsigned &Dfmt, unsigned &Nfmt);
 
@@ -1329,10 +1329,10 @@ StringRef getUnifiedFormatName(unsigned Id, const MCSubtargetInfo &STI);
 
 bool isValidUnifiedFormat(unsigned Val, const MCSubtargetInfo &STI);
 
-int64_t convertDfmtNfmt2Ufmt(unsigned Dfmt, unsigned Nfmt,
+int64_t convertDfmtNfmt2Ufmt(uint64_t Dfmt, uint64_t Nfmt,
                              const MCSubtargetInfo &STI);
 
-bool isValidFormatEncoding(unsigned Val, const MCSubtargetInfo &STI);
+bool isValidFormatEncoding(uint64_t Val, const MCSubtargetInfo &STI);
 
 unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI);
 
