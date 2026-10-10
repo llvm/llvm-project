@@ -57873,6 +57873,17 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
     std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
     std::tie(Bits1, Elts1) = GetDemandedMasks(N0, true);
 
+    // Reuse a live arithmetic shift when only sign bits are needed. This keeps
+    // the two-address SSE shift from requiring a copy of its input for ANDNP.
+    if (!Subtarget.hasAVX() && Bits0.isSignMask() &&
+        N0->hasNUsesOfValue(2, N0.getResNo())) {
+      for (SDNode *User : N0->users()) {
+        if (User->getOpcode() == X86ISD::VSRAI && User->hasOneUse() &&
+            User->getOperand(0) == N0)
+          return DAG.getNode(X86ISD::ANDNP, DL, VT, SDValue(User, 0), N1);
+      }
+    }
+
     if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
         TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
         TLI.SimplifyDemandedBits(N0, Bits0, Elts0, DCI) ||
