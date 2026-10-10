@@ -13637,8 +13637,9 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
           VecScale = std::max(VecScale, Scale);
         }
       } else {
-        // A splat is a single broadcast.
-        if (HasFusedAlt && isSplat(TE.Scalars))
+        // A splat is a single broadcast. In loops, its per-lane count, scaled
+        // by the trip count, rejects the profitable trees.
+        if ((HasFusedAlt || HasTreeLoop) && isSplat(TE.Scalars))
           Count = !isConstant(TE.Scalars.front());
         else
           Count = TE.Scalars.size() - count_if(TE.Scalars, isConstant);

@@ -128,3 +128,49 @@ define void @non_negated_lanes_keep_nsw(ptr %p, ptr %in) {
   store i32 %s3, ptr %g3, align 4
   ret void
 }
+
+@g = global i32 0
+
+define void @sub_const_lhs_constexpr_cmp_zero(ptr %p, ptr %in) {
+; CHECK-LABEL: define void @sub_const_lhs_constexpr_cmp_zero(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[IN:%.*]]) {
+; CHECK-NEXT:    [[G1I:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[G1I]], align 4
+; CHECK-NEXT:    [[G2I:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[G2I]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 ptrtoint (ptr @g to i32), i32 poison, i32 poison, i32 poison>, i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> <i32 2147483640, i32 3, i32 5, i32 7>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i32>
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %g1i = getelementptr inbounds i32, ptr %in, i64 1
+  %x1 = load i32, ptr %g1i, align 4
+  %g2i = getelementptr inbounds i32, ptr %in, i64 2
+  %x2 = load i32, ptr %g2i, align 4
+  %g3i = getelementptr inbounds i32, ptr %in, i64 3
+  %x3 = load i32, ptr %g3i, align 4
+  %s0 = sub nsw i32 -2147483640, trunc (i64 ptrtoint (ptr @g to i64) to i32)
+  %s1 = add nsw i32 %x1, 3
+  %s2 = add nsw i32 %x2, 5
+  %s3 = add nsw i32 %x3, 7
+  %c0 = icmp eq i32 %s0, 0
+  %c1 = icmp eq i32 %s1, 0
+  %c2 = icmp eq i32 %s2, 0
+  %c3 = icmp eq i32 %s3, 0
+  %z0 = zext i1 %c0 to i32
+  %z1 = zext i1 %c1 to i32
+  %z2 = zext i1 %c2 to i32
+  %z3 = zext i1 %c3 to i32
+  store i32 %z0, ptr %p, align 4
+  %g1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %z1, ptr %g1, align 4
+  %g2 = getelementptr inbounds i32, ptr %p, i64 2
+  store i32 %z2, ptr %g2, align 4
+  %g3 = getelementptr inbounds i32, ptr %p, i64 3
+  store i32 %z3, ptr %g3, align 4
+  ret void
+}
