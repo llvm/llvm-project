@@ -102,23 +102,23 @@ int main(int, char**) {
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&](std::stop_token st) {
+      writer_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           auto* ptr = new TestClass2(ctor_count, dtor_count);
           std::rcu_retire(ptr);
           std::this_thread::sleep_for(std::chrono::microseconds(1));
         }
-      });
+      }));
     }
 
     std::vector<std::jthread> collector_threads;
     for (int i = 0; i < num_collectors; ++i) {
-      collector_threads.emplace_back([&](std::stop_token st) {
+      collector_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           std::rcu_barrier();
           std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
-      });
+      }));
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -139,35 +139,35 @@ int main(int, char**) {
 
     std::vector<std::jthread> reader_threads;
     for (int i = 0; i < num_readers; ++i) {
-      reader_threads.emplace_back([&](std::stop_token st) {
+      reader_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           auto& dom = std::rcu_default_domain();
           dom.lock();
           std::this_thread::sleep_for(std::chrono::microseconds(5));
           dom.unlock();
         }
-      });
+      }));
     }
 
     std::vector<std::jthread> writer_threads;
     for (int i = 0; i < num_writers; ++i) {
-      writer_threads.emplace_back([&](std::stop_token st) {
+      writer_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           auto* ptr = new TestClass2(ctor_count, dtor_count);
           std::rcu_retire(ptr);
           std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
-      });
+      }));
     }
 
     std::vector<std::jthread> collector_threads;
     for (int i = 0; i < num_collectors; ++i) {
-      collector_threads.emplace_back([&](std::stop_token st) {
+      collector_threads.emplace_back(support::make_test_jthread([&](std::stop_token st) {
         while (!st.stop_requested()) {
           std::rcu_barrier();
           std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
-      });
+      }));
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));

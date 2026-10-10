@@ -15,7 +15,6 @@
 // T may be an incomplete type. It shall be complete before any member of the resulting specialization of rcu_obj_base is referenced.
 
 #include <rcu>
-#include <type_traits>
 
 class A;
 

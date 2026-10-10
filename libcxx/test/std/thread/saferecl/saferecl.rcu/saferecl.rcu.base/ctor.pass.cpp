@@ -20,10 +20,8 @@
 
 #include <cassert>
 #include <rcu>
-#include <thread>
 #include <type_traits>
 
-#include "make_test_thread.h"
 #include "test_macros.h"
 
 class A : public std::rcu_obj_base<A> {};
