@@ -1500,6 +1500,39 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIsend:
+  case Builtin::BIsendto: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIsend ? 4 : 6;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(0)->getType()->isIntegerType() ||
+        !TheCall->getArg(1)->getType()->isPointerType() ||
+        !TheCall->getArg(2)->getType()->isIntegerType() ||
+        !TheCall->getArg(3)->getType()->isIntegerType())
+      return;
+    if (BuiltinID == Builtin::BIsendto) {
+      // Under _GNU_SOURCE in C mode, glibc's <sys/socket.h> declares sendto's
+      // dest_addr parameter as a transparent_union (__CONST_SOCKADDR_ARG) whose
+      // first field is 'const struct sockaddr *'.
+      QualType AddrTy = TheCall->getArg(4)->getType();
+      const RecordDecl *UnionRD = AddrTy->getAsRecordDecl();
+      if (UnionRD && UnionRD->isUnion() &&
+          UnionRD->hasAttr<TransparentUnionAttr>() && !UnionRD->field_empty())
+        AddrTy = UnionRD->field_begin()->getType();
+      QualType AddrPointeeTy = AddrTy->getPointeeType();
+      if (AddrPointeeTy.isNull())
+        return;
+      const RecordDecl *RD = AddrPointeeTy->getAsRecordDecl();
+      if (!RD || !RD->getIdentifier() || RD->getName() != "sockaddr")
+        return;
+      if (!TheCall->getArg(5)->getType()->isIntegerType())
+        return;
+    }
+    DiagID = diag::warn_fortify_source_overread;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
   case Builtin::BIpoll:
   case Builtin::BIppoll:
   case Builtin::BIppoll64: {
