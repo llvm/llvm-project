@@ -592,9 +592,11 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
+  // clang-format off
   MCRegisterClass RC{
       0, 0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
-      0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+      0, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+  // clang-format on
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");
