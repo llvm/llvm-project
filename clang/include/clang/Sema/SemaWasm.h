@@ -51,6 +51,7 @@ public:
   void handleWebAssemblyImportModuleAttr(Decl *D, const ParsedAttr &AL);
   void handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL);
   void handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL);
+  bool checkWebAssemblyGlobalType(VarDecl *VD);
 };
 } // namespace clang
 

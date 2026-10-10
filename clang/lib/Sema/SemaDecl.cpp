@@ -4792,6 +4792,10 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
 
   mergeDeclAttributes(New, Old);
 
+  if (New->hasAttr<WebAssemblyGlobalAttr>() &&
+      Wasm().checkWebAssemblyGlobalType(New))
+    return New->setInvalidDecl();
+
   // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
   if (New->hasAttr<WeakImportAttr>())
@@ -9022,6 +9026,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // Defer checking an 'auto' type until its initializer is attached.
   if (T->isUndeducedType())
     return;
+
+  if (NewVD->hasAttr<WebAssemblyGlobalAttr>()) {
+    if (Wasm().checkWebAssemblyGlobalType(NewVD)) {
+      NewVD->setInvalidDecl();
+      return;
+    }
+    T = NewVD->getType();
+  }
 
   if (NewVD->hasAttrs())
     CheckAlignasUnderalignment(NewVD);
