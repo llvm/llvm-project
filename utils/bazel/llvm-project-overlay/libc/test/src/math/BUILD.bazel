@@ -68,6 +68,95 @@ math_mpfr_test(name = "atanhf16")
 
 math_mpfr_test(name = "atanpif16")
 
+math_mpfr_test(
+    name = "bf16addf",
+    hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16div",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16divf",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16divl",
+    hdrs = ["DivTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16fma",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16fmal",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mul",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mulf",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16mull",
+    hdrs = ["MulTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
+)
+
+math_mpfr_test(
+    name = "bf16sub",
+    hdrs = ["SubTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16subf",
+    hdrs = ["SubTest.h"],
+)
+
+math_mpfr_test(
+    name = "bf16subl",
+    hdrs = ["SubTest.h"],
+)
+
 math_mpfr_test(name = "cbrt")
 
 math_mpfr_test(
@@ -111,6 +200,11 @@ math_mpfr_test(
     deps = [
         "//libc:__support_fputil_float128",
     ],
+)
+
+math_mpfr_test(
+    name = "copysignf",
+    hdrs = ["CopySignTest.h"],
 )
 
 math_mpfr_test(name = "cos")
@@ -252,6 +346,15 @@ math_mpfr_test(
 math_mpfr_test(
     name = "faddl",
     hdrs = ["AddTest.h"],
+)
+
+math_mpfr_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+    deps = [
+        "//libc:rand",
+        "//libc:srand",
+    ],
 )
 
 math_mpfr_test(
@@ -484,6 +587,16 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ilogbf",
+    hdrs = ["ILogbTest.h"],
+)
+
+math_mpfr_test(
+    name = "ldexpf",
+    hdrs = ["LdExpTest.h"],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -545,6 +658,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "log")
+
+math_mpfr_test(
+    name = "logbf",
+    hdrs = ["LogbTest.h"],
+)
 
 math_mpfr_test(
     name = "log_bf16",
@@ -618,6 +736,11 @@ math_mpfr_test(
     hdrs = ["RoundToIntegerTest.h"],
 )
 
+math_mpfr_test(
+    name = "modff",
+    hdrs = ["ModfTest.h"],
+)
+
 # TODO: add nan tests.
 
 math_mpfr_test(
@@ -659,6 +782,11 @@ math_mpfr_test(
     deps = [
         "//libc:__support_cpp_array",
     ],
+)
+
+math_mpfr_test(
+    name = "nextafterf",
+    hdrs = ["NextAfterTest.h"],
 )
 
 math_mpfr_test(name = "pow")
@@ -888,7 +1016,10 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "scalbnf",
-    hdrs = ["LdExpTest.h", "ScalbnTest.h"],
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
 )
 
 math_mpfr_test(
