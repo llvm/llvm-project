@@ -309,6 +309,17 @@ int main(int, char**) {
       });
     }
   }
+  {
+    // thread exit with retired objects
+    int destroy_count = 0;
+    auto t            = support::make_test_jthread([&] {
+      auto obj = new TestClass1(destroy_count);
+      obj->retire();
+    });
+    t.join();
+    std::rcu_barrier();
+    assert(destroy_count == 1);
+  }
 
   return 0;
 }
