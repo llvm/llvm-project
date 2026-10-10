@@ -1018,45 +1018,37 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
   }
 
-  // Computes the operands of the new constant expression.
-  bool IsNew = false;
-  SmallVector<Constant *, 4> NewOperands;
-  for (unsigned Index = 0; Index < CE->getNumOperands(); ++Index) {
-    Constant *Operand = CE->getOperand(Index);
-    // If the address space of `Operand` needs to be modified, the new operand
-    // with the new address space should already be in ValueWithNewAddrSpace
-    // because (1) the constant expressions we consider (i.e. addrspacecast,
-    // bitcast, and getelementptr) do not incur cycles in the data flow graph
-    // and (2) this function is called on constant expressions in postorder.
-    if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
-      IsNew = true;
-      NewOperands.push_back(cast<Constant>(NewOperand));
-      continue;
-    }
-    if (auto *CExpr = dyn_cast<ConstantExpr>(Operand))
-      if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
-              CExpr, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI)) {
-        IsNew = true;
-        NewOperands.push_back(cast<Constant>(NewOperand));
-        continue;
-      }
-    // Otherwise, reuses the old operand.
-    NewOperands.push_back(Operand);
-  }
+  // The remaining constant expression is a getelementptr. Only its pointer
+  // operand is rewritten: the indices are not related to the pointer and
+  // NewAddrSpace may not be valid for them.
+  assert(CE->getOpcode() == Instruction::GetElementPtr &&
+         "unexpected constant expression");
+  // If the address space of the base needs to be modified, the new base with
+  // the new address space should already be in ValueWithNewAddrSpace because
+  // (1) the constant expressions we consider do not incur cycles in the data
+  // flow graph and (2) this function is called on constant expressions in
+  // postorder.
+  Constant *Base = CE->getOperand(0);
+  Value *NewBase = ValueWithNewAddrSpace.lookup(Base);
+  if (!NewBase)
+    if (auto *BaseCE = dyn_cast<ConstantExpr>(Base))
+      NewBase = cloneConstantExprWithNewAddressSpace(
+          BaseCE, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI);
 
-  // If !IsNew, we will replace the Value with itself. However, replaced values
-  // are assumed to wrapped in an addrspacecast cast later so drop it now.
-  if (!IsNew)
+  // If the base is unchanged, we will replace the Value with itself. However,
+  // replaced values are assumed to wrapped in an addrspacecast cast later so
+  // drop it now.
+  if (!NewBase)
     return nullptr;
 
-  if (CE->getOpcode() == Instruction::GetElementPtr) {
-    // Needs to specify the source type while constructing a getelementptr
-    // constant expression.
-    return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
-                               cast<GEPOperator>(CE)->getSourceElementType());
-  }
-
-  return CE->getWithOperands(NewOperands, TargetType);
+  SmallVector<Constant *, 4> NewOperands;
+  NewOperands.push_back(cast<Constant>(NewBase));
+  for (unsigned Index = 1; Index < CE->getNumOperands(); ++Index)
+    NewOperands.push_back(CE->getOperand(Index));
+  // Needs to specify the source type while constructing a getelementptr
+  // constant expression.
+  return CE->getWithOperands(NewOperands, TargetType, /*OnlyIfReduced=*/false,
+                             cast<GEPOperator>(CE)->getSourceElementType());
 }
 
 // Returns a clone of the value `V`, with its operands replaced as specified in

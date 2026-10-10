@@ -36,12 +36,20 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
 ; Make sure we can clone GEP which uses complex constant expressions as indices.
 ; https://bugs.llvm.org/show_bug.cgi?id=51099
+;
+; The pointer operand (@g2) is still rewritten to addrspace(3), but the index
+; operand -- itself a constant expression that happens to reference pointers
+; -- is left as-is rather than recursed into, since index operands are not
+; required to relate to the pointer's address space (see the GEP-index-operand
+; check in cloneConstantExprWithNewAddressSpace). This means the nested
+; getelementptrs inside the index keep their original addrspacecast rather
+; than also being narrowed to addrspace(3).
 @g2 = internal addrspace(3) global [128 x i8] poison, align 1
 
 define float @complex_ce(ptr nocapture readnone %a, ptr nocapture readnone %b, ptr nocapture readnone %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: @complex_ce(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 sub (i64 ptrtoint (ptr addrspace(3) getelementptr inbounds ([128 x i8], ptr addrspace(3) @g2, i64 0, i64 123) to i64), i64 ptrtoint (ptr addrspace(3) getelementptr inbounds ([128 x i8], ptr addrspace(3) @g2, i64 2, i64 0) to i64))), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 sub (i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(3) @g2 to ptr), i64 0, i64 123) to i64), i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(3) @g2 to ptr), i64 2, i64 0) to i64))), align 4
 ; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
@@ -67,7 +75,37 @@ entry:
   ret float %0
 }
 
+; The index operand of the GEP below is computed from pointers in an address
+; space (1) different from the one inferred for the GEP's pointer operand (3).
+; The index operand must not be rewritten for the inferred address space.
+@g3 = internal addrspace(1) global [128 x i8] poison, align 1
 
+define float @complex_ce_mixed_addrspace_index(ptr nocapture readnone %a) local_unnamed_addr #0 {
+; CHECK-LABEL: @complex_ce_mixed_addrspace_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(3) getelementptr (i8, ptr addrspace(3) @g2, i64 sub (i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(1) @g3 to ptr), i64 0, i64 123) to i64), i64 ptrtoint (ptr getelementptr inbounds ([128 x i8], ptr addrspacecast (ptr addrspace(1) @g3 to ptr), i64 2, i64 0) to i64))), align 4
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+entry:
+  %0 = load float, ptr getelementptr (
+         i8, ptr addrspacecast (ptr addrspace(3) @g2 to ptr),
+         i64 sub (
+           i64 ptrtoint (
+             ptr getelementptr inbounds (
+               [128 x i8],
+               ptr addrspacecast (ptr addrspace(1) @g3 to ptr),
+               i64 0,
+               i64 123)
+             to i64),
+           i64 ptrtoint (
+             ptr getelementptr inbounds (
+               [128 x i8],
+               ptr addrspacecast (ptr addrspace(1) @g3 to ptr),
+               i64 2,
+               i64 0)
+             to i64))), align 4
+  ret float %0
+}
 
 attributes #0 = { convergent nounwind }
 attributes #1 = { nounwind readnone }
