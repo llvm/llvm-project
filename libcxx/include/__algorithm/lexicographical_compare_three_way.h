@@ -10,14 +10,22 @@
 #define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_THREE_WAY_H
 
 #include <__algorithm/min.h>
+#include <__algorithm/mismatch.h>
 #include <__algorithm/three_way_comp_ref_type.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/desugars_to.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_trivially_lexicographically_comparable.h>
+#include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -62,6 +70,28 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_pa
   return __len1 <=> __len2;
 }
 
+template <class _Tp,
+          class _Cmp,
+          __enable_if_t<__desugars_to_v<__compare_three_way_tag, _Cmp, _Tp, _Tp> && !is_volatile<_Tp>::value &&
+                            __is_trivially_equality_comparable_v<_Tp, _Tp>,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+__lexicographical_compare_three_way_fast_path(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __last2, _Cmp& __comp)
+    -> decltype(__comp(*__first1, *__first2)) {
+  auto __len1 = __last1 - __first1;
+  auto __len2 = __last2 - __first2;
+  if constexpr (__is_trivially_lexicographically_comparable_v<_Tp, _Tp>) {
+    auto __res = std::__constexpr_memcmp(__first1, __first2, __element_count(std::min(__len1, __len2)));
+    if (__res != 0)
+      return __res <=> 0;
+  } else {
+    auto __res = std::mismatch(__first1, __last1, __first2, __last2);
+    if (__res.first != __last1 && __res.second != __last2)
+      return __comp(*__res.first, *__res.second);
+  }
+  return __len1 <=> __len2;
+}
+
 // Unoptimized implementation which compares the iterators against the end in every loop iteration
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_slow_path(
@@ -101,7 +131,11 @@ template <class _InputIterator1, class _InputIterator2, class _Cmp>
   if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
                 __has_random_access_iterator_category<_InputIterator2>::value) {
     return std::__lexicographical_compare_three_way_fast_path(
-        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __wrapped_comp_ref);
+        std::__unwrap_iter(__first1),
+        std::__unwrap_iter(__last1),
+        std::__unwrap_iter(__first2),
+        std::__unwrap_iter(__last2),
+        __wrapped_comp_ref);
   } else {
     // Unoptimized implementation which compares the iterators against the end in every loop iteration
     return std::__lexicographical_compare_three_way_slow_path(
