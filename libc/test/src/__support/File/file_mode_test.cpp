@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// file_mode_test.cpp
-/// This file contains possible test cases for FileMode class.
+/// \file
+/// Test cases for the FileMode class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -228,6 +228,22 @@ TEST(LlvmLibcFileModeTest, CloseOnExecCombinations) {
   EXPECT_TRUE(write_all_modifiers.is_binary_format());
   EXPECT_TRUE(write_all_modifiers.read_allowed());
   EXPECT_TRUE(write_all_modifiers.write_allowed());
+}
+
+TEST(LlvmLibcFileModeTest, UnknownCharactersAreIgnored) {
+  constexpr FileMode read_text("rt");
+  EXPECT_TRUE(read_text.is_valid());
+  EXPECT_TRUE(read_text.is_read());
+  EXPECT_FALSE(read_text.is_binary_format());
+
+  constexpr FileMode write_unknown("wzb");
+  EXPECT_TRUE(write_unknown.is_valid());
+  EXPECT_TRUE(write_unknown.is_write());
+  EXPECT_TRUE(write_unknown.is_binary_format());
+
+  // The first character must still be a main mode.
+  constexpr FileMode text_first("tr");
+  EXPECT_FALSE(text_first.is_valid());
 }
 
 TEST(LlvmLibcFileModeTest, InvalidCombinations) {

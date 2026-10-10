@@ -66,7 +66,9 @@ public:
         file_mode_ |= static_cast<Mode>(Extension::CLOSE_ON_EXEC);
         break;
       default:
-        file_mode_ = 0;
+        // Like glibc and musl, ignore characters we do not know, such as the
+        // 't' in "rt".
+        break;
       }
     }
 
