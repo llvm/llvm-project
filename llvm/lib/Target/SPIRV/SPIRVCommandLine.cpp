@@ -178,7 +178,9 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_poison_freeze},
     {"SPV_KHR_untyped_pointers",
      SPIRV::Extension::Extension::SPV_KHR_untyped_pointers},
-    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector}};
+    {"SPV_EXT_long_vector", SPIRV::Extension::Extension::SPV_EXT_long_vector},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {
