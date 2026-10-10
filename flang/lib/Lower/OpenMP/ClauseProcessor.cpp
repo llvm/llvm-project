@@ -1018,6 +1018,14 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
   return featuresMap;
 }
 
+// Rank includes earlier array parts, but not arrays in scalar subscripts.
+static bool hasArrayParent(const evaluate::DataRef &dataRef) {
+  const auto *component = std::get_if<evaluate::Component>(&dataRef.u);
+  if (const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef.u))
+    component = arrayRef->base().UnwrapComponent();
+  return component && component->base().Rank() > 0;
+}
+
 bool ClauseProcessor::processAffinity(
     mlir::omp::AffinityClauseOps &result) const {
   return findRepeatableClause<omp::clause::Affinity>(
@@ -1045,9 +1053,15 @@ bool ClauseProcessor::processAffinity(
         auto iteratorRanges = lowerIteratorRanges(clause, converter, stmtCtx);
 
         TodoLocators(clauseLocation, objects);
-        for (const omp::Object &object : objects)
-          if (object.ref() && evaluate::HasVectorSubscript(*object.ref()))
+        for (const omp::Object &object : objects) {
+          if (!object.ref())
+            continue;
+          if (evaluate::HasVectorSubscript(*object.ref()))
             TODO(clauseLocation, "vector subscript in AFFINITY clause");
+          if (auto dataRef = evaluate::ExtractDataRef(*object.ref()))
+            if (hasArrayParent(*dataRef))
+              TODO(clauseLocation, "array-valued parent in AFFINITY clause");
+        }
 
         auto genEntry = [&](const omp::Object &object,
                             lower::StatementContext &localStmtCtx) {
