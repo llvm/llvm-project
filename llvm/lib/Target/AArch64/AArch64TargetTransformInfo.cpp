@@ -797,6 +797,52 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    InstructionCost MulCost =
+        getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+    // Wide types like i128 need every partial product of a wide multiply
+    // and the carry chain between them. This is a crude cost approximation.
+    if (RetTy->getScalarSizeInBits() > 64)
+      return 2 * MulCost;
+
+    auto LT = getTypeLegalizationCost(RetTy);
+    MVT MTy = LT.second;
+
+    // Per-register cost to extend the operands.
+    InstructionCost ExtraCost =
+        LT.first *
+        (MTy.getScalarSizeInBits() != RetTy->getScalarSizeInBits() ? 2 : 0);
+
+    // MULH and MUL lower similarly for 64-bit products. For vectors, they
+    // also share the reduced vector multiply bandwidth seen on some cores.
+    if (MTy.getScalarSizeInBits() == 64)
+      return MulCost + ExtraCost;
+
+    // Scalable vectors (and fixed-length vectors, when possible) use SVE.
+    if (MTy.isScalableVector() ||
+        (MTy.isFixedLengthVector() && ST->isSVEorStreamingSVEAvailable()))
+      return LT.first + ExtraCost;
+
+    static const CostTblEntry MulHighCostTbl[] = {
+        {ISD::MULHU, MVT::i32, 2}, // [su]mull + lsr
+
+        {ISD::MULHU, MVT::v8i8, 2},  // [su]mull + shrn
+        {ISD::MULHU, MVT::v4i16, 2}, // "
+        {ISD::MULHU, MVT::v2i32, 2}, // "
+
+        {ISD::MULHU, MVT::v16i8, 3}, // [su]mull + [su]mull2 + uzp2
+        {ISD::MULHU, MVT::v8i16, 3}, // "
+        {ISD::MULHU, MVT::v4i32, 3}, // "
+    };
+
+    // Currently we assume SMULH has the same cost as UMULH.
+    if (const auto *Entry = CostTableLookup(MulHighCostTbl, ISD::MULHU, MTy))
+      return LT.first * Entry->Cost + ExtraCost;
+
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -3984,6 +4030,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                  const Instruction *I) const {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // Codegen is not able to select all <vscale x 1 x Ty> casts yet.
+  if (auto *VTy = dyn_cast<ScalableVectorType>(Dst);
+      VTy && VTy->getElementCount() == ElementCount::getScalable(1)) {
+    if (!is_contained({ISD::TRUNCATE, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND,
+                       ISD::BITCAST, ISD::ADDRSPACECAST},
+                      ISD))
+      return InstructionCost::getInvalid();
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -4053,6 +4109,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // SVE has no elements wider than 64 bits. The generic cost for a bitcast
+  // between unsupported scalable types can otherwise appear to be free.
+  if ((SrcTy.isScalableVector() && SrcTy.getScalarSizeInBits() > 64) ||
+      (DstTy.isScalableVector() && DstTy.getScalarSizeInBits() > 64))
+    return InstructionCost::getInvalid();
 
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
@@ -4985,6 +5047,15 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
+
+  // There's no scalarization overhead if ld1/st1 is cheap and the
+  // insert/extracts can be folded into the load/stores.
+  if (ST->hasFastLD1Single()) {
+    if ((VIC == TTI::VectorInstrContext::Store && Extract) ||
+        (VIC == TTI::VectorInstrContext::Load && Insert))
+      return 0;
+  }
+
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);

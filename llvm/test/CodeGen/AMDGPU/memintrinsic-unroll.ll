@@ -7061,7 +7061,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB6_5
-; CHECK-NEXT:  .LBB6_6: ; %Flow16
+; CHECK-NEXT:  .LBB6_6: ; %Flow14
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8334,7 +8334,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; ALIGNED-NEXT:    v_add_co_u32 v12, vcc_lo, 0xffffff00, v12
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v13, null, -1, v13, vcc_lo
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB6_5
-; ALIGNED-NEXT:  .LBB6_6: ; %Flow16
+; ALIGNED-NEXT:  .LBB6_6: ; %Flow14
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_clause 0x9 ; 40-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_load_dword v57, off, s[0:3], s32
@@ -8430,7 +8430,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB6_6
-; UNROLL3-NEXT:  .LBB6_7: ; %Flow15
+; UNROLL3-NEXT:  .LBB6_7: ; %Flow13
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -8578,7 +8578,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB7_5
-; CHECK-NEXT:  .LBB7_6: ; %Flow15
+; CHECK-NEXT:  .LBB7_6: ; %Flow14
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -9587,7 +9587,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v25 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v26
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB7_5
-; ALIGNED-NEXT:  .LBB7_6: ; %Flow15
+; ALIGNED-NEXT:  .LBB7_6: ; %Flow14
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
@@ -9672,7 +9672,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB7_6
-; UNROLL3-NEXT:  .LBB7_7: ; %Flow14
+; UNROLL3-NEXT:  .LBB7_7: ; %Flow13
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]

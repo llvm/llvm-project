@@ -12,14 +12,9 @@ declare double @llvm.fabs.f64(double) nounwind readnone
 ; FUNC-LABEL: {{^}}fma_f64:
 ; FMA_F64: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 ; FMAC_F64: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %r1, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64(double %in1, double %in2, double %in3) {
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %in2, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_v2f64:
@@ -70,155 +65,98 @@ define amdgpu_kernel void @fma_v4f64(ptr addrspace(1) %out, ptr addrspace(1) %in
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src0:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], |v\[[0-9]+:[0-9]+\]|, v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_abs_src0(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r0)
-   %r3 = tail call double @llvm.fma.f64(double %fabs, double %r1, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_abs_src0(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in1)
+   %r3 = tail call double @llvm.fma.f64(double %fabs, double %in2, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src1:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_abs_src1(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r1)
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %fabs, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_abs_src1(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in2)
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %fabs, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src2:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|}}
-define amdgpu_kernel void @fma_f64_abs_src2(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r2)
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %r1, double %fabs)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_abs_src2(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in3)
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %in2, double %fabs)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src0:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_neg_src0(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fsub = fsub double -0.000000e+00, %r0
-   %r3 = tail call double @llvm.fma.f64(double %fsub, double %r1, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_neg_src0(double %in1, double %in2, double %in3) {
+   %fsub = fsub double -0.000000e+00, %in1
+   %r3 = tail call double @llvm.fma.f64(double %fsub, double %in2, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src1:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_neg_src1(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fsub = fsub double -0.000000e+00, %r1
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %fsub, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_neg_src1(double %in1, double %in2, double %in3) {
+   %fsub = fsub double -0.000000e+00, %in2
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %fsub, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src2:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_neg_src2(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fsub = fsub double -0.000000e+00, %r2
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %r1, double %fsub)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_neg_src2(double %in1, double %in2, double %in3) {
+   %fsub = fsub double -0.000000e+00, %in3
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %in2, double %fsub)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src0:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_abs_neg_src0(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r0)
+define double @fma_f64_abs_neg_src0(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in1)
    %fsub = fsub double -0.000000e+00, %fabs
-   %r3 = tail call double @llvm.fma.f64(double %fsub, double %r1, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+   %r3 = tail call double @llvm.fma.f64(double %fsub, double %in2, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src1:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_abs_neg_src1(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r1)
+define double @fma_f64_abs_neg_src1(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in2)
    %fsub = fsub double -0.000000e+00, %fabs
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %fsub, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %fsub, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src2:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
-define amdgpu_kernel void @fma_f64_abs_neg_src2(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %fabs = call double @llvm.fabs.f64(double %r2)
+define double @fma_f64_abs_neg_src2(double %in1, double %in2, double %in3) {
+   %fabs = call double @llvm.fabs.f64(double %in3)
    %fsub = fsub double -0.000000e+00, %fabs
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %r1, double %fsub)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %in2, double %fsub)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src0:
 ; FMA_F64: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
 ; FMAC_F64: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_lit_src0(ptr addrspace(1) %out,
-                     ptr addrspace(1) %in2, ptr addrspace(1) %in3) {
-   %r1 = load double, ptr addrspace(1) %in2
-   %r2 = load double, ptr addrspace(1) %in3
-   %r3 = tail call double @llvm.fma.f64(double +2.0, double %r1, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_lit_src0(double %in2, double %in3) {
+   %r3 = tail call double @llvm.fma.f64(double +2.0, double %in2, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src1:
 ; FMA_F64: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
 ; FMAC_F64: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fma_f64_lit_src1(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in3) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r2 = load double, ptr addrspace(1) %in3
-   %r3 = tail call double @llvm.fma.f64(double %r0, double +2.0, double %r2)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_lit_src1(double %in1, double %in3) {
+   %r3 = tail call double @llvm.fma.f64(double %in1, double +2.0, double %in3)
+  ret double %r3
 }
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src2:
 ; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0}}
-define amdgpu_kernel void @fma_f64_lit_src2(ptr addrspace(1) %out, ptr addrspace(1) %in1,
-                     ptr addrspace(1) %in2) {
-   %r0 = load double, ptr addrspace(1) %in1
-   %r1 = load double, ptr addrspace(1) %in2
-   %r3 = tail call double @llvm.fma.f64(double %r0, double %r1, double +2.0)
-   store double %r3, ptr addrspace(1) %out
-   ret void
+define double @fma_f64_lit_src2(double %in1, double %in2) {
+   %r3 = tail call double @llvm.fma.f64(double %in1, double %in2, double +2.0)
+  ret double %r3
 }

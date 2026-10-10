@@ -151,6 +151,8 @@ TEST_F(PreAggregatedTestHelper, parseHexField) {
   EXPECT_EQ(*Res, 0ULL);
 }
 
+#ifdef X86_AVAILABLE
+
 namespace llvm {
 namespace bolt {
 
@@ -228,8 +230,6 @@ TEST_F(MMapEventsTestHelper, MatchIgnoreBuildId) {
   EXPECT_TRUE(PIDs.count(100));
   EXPECT_TRUE(PIDs.count(200));
 }
-
-#ifdef X86_AVAILABLE
 
 namespace llvm {
 namespace bolt {

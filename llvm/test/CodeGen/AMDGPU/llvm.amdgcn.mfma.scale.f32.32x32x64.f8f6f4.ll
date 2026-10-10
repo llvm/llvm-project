@@ -8156,13 +8156,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__vgprcd_nonma
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    global_store_dwordx4 v[22:23], v[36:39], off sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    global_store_dwordx4 v[18:19], v[8:11], off sc0 sc1
+; SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    global_store_dwordx4 v[16:17], v[12:15], off sc0 sc1
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    global_store_dwordx4 v[22:23], v[0:3], off sc0 sc1
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    global_store_dwordx4 v[20:21], v[4:7], off sc0 sc1
+; SDAG-NEXT:    global_store_dwordx4 v[16:17], v[4:7], off sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -8256,13 +8252,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__vgprcd_nonma
 ; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-SDAG-NEXT:    global_store_dwordx4 v[22:23], v[36:39], off sc0 sc1
 ; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[8:11], off sc0 sc1
+; AGPR-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off sc0 sc1
 ; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-SDAG-NEXT:    global_store_dwordx4 v[16:17], v[12:15], off sc0 sc1
-; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-SDAG-NEXT:    global_store_dwordx4 v[22:23], v[0:3], off sc0 sc1
-; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; AGPR-SDAG-NEXT:    global_store_dwordx4 v[20:21], v[4:7], off sc0 sc1
+; AGPR-SDAG-NEXT:    global_store_dwordx4 v[16:17], v[4:7], off sc0 sc1
 ; AGPR-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; AGPR-SDAG-NEXT:    s_endpgm
 ;

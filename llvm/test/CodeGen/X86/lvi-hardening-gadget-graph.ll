@@ -70,7 +70,7 @@ for.end:                                          ; preds = %for.cond
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{renamable $eax = MOV32rm %stack.4.i, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.i)\n}"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[color = red, style = "dashed"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
-; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{JCC_1 %bb.6, 13, implicit killed $eflags\n}"];
+; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{JCC_1 %bb.6, 13, implicit $eflags\n}"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{CMP32rm killed renamable $eax, %stack.2.secret_size.addr, 1, $noreg, 0, $noreg, implicit-def $eflags :: (dereferenceable load (s32) from %ir.secret_size.addr)\n}"];
@@ -79,7 +79,7 @@ for.end:                                          ; preds = %for.cond
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{renamable $eax = MOV32rm %stack.4.i, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.i)\n}"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[color = red, style = "dashed"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
-; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{JCC_1 %bb.4, 5, implicit killed $eflags\n}"];
+; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{JCC_1 %bb.4, 5, implicit $eflags\n}"];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} -> Node0x{{[0-9a-f]+}}[label = 1];
 ; CHECK-NEXT: Node0x{{[0-9a-f]+}} [shape=record,label="{renamable $rax = MOV64rm %stack.1.secret.addr, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.secret.addr)\n}"];

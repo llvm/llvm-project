@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ExpandMemCmp.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -40,19 +41,6 @@ STATISTIC(NumMemCmpNotConstant, "Number of memcmp calls without constant size");
 STATISTIC(NumMemCmpGreaterThanMax,
           "Number of memcmp calls with size greater than max size");
 STATISTIC(NumMemCmpInlined, "Number of inlined memcmp calls");
-
-static cl::opt<unsigned> MemCmpNumLoadsPerBlock(
-    "memcmp-num-loads-per-block", cl::Hidden, cl::init(1),
-    cl::desc("The number of loads per basic block for inline expansion of "
-             "memcmp."));
-
-static cl::opt<unsigned> MaxLoadsPerMemcmp(
-    "max-loads-per-memcmp", cl::Hidden,
-    cl::desc("Set maximum number of loads used in expanded memcmp"));
-
-static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
-    "max-loads-per-memcmp-opt-size", cl::Hidden,
-    cl::desc("Set maximum number of loads used in expanded memcmp for -Os/Oz"));
 
 namespace {
 
@@ -977,6 +965,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
                          const DataLayout *DL, ProfileSummaryInfo *PSI,
                          BlockFrequencyInfo *BFI, DomTreeUpdater *DTU,
                          const bool IsBCmp) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -1003,15 +992,14 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
                                             IsUsedForZeroCmp);
   if (!Options) return false;
 
-  if (MemCmpNumLoadsPerBlock.getNumOccurrences())
-    Options.NumLoadsPerBlock = MemCmpNumLoadsPerBlock;
+  if (Opts.memcmp_num_loads_per_block)
+    Options.NumLoadsPerBlock = *Opts.memcmp_num_loads_per_block;
 
-  if (OptForSize &&
-      MaxLoadsPerMemcmpOptSize.getNumOccurrences())
-    Options.MaxNumLoads = MaxLoadsPerMemcmpOptSize;
+  if (OptForSize && Opts.max_loads_per_memcmp_opt_size)
+    Options.MaxNumLoads = *Opts.max_loads_per_memcmp_opt_size;
 
-  if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
-    Options.MaxNumLoads = MaxLoadsPerMemcmp;
+  if (!OptForSize && Opts.max_loads_per_memcmp)
+    Options.MaxNumLoads = *Opts.max_loads_per_memcmp;
 
   // Keep only the load sizes the target can access at the base alignment:
   // either the access is naturally aligned, or the target allows a misaligned
