@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_LIVEVARIABLES_H
 #define LLVM_CODEGEN_LIVEVARIABLES_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -46,6 +47,10 @@ class LiveVariables {
   // register references are presumed dead across basic blocks.
   std::vector<MachineInstr *> PhysRegUse;
 
+  /// Track physical registers referenced in the current block, used as a
+  /// compile-time guard.
+  BitVector TrackedRegs;
+
   // DistanceMap - Keep track the distance of a MI from the start of the
   // current basic block.
   DenseMap<MachineInstr*, unsigned> DistanceMap;
@@ -64,9 +69,8 @@ class LiveVariables {
   void HandleRegMask(const MachineOperand &, unsigned);
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
-  void HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                        SmallVectorImpl<Register> &Defs);
-  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<Register> &Defs);
+  void HandlePhysRegDef(Register Reg, MachineInstr *MI);
+  void UpdatePhysRegDefs(MachineInstr &MI, ArrayRef<Register> Defs);
 
   /// FindLastRefOrPartRef - Return the last reference or partial reference of
   /// the specified register.
@@ -76,8 +80,7 @@ class LiveVariables {
   /// register.
   MachineInstr *FindLastPartialDef(Register Reg);
 
-  void runOnInstr(MachineInstr &MI, SmallVectorImpl<Register> &Defs,
-                  unsigned NumRegs);
+  void runOnInstr(MachineInstr &MI, unsigned NumRegs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);
 
