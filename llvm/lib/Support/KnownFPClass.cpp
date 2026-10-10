@@ -950,29 +950,20 @@ KnownFPClass KnownFPClass::atan(const KnownFPClass &KnownSrc) {
   // atan is bounded to (-pi/2, pi/2), never Inf. atan(+-Inf) = +-pi/2 (finite).
   Known.knownNot(fcInf);
 
-  // For non-zero numeric inputs, atan preserves the sign.
-  // A normal result can become normal or subnormal,
-  // and a subnormal result can become normal or subnormal 
-  // or round to signed zero.
+  // Ruling out Subnormal/Normal from the result requires the
+  // input to never be finite-nonzero and never inf, since
+  // atan(+-inf) = +-pi/2
   if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf))
     Known.knownNot(fcNegSubnormal | fcNegNormal);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
     Known.knownNot(fcPosSubnormal | fcPosNormal);
 
-  // atan(-0.0) = -0.0.
-  // A negative subnormal can also round to -0.0, so -0.0 can only
-  // be ruled out when both negative zero and negative subnormal
-  // are impossible.
-  if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
+  // -0.0 only ever arises from a negative-finite input (atan(-0.0) = -0.0,
+  // and a flushed negative subnormal may become -0.0). atan(-inf) is never
+  // -0.0, so this check does not need to exclude fcNegInf.
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegZero))
     Known.knownNot(fcNegZero);
-
-  // atan(+0.0) = +0.0.
-  // A positive subnormal can also round to +0.0, so +0.0 can only
-  // be ruled out when both positive zero and positive subnormal
-  // are impossible.
-  if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
-    Known.knownNot(fcPosZero);
 
   Known.propagateNonNaN(KnownSrc);
 
