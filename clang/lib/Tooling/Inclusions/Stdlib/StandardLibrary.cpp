@@ -298,6 +298,7 @@ std::optional<Symbol> Recognizer::operator()(const Decl *D) {
   if (!Symbols)
     return std::nullopt;
 
+  std::string NameStorage;
   llvm::StringRef Name = [&]() -> llvm::StringRef {
     for (const auto *SymDC : llvm::reverse(IntermediateDecl)) {
       DeclarationName N = cast<NamedDecl>(SymDC)->getDeclName();
@@ -306,9 +307,16 @@ std::optional<Symbol> Recognizer::operator()(const Decl *D) {
       if (!N.isEmpty())
         return ""; // e.g. operator<: give up
     }
-    if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
+    if (const auto *ND = llvm::dyn_cast<NamedDecl>(D)) {
       if (const auto *II = ND->getIdentifier())
         return II->getName();
+      DeclarationName DN = ND->getDeclName();
+      if (DN.getNameKind() == DeclarationName::CXXLiteralOperatorName) {
+        NameStorage =
+            "operator\"\"" + DN.getCXXLiteralIdentifier()->getName().str();
+        return NameStorage;
+      }
+    }
     return "";
   }();
   if (Name.empty())
