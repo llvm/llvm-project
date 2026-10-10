@@ -4512,24 +4512,7 @@ public:
 
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
-
-  // In OpenMP target regions, we assume that catch is never reached on GPU
-  // targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
 
   sema::FunctionScopeInfo *FSI = getCurFunction();
 
@@ -4623,16 +4606,35 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
-    // Delay error emission for the OpenMP device code.
+  // Skip this check if we're in a dependent context as we don't want
+  // to diagnose try/throw in a discarded branch of an 'if constexpr'.
+  if (CurContext->isDependentContext())
     return;
 
-  if (!getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(Loc) &&
-      !CurContext->isDependentContext())
-    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
+  // Warn that we assume that throw/catch is never reached on OpenMP
+  // GPU targets.
+  if (IsOpenMPGPUTarget) {
+    targetDiag(Loc, diag::warn_exceptions_not_valid_on_target)
+        << T.str() << IsTry;
+    return;
+  }
+
+  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope()) {
+    Diag(Loc, diag::err_omp_simd_region_cannot_use_exceptions) << IsTry;
+    return;
+  }
+
+  // Exceptions aren't allowed in CUDA device code. Skip this check if
+  // exceptions are disabled since we will issue a more general diagnostic
+  // for that below.
+  if (getLangOpts().CUDA && getLangOpts().CXXExceptions) {
+    CUDA().DiagIfDeviceCode(Loc, diag::err_cuda_device_exceptions)
+        << IsTry << CUDA().CurrentTarget();
+    return;
+  }
+
+  if (!getLangOpts().CXXExceptions && !getSourceManager().isInSystemHeader(Loc))
+    targetDiag(Loc, diag::err_exceptions_disabled) << IsTry;
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,
