@@ -378,6 +378,7 @@
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
+#include "llvm/Transforms/Scalar/WarnUninitialized.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"

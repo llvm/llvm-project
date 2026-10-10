@@ -37,6 +37,7 @@ class DiagnosticInfoOptimizationFailure;
 class DiagnosticInfoResourceLimit;
 class DiagnosticInfoSrcMgr;
 class DiagnosticInfoStackSize;
+class DiagnosticInfoUninitialized;
 class DiagnosticInfoUnsupported;
 class DiagnosticInfoUnsupportedTargetIntrinsic;
 class DiagnosticInfoWithLocationBase;
@@ -134,6 +135,7 @@ private:
   /// Specialized handler for misexpect warnings.
   /// Note that misexpect remarks are emitted through ORE
   void MisExpectDiagHandler(const llvm::DiagnosticInfoMisExpect &D);
+  void UninitializedDiagHandler(const llvm::DiagnosticInfoUninitialized &D);
 
   DiagnosticsEngine &Diags;
   const CodeGenOptions &CodeGenOpts;
