@@ -724,16 +724,23 @@ static bool matchesInsertDestination(const AnalysisState &state,
 /// subset cannot be compared, continue through its source to try a larger
 /// bound. Other alias edges must be equivalent: an unknown alias does not
 /// guarantee containment. Unproven leaves and cycles conservatively fail the
-/// proof.
+/// proof. An origin equal to `overlappingSubset` or its container fails
+/// immediately: a larger enclosing bound cannot prove disjointness either.
 static bool
 hasDisjointSubsetOrigins(const AnalysisState &state, OpOperand *opOperand,
-                         function_ref<bool(SubsetOpInterface)> isDisjoint) {
+                         function_ref<bool(SubsetOpInterface)> isDisjoint,
+                         SubsetOpInterface overlappingSubset = {}) {
   SetVector<Value> worklist;
   DenseSet<Value> visited;
   worklist.insert(opOperand->get());
   while (!worklist.empty()) {
     Value value = worklist.pop_back_val();
+    if (overlappingSubset && value == overlappingSubset.getTensorContainer())
+      return false;
     auto extraction = value.getDefiningOp<SubsetExtractionOpInterface>();
+    if (extraction && overlappingSubset &&
+        extraction.getOperation() == overlappingSubset.getOperation())
+      return false;
     if (extraction &&
         isDisjoint(cast<SubsetOpInterface>(extraction.getOperation())))
       continue;
@@ -772,6 +779,10 @@ static bool areDisjointSubsetAccesses(OpOperand *uRead,
 
   auto readsAreDisjoint = [&](SubsetOpInterface writtenSubset) {
     auto isDisjoint = [&](SubsetOpInterface readSubset) {
+      // Conservatively treat identical access bounds as overlapping. In
+      // particular, do not invoke ValueBounds on a dynamic slice with itself.
+      if (readSubset == writtenSubset)
+        return false;
       return readSubset.operatesOnDisjointSubset(
           writtenSubset, [&](Value v1, Value v2) {
             return state.areEquivalentBufferizedValues(v1, v2);
@@ -781,7 +792,7 @@ static bool areDisjointSubsetAccesses(OpOperand *uRead,
       if (uRead == &extraction.getSourceOperand() &&
           isDisjoint(cast<SubsetOpInterface>(readingOp)))
         return true;
-    return hasDisjointSubsetOrigins(state, uRead, isDisjoint);
+    return hasDisjointSubsetOrigins(state, uRead, isDisjoint, writtenSubset);
   };
 
   // First try the exact subset written by an insertion op.
@@ -850,27 +861,6 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
       return true;
   }
 
-  // A read from a subset does not conflict with a write to a disjoint subset
-  // of an equivalent tensor. The actual read or write may be further down an
-  // aliasing use-def chain. Trace such accesses back to subset extractions,
-  // crossing only equivalent alias edges or extraction source edges.
-  //
-  // %lhs = tensor.extract_slice %t[0][4][1]
-  // %rhs = tensor.extract_slice %t[4][4][1]
-  // %written = linalg.fill ins(%cst) outs(%lhs)
-  // return %written, %rhs
-  //
-  // Disjointness describes a single execution of the subset ops. If a read
-  // can observe writes from another iteration, the subset coordinates may
-  // differ across executions. Reuse the dominance checks to conservatively
-  // exclude such repetitive-region and CFG cases. Matching subset rules above
-  // and below do not rely on a disjointness proof and remain applicable.
-  const SetVector<Value> &definitions = state.findDefinitionsCached(uRead);
-  if ((definitions.empty() ||
-       canUseOpDominance(uRead, uConflictingWrite, definitions, state)) &&
-      areDisjointSubsetAccesses(uRead, uConflictingWrite, state))
-    return true;
-
   // If uConflictingWrite is an InsertSliceOp...
   if (auto subsetOp =
           dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp)) {
@@ -897,7 +887,26 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
       return true;
   }
 
-  return false;
+  // A read from a subset does not conflict with a write to a disjoint subset
+  // of an equivalent tensor. The actual read or write may be further down an
+  // aliasing use-def chain. Trace such accesses back to subset extractions,
+  // crossing only equivalent alias edges or extraction source edges. Try the
+  // matching-subset rules above first to avoid unnecessary disjointness proofs.
+  //
+  // %lhs = tensor.extract_slice %t[0][4][1]
+  // %rhs = tensor.extract_slice %t[4][4][1]
+  // %written = linalg.fill ins(%cst) outs(%lhs)
+  // return %written, %rhs
+  //
+  // Disjointness describes a single execution of the subset ops. If a read
+  // can observe writes from another iteration, the subset coordinates may
+  // differ across executions. Reuse the dominance checks to conservatively
+  // exclude such repetitive-region and CFG cases. Matching subset rules above
+  // do not rely on a disjointness proof and remain applicable.
+  const SetVector<Value> &definitions = state.findDefinitionsCached(uRead);
+  return (definitions.empty() ||
+          canUseOpDominance(uRead, uConflictingWrite, definitions, state)) &&
+         areDisjointSubsetAccesses(uRead, uConflictingWrite, state);
 }
 
 /// Given sets of uses and writes, return true if there is a RaW conflict under
