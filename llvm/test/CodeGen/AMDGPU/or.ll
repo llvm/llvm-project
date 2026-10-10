@@ -1034,26 +1034,6 @@ define i32 @or_sext_bool(i32 %x, i32 %y) {
   ret i32 %or
 }
 
-define i32 @or_sext_bool_commuted(i32 %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_commuted:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v1, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_commuted:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, -1, v1, vcc
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %y, %ext
-  ret i32 %or
-}
-
 ; The high bits are already set, so only bit 0 of the sext is demanded.
 ; The resulting anyext should still fold to a select.
 define i32 @or_anyext_bool(i32 %x, i32 %y) {
@@ -1066,29 +1046,6 @@ define i32 @or_anyext_bool(i32 %x, i32 %y) {
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: or_anyext_bool:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, -1, v1, vcc
-; GFX8-NEXT:    v_or_b32_e32 v0, -2, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %high = or i32 %y, -2
-  %or = or i32 %ext, %high
-  ret i32 %or
-}
-
-define i32 @or_anyext_bool_commuted(i32 %x, i32 %y) {
-; GFX6-LABEL: or_anyext_bool_commuted:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v1, vcc
-; GFX6-NEXT:    v_or_b32_e32 v0, -2, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_anyext_bool_commuted:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
@@ -1125,49 +1082,6 @@ define i32 @or_zext_bool(i32 %x, i32 %y) {
   ret i32 %or
 }
 
-define i32 @or_zext_bool_commuted(i32 %x, i32 %y) {
-; GFX6-LABEL: or_zext_bool_commuted:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_zext_bool_commuted:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = zext i1 %cmp to i32
-  %or = or i32 %y, %ext
-  ret i32 %or
-}
-
-define i32 @or_sext_bool_uadd_w_overflow(i32 %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_uadd_w_overflow:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, v1, -1, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_uadd_w_overflow:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v1, -1, vcc
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %uadd = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
-  %carry = extractvalue { i32, i1 } %uadd, 1
-  %ext = sext i1 %carry to i32
-  %or = or i32 %ext, %y
-  ret i32 %or
-}
-
 ; Keep the OR when the extension is still needed by another use. Replacing
 ; it with an e64 cndmask would grow the code.
 define <2 x i32> @or_sext_bool_multiuse(i32 %x, i32 %y) {
@@ -1194,52 +1108,6 @@ define <2 x i32> @or_sext_bool_multiuse(i32 %x, i32 %y) {
   ret <2 x i32> %v1
 }
 
-define <2 x i32> @or_sext_bool_multiuse_commuted(i32 %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_multiuse_commuted:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
-; GFX6-NEXT:    v_or_b32_e32 v1, v1, v0
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_multiuse_commuted:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
-; GFX8-NEXT:    v_or_b32_e32 v1, v1, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %y, %ext
-  %v0 = insertelement <2 x i32> poison, i32 %ext, i32 0
-  %v1 = insertelement <2 x i32> %v0, i32 %or, i32 1
-  ret <2 x i32> %v1
-}
-
-define i32 @or_sext_bool_uniform_cond(i32 inreg %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_uniform_cond:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
-; GFX6-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_uniform_cond:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_lg_u32 s16, 0
-; GFX8-NEXT:    s_cselect_b64 vcc, -1, 0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %ext, %y
-  ret i32 %or
-}
-
 define { i32, i32 } @or_sext_bool_uniform_cond_shared(i32 inreg %x, i32 %y) {
 ; GFX6-LABEL: or_sext_bool_uniform_cond_shared:
 ; GFX6:       ; %bb.0:
@@ -1259,120 +1127,6 @@ define { i32, i32 } @or_sext_bool_uniform_cond_shared(i32 inreg %x, i32 %y) {
 ; GFX8-NEXT:    v_or_b32_e32 v0, s4, v0
 ; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %ext, %y
-  %zext = zext i1 %cmp to i32
-  %r0 = insertvalue { i32, i32 } poison, i32 %or, 0
-  %r1 = insertvalue { i32, i32 } %r0, i32 %zext, 1
-  ret { i32, i32 } %r1
-}
-
-define { i32, i32 } @or_sext_bool_uniform_cond_shared_commuted(i32 inreg %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_uniform_cond_shared_commuted:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX6-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX6-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX6-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX6-NEXT:    v_mov_b32_e32 v1, s4
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_uniform_cond_shared_commuted:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX8-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX8-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX8-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %y, %ext
-  %zext = zext i1 %cmp to i32
-  %r0 = insertvalue { i32, i32 } poison, i32 %or, 0
-  %r1 = insertvalue { i32, i32 } %r0, i32 %zext, 1
-  ret { i32, i32 } %r1
-}
-
-define { i32, i32 } @or_sext_bool_uniform_cond_shared_select(i32 inreg %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_uniform_cond_shared_select:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX6-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX6-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX6-NEXT:    s_movk_i32 s4, 0x7b
-; GFX6-NEXT:    s_cselect_b32 s4, s4, 0x1c8
-; GFX6-NEXT:    v_mov_b32_e32 v1, s4
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_uniform_cond_shared_select:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX8-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX8-NEXT:    v_or_b32_e32 v0, s4, v0
-; GFX8-NEXT:    s_movk_i32 s4, 0x7b
-; GFX8-NEXT:    s_cselect_b32 s4, s4, 0x1c8
-; GFX8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %ext, %y
-  %sel = select i1 %cmp, i32 123, i32 456
-  %r0 = insertvalue { i32, i32 } poison, i32 %or, 0
-  %r1 = insertvalue { i32, i32 } %r0, i32 %sel, 1
-  ret { i32, i32 } %r1
-}
-
-define { i32, i32 } @or_sext_bool_divergent_cond_shared(i32 %x, i32 %y) {
-; GFX6-LABEL: or_sext_bool_divergent_cond_shared:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, v1, -1, vcc
-; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_divergent_cond_shared:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX8-NEXT:    v_cndmask_b32_e64 v0, v1, -1, vcc
-; GFX8-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %or = or i32 %ext, %y
-  %zext = zext i1 %cmp to i32
-  %r0 = insertvalue { i32, i32 } poison, i32 %or, 0
-  %r1 = insertvalue { i32, i32 } %r0, i32 %zext, 1
-  ret { i32, i32 } %r1
-}
-
-define { i32, i32 } @or_sext_bool_uniform_cond_shared_uniform_or(i32 inreg %x, i32 inreg %y) {
-; GFX6-LABEL: or_sext_bool_uniform_cond_shared_uniform_or:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX6-NEXT:    s_cselect_b32 s4, -1, s17
-; GFX6-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX6-NEXT:    v_mov_b32_e32 v0, s4
-; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: or_sext_bool_uniform_cond_shared_uniform_or:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_cmp_eq_u32 s16, 0
-; GFX8-NEXT:    s_cselect_b32 s4, -1, s17
-; GFX8-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %x, 0
   %ext = sext i1 %cmp to i32

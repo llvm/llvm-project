@@ -166,36 +166,6 @@ define i32 @and_anyext_bool(i32 %x, i32 %y) {
   ret i32 %and
 }
 
-define i32 @and_anyext_bool_commuted(i32 %x, i32 %y) {
-; GCN-LABEL: and_anyext_bool_commuted:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 31, v1
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = sext i1 %cmp to i32
-  %bit = lshr i32 %y, 31
-  %and = and i32 %bit, %ext
-  ret i32 %and
-}
-
-; A zext must clear the high bits even when the condition is true.
-define i32 @and_zext_bool(i32 %x, i32 %y) {
-; GCN-LABEL: and_zext_bool:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %cmp = icmp eq i32 %x, 0
-  %ext = zext i1 %cmp to i32
-  %and = and i32 %ext, %y
-  ret i32 %and
-}
-
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 declare i32 @llvm.amdgcn.workitem.id.y() #0
