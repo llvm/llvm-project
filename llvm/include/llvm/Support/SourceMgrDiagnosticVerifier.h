@@ -58,6 +58,9 @@ public:
     SourceMgr::DiagKind Kind;
     /// The line number the expected diagnostic should be on.
     unsigned LineNo;
+    /// The column the expected diagnostic should be at, or 0 if the column
+    /// isn't checked (only the line is).
+    unsigned ColNo = 0;
     /// The location of the expected diagnostic within the input file.
     SMLoc FileLoc;
     /// A flag indicating if the expected diagnostic has been matched yet.
@@ -114,18 +117,21 @@ public:
   }
 
   /// Matches a single actual diagnostic against the expected diagnostics
-  /// recorded for \p Buf / \p LineNo, computing them first via \p
+  /// recorded for \p Buf / \p LineNo / \p ColNo, computing them first via \p
   /// computeExpectedDiags if they haven't been already. If \p HasLoc is
   /// false, the diagnostic has no location and is matched against the
-  /// '@unknown' list instead (\p Buf / \p LineNo are ignored). If \p HasLoc
-  /// is true but \p Buf is null (e.g. the diagnostic's file isn't a known
-  /// buffer), the diagnostic is matched against an empty list, i.e. it can
-  /// never match and is always unexpected. On a near miss, prints a message
-  /// through \p Mgr. \p ReportUnexpected controls whether near misses /
-  /// unexpected diagnostics are reported at all.
+  /// '@unknown' list instead (\p Buf / \p LineNo / \p ColNo are ignored). If
+  /// \p HasLoc is true but \p Buf is null (e.g. the diagnostic's file isn't a
+  /// known buffer), the diagnostic is matched against an empty list, i.e. it
+  /// can never match and is always unexpected. \p ColNo is only checked
+  /// against expected diagnostics that requested a column (via ':<col>');
+  /// others match on line alone regardless of \p ColNo. On a near miss,
+  /// prints a message through \p Mgr. \p ReportUnexpected controls whether
+  /// near misses / unexpected diagnostics are reported at all.
   MatchResult process(raw_ostream &OS, SourceMgr &Mgr, SourceMgr::DiagKind Kind,
                       bool HasLoc, const MemoryBuffer *Buf, unsigned LineNo,
-                      StringRef Message, bool ReportUnexpected = true);
+                      unsigned ColNo, StringRef Message,
+                      bool ReportUnexpected = true);
 
   /// Reports (through \p Mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,

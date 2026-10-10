@@ -726,7 +726,8 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
   using MatchResult = llvm::SourceMgrDiagnosticVerifier::MatchResult;
   MatchResult result = impl->verifier.process(
       os, mgr, getDiagKind(kind), /*hasLoc=*/static_cast<bool>(fileLoc), buf,
-      fileLoc ? fileLoc.getLine() : 0, msg, reportUnexpected);
+      fileLoc ? fileLoc.getLine() : 0, fileLoc ? fileLoc.getColumn() : 0, msg,
+      reportUnexpected);
   if (result == MatchResult::Unexpected)
     emitDiagnostic(loc, "unexpected " + getDiagKindStr(kind) + ": " + msg,
                    DiagnosticSeverity::Error);
