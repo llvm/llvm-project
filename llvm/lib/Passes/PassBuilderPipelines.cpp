@@ -1982,6 +1982,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // is fixed.
   MPM.addPass(WholeProgramDevirtPass(ExportSummary, nullptr));
 
+  if (Opts.attributor_enable & AttributorRunOption::MODULE)
+    MPM.addPass(AttributorPass());
+  else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
+
   MPM.addPass(NoRecurseLTOInferencePass());
   // Stop here at -O1.
   if (Level == OptimizationLevel::O1) {
