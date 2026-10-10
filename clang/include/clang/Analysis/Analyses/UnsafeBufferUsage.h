@@ -151,6 +151,11 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
+  /// Invoked when a field annotated with `[[clang::unsafe_buffer_usage]]` is
+  /// initialized. `Range` covers the initializer as written.
+  virtual void handleUnsafeFieldInit(const FieldDecl *Field,
+                                     SourceRange Range) = 0;
+
 #ifndef NDEBUG
 public:
   bool areDebugNotesRequested() {
