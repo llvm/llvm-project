@@ -795,6 +795,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sync
+  SRCS
+    sync.cpp
+  HDRS
+    ../sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sync
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   sysconf
   SRCS
     sysconf.cpp

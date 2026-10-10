@@ -571,6 +571,12 @@ functions:
       - type: const char *
       - type: int
       - type: const char *
+  - name: sync
+    standards:
+      - posix
+    return_type: void
+    arguments:
+      - type: void
   - name: sysconf
     standards:
       - posix

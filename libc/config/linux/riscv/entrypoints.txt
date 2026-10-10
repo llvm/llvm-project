@@ -527,6 +527,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.sync
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
