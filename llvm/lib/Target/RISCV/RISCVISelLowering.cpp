@@ -44,7 +44,6 @@
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstBuilder.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
@@ -58,71 +57,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-static cl::opt<unsigned> ExtensionMaxWebSize(
-    DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
-    cl::desc("Give the maximum size (in number of nodes) of the web of "
-             "instructions that we will consider for VW expansion"),
-    cl::init(18));
-
-static cl::opt<bool>
-    AllowSplatInVW_W(DEBUG_TYPE "-form-vw-w-with-splat", cl::Hidden,
-                     cl::desc("Allow the formation of VW_W operations (e.g., "
-                              "VWADD_W) with splat constants"),
-                     cl::init(false));
-
-static cl::opt<unsigned> NumRepeatedDivisors(
-    DEBUG_TYPE "-fp-repeated-divisors", cl::Hidden,
-    cl::desc("Set the minimum number of repetitions of a divisor to allow "
-             "transformation to multiplications by the reciprocal"),
-    cl::init(2));
-
-static cl::opt<int>
-    FPImmCost(DEBUG_TYPE "-fpimm-cost", cl::Hidden,
-              cl::desc("Give the maximum number of instructions that we will "
-                       "use for creating a floating-point immediate value"),
-              cl::init(3));
-
-static cl::opt<bool>
-    ReassocShlAddiAdd("riscv-reassoc-shl-addi-add", cl::Hidden,
-                      cl::desc("Swap add and addi in cases where the add may "
-                               "be combined with a shift"),
-                      cl::init(true));
-
-static cl::opt<int> BrMergingBaseCostThresh(
-    "riscv-br-merging-base-cost", cl::init(2),
-    cl::desc(
-        "Sets the cost threshold for when multiple conditionals will be merged "
-        "into one branch versus be split in multiple branches. Merging "
-        "conditionals saves branches at the cost of additional instructions. "
-        "This value sets the instruction cost limit, below which conditionals "
-        "will be merged, and above which conditionals will be split. Set to -1 "
-        "to never merge branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingLikelyBias(
-    "riscv-br-merging-likely-bias", cl::init(0),
-    cl::desc(
-        "Increases 'riscv-br-merging-base-cost' in cases that it is "
-        "likely that all conditionals will be executed. For example for "
-        "merging the conditionals (a == b && c > d), if its known that "
-        "a == b is likely, then it is likely that if the conditionals are "
-        "split both sides will be executed, so it may be desirable to "
-        "increase the instruction cost threshold. Set to -1 to never merge "
-        "likely branches."),
-    cl::Hidden);
-
-static cl::opt<int> BrMergingUnlikelyBias(
-    "riscv-br-merging-unlikely-bias", cl::init(-1),
-    cl::desc(
-        "Decreases 'riscv-br-merging-base-cost' in cases that it is unlikely "
-        "that all conditionals will be executed. For example for merging "
-        "the conditionals (a == b && c > d), if its known that a == b is "
-        "unlikely, then it is unlikely that if the conditionals are split "
-        "both sides will be executed, so it may be desirable to decrease "
-        "the instruction cost threshold. Set to -1 to never merge unlikely "
-        "branches."),
-    cl::Hidden);
 
 // TODO: Support more ops
 static const unsigned ZvfbfaOps[] = {
@@ -2157,11 +2091,11 @@ RISCVTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // spend eagerly computing the RHS condition should scale with how expensive a
   // mispredicted branch is. A branch only costs the full penalty when actually
   // mispredicted, so scale it down by an assumed misprediction rate (~25%).
-  int BaseCost = Subtarget.getMispredictionPenalty() / 4;
-  if (BrMergingBaseCostThresh.getNumOccurrences() > 1)
-    BaseCost = BrMergingBaseCostThresh;
-
-  return {BaseCost, BrMergingLikelyBias, BrMergingUnlikelyBias};
+  const RISCVOptions &CLOpts = Subtarget.getCLOpts();
+  int BaseCost = CLOpts.br_merging_base_cost.value_or(
+      Subtarget.getMispredictionPenalty() / 4);
+  return {BaseCost, CLOpts.br_merging_likely_bias,
+          CLOpts.br_merging_unlikely_bias};
 }
 
 MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
@@ -2912,7 +2846,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   const int Cost =
       FmvCost + RISCVMatInt::getIntMatCost(Imm.bitcastToAPInt(),
                                            Subtarget.getXLen(), Subtarget);
-  return Cost <= FPImmCost;
+  return Cost <= Subtarget.getCLOpts().lower_fpimm_cost;
 }
 
 // TODO: This is very conservative.
@@ -3328,7 +3262,7 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
 
 
 unsigned RISCVTargetLowering::combineRepeatedFPDivisors() const {
-  return NumRepeatedDivisors;
+  return Subtarget.getCLOpts().lower_fp_repeated_divisors;
 }
 
 static SDValue getVLOperand(SDValue Op) {
@@ -18786,7 +18720,7 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   // Perform this optimization only in the zba extension.
-  if (!ReassocShlAddiAdd || !Subtarget.hasShlAdd(3))
+  if (!Subtarget.getCLOpts().reassoc_shl_addi_add || !Subtarget.hasShlAdd(3))
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -21757,13 +21691,15 @@ canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
 
   // FIXME: Is it useful to form a vwadd.wx or vwsub.wx if it removes a scalar
   // sext/zext?
-  // Control this behavior behind an option (AllowSplatInVW_W) for testing
-  // purposes.
-  if (RHS.SupportsZExt && (!RHS.isSplat() || AllowSplatInVW_W))
+  // Control this behavior behind an option (-riscv-lower-form-vw-w-with-splat)
+  // for testing purposes.
+  if (RHS.SupportsZExt &&
+      (!RHS.isSplat() || Subtarget.getCLOpts().lower_form_vw_w_with_splat))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::ZExt), Root,
         LHS, /*LHSExt=*/std::nullopt, RHS, /*RHSExt=*/{ExtKind::ZExt});
-  if (RHS.SupportsSExt && (!RHS.isSplat() || AllowSplatInVW_W))
+  if (RHS.SupportsSExt &&
+      (!RHS.isSplat() || Subtarget.getCLOpts().lower_form_vw_w_with_splat))
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::SExt), Root,
         LHS, /*LHSExt=*/std::nullopt, RHS, /*RHSExt=*/{ExtKind::SExt});
@@ -21972,7 +21908,7 @@ static SDValue combineOp_VLToVWOp_VL(SDNode *N,
 
     // Control the compile time by limiting the number of node we look at in
     // total.
-    if (Inserted.size() > ExtensionMaxWebSize)
+    if (Inserted.size() > Subtarget.getCLOpts().lower_ext_max_web_size)
       return SDValue();
 
     SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
