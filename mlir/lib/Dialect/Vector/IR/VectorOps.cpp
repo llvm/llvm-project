@@ -7682,6 +7682,17 @@ public:
   }
 };
 
+/// Returns the indices of `type`'s non-unit dimensions in increasing order.
+/// Scalable dimensions are included even when their static size is 1, since
+/// their runtime size is not guaranteed to be 1.
+static SmallVector<int64_t> nonUnitAxes(VectorType type) {
+  SmallVector<int64_t> axes;
+  for (auto [i, size] : llvm::enumerate(type.getShape()))
+    if (size != 1 || type.getScalableDims()[i])
+      axes.push_back(i);
+  return axes;
+}
+
 /// Folds transpose(broadcast(x)) to broadcast(x) if the transpose is
 /// 'order preserving', where 'order preserving' means the flattened
 /// inputs and outputs of the transpose have identical (numerical) values.
@@ -7777,13 +7788,118 @@ public:
   }
 };
 
+/// Folds transpose(broadcast(shape_cast(x))) to broadcast(x) when:
+///  - x is broadcastable to the transpose's result type.
+///  - The shape_cast only inserts, removes, or moves fixed size-1 dimensions.
+///    All other dimensions retain their sizes, scalability, and relative order.
+///  - The transpose preserves the relative order of all dimensions inherited
+///    from the shape_cast result, including size-1 dimensions. Dimensions
+///    prepended by the broadcast may be freely permuted around them.
+///  - Each non-unit dimension of x ends up at the position it would occupy in
+///    a direct broadcast of x. Scalable dimensions count as non-unit.
+///
+/// These conditions ensure that the direct broadcast replicates the same
+/// source elements along the same result dimensions as the original chain.
+///
+/// For example, the broadcast prepends a dimension that the transpose moves
+/// to the back, where x already has a size-1 dimension:
+/// ```
+///  %0 = vector.shape_cast %x : vector<1x32x1xf32> to vector<1x32xf32>
+///  %1 = vector.broadcast %0 : vector<1x32xf32> to vector<64x1x32xf32>
+///  %2 = vector.transpose %1, [1, 2, 0] : vector<64x1x32xf32>
+///                                                    to vector<1x32x64xf32>
+/// ```
+/// This rewrites to:
+/// ```
+///  %2 = vector.broadcast %x : vector<1x32x1xf32> to vector<1x32x64xf32>
+/// ```
+///
+/// The order-preservation check is conservative: a size-1 dimension expanded
+/// by the broadcast is still an inherited dimension, not a prepended one.
+/// The following chain therefore does not fold, even though broadcasting x
+/// directly to vector<3x4xf32> would produce the same result:
+/// ```
+///  %0 = vector.shape_cast %x : vector<1x4xf32> to vector<4x1xf32>
+///  %1 = vector.broadcast %0 : vector<4x1xf32> to vector<4x3xf32>
+///  %2 = vector.transpose %1, [1, 0] : vector<4x3xf32> to vector<3x4xf32>
+/// ```
+class FoldTransposeShapeCastBroadcast
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp transpose,
+                                PatternRewriter &rewriter) const override {
+    auto broadcast = transpose.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!broadcast)
+      return rewriter.notifyMatchFailure(transpose, "not a broadcast source");
+    auto shapeCast = broadcast.getSource().getDefiningOp<vector::ShapeCastOp>();
+    if (!shapeCast)
+      return rewriter.notifyMatchFailure(transpose, "not a shape_cast source");
+
+    VectorType srcType = shapeCast.getSourceVectorType(); // x
+    VectorType midType =
+        shapeCast.getResultVectorType(); // y, the broadcast input
+    VectorType outType = transpose.getResultVectorType();
+
+    if (vector::isBroadcastableTo(srcType, outType) !=
+        vector::BroadcastableToResult::Success)
+      return rewriter.notifyMatchFailure(transpose, "not broadcastable");
+
+    // Size-1-dim-only shape_cast: x and y must have identical non-broadcast
+    // dims in the same order. E.g. rejects 5x4 -> 4x5x1, which reorders 5
+    // and 4.
+    SmallVector<int64_t> srcAxes = nonUnitAxes(srcType);
+    SmallVector<int64_t> midAxes = nonUnitAxes(midType);
+    if (srcAxes.size() != midAxes.size())
+      return rewriter.notifyMatchFailure(transpose,
+                                         "reshapes a non-broadcast dim");
+    for (auto [srcAxis, midAxis] : llvm::zip_equal(srcAxes, midAxes))
+      if (srcType.getDimSize(srcAxis) != midType.getDimSize(midAxis) ||
+          srcType.getScalableDims()[srcAxis] !=
+              midType.getScalableDims()[midAxis])
+        return rewriter.notifyMatchFailure(transpose,
+                                           "reshapes a non-broadcast dim");
+
+    // The broadcast prepends `numPrepended` dims to y; its remaining dims are
+    // one-to-one with y's dims, i.e. y's dim `i` is at index `i + numPrepended`
+    // in the broadcast result. `invPerm[i]` is where the transpose moves the
+    // broadcast's dim `i` to.
+    int64_t bcastRank = broadcast.getResultVectorType().getRank();
+    int64_t numPrepended = bcastRank - midType.getRank();
+    SmallVector<int64_t> invPerm =
+        invertPermutationVector(transpose.getPermutation());
+
+    // Only the prepended dims may be permuted: the dims coming from y must keep
+    // their relative order. This rejects reordering non-broadcast dims, and
+    // also stretching a size-1 dim of y and then transposing it.
+    for (int64_t i = numPrepended + 1; i < bcastRank; ++i)
+      if (invPerm[i - 1] > invPerm[i])
+        return rewriter.notifyMatchFailure(
+            transpose, "permutes the broadcast's non-prepended dims");
+
+    // Each non-unit source dimension must land at the same result index as
+    // in a direct broadcast of x. For the dimension of size 32 above:
+    //   broadcast + transpose: 64x1x32 -> 1x32x64 (index 2 -> index 1)
+    //   direct broadcast of x: 1x32x1  -> 1x32x64 (index 1 -> index 1)
+    for (auto [srcAxis, midAxis] : llvm::zip_equal(srcAxes, midAxes))
+      if (invPerm[midAxis + numPrepended] !=
+          srcAxis + outType.getRank() - srcType.getRank())
+        return rewriter.notifyMatchFailure(
+            transpose, "not a plain broadcast of the source");
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outType,
+                                                     shapeCast.getSource());
+    return success();
+  }
+};
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposeShapeCast, TransposeFolder,
               FoldTransposeSplat, FoldTransposeFromElements,
-              FoldTransposeBroadcast>(context);
+              FoldTransposeBroadcast, FoldTransposeShapeCastBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
