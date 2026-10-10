@@ -21,8 +21,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_2_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_2_NEXT]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[SRC_2:%.*]] = tail call noalias noundef dereferenceable_or_null(8) ptr @calloc(i64 1, i64 8)
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[IV_2_NEXT]], i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[IV_2_NEXT]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[IV_2_NEXT_LCSSA]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[IV_2_NEXT_LCSSA]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -474,9 +474,7 @@ define void @reuse_lcssa_phi_for_trip_count(ptr %dst, i64 %start) {
 ; CHECK:       [[PH]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_2_LCSSA:%.*]] = phi i64 [ [[IV_2]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START]], -5
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[IV_LCSSA]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[IV_2_LCSSA]], -5
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
