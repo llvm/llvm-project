@@ -49,17 +49,12 @@ exit:
 define void @check_dt_after_modifying_cfg(ptr %dst, i64 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: define void @check_dt_after_modifying_cfg(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[OFFSET:%.*]] = lshr i64 [[X]], 2
-; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i8 [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL_FROZEN]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE_SINK:.*]]
-; CHECK:       [[SELECT_FALSE_SINK]]:
-; CHECK-NEXT:    [[SMIN:%.*]] = tail call i8 @llvm.smin.i8(i8 [[Y]], i8 0)
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[SEL:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[SMIN]], %[[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET]]
+; CHECK-NEXT:    [[SMIN:%.*]] = tail call i8 @llvm.smin.i8(i8 [[Y]], i8 0)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Z]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[SMIN]]
 ; CHECK-NEXT:    store i8 [[SEL]], ptr [[SUNKADDR]], align 1
 ; CHECK-NEXT:    ret void
 ;
