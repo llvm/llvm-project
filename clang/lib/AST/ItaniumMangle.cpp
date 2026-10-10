@@ -45,7 +45,8 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl,
+             TopLevelStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -516,6 +517,7 @@ private:
                        ArrayRef<StringRef> AdditionalAbiTags = {});
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
+  void mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
   void mangleTypeConstraint(TemplateName Concept,
@@ -576,6 +578,7 @@ private:
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
   void mangleFixedPointLiteral();
   void mangleNullPointer(QualType T);
+  void mangleReflection(ReflectionKind Kind, const void *OpaqueOperand);
 
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
@@ -726,18 +729,20 @@ bool ItaniumMangleContextImpl::isInternalLinkageDecl(const NamedDecl *ND) {
   return false;
 }
 
-// Check if this Decl needs a unique internal linkage name.
+// Check if this Function Decl needs a unique internal linkage name.
 bool ItaniumMangleContextImpl::isUniqueInternalLinkageDecl(
     const NamedDecl *ND) {
   if (!NeedsUniqueInternalLinkageNames || !ND)
     return false;
 
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  if (!FD)
+    return false;
+
   // For C functions without prototypes, return false as their
   // names should not be mangled.
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    if (!FD->getType()->getAs<FunctionProtoType>())
-      return false;
-  }
+  if (!FD->getType()->getAs<FunctionProtoType>())
+    return false;
 
   if (isInternalLinkageDecl(ND))
     return true;
@@ -871,9 +876,10 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
 
-  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState EncodingSaved =
+      FunctionEncodingMangler.FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD);
-  FunctionTypeDepth.pop(Saved);
+  FunctionEncodingMangler.FunctionTypeDepth.pop(EncodingSaved);
 
   // Remember length of the function name in the buffer.
   size_t EncodingPositionStart = FunctionEncodingStream.str().size();
@@ -891,7 +897,7 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
       AdditionalAbiTags.end());
 
   // Output name with implicit tags and function encoding from temporary buffer.
-  Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
   mangleNameWithAbiTags(FD, AdditionalAbiTags);
   FunctionTypeDepth.pop(Saved);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
@@ -1276,6 +1282,66 @@ void CXXNameMangler::mangleNullPointer(QualType T) {
   Out << 'L';
   mangleType(T);
   Out << "0E";
+}
+
+void CXXNameMangler::mangleReflection(ReflectionKind Kind,
+                                      const void *OpaqueOperand) {
+  // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+  // TODO(Reflection): add support for remaining items in the grammar below
+
+  // <reflection> ::= nu                                 # null reflection
+  //              ::= vl <expression>                    # value
+  //              ::= ob <expression>                    # object
+  //              ::= vr <variable name>                 # variable
+  //              ::= sb <sb name>                       # structured binding
+  //              ::= fn <function encoding>             # function
+  //              ::= pa [ <nonnegative number> ] _ <encoding>  # function
+  //                                                              parameter
+  //              ::= en <prefix> <unqualified-name>     # enumerator
+  //              ::= an [ <nonnegative number> ] _      # annotation
+  //              ::= ta <alias prefix>                  # type alias
+  //              ::= ty <type>                          # type
+  //              ::= dm <prefix> <unqualified-name>     # non-static data
+  //                                                       member
+  //              ::= un <prefix> [ <nonnegative number> ] _ # unnamed bit-field
+  //              ::= ct [ <prefix> ] <unqualified-name> # class template
+  //              ::= ft [ <prefix> ] <unqualified-name> # function template
+  //              ::= vt [ <prefix> ] <unqualified-name> # variable template
+  //              ::= at [ <prefix> ] <unqualified-name> # alias template
+  //              ::= co [ <prefix> ] <unqualified-name> # concept
+  //              ::= na [ <prefix> ] <unqualified-name> # namespace alias
+  //              ::= ns [ <prefix> ] <unqualified-name> # namespace
+  //              ::= ng                                 # ^^::
+  //              ::= ba [ <nonnegative number> ] _ <type> # direct base class
+  //                                                         relationship
+  //              ::= ds <type> _ [ <unqualified-name> ] _
+  //                  [ <alignment number> ] _ [ <bit-width number> ] _
+  //                  [ n ]                              # data member
+  //                  description
+
+  Out << "LDm";
+  switch (Kind) {
+  case ReflectionKind::Null:
+    Out << "nu";
+    break;
+  case ReflectionKind::Type: {
+    const auto *TSI = static_cast<const TypeSourceInfo *>(OpaqueOperand);
+    QualType QT = TSI->getType();
+
+    if (isTypeAliasAsReflectionName(QT)) {
+      if (const auto *TDT = QT->getAs<TypedefType>()) {
+        Out << "ta";
+        mangleName(TDT->getDecl()->getCanonicalDecl());
+        break;
+      }
+    }
+
+    Out << "ty";
+    mangleType(QT);
+    break;
+  }
+  }
+  Out << 'E';
 }
 
 void CXXNameMangler::mangleNumber(const llvm::APSInt &Value) {
@@ -1904,6 +1970,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleObjCMethodName(MD);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
+    } else if (const auto *TLSD = dyn_cast<TopLevelStmtDecl>(DC)) {
+      mangleTopLevelStmtEncoding(TLSD);
     } else {
       mangleFunctionEncoding(getParentOfLocalEntity(DC));
     }
@@ -2039,6 +2107,13 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   if (Number > 0)
     Out << Number - 1;
   Out << '_';
+}
+
+void CXXNameMangler::mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D) {
+  // Numbered internal function, like Ub_ for blocks: locals get <local-name>s.
+  SmallString<16> Name("__stmt__");
+  Name += llvm::utostr(D->getOrdinal());
+  Out << 'L' << Name.size() << Name << 'v';
 }
 
 // <template-param-decl>
@@ -2854,7 +2929,8 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         ASString = "CLgeneric";
         break;
       //  <SYCL-addrspace> ::= "SY" [ "global" | "local" | "private" |
-      //                              "device" | "host" ]
+      //                              "generic" | "constant" | "device" | "host"
+      //                              ]
       case LangAS::sycl_global:
         ASString = "SYglobal";
         break;
@@ -2869,6 +2945,12 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         break;
       case LangAS::sycl_private:
         ASString = "SYprivate";
+        break;
+      case LangAS::sycl_generic:
+        ASString = "SYgeneric";
+        break;
+      case LangAS::sycl_constant:
+        ASString = "SYconstant";
         break;
       //  <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
       case LangAS::cuda_device:
@@ -3174,10 +3256,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
+  //                 type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= Dm # std::meta::info (i.e., decltype(^^int))
   //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
   //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
@@ -3446,6 +3530,10 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << TI->getIbm128Mangling();
     break;
   }
+  case BuiltinType::MetaInfo:
+    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+    Out << "Dm";
+    break;
   case BuiltinType::NullPtr:
     Out << "Dn";
     break;
@@ -3550,6 +3638,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(#Name);                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     mangleVendorType(Name);                                                    \
@@ -4968,6 +5061,7 @@ void CXXNameMangler::mangleExpression(const Expr *E, unsigned Arity,
   //                ::= L <pointer type> 0 E         # null pointer template argument
   //                ::= L <type> <real-part float> _ <imag-part float> E    # complex floating point literal (C99); not used by clang
   //                ::= L <mangled-name> E           # external name
+  //                ::= LDm <reflection> E           # C++26 reflection value
   // clang-format on
   QualType ImplicitlyConvertedToType;
 
@@ -5047,8 +5141,8 @@ recurse:
     goto recurse;
 
   case Expr::CXXReflectExprClass: {
-    // TODO(Reflection): implement this after introducing std::meta::info
-    assert(false && "unimplemented");
+    const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
+    mangleReflection(RE->getKind(), RE->getOpaqueValue());
     break;
   }
 
@@ -6599,6 +6693,9 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
 
   case APValue::MemberPointer:
     return !V.getMemberPointerDecl();
+
+  case APValue::Reflection:
+    return !V.getReflectionOpaqueOperand();
   }
 
   llvm_unreachable("Unhandled APValue::ValueKind enum");
@@ -6992,6 +7089,12 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
       break;
     }
 
+    break;
+  }
+
+  case APValue::Reflection: {
+    mangleReflection(V.getReflectionOperandKind(),
+                     V.getReflectionOpaqueOperand());
     break;
   }
 

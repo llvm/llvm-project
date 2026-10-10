@@ -267,6 +267,9 @@ public:
   ///
   const X86RegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
+
   /// Returns the stack pointer adjustment that happens inside the frame
   /// setup..destroy sequence (e.g. by pushes, or inside the callee).
   int64_t getFrameAdjustment(const MachineInstr &I) const {
@@ -368,8 +371,7 @@ public:
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
                       unsigned &NewSrcSubReg, bool &isKill,
-                      MachineOperand &ImplicitOp, LiveVariables *LV,
-                      LiveIntervals *LIS) const;
+                      MachineOperand &ImplicitOp, LiveIntervals *LIS) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target
@@ -381,7 +383,7 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the new instruction.
   ///
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   /// Returns true iff the routine could find two commutable operands in the
@@ -442,21 +444,18 @@ public:
   int getJumpTableIndex(const MachineInstr &MI) const override;
 
   std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const override;
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const override;
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
   bool preservesZeroValueInReg(const MachineInstr *MI,
-                               const Register NullValueReg,
-                               const TargetRegisterInfo *TRI) const override;
+                               const Register NullValueReg) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,
                               bool AllowModify = false) const override;
@@ -582,13 +581,12 @@ public:
 
   bool setExecutionDomainCustom(MachineInstr &MI, unsigned Domain) const;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &MI, unsigned OpNum,
-                               const TargetRegisterInfo *TRI) const override;
-  unsigned getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
-                                const TargetRegisterInfo *TRI) const override;
-  void breakPartialRegDependency(MachineInstr &MI, unsigned OpNum,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &MI,
+                                        unsigned OpNum) const override;
+  unsigned getUndefRegClearance(const MachineInstr &MI,
+                                unsigned OpNum) const override;
+  void breakPartialRegDependency(MachineInstr &MI,
+                                 unsigned OpNum) const override;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       unsigned OpNum,
@@ -713,7 +711,6 @@ private:
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc, MachineInstr &MI,
-                                             LiveVariables *LV,
                                              LiveIntervals *LIS,
                                              bool Is8BitOp) const;
 
