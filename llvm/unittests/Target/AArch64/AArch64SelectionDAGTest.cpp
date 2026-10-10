@@ -204,7 +204,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_EXTRACT_SUBVECTOR) {
   auto Vec = DAG->getConstant(1, Loc, ScalableVecVT);
   auto ZeroIdx = DAG->getConstant(0, Loc, IdxVT);
   auto Op = DAG->getNode(ISD::EXTRACT_SUBVECTOR, Loc, FixedVecVT, Vec, ZeroIdx);
-  auto DemandedElts = APInt(3, 7);
+  auto DemandedElts = APInt(16, 7);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
 }
 
@@ -221,6 +221,45 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
   // VASHR can't create undef/poison - FREEZE(VASHR(C1,C2)) -> VASHR(C1,C2).
   auto Fr2 = DAG->getFreeze(Op2);
   EXPECT_EQ(DAG->ComputeNumSignBits(Fr2), 5u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_MUL) {
+  SDLoc Loc;
+  auto X = DAG->getRegister(0, MVT::i32);
+  auto Y = DAG->getRegister(1, MVT::i32);
+  for (auto [Mask, SignBits] :
+       {std::pair{255u, 16u}, {32767u, 2u}, {1073741824u, 32u}}) {
+    auto C = DAG->getConstant(Mask, Loc, MVT::i32);
+    auto LHS = DAG->getNode(ISD::AND, Loc, MVT::i32, X, C);
+    auto RHS = DAG->getNode(ISD::AND, Loc, MVT::i32, Y, C);
+    auto Product = DAG->getNode(ISD::MUL, Loc, MVT::i32, LHS, RHS);
+    EXPECT_EQ(DAG->ComputeNumSignBits(Product), SignBits) << Mask;
+  }
+  auto Shift = DAG->getConstant(24, Loc, MVT::i32);
+  auto LHS = DAG->getNode(ISD::SRA, Loc, MVT::i32, X, Shift);
+  auto RHS = DAG->getNode(ISD::SRA, Loc, MVT::i32, Y, Shift);
+  auto Product = DAG->getNode(ISD::MUL, Loc, MVT::i32, LHS, RHS);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Product), 17u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_KnownBits) {
+  SDLoc Loc;
+  auto X = DAG->getRegister(0, MVT::i32);
+  auto Y = DAG->getRegister(1, MVT::i32);
+  auto Small = DAG->getNode(ISD::AND, Loc, MVT::i32, X,
+                            DAG->getConstant(255, Loc, MVT::i32));
+  auto Low = DAG->getNode(ISD::AND, Loc, MVT::i32, X,
+                          DAG->getConstant(127, Loc, MVT::i32));
+  auto Bit = DAG->getNode(ISD::AND, Loc, MVT::i32, Y,
+                          DAG->getConstant(128, Loc, MVT::i32));
+  auto Sum = DAG->getNode(ISD::ADD, Loc, MVT::i32, Low, Bit);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Sum), 24u);
+  auto High = DAG->getNode(ISD::AND, Loc, MVT::i32, X,
+                           DAG->getConstant(0xffff0000, Loc, MVT::i32));
+  auto Trunc = DAG->getNode(ISD::TRUNCATE, Loc, MVT::i16, High);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Trunc), 16u);
+  auto Min = DAG->getNode(ISD::UMIN, Loc, MVT::i32, Small, Y);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Min), 24u);
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SUB) {
@@ -362,7 +401,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADDC) {
   // N8    = 00001000
   // Nneg1 = 11111111
   auto OpSeven = DAG->getNode(ISD::ADDC, Loc, IntVT, N8, Nneg1);
-  EXPECT_EQ(DAG->ComputeNumSignBits(OpSeven), 4u);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpSeven), 5u);
 
   // Non negative
   // Nsign3 = 000????0

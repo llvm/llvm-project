@@ -274,3 +274,15 @@ body:             |
     %3:_(<4 x i16>) = G_BUILD_VECTOR %1, %2, %2, %1
     %4:_(<4 x i16>) = G_SUB %0, %3
 ...
+---
+name: knownbits_sign_bit
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: @knownbits_sign_bit
+    ; CHECK: %{{.+}}:_ KnownBits:10000000000000000000000000000000 SignBits:1 IsKnownNeverZero:1
+    %lhs:_(s32) = G_CONSTANT i32 -2147483648
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:10000000000000000000000000000000 SignBits:1 IsKnownNeverZero:1
+    %rhs:_(s32) = G_CONSTANT i32 -2147483648
+    ; CHECK-NEXT: %{{.+}}:_ KnownBits:00000000000000000000000000000000 SignBits:32 IsKnownNeverZero:0
+    %difference:_(s32) = G_SUB %lhs, %rhs
+...

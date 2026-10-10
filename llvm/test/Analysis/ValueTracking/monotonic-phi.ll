@@ -628,13 +628,10 @@ define i1 @test_ashr_zero_start(i8 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[NEXT]] = ashr exact i8 [[A]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 0, [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br label %loop

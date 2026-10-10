@@ -11,7 +11,7 @@ body: |
   ; CHECK-DEFAULT-NEXT: %1:_ KnownBits:00000001 SignBits:7 IsKnownNeverZero:1
   ; CHECK-DEFAULT-NEXT: %2:_ KnownBits:00000110 SignBits:5 IsKnownNeverZero:1
   ; CHECK-DEFAULT-NEXT: %3:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
-  ; CHECK-DEFAULT-NEXT: %4:_ KnownBits:00000000 SignBits:7 IsKnownNeverZero:0
+  ; CHECK-DEFAULT-NEXT: %4:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
   ; CHECK-DEFAULT-NEXT: %5:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
   ;
   ; CHECK-O0-LABEL: name: @test_depth_within_limit
