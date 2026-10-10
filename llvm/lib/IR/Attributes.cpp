@@ -2554,6 +2554,15 @@ AttributeMask AttributeFuncs::getUBImplyingAttributes() {
   return AM;
 }
 
+AttributeMask AttributeFuncs::getPoisonGeneratingAttributes() {
+  AttributeMask AM;
+  AM.addAttribute(Attribute::Range);
+  AM.addAttribute(Attribute::Alignment);
+  AM.addAttribute(Attribute::NonNull);
+  AM.addAttribute(Attribute::NoFPClass);
+  return AM;
+}
+
 /// Callees with dynamic denormal modes are compatible with any caller mode.
 static bool denormModeCompatible(DenormalMode CallerMode,
                                  DenormalMode CalleeMode) {
