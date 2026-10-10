@@ -6204,7 +6204,6 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                               const TargetTransformInfo &TTI,
                                                PredicatedScalarEvolution &PSE) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
@@ -6238,17 +6237,15 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (Op != WideIV)
         continue;
 
-      // Replacing a free truncate would add an induction update instruction to
-      // each iteration of the loop. The canonical induction is exempt, as it
-      // needs an update instruction regardless.
-      auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return match(WideIV, m_CanonicalWidenIV()) ||
-               !TTI.isTruncateFree(
-                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
-                   toVectorTy(VPI.getScalarType(), VF));
+      // It is always profitable to narrow on vector VFs, because the trunc
+      // would be replacing adds. It is also profitable to narrow when trunc is
+      // the sole user of the WideIV, and on canonical wide inductions, as they
+      // would need an update instruction anyway.
+      auto ShouldNarrow = [&](ElementCount VF) {
+        return VF.isVector() || match(WideIV, m_CanonicalWidenIV());
       };
-      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-              IsNarrowingProfitable, Range))
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(ShouldNarrow,
+                                                              Range))
         continue;
 
       // Wrap flags of the original induction do not hold in the truncated
