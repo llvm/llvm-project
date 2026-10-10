@@ -47,6 +47,10 @@ public:
          bool profileIsCS);
   virtual void generateProfile() = 0;
   void write();
+  void
+  setDataAccessProfData(std::unique_ptr<memprof::DataAccessProfData> Data) {
+    DataAccessProfileData = std::move(Data);
+  }
 
   static uint32_t
   getDuplicationFactor(unsigned Discriminator,
@@ -150,6 +154,7 @@ protected:
 
   // Used by SampleProfileWriter
   SampleProfileMap ProfileMap;
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
   const ContextSampleCounterMap *SampleCounters = nullptr;
 };
