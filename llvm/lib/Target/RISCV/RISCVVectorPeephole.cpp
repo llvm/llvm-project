@@ -68,8 +68,6 @@ private:
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
-  static void eraseInstrAndUndefDebugUses(MachineInstr &MI,
-                                          MachineRegisterInfo *MRI);
 };
 
 class RISCVVectorPeepholeLegacy : public MachineFunctionPass {
@@ -328,14 +326,6 @@ Register RISCVVectorPeepholeImpl::lookThruCopies(
   return Reg;
 }
 
-/// Erase an instruction whose result does not survive, undefining its debug
-/// uses before removing the definition.
-void RISCVVectorPeepholeImpl::eraseInstrAndUndefDebugUses(
-    MachineInstr &MI, MachineRegisterInfo *MRI) {
-  MRI->markUsesInDebugValueAsUndef(MI.getOperand(0).getReg());
-  MI.eraseFromParent();
-}
-
 /// If a PseudoVMERGE_VVM's true operand is a masked pseudo and both have the
 /// same mask, and the masked pseudo's passthru is the same as the false
 /// operand, we can convert the PseudoVMERGE_VVM to a PseudoVMV_V_V.
@@ -393,9 +383,6 @@ bool RISCVVectorPeepholeImpl::convertSameMaskVMergeToVMv(MachineInstr &MI) {
         !MRI->hasOneNonDBGUse(MI.getOperand(3).getReg()) ||
         !ensureDominates(&MI.getOperand(2), *True))
       return false;
-    // True may have moved below its debug users and its passthru is about to
-    // change. The old debug location no longer describes the rewritten value.
-    MRI->markUsesInDebugValueAsUndef(True->getOperand(0).getReg());
     True->getOperand(1).setReg(MI.getOperand(2).getReg());
     // If True is masked then its passthru needs to be in VRNoV0.
     MRI->constrainRegClass(True->getOperand(1).getReg(),
@@ -543,11 +530,8 @@ bool RISCVVectorPeepholeImpl::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
     MachineOperand &SrcPolicy =
         Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
 
-    if (RISCV::isVLKnownLE(*MRI, MIVL, SrcVL)) {
-      // Tail elements are about to become undefined.
-      MRI->markUsesInDebugValueAsUndef(Src->getOperand(0).getReg());
+    if (RISCV::isVLKnownLE(*MRI, MIVL, SrcVL))
       SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
-    }
   }
 
   MRI->constrainRegClass(MI.getOperand(2).getReg(),
@@ -617,9 +601,6 @@ bool RISCVVectorPeepholeImpl::foldVMV_V_V(MachineInstr &MI) {
   if (!ensureDominates(&Passthru, *Src))
     return false;
 
-  // Src is about to be changed to compute MI's value. Invalidate its existing
-  // debug users before replaceRegWith redirects MI's debug users to Src.
-  MRI->markUsesInDebugValueAsUndef(Src->getOperand(0).getReg());
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
     [[maybe_unused]] bool Commuted =
@@ -776,10 +757,6 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   if (!ensureDominates({&MaskOp, &FalseOp, &MinVL}, True))
     return false;
 
-  // True is about to be rewritten to compute MI's value under MI's register.
-  // Undef True's own debug users first; after replaceRegWith they would
-  // describe MI's value instead.
-  MRI->markUsesInDebugValueAsUndef(TrueReg);
   if (NeedsCommute) {
     auto [OpIdx1, OpIdx2] = *NeedsCommute;
     [[maybe_unused]] bool Commuted =
@@ -818,7 +795,7 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   // Cleanup all the COPYs on True's value. We have to manually do this because
   // sometimes sinking True causes these COPY to be invalid (use before define).
   for (MachineInstr *TrueCopy : TrueCopies)
-    eraseInstrAndUndefDebugUses(*TrueCopy, MRI);
+    TrueCopy->eraseFromParent();
 
   return true;
 }
@@ -963,10 +940,9 @@ bool RISCVVectorPeepholeImpl::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     }
     MRI->clearKillFlags(MaskReg);
     MI.eraseFromParent();
-    // The comparison is about to be erased.
-    eraseInstrAndUndefDebugUses(Cmp, MRI);
+    Cmp.eraseFromParent();
     for (MachineInstr *CmpCopy : CmpCopies)
-      eraseInstrAndUndefDebugUses(*CmpCopy, MRI);
+      CmpCopy->eraseFromParent();
 
     return true;
   }
