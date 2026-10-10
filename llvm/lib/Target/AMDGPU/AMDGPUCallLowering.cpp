@@ -508,6 +508,63 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   }
 }
 
+void AMDGPUCallLowering::lowerPreloadedParameter(MachineIRBuilder &B,
+                                                 ArgInfo &OrigArg,
+                                                 ArrayRef<MCRegister> Regs,
+                                                 unsigned BitOffset) const {
+  MachineFunction &MF = B.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const Function &F = MF.getFunction();
+  const DataLayout &DL = F.getDataLayout();
+  const SIRegisterInfo &TRI =
+      *MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  SmallVector<Register, 4> Parts;
+  for (MCRegister Reg : Regs) {
+    Register VReg = MRI.getLiveInVirtReg(Reg);
+    if (!VReg) {
+      const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+      VReg = MRI.createGenericVirtualRegister(
+          LLT::integer(TRI.getRegSizeInBits(*RC)));
+      MRI.addLiveIn(Reg, VReg);
+      B.getMBB().addLiveIn(Reg);
+      B.buildCopy(VReg, Register(Reg));
+    }
+    Parts.push_back(VReg);
+  }
+
+  Register Val = Parts.front();
+  if (Parts.size() > 1)
+    Val = B.buildMergeValues(LLT::integer(Parts.size() * 32), Parts).getReg(0);
+
+  SmallVector<ArgInfo, 4> SplitArgs;
+  SmallVector<TypeSize, 4> FieldOffsets;
+  splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
+  for (auto [SplitArg, FieldOffset] : zip(SplitArgs, FieldOffsets)) {
+    assert(SplitArg.Regs.size() == 1);
+    LLT ArgTy = MRI.getType(SplitArg.Regs[0]);
+    auto ExtractValue = [&](Register Dst, unsigned Offset) {
+      LLT Ty = MRI.getType(Dst);
+      Register Extract =
+          B.buildExtract(LLT::integer(Ty.getSizeInBits()), Val, Offset)
+              .getReg(0);
+      B.buildCast(Dst, Extract);
+    };
+    unsigned Offset = BitOffset + FieldOffset * 8;
+    if (ArgTy.isVector()) {
+      LLT EltTy = ArgTy.getElementType();
+      SmallVector<Register, 4> Elts;
+      for (unsigned I = 0; I != ArgTy.getNumElements(); ++I) {
+        Register Elt = MRI.createGenericVirtualRegister(EltTy);
+        ExtractValue(Elt, Offset + I * EltTy.getSizeInBits());
+        Elts.push_back(Elt);
+      }
+      B.buildBuildVector(SplitArg.Regs[0], Elts);
+    } else {
+      ExtractValue(SplitArg.Regs[0], Offset);
+    }
+  }
+}
+
 // Allocate special inputs passed in user SGPRs.
 static void allocateHSAUserSGPRs(CCState &CCInfo,
                                  MachineIRBuilder &B,
@@ -587,13 +644,17 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   const Align KernArgBaseAlign(16);
   const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset();
   uint64_t ExplicitArgOffset = 0;
+  uint64_t PreloadEnd = BaseOffset;
+  MCRegister LastPreloadReg;
+  bool InPreloadSequence = Subtarget->hasKernargPreload();
+  bool HasHiddenArgs = false;
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
-    // TODO: Add support for kernarg preload.
-    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
-      LLVM_DEBUG(dbgs() << "Preloading hidden arguments is not supported\n");
-      return false;
+    if (Arg.hasAttribute("amdgpu-hidden-argument") && !HasHiddenArgs) {
+      ExplicitArgOffset = alignTo(ExplicitArgOffset,
+                                  Subtarget->getAlignmentForImplicitArgPtr());
+      HasHiddenArgs = true;
     }
 
     const bool IsByRef = Arg.hasByRefAttr();
@@ -607,6 +668,42 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
     uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+
+    InPreloadSequence &=
+        Arg.hasInRegAttr() && !IsByRef && !ArgTy->isAggregateType();
+    SmallVector<MCRegister, 4> PreloadRegs;
+    if (InPreloadSequence) {
+      unsigned NumSGPRs = divideCeil(DL.getTypeStoreSize(ArgTy), 4);
+      if (ArgOffset < PreloadEnd) {
+        assert(LastPreloadReg && NumSGPRs == 1);
+        PreloadRegs.push_back(LastPreloadReg);
+      } else {
+        unsigned PaddingSGPRs = divideCeil(ArgOffset - PreloadEnd, 4);
+        if (PaddingSGPRs + NumSGPRs >
+            Info->getUserSGPRInfo().getNumFreeUserSGPRs()) {
+          InPreloadSequence = false;
+        } else {
+          const TargetRegisterClass *RC =
+              NumSGPRs <= 2 ? TRI->getSGPRClassForBitWidth(NumSGPRs * 32)
+                            : &AMDGPU::SGPR_32RegClass;
+          PreloadRegs.append(
+              *Info->addPreloadedKernArg(*TRI, RC, NumSGPRs, i, PaddingSGPRs));
+          for (MCRegister Reg : PreloadRegs)
+            CCInfo.AllocateReg(Reg);
+          LastPreloadReg = PreloadRegs.back();
+          if (PreloadRegs.size() == 1 && NumSGPRs > 1)
+            LastPreloadReg = TRI->getSubReg(
+                LastPreloadReg, TRI->getSubRegFromChannel(NumSGPRs - 1));
+          PreloadEnd = alignDown(ArgOffset, 4) + NumSGPRs * 4;
+        }
+      }
+    }
+
+    if (Arg.hasAttribute("amdgpu-hidden-argument") && PreloadRegs.empty()) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "hidden argument in kernel signature was not preloaded"));
+      return false;
+    }
 
     if (Arg.use_empty()) {
       ++i;
@@ -633,7 +730,10 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
       ArgInfo OrigArg(VRegs[i], Arg, i);
       const unsigned OrigArgIdx = i + AttributeList::FirstArgIndex;
       setArgFlags(OrigArg, OrigArgIdx, DL, F);
-      lowerParameter(B, OrigArg, ArgOffset, Alignment);
+      if (!PreloadRegs.empty())
+        lowerPreloadedParameter(B, OrigArg, PreloadRegs, (ArgOffset % 4) * 8);
+      else
+        lowerParameter(B, OrigArg, ArgOffset, Alignment);
     }
 
     ++i;
