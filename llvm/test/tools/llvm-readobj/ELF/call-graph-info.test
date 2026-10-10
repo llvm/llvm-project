@@ -453,7 +453,8 @@ Symbols:
 ## relocations. An implicit addend is the value stored in the address field,
 ## sign-extended, and the Thumb bit is kept in it. The Thumb bit is not cleared
 ## from the offsets of address fields either, so a field at an odd offset still
-## gets its relocation.
+## gets its relocation. Names are looked up at the address that a relocation
+## resolves to, with the Thumb bit cleared.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t3 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
@@ -465,6 +466,7 @@ Symbols:
 
 # LLVM-ARM-THUMB:      CallGraph [
 # LLVM-ARM-THUMB-NEXT:   Function {
+# LLVM-ARM-THUMB-NEXT:     Names: [foo]
 # LLVM-ARM-THUMB-NEXT:     Relocation {
 # LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
 # LLVM-ARM-THUMB-NEXT:       SymbolName: foo
@@ -482,6 +484,7 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:         }
 # LLVM-ARM-THUMB-NEXT:       }
 # LLVM-ARM-THUMB-NEXT:       {
+# LLVM-ARM-THUMB-NEXT:         Names: [baz]
 # LLVM-ARM-THUMB-NEXT:         Relocation {
 # LLVM-ARM-THUMB-NEXT:           SymbolIndex: 3
 # LLVM-ARM-THUMB-NEXT:           Addend: 33
@@ -495,6 +498,9 @@ Symbols:
 # JSON-ARM-THUMB:       "CallGraph": [
 # JSON-ARM-THUMB-NEXT:    {
 # JSON-ARM-THUMB-NEXT:      "Function": {
+# JSON-ARM-THUMB-NEXT:        "Names": [
+# JSON-ARM-THUMB-NEXT:          "foo"
+# JSON-ARM-THUMB-NEXT:        ],
 # JSON-ARM-THUMB-NEXT:        "Relocation": {
 # JSON-ARM-THUMB-NEXT:          "SymbolIndex": 1,
 # JSON-ARM-THUMB-NEXT:          "SymbolName": "foo",
@@ -512,6 +518,9 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:            }
 # JSON-ARM-THUMB-NEXT:          },
 # JSON-ARM-THUMB-NEXT:          {
+# JSON-ARM-THUMB-NEXT:            "Names": [
+# JSON-ARM-THUMB-NEXT:              "baz"
+# JSON-ARM-THUMB-NEXT:            ],
 # JSON-ARM-THUMB-NEXT:            "Relocation": {
 # JSON-ARM-THUMB-NEXT:              "SymbolIndex": 3,
 # JSON-ARM-THUMB-NEXT:              "Addend": 33
@@ -541,7 +550,7 @@ Sections:
       0x01, 0x00, 0x00, 0x00, ## Offset 0x2: FunctionEntryPC, implicit addend 1 (the Thumb bit)
       0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, ## FunctionTypeID: 0x123456789ABCDEF0
       0x02, ## NumDirectCallees
-      0xFC, 0xFF, 0xFF, 0xFF, ## Offset 0xF: Callee 1, implicit addend -4
+      0xFC, 0xFF, 0xFF, 0xFF, ## Offset 0xF: Callee 1, implicit addend -4 (no function at bar-4)
       0x21, 0x00, 0x00, 0x00  ## Offset 0x13: Callee 2 (baz), implicit addend 0x21
     ]
   - Name:   .rel.llvm.callgraph
@@ -993,14 +1002,16 @@ Symbols:
     Value:    0x17D0
 ...
 
-## Check the fields of the Relocation object. SymbolName is the name exactly as
-## recorded in st_name: it is not demangled, and it is omitted for an unnamed
-## STT_SECTION symbol and for symbol index 0. With --demangle, the demangled
-## name is printed as DemangledName. Addend is omitted when it is 0.
+## Check the fields of the Relocation object, and the Names printed before it.
+## SymbolName is the name exactly as recorded in st_name: it is not demangled,
+## and it is omitted for an unnamed STT_SECTION symbol and for symbol index 0.
+## With --demangle, the demangled name is printed as DemangledName. Addend is
+## omitted when it is 0. Names lists the functions at the address that the
+## relocation resolves to, and is demangled with --demangle.
 # RUN: yaml2obj --docnum=9 %s -o %t9
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
-# RUN:     --check-prefix=LLVM-FIELDS
+# RUN:     --check-prefixes=LLVM-FIELDS,MANGLED
 # RUN: llvm-readobj --elf-output-style=LLVM --demangle --call-graph-info %t9 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
 # RUN:     --check-prefixes=LLVM-FIELDS,DEMANGLE
@@ -1010,6 +1021,8 @@ Symbols:
 
 # LLVM-FIELDS:      CallGraph [
 # LLVM-FIELDS-NEXT:   Function {
+# MANGLED-NEXT:         Names: [_Z3foov]
+# DEMANGLE-NEXT:        Names: [foo()]
 # LLVM-FIELDS-NEXT:     Relocation {
 # LLVM-FIELDS-NEXT:       SymbolIndex: 1
 # LLVM-FIELDS-NEXT:       Addend: 16
@@ -1019,6 +1032,8 @@ Symbols:
 # LLVM-FIELDS-NEXT:     TypeID: 0x0
 # LLVM-FIELDS-NEXT:     DirectCallees [
 # LLVM-FIELDS-NEXT:       {
+# MANGLED-NEXT:             Names: [_Z3foov]
+# DEMANGLE-NEXT:            Names: [foo()]
 # LLVM-FIELDS-NEXT:         Relocation {
 # LLVM-FIELDS-NEXT:           SymbolIndex: 2
 # LLVM-FIELDS-NEXT:           SymbolName: _Z3foov
@@ -1044,7 +1059,10 @@ Symbols:
 # LLVM-FIELDS-NEXT:   }
 # LLVM-FIELDS-NEXT: ]
 
-# JSON-FIELDS:      "Relocation": {
+# JSON-FIELDS:      "Names": [
+# JSON-FIELDS-NEXT:   "_Z3foov"
+# JSON-FIELDS-NEXT: ],
+# JSON-FIELDS-NEXT: "Relocation": {
 # JSON-FIELDS-NEXT:   "SymbolIndex": 1,
 # JSON-FIELDS-NEXT:   "Addend": 16
 # JSON-FIELDS-NEXT: },
