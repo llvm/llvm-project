@@ -1814,6 +1814,12 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
+  case Intrinsic::arm_crc32b:
+  case Intrinsic::arm_crc32h:
+  case Intrinsic::arm_crc32w:
+  case Intrinsic::arm_crc32cb:
+  case Intrinsic::arm_crc32ch:
+  case Intrinsic::arm_crc32cw:
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
@@ -3994,20 +4000,26 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
     case Intrinsic::aarch64_crc32b:
+    case Intrinsic::arm_crc32b:
       return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
     case Intrinsic::aarch64_crc32h:
+    case Intrinsic::arm_crc32h:
       return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
     case Intrinsic::aarch64_crc32w:
+    case Intrinsic::arm_crc32w:
       return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
     case Intrinsic::aarch64_crc32x:
       return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
     case Intrinsic::aarch64_crc32cb:
+    case Intrinsic::arm_crc32cb:
     case Intrinsic::x86_sse42_crc32_32_8:
       return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
     case Intrinsic::aarch64_crc32ch:
+    case Intrinsic::arm_crc32ch:
     case Intrinsic::x86_sse42_crc32_32_16:
       return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
     case Intrinsic::aarch64_crc32cw:
+    case Intrinsic::arm_crc32cw:
     case Intrinsic::x86_sse42_crc32_32_32:
       return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
     case Intrinsic::aarch64_crc32cx:
