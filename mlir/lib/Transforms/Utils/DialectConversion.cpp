@@ -2447,6 +2447,24 @@ private:
   /// Attempt to legalize the given operation by folding it.
   LogicalResult legalizeWithFold(Operation *op);
 
+  /// Apply only the in-place change of a fold of the given operation, and
+  /// legalize the changed operation. Fails if the fold did not change the
+  /// operation in place.
+  LogicalResult legalizeInPlaceFold(Operation *op, bool modifiedInPlace);
+
+  /// Replace the uses of the results that a partial fold of the given
+  /// operation replaces, and legalize the changed operation.
+  LogicalResult legalizePartialFold(Operation *op, bool modifiedInPlace,
+                                    ArrayRef<Value> replacementValues,
+                                    ArrayRef<Operation *> constants,
+                                    const RewriterState &curState);
+
+  /// Legalize the constants that a fold of an `opName` operation created. On
+  /// failure, roll back to `curState`.
+  LogicalResult legalizeFoldConstants(StringRef opName,
+                                      ArrayRef<Operation *> constants,
+                                      const RewriterState &curState);
+
   /// Attempt to legalize the given operation by applying a pattern. Returns
   /// success if the operation was legalized, failure otherwise.
   LogicalResult legalizeWithPattern(Operation *op);
@@ -2667,43 +2685,100 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
 
   // Try to fold the operation.
   StringRef opName = op->getName().getStringRef();
-  SmallVector<Value, 2> replacementValues;
-  SmallVector<Operation *, 2> newOps;
+  bool allowRollback = rewriter.getConfig().allowPatternRollback;
   rewriter.setInsertionPoint(op);
   rewriter.startOpModification(op);
-  if (failed(rewriter.tryFold(op, replacementValues, &newOps))) {
-    LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));
+  NormalizedOpFoldResults foldResults = rewriter.tryFold(op);
+  // With rollback, apply only the in-place change of a partial fold. Its
+  // replacements could remap a result that the value mapping already holds.
+  if (!foldResults.replacesAny() ||
+      (allowRollback && !foldResults.replacesAll()))
+    return legalizeInPlaceFold(op, foldResults.modifiedInPlace());
+
+  // With rollback, a replacement adds no IR uses until the conversion commits,
+  // so a result without uses can still be live. Materialize every result then.
+  FailureOr<SmallVector<Value>> replacementValues =
+      rewriter.materializeFoldResults(op, foldResults,
+                                      /*liveOnly=*/!allowRollback);
+  // If a constant fails to materialize, only the in-place change applies.
+  if (failed(replacementValues))
+    return legalizeInPlaceFold(op, foldResults.modifiedInPlace());
+
+  SmallVector<Operation *> constants =
+      OpBuilder::getMaterializedConstants(foldResults, *replacementValues);
+  if (!foldResults.replacesAll())
+    return legalizePartialFold(op, foldResults.modifiedInPlace(),
+                               *replacementValues, constants, curState);
+
+  // Insert a replacement for 'op' with the folded replacement values.
+  rewriter.finalizeOpModification(op);
+  rewriter.replaceOp(op, *replacementValues);
+  if (failed(legalizeFoldConstants(opName, constants, curState)))
+    return failure();
+
+  LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
+  return success();
+}
+
+LogicalResult OperationLegalizer::legalizeInPlaceFold(Operation *op,
+                                                      bool modifiedInPlace) {
+  if (!modifiedInPlace) {
+    LLVM_DEBUG(logFailure(rewriter.getImpl().logger, "unable to fold"));
     rewriter.cancelOpModification(op);
     return failure();
   }
   rewriter.finalizeOpModification(op);
+  return legalize(op);
+}
 
-  // An empty list of replacement values indicates that the fold was in-place.
-  // As the operation changed, a new legalization needs to be attempted.
-  if (replacementValues.empty())
-    return legalize(op);
-
-  // Insert a replacement for 'op' with the folded replacement values.
-  rewriter.replaceOp(op, replacementValues);
-
-  // Recursively legalize any new constant operations.
-  for (Operation *newOp : newOps) {
-    if (failed(legalize(newOp))) {
-      LLVM_DEBUG(logFailure(rewriterImpl.logger,
-                            "failed to legalize generated constant '{0}'",
-                            newOp->getName()));
-      if (!rewriter.getConfig().allowPatternRollback) {
-        // Rolling back a folder is like rolling back a pattern.
-        llvm::reportFatalInternalError(
-            "op '" + opName +
-            "' folder rollback of IR modifications requested");
-      }
-      rewriterImpl.resetState(curState, std::string(opName) + " folder");
-      return failure();
-    }
+LogicalResult OperationLegalizer::legalizePartialFold(
+    Operation *op, bool modifiedInPlace, ArrayRef<Value> replacementValues,
+    ArrayRef<Operation *> constants, const RewriterState &curState) {
+  // The replacement skips the uses that come before the replacement value in a
+  // graph region, so a result counts as progress only if it loses uses.
+  bool changed = modifiedInPlace;
+  for (auto [result, replacement] :
+       llvm::zip_equal(op->getResults(), replacementValues)) {
+    if (!replacement)
+      continue;
+    unsigned numUsesBefore = result.getNumUses();
+    rewriter.replaceAllUsesWith(result, replacement);
+    if (result.getNumUses() < numUsesBefore)
+      changed = true;
   }
+  if (!changed) {
+    LLVM_DEBUG(logFailure(rewriter.getImpl().logger, "fold made no progress"));
+    for (Operation *constant : constants)
+      rewriter.eraseOp(constant);
+    rewriter.cancelOpModification(op);
+    return failure();
+  }
+  rewriter.finalizeOpModification(op);
+  if (failed(legalizeFoldConstants(op->getName().getStringRef(), constants,
+                                   curState)))
+    return failure();
+  return legalize(op);
+}
 
-  LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
+LogicalResult
+OperationLegalizer::legalizeFoldConstants(StringRef opName,
+                                          ArrayRef<Operation *> constants,
+                                          const RewriterState &curState) {
+  auto &rewriterImpl = rewriter.getImpl();
+  for (Operation *constant : constants) {
+    if (succeeded(legalize(constant)))
+      continue;
+    LLVM_DEBUG(logFailure(rewriterImpl.logger,
+                          "failed to legalize generated constant '{0}'",
+                          constant->getName()));
+    if (!rewriter.getConfig().allowPatternRollback) {
+      // Rolling back a folder is like rolling back a pattern.
+      llvm::reportFatalInternalError(
+          "op '" + opName + "' folder rollback of IR modifications requested");
+    }
+    rewriterImpl.resetState(curState, std::string(opName) + " folder");
+    return failure();
+  }
   return success();
 }
 
