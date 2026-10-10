@@ -24069,10 +24069,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                  R == LaneI->getOperand(0) && L != R;
         if (Opcode == Instruction::Add)
           // sub C, x emitted as x + -C.
-          return isa<Constant>(LaneI->getOperand(0)) &&
-                 !isa<Constant>(LaneI->getOperand(1));
+          return isa<ConstantInt>(LaneI->getOperand(0)) &&
+                 !isa<ConstantInt>(LaneI->getOperand(1));
         // add x, C emitted as -C - x.
-        return isa<Constant>(L) && !isa<Constant>(R);
+        return isa<ConstantInt>(L) && !isa<ConstantInt>(R);
       };
       if (any_of(enumerate(E->Scalars), [&](const auto &P) {
             auto *LaneI = dyn_cast<Instruction>(P.value());

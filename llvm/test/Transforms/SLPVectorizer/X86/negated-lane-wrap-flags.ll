@@ -141,7 +141,7 @@ define void @sub_const_lhs_constexpr_cmp_zero(ptr %p, ptr %in) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 ptrtoint (ptr @g to i32), i32 poison, i32 poison, i32 poison>, i32 [[X1]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> <i32 2147483640, i32 3, i32 5, i32 7>, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> <i32 2147483640, i32 3, i32 5, i32 7>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[P]], align 4
