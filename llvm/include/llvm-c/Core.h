@@ -3238,6 +3238,26 @@ LLVM_C_ABI char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod,
 LLVM_C_ABI LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID);
 
 /**
+ * Determine whether the given function type is a valid signature of the
+ * intrinsic identified by the given ID, and if so, obtain the overload types
+ * of the intrinsic for that signature (none for an intrinsic that is not
+ * overloaded). These can be used with LLVMGetIntrinsicDeclaration or
+ * LLVMIntrinsicCopyOverloadedName2, e.g. to declare an intrinsic from its
+ * base name and the type of a call to it.
+ *
+ * Returns true if the signature is valid. Then the number of overload types is
+ * stored in *OverloadCount and, if OverloadTypes is not NULL, the overload
+ * types are stored in the array it points to, which must be large enough to
+ * hold them. Call with OverloadTypes set to NULL to obtain the count first.
+ *
+ * @see llvm::Intrinsic::isSignatureValid()
+ */
+LLVM_C_ABI LLVMBool LLVMIntrinsicGetOverloadTypes(unsigned ID,
+                                                  LLVMTypeRef FunctionTy,
+                                                  LLVMTypeRef *OverloadTypes,
+                                                  size_t *OverloadCount);
+
+/**
  * Obtain the calling function of a function.
  *
  * The returned value corresponds to the LLVMCallConv enumeration.
