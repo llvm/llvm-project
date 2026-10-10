@@ -11575,30 +11575,33 @@ static void diagnoseSubtractionOnNullPointer(Sema &S, SourceLocation Loc,
 
 /// Diagnose invalid arithmetic on two function pointers.
 static void diagnoseArithmeticOnTwoFunctionPointers(Sema &S, SourceLocation Loc,
-                                                    Expr *LHS, Expr *RHS) {
-  assert(LHS->getType()->isAnyPointerType());
-  assert(RHS->getType()->isAnyPointerType());
+                                                    Expr *LHS, Expr *RHS,
+                                                    QualType LHSType,
+                                                    QualType RHSType) {
+  assert(LHSType->isAnyPointerType());
+  assert(RHSType->isAnyPointerType());
   S.Diag(Loc, S.getLangOpts().CPlusPlus
-                ? diag::err_typecheck_pointer_arith_function_type
-                : diag::ext_gnu_ptr_func_arith)
-    << 1 /* two pointers */ << LHS->getType()->getPointeeType()
-    // We only show the second type if it differs from the first.
-    << (unsigned)!S.Context.hasSameUnqualifiedType(LHS->getType(),
-                                                   RHS->getType())
-    << RHS->getType()->getPointeeType()
-    << LHS->getSourceRange() << RHS->getSourceRange();
+                  ? diag::err_typecheck_pointer_arith_function_type
+                  : diag::ext_gnu_ptr_func_arith)
+      << 1 /* two pointers */
+      << LHSType->getPointeeType()
+      // We only show the second type if it differs from the first.
+      << (unsigned)!S.Context.hasSameUnqualifiedType(LHSType, RHSType)
+      << RHSType->getPointeeType() << LHS->getSourceRange()
+      << RHS->getSourceRange();
 }
 
 /// Diagnose invalid arithmetic on a function pointer.
 static void diagnoseArithmeticOnFunctionPointer(Sema &S, SourceLocation Loc,
-                                                Expr *Pointer) {
-  assert(Pointer->getType()->isAnyPointerType());
+                                                Expr *Pointer,
+                                                QualType PtrType) {
+  assert(PtrType->isAnyPointerType());
   S.Diag(Loc, S.getLangOpts().CPlusPlus
-                ? diag::err_typecheck_pointer_arith_function_type
-                : diag::ext_gnu_ptr_func_arith)
-    << 0 /* one pointer */ << Pointer->getType()->getPointeeType()
-    << 0 /* one pointer, so only one type */
-    << Pointer->getSourceRange();
+                  ? diag::err_typecheck_pointer_arith_function_type
+                  : diag::ext_gnu_ptr_func_arith)
+      << 0 /* one pointer */ << PtrType->getPointeeType()
+      << 0 /* one pointer, so only one type */
+      << Pointer->getSourceRange();
 }
 
 /// Emit error if Operand is incomplete pointer type
@@ -11640,7 +11643,7 @@ static bool checkArithmeticOpPointerOperand(Sema &S, SourceLocation Loc,
     return !S.getLangOpts().CPlusPlus;
   }
   if (PointeeTy->isFunctionType()) {
-    diagnoseArithmeticOnFunctionPointer(S, Loc, Operand);
+    diagnoseArithmeticOnFunctionPointer(S, Loc, Operand, ResType);
     return !S.getLangOpts().CPlusPlus;
   }
 
@@ -11694,10 +11697,13 @@ static bool checkArithmeticBinOpPointerOperands(Sema &S, SourceLocation Loc,
   bool isLHSFuncPtr = isLHSPointer && LHSPointeeTy->isFunctionType();
   bool isRHSFuncPtr = isRHSPointer && RHSPointeeTy->isFunctionType();
   if (isLHSFuncPtr || isRHSFuncPtr) {
-    if (!isRHSFuncPtr) diagnoseArithmeticOnFunctionPointer(S, Loc, LHSExpr);
-    else if (!isLHSFuncPtr) diagnoseArithmeticOnFunctionPointer(S, Loc,
-                                                                RHSExpr);
-    else diagnoseArithmeticOnTwoFunctionPointers(S, Loc, LHSExpr, RHSExpr);
+    if (!isRHSFuncPtr)
+      diagnoseArithmeticOnFunctionPointer(S, Loc, LHSExpr, LHSExpr->getType());
+    else if (!isLHSFuncPtr)
+      diagnoseArithmeticOnFunctionPointer(S, Loc, RHSExpr, RHSExpr->getType());
+    else
+      diagnoseArithmeticOnTwoFunctionPointers(
+          S, Loc, LHSExpr, RHSExpr, LHSExpr->getType(), RHSExpr->getType());
 
     return !S.getLangOpts().CPlusPlus;
   }
