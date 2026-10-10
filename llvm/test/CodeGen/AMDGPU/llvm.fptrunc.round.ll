@@ -1980,8 +1980,8 @@ define amdgpu_gs float @s_fptrunc_round_f64_to_f32_downward(double inreg %a) {
   ret float %res
 }
 
-define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a) {
-; SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_downward(float inreg %a) {
+; SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    v_mul_f32_e64 v0, s0, 0.15915494
 ; SDAG-NEXT:    v_sin_f32_e32 v0, v0
@@ -1990,7 +1990,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX11-SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+; GFX11-SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    v_mul_f32_e64 v0, s0, 0.15915494
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2001,7 +2001,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; GFX11-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX11-GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+; GFX11-GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    v_mul_f32_e64 v0, s0, 0.15915494
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2012,7 +2012,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; GFX11-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ;
-; GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+; GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_mul_f32_e64 v0, s0, 0.15915494
 ; GISEL-NEXT:    v_sin_f32_e32 v0, v0
@@ -2021,7 +2021,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+; GFX12-SDAG-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; GFX12-SDAG:       ; %bb.0:
 ; GFX12-SDAG-NEXT:    s_mul_f32 s0, s0, 0.15915494
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
@@ -2031,7 +2031,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
-; GFX12-GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_towardzero:
+; GFX12-GISEL-LABEL: s_sin_fptrunc_round_f32_to_f16_downward:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_mul_f32 s0, s0, 0.15915494
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
