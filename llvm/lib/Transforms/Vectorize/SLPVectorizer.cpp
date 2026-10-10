@@ -17698,8 +17698,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             CostKind);
         if (StridedLoadTy != VecTy)
           VecLdCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
-                                    getCastContextHint(*E), CostKind);
+              getWidenedStridedCastCost(*TTI, StridedLoadTy, VecTy, *DL,
+                                        getCastContextHint(*E), CostKind);
 
         break;
       }
@@ -17819,8 +17819,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             CostKind);
         if (StridedStoreTy != VecTy)
           VecStCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedStoreTy,
-                                    getCastContextHint(*E), CostKind);
+              getWidenedStridedCastCost(*TTI, VecTy, StridedStoreTy, *DL,
+                                        getCastContextHint(*E), CostKind);
       } else if (E->State == TreeEntry::ExpandVectorize) {
         const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
         FixedVectorType *MaskedStoreTy = SPtrInfo.Ty;
@@ -25172,7 +25172,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                      : PropagateIRFlags(NewLI);
 
       if (StridedLoadTy != VecTy)
-        V = Builder.CreateBitOrPointerCast(V, VecTy);
+        V = createWidenedStridedCast(Builder, V, VecTy, *DL);
       V = FinalShuffle(V, E);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
@@ -25238,7 +25238,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             ConstantInt::getSigned(
                 StrideTy, static_cast<int>(DL->getTypeAllocSize(ScalarTy))));
         if (StridedStoreTy != VecTy)
-          VecValue = Builder.CreateBitOrPointerCast(VecValue, StridedStoreTy);
+          VecValue =
+              createWidenedStridedCast(Builder, VecValue, StridedStoreTy, *DL);
         auto *Inst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::experimental_vp_strided_store,
             {StridedStoreTy, Ptr->getType(), StrideTy},
