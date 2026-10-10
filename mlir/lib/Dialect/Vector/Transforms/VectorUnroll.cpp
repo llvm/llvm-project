@@ -90,10 +90,17 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 static std::optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   LDBG() << "Get unroll shape for op " << op->getName().getStringRef();
-  if (options.filterConstraint && failed(options.filterConstraint(op))) {
+
+  if (!options.filterConstraint) {
     LDBG() << "--no filter constraint -> BAIL";
     return std::nullopt;
   }
+
+  if (failed(options.filterConstraint(op))) {
+    LDBG() << "--filtering failed -> BAIL";
+    return std::nullopt;
+  }
+
   assert(options.nativeShape &&
          "vector unrolling expects the native shape or native"
          "shape call back function to be set");
@@ -284,8 +291,12 @@ struct UnrollContractionPattern
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     auto targetShape = getTargetShape(options, contractOp);
-    if (!targetShape)
+    if (!targetShape) {
+      // targetShape = SmallVector<int64_t>({1, 8, 4});
       return failure();
+    }
+    contractOp.getResultType();
+    // return failure();
     auto dstVecType = cast<VectorType>(contractOp.getResultType());
     SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
 
@@ -1726,6 +1737,13 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollBitCastPattern, UnrollInterleavePattern,
                UnrollDeinterleavePattern>(patterns.getContext(), options,
                                           benefit);
+}
+
+void mlir::vector::populateVectorContractUnrollPatterns(
+    RewritePatternSet &patterns, const UnrollVectorOptions &options,
+    PatternBenefit benefit) {
+  patterns.add<UnrollContractionPattern>(patterns.getContext(), options,
+                                         benefit);
 }
 
 void mlir::vector::populateVectorToElementsUnrollPatterns(

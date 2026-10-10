@@ -14,6 +14,7 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/Transform/IR/TransformTypes.td"
 
 def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
     "apply_conversion_patterns.vector.vector_to_llvm",
@@ -322,6 +323,27 @@ def ApplyUnrollFromElementsPatternsOp : Op<Transform_Dialect,
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def ApplyUnrollContractPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_contract",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply unroll patterns for `vector.contract` using the given shapes as the
+    target shape. If no `vector.contract` Op is present in the target block, no
+    unrolling takes place.
+
+    This op assumes that the target `vector.contract` Op models a matrix
+    multiplication. Generalising this Op to other cases is left as a TODO.
+  }];
+
+  let arguments = (ins I64Attr:$m,
+                       I64Attr:$n,
+                       I64Attr:$k);
+
+  let assemblyFormat = [{
+    `[` $m `,` $n `,` $k `]` attr-dict
+  }];
 }
 
 def ApplyUnrollToElementsPatternsOp : Op<Transform_Dialect,
