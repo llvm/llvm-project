@@ -97,11 +97,11 @@ defm : ValueField<"earlycse-mssa-optimization-cap", "unsigned", "500",
   "Enable imprecision in EarlyCSE in pathological cases, in exchange for faster compile. Caps the MemorySSA clobbering calls">;
 
 // ExpandMemCmp.cpp
-defm : ValueField<"max-loads-per-memcmp", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"max-loads-per-memcmp", "unsigned",
   "Set maximum number of loads used in expanded memcmp">;
-defm : ValueField<"max-loads-per-memcmp-opt-size", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"max-loads-per-memcmp-opt-size", "unsigned",
   "Set maximum number of loads used in expanded memcmp for -Os/Oz">;
-defm : ValueField<"memcmp-num-loads-per-block", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"memcmp-num-loads-per-block", "unsigned",
   "The number of loads per basic block for inline expansion of memcmp">;
 
 // Float2Int.cpp
@@ -189,7 +189,7 @@ defm : ValueField<"jump-threading-implication-search-threshold", "unsigned", "3"
   "The number of predecessors to search for a stronger condition to use to thread over a weaker condition">;
 defm : ValueField<"jump-threading-phi-threshold", "unsigned", "76",
   "Max PHIs in BB to duplicate for jump threading">;
-defm : ValueField<"jump-threading-threshold", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"jump-threading-threshold", "unsigned",
   "Max block size to duplicate for jump threading">;
 
 // LICM.cpp
@@ -223,11 +223,11 @@ defm : ValueField<"licm-mssa-optimization-cap", "unsigned", "100",
 // the allocatable register set).
 defm : OptionalBoolField<"loop-prefetch-writes",
   "Prefetch write addresses">;
-defm : ValueField<"max-prefetch-iters-ahead", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"max-prefetch-iters-ahead", "unsigned",
   "Max number of iterations to prefetch ahead">;
-defm : ValueField<"min-prefetch-stride", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"min-prefetch-stride", "unsigned",
   "Min stride to add prefetches">;
-defm : ValueField<"prefetch-distance", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"prefetch-distance", "unsigned",
   "Number of instructions to prefetch ahead">;
 
 // LoopDeletion.cpp
@@ -279,6 +279,10 @@ defm : ValueField<"loop-interchange-max-mem-instr-ratio", "unsigned", "4",
 // Minimum loop depth supported.
 defm : ValueField<"loop-interchange-min-loop-nest-depth", "unsigned", "2",
   "Minimum depth of loop nest considered for the transform">;
+defm : EnumListField<"loop-interchange-profitabilities", "LoopInterchangeRule",
+  "cache,instorder,vectorize,ignore",
+  ["LoopInterchangeRule::PerLoopCacheAnalysis", "LoopInterchangeRule::PerInstrOrderCost", "LoopInterchangeRule::ForVectorization", "LoopInterchangeRule::Ignore"],
+  "List of profitability heuristics to be used. They are applied in the given order">;
 // Support for the inner-loop reduction pattern.
 defm : BoolField<"loop-interchange-reduction-to-mem", "false",
   "Support for the inner-loop reduction pattern">;
@@ -350,7 +354,7 @@ defm : BoolField<"lsr-filter-same-scaled-reg", "true",
 // The flag adds instruction count to solutions cost comparison.
 defm : OptionalBoolField<"lsr-insns-cost",
   "Add instruction count to a LSR cost model">;
-defm : EnumField<"lsr-preferred-addressing-mode", "std::optional<TargetTransformInfo::AddressingModeKind>", "std::nullopt",
+defm : OptionalEnumField<"lsr-preferred-addressing-mode", "TargetTransformInfo::AddressingModeKind",
   "none,preindexed,postindexed,all",
   ["TargetTransformInfo::AMK_None", "TargetTransformInfo::AMK_PreIndexed", "TargetTransformInfo::AMK_PostIndexed", "TargetTransformInfo::AMK_All"],
   "A flag that overrides the target's preferred addressing mode">;
@@ -362,9 +366,9 @@ defm : OptionalBoolField<"allow-unroll-and-jam",
   "Allows loops to be unroll-and-jammed">;
 defm : ValueField<"pragma-unroll-and-jam-threshold", "unsigned", "1024",
   "Unrolled size limit for loops with an unroll_and_jam(full) or unroll_count pragma">;
-defm : ValueField<"unroll-and-jam-count", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-and-jam-count", "unsigned",
   "Use this unroll count for all loops including those with unroll_and_jam_count pragma values, for testing purposes">;
-defm : ValueField<"unroll-and-jam-threshold", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-and-jam-threshold", "unsigned",
   "Threshold to use for inner loop when doing unroll and jam">;
 
 // LoopUnrollPass.cpp
@@ -380,21 +384,21 @@ defm : OptionalBoolField<"unroll-allow-partial",
   "Allows loops to be partially unrolled until -unroll-threshold loop size is reached">;
 defm : OptionalBoolField<"unroll-allow-remainder",
   "Allow generation of a loop remainder (extra iterations) when unrolling a loop">;
-defm : ValueField<"unroll-count", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-count", "unsigned",
   "Use this unroll count for all loops including those with unroll_count pragma values, for testing purposes">;
-defm : ValueField<"unroll-full-max-count", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-full-max-count", "unsigned",
   "Set the max unroll count for full unrolling, for testing purposes">;
-defm : ValueField<"unroll-max-count", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-max-count", "unsigned",
   "Set the max unroll count for partial and runtime unrolling, fortesting purposes">;
-defm : ValueField<"unroll-max-iteration-count-to-analyze", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-max-iteration-count-to-analyze", "unsigned",
   "Don't allow loop unrolling to simulate more than this number of iterations when checking full unroll profitability">;
-defm : ValueField<"unroll-max-percent-threshold-boost", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-max-percent-threshold-boost", "unsigned",
   "The maximum 'boost' (represented as a percentage >= 100) applied to the threshold when aggressively unrolling a loop due to the dynamic cost savings. If completely unrolling a loop will reduce the total runtime from X to Y, we boost the loop unroll threshold to DefaultThreshold*std::min(MaxPercentThresholdBoost, X/Y). This limit avoids excessive code bloat">;
-defm : ValueField<"unroll-max-upperbound", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-max-upperbound", "unsigned",
   "The max of trip count upper bound that is considered in unrolling">;
 defm : ValueField<"unroll-optsize-threshold", "unsigned", "0",
   "The cost threshold for loop unrolling when optimizing for size">;
-defm : ValueField<"unroll-partial-threshold", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-partial-threshold", "unsigned",
   "The cost threshold for partial loop unrolling">;
 defm : OptionalBoolField<"unroll-remainder",
   "Allow the loop remainder to be unrolled">;
@@ -404,7 +408,7 @@ defm : BoolField<"unroll-revisit-child-loops", "false",
   "Enqueue and re-visit child loops in the loop PM after unrolling. This shouldn't typically be needed as child loops (or their clones) were already visited">;
 defm : OptionalBoolField<"unroll-runtime",
   "Unroll loops with run-time trip counts">;
-defm : ValueField<"unroll-threshold", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"unroll-threshold", "unsigned",
   "The cost threshold for loop unrolling">;
 defm : ValueField<"unroll-threshold-aggressive", "unsigned", "300",
   "Threshold (max size of unrolled loop) to use in aggressive (O3) optimizations">;
@@ -528,7 +532,7 @@ defm : ValueField<"unswitch-threshold", "int", "50",
   "The cost threshold for unswitching a loop">;
 
 // SimplifyCFGPass.cpp
-defm : ValueField<"bonus-inst-threshold", "std::optional<unsigned>", "std::nullopt",
+defm : OptionalValueField<"bonus-inst-threshold", "unsigned",
   "Control the number of bonus instructions">;
 defm : OptionalBoolField<"forward-switch-cond",
   "Forward switch condition to phi ops">;
