@@ -53,7 +53,7 @@ public:
   }
 
   std::string VisitUnaryOperator(const UnaryOperator *UO) {
-    return "UnaryOperator(" + UO->getOpcodeStr(UO->getOpcode()).str() + ")";
+    return "UnaryOperator(" + UO->getOpcodeStr().str() + ")";
   }
 
   std::string VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
