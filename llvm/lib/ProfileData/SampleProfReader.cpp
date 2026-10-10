@@ -1111,9 +1111,32 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   if (!M)
     return false;
   FuncsToUse.clear();
+  ModuleNameTableEntries.reset();
   for (auto &F : *M)
     FuncsToUse.insert(FunctionSamples::getCanonicalFnName(F));
   return true;
+}
+
+bool SampleProfileReaderExtBinaryBase::contains(StringRef Key) const {
+  constexpr size_t MinProfileToModuleSizeRatio = 16;
+
+  assert(NameTable && "NameTable should be populated before querying");
+  // Use the existing module filter for module-scoped queries when it is
+  // substantially smaller than the profile NameTable.
+  if (useMD5() || !FuncsToUse.contains(Key) ||
+      FuncsToUse.size() > NameTable->size() / MinProfileToModuleSizeRatio)
+    return SampleProfileReaderBinary::contains(Key);
+
+  if (!ModuleNameTableEntries) {
+    ModuleNameTableEntries.emplace();
+    ModuleNameTableEntries->reserve(FuncsToUse.size());
+    for (FunctionId FID : *NameTable) {
+      StringRef Name = FID.stringRef();
+      if (FuncsToUse.contains(Name))
+        ModuleNameTableEntries->insert(Name);
+    }
+  }
+  return ModuleNameTableEntries->contains(Key);
 }
 
 std::error_code
