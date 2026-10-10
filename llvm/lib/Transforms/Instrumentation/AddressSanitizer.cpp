@@ -449,9 +449,6 @@ static cl::list<unsigned> ClAddrSpaces(
 
 // Debug flags.
 
-static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
-                            cl::init(0));
-
 static cl::opt<int> ClDebugStack("asan-debug-stack", cl::desc("debug stack"),
                                  cl::Hidden, cl::init(0));
 
