@@ -217,7 +217,8 @@ def BlockAddrDiffAttr : DialectAttribute<(attr
 def GlobalViewAttr : DialectAttribute<(attr
   Type:$type,
   Attr<"mlir::FlatSymbolRefAttr">:$symbol,
-  OptionalAttribute<"mlir::ArrayAttr">:$indices
+  OptionalAttribute<"mlir::ArrayAttr">:$indices,
+  Bool:$address_point
 )>;
 
 def TypeInfoAttr : DialectAttribute<(attr

@@ -28,6 +28,7 @@
 module {
   cir.global external @plain = #cir.global_view<@some_sym> : !cir.ptr<!rec_Marker>
   cir.global external @indexed = #cir.global_view<@some_sym, [3 : i32, 0 : i32]> : !cir.ptr<!rec_Marker>
+  cir.global external @addr_point = #cir.global_view<@some_sym, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>
   cir.global external @g7 = #cir.global_view<@s7> : !cir.ptr<!rec_Marker>
   cir.global external @info = #cir.typeinfo<{#cir.global_view<@_ZTS6Widget> : !cir.ptr<!u8i>, #cir.int<2> : !s32i}> : !rec_TI
   cir.global external @vec = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<2 x !s32i>
@@ -56,6 +57,7 @@ module {
 
 // CHECK: cir.global external @plain = #cir.global_view<@some_sym> : !cir.ptr<!rec_Marker>
 // CHECK: cir.global external @indexed = #cir.global_view<@some_sym, [3 : i32, 0 : i32]> : !cir.ptr<!rec_Marker>
+// CHECK: cir.global external @addr_point = #cir.global_view<@some_sym, [0 : i32, 3 : i32], address_point true> : !cir.ptr<!u8i>
 // CHECK: cir.global external @g7 = #cir.global_view<@s7> : !cir.ptr<!rec_Marker>
 // CHECK: cir.global external @info = #cir.typeinfo<{#cir.global_view<@_ZTS6Widget> : !cir.ptr<!u8i>, #cir.int<2> : !s32i}> : !rec_TI
 // CHECK: cir.global external @vec = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<2 x !s32i>
