@@ -65,11 +65,16 @@ define x86_vectorcallcc {double, double, double, double} @test_fp_3() {
 ; tablegen any other way.
 define x86_vectorcallcc {double, double, double, double, double} @test_fp_4() {
 ; CHECK-LABEL: {{^}}test_fp_4@@0:
-; CHECK: fldz
-; CHECK: xorps %xmm0
-; CHECK: xorps %xmm1
-; CHECK: xorps %xmm2
-; CHECK: xorps %xmm3
+; X86: fldz
+; X86: xorps %xmm0
+; X86: xorps %xmm1
+; X86: xorps %xmm2
+; X86: xorps %xmm3
+; X64: movq    $0, 32(%rcx)
+; X64: movq    $0, 24(%rcx)
+; X64: movq    $0, 16(%rcx)
+; X64: movq    $0, 8(%rcx)
+; X64: movq    $0, (%rcx)
   ret {double, double, double, double, double}
         { double 0.0, double 0.0, double 0.0, double 0.0, double 0.0 }
 }
