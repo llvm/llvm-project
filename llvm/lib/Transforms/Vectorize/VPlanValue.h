@@ -198,6 +198,13 @@ public:
   /// concrete subclass.
   Type *getScalarType() const;
 
+  /// Returns the type of this VPValue when widened to \p VF.
+  Type *getWideType(ElementCount VF) const;
+
+  /// Returns the element count of this value's explicit vector result type, or
+  /// \p VF if it has none.
+  ElementCount getWideningVF(ElementCount VF) const;
+
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
@@ -329,7 +336,7 @@ class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
 
-  /// The scalar type of the value produced by this recipe.
+  /// The scalar or explicit vector type of the value produced by this recipe.
   Type *Ty = nullptr;
 
 #if !defined(NDEBUG)
@@ -347,7 +354,10 @@ public:
   LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
 
   /// Returns the scalar type of this VPRecipeValue.
-  Type *getScalarType() const { return Ty; }
+  Type *getScalarType() const { return Ty->getScalarType(); }
+
+  /// Returns the result type, which may be an explicit vector type.
+  Type *getResultType() const { return Ty; }
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVMultiDefValueSC ||
