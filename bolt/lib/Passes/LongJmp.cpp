@@ -542,6 +542,13 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   if (!(PCRelTgtAddress & SingleInstrMask))
     return Error::success();
 
+  // Do not relax non-call branches beyond 128MiB.
+  if (PCRelTgtAddress >= 0x8000000) {
+    if (!BC.MIB->isCall(*StubBB.begin()) && Bits != RangeShortJmp)
+      return createFatalBOLTError(
+          "BOLT-ERROR: Unable to relax non-call branch beyond 128MiB\n");
+  }
+
   // Fits short jmp
   if (!(PCRelTgtAddress & ShortJmpMask)) {
     if (Bits >= RangeShortJmp)
