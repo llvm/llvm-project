@@ -2,9 +2,9 @@
 
 # Test that baremetal toolchain discovers multilib.yaml in per-triple dirs
 # when no sysroot-level multilib.yaml exists. This tests the fallthrough
-# from FallbackDir to getStdlibPath() in findMultilibsYAML.
+# from getStdlibPath() to FallbackDir in findMultilibsYAML.
 
-## Test 1: per-triple autodiscovery (no sysroot-level YAML)
+## Test 1: per-triple autodiscovery (no sysroot-level yaml)
 #
 # getStdlibPath() = D.Dir/../lib/<triple> = %t/a/sysroot/usr/lib/riscv64-unknown-none-elf
 # FallbackDir     = D.SysRoot             = %t/a/sysroot (no multilib.yaml here)
@@ -26,9 +26,9 @@
 # RUN:   | FileCheck --check-prefix=CHECK-DIR %s
 # CHECK-DIR: rv64gc/lib
 
-## Test 2: sysroot-level YAML still works via FallbackDir
+## Test 2: sysroot-level yaml still works via FallbackDir
 #
-# Place YAML at sysroot root only, no per-triple YAML.
+# Place yaml at sysroot root only, no per-triple yaml.
 #
 # RUN: mkdir -p %t/b/sysroot/usr/bin
 # RUN: cp %s %t/b/sysroot/multilib.yaml
@@ -39,10 +39,26 @@
 # RUN:   | FileCheck --check-prefix=CHECK-SYSROOT %s
 # CHECK-SYSROOT: rv64gc/lib;@-target=riscv64-unknown-none-elf@mabi=lp64d@march=rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0
 
-## Test 3: per-triple takes priority over sysroot-level
+## Test 3: fallthrough when getStdlibPath() dir exists but has no yaml
 #
-# Both exist: per-triple has real YAML, sysroot root has empty YAML.
-# getStdlibPath() is tried before FallbackDir, so per-triple wins.
+# getStdlibPath() dir exists but contains no multilib.yaml. 
+# Use sysroot-level yaml must still be found via FallbackDir.
+#
+# RUN: mkdir -p %t/d/sysroot/usr/bin
+# RUN: mkdir -p %t/d/sysroot/usr/lib/riscv64-unknown-none-elf
+# RUN: cp %s %t/d/sysroot/multilib.yaml
+# RUN: mkdir -p %t/d/sysroot/rv64gc/lib
+# RUN: %clang -no-canonical-prefixes -print-multi-lib 2>&1 \
+# RUN:     --target=riscv64-unknown-none-elf -march=rv64gc \
+# RUN:     --sysroot=%t/d/sysroot \
+# RUN:     -ccc-install-dir %t/d/sysroot/usr/bin \
+# RUN:   | FileCheck --check-prefix=CHECK-FALLTHROUGH %s
+# CHECK-FALLTHROUGH: rv64gc/lib;@-target=riscv64-unknown-none-elf@mabi=lp64d@march=rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0
+
+## Test 4: per-triple takes priority over sysroot-level
+#
+# Both exist: per-triple has real yaml, sysroot has empty yaml.
+# getStdlibPath() is tried before FallbackDir, so per-triple should be selected.
 #
 # RUN: mkdir -p %t/c/sysroot/usr/bin
 # RUN: mkdir -p %t/c/sysroot/usr/lib/riscv64-unknown-none-elf/rv64gc/lib

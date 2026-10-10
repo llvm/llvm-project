@@ -52,6 +52,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -201,17 +202,24 @@ ToolChain::findMultilibsYAML(const llvm::opt::ArgList &Args, const Driver &D,
     return std::string(MultilibPath);
   }
 
-  SmallString<128> MultilibPath;
-  if (std::optional<std::string> StdlibDir = getStdlibPath())
-    MultilibPath = *StdlibDir;
-  else if (!FallbackDir.empty())
-    MultilibPath = FallbackDir;
-  else
-    return std::nullopt;
-  llvm::sys::path::append(MultilibPath, "multilib.yaml");
-  if (!D.getVFS().exists(MultilibPath))
-    return std::nullopt;
-  return std::string(MultilibPath);
+  const auto getMultilibYaml =
+      [&](StringRef Dir) -> std::optional<std::string> {
+    SmallString<128> MultilibPath(Dir);
+    llvm::sys::path::append(MultilibPath, "multilib.yaml");
+    if (!D.getVFS().exists(MultilibPath))
+      return std::nullopt;
+    return std::string(MultilibPath);
+  };
+
+  if (const auto StdlibDir = getStdlibPath()) {
+    if (auto MultilibYaml = getMultilibYaml(*StdlibDir))
+      return *MultilibYaml;
+  }
+
+  if (auto MultilibYaml = getMultilibYaml(FallbackDir))
+    return *MultilibYaml;
+
+  return std::nullopt;
 }
 
 void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
