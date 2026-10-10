@@ -30,6 +30,7 @@ namespace {
 
 // The struct -gen-opt-parser-defs generates: every spelling sets its member.
 TEST(LibraryOptionsTest, Apply) {
+  BumpPtrAllocator Alloc;
   TestLibraryOptions O;
   EXPECT_FALSE(O.enable);
   EXPECT_EQ(O.count, 3u);
@@ -49,7 +50,7 @@ TEST(LibraryOptionsTest, Apply) {
         Argv, MissingIndex, MissingCount);
     std::vector<bool> Applied;
     for (const opt::Arg *A : Args)
-      Applied.push_back(O.apply(*A));
+      Applied.push_back(O.apply(*A, Alloc));
     return Applied;
   };
   EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-limit=0",
@@ -116,7 +117,9 @@ TEST(LibraryOptionsTest, BoolOrDefault) {
 TEST(LibraryOptionsTest, Parser) {
   opt::LibraryOptionsParser P(
       TestLibraryOptions::optTable,
-      [](const opt::Arg &A) { return TestLibraryOptions::Global.apply(A); },
+      [](const opt::Arg &A, BumpPtrAllocator &Alloc) {
+        return TestLibraryOptions::Global.apply(A, Alloc);
+      },
       [] { TestLibraryOptions::Global = TestLibraryOptions(); });
 
   std::vector<std::string> Rows;
@@ -133,9 +136,10 @@ TEST(LibraryOptionsTest, Parser) {
           "lib-print|[=<a|b>]|A flag or enum", "lib-ratio|=<value>|A double",
           "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
+  BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
-    std::string Err = toString(P.parse(Argv, Consumed));
+    std::string Err = toString(P.parse(Argv, Consumed, Alloc));
     return std::to_string(Consumed) + " " + Err;
   };
   EXPECT_EQ(Parse({"-lib-count", "5"}), "2 ");
@@ -175,6 +179,12 @@ TEST(LibraryOptionsTest, Register) {
   EXPECT_FALSE(G.enable);
   EXPECT_EQ(G.Path, "p");
   EXPECT_THAT(G.list, testing::IsEmpty());
+  // Options parse again after a reset frees their storage.
+  const char *Again[] = {"prog", "-lib-path=r", "-lib-list=3", "-lib-list=4"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(std::size(Again), Again, "", &nulls()));
+  EXPECT_EQ(G.Path, "r");
+  EXPECT_THAT(G.list, testing::ElementsAre(3u, 4u));
   cl::ResetCommandLineParser();
 }
 

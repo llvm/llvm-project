@@ -310,7 +310,8 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
   OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
-  OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Support/Allocator.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
         "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
@@ -323,9 +324,10 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
-  OS << "  /// Sets the member that \\p A names. Returns false if the value is "
-        "invalid.\n";
-  OS << "  bool apply(const llvm::opt::Arg &A);\n";
+  OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
+        "Alloc.\n  /// Returns false if the value is invalid.\n";
+  OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
+        "&Alloc);\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
@@ -341,7 +343,8 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
   OS << "  return T;\n}\n\n";
-  OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
+  OS << "bool " << Qualified
+     << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
@@ -359,7 +362,7 @@ static void emitOptionsStruct(const Record &Struct,
                                      "value");
       // The generic lambda sets a scalar, a std::optional, or a list element.
       OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
-         << ", [](llvm::StringRef V, auto &X) {\n";
+         << ", Alloc, [](llvm::StringRef V, auto &X) {\n";
       for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
         OS << "      if (V == \"" << Value
            << "\") {\n        X = " << Enumerator
@@ -373,7 +376,7 @@ static void emitOptionsStruct(const Record &Struct,
             ? "A.getNumValues() ? A.getValue() : \"true\""
             : "A.getValue()";
     OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
-       << ");\n";
+       << ", Alloc);\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
   OS << "#endif // OPTIONS_STRUCT_DEFS\n";
