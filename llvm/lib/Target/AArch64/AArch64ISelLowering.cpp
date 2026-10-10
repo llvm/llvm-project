@@ -25,6 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -33563,10 +33564,29 @@ bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
     return TySize.isScalable() && TySize.getKnownMinValue() > 128;
   }
 
-  // All non aggregate members of the type must have the same type
-  SmallVector<EVT> ValueVTs;
-  ComputeValueVTs(*this, DL, Ty, ValueVTs);
-  return all_equal(ValueVTs);
+  // All non-aggregate members must have the same value type. Array elements
+  // repeat the same type, so inspect it once instead of expanding potentially
+  // huge byval arrays into one EVT per element.
+  SmallVector<Type *, 8> Worklist{Ty};
+  SmallPtrSet<Type *, 8> Visited;
+  std::optional<EVT> MemberVT;
+  while (!Worklist.empty()) {
+    Type *Member = Worklist.pop_back_val();
+    if (!Visited.insert(Member).second)
+      continue;
+    if (auto *AT = dyn_cast<ArrayType>(Member)) {
+      if (AT->getNumElements())
+        Worklist.push_back(AT->getElementType());
+    } else if (auto *ST = dyn_cast<StructType>(Member)) {
+      append_range(Worklist, ST->elements());
+    } else if (!Member->isVoidTy()) {
+      EVT VT = getValueType(DL, Member);
+      if (MemberVT && *MemberVT != VT)
+        return false;
+      MemberVT = VT;
+    }
+  }
+  return true;
 }
 
 bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT,
