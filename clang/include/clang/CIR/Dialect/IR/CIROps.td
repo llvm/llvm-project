@@ -2800,12 +2800,12 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 //===----------------------------------------------------------------------===//
 
 def CIR_AddOp
-    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer addition";
   let description = [{
     The `cir.add` operation performs addition on integer operands. Both
-    operands and the result must have the same integer or vector-of-integer
-    type.
+    operands and the result must have the same integer, vector-of-integer or
+    matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2821,6 +2821,7 @@ def CIR_AddOp
     %2 = cir.add nuw %a, %b : !u32i
     %3 = cir.add sat %a, %b : !s32i
     %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
+    %5 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2943,8 +2944,9 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 //
 // The optional `fenv` attribute describes constraints on the floating-point
 // handling of the operation.
-class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
-    : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
+class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
+                     Type type = CIR_AnyFloatOrVecOfFloatType>
+    : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
   let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
@@ -2965,12 +2967,13 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
 // FAddOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FAddOp : CIR_FPBinaryOp<"fadd"> {
+def CIR_FAddOp
+    : CIR_FPBinaryOp<"fadd", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point addition";
   let description = [{
     The `cir.fadd` operation performs floating-point addition on its operands.
-    Both operands and the result must have the same floating-point scalar or
-    vector-of-float type.
+    Both operands and the result must have the same floating-point scalar,
+    vector-of-float or matrix-of-float type.
 
     Example:
 
@@ -2978,6 +2981,7 @@ def CIR_FAddOp : CIR_FPBinaryOp<"fadd"> {
     %0 = cir.fadd %a, %b : !cir.float
     %1 = cir.fadd %a, %b : !cir.double
     %2 = cir.fadd %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fadd %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
@@ -6553,12 +6557,16 @@ def CIR_VecTernaryOp : CIR_Op<"vec.ternary", [
 def CIR_VecSplatOp : CIR_Op<"vec.splat", [
   Pure,
   TypesMatchWith<"type of 'value' matches element type of 'result'",
-    "result", "value", "mlir::cast<cir::VectorType>($_self).getElementType()">
+    "result", "value",
+    "mlir::isa<cir::VectorType>($_self) "
+    "? mlir::cast<cir::VectorType>($_self).getElementType() "
+    ": mlir::cast<cir::MatrixType>($_self).getElementType()">
 ]> {
-  let summary = "Convert a scalar into a vector";
+  let summary = "Convert a scalar into a vector or matrix";
   let description = [{
-    The `cir.vec.splat` operation creates a vector value from a scalar value.
-    All elements of the vector have the same value, that of the given scalar.
+    The `cir.vec.splat` operation creates a vector or matrix value from a
+    scalar value. All elements of the result have the same value, that of the
+    given scalar.
 
     It's a separate operation from `cir.vec.create` because more
     efficient LLVM IR can be generated for it, and because some optimization and
@@ -6568,14 +6576,55 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
     ```
     %value = cir.const #cir.int<3> : !s32i
     %value_vec = cir.vec.splat %value : !s32i, !cir.vector<4 x !s32i>
+    %value_mat = cir.vec.splat %value : !s32i, !cir.matrix<2 x 2 x !s32i>
     ```
   }];
 
   let arguments = (ins CIR_VectorElementType:$value);
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs AnyTypeOf<[CIR_VectorType, CIR_MatrixType],
+                                "vector or matrix type">:$result);
 
   let assemblyFormat = [{
     $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixExtractOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
+  Pure,
+  TypesMatchWith<"type of 'result' matches element type of 'matrix'",
+    "matrix", "result", "mlir::cast<cir::MatrixType>($_self).getElementType()">
+]> {
+  let summary = "Extract one element from a matrix object";
+  let description = [{
+    The `cir.matrix.extract` operation extracts the element at the given row 
+    and column indices from a matrix object.
+
+    Currently, the flatten index is a column-based index.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %columnIdx = cir.const #cir.int<2> : !u64i
+    %element = cir.matrix.extract %matrix[%rowIdx : !u64i] [%columnIdx : !u64i] 
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins 
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx,
+    CIR_AnyFundamentalIntType:$columnIdx
+  );
+
+  let results = (outs CIR_MatrixElementType:$result);
+
+  let assemblyFormat = [{
+    $matrix
+    `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
   }];
 }
 
@@ -8337,9 +8386,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                   "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 

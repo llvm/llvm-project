@@ -211,6 +211,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
+  positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
+  value or returned by `bsl::make_optional`.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.
@@ -267,6 +272,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
+
+- Improved {doc}`modernize-use-equals-default
+  <clang-tidy/checks/modernize/use-equals-default>` check to also capture
+  default constructor with explicit default-initialization of parents.
 
 - Fixed a crash in {doc}`modernize-use-noexcept
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template

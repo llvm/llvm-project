@@ -398,9 +398,14 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
       true;
 
-  if (ScanInvocation->getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+  if (ScanInvocation->getHeaderSearchOpts()
+          .ModulesValidateOncePerBuildSession ||
+      Service.getOpts().ValidateAgainstInvalidatedPaths)
     ScanInvocation->getHeaderSearchOpts().BuildSessionTimestamp =
         Service.getOpts().BuildSessionTimestamp;
+  if (Service.getOpts().ValidateAgainstInvalidatedPaths)
+    ScanInvocation->getHeaderSearchOpts().ModulesValidateDirectoryDependencies =
+        true;
 
   ScanInvocation->getFrontendOpts().DisableFree = false;
   ScanInvocation->getFrontendOpts().GenerateGlobalModuleIndex = false;
