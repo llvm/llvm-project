@@ -1762,9 +1762,9 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
     return Base;
 
   // bitinsert undef, undef, C -> undef
-  if (isa<UndefValue>(Base) && !isa<PoisonValue>(Base) &&
-      isa<UndefValue>(Val) && !isa<PoisonValue>(Val))
-    return Base;
+  // Any poison bits are refined to undef.
+  if (isa<UndefValue>(Base) && isa<UndefValue>(Val))
+    return UndefValue::get(Base->getType());
 
   // A byte constant can't mix poison or undef bits with other bits.
   auto *CB = dyn_cast<ConstantByte>(Base);

@@ -319,11 +319,9 @@ define b32 @neg_bitinsert_poison_base() {
   ret b32 %r
 }
 
-; The result would have both undef and poison bits.
-define b32 @neg_bitinsert_undef_base_poison_val() {
-; CHECK-LABEL: define b32 @neg_bitinsert_undef_base_poison_val() {
-; CHECK-NEXT:    [[R:%.*]] = bitinsert b32 undef, i8 poison, i32 8
-; CHECK-NEXT:    ret b32 [[R]]
+define b32 @bitinsert_undef_base_poison_val() {
+; CHECK-LABEL: define b32 @bitinsert_undef_base_poison_val() {
+; CHECK-NEXT:    ret b32 undef
 ;
   %r = bitinsert b32 undef, i8 poison, i32 8
   ret b32 %r
