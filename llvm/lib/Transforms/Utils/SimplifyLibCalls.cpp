@@ -2657,28 +2657,44 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
 
   // exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= IntSize
   // exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
+  // exp2(uitofp(x)) -> ldexp(1.0, trunc(umin(x, C))) if sizeof(x) >= IntSize
   Value *Op = CI->getArgOperand(0);
-  if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
-      (UseIntrinsic ||
-       hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl))) {
-    if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize())) {
-      Constant *One = ConstantFP::get(Ty, 1.0);
+  if (!isa<SIToFPInst, UIToFPInst>(Op) ||
+      (!UseIntrinsic &&
+       !hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)))
+    return Ret;
 
-      if (UseIntrinsic) {
-        return copyFlags(*CI, B.CreateIntrinsic(Intrinsic::ldexp,
-                                                {Ty, Exp->getType()},
-                                                {One, Exp}, CI));
-      }
-
-      IRBuilderBase::FastMathFlagGuard Guard(B);
-      B.setFastMathFlags(CI->getFastMathFlags());
-      return copyFlags(*CI, emitBinaryFloatFnCall(
-                                One, Exp, TLI, LibFunc_ldexp, LibFunc_ldexpf,
-                                LibFunc_ldexpl, B, AttributeList()));
-    }
+  unsigned IntSize = TLI->getIntSize();
+  Value *Exp = getIntToFPVal(Op, B, IntSize);
+  Value *UIntOp = nullptr;
+  // A uitofp source at least as wide as int may exceed INT_MAX, so clamp it.
+  if (!Exp && UseIntrinsic && match(Op, m_UIToFP(m_Value(UIntOp))) &&
+      UIntOp->getType()->getScalarSizeInBits() >= IntSize) {
+    const fltSemantics &Sem = Ty->getScalarType()->getFltSemantics();
+    // exp2(x) and ldexp(1.0, Clamp) both overflow for every x >= Clamp.
+    int Clamp = llvm::ilogb(APFloat::getLargest(Sem)) + 1;
+    assert(isIntN(IntSize, Clamp) && "Emax + 1 must fit in int");
+    Exp = UIntOp;
+    if (!CI->hasNoInfs())
+      Exp = B.CreateBinaryIntrinsic(Intrinsic::umin, UIntOp,
+                                    ConstantInt::get(UIntOp->getType(), Clamp));
+    Exp = B.CreateTrunc(Exp, UIntOp->getType()->getWithNewBitWidth(IntSize));
   }
 
-  return Ret;
+  if (!Exp)
+    return Ret;
+
+  Constant *One = ConstantFP::get(Ty, 1.0);
+  if (UseIntrinsic)
+    return copyFlags(*CI,
+                     B.CreateIntrinsic(Intrinsic::ldexp, {Ty, Exp->getType()},
+                                       {One, Exp}, CI));
+
+  IRBuilderBase::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+  return copyFlags(*CI, emitBinaryFloatFnCall(One, Exp, TLI, LibFunc_ldexp,
+                                              LibFunc_ldexpf, LibFunc_ldexpl, B,
+                                              AttributeList()));
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B,
