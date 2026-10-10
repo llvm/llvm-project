@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/unit.h"
+#include "flang/Common/fp-control.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
@@ -24,6 +25,7 @@
 extern "C" {
 
 [[maybe_unused]] static void DescribeIEEESignaledExceptions() {
+  FLANG_FENV_ACCESS_ON
 #if defined(RT_DEVICE_COMPILATION) || RT_GPU_TARGET
   unsigned excepts{}; // No fenv support on the device.
 #else

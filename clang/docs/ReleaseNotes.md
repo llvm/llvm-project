@@ -621,6 +621,9 @@ features cannot lower the translation-unit ABI level;
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling floating-point
+  exception behavior via the appropriate flags or pragmas on supported targets. (#GH128239)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
