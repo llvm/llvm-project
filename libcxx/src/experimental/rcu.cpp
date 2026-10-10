@@ -215,23 +215,23 @@ class rcu_domain::__impl : public rcu_domain_impl {};
 
 // exported symbols
 
-rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
+rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
+rcu_domain::~rcu_domain() = default;
+
+rcu_domain& __rcu_domain_export::__rcu_default_domain() noexcept {
   static rcu_domain default_domain;
   return default_domain;
 }
 
-rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
-rcu_domain::~rcu_domain() = default;
+void __rcu_domain_export::__lock(rcu_domain& dom) noexcept { dom.__pimpl_->lock(); }
 
-void rcu_domain::__lock() noexcept { __pimpl_->lock(); }
+void __rcu_domain_export::__unlock(rcu_domain& dom) noexcept { dom.__pimpl_->unlock(); }
 
-void rcu_domain::__unlock() noexcept { __pimpl_->unlock(); }
+void __rcu_domain_export::__retire(rcu_domain& dom, __rcu_node* node) noexcept { dom.__pimpl_->retire(node); }
 
-void rcu_domain::__retire(__rcu_node* node) noexcept { __pimpl_->retire(node); }
+void __rcu_domain_export::__synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(false); }
 
-void __rcu_synchronize(rcu_domain& dom) noexcept { __rcu_domain_access::__get_impl(dom)->synchronize(false); }
-
-void __rcu_barrier(rcu_domain& dom) noexcept { __rcu_domain_access::__get_impl(dom)->synchronize(true); }
+void __rcu_domain_export::__barrier(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(true); }
 
 // exported symbols end
 

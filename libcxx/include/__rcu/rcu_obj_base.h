@@ -40,7 +40,7 @@ public:
     static_assert(std::is_base_of_v<rcu_obj_base, _Tp>, "T must be an rcu-protectable type.");
     __deleter_  = std::move(__deleter);
     __callback_ = &rcu_obj_base::__destroy;
-    __dom.__retire(this);
+    __rcu_domain_export::__retire(__dom, this);
   }
 
 protected:
