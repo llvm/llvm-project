@@ -108,8 +108,6 @@ DebugHandlerBase::~DebugHandlerBase() = default;
 void DebugHandlerBase::beginModule(Module *M) {
   if (M->debug_compile_units().empty())
     Asm = nullptr;
-  else
-    LScopes.initialize(*M);
 }
 
 // Each LexicalScope has first instruction and last instruction to mark
