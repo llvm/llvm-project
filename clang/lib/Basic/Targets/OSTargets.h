@@ -395,7 +395,7 @@ protected:
       }
     } else if (Triple.isMlibc()) {
       Builder.defineMacro("__mlibc__");
-    } else {
+    } else if (Triple.isGNUEnvironment()) {
       Builder.defineMacro("__gnu_linux__");
     }
     if (Opts.POSIXThreads)
