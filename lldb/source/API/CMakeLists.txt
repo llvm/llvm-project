@@ -39,6 +39,12 @@ add_custom_target(lldb-sbapi-dwarf-enums
   DEPENDS ${sb_languages_file})
 set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
+set(LLDB_VERSION_HEADER_IN ${LLDB_SOURCE_DIR}/include/lldb/lldb-version.h.cmake)
+set(LLDB_VERSION_HEADER_OUT ${LLDB_BINARY_DIR}/include/lldb/lldb-version.h)
+configure_file(
+  ${LLDB_VERSION_HEADER_IN}
+  ${LLDB_VERSION_HEADER_OUT})
+
 add_lldb_library(liblldb ${liblldb_library_type} ${option_framework}
   SBAddress.cpp
   SBAddressRange.cpp
@@ -293,7 +299,7 @@ set(lldb_header_staging_dir ${CMAKE_BINARY_DIR}/include/lldb)
 set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
-list(REMOVE_ITEM root_public_headers ${root_private_headers})
+list(REMOVE_ITEM root_public_headers ${root_private_headers} ${LLDB_SOURCE_DIR}/include/lldb/lldb-version.h.cmake)
 
 file(MAKE_DIRECTORY ${lldb_header_staging_dir})
 
@@ -317,12 +323,6 @@ foreach(header
   get_filename_component(basename ${header} NAME)
   set(staged_header ${lldb_header_staging_dir}/${basename})
 
-  if(basename STREQUAL "lldb-defines.h")
-    set(copy_command "${Python3_EXECUTABLE}"
-        ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py
-        -i ${header} -o ${staged_header}
-        -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH})
-  endif()
   if(unifdef_EXECUTABLE)
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
@@ -365,6 +365,14 @@ add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
+
+  set(lldb_framework_version_header "$<TARGET_FILE_DIR:liblldb>/Headers/lldb-version.h")
+  add_custom_target(lldb-framework-fixup-header-lldb-version.h DEPENDS ${LLDB_VERSION_HEADER_OUT})
+  add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-lldb-version.h)
+  add_custom_command(TARGET lldb-framework-fixup-header-lldb-version.h POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${LLDB_VERSION_HEADER_OUT} ${lldb_framework_version_header}
+    COMMENT "LLDB.framework: Fix up and copy framework headers"
+  )
 
   if (TARGET install-liblldb)
     add_dependencies(install-liblldb
