@@ -715,7 +715,7 @@ public:
   bool threadPrivateMemoryAtomicsAreUndefined() const {
     // Should be false for OpenMP.
     // TODO: Should this be true for SYCL?
-    return OpenCL || CUDA;
+    return PrivateAtomicsUndefined;
   }
 
   /// Return the OpenCL C or C++ version as a VersionTuple.
