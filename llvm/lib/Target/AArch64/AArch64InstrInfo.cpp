@@ -10587,6 +10587,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
       int SPValue = 0;
       for (auto &MI : C) {
         if (MI.modifiesRegister(AArch64::SP, &TRI)) {
+          // Calls implicitly modify the stack, but they are already vetted by
+          // getOutliningTypeImpl to only be outlined as safe tail-calls.
+          if (MI.isCall())
+            continue;
+
           switch (MI.getOpcode()) {
           case AArch64::ADDXri:
           case AArch64::ADDWri:
