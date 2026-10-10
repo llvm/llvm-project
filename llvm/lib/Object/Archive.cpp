@@ -1446,14 +1446,19 @@ static Error getGlobalSymtabLocAndSize(const MemoryBufferRef &Data,
                                        const char *&GlobalSymtabLoc,
                                        uint64_t &Size, const char *BitMessage) {
   uint64_t BufferSize = Data.getBufferSize();
-  uint64_t GlobalSymtabContentOffset =
-      GlobalSymtabOffset + sizeof(BigArMemHdrType);
-  if (GlobalSymtabContentOffset > BufferSize)
+  // GlobalSymtabOffset is read from the fixed-length header. Compare without
+  // adding: the sum wraps for a large offset, which would pass this check and
+  // leave GlobalSymtabLoc pointing outside the buffer.
+  if (GlobalSymtabOffset > BufferSize ||
+      sizeof(BigArMemHdrType) > BufferSize - GlobalSymtabOffset)
     return malformedError(
         Twine(BitMessage) + " global symbol table header at offset 0x" +
         Twine::utohexstr(GlobalSymtabOffset) + " and size 0x" +
         Twine::utohexstr(sizeof(BigArMemHdrType)) +
         " goes past the end of file");
+
+  uint64_t GlobalSymtabContentOffset =
+      GlobalSymtabOffset + sizeof(BigArMemHdrType);
 
   GlobalSymtabLoc = Data.getBufferStart() + GlobalSymtabOffset;
   const BigArMemHdrType *GlobalSymHdr =
@@ -1463,7 +1468,8 @@ static Error getGlobalSymtabLocAndSize(const MemoryBufferRef &Data,
     return malformedError(Twine(BitMessage) + " global symbol table size \"" +
                           RawOffset + "\" is not a number");
 
-  if (GlobalSymtabContentOffset + Size > BufferSize)
+  // Size is read from the member header, so compare without adding here too.
+  if (Size > BufferSize - GlobalSymtabContentOffset)
     return malformedError(
         Twine(BitMessage) + " global symbol table content at offset 0x" +
         Twine::utohexstr(GlobalSymtabContentOffset) + " and size 0x" +
