@@ -7516,6 +7516,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (isa<MemIntrinsic>(I) && !I->isVolatile())
         return false;
 
+      // Droppable intrinsics only model a memory write; they are not progress.
+      if (I->isDroppable())
+        return false;
+
       return I->mayWriteToMemory();
     };
 
