@@ -1357,7 +1357,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SETCC, MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FSETCC, MVT::f128, Custom);
       setOperationAction(ISD::STRICT_FSETCCS, MVT::f128, Custom);
-      setOperationAction(ISD::BR_CC, MVT::f128, Expand);
+      setOperationAction(ISD::BR_CC, MVT::f128, Custom);
 
       // Lower following f128 select_cc pattern:
       // select_cc x, y, tv, fv, cc -> select_cc (setcc x, y, cc), 0, tv, fv, NE
@@ -3703,8 +3703,6 @@ SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  assert(Subtarget.hasSPE() && "LowerBR_CC used only for targets with SPE");
-
   if ((LHSVT == MVT::f32 || LHSVT == MVT::f64) && Flags.hasNoNaNs() &&
       Flags.hasNoInfs())
     return Op;
@@ -3714,7 +3712,7 @@ SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   // If softenSetCCOperands returned a scalar, we need to compare the result
   // against zero to select between true and false values.
   if (!RHS) {
-    RHS = DAG.getConstant(0, dl, LHSVT);
+    RHS = DAG.getConstant(0, dl, LHS.getValueType());
     CC = ISD::SETNE;
   }
 
