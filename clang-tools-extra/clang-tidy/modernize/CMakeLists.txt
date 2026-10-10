@@ -49,6 +49,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UseStartsEndsWithCheck.cpp
   UseStdBitCheck.cpp
   UseStdFormatCheck.cpp
+  UseStdInterpolationCheck.cpp
   UseStdNumbersCheck.cpp
   UseStdPrintCheck.cpp
   UseStringViewCheck.cpp
@@ -76,4 +77,5 @@ clang_target_link_libraries(clangTidyModernizeModule
   clangBasic
   clangLex
   clangTooling
+  clangTransformer
   )
