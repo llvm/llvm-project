@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -106,6 +107,34 @@ struct OptimizeAllocationLiveness
 public:
   OptimizeAllocationLiveness() = default;
 
+  static Operation *findValidInsertionPoint(Operation *allocOp,
+                                            Operation *deallocOp,
+                                            Operation *lastUser) {
+    auto domInfo = DominanceInfo();
+
+    auto *target = lastUser;
+
+    for (Value operand : deallocOp->getOperands()) {
+      auto *definingOp = operand.getDefiningOp();
+      if (!definingOp)
+        continue;
+
+      if (!target || domInfo.properlyDominates(target, definingOp))
+        target = definingOp;
+    }
+
+    if (!target)
+      target = allocOp;
+
+    for (Value result : deallocOp->getResults()) {
+      for (Operation *user : result.getUsers()) {
+        if (user == target || !domInfo.properlyDominates(target, user))
+          return nullptr;
+      }
+    }
+    return target;
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
@@ -160,9 +189,15 @@ public:
       LDBG() << "Last user found: " << *lastUser;
       assert(lastUser->getBlock() == allocOp->getBlock());
       assert(lastUser->getBlock() == deallocOp->getBlock());
-      // Move the dealloc op after the last user.
-      deallocOp->moveAfter(lastUser);
-      LDBG() << "Moved dealloc op after: " << *lastUser;
+
+      Operation *target = findValidInsertionPoint(allocOp, deallocOp, lastUser);
+      if (!target) {
+        LDBG() << "No valid insertion point found; skipping move";
+        return WalkResult::advance();
+      }
+
+      deallocOp->moveAfter(target);
+      LDBG() << "Moved dealloc op after: " << *target;
 
       return WalkResult::advance();
     });
