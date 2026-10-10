@@ -270,7 +270,9 @@ def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
 
 multiclass def_strict_fp_op<string short_opcode, SDTypeProfile typeprof> {
   def _nonstrict : SDNode<"AArch64ISD::" # short_opcode,        typeprof>;
-  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]>;
+  def _strict    : SDNode<"AArch64ISD::STRICT_" # short_opcode, typeprof, [SDNPHasChain]> {
+    let IsStrictFP = true;
+  }
 }
 
 multiclass def_strict_fp_3op<string short_opcode, SDTypeProfile typeprof>
