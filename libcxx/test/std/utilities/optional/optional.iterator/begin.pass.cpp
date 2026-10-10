@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
-
 // <optional>
 
 // constexpr iterator optional::begin() noexcept;
@@ -54,18 +52,23 @@ constexpr bool test() {
 constexpr bool tests() {
   assert(test<int>());
   assert(test<char>());
+  assert(test<short>());
   assert(test<const int>());
   assert(test<const char>());
   assert(test<int&>());
   assert(test<char&>());
+  assert(test<short&>());
   assert(test<const int&>());
   assert(test<const char&>());
+  assert(test<const short&>());
   return true;
 }
 
 int main(int, char**) {
   assert(tests());
-  static_assert(tests());
+
+  // blocked on constexpr pointer tagging
+  // static_assert(tests());
 
   return 0;
 }

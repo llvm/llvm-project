@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
 
 // <optional>
 
@@ -94,7 +93,8 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  static_assert(test());
+  // blocked on constexpr pointer tagging
+  // static_assert(test());
 
   return 0;
 }

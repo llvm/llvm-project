@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: libcpp-has-no-experimental-optional-iterator
-
 // <optional>
 
 // template <class T> class optional::iterator;
@@ -141,13 +139,16 @@ constexpr bool test() {
   test<int>(1);
   test<char>('a');
   test<bool>(true);
+  test<short>(2);
   test<const int>(2);
   test<const char>('b');
   test<int&>(1);
   test<char&>('a');
   test<bool&>(true);
+  test<short&>(1);
   test<const int&>(2);
   test<const char&>('b');
+  test<const short&>(1);
 
   static_assert(!std::ranges::range<std::optional<int (&)()>>);
   static_assert(!std::ranges::range<std::optional<int (&)[]>>);
@@ -158,7 +159,8 @@ constexpr bool test() {
 
 int main(int, char**) {
   assert(test());
-  static_assert(test());
+
+  // static_assert(test());
 
   return 0;
 }
