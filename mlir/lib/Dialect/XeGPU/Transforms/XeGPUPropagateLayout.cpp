@@ -59,7 +59,6 @@ using namespace mlir;
 using namespace mlir::dataflow;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // LayoutInfo
 //===----------------------------------------------------------------------===//
@@ -1544,7 +1543,6 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 }
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // ResolveLayoutConflicts
 //===----------------------------------------------------------------------===//
@@ -1583,7 +1581,6 @@ private:
   LogicalResult resolveVectorConsumer(OpOperand &operand);
   LogicalResult assignResultLayout(OpResult &result);
 };
-
 } // namespace
 
 LogicalResult ResolveLayoutConflicts::run() {
@@ -1713,26 +1710,6 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
     return success();
   }
 
-  // If the producer is trivially rematerializable (e.g. `vector.step`, splat
-  // `arith.constant`), clone it and stamp the consumer's expected layout on
-  // the clone instead of inserting a `xegpu.convert_layout`. The convert
-  // would otherwise lower to a cross-subgroup data movement through SLM at
-  // WG-to-SG distribution time, which is more expensive than
-  // recomputing a pure value generator.
-  if (auto *producerOp = vectorValue.getDefiningOp();
-      producerOp && producerOp->getNumResults() == 1 &&
-      isa<OpResult>(vectorValue) &&
-      xegpu::isTriviallyRematerializable(producerOp)) {
-    builder.setInsertionPointAfter(producerOp);
-    Operation *clone = builder.clone(*producerOp);
-    OpResult cloneResult = clone->getResult(0);
-    // Drop the inherited producer layout so the new layout takes effect
-    xegpu::removeLayoutAttr(cloneResult);
-    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
-    operand.set(cloneResult);
-    return success();
-  }
-
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
   auto convertOp = xegpu::ConvertLayoutOp::create(
@@ -1835,6 +1812,41 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
   return success();
 }
 
+/// Recompute eligible producer chains in the conversion's target layout.
+///
+///   %step = vector.step                       {L1}
+///   %cast = arith.index_castui %step           {L1}
+///   %cvt  = xegpu.convert_layout %cast : L1 -> L2
+///   use(%cast)                                {L1}
+///   use(%cvt)                                 {L2}
+///
+/// becomes
+///
+///   %step  = vector.step                      {L1}
+///   %step' = vector.step                      {L2}
+///   %cast  = arith.index_castui %step          {L1}
+///   %cast' = arith.index_castui %step'         {L2}
+///   use(%cast)                                {L1}
+///   use(%cast')                               {L2}
+///
+/// Clone the whole vector producer chain so the original and rematerialized
+/// values can carry independent layouts. For small, layout-preserving chains,
+/// recomputation can avoid cross-subgroup data movement through SLM.
+void xegpu::rematerializeConversionSources(OpBuilder &builder,
+                                           Operation *parentOp) {
+  SmallVector<xegpu::ConvertLayoutOp> conversions;
+  parentOp->walk(
+      [&](xegpu::ConvertLayoutOp convert) { conversions.push_back(convert); });
+  for (xegpu::ConvertLayoutOp convert : conversions) {
+    Value clone = xegpu::rematerializeWithLayout(builder, convert.getSource(),
+                                                 convert.getTargetLayout());
+    if (!clone)
+      continue;
+    convert.getResult().replaceAllUsesWith(clone);
+    convert.erase();
+  }
+}
+
 /// Optimize elementwise operations by sinking costly layout conversion.
 ///
 ///   %m  = vector.create_mask ...                        {L1}
@@ -1919,17 +1931,11 @@ void xegpu::sinkElementwiseConversions(OpBuilder &builder,
         continue;
       if (rewiredOpIdxs.contains(operand.getOperandNumber()))
         continue;
-      Operation *definingOp = operandValue.getDefiningOp();
-      assert(definingOp && xegpu::isTriviallyRematerializable(definingOp) &&
-             "operand should have been rejected above");
       // Rematerialize with uniform source layout.
-      builder.setInsertionPointAfter(definingOp);
-      Operation *clone = builder.clone(*definingOp);
-      OpResult cloneResult =
-          clone->getResult(cast<OpResult>(operandValue).getResultNumber());
-      xegpu::removeLayoutAttr(cloneResult);
-      xegpu::setDistributeLayoutAttr(cloneResult, uniformConvSrcLayout);
-      operand.set(cloneResult);
+      Value clone = xegpu::rematerializeWithLayout(builder, operandValue,
+                                                   uniformConvSrcLayout);
+      assert(clone && "operand should have been rejected above");
+      operand.set(clone);
     }
 
     // Run the op in the source layout and bridge its result back, so that
@@ -1999,7 +2005,6 @@ struct XeGPUPropagateLayoutPass final
       : XeGPUPropagateLayoutBase(std::move(options)) {}
   void runOnOperation() override;
 };
-
 } // namespace
 
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
@@ -2108,6 +2113,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+  xegpu::rematerializeConversionSources(builder, getOperation());
   if (layoutKind == xegpu::LayoutKind::InstData)
     xegpu::sinkElementwiseConversions(builder, getOperation());
 }
