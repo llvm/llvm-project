@@ -1693,9 +1693,9 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
          !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
                                TT_PointerOrReference)) ||
         (PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
-                                    TT_FunctionAnnotationRParen,
-                                    TT_JavaAnnotation,
-                                    TT_LeadingJavaAnnotation) &&
+                                     TT_FunctionAnnotationRParen,
+                                     TT_JavaAnnotation,
+                                     TT_LeadingJavaAnnotation) &&
          !Current.isBinaryOperator()))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||

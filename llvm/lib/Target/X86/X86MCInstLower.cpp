@@ -2646,8 +2646,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // jump instruction with higher probability than threshold.
     if (getSubtarget().hasBranchHint() &&
         getSubtarget().getCLOpts().enable_branch_hint) {
-      const MachineBranchProbabilityInfo *MBPI =
-          &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+      const MachineBranchProbabilityInfo *MBPI = GetMBPI(*MF);
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);
