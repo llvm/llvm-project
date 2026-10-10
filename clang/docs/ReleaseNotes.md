@@ -959,6 +959,9 @@ features cannot lower the translation-unit ABI level;
   represent in `size_t`. The `err_struct_too_large` check now scales the
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
+- Fixed a crash, or wrong code in builds without assertions, when an rvalue of
+  `_Complex` or structure type, such as `c--` or `a + b`, is used as an inline
+  asm input. (#GH173672)
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
 - Fixed a crash when filling in the ``TypeLoc`` for an ``AttributedType``
   that was inherited from a different declarator, for example when
