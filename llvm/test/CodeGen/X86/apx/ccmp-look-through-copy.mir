@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp-opt -run-pass=machine-ccmp -stress-machine-ccmp | FileCheck %s
-# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp-opt -passes=machine-ccmp -stress-machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp -run-pass=machine-ccmp -machine-stress-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp -passes=machine-ccmp -machine-stress-ccmp | FileCheck %s
 
 # The Tail PHI selects copy-equivalent values from Head (%4) and CmpBB (%7),
 # both tracing to %0. lookThroughCopies must see them as equal so the triangle

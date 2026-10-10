@@ -202,6 +202,8 @@ defm : EnumField<"aarch64-authenticated-lr-check-method", "std::optional<AArch64
   "Override the variant of check applied to authenticated LR during tail call">;
 defm : BoolField<"aarch64-early-ifcvt", "true",
   "Enable the early if converter pass">;
+defm : BoolField<"aarch64-enable-ccmp", "true",
+  "Enable the CCMP formation pass">;
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 defm : BoolField<"aarch64-enable-subreg-liveness-tracking", "false",
@@ -234,8 +236,6 @@ defm : BoolField<"aarch64-enable-branch-relax", "true",
   "Relax out of range conditional branches">;
 defm : BoolField<"aarch64-enable-branch-targets", "true",
   "Enable the AArch64 branch target pass">;
-defm : BoolField<"aarch64-enable-ccmp", "true",
-  "Enable the CCMP formation pass">;
 defm : BoolField<"aarch64-enable-collect-loh", "true",
   "Enable the pass that emits the linker optimization hints (LOH)">;
 defm : BoolField<"aarch64-enable-compress-jump-tables", "true",

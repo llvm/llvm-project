@@ -1,13 +1,26 @@
-# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp-opt -run-pass=machine-ccmp | FileCheck %s
-# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp-opt -passes=machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp -run-pass=machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp -passes=machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp -run-pass=machine-ccmp -machine-ccmp-limit=0 | FileCheck %s --check-prefix=LIMIT
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -mcpu=diamondrapids -x86-enable-ccmp -run-pass=machine-ccmp -machine-stress-ccmp | FileCheck %s --check-prefix=STRESS
 
 # This test exercises the profitability cost model of the CCMP formation pass
-# (machine-ccmp), i.e. the paths that -stress-machine-ccmp bypasses. A fixed
+# (machine-ccmp), i.e. the paths that -machine-stress-ccmp bypasses. A fixed
 # -mcpu is required so MachineTraceMetrics produces deterministic depths.
 # positive_control confirms the pass is active by folding to a CTEST; the other
 # two functions are structurally convertible but rejected by shouldConvert().
 # minsize_control takes the MinSize code-size path: X86 reports a zero delta, so
 # the pass falls through to the same cost model and still folds to a CTEST.
+#
+# The STRESS run bypasses shouldConvert() entirely, so the two cost-model
+# rejects fold as well. That pins the rejects to the cost model rather than to
+# recognition: if a scheduling-model change made them profitable, the CHECK run
+# would start folding and fail, and if a recognition change made them
+# unconvertible, the STRESS run would stop folding and fail.
+#
+# The LIMIT run sets -machine-ccmp-limit=0 so canSpeculateInstrs() rejects every
+# candidate block; nothing in the file may fold.
+# LIMIT-NOT: CCMP
+# LIMIT-NOT: CTEST
 
 --- |
   define void @positive_control(i32 %a, i32 %b) { ret void }
@@ -98,6 +111,8 @@ body: |
 name:            reject_branch_delay
 tracksRegLiveness: true
 body: |
+  ; STRESS-LABEL: name: reject_branch_delay
+  ; STRESS:       CTEST32rr
   ; CHECK-LABEL: name: reject_branch_delay
   ; CHECK:       bb.0:
   ; CHECK:       TEST32rr
@@ -156,6 +171,8 @@ body: |
 name:            reject_resource_depth
 tracksRegLiveness: true
 body: |
+  ; STRESS-LABEL: name: reject_resource_depth
+  ; STRESS:       CTEST32rr
   ; CHECK-LABEL: name: reject_resource_depth
   ; CHECK:       bb.0:
   ; CHECK:       TEST32rr

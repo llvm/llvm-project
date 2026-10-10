@@ -50,7 +50,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-instr-info"
 
-// Conditional-compare formation rejection reasons (see findConvertibleCompare).
+// Conditional-compare formation rejection reasons (see canConvertToCCMP and
+// findConvertibleCompare).
+STATISTIC(NumMultJccRejs, "Number of ccmps rejected (multiple Jcc in Head)");
+STATISTIC(NumHeadCondRejs, "Number of ccmps rejected (Head condition code)");
+STATISTIC(NumCmpBBCondRejs, "Number of ccmps rejected (CmpBB condition code)");
+STATISTIC(NumLiveDstRejs, "Number of ccmps rejected (live dest)");
 STATISTIC(NumMultEFLAGSUses, "Number of ccmps rejected (EFLAGS used)");
 STATISTIC(NumUnknEFLAGSDefs, "Number of ccmps rejected (EFLAGS def unknown)");
 
@@ -3283,8 +3288,12 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
     case X86::SUB16ri_ND:
     case X86::SUB32ri_ND:
     case X86::SUB64ri32_ND: {
-      if (!isDeadDef(MRI, I->getOperand(0).getReg()))
+      if (!isDeadDef(MRI, I->getOperand(0).getReg())) {
+        LLVM_DEBUG(dbgs() << "Can't convert compare with live destination: "
+                          << *I);
+        ++NumLiveDstRejs;
         return nullptr;
+      }
       return &*I;
     }
     case X86::CMP8rr:
@@ -3315,15 +3324,19 @@ static MachineInstr *findConvertibleCompare(MachineBasicBlock *MBB,
       // The ccmp doesn't produce exactly the same flags as the original
       // compare, so reject the transform if there are uses of the flags
       // besides the terminators.
+      LLVM_DEBUG(dbgs() << "Can't create ccmp with multiple uses: " << *I);
       ++NumMultEFLAGSUses;
       return nullptr;
     }
 
     if (PRI.Defined || PRI.Clobbered) {
+      LLVM_DEBUG(dbgs() << "Can't create ccmp with EFLAGS def: " << *I);
       ++NumUnknEFLAGSDefs;
       return nullptr;
     }
   }
+  LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
+                    << '\n');
   return nullptr;
 }
 
@@ -3406,20 +3419,29 @@ bool X86InstrInfo::canConvertToCCMP(
     const MachineRegisterInfo &MRI, CCmpConvInfo &Info) const {
   // CCMP/CTEST resets all the bits of EFLAGS, so Head must contain only a
   // single conditional branch.
-  if (getNumOfJcc(&Head) > 1)
+  if (getNumOfJcc(&Head) > 1) {
+    LLVM_DEBUG(dbgs() << "Multiple Jcc in " << printMBBReference(Head) << '\n');
+    ++NumMultJccRejs;
     return false;
+  }
 
   X86::CondCode HeadCmpBBCC;
-  if (!parseCCMPCond(HeadCond, HeadCmpBBCC, {X86::COND_P, X86::COND_NP}))
+  if (!parseCCMPCond(HeadCond, HeadCmpBBCC, {X86::COND_P, X86::COND_NP})) {
+    LLVM_DEBUG(dbgs() << "Unsupported condition code on Head\n");
+    ++NumHeadCondRejs;
     return false;
+  }
   // The condition code should make Head branch to CmpBB.
   if (!HeadTBBIsCmpBB)
     HeadCmpBBCC = X86::GetOppositeBranchCondition(HeadCmpBBCC);
 
   X86::CondCode CmpBBTailCC;
   if (!parseCCMPCond(CmpBBCond, CmpBBTailCC,
-                     {X86::COND_NE_OR_P, X86::COND_E_AND_NP}))
+                     {X86::COND_NE_OR_P, X86::COND_E_AND_NP})) {
+    LLVM_DEBUG(dbgs() << "Unsupported condition code on CmpBB\n");
+    ++NumCmpBBCondRejs;
     return false;
+  }
   // The condition code should make CmpBB branch to Tail.
   if (!CmpBBTBBIsTail)
     CmpBBTailCC = X86::GetOppositeBranchCondition(CmpBBTailCC);

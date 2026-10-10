@@ -1,13 +1,38 @@
-# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp-opt -run-pass=machine-ccmp -stress-machine-ccmp | FileCheck %s
-# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp-opt -passes=machine-ccmp -stress-machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp -run-pass=machine-ccmp -machine-stress-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp -passes=machine-ccmp -machine-stress-ccmp | FileCheck %s
+# RUN: %if asserts %{ llc -o /dev/null %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp -run-pass=machine-ccmp -machine-stress-ccmp -stats 2>&1 | FileCheck %s --check-prefix=STATS %}
+# RUN: llc -o - %s -mtriple=x86_64 -mattr=+ccmp -x86-enable-ccmp=false -passes=machine-ccmp -machine-stress-ccmp | FileCheck %s --check-prefix=OFF
 
 # This test exercises the structural/recognition reject paths of the
 # target-independent CCMP formation pass (machine-ccmp) and its X86 hook.
-# -stress-machine-ccmp bypasses the profitability cost model, so only the
+# -machine-stress-ccmp bypasses the profitability cost model, so only the
 # canConvert() and X86 canConvertToCCMP()/findConvertibleCompare() checks
 # decide whether a CCMP/CTEST forms. Each reject function keeps its original
 # two compares/branches; the positive controls fold to a CTEST (from TEST) and
 # a CCMP (from a dead-def SUB).
+#
+# A reject is invisible in the output (nothing changes), so the STATS run pins
+# the rejection counters. Without it, a function could start rejecting for the
+# wrong reason -- or stop being recognized at all -- and still pass the CHECK
+# runs.
+#
+# The OFF run disables the pass through the subtarget hook, so not even the
+# positive controls fold.
+# OFF-NOT: CCMP
+# OFF-NOT: CTEST
+# STATS-DAG: 2 machine-ccmp {{ *}}- Number of ccmp instructions created
+# STATS-DAG: 1 machine-ccmp {{ *}}- Number of ccmps rejected (PHI){{$}}
+# STATS-DAG: 1 machine-ccmp {{ *}}- Number of ccmps rejected (PHI2){{$}}
+# STATS-DAG: 2 machine-ccmp {{ *}}- Number of ccmps rejected (Physregs)
+# STATS-DAG: 3 machine-ccmp {{ *}}- Number of ccmps rejected (Can't speculate)
+# STATS-DAG: 1 machine-ccmp {{ *}}- Number of ccmps rejected (Head branch)
+# STATS-DAG: 1 machine-ccmp {{ *}}- Number of ccmps rejected (CmpBB branch)
+# STATS-DAG: 1 x86-instr-info {{ *}}- Number of ccmps rejected (multiple Jcc in Head)
+# STATS-DAG: 2 x86-instr-info {{ *}}- Number of ccmps rejected (Head condition code)
+# STATS-DAG: 2 x86-instr-info {{ *}}- Number of ccmps rejected (CmpBB condition code)
+# STATS-DAG: 2 x86-instr-info {{ *}}- Number of ccmps rejected (live dest)
+# STATS-DAG: 1 x86-instr-info {{ *}}- Number of ccmps rejected (EFLAGS used)
+# STATS-DAG: 1 x86-instr-info {{ *}}- Number of ccmps rejected (EFLAGS def unknown)
 
 --- |
   define void @nontrivial_tail_phi(i32 %a, i32 %b) { ret void }
@@ -23,6 +48,18 @@
   define void @sub_dead_def(i32 %a, i32 %b) { ret void }
   define void @head_cond_np(i32 %a, i32 %b) { ret void }
   define void @cmpbb_cond_e_and_np(i32 %a, i32 %b) { ret void }
+  define void @sub_physreg_def(i32 %a, i32 %b) { ret void }
+  define void @flags_not_defined_in_cmpbb(i32 %a, i32 %b) { ret void }
+  define void @cmpbb_livein(i32 %a, i32 %b) { ret void }
+  define void @tail_livein(i32 %a, i32 %b) { ret void }
+  define void @store_in_cmpbb(i32 %a, i32 %b, ptr %p) { ret void }
+  define void @flags_clobber_before_cmp(i32 %a, i32 %b) { ret void }
+  define void @diamond_not_triangle(i32 %a, i32 %b) { ret void }
+  define void @head_branch_unanalyzable(i32 %a, i32 %b) { ret void }
+  define void @cmpbb_branch_unanalyzable(i32 %a, i32 %b) { ret void }
+  define void @optnone_skipped(i32 %a, i32 %b) #0 { ret void }
+
+  attributes #0 = { noinline optnone }
 ...
 
 # 1. Non-trivial Tail PHI: the Tail PHI selects different values from Head vs
@@ -581,4 +618,406 @@ body: |
     %2:gr32 = MOV32ri 1
     $eax = COPY %2
     RET 0, $eax
+...
+
+# 14. SUB with a physical-register destination: isDeadDef() rejects on the
+#     !isVirtual() arm rather than on the use_nodbg_empty() arm covered by
+#     sub_live_def (stat NumLiveDstRejs).
+---
+name:            sub_physreg_def
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: sub_physreg_def
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       SUB32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    $ecx = SUB32rr %1, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 15. No flag definition in CmpBB: its branch consumes the flags Head set, so
+#     findConvertibleCompare() walks the whole block without finding a
+#     convertible compare and falls off the end.
+---
+name:            flags_not_defined_in_cmpbb
+tracksRegLiveness: false
+body: |
+  ; CHECK-LABEL: name: flags_not_defined_in_cmpbb
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       MOV32ri
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+
+    %0:gr32 = IMPLICIT_DEF
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %1:gr32 = MOV32ri 3
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 16. Live-in physreg in CmpBB: speculating the block would need the live-in to
+#     be available in Head too, so canConvert() rejects (stat NumPhysRejs).
+---
+name:            cmpbb_livein
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cmpbb_livein
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    liveins: $ecx
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 17. Live-in physreg in Tail: same rejection, on the Tail arm (NumPhysRejs).
+---
+name:            tail_livein
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: tail_livein
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    liveins: $ecx
+    RET 0
+...
+
+# 18. Store in CmpBB: not safe to speculate, so canSpeculateInstrs() rejects on
+#     the isSafeToMove() arm rather than the mayLoad() arm covered by
+#     load_in_cmpbb (stat NumSpeculateRejs).
+---
+name:            store_in_cmpbb
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: store_in_cmpbb
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       MOV32mi
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi, $rdx
+
+    %2:gr64 = COPY $rdx
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    MOV32mi %2, 1, $noreg, 0, $noreg, 7 :: (store (s32))
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 19. Flag clobber before the compare in CmpBB: the ADD would be speculated into
+#     Head ahead of the ccmp and overwrite the flags Head's compare set, so
+#     canSpeculateInstrs() rejects (stat NumSpeculateRejs). Note this is a
+#     different path from eflags_def_in_cmpbb, where the extra flag definition
+#     sits after the compare and is caught by findConvertibleCompare() instead.
+---
+name:            flags_clobber_before_cmp
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: flags_clobber_before_cmp
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       ADD32ri
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %2:gr32 = ADD32ri %1, 3, implicit-def $eflags
+    TEST32rr %2, %2, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 20. Diamond rather than triangle: CmpBB's successors do not include Head's
+#     other successor, so there is no common Tail and canConvert() rejects on
+#     the topology check, before the candidate is even counted.
+---
+name:            diamond_not_triangle
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: diamond_not_triangle
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.4
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+
+  bb.4:
+    RET 0
+...
+
+# 21. Unanalyzable Head terminator: analyzeBranch() cannot describe the indirect
+#     branch, so the generic pass rejects (stat NumHeadBranchRejs).
+---
+name:            head_branch_unanalyzable
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: head_branch_unanalyzable
+  ; CHECK:       bb.0:
+  ; CHECK:       JMP64r
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi, $rdx
+
+    %2:gr64 = COPY $rdx
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    JMP64r %2
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 22. Unanalyzable CmpBB terminator: same rejection on the CmpBB arm (stat
+#     NumCmpBranchRejs).
+---
+name:            cmpbb_branch_unanalyzable
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: cmpbb_branch_unanalyzable
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JMP64r
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi, $rdx
+
+    %2:gr64 = COPY $rdx
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JMP64r %2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
+...
+
+# 23. optnone: the pass skips the function entirely, so an otherwise convertible
+#     triangle is left alone. This candidate is not counted at all.
+---
+name:            optnone_skipped
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: optnone_skipped
+  ; CHECK:       bb.0:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK:       bb.1:
+  ; CHECK:       TEST32rr
+  ; CHECK:       JCC_1
+  ; CHECK-NOT:   CCMP
+  ; CHECK-NOT:   CTEST
+  bb.0:
+    successors: %bb.1, %bb.3
+    liveins: $edi, $esi
+
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    TEST32rr %0, %0, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    TEST32rr %1, %1, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    RET 0
+
+  bb.3:
+    RET 0
 ...

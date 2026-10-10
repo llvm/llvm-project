@@ -263,7 +263,7 @@ bool SSACCmpConv::canSpeculateInstrs(MachineBasicBlock *MBB,
     if (I.isDebugInstr())
       continue;
 
-    if (++InstrCount > Opts.machine_ccmp_limit && !Opts.stress_machine_ccmp) {
+    if (++InstrCount > Opts.machine_ccmp_limit && !Opts.machine_stress_ccmp) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
                         << Opts.machine_ccmp_limit << " instructions.\n");
       return false;
@@ -552,7 +552,7 @@ void MachineConditionalCompares::invalidateTraces() {
 /// the conversion is a good idea.
 bool MachineConditionalCompares::shouldConvert() {
   // Stress testing mode disables all cost considerations.
-  if (Opts.stress_machine_ccmp)
+  if (Opts.machine_stress_ccmp)
     return true;
 
   if (!MinInstr)

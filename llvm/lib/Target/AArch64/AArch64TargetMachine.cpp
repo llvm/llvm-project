@@ -680,8 +680,8 @@ void AArch64PassConfig::addMachineSSAOptimization() {
 bool AArch64PassConfig::addILPOpts() {
   if (CLOpts.enable_condopt)
     addPass(createAArch64ConditionOptimizerLegacyPass());
-  if (CLOpts.enable_ccmp)
-    addPass(&MachineConditionalComparesLegacyID);
+  // Gated by AArch64Subtarget::enableCCMPFormation().
+  addPass(&MachineConditionalComparesLegacyID);
   if (CLOpts.enable_mcr)
     addPass(&MachineCombinerID);
   if (CLOpts.enable_cond_br_tune)

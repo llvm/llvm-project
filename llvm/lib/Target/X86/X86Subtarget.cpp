@@ -368,7 +368,7 @@ bool X86Subtarget::enableEarlyIfConversion() const {
 }
 
 bool X86Subtarget::enableCCMPFormation() const {
-  return CLOpts.enable_ccmp_opt && hasCCMP();
+  return CLOpts.enable_ccmp && hasCCMP();
 }
 
 void X86Subtarget::getPostRAMutations(
