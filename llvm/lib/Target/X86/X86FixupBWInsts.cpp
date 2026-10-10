@@ -42,6 +42,12 @@
 /// wouldn't be created, or when your know a newer processor is being
 /// targeted, or when optimizing for minimum code size.
 ///
+/// SETcc has the same false dependence but no wider form. On targets where it
+/// matters, a SETcc whose destination register carries a value from the
+/// previous iteration of a loop gets the 32-bit super-register zeroed before
+/// it, so that the SETcc does not become part of a loop-carried dependency
+/// chain.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
@@ -100,6 +106,14 @@ private:
   MachineInstr *tryReplaceExtend(unsigned New32BitOpcode,
                                  MachineInstr *MI) const;
 
+  /// If the SETcc \p MI depends on a value of its destination's super-register
+  /// that was produced in the previous iteration of a single-block loop,
+  /// return an instruction that zeroes the super-register and set \p InsertPt
+  /// to the instruction it must be inserted before. Otherwise return nullptr.
+  MachineInstr *tryBreakSETCCDependency(MachineInstr *MI,
+                                        MachineBasicBlock &MBB,
+                                        MachineInstr *&InsertPt) const;
+
   // Change the MachineInstr \p MI into an eqivalent 32 bit instruction if
   // possible.  Return the replacement instruction if OK, return nullptr
   // otherwise.
@@ -114,6 +128,9 @@ private:
 
   /// Local member for function's OptForSize attribute.
   bool OptForSize = false;
+
+  /// Whether SETcc has a false dependency worth breaking on this target.
+  bool BreakSETCCDeps = false;
 
   /// Register Liveness information after the current instruction.
   LiveRegUnits LiveUnits;
@@ -164,6 +181,7 @@ bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   TII = ST.getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
+  BreakSETCCDeps = ST.hasSETCCFalseDeps();
   LiveUnits.init(TII->getRegisterInfo());
 
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
@@ -379,6 +397,67 @@ MachineInstr *X86FixupBWInstImpl::tryReplaceExtend(unsigned New32BitOpcode,
   return MIB;
 }
 
+MachineInstr *X86FixupBWInstImpl::tryBreakSETCCDependency(
+    MachineInstr *MI, MachineBasicBlock &MBB, MachineInstr *&InsertPt) const {
+  if (!MBB.isSuccessor(&MBB))
+    return nullptr;
+
+  // The upper bits must be dead after the SETcc, which also means that they
+  // are dead before it.
+  Register SuperReg = getSuperRegDestIfDead(MI);
+  if (!SuperReg)
+    return nullptr;
+
+  // The SETcc only waits for the previous iteration if nothing writes the
+  // super-register before it in the block, and something other than the
+  // SETcc writes it after it.
+  if (llvm::none_of(
+          make_range(std::next(MachineBasicBlock::iterator(MI)), MBB.end()),
+          [&](const MachineInstr &I) {
+            return I.modifiesRegister(SuperReg, TRI);
+          }))
+    return nullptr;
+
+  MachineInstr *FlagsDef = nullptr;
+  bool SuperRegReadAfterFlagsDef = false;
+  for (MachineInstr &I : make_range(
+           std::next(MachineBasicBlock::reverse_iterator(MI)), MBB.rend())) {
+    if (I.isDebugInstr())
+      continue;
+    if (I.modifiesRegister(SuperReg, TRI))
+      return nullptr;
+    if (FlagsDef)
+      continue;
+    if (I.modifiesRegister(X86::EFLAGS, TRI)) {
+      // If the flags already depend on the value the SETcc merges into, the
+      // merge adds no latency.
+      if (I.readsRegister(SuperReg, TRI))
+        return nullptr;
+      FlagsDef = &I;
+    } else if (I.readsRegister(SuperReg, TRI)) {
+      SuperRegReadAfterFlagsDef = true;
+    }
+  }
+
+  // Prefer a zero idiom in front of the flags producer. The xor clobbers
+  // EFLAGS, so that only works if the producer doesn't read them and the
+  // super-register is dead from there on.
+  if (FlagsDef && !SuperRegReadAfterFlagsDef &&
+      !FlagsDef->readsRegister(X86::EFLAGS, TRI)) {
+    InsertPt = FlagsDef;
+    MachineInstr *Xor =
+        BuildMI(*MF, MIMetadata(*MI), TII->get(X86::XOR32rr), SuperReg)
+            .addReg(SuperReg, RegState::Undef)
+            .addReg(SuperReg, RegState::Undef);
+    Xor->addRegisterDead(X86::EFLAGS, TRI);
+    return Xor;
+  }
+
+  InsertPt = MI;
+  return BuildMI(*MF, MIMetadata(*MI), TII->get(X86::MOV32ri), SuperReg)
+      .addImm(0);
+}
+
 MachineInstr *
 X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
                                     MachineBasicBlock &MBB) const {
@@ -440,6 +519,9 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
   // whole BB has been analyzed.  This keeps the replacement instructions
   // from making it seem as if the larger register might be live.
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 8> MIReplacements;
+  // Dependency-breaking instructions, with the instruction to insert them
+  // before.
+  SmallVector<std::pair<MachineInstr *, MachineInstr *>, 4> MIInsertions;
 
   // Start computing liveness for this block. We iterate from the end to be able
   // to update this for each instruction.
@@ -453,6 +535,11 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
     if (MachineInstr *NewMI = tryReplaceInstr(&MI, MBB))
       MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
+    MachineInstr *InsertPt = nullptr;
+    if (BreakSETCCDeps && !OptForSize && MI.getOpcode() == X86::SETCCr)
+      if (MachineInstr *NewMI = tryBreakSETCCDependency(&MI, MBB, InsertPt))
+        MIInsertions.push_back(std::make_pair(InsertPt, NewMI));
+
     // We're done with this instruction, update liveness for the next one.
     if (!MI.isDebugInstr())
       LiveUnits.stepBackward(MI);
@@ -465,6 +552,9 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
     MBB.insert(MI, NewMI);
     MBB.erase(MI);
   }
+
+  for (auto [InsertPt, NewMI] : MIInsertions)
+    MBB.insert(InsertPt, NewMI);
 }
 
 bool X86FixupBWInstLegacy::runOnMachineFunction(MachineFunction &MF) {
