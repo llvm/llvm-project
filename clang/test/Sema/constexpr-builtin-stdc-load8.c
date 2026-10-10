@@ -122,6 +122,7 @@ void test_wrong_types(void) {
 struct NonChar { int x; };
 constexpr struct NonChar non_char_arr[2] = {{0x12345678}, {0}};
 constexpr __UINT_LEAST32_TYPE__ struct_arr_fail = stdc_load8_leu32((const unsigned char *)non_char_arr); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+constexpr __UINT_LEAST8_TYPE__ struct_arr_n8_fail = stdc_load8_leu8((const unsigned char *)non_char_arr); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
 
 // Negative: out-of-bounds, scalar, and null.
 constexpr unsigned char small[] = {0x01, 0x02};
@@ -219,6 +220,7 @@ union FieldUnion { unsigned char c; unsigned char data[8]; };
 alignas(8) constexpr union FieldUnion field_u = {.data = {0x78, 0x56, 0x34, 0x12}};
 constexpr __UINT_LEAST32_TYPE__ union_ok = stdc_load8_aligned_leu32(field_u.data);
 static_assert(union_ok == 0x12345678U, "");
+constexpr __UINT_LEAST8_TYPE__ union_n8_fail = stdc_load8_leu8((const unsigned char *)&field_u); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
 
 constexpr unsigned char scalar_ok = 0x42;
 constexpr __UINT_LEAST8_TYPE__ scalar_aligned_ok = stdc_load8_aligned_leu8(&scalar_ok);
@@ -231,3 +233,20 @@ void test_block_scope_scalar(void) {
   constexpr unsigned char local_scalar = 0x42;
   static_assert(stdc_load8_aligned_leu8(&local_scalar) == 0x42, "");
 }
+
+constexpr bool bool_arr[4] = {1, 0, 1, 0};
+constexpr __UINT_LEAST32_TYPE__ bool_arr_fail = stdc_load8_leu32((const unsigned char *)bool_arr); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+constexpr bool bool_scalar = 1;
+constexpr __UINT_LEAST8_TYPE__ bool_scalar_fail = stdc_load8_leu8((const unsigned char *)&bool_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+constexpr short short_scalar = 1;
+constexpr __UINT_LEAST16_TYPE__ short_scalar_fail = stdc_load8_leu16((const unsigned char *)&short_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+constexpr float float_scalar = 1.0f;
+constexpr __UINT_LEAST32_TYPE__ float_scalar_fail = stdc_load8_leu32((const unsigned char *)&float_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+constexpr __UINT_LEAST8_TYPE__ float_scalar_n8_fail = stdc_load8_leu8((const unsigned char *)&float_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
+constexpr double double_scalar = 1.0;
+constexpr __UINT_LEAST64_TYPE__ double_scalar_fail = stdc_load8_leu64((const unsigned char *)&double_scalar); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
