@@ -16,6 +16,7 @@
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
 #include "MipsMCAsmInfo.h"
+#include "MipsMCOptions.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -47,6 +49,9 @@ using namespace llvm;
 
 #define GET_REGISTER_MATCHER
 #include "MipsGenAsmMatcher.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "MipsMCOptions.inc"
 
 MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
                                       unsigned RegClassID, unsigned AltIdx) {
@@ -327,6 +332,7 @@ static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
+  static opt::RegisterLibraryOptions<MipsMCOptions> O;
   for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
                     &getTheMips64Target(), &getTheMips64elTarget()}) {
     // Register the MC asm info.

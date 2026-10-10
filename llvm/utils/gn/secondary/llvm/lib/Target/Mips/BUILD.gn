@@ -51,6 +51,12 @@ tablegen("MipsGenSDNodeInfo") {
   td_file = "Mips.td"
 }
 
+tablegen("MipsOptions") {
+  visibility = [ ":LLVMMipsCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "MipsOptions.td"
+}
+
 static_library("LLVMMipsCodeGen") {
   deps = [
     ":MipsGenCallingConv",
@@ -61,6 +67,7 @@ static_library("LLVMMipsCodeGen") {
     ":MipsGenPostLegalizeGICombiner",
     ":MipsGenRegisterBank",
     ":MipsGenSDNodeInfo",
+    ":MipsOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -71,6 +78,7 @@ static_library("LLVMMipsCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

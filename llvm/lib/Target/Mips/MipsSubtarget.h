@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSSUBTARGET_H
 
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsMCOptions.h"
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
@@ -32,19 +33,27 @@
 namespace llvm {
 class StringRef;
 
-enum CompactBranchPolicy {
-  CB_Never,   ///< The policy 'never' may in some circumstances or for some
-              ///< ISAs not be absolutely adhered to.
-  CB_Optimal, ///< Optimal is the default and will produce compact branches
-              ///< when appropriate.
-  CB_Always   ///< 'always' may in some circumstances may not be
-              ///< absolutely adhered to, there may not be a corresponding
-              ///< compact form of a branch.
+enum class CompactBranchPolicy {
+  Never,   ///< The policy 'never' may in some circumstances or for some
+           ///< ISAs not be absolutely adhered to.
+  Optimal, ///< Optimal is the default and will produce compact branches
+           ///< when appropriate.
+  Always   ///< 'always' may in some circumstances may not be
+           ///< absolutely adhered to, there may not be a corresponding
+           ///< compact form of a branch.
 };
+} // namespace llvm
 
+#define OPTIONS_STRUCT_DECL
+#include "MipsOptions.inc"
+
+namespace llvm {
 class MipsTargetMachine;
 
 class MipsSubtarget : public MipsGenSubtargetInfo {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
+
   virtual void anchor();
 
   enum MipsArchEnum {
@@ -368,7 +377,7 @@ public:
 
   // for now constant islands are on for the whole compilation unit but we only
   // really use them if in addition we are in mips16 mode
-  static bool useConstantIslands();
+  bool useConstantIslands() const;
 
   Align getStackAlignment() const { return stackAlignment; }
 
@@ -389,6 +398,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const MipsInstrInfo *getInstrInfo() const override { return InstrInfo.get(); }
   const TargetFrameLowering *getFrameLowering() const override {
     return FrameLowering.get();

@@ -3257,6 +3257,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/Mips/MipsGenSubtargetInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":MipsMCOptionsTableGen",
+            ":MipsOptionsTableGen",
+        ],
     },
     {
         "name": "MSP430",
@@ -4115,6 +4119,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MCTargetDesc/MipsMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MipsOptionsTableGen",
+    strip_include_prefix = "lib/Target/Mips",
+    tbl_outs = {"lib/Target/Mips/MipsOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Mips/MipsOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

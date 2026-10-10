@@ -21,6 +21,12 @@ tablegen(LLVM MipsGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM MipsGenExegesis.inc -gen-exegesis)
 
+set(LLVM_TARGET_DEFINITIONS MipsOptions.td)
+tablegen(LLVM MipsOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/MipsMCOptions.td)
+tablegen(LLVM MipsMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(MipsCommonTableGen)
 
 add_llvm_target(MipsCodeGen
@@ -78,6 +84,7 @@ add_llvm_target(MipsCodeGen
   MC
   MipsDesc
   MipsInfo
+  Option
   SelectionDAG
   Support
   Target

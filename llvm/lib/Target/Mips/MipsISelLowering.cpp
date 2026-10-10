@@ -59,7 +59,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -80,13 +79,6 @@ using namespace llvm;
 #define DEBUG_TYPE "mips-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
-
-extern cl::opt<bool> EmitJalrReloc;
-extern cl::opt<bool> NoZeroDivCheck;
-
-static cl::opt<bool> UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                                      cl::desc("MIPS: permit tail calls."),
-                                      cl::init(false));
 
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
@@ -1293,10 +1285,10 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
 }
 
 static MachineBasicBlock *
-insertDivByZeroTrap(MachineInstr &MI, MachineBasicBlock &MBB,
-                    const TargetInstrInfo &TII, bool Is64Bit,
-                    const DivByZeroTrapKind TrapKind) {
-  if (NoZeroDivCheck)
+insertDivByZeroTrap(const MipsMCOptions &MCCLOpts, MachineInstr &MI,
+                    MachineBasicBlock &MBB, const TargetInstrInfo &TII,
+                    bool Is64Bit, const DivByZeroTrapKind TrapKind) {
+  if (MCCLOpts.mno_check_zero_division)
     return &MBB;
 
   MachineOperand &Divisor = MI.getOperand(2);
@@ -1488,8 +1480,8 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     const DivByZeroTrapKind TrapKind = !Subtarget.hasMips2()
                                            ? DivByZeroTrapKind::Break
                                            : DivByZeroTrapKind::Teq;
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               TrapKind);
+    return insertDivByZeroTrap(Subtarget.getMCCLOpts(), MI, *BB,
+                               *Subtarget.getInstrInfo(), false, TrapKind);
   }
   case Mips::SDIV_MM_Pseudo:
   case Mips::UDIV_MM_Pseudo:
@@ -1499,7 +1491,8 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU_MMR6:
   case Mips::MOD_MMR6:
   case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
+    return insertDivByZeroTrap(Subtarget.getMCCLOpts(), MI, *BB,
+                               *Subtarget.getInstrInfo(), false,
                                DivByZeroTrapKind::TeqMM);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
@@ -1507,7 +1500,8 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true,
+    return insertDivByZeroTrap(Subtarget.getMCCLOpts(), MI, *BB,
+                               *Subtarget.getInstrInfo(), true,
                                DivByZeroTrapKind::Teq);
 
   case Mips::PseudoSELECT_I:
@@ -3342,10 +3336,8 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     case Mips::TAILCALL64R6REG:
     case Mips::TAILCALLREG_MM:
     case Mips::TAILCALLREG_MMR6: {
-      if (!EmitJalrReloc ||
-          Subtarget.inMips16Mode() ||
-          !isPositionIndependent() ||
-          Node->getNumOperands() < 1 ||
+      if (!Subtarget.getMCCLOpts().jalr_reloc || Subtarget.inMips16Mode() ||
+          !isPositionIndependent() || Node->getNumOperands() < 1 ||
           Node->getOperand(0).getNumOperands() < 2) {
         return;
       }
@@ -3476,7 +3468,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (IsTailCall) {
-    if (!UseMipsTailCalls) {
+    if (!Subtarget.getCLOpts().tail_calls) {
       IsTailCall = false;
       if (IsMustTail)
         report_fatal_error("failed to perform tail call elimination on a call "

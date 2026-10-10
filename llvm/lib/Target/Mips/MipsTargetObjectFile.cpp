@@ -9,36 +9,14 @@
 #include "MipsTargetObjectFile.h"
 #include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MipsSubtarget.h"
+#include "MipsTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
-
-static cl::opt<unsigned>
-SSThreshold("mips-ssection-threshold", cl::Hidden,
-            cl::desc("Small data and bss section threshold size (default=8)"),
-            cl::init(8));
-
-static cl::opt<bool>
-LocalSData("mlocal-sdata", cl::Hidden,
-           cl::desc("MIPS: Use gp_rel for object-local data."),
-           cl::init(true));
-
-static cl::opt<bool>
-ExternSData("mextern-sdata", cl::Hidden,
-            cl::desc("MIPS: Use gp_rel for data that is not defined by the "
-                     "current object."),
-            cl::init(true));
-
-static cl::opt<bool>
-EmbeddedData("membedded-data", cl::Hidden,
-             cl::desc("MIPS: Try to allocate variables in the following"
-                      " sections if possible: .rodata, .sdata, .data ."),
-             cl::init(false));
 
 void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
@@ -55,10 +33,10 @@ void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
 // A address must be loaded from a small section if its size is less than the
 // small section size threshold. Data in this section must be addressed using
 // gp_rel operator.
-static bool IsInSmallSection(uint64_t Size) {
+static bool isInSmallSection(const MipsOptions &CLOpts, uint64_t Size) {
   // gcc has traditionally not treated zero-sized objects as small data, so this
   // is effectively part of the ABI.
-  return Size > 0 && Size <= SSThreshold;
+  return Size > 0 && Size <= CLOpts.ssection_threshold;
 }
 
 /// Return true if this global address should be placed into small data/bss
@@ -88,6 +66,8 @@ bool MipsTargetObjectFile::IsGlobalInSmallSection(const GlobalObject *GO,
 /// kind.
 bool MipsTargetObjectFile::IsGlobalInSmallSectionImpl(
     const GlobalObject *GO) const {
+  const MipsOptions &CLOpts =
+      static_cast<const MipsTargetMachine *>(TM)->getCLOpts();
   // Only global variables, not functions.
   const GlobalVariable *GVA = dyn_cast<GlobalVariable>(GO);
   if (!GVA)
@@ -117,16 +97,17 @@ bool MipsTargetObjectFile::IsGlobalInSmallSectionImpl(
     return false;
 
   // Enforce -mlocal-sdata.
-  if (!LocalSData && GVA->hasLocalLinkage())
+  if (!CLOpts.mlocal_sdata && GVA->hasLocalLinkage())
     return false;
 
   // Enforce -mextern-sdata.
-  if (!ExternSData && ((GVA->hasExternalLinkage() && GVA->isDeclaration()) ||
-                       GVA->hasCommonLinkage()))
+  if (!CLOpts.mextern_sdata &&
+      ((GVA->hasExternalLinkage() && GVA->isDeclaration()) ||
+       GVA->hasCommonLinkage()))
     return false;
 
   // Enforce -membedded-data.
-  if (EmbeddedData && GVA->isConstant())
+  if (CLOpts.membedded_data && GVA->isConstant())
     return false;
 
   Type *Ty = GVA->getValueType();
@@ -137,8 +118,7 @@ bool MipsTargetObjectFile::IsGlobalInSmallSectionImpl(
   if (!Ty->isSized())
     return false;
 
-  return IsInSmallSection(
-      GVA->getDataLayout().getTypeAllocSize(Ty));
+  return isInSmallSection(CLOpts, GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
 MCSection *MipsTargetObjectFile::SelectSectionForGlobal(
@@ -165,8 +145,10 @@ bool MipsTargetObjectFile::IsConstantInSmallSection(const DataLayout &DL,
   bool UseSmallSection =
       F ? TM->getSubtarget<MipsSubtarget>(*F).useSmallSection()
         : this->UseSmallSection;
-  return UseSmallSection && CN && LocalSData &&
-         IsInSmallSection(DL.getTypeAllocSize(CN->getType()));
+  const MipsOptions &CLOpts =
+      static_cast<const MipsTargetMachine *>(TM)->getCLOpts();
+  return UseSmallSection && CN && CLOpts.mlocal_sdata &&
+         isInSmallSection(CLOpts, DL.getTypeAllocSize(CN->getType()));
 }
 
 /// Return true if this constant should be placed into small data section.
