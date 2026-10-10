@@ -258,9 +258,9 @@ public:
            getInlinedAt() == Other.getInlinedAt();
   }
 
-  /// As isSameSourceLocation, and additionally requires the intermediate-IR
-  /// layers to match. For callers that replace a location wholesale, or that
-  /// emit something derived from the layers.
+  /// Like isSameSourceLocation, but also requires the intermediate-IR layers
+  /// to match. Use it before copying one location over another, so the copy
+  /// cannot change the layers.
   bool isSameSourceLocationAndIRLayers(const DebugLoc &Other) const {
     return isSameSourceLocation(Other) &&
            getRawIRLayers() == Other.getRawIRLayers();

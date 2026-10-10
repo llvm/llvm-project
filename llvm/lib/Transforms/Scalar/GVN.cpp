@@ -2262,7 +2262,7 @@ bool GVNPassImpl::performLoadPRE(LoadInst *Load,
     // Instructions that have been inserted in predecessor(s) to materialize
     // the load address do not retain their original debug locations. Doing
     // so could lead to confusing (but correct) source attributions.
-    I->updateLocationAfterHoist();
+    I->updateLocationAfterMove();
 
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into

@@ -746,15 +746,15 @@ public:
   /// merged DebugLoc.
   LLVM_ABI void applyMergedLocation(DebugLoc LocA, DebugLoc LocB);
 
-  /// Updates the debug location given that the instruction has been hoisted
-  /// from a block to a predecessor of that block. The source location is
-  /// dropped as by \ref dropLocation(), but intermediate-IR layers survive the
-  /// move: if the instruction has any (see
+  /// Updates the debug location given that the instruction has been moved to
+  /// another block, for example hoisted into a predecessor or sunk out of a
+  /// loop. The source location is dropped as by \ref dropLocation(), but
+  /// intermediate-IR layers survive the move: if the instruction has any (see
   /// DILocation::getInnermostIRLayers()), it gets a line 0 location in the
   /// function's scope that carries them.
   /// Note: it is undefined behavior to call this on an instruction not
   /// currently inserted into a function.
-  LLVM_ABI void updateLocationAfterHoist();
+  LLVM_ABI void updateLocationAfterMove();
 
   /// Drop the instruction's debug location. This does not guarantee removal
   /// of the !dbg source location attachment, as it must set a line 0 location

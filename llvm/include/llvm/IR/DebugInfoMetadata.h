@@ -3090,8 +3090,9 @@ public:
   DILayerLocList *getIRLayers() const {
     return cast_if_present<DILayerLocList>(getRawIRLayers());
   }
-  /// The layer list of the innermost location in this inlined-at chain that
-  /// has one, starting with this location; null if none does.
+  /// The layer list nearest this location: walks from this location through
+  /// getInlinedAt() toward the outermost call site and returns the first one
+  /// found, or null if none has layers.
   DILayerLocList *getInnermostIRLayers() const {
     for (const DILocation *L = this; L; L = L->getInlinedAt())
       if (DILayerLocList *Layers = L->getIRLayers())
