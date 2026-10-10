@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/WindowsResource.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -430,6 +431,7 @@ Error WindowsResourceParser::addChildren(TreeNode &Node,
       Context.push_back(StringOrID(Entry.Identifier.ID));
       bool Added = Node.addDataChild(Entry.Identifier.ID, Table.MajorVersion,
                                      Table.MinorVersion, Table.Characteristics,
+                                     DataEntry.Codepage, DataEntry.Reserved,
                                      Origin, Data.size(), Child);
       if (Added) {
         UNWRAP_OR_RETURN(Contents, RSR.getContents(DataEntry));
@@ -454,10 +456,11 @@ WindowsResourceParser::TreeNode::TreeNode(uint32_t StringIndex)
 WindowsResourceParser::TreeNode::TreeNode(uint16_t MajorVersion,
                                           uint16_t MinorVersion,
                                           uint32_t Characteristics,
+                                          uint32_t CodePage, uint32_t Reserved,
                                           uint32_t Origin, uint32_t DataIndex)
     : IsDataNode(true), DataIndex(DataIndex), MajorVersion(MajorVersion),
       MinorVersion(MinorVersion), Characteristics(Characteristics),
-      Origin(Origin) {}
+      CodePage(CodePage), Reserved(Reserved), Origin(Origin) {}
 
 std::unique_ptr<WindowsResourceParser::TreeNode>
 WindowsResourceParser::TreeNode::createStringNode(uint32_t Index) {
@@ -470,13 +473,12 @@ WindowsResourceParser::TreeNode::createIDNode() {
 }
 
 std::unique_ptr<WindowsResourceParser::TreeNode>
-WindowsResourceParser::TreeNode::createDataNode(uint16_t MajorVersion,
-                                                uint16_t MinorVersion,
-                                                uint32_t Characteristics,
-                                                uint32_t Origin,
-                                                uint32_t DataIndex) {
-  return std::unique_ptr<TreeNode>(new TreeNode(
-      MajorVersion, MinorVersion, Characteristics, Origin, DataIndex));
+WindowsResourceParser::TreeNode::createDataNode(
+    uint16_t MajorVersion, uint16_t MinorVersion, uint32_t Characteristics,
+    uint32_t CodePage, uint32_t Reserved, uint32_t Origin, uint32_t DataIndex) {
+  return std::unique_ptr<TreeNode>(new TreeNode(MajorVersion, MinorVersion,
+                                                Characteristics, CodePage,
+                                                Reserved, Origin, DataIndex));
 }
 
 WindowsResourceParser::TreeNode &WindowsResourceParser::TreeNode::addTypeNode(
@@ -502,7 +504,7 @@ bool WindowsResourceParser::TreeNode::addLanguageNode(
     std::vector<std::vector<uint8_t>> &Data, TreeNode *&Result) {
   bool Added = addDataChild(Entry.getLanguage(), Entry.getMajorVersion(),
                             Entry.getMinorVersion(), Entry.getCharacteristics(),
-                            Origin, Data.size(), Result);
+                            0, 0, Origin, Data.size(), Result);
   if (Added)
     Data.push_back(Entry.getData());
   return Added;
@@ -510,10 +512,10 @@ bool WindowsResourceParser::TreeNode::addLanguageNode(
 
 bool WindowsResourceParser::TreeNode::addDataChild(
     uint32_t ID, uint16_t MajorVersion, uint16_t MinorVersion,
-    uint32_t Characteristics, uint32_t Origin, uint32_t DataIndex,
-    TreeNode *&Result) {
+    uint32_t Characteristics, uint32_t CodePage, uint32_t Reserved,
+    uint32_t Origin, uint32_t DataIndex, TreeNode *&Result) {
   auto NewChild = createDataNode(MajorVersion, MinorVersion, Characteristics,
-                                 Origin, DataIndex);
+                                 CodePage, Reserved, Origin, DataIndex);
   auto ElementInserted = IDChildren.emplace(ID, std::move(NewChild));
   Result = ElementInserted.first->second.get();
   return ElementInserted.second;
@@ -597,6 +599,187 @@ void WindowsResourceParser::TreeNode::shiftDataIndexDown(uint32_t Index) {
   }
 }
 
+// Shift StringIndex of all string children with an Index greater or equal to
+// the given one, to fill a gap from removing an entry from the StringTable
+// vector.
+void WindowsResourceParser::TreeNode::shiftStringIndexDown(uint32_t Index) {
+  for (auto &Child : StringChildren) {
+    if (Child.second->StringIndex >= Index)
+      Child.second->StringIndex--;
+    Child.second->shiftStringIndexDown(Index);
+  }
+  for (auto &Child : IDChildren)
+    Child.second->shiftStringIndexDown(Index);
+}
+
+WindowsResourceParser::TreeNode &WindowsResourceParser::TreeNode::addChild(
+    const StringOrID &Key, std::vector<std::vector<UTF16>> &StringTable) {
+  if (Key.IsString)
+    return addNameChild(Key.String, StringTable);
+  return addIDChild(Key.ID);
+}
+
+const WindowsResourceParser::TreeNode *
+WindowsResourceParser::TreeNode::findChild(const StringOrID &Key) const {
+  if (!Key.IsString) {
+    auto Child = IDChildren.find(Key.ID);
+    return Child == IDChildren.end() ? nullptr : Child->second.get();
+  }
+  std::string KeyString;
+  convertUTF16LEToUTF8String(Key.String, KeyString);
+  auto Child = StringChildren.find(KeyString);
+  return Child == StringChildren.end() ? nullptr : Child->second.get();
+}
+
+const WindowsResourceParser::TreeNode *
+WindowsResourceParser::findResource(const StringOrID &Type,
+                                    const StringOrID &Name) const {
+  const TreeNode *TypeNode = Root.findChild(Type);
+  return TypeNode ? TypeNode->findChild(Name) : nullptr;
+}
+
+namespace {
+
+// Owns a copy of a StringOrID's string, if any. This keeps keys valid while
+// resource removal mutates the parser's string table.
+struct StableStringOrID {
+  std::vector<UTF16> Storage;
+  WindowsResourceParser::StringOrID Value;
+
+  explicit StableStringOrID(const WindowsResourceParser::StringOrID &Key)
+      : Storage(Key.IsString ? Key.String.vec() : std::vector<UTF16>()),
+        Value(Key.IsString ? WindowsResourceParser::StringOrID(Storage)
+                           : WindowsResourceParser::StringOrID(Key.ID)) {}
+};
+
+} // namespace
+
+void WindowsResourceParser::addResource(const StringOrID &Type,
+                                        const StringOrID &Name,
+                                        uint16_t Language,
+                                        ArrayRef<uint8_t> ResourceData,
+                                        StringRef Origin) {
+  StableStringOrID StableType(Type);
+  StableStringOrID StableName(Name);
+  std::vector<uint8_t> NewData = ResourceData.vec();
+
+  uint32_t CodePage = 0;
+  uint32_t Reserved = 0;
+  if (const TreeNode *NameNode =
+          findResource(StableType.Value, StableName.Value)) {
+    auto LanguageNode = NameNode->IDChildren.find(Language);
+    if (LanguageNode != NameNode->IDChildren.end() &&
+        LanguageNode->second->IsDataNode) {
+      CodePage = LanguageNode->second->CodePage;
+      Reserved = LanguageNode->second->Reserved;
+    }
+  }
+
+  // Replace any existing resource with the same type, name and language.
+  removeResource(StableType.Value, StableName.Value, Language);
+
+  uint32_t OriginIndex = InputFilenames.size();
+  InputFilenames.push_back(std::string(Origin));
+  TreeNode &TypeNode = Root.addChild(StableType.Value, StringTable);
+  TreeNode &NameNode = TypeNode.addChild(StableName.Value, StringTable);
+  TreeNode *LanguageNode;
+  bool Added = NameNode.addDataChild(Language, 0, 0, 0, CodePage, Reserved,
+                                     OriginIndex, Data.size(), LanguageNode);
+  assert(Added && "existing resource was not removed");
+  (void)Added;
+  Data.push_back(std::move(NewData));
+}
+
+bool WindowsResourceParser::removeResource(const StringOrID &Type,
+                                           const StringOrID &Name,
+                                           std::optional<uint16_t> Language) {
+  StableStringOrID StableType(Type);
+  StableStringOrID StableName(Name);
+  TreeNode *TypeNode = Root.findChild(StableType.Value);
+  if (!TypeNode)
+    return false;
+  TreeNode *NameNode = TypeNode->findChild(StableName.Value);
+  if (!NameNode)
+    return false;
+
+  bool Removed = false;
+  std::vector<uint32_t> RemovedDataIndices;
+  for (auto Child = NameNode->IDChildren.begin();
+       Child != NameNode->IDChildren.end();) {
+    if (Language && Child->first != *Language) {
+      ++Child;
+      continue;
+    }
+    if (Child->second->IsDataNode)
+      RemovedDataIndices.push_back(Child->second->DataIndex);
+    Child = NameNode->IDChildren.erase(Child);
+    Removed = true;
+  }
+
+  // Remove directories that have become empty.
+  if (NameNode->IDChildren.empty() && NameNode->StringChildren.empty()) {
+    removeChild(*TypeNode, StableName.Value);
+    if (TypeNode->IDChildren.empty() && TypeNode->StringChildren.empty())
+      removeChild(Root, StableType.Value);
+  }
+
+  // Remove the data of the removed resources, starting with the highest index
+  // so that the indices of the remaining ones stay valid while shifting.
+  llvm::sort(RemovedDataIndices, std::greater<>());
+  for (uint32_t Index : RemovedDataIndices) {
+    Data.erase(Data.begin() + Index);
+    Root.shiftDataIndexDown(Index);
+  }
+  return Removed;
+}
+
+void WindowsResourceParser::removeChild(TreeNode &Parent,
+                                        const StringOrID &Key) {
+  if (!Key.IsString) {
+    Parent.IDChildren.erase(Key.ID);
+    return;
+  }
+  std::string KeyString;
+  convertUTF16LEToUTF8String(Key.String, KeyString);
+  auto Child = Parent.StringChildren.find(KeyString);
+  if (Child == Parent.StringChildren.end())
+    return;
+  uint32_t StringIndex = Child->second->StringIndex;
+  Parent.StringChildren.erase(Child);
+  StringTable.erase(StringTable.begin() + StringIndex);
+  Root.shiftStringIndexDown(StringIndex);
+}
+
+namespace {
+
+// Writes the resource directory of a resource tree: the directory tables and
+// their entries, the data entries and the directory string table, in the layout
+// used by both the .rsrc$01 section of an object file and the start of the
+// .rsrc section of an image.
+class ResourceDirectoryWriter {
+public:
+  explicit ResourceDirectoryWriter(const WindowsResourceParser &Parser);
+
+  // The size of the directory, including the string table.
+  uint32_t getSize() const { return Size; }
+
+  // Writes the directory to Buf, which must be zero-initialized and at least
+  // getSize() bytes large. The DataRVA field of the data entry of the resource
+  // with data index I is set to GetDataRVA(I) and the offset of the data entry
+  // in Buf is stored in DataEntryOffsets[I].
+  void write(char *Buf, function_ref<uint32_t(uint32_t)> GetDataRVA,
+             std::vector<uint32_t> &DataEntryOffsets) const;
+
+private:
+  const WindowsResourceParser::TreeNode &Root;
+  const ArrayRef<std::vector<uint8_t>> Data;
+  const ArrayRef<std::vector<UTF16>> StringTable;
+  std::vector<uint32_t> StringTableOffsets;
+  uint32_t Size;
+};
+
+} // namespace
+
 class WindowsResourceCOFFWriter {
 public:
   WindowsResourceCOFFWriter(COFF::MachineTypes MachineType,
@@ -614,15 +797,13 @@ private:
   void writeSecondSection();
   void writeSymbolTable();
   void writeStringTable();
-  void writeDirectoryTree();
-  void writeDirectoryStringTable();
   void writeFirstSectionRelocations();
   std::unique_ptr<WritableMemoryBuffer> OutputBuffer;
   char *BufferStart;
   uint64_t CurrentOffset = 0;
   COFF::MachineTypes MachineType;
-  const WindowsResourceParser::TreeNode &Resources;
   const ArrayRef<std::vector<uint8_t>> Data;
+  ResourceDirectoryWriter Directory;
   uint64_t FileSize;
   uint32_t SymbolTableOffset;
   uint32_t SectionOneSize;
@@ -630,8 +811,6 @@ private:
   uint32_t SectionOneRelocations;
   uint32_t SectionTwoSize;
   uint32_t SectionTwoOffset;
-  const ArrayRef<std::vector<UTF16>> StringTable;
-  std::vector<uint32_t> StringTableOffsets;
   std::vector<uint32_t> DataOffsets;
   std::vector<uint32_t> RelocationAddresses;
 };
@@ -639,8 +818,7 @@ private:
 WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
     COFF::MachineTypes MachineType, const WindowsResourceParser &Parser,
     Error &E)
-    : MachineType(MachineType), Resources(Parser.getTree()),
-      Data(Parser.getData()), StringTable(Parser.getStringTable()) {
+    : MachineType(MachineType), Data(Parser.getData()), Directory(Parser) {
   performFileLayout();
 
   OutputBuffer = WritableMemoryBuffer::getNewMemBuffer(
@@ -669,16 +847,7 @@ void WindowsResourceCOFFWriter::performFileLayout() {
 void WindowsResourceCOFFWriter::performSectionOneLayout() {
   SectionOneOffset = FileSize;
 
-  SectionOneSize = Resources.getTreeSize();
-  uint32_t CurrentStringOffset = SectionOneSize;
-  uint32_t TotalStringTableSize = 0;
-  for (auto const &String : StringTable) {
-    StringTableOffsets.push_back(CurrentStringOffset);
-    uint32_t StringSize = String.size() * sizeof(UTF16) + sizeof(uint16_t);
-    CurrentStringOffset += StringSize;
-    TotalStringTableSize += StringSize;
-  }
-  SectionOneSize += alignTo(TotalStringTableSize, sizeof(uint32_t));
+  SectionOneSize = Directory.getSize();
 
   // account for the relocations of section one.
   SectionOneRelocations = FileSize + SectionOneSize;
@@ -780,8 +949,11 @@ void WindowsResourceCOFFWriter::writeFirstSection() {
   // Write section one.
   CurrentOffset += sizeof(coff_section);
 
-  writeDirectoryTree();
-  writeDirectoryStringTable();
+  // The DataRVA fields are set to zero because they are relocated.
+  Directory.write(
+      BufferStart + CurrentOffset, [](uint32_t) { return 0; },
+      RelocationAddresses);
+  CurrentOffset += SectionOneSize;
   writeFirstSectionRelocations();
 
   CurrentOffset = alignTo(CurrentOffset, SECTION_ALIGNMENT);
@@ -867,23 +1039,39 @@ void WindowsResourceCOFFWriter::writeStringTable() {
   memset(COFFStringTable, 0, 4);
 }
 
-void WindowsResourceCOFFWriter::writeDirectoryTree() {
+ResourceDirectoryWriter::ResourceDirectoryWriter(
+    const WindowsResourceParser &Parser)
+    : Root(Parser.getTree()), Data(Parser.getData()),
+      StringTable(Parser.getStringTable()) {
+  // The string table follows the directory tree and the data entries.
+  uint32_t StringOffset = Root.getTreeSize();
+  for (auto const &String : StringTable) {
+    StringTableOffsets.push_back(StringOffset);
+    StringOffset += String.size() * sizeof(UTF16) + sizeof(uint16_t);
+  }
+  Size = alignTo(StringOffset, sizeof(uint32_t));
+}
+
+void ResourceDirectoryWriter::write(
+    char *Buf, function_ref<uint32_t(uint32_t)> GetDataRVA,
+    std::vector<uint32_t> &DataEntryOffsets) const {
+  using TreeNode = WindowsResourceParser::TreeNode;
+
   // Traverse parsed resource tree breadth-first and write the corresponding
   // COFF objects.
-  std::queue<const WindowsResourceParser::TreeNode *> Queue;
-  Queue.push(&Resources);
+  std::queue<const TreeNode *> Queue;
+  Queue.push(&Root);
   uint32_t NextLevelOffset =
-      sizeof(coff_resource_dir_table) + (Resources.getStringChildren().size() +
-                                         Resources.getIDChildren().size()) *
-                                            sizeof(coff_resource_dir_entry);
-  std::vector<const WindowsResourceParser::TreeNode *> DataEntriesTreeOrder;
-  uint32_t CurrentRelativeOffset = 0;
+      sizeof(coff_resource_dir_table) +
+      (Root.getStringChildren().size() + Root.getIDChildren().size()) *
+          sizeof(coff_resource_dir_entry);
+  std::vector<const TreeNode *> DataEntriesTreeOrder;
+  uint32_t Offset = 0;
 
   while (!Queue.empty()) {
-    auto CurrentNode = Queue.front();
+    const TreeNode *CurrentNode = Queue.front();
     Queue.pop();
-    auto *Table = reinterpret_cast<coff_resource_dir_table *>(BufferStart +
-                                                              CurrentOffset);
+    auto *Table = reinterpret_cast<coff_resource_dir_table *>(Buf + Offset);
     Table->Characteristics = CurrentNode->getCharacteristics();
     Table->TimeDateStamp = 0;
     Table->MajorVersion = CurrentNode->getMajorVersion();
@@ -892,80 +1080,61 @@ void WindowsResourceCOFFWriter::writeDirectoryTree() {
     auto &StringChildren = CurrentNode->getStringChildren();
     Table->NumberOfNameEntries = StringChildren.size();
     Table->NumberOfIDEntries = IDChildren.size();
-    CurrentOffset += sizeof(coff_resource_dir_table);
-    CurrentRelativeOffset += sizeof(coff_resource_dir_table);
+    Offset += sizeof(coff_resource_dir_table);
 
     // Write the directory entries immediately following each directory table.
-    for (auto const &Child : StringChildren) {
-      auto *Entry = reinterpret_cast<coff_resource_dir_entry *>(BufferStart +
-                                                                CurrentOffset);
-      Entry->Identifier.setNameOffset(
-          StringTableOffsets[Child.second->getStringIndex()]);
-      if (Child.second->checkIsDataNode()) {
+    auto WriteEntry = [&](const TreeNode &Child, auto SetIdentifier) {
+      auto *Entry = reinterpret_cast<coff_resource_dir_entry *>(Buf + Offset);
+      SetIdentifier(*Entry);
+      if (Child.checkIsDataNode()) {
         Entry->Offset.DataEntryOffset = NextLevelOffset;
         NextLevelOffset += sizeof(coff_resource_data_entry);
-        DataEntriesTreeOrder.push_back(Child.second.get());
+        DataEntriesTreeOrder.push_back(&Child);
       } else {
         Entry->Offset.SubdirOffset = NextLevelOffset + (1 << 31);
-        NextLevelOffset += sizeof(coff_resource_dir_table) +
-                           (Child.second->getStringChildren().size() +
-                            Child.second->getIDChildren().size()) *
-                               sizeof(coff_resource_dir_entry);
-        Queue.push(Child.second.get());
+        NextLevelOffset +=
+            sizeof(coff_resource_dir_table) +
+            (Child.getStringChildren().size() + Child.getIDChildren().size()) *
+                sizeof(coff_resource_dir_entry);
+        Queue.push(&Child);
       }
-      CurrentOffset += sizeof(coff_resource_dir_entry);
-      CurrentRelativeOffset += sizeof(coff_resource_dir_entry);
-    }
-    for (auto const &Child : IDChildren) {
-      auto *Entry = reinterpret_cast<coff_resource_dir_entry *>(BufferStart +
-                                                                CurrentOffset);
-      Entry->Identifier.ID = Child.first;
-      if (Child.second->checkIsDataNode()) {
-        Entry->Offset.DataEntryOffset = NextLevelOffset;
-        NextLevelOffset += sizeof(coff_resource_data_entry);
-        DataEntriesTreeOrder.push_back(Child.second.get());
-      } else {
-        Entry->Offset.SubdirOffset = NextLevelOffset + (1 << 31);
-        NextLevelOffset += sizeof(coff_resource_dir_table) +
-                           (Child.second->getStringChildren().size() +
-                            Child.second->getIDChildren().size()) *
-                               sizeof(coff_resource_dir_entry);
-        Queue.push(Child.second.get());
-      }
-      CurrentOffset += sizeof(coff_resource_dir_entry);
-      CurrentRelativeOffset += sizeof(coff_resource_dir_entry);
-    }
+      Offset += sizeof(coff_resource_dir_entry);
+    };
+    for (auto const &Child : StringChildren)
+      WriteEntry(*Child.second, [&](coff_resource_dir_entry &Entry) {
+        Entry.Identifier.setNameOffset(
+            StringTableOffsets[Child.second->getStringIndex()]);
+      });
+    for (auto const &Child : IDChildren)
+      WriteEntry(*Child.second, [&](coff_resource_dir_entry &Entry) {
+        Entry.Identifier.ID = Child.first;
+      });
   }
 
-  RelocationAddresses.resize(Data.size());
+  DataEntryOffsets.resize(Data.size());
   // Now write all the resource data entries.
-  for (const auto *DataNodes : DataEntriesTreeOrder) {
-    auto *Entry = reinterpret_cast<coff_resource_data_entry *>(BufferStart +
-                                                               CurrentOffset);
-    RelocationAddresses[DataNodes->getDataIndex()] = CurrentRelativeOffset;
-    Entry->DataRVA = 0; // Set to zero because it is a relocation.
-    Entry->DataSize = Data[DataNodes->getDataIndex()].size();
-    Entry->Codepage = 0;
-    Entry->Reserved = 0;
-    CurrentOffset += sizeof(coff_resource_data_entry);
-    CurrentRelativeOffset += sizeof(coff_resource_data_entry);
+  for (const TreeNode *DataNode : DataEntriesTreeOrder) {
+    auto *Entry = reinterpret_cast<coff_resource_data_entry *>(Buf + Offset);
+    uint32_t DataIndex = DataNode->getDataIndex();
+    DataEntryOffsets[DataIndex] = Offset;
+    Entry->DataRVA = GetDataRVA(DataIndex);
+    Entry->DataSize = Data[DataIndex].size();
+    Entry->Codepage = DataNode->getCodePage();
+    Entry->Reserved = DataNode->getReserved();
+    Offset += sizeof(coff_resource_data_entry);
   }
-}
 
-void WindowsResourceCOFFWriter::writeDirectoryStringTable() {
-  // Now write the directory string table for .rsrc$01
-  uint32_t TotalStringTableSize = 0;
+  // Now write the directory string table.
   for (auto &String : StringTable) {
     uint16_t Length = String.size();
-    support::endian::write16le(BufferStart + CurrentOffset, Length);
-    CurrentOffset += sizeof(uint16_t);
-    auto *Start = reinterpret_cast<UTF16 *>(BufferStart + CurrentOffset);
+    support::endian::write16le(Buf + Offset, Length);
+    Offset += sizeof(uint16_t);
+    auto *Start = reinterpret_cast<UTF16 *>(Buf + Offset);
     llvm::copy(String, Start);
-    CurrentOffset += Length * sizeof(UTF16);
-    TotalStringTableSize += Length * sizeof(UTF16) + sizeof(uint16_t);
+    Offset += Length * sizeof(UTF16);
   }
-  CurrentOffset +=
-      alignTo(TotalStringTableSize, sizeof(uint32_t)) - TotalStringTableSize;
+  assert(alignTo(Offset, sizeof(uint32_t)) == Size &&
+         "directory layout mismatch");
 }
 
 void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
@@ -1011,6 +1180,34 @@ writeWindowsResourceCOFF(COFF::MachineTypes MachineType,
   if (E)
     return E;
   return Writer.write(TimeDateStamp);
+}
+
+std::vector<uint8_t>
+writeWindowsResourceSection(const WindowsResourceParser &Parser,
+                            uint32_t SectionRVA) {
+  ResourceDirectoryWriter Directory(Parser);
+  ArrayRef<std::vector<uint8_t>> Data = Parser.getData();
+
+  // The resource data follows the directory, with each entry aligned to 8
+  // bytes like in the .rsrc$02 section created by cvtres.
+  std::vector<uint32_t> DataOffsets;
+  DataOffsets.reserve(Data.size());
+  uint32_t Size = Directory.getSize();
+  for (auto const &Entry : Data) {
+    Size = alignTo(Size, sizeof(uint64_t));
+    DataOffsets.push_back(Size);
+    Size += Entry.size();
+  }
+
+  std::vector<uint8_t> Buf(Size);
+  std::vector<uint32_t> DataEntryOffsets;
+  Directory.write(
+      reinterpret_cast<char *>(Buf.data()),
+      [&](uint32_t DataIndex) { return SectionRVA + DataOffsets[DataIndex]; },
+      DataEntryOffsets);
+  for (size_t I = 0; I < Data.size(); ++I)
+    llvm::copy(Data[I], Buf.begin() + DataOffsets[I]);
+  return Buf;
 }
 
 } // namespace object

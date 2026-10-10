@@ -4,6 +4,8 @@ if (NOT LLVM_ENABLE_LIBXML2)
 endif ()
 
 set(LLVM_LINK_COMPONENTS
+  ObjCopy
+  Object
   Option
   Support
   WindowsManifest
