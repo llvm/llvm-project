@@ -107,6 +107,9 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
   }
 
   char *exceptionSvptr{nullptr};
+  // Pass the string only on the first call; some libcs (e.g. AIX) set the
+  // save pointer to nullptr after the last token.
+  char *nextStr{envStr};
   char *exceptionStr;
   char *unitListStr;
   bool firstException{true};
@@ -123,12 +126,11 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
   while (success) {
 #if _WIN32
-    exceptionStr =
-        strtok_s(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+    exceptionStr = strtok_s(nextStr, ";", &exceptionSvptr);
 #else
-    exceptionStr =
-        strtok_r(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+    exceptionStr = strtok_r(nextStr, ";", &exceptionSvptr);
 #endif
+    nextStr = nullptr;
     if (nullptr == exceptionStr) {
       break;
     }
@@ -185,12 +187,11 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
       lb = ub = -1;
 #if _WIN32
-      units =
-          strtok_s(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_s(unitListStr, ",", &unitListSvptr);
 #else
-      units =
-          strtok_r(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+      units = strtok_r(unitListStr, ",", &unitListSvptr);
 #endif
+      unitListStr = nullptr;
       if (nullptr == units) {
         break;
       }
