@@ -1802,8 +1802,9 @@ def TestDialectCanonicalizerOp : TEST_Op<"dialect_canonicalizable"> {
 
 // Op for the fold tests in IR/fold-dispatch.mlir. It has no fold and no fold
 // trait, so only the fallback fold of the dialect can fold it. The
-// `legacy_dialect_fold` attribute configures that fallback; see the
-// configurable folds in TestOps.h.
+// `dialect_fold` attribute configures that fallback in the `OpFoldResults`
+// form, and `legacy_dialect_fold` in the legacy form; see the configurable
+// folds in TestOps.h.
 def TestFoldDispatchFallbackOp : TEST_Op<"fold_dispatch_fallback"> {
   let arguments = (ins Variadic<AnyType>);
   let results = (outs Variadic<AnyType>);
@@ -1822,6 +1823,20 @@ def TestFoldDispatchOp : TEST_Op<"fold_dispatch", [TestLegacyFoldTrait]> {
   let extraClassDeclaration = [{
     ::mlir::OpFoldResults fold(FoldAdaptor adaptor);
   }];
+}
+
+def TestResultsFoldTrait : NativeOpTrait<"TestResultsFoldTrait"> {
+  let cppNamespace = "::test";
+}
+
+// Op for the fold tests in IR/fold-dispatch.mlir. It has no fold of its own.
+// `trait_fold` configures its fold trait in the `OpFoldResults` form, which
+// runs before its legacy fold trait.
+def TestFoldDispatchTraitsOp
+    : TEST_Op<"fold_dispatch_traits",
+              [TestResultsFoldTrait, TestLegacyFoldTrait]> {
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
 }
 
 //===----------------------------------------------------------------------===//

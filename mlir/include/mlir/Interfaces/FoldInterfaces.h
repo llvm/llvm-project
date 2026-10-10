@@ -9,6 +9,7 @@
 #define MLIR_INTERFACES_FOLDINTERFACES_H_
 
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/OpFoldResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
