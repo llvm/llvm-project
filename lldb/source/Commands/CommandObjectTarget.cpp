@@ -3596,10 +3596,10 @@ protected:
       }
       PlatformSP platform_sp(target->GetPlatform());
       if (platform_sp) {
-        const std::vector<ConstString> trap_handler_names(
+        const std::vector<std::string> &trap_handler_names(
             platform_sp->GetTrapHandlerSymbolNames());
-        for (ConstString trap_name : trap_handler_names) {
-          if (trap_name == funcname) {
+        for (const std::string &trap_name : trap_handler_names) {
+          if (llvm::StringRef(trap_name) == funcname) {
             result.GetOutputStream().Printf(
                 "This function's "
                 "name is listed by the platform as a trap handler.\n");

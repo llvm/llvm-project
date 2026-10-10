@@ -3959,6 +3959,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   LLVM_DEBUG(dump(););
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
@@ -3967,7 +3968,6 @@ void NodeSet::print(raw_ostream &os) const {
   os << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.
@@ -4498,8 +4498,10 @@ void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
   }
 }
 
-void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
-                            const MachineRegisterInfo *MRI) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void
+LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
+                       const MachineRegisterInfo *MRI) const {
   const auto *Order = getOrderDepOrNull(SU);
 
   if (!Order)
@@ -4517,3 +4519,4 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
   for (SUnit *Dst : *Order)
     dbgs() << "      " << DumpSU(Dst) << "\n";
 }
+#endif

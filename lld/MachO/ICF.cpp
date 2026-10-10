@@ -449,16 +449,25 @@ void ICF::run() {
     });
   }
   const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
-  llvm::stable_sort(
-      icfInputs, [&](const ConcatInputSection *a, const ConcatInputSection *b) {
-        // When using safe_thunks, ensure that we first sort by icfEqClass and
-        // then by keepUnique (descending). This guarantees that within an
-        // equivalence class, the keepUnique inputs are always first.
-        if (useSafeThunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
-            return a->keepUnique > b->keepUnique;
-        return a->icfEqClass[0] < b->icfEqClass[0];
-      });
+  // Sort by icfEqClass so that inputs in the same equivalence class are
+  // consecutive. When using safe_thunks, also sort by keepUnique (descending)
+  // within a class. This guarantees that within an equivalence class, the
+  // keepUnique inputs are always first. The index in the low bits keeps the
+  // order stable.
+  assert(icfInputs.size() <= (1u << 31));
+  SmallVector<uint64_t, 0> keys(icfInputs.size());
+  parallelFor(0, icfInputs.size(), [&](size_t i) {
+    uint64_t key = uint64_t(icfInputs[i]->icfEqClass[0]) << 32 | i;
+    if (useSafeThunks && !icfInputs[i]->keepUnique)
+      key |= 1u << 31;
+    keys[i] = key;
+  });
+  parallelSort(keys.begin(), keys.end());
+  std::vector<ConcatInputSection *> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(icfInputs[k & ((1u << 31) - 1)]);
+  icfInputs = std::move(sorted);
   forEachClass([&](size_t begin, size_t end) {
     segregate(begin, end, &ICF::equalsConstant);
   });

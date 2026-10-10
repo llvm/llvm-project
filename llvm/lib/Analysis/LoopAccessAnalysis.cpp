@@ -2594,21 +2594,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   return std::nullopt;
 }
 
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
-                                          Type *AccessTy, Value *Ptr,
-                                          const Loop *Lp,
-                                          const DominatorTree &DT,
-                                          const SymbolicStrideMap &StridesMap,
-                                          bool Assume, bool ShouldCheckWrap) {
-  SmallVector<const SCEVPredicate *> Predicates;
-  std::optional<int64_t> Stride =
-      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
-                   Assume ? &Predicates : nullptr);
-  PSE.addPredicates(Predicates);
-  return Stride;
-}
-
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
                                              Type *ElemTyB, Value *PtrB,
                                              const DataLayout &DL,
@@ -3708,7 +3693,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides,
                       true)) {
       ++NumReads;
       IsReadOnlyPtr = true;

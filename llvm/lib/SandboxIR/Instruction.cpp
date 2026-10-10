@@ -8,6 +8,7 @@
 
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Module.h"
 
 namespace llvm::sandboxir {
 
@@ -153,6 +154,17 @@ BasicBlock *Instruction::getParent() const {
   if (BB == nullptr)
     return nullptr;
   return cast<BasicBlock>(Ctx.getValue(BB));
+}
+
+IRBuilder<> &Instruction::setInsertPos(InsertPosition Pos) {
+  auto *WhereBB = Pos.getBasicBlock();
+  auto WhereIt = Pos.getIterator();
+  auto &Builder = WhereBB->getParent()->getParent()->getLLVMIRBuilder();
+  if (WhereIt != WhereBB->end())
+    Builder.SetInsertPoint((*Pos).getTopmostLLVMInstruction());
+  else
+    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  return Builder;
 }
 
 bool Instruction::classof(const sandboxir::Value *From) {
