@@ -293,7 +293,7 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
 ///
 /// Returns a IntegerIV struct if possible, std::nullopt otherwise.
 static std::optional<IntegerIV>
-tryConvertToIntegerIV(const FloatingPointIV &FPIV) {
+tryConvertToIntegerIV(Loop *L, const FloatingPointIV &FPIV) {
   // Convert floating-point predicate to integer.
   auto NewPred = getIntegerPredicate(FPIV.Compare->getPredicate());
   if (NewPred == CmpInst::BAD_ICMP_PREDICATE)
@@ -324,62 +324,51 @@ tryConvertToIntegerIV(const FloatingPointIV &FPIV) {
   if (IncrValue == 0)
     return std::nullopt;
 
-  // Positive and negative strides have different safety conditions.
-  if (IncrValue > 0) {
-    // If we have a positive stride, we require the init to be less than the
-    // exit value.
-    if (InitValue >= ExitValue)
-      return std::nullopt;
+  // Compute the predicate under which the loop keeps iterating
+  auto *BI = cast<CondBrInst>(FPIV.Compare->user_back());
+  CmpInst::Predicate ContinuePred = L->contains(BI->getSuccessor(0))
+                                        ? NewPred
+                                        : CmpInst::getInversePredicate(NewPred);
 
-    uint32_t Range = uint32_t(ExitValue - InitValue);
-    // Check for infinite loop, either:
-    // while (i <= Exit) or until (i > Exit)
-    if (NewPred == CmpInst::ICMP_SLE || NewPred == CmpInst::ICMP_SGT) {
-      if (++Range == 0)
-        return std::nullopt; // Range overflows.
-    }
-
-    unsigned Leftover = Range % uint32_t(IncrValue);
-
-    // If this is an equality comparison, we require that the strided value
-    // exactly land on the exit value, otherwise the IV condition will wrap
-    // around and do things the fp IV wouldn't.
-    if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
-        Leftover != 0)
-      return std::nullopt;
-
-    // If the stride would wrap around the i32 before exiting, we can't
-    // transform the IV.
-    if (Leftover != 0 && int32_t(ExitValue + IncrValue) < ExitValue)
-      return std::nullopt;
-  } else {
-    // If we have a negative stride, we require the init to be greater than the
-    // exit value.
-    if (InitValue <= ExitValue)
-      return std::nullopt;
-
-    uint32_t Range = uint32_t(InitValue - ExitValue);
-    // Check for infinite loop, either:
-    // while (i >= Exit) or until (i < Exit)
-    if (NewPred == CmpInst::ICMP_SGE || NewPred == CmpInst::ICMP_SLT) {
-      if (++Range == 0)
-        return std::nullopt; // Range overflows.
-    }
-
-    unsigned Leftover = Range % uint32_t(-IncrValue);
-
-    // If this is an equality comparison, we require that the strided value
-    // exactly land on the exit value, otherwise the IV condition will wrap
-    // around and do things the fp IV wouldn't.
-    if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
-        Leftover != 0)
-      return std::nullopt;
-
-    // If the stride would wrap around the i32 before exiting, we can't
-    // transform the IV.
-    if (Leftover != 0 && int32_t(ExitValue + IncrValue) > ExitValue)
-      return std::nullopt;
+  // Normalize to positive stride.
+  int64_t Start = InitValue, Step = IncrValue, Bound = ExitValue;
+  if (Step < 0) {
+    Start = -Start;
+    Step = -Step;
+    Bound = -Bound;
+    ContinuePred = CmpInst::getSwappedPredicate(ContinuePred);
   }
+
+  // start of IV is below the exit value.
+  if (Start >= Bound)
+    return std::nullopt;
+
+  // Compute the last value of the incremented IV
+  uint64_t Dist = Bound - Start;
+  int64_t Last;
+  switch (ContinuePred) {
+  case CmpInst::ICMP_SLT:
+    Last = Start + alignTo(Dist, Step);
+    break;
+  case CmpInst::ICMP_SLE:
+    Last = Start + alignTo(Dist + 1, Step);
+    break;
+  case CmpInst::ICMP_NE:
+    // The strided value must exactly land on the exit value.
+    if (Dist % Step != 0)
+      return std::nullopt;
+    Last = Bound;
+    break;
+  case CmpInst::ICMP_EQ:
+    Last = Start + Step == Bound ? Bound + Step : Start + Step;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  // The integer IV must not overflow before the loop exits.
+  if (!isInt<32>(Last))
+    return std::nullopt;
 
   return IntegerIV{InitValue, IncrValue, ExitValue, NewPred};
 }
@@ -467,7 +456,7 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
     return false;
 
   // Can we safely convert the floating-point values to integer ones?
-  auto IIV = tryConvertToIntegerIV(*FPIV);
+  auto IIV = tryConvertToIntegerIV(L, *FPIV);
   if (!IIV)
     return false;
 
