@@ -525,7 +525,16 @@ public:
     Visit(TL.getSizeExpr());
   }
   void VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
-    Visit(cast<DependentSizedExtVectorType>(TL.getType())->getSizeExpr());
+    Expr *Size = TL.getSizeExpr();
+    Visit(Size ? Size : TL.getTypePtr()->getSizeExpr());
+  }
+  void VisitVectorTypeLoc(VectorTypeLoc TL) {
+    if (Expr *Size = TL.getSizeExpr())
+      Visit(Size);
+  }
+  void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+    Expr *Size = TL.getSizeExpr();
+    Visit(Size ? Size : TL.getTypePtr()->getSizeExpr());
   }
   void VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
     Visit(TL.getUnderlyingExpr());

@@ -5958,6 +5958,26 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+// FIXME: Also handle attributes on the decl-specifier, declarator and
+// declaration. Matrix type locations need the same handling.
+static void fillVectorTypeLoc(VectorTypeLoc VTL,
+                              const ParsedAttributesView &Attrs) {
+  auto Kind = isa<ExtVectorType>(VTL.getTypePtr())
+                  ? ParsedAttr::AT_ExtVectorType
+                  : ParsedAttr::AT_VectorSize;
+  for (const ParsedAttr &AL : Attrs) {
+    if (AL.getKind() == Kind && !AL.isInvalid() && AL.getNumArgs() == 1) {
+      VTL.setAttrNameLoc(AL.getLoc());
+      VTL.setSizeExpr(AL.getArgAsExpr(0));
+      return;
+    }
+  }
+
+  // The attribute may be on the declarator rather than this chunk, or the
+  // vector may use a target-specific attribute. Keep the default locations
+  // when no matching attribute is present.
+}
+
 static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   SourceLocation Loc;
   switch (Chunk.Kind) {
@@ -6358,19 +6378,19 @@ namespace {
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       TL.setExpansionLoc(Chunk.Loc);
     }
-    void VisitVectorTypeLoc(VectorTypeLoc TL) { TL.setNameLoc(Chunk.Loc); }
-    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitVectorTypeLoc(VectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
+      fillVectorTypeLoc(TL, Chunk.getAttrs());
     }
-    void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       fillAtomicQualLoc(TL, Chunk);
     }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitMatrixTypeLoc(MatrixTypeLoc TL) {
       fillMatrixTypeLoc(TL, Chunk.getAttrs());
