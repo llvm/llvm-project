@@ -1446,6 +1446,51 @@ TEST_F(ScalarEvolutionsTest, SCEVgetExitLimitForGuardedLoop) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, KnownPredicateViaNestedAddRecStarts) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+      define void @foo(i32 %x, i32 %y, i1 %inner.cond, i1 %outer.cond) {
+      entry:
+        br label %outer
+      outer:
+        br label %inner
+      inner:
+        br i1 %inner.cond, label %inner, label %outer.latch
+      outer.latch:
+        br i1 %outer.cond, label %outer, label %exit
+      exit:
+        ret void
+      }
+      )",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_FALSE(verifyModule(*M));
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const Loop *Outer = *LI.begin();
+    const Loop *Inner = Outer->getSubLoops().front();
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *One = SE.getOne(X->getType());
+    const SCEV *Min = SE.getUMinExpr(X, Y);
+    const SCEV *OuterLHS = SE.getAddRecExpr(Min, One, Outer, SCEV::FlagNUW);
+    const SCEV *OuterRHS = SE.getAddRecExpr(X, One, Outer, SCEV::FlagNUW);
+    const SCEV *InnerLHS =
+        SE.getAddRecExpr(OuterLHS, One, Inner, SCEV::FlagNUW);
+    const SCEV *InnerRHS =
+        SE.getAddRecExpr(OuterRHS, One, Inner, SCEV::FlagNUW);
+
+    // The loops have no guards relating the recurrences. Their ordering follows
+    // from the start values, and the inner comparison needs to recurse through
+    // both levels of addrec starts before reaching umin(x, y) <= x.
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, OuterLHS, OuterRHS));
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULE, InnerLHS, InnerRHS));
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, InnerLHS, InnerRHS));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, ImpliedViaAddRecStart) {
   LLVMContext C;
   SMDiagnostic Err;

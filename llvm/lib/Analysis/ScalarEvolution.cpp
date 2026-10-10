@@ -11436,6 +11436,32 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
+static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
+                                           CmpPredicate Pred, const SCEV *LHS,
+                                           const SCEV *RHS) {
+  // If both sides are affine addrecs for the same loop, with equal
+  // steps, and we know the recurrences don't wrap, then we only
+  // need to check the predicate on the starting values.
+
+  if (!ICmpInst::isRelational(Pred))
+    return false;
+
+  const SCEV *LStart, *RStart, *Step;
+  const Loop *L;
+  if (!match(LHS,
+             m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step), m_Loop(L))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step),
+                                      m_SpecificLoop(L))))
+    return false;
+  const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
+  const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
+  SCEVFlags NW = ICmpInst::isSigned(Pred) ? SCEV::FlagNSW : SCEV::FlagNUW;
+  if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
+    return false;
+
+  return SE.isKnownPredicate(Pred, LStart, RStart);
+}
+
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS) {
   // Canonicalize the inputs first.
@@ -11443,7 +11469,8 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
 
   return isKnownViaInduction(Pred, LHS, RHS) ||
          isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
-         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
+         isKnownViaNonRecursiveReasoning(Pred, LHS, RHS) ||
+         IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS);
 }
 
 std::optional<bool> ScalarEvolution::evaluatePredicate(CmpPredicate Pred,
@@ -12880,32 +12907,6 @@ static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
   return is_contained(MinMaxExpr->operands(), Candidate);
 }
 
-static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
-                                           CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS) {
-  // If both sides are affine addrecs for the same loop, with equal
-  // steps, and we know the recurrences don't wrap, then we only
-  // need to check the predicate on the starting values.
-
-  if (!ICmpInst::isRelational(Pred))
-    return false;
-
-  const SCEV *LStart, *RStart, *Step;
-  const Loop *L;
-  if (!match(LHS,
-             m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step), m_Loop(L))) ||
-      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step),
-                                      m_SpecificLoop(L))))
-    return false;
-  const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
-  const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
-  SCEVFlags NW = ICmpInst::isSigned(Pred) ? SCEV::FlagNSW : SCEV::FlagNUW;
-  if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
-    return false;
-
-  return SE.isKnownPredicate(Pred, LStart, RStart);
-}
-
 /// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
 /// go below its own start value?
 static bool IsKnownPredicateViaAddRecMonotonicity(ScalarEvolution &SE,
@@ -13190,7 +13191,6 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
   return isKnownPredicateExtendIdiom(Pred, LHS, RHS) ||
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
-         IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }
@@ -13268,7 +13268,14 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(
   const APInt &ConstRHS = cast<SCEVConstant>(RHS)->getAPInt();
   // The antecedent implies the consequent if every value of `LHS` that
   // satisfies the antecedent also satisfies the consequent.
-  return LHSRange.icmp(Pred, ConstRHS);
+  if (LHSRange.icmp(Pred, ConstRHS))
+    return true;
+
+  // Intersect with the known range of LHS to exclude impossible values that
+  // may have been introduced by wrapping when adding the constant difference.
+  ConstantRange KnownLHSRange =
+      ICmpInst::isSigned(Pred) ? getSignedRange(LHS) : getUnsignedRange(LHS);
+  return LHSRange.intersectWith(KnownLHSRange).icmp(Pred, ConstRHS);
 }
 
 bool ScalarEvolution::canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
