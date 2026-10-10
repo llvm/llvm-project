@@ -38,6 +38,13 @@ def SDTBinaryArithWithFlags : SDTypeProfile<2, 2,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisInt<0>, SDTCisVT<1, i32>]>;
 
+// SDTShiftWithFlags - RES, EFLAGS = op SRC, SHAMT
+// Shift amount is i8, result matches source type.
+def SDTShiftWithFlags : SDTypeProfile<2, 2,
+                                      [SDTCisSameAs<0, 2>,
+                                       SDTCisInt<0>, SDTCisVT<1, i32>,
+                                       SDTCisVT<3, i8>]>;
+
 // SDTBinaryArithWithFlagsInOut - RES1, EFLAGS = op LHS, RHS, EFLAGS
 def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                             [SDTCisSameAs<0, 2>,
@@ -405,6 +412,11 @@ def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86and_flag  : SDNode<"X86ISD::AND",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
+
+// Shift right logical with flags. Used when we need both the shifted result
+// and the carry flag (which contains the shifted-out bit).
+// RES, EFLAGS = SHR_FLAG SRC, SHAMT
+def X86shr_flag  : SDNode<"X86ISD::SHR_FLAG", SDTShiftWithFlags>;
 
 // LOCK-prefixed arithmetic read-modify-write instructions.
 // EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
