@@ -146,7 +146,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   ASSERT_TRUE(Addrs[0].has_value());
   EXPECT_NE(*Addrs[0], nullptr);
 
-  auto *Func = reinterpret_cast<int (*)()>(*Addrs[0]);
+  auto *Func = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[0]));
   EXPECT_EQ(Func(), 42);
 }
 
@@ -171,8 +171,8 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   EXPECT_NE(*Addrs[0], nullptr);
   EXPECT_NE(*Addrs[1], nullptr);
 
-  auto *Func1 = reinterpret_cast<int (*)()>(*Addrs[0]);
-  auto *Func2 = reinterpret_cast<int (*)()>(*Addrs[1]);
+  auto *Func1 = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[0]));
+  auto *Func2 = reinterpret_cast<int (*)()>(const_cast<void *>(*Addrs[1]));
   EXPECT_EQ(Func1(), 42);
   EXPECT_EQ(Func2(), 7);
 }
