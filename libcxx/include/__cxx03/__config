@@ -265,6 +265,14 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||                     \
       defined(__DragonFly__) || defined(__BIONIC__)
 #    define _LIBCPP_USING_ARC4_RANDOM
+#  elif defined(__linux__) && defined(_LIBCPP_GLIBC_PREREQ)
+#    if _LIBCPP_GLIBC_PREREQ(2, 36)
+#      define _LIBCPP_USING_ARC4_RANDOM
+#    elif _LIBCPP_GLIBC_PREREQ(2, 25)
+#      define _LIBCPP_USING_GETENTROPY
+#    else
+#      define _LIBCPP_USING_DEV_RANDOM
+#    endif
 #  elif defined(__wasi__) || defined(__EMSCRIPTEN__)
 #    define _LIBCPP_USING_GETENTROPY
 #  elif defined(__Fuchsia__)
