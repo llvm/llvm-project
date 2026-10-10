@@ -1485,6 +1485,19 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
       continue;
     }
 
+    if (ParamName.consume_front("opcode=")) {
+      unsigned Opcode = Instruction::TermOpsBegin;
+      for (; Opcode != Instruction::OtherOpsEnd; ++Opcode)
+        if (ParamName == Instruction::getOpcodeName(Opcode))
+          break;
+      if (Opcode == Instruction::OtherOpsEnd)
+        return make_error<StringError>(
+            formatv("invalid Scalarizer opcode '{}'", ParamName).str(),
+            inconvertibleErrorCode());
+      Result.ScalarizeOpcodes.push_back(Opcode);
+      continue;
+    }
+
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "load-store")
       Result.ScalarizeLoadStore = Enable;
