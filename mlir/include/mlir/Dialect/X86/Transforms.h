@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_X86_TRANSFORMS_H
 #define MLIR_DIALECT_X86_TRANSFORMS_H
 
+#include "mlir/Dialect/X86/X86Enums.h"
 #include "mlir/IR/Value.h"
 
 namespace mlir {
@@ -114,6 +115,11 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 // and materializing the accumulation as a separate add after the contraction.
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
+
+// A set of patterns that tile and unroll contractions in order to prepare them
+// for the nanokernel lowerings.
+void populateVectorContractMultiLevelUnrollPatterns(RewritePatternSet &patterns,
+                                                    MLUTarget target);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:

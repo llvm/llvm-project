@@ -27,6 +27,8 @@ using namespace mlir;
 
 #include "mlir/Dialect/X86/X86Dialect.cpp.inc"
 
+#include "mlir/Dialect/X86/X86Enums.cpp.inc"
+
 void x86::X86Dialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
