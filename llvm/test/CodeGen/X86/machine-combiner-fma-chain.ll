@@ -2,19 +2,20 @@
 ; RUN: llc -O3 -mcpu=haswell < %s -mtriple=x86_64 | FileCheck %s
 ; RUN: llc -O3 -mcpu=skylake-avx512 < %s -mtriple=x86_64 | FileCheck %s
 
-; FIXME: A long chain of FMA accumulations should be reassociated into two
-; shorter chains combined by a single add to expose more ILP.
+; A long chain of FMA accumulations is reassociated into two shorter chains
+; combined by a single add to expose more ILP.
 
 define <4 x double> @fma_chain_v4f64(ptr %py, ptr %pa, <4 x double> %x0, <4 x double> %x1, <4 x double> %x2, <4 x double> %x3, <4 x double> %x4, <4 x double> %x5) {
 ; CHECK-LABEL: fma_chain_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovupd (%rsi), %ymm6
-; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm6 * ymm0) + mem
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm2 * mem) + ymm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm3 * mem) + ymm0
+; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm6 = (ymm0 * ymm6) + mem
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm6 = (ymm1 * mem) + ymm6
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm6 = (ymm2 * mem) + ymm6
+; CHECK-NEXT:    vmulpd 96(%rsi), %ymm3, %ymm0
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm4 * mem) + ymm0
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm5 * mem) + ymm0
+; CHECK-NEXT:    vaddpd %ymm0, %ymm6, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %y = load <4 x double>, ptr %py, align 8
@@ -50,9 +51,10 @@ define double @fma_chain_f64(double %y, ptr %pa, double %x0, double %x1, double 
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm2 * mem) + xmm0
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm3 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm4 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm5 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm6 * mem) + xmm0
+; CHECK-NEXT:    vmulsd 24(%rdi), %xmm4, %xmm1
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm5 * mem) + xmm1
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm6 * mem) + xmm1
+; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %a0 = load double, ptr %pa, align 8
@@ -178,8 +180,7 @@ entry:
   ret double %s5
 }
 
-; FIXME: A store before the first link of the upper half should not block the
-; split.
+; A store before the first link of the upper half does not block the split.
 define double @fma_chain_store_before_upper(double %y, ptr %pa, ptr %pq, double %x0, double %x1, double %x2, double %x3, double %x4, double %x5) {
 ; CHECK-LABEL: fma_chain_store_before_upper:
 ; CHECK:       # %bb.0: # %entry
@@ -187,10 +188,10 @@ define double @fma_chain_store_before_upper(double %y, ptr %pa, ptr %pq, double 
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm2 * mem) + xmm1
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm3 * mem) + xmm1
 ; CHECK-NEXT:    vmovsd %xmm0, (%rsi)
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm4 * mem) + xmm1
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm5 * mem) + xmm1
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm6 * mem) + xmm1
-; CHECK-NEXT:    vmovapd %xmm1, %xmm0
+; CHECK-NEXT:    vmulsd 24(%rdi), %xmm4, %xmm0
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm5 * mem) + xmm0
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm6 * mem) + xmm0
+; CHECK-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %a0 = load double, ptr %pa, align 8
@@ -214,17 +215,18 @@ entry:
   ret double %s5
 }
 
-; FIXME: The chain end has a second user besides the continuing FMA; the chain
-; ending there should be split even though the last FMA accumulates into it.
+; The chain end has a second user besides the continuing FMA, so the chain
+; ending there is split even though the last FMA accumulates into it.
 define double @fma_chain_root_multi_use(double %y, ptr %pa, ptr %pq, double %x0, double %x1, double %x2, double %x3, double %x4, double %x5, double %x6) {
 ; CHECK-LABEL: fma_chain_root_multi_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm1 * mem) + xmm0
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm2 * mem) + xmm0
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm3 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm4 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm5 * mem) + xmm0
-; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm6 * mem) + xmm0
+; CHECK-NEXT:    vmulsd 24(%rdi), %xmm4, %xmm1
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm5 * mem) + xmm1
+; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm1 = (xmm6 * mem) + xmm1
+; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovsd %xmm0, (%rsi)
 ; CHECK-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm7 * mem) + xmm0
 ; CHECK-NEXT:    retq
