@@ -28,7 +28,9 @@ __assume_aligned(_Tp* __ptr) {
   static_assert(_Np != 0 && (_Np & (_Np - 1)) == 0, "std::assume_aligned<N>(p) requires N to be a power of two");
 
   if (__libcpp_is_constant_evaluated()) {
+#if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2200
     (void)__builtin_assume_aligned(__ptr, _Np);
+#endif
     return __ptr;
   } else {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
