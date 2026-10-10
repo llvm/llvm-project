@@ -69,6 +69,121 @@ void test5(void) {
   a.b = 100;
 }
 
+// GH223923: Do not diagnose conversions in unselected operands of constant
+// conditional expressions.
+// Exercise both selected and unselected operands in array initializers.
+static const signed char conditional_array[] __attribute__((unused)) = {
+  0 ? 128 : 1,
+  1 ? 1 : 128,
+  1 ? 128 : 1, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  0 ? 1 : 128, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  // An enclosing unselected operand also suppresses nested conversions.
+  0 ? (1 ? 128 : 1) : 1,
+  1 ? 1 : (0 ? 1 : 128),
+};
+
+void GH223923(int condition) {
+  signed char signed_char_dead = 0 ? 128 : -1;
+  signed char signed_char_live = 1 ? 128 : -1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char signed_char_maybe = condition ? 128 : -1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char false_operand_dead = 1 ? -1 : 128;
+  signed char false_operand_live = 0 ? -1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char false_operand_maybe = condition ? -1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  short short_dead = 0 ? 32768 : 1;
+  short short_live = 1 ? 32768 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'short' changes value from 32768 to -32768}}
+
+  int int_dead = 0 ? 2147483648LL : 1;
+  int int_live = 1 ? 2147483648LL : 1;
+  // expected-warning@-1 {{implicit conversion from 'long long' to 'int' changes value from 2147483648 to -2147483648}}
+
+  signed char truncation_dead = 0 ? 256 : 1;
+  signed char truncation_live = 1 ? 256 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 256 to 0}}
+
+  signed char sink;
+  int assignment_dead = 0 ? (sink = 128) : 1;
+  int assignment_live = 1 ? (sink = 128) : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  signed char binary_dead = 1 ?: 128;
+  signed char binary_live = 0 ?: 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
+#define CONDITION_FALSE 0
+#define CONDITION_TRUE 1
+#define IS_ZERO(x) ((x) == 0)
+
+void GH223923_macro_conditions(int condition) {
+  signed char object_true_dead = CONDITION_FALSE ? 128 : 1;
+  signed char object_false_dead = CONDITION_TRUE ? 1 : 128;
+  signed char object_true_live = CONDITION_TRUE ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char object_false_live = CONDITION_FALSE ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  signed char function_true_dead = IS_ZERO(1) ? 128 : 1;
+  signed char function_false_dead = IS_ZERO(2 - 2) ? 1 : 128;
+  signed char function_true_live = IS_ZERO(0) ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char function_false_live = IS_ZERO(1 + 1) ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  // A macro argument need not be constant: either operand can be selected.
+  signed char function_true_maybe = IS_ZERO(condition) ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char function_false_maybe = IS_ZERO(condition) ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
+#undef IS_ZERO
+#undef CONDITION_TRUE
+#undef CONDITION_FALSE
+
+void GH223923_static_const_conditions(void) {
+  // These conditions can be folded even though the variables are not integer
+  // constant expressions in C.
+  static const int zero = 0;
+  static const int one = 1;
+  signed char true_dead = zero ? 128 : 1;
+  signed char false_dead = one ? 1 : 128;
+  signed char true_live = one ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char false_live = zero ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
+void GH223923_generic_conditions(int i, double d) {
+  // Selection depends on the type, not the runtime value of the argument.
+  signed char true_dead = _Generic(d, int: 1, default: 0) ? 128 : 1;
+  signed char false_dead = _Generic(i, int: 1, default: 0) ? 1 : 128;
+  signed char true_live = _Generic(i, int: 1, default: 0) ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char false_live = _Generic(d, int: 1, default: 0) ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
+void GH223923_algebraic_conditions(int x) {
+  // These conditions have fixed results for int, but conversion analysis
+  // remains conservative: neither operand is marked unreachable here.
+  signed char multiply_true = x * 0 ? 128 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char multiply_false = x * 0 ? 1 : 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char compare_true = x == x ? 128 : 1;
+  // expected-warning@-1 {{self-comparison always evaluates to true}}
+  // expected-warning@-2 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char compare_false = x == x ? 1 : 128;
+  // expected-warning@-1 {{self-comparison always evaluates to true}}
+  // expected-warning@-2 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
 void test6(void) {
   // Test that unreachable code doesn't trigger the truncation warning.
   unsigned char x = 0 ? 65535 : 1; // no-warning
