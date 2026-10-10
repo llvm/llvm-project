@@ -931,6 +931,9 @@ features cannot lower the translation-unit ABI level;
   constrained placeholder type (such as `C auto`) whose default argument
   contains a lambda. (#GH230539)
 
+- Fixed a bug where Clang failed to resolve a reference to an overloaded
+  conversion function when one of the overloads was non-template. (#GH230682)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
