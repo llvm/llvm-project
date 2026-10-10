@@ -2410,7 +2410,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
 // [Spec 5.2] 10.5 masked Construct
 //===----------------------------------------------------------------------===//
 def MaskedOp : OpenMP_Op<"masked", traits = [
-    DeclareOpInterfaceMethods<ComposableOpInterface>
+    DeclareOpInterfaceMethods<ComposableOpInterface>, RecursiveMemoryEffects
   ], clauses = [
     OpenMP_FilterClause
   ], singleRegion = 1> {
