@@ -75,6 +75,10 @@ PreservedAnalyses LowerGlobalDtorsPass::run(Module &M,
 }
 
 static bool runImpl(Module &M) {
+  // Set for environments without __cxa_atexit(), such as the kernel.
+  if (M.getModuleFlag("disable-atexit-based-global-dtor-lowering"))
+    return false;
+
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_dtors");
   if (!GV || !GV->hasInitializer())
     return false;

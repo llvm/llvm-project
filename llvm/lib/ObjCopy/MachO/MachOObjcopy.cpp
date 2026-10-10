@@ -11,6 +11,7 @@
 #include "MachOReader.h"
 #include "MachOWriter.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
@@ -89,6 +90,11 @@ static void markSymbols(const CommonConfig &Config, Object &Obj) {
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
 
+  // Nor those referenced from external relocations.
+  for (const RelocationInfo &R : Obj.ExternalRelocations)
+    if (R.Symbol && *R.Symbol)
+      (*R.Symbol)->Referenced = true;
+
   // --strip-all removes relocations, so their symbols need not be preserved.
   if (Config.StripAll)
     return;
@@ -98,6 +104,26 @@ static void markSymbols(const CommonConfig &Config, Object &Obj) {
       for (const RelocationInfo &R : Sec->Relocations)
         if (R.Symbol && *R.Symbol)
           (*R.Symbol)->Referenced = true;
+}
+
+// --strip-all would remove the symbols that external relocations refer to.
+// Like cctools' strip, refuse to strip them.
+static Error checkExternalRelocationSymbols(const Object &Obj) {
+  SmallPtrSet<const SymbolEntry *, 8> Referenced;
+  for (const RelocationInfo &R : Obj.ExternalRelocations)
+    if (R.Symbol && *R.Symbol)
+      Referenced.insert(*R.Symbol);
+  if (Referenced.empty())
+    return Error::success();
+
+  std::string Names;
+  for (const std::unique_ptr<SymbolEntry> &Sym : Obj.SymTable.Symbols)
+    if (Referenced.contains(Sym.get()))
+      Names += (Names.empty() ? "" : ", ") + Sym->Name;
+  return createStringError(std::errc::invalid_argument,
+                           "symbols referenced by external relocations cannot "
+                           "be stripped: %s",
+                           Names.c_str());
 }
 
 static void updateAndRemoveSymbols(const CommonConfig &Config,
@@ -462,6 +488,10 @@ static Error handleArgs(const CommonConfig &Config,
 
   if (Error E = removeSections(Config, Obj))
     return createFileError(Config.InputFilename, std::move(E));
+
+  if (Config.StripAll)
+    if (Error E = checkExternalRelocationSymbols(Obj))
+      return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
   markSymbols(Config, Obj);

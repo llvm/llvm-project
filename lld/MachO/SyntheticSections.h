@@ -288,6 +288,38 @@ private:
   llvm::SetVector<Symbol *> entries;
 };
 
+// Stores the external or local relocation entries of a kext bundle, which the
+// kernel linker uses in place of dyld's binding and rebase opcodes.
+class RelocSection final : public LinkEditSection {
+public:
+  // The symbol an external relocation binds to, or the symbol or section a
+  // local relocation points into.
+  using Referent = llvm::PointerUnion<const Symbol *, const InputSection *>;
+
+  RelocSection(const char *name, bool external);
+  void addEntry(Referent referent, const InputSection *isec, uint32_t offset,
+                uint8_t type, bool pcrel, uint8_t length);
+  bool isNeeded() const override { return !entries.empty(); }
+  void finalizeContents() override;
+  uint64_t getRawSize() const override { return contents.size(); }
+  void writeTo(uint8_t *buf) const override;
+  uint32_t getNumEntries() const { return entries.size(); }
+
+private:
+  struct Entry {
+    Referent referent;
+    const InputSection *isec;
+    uint32_t offset;
+    uint8_t type;
+    bool pcrel;
+    uint8_t length;
+  };
+  const bool external;
+  bool isFinal = false;
+  std::vector<Entry> entries;
+  SmallVector<char, 128> contents;
+};
+
 class StubHelperSection final : public SyntheticSection {
 public:
   StubHelperSection();
@@ -844,6 +876,8 @@ struct InStruct {
   InitOffsetsSection *initOffsets = nullptr;
   ObjCMethListSection *objcMethList = nullptr;
   ChainedFixupsSection *chainedFixups = nullptr;
+  RelocSection *extRelocs = nullptr;
+  RelocSection *localRelocs = nullptr;
 
   CStringSection *getOrCreateCStringSection(StringRef name,
                                             bool forceDedupStrings = false) {

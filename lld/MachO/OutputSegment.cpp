@@ -8,6 +8,7 @@
 
 #include "OutputSegment.h"
 #include "ConcatOutputSection.h"
+#include "Config.h"
 #include "InputSection.h"
 #include "Sections.h"
 #include "Symbols.h"
@@ -145,8 +146,18 @@ static int sectionOrder(OutputSection *osec) {
     case S_THREAD_LOCAL_ZEROFILL:
       return std::numeric_limits<int>::max() - 1;
     case S_ZEROFILL:
+      // ld64 places __common after the other zerofill sections of kexts.
+      if (config->outputType == MH_KEXT_BUNDLE &&
+          osec->name != section_names::common)
+        return std::numeric_limits<int>::max() - 1;
       return std::numeric_limits<int>::max();
     default:
+      // ld64 lays out the non-zerofill sections of kexts in input order, with
+      // the GOT last.
+      if (config->outputType == MH_KEXT_BUNDLE)
+        return osec->name == section_names::got
+                   ? std::numeric_limits<int>::max() - 4
+                   : osec->inputOrder;
       return StringSwitch<int>(osec->name)
           .Case(section_names::got, -3)
           .Case(section_names::lazySymbolPtr, -2)
@@ -155,15 +166,17 @@ static int sectionOrder(OutputSection *osec) {
     }
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::chainFixups, -11)
-        .Case(section_names::rebase, -10)
-        .Case(section_names::binding, -9)
-        .Case(section_names::weakBinding, -8)
-        .Case(section_names::lazyBinding, -7)
-        .Case(section_names::export_, -6)
-        .Case(section_names::functionStarts, -5)
-        .Case(section_names::dataInCode, -4)
-        .Case(section_names::symbolTable, -3)
+        .Case(section_names::chainFixups, -13)
+        .Case(section_names::rebase, -12)
+        .Case(section_names::binding, -11)
+        .Case(section_names::weakBinding, -10)
+        .Case(section_names::lazyBinding, -9)
+        .Case(section_names::export_, -8)
+        .Case(section_names::localRelocs, -7)
+        .Case(section_names::functionStarts, -6)
+        .Case(section_names::dataInCode, -5)
+        .Case(section_names::symbolTable, -4)
+        .Case(section_names::extRelocs, -3)
         .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
         .Case(section_names::codeSignature, std::numeric_limits<int>::max())

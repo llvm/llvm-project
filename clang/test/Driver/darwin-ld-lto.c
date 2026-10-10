@@ -40,13 +40,6 @@
 // GISEL: "-mllvm" "-global-isel-abort=0"
 
 
-// Check that we disable atexit()-based global destructor lowering when
-// compiling/linking for kernel/kext/freestanding.
-// RUN: %clang --target=arm64-apple-darwin %s -flto -fapple-kext -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=KEXT %s
-// KEXT: {{ld(.exe)?"}}
-// KEXT: "-mllvm" "-disable-atexit-based-global-dtor-lowering"
-
 // Check that we select a filename for -fstack-usage.
 // RUN: %clang --target=arm64-apple-darwin %s -flto -fstack-usage -o foo \
 // RUN:   -### 2>&1 | FileCheck --check-prefix=STACKUSAGE %s

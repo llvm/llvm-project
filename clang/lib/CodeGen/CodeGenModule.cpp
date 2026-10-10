@@ -1378,6 +1378,11 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.Dwarf64)
     getModule().addModuleFlag(llvm::Module::Max, "DWARF64", 1);
 
+  // Freestanding environments, such as the kernel, lack __cxa_atexit().
+  if (LangOpts.Freestanding && getTriple().isOSBinFormatMachO())
+    getModule().addModuleFlag(llvm::Module::Max,
+                              "disable-atexit-based-global-dtor-lowering", 1);
+
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(true);
