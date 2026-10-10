@@ -1149,3 +1149,44 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return std::nullopt;
   }
 }
+
+// Emit an AMDGPU device printf as a cir.offload.printf, which is expanded into
+// the AMDGPU printf runtime sequence during LLVM lowering.
+mlir::Value
+CIRGenFunction::emitAMDGPUDevicePrintfCallExpr(const CallExpr *expr) {
+  assert(cgm.getTriple().isAMDGCN() ||
+         (cgm.getTriple().isSPIRV() &&
+          cgm.getTriple().getVendor() == llvm::Triple::AMD));
+  assert(expr->getBuiltinCallee() == Builtin::BIprintf ||
+         expr->getBuiltinCallee() == Builtin::BI__builtin_printf);
+  assert(expr->getNumArgs() >= 1);
+
+  const FunctionProtoType *funcPrototype =
+      expr->getDirectCallee()->getType()->getAs<FunctionProtoType>();
+  CallArgList args;
+  emitCallArgs(args, funcPrototype, expr->arguments(), expr->getDirectCallee());
+
+  mlir::Location loc = getLoc(expr->getBeginLoc());
+
+  // We don't know how to emit non-scalar varargs, nor scalars the printf
+  // runtime has no encoding for, such as vectors.
+  bool hasNonScalar = llvm::any_of(args, [&](const CallArg &a) {
+    if (a.hasLValue() || !a.getKnownRValue().isScalar())
+      return true;
+    mlir::Type ty = a.getKnownRValue().getValue().getType();
+    return !mlir::isa<cir::IntType, cir::PointerType>(ty) &&
+           !cir::isAnyFloatingPointType(ty);
+  });
+  if (hasNonScalar) {
+    cgm.errorUnsupported(expr, "non-scalar args to printf");
+    return builder.getConstInt(loc, builder.getSInt32Ty(), 0);
+  }
+
+  llvm::SmallVector<mlir::Value, 8> callArgs;
+  for (const CallArg &a : args)
+    callArgs.push_back(a.getKnownRValue().getValue());
+
+  return cir::OffloadPrintfOp::create(builder, loc, builder.getSInt32Ty(),
+                                      callArgs.front(),
+                                      llvm::drop_begin(callArgs));
+}

@@ -1,0 +1,13 @@
+// RUN: cir-opt %s --cir-to-llvm -verify-diagnostics
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.triple = "nvptx64-nvidia-cuda"} {
+  cir.func @p(%fmt: !cir.ptr<!s8i>, %v: !s32i) -> !s32i {
+    // expected-error @below {{offload printf lowering is NYI for target 'nvptx64-nvidia-cuda'}}
+    // expected-error @below {{failed to legalize operation 'cir.offload.printf'}}
+    %0 = cir.offload.printf(%fmt, %v) : (!cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+}
