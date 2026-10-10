@@ -2711,6 +2711,8 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
+  LLVM_ABI const BasicBlock *getBasicBlock() const;
+
   /// Get the (commutative) identity element for the given opcode, if it exists.
   LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       SDNodeFlags Flags);

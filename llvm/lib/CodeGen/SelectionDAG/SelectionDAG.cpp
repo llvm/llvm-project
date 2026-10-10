@@ -1486,6 +1486,10 @@ bool SelectionDAG::shouldOptForSize() const {
   return llvm::shouldOptimizeForSize(FLI->MBB->getBasicBlock(), PSI, BFI);
 }
 
+const BasicBlock *SelectionDAG::getBasicBlock() const {
+  return FLI->MBB->getBasicBlock();
+}
+
 void SelectionDAG::allnodes_clear() {
   assert(&*AllNodes.begin() == &EntryNode);
   AllNodes.remove(AllNodes.begin());

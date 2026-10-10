@@ -15985,6 +15985,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                     DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, V1)));
   }
 
+  auto preferTBLToMultiInstrShuffle = [&]() {
+    if (DAG.shouldOptForSize())
+      return false;
+    // Look for a simple single block loop.
+    const BasicBlock *Block = DAG.getBasicBlock();
+    assert(Block && "Expected a valid block!");
+    return is_contained(successors(Block), Block);
+  };
+
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8) ||
        (NumElts == 4 && EltSize == 32)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
@@ -15997,9 +16006,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
       return convertFromScalableVector(DAG, VT, Rev);
     }
 
-    SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
-    return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
-                       DAG.getConstant(8, DL, MVT::i32));
+    if (!preferTBLToMultiInstrShuffle()) {
+      SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
+      return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
+                         DAG.getConstant(8, DL, MVT::i32));
+    }
   }
 
   // Check for slide-with-zeros pattern before EXT (slide is also valid EXT)
@@ -16118,7 +16129,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If the shuffle is not directly supported and it has 4 elements, use
   // the PerfectShuffle-generated table to synthesize it from other shuffles.
-  if (NumElts == 4) {
+  if (NumElts == 4 && (getPerfectShuffleCost(ShuffleMask) == 1 ||
+                       !preferTBLToMultiInstrShuffle())) {
     SmallVector<ShuffleEntry> Entries;
     if (generatePerfectShuffle(ShuffleMask, NumElts, Entries)) {
       SmallVector<SDValue> Vals;
