@@ -221,13 +221,13 @@ define void @write_imm_into_src_flat_scratch_base() {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, 0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[0:1]
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, -1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !7, i64 0)
@@ -857,10 +857,10 @@ define void @write_sgpr_into_src_flat_scratch_base(i64 inreg %x) {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
+; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, s[0:1]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[2:3]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, s[0:1]
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !7, i64 %x)
   %read = call i64 @llvm.read_register.i64(metadata !7)

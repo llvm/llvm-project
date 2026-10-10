@@ -1,0 +1,49 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched -amdgpu-sched-strategy=coexec -verify-machineinstrs -verify-misched -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Encoded DS reads and reads without MMOs retain the modeled result latency
+# at explicit inline-asm inputs. Generic side-effect/order flags do not change
+# the latency of a register result.
+
+---
+name: encoded_read
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: encoded_read:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_READ_B32_vi_gfx9
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $exec
+    $vgpr2 = DS_READ_B32_vi_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr6, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: missing_mmo
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: missing_mmo:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_READ_B32_gfx9
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $exec
+    $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr6, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
+
+---
+name: atomic_lds_result
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: atomic_lds_result:%bb.0
+  ; CHECK: SU(0): {{.*}}DS_ADD_RTN_U32_gfx9
+  ; CHECK: SU(1): Data Latency=5 Reg=$vgpr2
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $exec
+    $vgpr2 = DS_ADD_RTN_U32_gfx9 $vgpr0, $vgpr1, 0, 0, implicit $exec :: (load store (s32), addrspace 3)
+    INLINEASM &"v_mov_b32 $0, $1", attdialect, regdef:VGPR_32, def $vgpr12, reguse:VGPR_32, $vgpr2
+    S_ENDPGM 0
+...
