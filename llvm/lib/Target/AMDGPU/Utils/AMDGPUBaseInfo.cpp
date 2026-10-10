@@ -433,8 +433,14 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+struct BUFInfo {
+  uint16_t Opcode;
+};
+
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
+#define GET_BUFInfoTable_DECL
+#define GET_BUFInfoTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -545,6 +551,10 @@ bool getMUBUFIsBufferInv(unsigned Opc) {
 bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
   return Info && Info->tfe;
+}
+
+bool isBUFIndexed(unsigned Opc) {
+  return isBUFIndexedOpcodeHelper(Opc) != nullptr;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
