@@ -172,7 +172,8 @@ static uint64_t addMachOSymbolStubs(const object::MachOObjectFile &MachO,
 
 llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
                                            OutputAggregator &Out,
-                                           GsymCreator &Gsym) {
+                                           GsymCreator &Gsym,
+                                           const object::ObjectFile *StubsObj) {
   using namespace llvm::object;
 
   const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
@@ -223,9 +224,19 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
                  << " functions from symbol table.\n";
 
   // Mach-O symbol stubs have no symbol table entries of their own, so
-  // synthesize function infos for them using the indirect symbol table.
-  if (IsMachO) {
-    const uint64_t StubsAddedCount = addMachOSymbolStubs(*MachO, Out, Gsym);
+  // synthesize function infos for them using the indirect symbol table. That
+  // table lives in LC_DYSYMTAB, which a dSYM does not carry, so the stubs can
+  // be read from a different file than the symbol table above.
+  const MachOObjectFile *StubsMachO = MachO;
+  if (StubsObj) {
+    StubsMachO = dyn_cast<MachOObjectFile>(StubsObj);
+    if (!StubsMachO && Out.GetOS())
+      *Out.GetOS() << "warning: the symbol stubs file is not a mach-o file, "
+                      "no symbol stubs will be synthesized.\n";
+  }
+  if (StubsMachO) {
+    const uint64_t StubsAddedCount =
+        addMachOSymbolStubs(*StubsMachO, Out, Gsym);
     if (Out.GetOS())
       *Out.GetOS() << "Loaded " << StubsAddedCount
                    << " functions from symbol stubs.\n";
