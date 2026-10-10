@@ -2483,6 +2483,27 @@ def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LSX128:$vj))), 0,
           (BCNEZ (VSETEQZ_V LSX128:$vj), bb:$imm21)>;
 }
 
+// Vector conditional branches. Ditto.
+multiclass PatVecCondBrCC<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
+                          RegisterClass RC> {
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETNE, bb:$imm21),
+            (BCNEZ (VSet RC:$vj), bb:$imm21)>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETEQ, bb:$imm21),
+            (BCEQZ (VSet RC:$vj), bb:$imm21)>;
+}
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
+defm : PatVecCondBrCC<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+
 } // Predicates = [HasExtLSX]
 
 /// Intrinsic pattern

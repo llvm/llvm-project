@@ -17,33 +17,19 @@ define void @xbz_b_ne(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbz_b_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.b $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB0_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB0_3
-; LA64-NEXT:    b .LBB0_4
-; LA64-NEXT:  .LBB0_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB0_4
-; LA64-NEXT:  .LBB0_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB0_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB0_4: # %e
+; LA64-NEXT:  .LBB0_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_b_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.b $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB0_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB0_3
-; LA32-NEXT:    b .LBB0_4
-; LA32-NEXT:  .LBB0_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB0_4
-; LA32-NEXT:  .LBB0_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB0_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB0_4: # %e
+; LA32-NEXT:  .LBB0_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.b(<32 x i8> %v)
   %c = icmp ne i32 %r, 0
@@ -59,34 +45,20 @@ define void @xbz_b_eq(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbz_b_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.b $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB1_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB1_3
-; LA64-NEXT:    b .LBB1_4
-; LA64-NEXT:  .LBB1_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB1_4
-; LA64-NEXT:  .LBB1_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB1_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB1_4: # %t
+; LA64-NEXT:  .LBB1_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_b_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.b $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB1_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB1_3
-; LA32-NEXT:    b .LBB1_4
-; LA32-NEXT:  .LBB1_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB1_4
-; LA32-NEXT:  .LBB1_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB1_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB1_4: # %t
+; LA32-NEXT:  .LBB1_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.b(<32 x i8> %v)
@@ -103,33 +75,19 @@ define void @xbz_h_ne(<16 x i16> %v, ptr %p) {
 ; LA64-LABEL: xbz_h_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.h $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB2_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB2_3
-; LA64-NEXT:    b .LBB2_4
-; LA64-NEXT:  .LBB2_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB2_4
-; LA64-NEXT:  .LBB2_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB2_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB2_4: # %e
+; LA64-NEXT:  .LBB2_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_h_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.h $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB2_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB2_3
-; LA32-NEXT:    b .LBB2_4
-; LA32-NEXT:  .LBB2_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB2_4
-; LA32-NEXT:  .LBB2_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB2_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB2_4: # %e
+; LA32-NEXT:  .LBB2_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.h(<16 x i16> %v)
   %c = icmp ne i32 %r, 0
@@ -145,34 +103,20 @@ define void @xbz_h_eq(<16 x i16> %v, ptr %p) {
 ; LA64-LABEL: xbz_h_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.h $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB3_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB3_3
-; LA64-NEXT:    b .LBB3_4
-; LA64-NEXT:  .LBB3_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB3_4
-; LA64-NEXT:  .LBB3_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB3_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB3_4: # %t
+; LA64-NEXT:  .LBB3_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_h_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.h $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB3_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB3_3
-; LA32-NEXT:    b .LBB3_4
-; LA32-NEXT:  .LBB3_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB3_4
-; LA32-NEXT:  .LBB3_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB3_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB3_4: # %t
+; LA32-NEXT:  .LBB3_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.h(<16 x i16> %v)
@@ -189,33 +133,19 @@ define void @xbz_w_ne(<8 x i32> %v, ptr %p) {
 ; LA64-LABEL: xbz_w_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.w $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB4_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB4_3
-; LA64-NEXT:    b .LBB4_4
-; LA64-NEXT:  .LBB4_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB4_4
-; LA64-NEXT:  .LBB4_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB4_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB4_4: # %e
+; LA64-NEXT:  .LBB4_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_w_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.w $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB4_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB4_3
-; LA32-NEXT:    b .LBB4_4
-; LA32-NEXT:  .LBB4_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB4_4
-; LA32-NEXT:  .LBB4_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB4_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB4_4: # %e
+; LA32-NEXT:  .LBB4_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.w(<8 x i32> %v)
   %c = icmp ne i32 %r, 0
@@ -231,34 +161,20 @@ define void @xbz_w_eq(<8 x i32> %v, ptr %p) {
 ; LA64-LABEL: xbz_w_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.w $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB5_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB5_3
-; LA64-NEXT:    b .LBB5_4
-; LA64-NEXT:  .LBB5_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB5_4
-; LA64-NEXT:  .LBB5_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB5_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB5_4: # %t
+; LA64-NEXT:  .LBB5_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_w_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.w $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB5_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB5_3
-; LA32-NEXT:    b .LBB5_4
-; LA32-NEXT:  .LBB5_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB5_4
-; LA32-NEXT:  .LBB5_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB5_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB5_4: # %t
+; LA32-NEXT:  .LBB5_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.w(<8 x i32> %v)
@@ -275,33 +191,19 @@ define void @xbz_d_ne(<4 x i64> %v, ptr %p) {
 ; LA64-LABEL: xbz_d_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.d $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB6_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB6_3
-; LA64-NEXT:    b .LBB6_4
-; LA64-NEXT:  .LBB6_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB6_4
-; LA64-NEXT:  .LBB6_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB6_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB6_4: # %e
+; LA64-NEXT:  .LBB6_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_d_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.d $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB6_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB6_3
-; LA32-NEXT:    b .LBB6_4
-; LA32-NEXT:  .LBB6_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB6_4
-; LA32-NEXT:  .LBB6_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB6_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB6_4: # %e
+; LA32-NEXT:  .LBB6_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.d(<4 x i64> %v)
   %c = icmp ne i32 %r, 0
@@ -317,34 +219,20 @@ define void @xbz_d_eq(<4 x i64> %v, ptr %p) {
 ; LA64-LABEL: xbz_d_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetanyeqz.d $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB7_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB7_3
-; LA64-NEXT:    b .LBB7_4
-; LA64-NEXT:  .LBB7_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB7_4
-; LA64-NEXT:  .LBB7_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB7_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB7_4: # %t
+; LA64-NEXT:  .LBB7_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_d_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetanyeqz.d $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB7_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB7_3
-; LA32-NEXT:    b .LBB7_4
-; LA32-NEXT:  .LBB7_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB7_4
-; LA32-NEXT:  .LBB7_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB7_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB7_4: # %t
+; LA32-NEXT:  .LBB7_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.d(<4 x i64> %v)
@@ -361,33 +249,19 @@ define void @xbz_v_ne(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbz_v_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvseteqz.v $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB8_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB8_3
-; LA64-NEXT:    b .LBB8_4
-; LA64-NEXT:  .LBB8_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB8_4
-; LA64-NEXT:  .LBB8_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB8_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB8_4: # %e
+; LA64-NEXT:  .LBB8_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_v_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvseteqz.v $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB8_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB8_3
-; LA32-NEXT:    b .LBB8_4
-; LA32-NEXT:  .LBB8_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB8_4
-; LA32-NEXT:  .LBB8_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB8_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB8_4: # %e
+; LA32-NEXT:  .LBB8_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.v(<32 x i8> %v)
   %c = icmp ne i32 %r, 0
@@ -403,34 +277,20 @@ define void @xbz_v_eq(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbz_v_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvseteqz.v $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB9_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB9_3
-; LA64-NEXT:    b .LBB9_4
-; LA64-NEXT:  .LBB9_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB9_4
-; LA64-NEXT:  .LBB9_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB9_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB9_4: # %t
+; LA64-NEXT:  .LBB9_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbz_v_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvseteqz.v $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB9_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB9_3
-; LA32-NEXT:    b .LBB9_4
-; LA32-NEXT:  .LBB9_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB9_4
-; LA32-NEXT:  .LBB9_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB9_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB9_4: # %t
+; LA32-NEXT:  .LBB9_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbz.v(<32 x i8> %v)
@@ -447,33 +307,19 @@ define void @xbnz_b_ne(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbnz_b_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.b $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB10_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB10_3
-; LA64-NEXT:    b .LBB10_4
-; LA64-NEXT:  .LBB10_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB10_4
-; LA64-NEXT:  .LBB10_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB10_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB10_4: # %e
+; LA64-NEXT:  .LBB10_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_b_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.b $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB10_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB10_3
-; LA32-NEXT:    b .LBB10_4
-; LA32-NEXT:  .LBB10_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB10_4
-; LA32-NEXT:  .LBB10_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB10_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB10_4: # %e
+; LA32-NEXT:  .LBB10_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.b(<32 x i8> %v)
   %c = icmp ne i32 %r, 0
@@ -489,34 +335,20 @@ define void @xbnz_b_eq(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbnz_b_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.b $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB11_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB11_3
-; LA64-NEXT:    b .LBB11_4
-; LA64-NEXT:  .LBB11_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB11_4
-; LA64-NEXT:  .LBB11_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB11_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB11_4: # %t
+; LA64-NEXT:  .LBB11_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_b_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.b $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB11_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB11_3
-; LA32-NEXT:    b .LBB11_4
-; LA32-NEXT:  .LBB11_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB11_4
-; LA32-NEXT:  .LBB11_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB11_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB11_4: # %t
+; LA32-NEXT:  .LBB11_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.b(<32 x i8> %v)
@@ -533,33 +365,19 @@ define void @xbnz_h_ne(<16 x i16> %v, ptr %p) {
 ; LA64-LABEL: xbnz_h_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.h $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB12_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB12_3
-; LA64-NEXT:    b .LBB12_4
-; LA64-NEXT:  .LBB12_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB12_4
-; LA64-NEXT:  .LBB12_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB12_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB12_4: # %e
+; LA64-NEXT:  .LBB12_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_h_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.h $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB12_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB12_3
-; LA32-NEXT:    b .LBB12_4
-; LA32-NEXT:  .LBB12_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB12_4
-; LA32-NEXT:  .LBB12_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB12_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB12_4: # %e
+; LA32-NEXT:  .LBB12_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.h(<16 x i16> %v)
   %c = icmp ne i32 %r, 0
@@ -575,34 +393,20 @@ define void @xbnz_h_eq(<16 x i16> %v, ptr %p) {
 ; LA64-LABEL: xbnz_h_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.h $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB13_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB13_3
-; LA64-NEXT:    b .LBB13_4
-; LA64-NEXT:  .LBB13_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB13_4
-; LA64-NEXT:  .LBB13_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB13_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB13_4: # %t
+; LA64-NEXT:  .LBB13_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_h_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.h $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB13_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB13_3
-; LA32-NEXT:    b .LBB13_4
-; LA32-NEXT:  .LBB13_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB13_4
-; LA32-NEXT:  .LBB13_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB13_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB13_4: # %t
+; LA32-NEXT:  .LBB13_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.h(<16 x i16> %v)
@@ -619,33 +423,19 @@ define void @xbnz_w_ne(<8 x i32> %v, ptr %p) {
 ; LA64-LABEL: xbnz_w_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.w $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB14_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB14_3
-; LA64-NEXT:    b .LBB14_4
-; LA64-NEXT:  .LBB14_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB14_4
-; LA64-NEXT:  .LBB14_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB14_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB14_4: # %e
+; LA64-NEXT:  .LBB14_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_w_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.w $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB14_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB14_3
-; LA32-NEXT:    b .LBB14_4
-; LA32-NEXT:  .LBB14_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB14_4
-; LA32-NEXT:  .LBB14_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB14_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB14_4: # %e
+; LA32-NEXT:  .LBB14_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.w(<8 x i32> %v)
   %c = icmp ne i32 %r, 0
@@ -661,34 +451,20 @@ define void @xbnz_w_eq(<8 x i32> %v, ptr %p) {
 ; LA64-LABEL: xbnz_w_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.w $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB15_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB15_3
-; LA64-NEXT:    b .LBB15_4
-; LA64-NEXT:  .LBB15_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB15_4
-; LA64-NEXT:  .LBB15_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB15_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB15_4: # %t
+; LA64-NEXT:  .LBB15_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_w_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.w $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB15_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB15_3
-; LA32-NEXT:    b .LBB15_4
-; LA32-NEXT:  .LBB15_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB15_4
-; LA32-NEXT:  .LBB15_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB15_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB15_4: # %t
+; LA32-NEXT:  .LBB15_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.w(<8 x i32> %v)
@@ -705,33 +481,19 @@ define void @xbnz_d_ne(<4 x i64> %v, ptr %p) {
 ; LA64-LABEL: xbnz_d_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.d $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB16_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB16_3
-; LA64-NEXT:    b .LBB16_4
-; LA64-NEXT:  .LBB16_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB16_4
-; LA64-NEXT:  .LBB16_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB16_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB16_4: # %e
+; LA64-NEXT:  .LBB16_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_d_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.d $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB16_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB16_3
-; LA32-NEXT:    b .LBB16_4
-; LA32-NEXT:  .LBB16_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB16_4
-; LA32-NEXT:  .LBB16_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB16_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB16_4: # %e
+; LA32-NEXT:  .LBB16_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.d(<4 x i64> %v)
   %c = icmp ne i32 %r, 0
@@ -747,34 +509,20 @@ define void @xbnz_d_eq(<4 x i64> %v, ptr %p) {
 ; LA64-LABEL: xbnz_d_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetallnez.d $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB17_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB17_3
-; LA64-NEXT:    b .LBB17_4
-; LA64-NEXT:  .LBB17_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB17_4
-; LA64-NEXT:  .LBB17_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB17_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB17_4: # %t
+; LA64-NEXT:  .LBB17_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_d_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetallnez.d $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB17_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB17_3
-; LA32-NEXT:    b .LBB17_4
-; LA32-NEXT:  .LBB17_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB17_4
-; LA32-NEXT:  .LBB17_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB17_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB17_4: # %t
+; LA32-NEXT:  .LBB17_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.d(<4 x i64> %v)
@@ -791,33 +539,19 @@ define void @xbnz_v_ne(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbnz_v_ne:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetnez.v $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB18_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB18_3
-; LA64-NEXT:    b .LBB18_4
-; LA64-NEXT:  .LBB18_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB18_4
-; LA64-NEXT:  .LBB18_3: # %t
+; LA64-NEXT:    bceqz $fcc0, .LBB18_2
+; LA64-NEXT:  # %bb.1: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
-; LA64-NEXT:  .LBB18_4: # %e
+; LA64-NEXT:  .LBB18_2: # %e
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_v_ne:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetnez.v $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB18_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB18_3
-; LA32-NEXT:    b .LBB18_4
-; LA32-NEXT:  .LBB18_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB18_4
-; LA32-NEXT:  .LBB18_3: # %t
+; LA32-NEXT:    bceqz $fcc0, .LBB18_2
+; LA32-NEXT:  # %bb.1: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
-; LA32-NEXT:  .LBB18_4: # %e
+; LA32-NEXT:  .LBB18_2: # %e
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.v(<32 x i8> %v)
   %c = icmp ne i32 %r, 0
@@ -833,34 +567,20 @@ define void @xbnz_v_eq(<32 x i8> %v, ptr %p) {
 ; LA64-LABEL: xbnz_v_eq:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvsetnez.v $fcc0, $xr0
-; LA64-NEXT:    bcnez $fcc0, .LBB19_2
-; LA64-NEXT:  # %bb.1:
-; LA64-NEXT:    addi.w $a1, $zero, 0
-; LA64-NEXT:    bnez $a1, .LBB19_3
-; LA64-NEXT:    b .LBB19_4
-; LA64-NEXT:  .LBB19_2:
-; LA64-NEXT:    addi.w $a1, $zero, 1
-; LA64-NEXT:    beqz $a1, .LBB19_4
-; LA64-NEXT:  .LBB19_3: # %e
+; LA64-NEXT:    bceqz $fcc0, .LBB19_2
+; LA64-NEXT:  # %bb.1: # %e
 ; LA64-NEXT:    ret
-; LA64-NEXT:  .LBB19_4: # %t
+; LA64-NEXT:  .LBB19_2: # %t
 ; LA64-NEXT:    ld.w $zero, $a0, 0
 ; LA64-NEXT:    ret
 ;
 ; LA32-LABEL: xbnz_v_eq:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvsetnez.v $fcc0, $xr0
-; LA32-NEXT:    bcnez $fcc0, .LBB19_2
-; LA32-NEXT:  # %bb.1:
-; LA32-NEXT:    addi.w $a1, $zero, 0
-; LA32-NEXT:    bnez $a1, .LBB19_3
-; LA32-NEXT:    b .LBB19_4
-; LA32-NEXT:  .LBB19_2:
-; LA32-NEXT:    addi.w $a1, $zero, 1
-; LA32-NEXT:    beqz $a1, .LBB19_4
-; LA32-NEXT:  .LBB19_3: # %e
+; LA32-NEXT:    bceqz $fcc0, .LBB19_2
+; LA32-NEXT:  # %bb.1: # %e
 ; LA32-NEXT:    ret
-; LA32-NEXT:  .LBB19_4: # %t
+; LA32-NEXT:  .LBB19_2: # %t
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    ret
   %r = call i32 @llvm.loongarch.lasx.xbnz.v(<32 x i8> %v)

@@ -2804,4 +2804,15 @@ def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LASX256:$xj))), 0,
           (BCNEZ (XVSETEQZ_V LASX256:$xj), bb:$imm21)>;
 }
 
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_B, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_H, v16i16, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_W, v8i32, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_zero, XVSETANYEQZ_D, v4i64, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_B, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_H, v16i16, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_W, v8i32, LASX256>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, XVSETALLNEZ_D, v4i64, LASX256>;
+defm : PatVecCondBrCC<loongarch_vany_zero, XVSETEQZ_V, v32i8, LASX256>;
+defm : PatVecCondBrCC<loongarch_vany_nonzero, XVSETNEZ_V, v32i8, LASX256>;
+
 } // Predicates = [HasExtLASX]
