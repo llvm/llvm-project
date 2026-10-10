@@ -1355,6 +1355,50 @@ bool TargetLowering::SimplifyDemandedBits(
     return false;
   }
 
+  // Before folding to the LHS, recheck bits excluded from its earlier demand
+  // using the full result demand. Mask identifies these excluded bits.
+  // KnownMask selects the Zero/One member of the recomputed LHS known bits
+  // that must cover Mask & DemandedBits.
+  auto TryFoldToLHS = [&](const APInt &Mask,
+                          const APInt KnownBits::*KnownMask) {
+    SDValue LHS = Op.getOperand(0);
+    APInt MaskedBits = Mask & DemandedBits;
+    if (MaskedBits.isZero())
+      return TLO.CombineTo(Op, LHS);
+
+    KnownBits LHSKnown(BitWidth);
+    if (SimplifyDemandedBits(LHS, DemandedBits, DemandedElts, LHSKnown, TLO,
+                             Depth + 1))
+      return true;
+
+    return MaskedBits.isSubsetOf(LHSKnown.*KnownMask) && TLO.CombineTo(Op, LHS);
+  };
+
+  // Try reducing the RHS demand using LHS known bits.
+  // KnownMask selects the LHS Zero/One bits that make RHS bits irrelevant.
+  auto TryReduceRHSDemand = [&](const KnownBits &LHSKnown,
+                                const APInt KnownBits::*KnownMask) {
+    SDValue RHS = Op.getOperand(1);
+    if (!RHS.hasOneUse() || isConstOrConstSplat(RHS, DemandedElts))
+      return false;
+
+    // Reuse LHS facts if the RHS did not reduce its earlier demand. Otherwise,
+    // query independent facts to avoid using bits outside that demand.
+    KnownBits FullDemandKnown =
+        DemandedBits.intersects(Known.*KnownMask)
+            ? TLO.DAG.computeKnownBits(Op.getOperand(0), DemandedElts,
+                                       Depth + 1)
+            : LHSKnown;
+    APInt RHSDemandedBits = ~(FullDemandKnown.*KnownMask) & DemandedBits;
+    if (RHSDemandedBits == DemandedBits)
+      return false;
+
+    // A failed retry must not replace Known with reduced-demand facts.
+    KnownBits RetryKnown;
+    return SimplifyDemandedBits(RHS, RHSDemandedBits, DemandedElts, RetryKnown,
+                                TLO, Depth + 1);
+  };
+
   KnownBits Known2;
   switch (Op.getOpcode()) {
   case ISD::SCALAR_TO_VECTOR: {
@@ -1662,8 +1706,10 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
-    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.Zero | Known.One)) {
+      if (TryFoldToLHS(Known.Zero, &KnownBits::Zero))
+        return true;
+    }
     if (DemandedBits.isSubsetOf(Known.Zero | Known2.One))
       return TLO.CombineTo(Op, Op1);
     // If all of the demanded bits in the inputs are known zeros, return zero.
@@ -1691,20 +1737,8 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    // Try reducing the RHS demand using independent LHS known bits. Known2
-    // may only be valid for the demand already reduced by the RHS.
-    if (Op1.hasOneUse() && !isConstOrConstSplat(Op1, DemandedElts)) {
-      KnownBits LHSKnown =
-          TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
-      APInt RHSDemandedBits = ~LHSKnown.Zero & DemandedBits;
-      if (RHSDemandedBits != DemandedBits) {
-        // A failed retry must not replace Known with reduced-demand facts.
-        KnownBits RetryKnown;
-        if (SimplifyDemandedBits(Op1, RHSDemandedBits, DemandedElts, RetryKnown,
-                                 TLO, Depth + 1))
-          return true;
-      }
-    }
+    if (TryReduceRHSDemand(Known2, &KnownBits::Zero))
+      return true;
 
     Known &= Known2;
     break;
@@ -1726,8 +1760,12 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
-    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
-      return TLO.CombineTo(Op, Op0);
+    if (DemandedBits.isSubsetOf(Known2.One | Known.Zero)) {
+      if (TryFoldToLHS(Known.One, &KnownBits::One)) {
+        Op->dropFlags(SDNodeFlags::Disjoint);
+        return true;
+      }
+    }
     if (DemandedBits.isSubsetOf(Known.One | Known2.Zero))
       return TLO.CombineTo(Op, Op1);
     // If the RHS is a constant, see if we can simplify it.
@@ -1766,21 +1804,9 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    // Try reducing the RHS demand using independent LHS known bits. Known2
-    // may only be valid for the demand already reduced by the RHS.
-    if (Op1.hasOneUse() && !isConstOrConstSplat(Op1, DemandedElts)) {
-      KnownBits LHSKnown =
-          TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth + 1);
-      APInt RHSDemandedBits = ~LHSKnown.One & DemandedBits;
-      if (RHSDemandedBits != DemandedBits) {
-        // A failed retry must not replace Known with reduced-demand facts.
-        KnownBits RetryKnown;
-        if (SimplifyDemandedBits(Op1, RHSDemandedBits, DemandedElts, RetryKnown,
-                                 TLO, Depth + 1)) {
-          Op->dropFlags(SDNodeFlags::Disjoint);
-          return true;
-        }
-      }
+    if (TryReduceRHSDemand(Known2, &KnownBits::One)) {
+      Op->dropFlags(SDNodeFlags::Disjoint);
+      return true;
     }
 
     Known |= Known2;
