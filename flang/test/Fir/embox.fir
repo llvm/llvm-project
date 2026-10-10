@@ -37,7 +37,8 @@ func.func @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK-LABEL: define void @_QPtest_dt_slice()
 func.func @_QPtest_dt_slice() {
 // CHECK:  %[[a1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
-// CHECK:  %[[a3:.*]] = alloca [20 x %_QFtest_dt_sliceTt], i64 1, align 8
+// SystemZ aligns this aggregate to 4, other architectures to 8.
+// CHECK:  %[[a3:.*]] = alloca [20 x %_QFtest_dt_sliceTt], i64 1, align {{4|8}}
 // CHECK:  %[[a4:.*]] = getelementptr [20 x %_QFtest_dt_sliceTt], ptr %[[a3]], i64 0, i64 0, i32 0
 // CHECK: %[[a5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
 // CHECK-SAME: { ptr undef, i64 4, i32 20240719, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
