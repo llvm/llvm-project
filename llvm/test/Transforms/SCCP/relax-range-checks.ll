@@ -113,4 +113,151 @@ define i1 @range_check_to_icmp_eq2(i32 range(i32 -1, 2) %x) {
   ret i1 %cmp
 }
 
+define i1 @range_check_to_icmp_ult(i8 range(i8 2, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_ult(
+; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, -2
+  %cmp = icmp ult i8 %off, 4
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_uge(i8 range(i8 2, 6) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_uge(
+; CHECK-SAME: i8 range(i8 2, 6) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nsw i8 %x, -4
+  %cmp = icmp ult i8 %off, 2
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_slt(i8 range(i8 -56, 20) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_slt(
+; CHECK-SAME: i8 range(i8 -56, 20) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], 56
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], -6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nsw i8 %x, 56
+  %cmp = icmp ult i8 %off, 50
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_sge(i8 range(i8 -56, 20) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_sge(
+; CHECK-SAME: i8 range(i8 -56, 20) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X]], -16
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nsw i8 %x, 16
+  %cmp = icmp ult i8 %off, 36
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_empty(i8 range(i8 2, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_empty(
+; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nuw nsw i8 [[X]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nuw i8 %x, -2
+  %cmp = icmp ult i8 %off, 0
+  ret i1 %cmp
+}
+
+define i1 @range_check_to_icmp_full(i8 range(i8 2, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_to_icmp_full(
+; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nuw nsw i8 [[X]], -2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nuw i8 %x, -2
+  %cmp = icmp uge i8 %off, 0
+  ret i1 %cmp
+}
+
+; Cover the early exit when ActiveCmpCR is already a one-icmp check.
+
+define i1 @range_check_intersection_to_icmp_eq(i32 range(i32 0, 4) %x) {
+; CHECK-LABEL: define i1 @range_check_intersection_to_icmp_eq(
+; CHECK-SAME: i32 range(i32 0, 4) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i32 [[X]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add nsw i32 %x, -3
+  %cmp = icmp ult i32 %off, 2
+  ret i1 %cmp
+}
+
+define i1 @range_check_intersection_to_icmp_ult(i8 range(i8 0, 10) %x) {
+; CHECK-LABEL: define i1 @range_check_intersection_to_icmp_ult(
+; CHECK-SAME: i8 range(i8 0, 10) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nuw nsw i8 [[X]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], 4
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, 2
+  %cmp = icmp ult i8 %off, 6
+  ret i1 %cmp
+}
+
+define i1 @range_check_intersection_to_icmp_slt(i8 range(i8 -128, -100) %x) {
+; CHECK-LABEL: define i1 @range_check_intersection_to_icmp_slt(
+; CHECK-SAME: i8 range(i8 -128, -100) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add i8 [[X]], -120
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], -118
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, -120
+  %cmp = icmp ult i8 %off, 18
+  ret i1 %cmp
+}
+
+define i1 @range_check_intersection_to_icmp_uge(i8 range(i8 -6, 0) %x) {
+; CHECK-LABEL: define i1 @range_check_intersection_to_icmp_uge(
+; CHECK-SAME: i8 range(i8 -6, 0) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], -2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, 2
+  %cmp = icmp ult i8 %off, 6
+  ret i1 %cmp
+}
+
+define i1 @range_check_intersection_to_icmp_sge(i8 range(i8 120, -128) %x) {
+; CHECK-LABEL: define i1 @range_check_intersection_to_icmp_sge(
+; CHECK-SAME: i8 range(i8 120, -128) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], -122
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X]], 122
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, -122
+  %cmp = icmp ult i8 %off, 14
+  ret i1 %cmp
+}
+
+; Negative test: CmpCR relaxation cannot perform when x's range is nuw and nsw.
+define i1 @range_check_nsw_nuw(i8 range(i8 -20, -56) %x) {
+; CHECK-LABEL: define i1 @range_check_nsw_nuw(
+; CHECK-SAME: i8 range(i8 -20, -56) [[X:%.*]]) {
+; CHECK-NEXT:    [[OFF:%.*]] = add i8 [[X]], 20
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 14
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %off = add i8 %x, 20
+  %cmp = icmp ult i8 %off, 14
+  ret i1 %cmp
+}
+
 declare void @use(i8)
