@@ -1175,11 +1175,11 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     break;
   };
 
-  AttributeList AL = IRP.getAttrList();
+  // Only add an entry to the map once something changed; this is also used to
+  // query attributes.
   Value *AttrListAnchor = IRP.getAttrListAnchor();
-  auto [Iter, Inserted] = AttrsMap.insert({AttrListAnchor, AL});
-  if (!Inserted)
-    AL = Iter->second;
+  auto Iter = AttrsMap.find(AttrListAnchor);
+  AttributeList AL = Iter != AttrsMap.end() ? Iter->second : IRP.getAttrList();
 
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AttrIdx = IRP.getAttrIdx();
@@ -1199,7 +1199,7 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
 
-  Iter->second = AL;
+  AttrsMap[AttrListAnchor] = AL;
   return HasChanged;
 }
 
