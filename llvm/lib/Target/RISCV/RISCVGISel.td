@@ -16,6 +16,9 @@
 include "RISCV.td"
 include "RISCVCombine.td"
 
+let Predicates = [HasStdExtZbb] in
+def : PatGpr<int_riscv_orc_b, ORC_B>;
+
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return Imm >= -2047 && Imm <= 2048;}]>;
 def simm12Plus1i32 : ImmLeaf<i32, [{

@@ -572,10 +572,8 @@ def : Pat<(binop_allwusers<xor> GPR:$rs1, (XLenVT -2147483648)),
 } // append Predicates = [IsRV64]
 } // Predicates = [HasStdExtZbs]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbb] in
 def : PatGpr<riscv_orc_b, ORC_B>;
-def : PatGpr<int_riscv_orc_b, ORC_B>;
-}
 
 let Predicates = [HasStdExtZbkb] in
 def : PatGpr<riscv_brev8, BREV8>;
