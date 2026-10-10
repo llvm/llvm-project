@@ -212,6 +212,15 @@ public:
 
     c->indirectsymoff = indirectSymtabSection->fileOff;
     c->nindirectsyms = indirectSymtabSection->getNumSymbols();
+
+    if (in.extRelocs && in.extRelocs->isNeeded()) {
+      c->extreloff = in.extRelocs->fileOff;
+      c->nextrel = in.extRelocs->getNumEntries();
+    }
+    if (in.localRelocs && in.localRelocs->isNeeded()) {
+      c->locreloff = in.localRelocs->fileOff;
+      c->nlocrel = in.localRelocs->getNumEntries();
+    }
   }
 
   SymtabSection *symtabSection;
@@ -684,8 +693,13 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
-    if (needsBinding(sym))
-      in.stubs->addEntry(sym);
+    if (needsBinding(sym)) {
+      // Kexts have no stubs: the kernel linker patches the branch itself.
+      if (config->outputType == MH_KEXT_BUNDLE)
+        in.extRelocs->addEntry(sym, isec, r.offset, r.type, r.pcrel, r.length);
+      else
+        in.stubs->addEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
       addNonLazyPointerEntry(sym);
@@ -698,6 +712,11 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     // need of rebase opcodes.
     if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
       addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+  } else if (config->outputType == MH_KEXT_BUNDLE && needsBinding(sym)) {
+    // The kernel linker can only bind branches and pointers.
+    error(isec->getLocation(r.offset) + ": " + relocAttrs.name +
+          " relocation to " + toString(*sym) +
+          " cannot be bound in a kext; access it through the GOT instead");
   }
 }
 
@@ -741,6 +760,10 @@ void Writer::scanRelocations() {
         if (!r.pcrel) {
           if (config->emitChainedFixups)
             in.chainedFixups->addRebase(isec, r.offset);
+          else if (config->outputType == MH_KEXT_BUNDLE)
+            in.localRelocs->addEntry(cast<InputSection *>(r.referent), isec,
+                                     r.offset, r.type, /*pcrel=*/false,
+                                     r.length);
           else
             in.rebase->addEntry(isec, r.offset);
         }
@@ -831,7 +854,7 @@ template <class LP> void Writer::createLoadCommands() {
   if (config->emitChainedFixups) {
     in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
     in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
-  } else {
+  } else if (config->outputType != MH_KEXT_BUNDLE) {
     in.header->addLoadCommand(make<LCDyldInfo>(
         in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   }
@@ -857,6 +880,7 @@ template <class LP> void Writer::createLoadCommands() {
       in.header->addLoadCommand(make<LCSubClient>(client));
     break;
   case MH_BUNDLE:
+  case MH_KEXT_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -867,10 +891,13 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(uuidCommand);
   }
 
-  if (useLCBuildVersion(config->platformInfo))
-    in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
-  else
-    in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
+  // ld64 does not record the platform of kexts.
+  if (config->outputType != MH_KEXT_BUNDLE) {
+    if (useLCBuildVersion(config->platformInfo))
+      in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
+    else
+      in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
+  }
 
   if (config->secondaryPlatformInfo) {
     in.header->addLoadCommand(
@@ -1089,6 +1116,7 @@ template <class LP> void Writer::createOutputSections() {
     break;
   case MH_DYLIB:
   case MH_BUNDLE:
+  case MH_KEXT_BUNDLE:
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -1207,6 +1235,11 @@ void Writer::finalizeLinkEditSegment() {
                     if (osec)
                       osec->finalizeContents();
                   });
+
+  if (in.extRelocs)
+    in.extRelocs->finalizeContents();
+  if (in.localRelocs)
+    in.localRelocs->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -1436,6 +1469,9 @@ void macho::createSyntheticSections() {
   in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();
+  } else if (config->outputType == MH_KEXT_BUNDLE) {
+    in.extRelocs = make<ExternalRelocSection>();
+    in.localRelocs = make<LocalRelocSection>();
   } else {
     in.rebase = make<RebaseSection>();
     in.binding = make<BindingSection>();
@@ -1444,9 +1480,11 @@ void macho::createSyntheticSections() {
     in.lazyPointers = make<LazyPointerSection>();
     in.stubHelper = make<StubHelperSection>();
   }
-  in.exports = make<ExportSection>();
+  if (config->outputType != MH_KEXT_BUNDLE)
+    in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.stubs = make<StubsSection>();
+  if (config->outputType != MH_KEXT_BUNDLE)
+    in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();

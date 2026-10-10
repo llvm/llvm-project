@@ -141,10 +141,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MH_DYLIB && config->applicationExtension)
     hdr->flags |= MH_APP_EXTENSION_SAFE;
 
-  if (in.exports->hasWeakSymbol || hasNonWeakDefinition())
+  if (in.exports && (in.exports->hasWeakSymbol || hasNonWeakDefinition()))
     hdr->flags |= MH_WEAK_DEFINES;
 
-  if (in.exports->hasWeakSymbol || hasWeakBinding())
+  if (in.exports && (in.exports->hasWeakSymbol || hasWeakBinding()))
     hdr->flags |= MH_BINDS_TO_WEAK;
 
   for (const OutputSegment *seg : outputSegments) {
@@ -303,7 +303,9 @@ void RebaseSection::writeTo(uint8_t *buf) const {
 GotSection::GotSection()
     : SyntheticSection(segment_names::data, section_names::got) {
   align = target->wordSize;
-  flags = S_NON_LAZY_SYMBOL_POINTERS;
+  // ld64 marks the GOT of kexts as a regular section.
+  flags = config->outputType == MH_KEXT_BUNDLE ? S_REGULAR
+                                               : S_NON_LAZY_SYMBOL_POINTERS;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
@@ -314,6 +316,18 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
       in.chainedFixups->addBinding(sym, isec, offset, addend);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
+    else
+      llvm_unreachable("cannot bind to an undefined symbol");
+    return;
+  }
+
+  if (config->outputType == MH_KEXT_BUNDLE) {
+    if (needsBinding(sym))
+      in.extRelocs->addEntry(sym, isec, offset, target->unsignedRelocType,
+                             /*pcrel=*/false, target->p2WordSize);
+    else if (isa<Defined>(sym))
+      in.localRelocs->addEntry(sym, isec, offset, target->unsignedRelocType,
+                               /*pcrel=*/false, target->p2WordSize);
     else
       llvm_unreachable("cannot bind to an undefined symbol");
     return;
@@ -807,6 +821,61 @@ void StubHelperSection::setUp() {
                     /*noDeadStrip=*/false);
   dyldPrivate->used = true;
 }
+
+RelocSection::RelocSection(const char *name)
+    : LinkEditSection(segment_names::linkEdit, name) {}
+
+void RelocSection::addEntry(Referent referent, const InputSection *isec,
+                            uint32_t offset, uint8_t type, bool pcrel,
+                            uint8_t length) {
+  assert(!isFinal && "RelocSection entry added after finalizeContents");
+  entries.push_back({referent, isec, offset, type, pcrel, length});
+}
+
+// Must be called after the symbol table is finalized, as external relocations
+// refer to symbol table indices.
+void RelocSection::finalizeContents() {
+  assert(!isFinal && "RelocSection finalized twice");
+  isFinal = true;
+
+  const bool external = isExternal();
+  raw_svector_ostream os(contents);
+  for (const Entry &e : entries) {
+    uint32_t symbolNum;
+    if (external) {
+      symbolNum = cast<const Symbol *>(e.referent)->symtabIndex;
+    } else {
+      // Local relocations name the section of their target.
+      const InputSection *targetIsec =
+          dyn_cast<const InputSection *>(e.referent);
+      if (!targetIsec)
+        targetIsec = cast<Defined>(cast<const Symbol *>(e.referent))->isec();
+      symbolNum = targetIsec ? targetIsec->parent->index : R_ABS;
+    }
+
+    // Relocation addresses are relative to the first segment.
+    char buf[2 * sizeof(uint32_t)];
+    write32le(buf, e.isec->getVA(e.offset) - in.header->addr);
+    write32le(buf + sizeof(uint32_t),
+              (symbolNum & 0x00ffffff) |
+                  (static_cast<uint32_t>(e.pcrel) << 24) |
+                  (static_cast<uint32_t>(e.length) << 25) |
+                  (static_cast<uint32_t>(external) << 27) |
+                  (static_cast<uint32_t>(e.type) << 28));
+    os.write(buf, sizeof(buf));
+  }
+}
+
+void RelocSection::writeTo(uint8_t *buf) const {
+  assert(isFinal && "RelocSection contents written before finalization");
+  memcpy(buf, contents.data(), contents.size());
+}
+
+ExternalRelocSection::ExternalRelocSection()
+    : RelocSection(section_names::extRelocs) {}
+
+LocalRelocSection::LocalRelocSection()
+    : RelocSection(section_names::localRelocs) {}
 
 llvm::DenseMap<llvm::CachedHashStringRef, ConcatInputSection *>
     ObjCSelRefsHelper::methnameToSelref;
@@ -1494,25 +1563,26 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
-  if (!config->emitChainedFixups)
-    size += in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size();
+  if (in.stubs)
+    size += in.stubs->getEntries().size() * (config->emitChainedFixups ? 1 : 2);
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.stubs->isNeeded();
+  return in.got->isNeeded() || (in.stubs && in.stubs->isNeeded());
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
-  in.stubs->reserved1 = off;
-  if (in.lazyPointers) {
+  if (in.stubs) {
+    in.stubs->reserved1 = off;
     off += in.stubs->getEntries().size();
-    in.lazyPointers->reserved1 = off;
   }
+  if (in.lazyPointers)
+    in.lazyPointers->reserved1 = off;
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
@@ -1527,9 +1597,11 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
-  for (const Symbol *sym : in.stubs->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
+  if (in.stubs) {
+    for (const Symbol *sym : in.stubs->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
 
   if (in.lazyPointers) {
@@ -2322,6 +2394,10 @@ void macho::createSyntheticSymbols() {
       symtab->addSynthetic("__mh_execute_header", /*isec=*/nullptr, /*value=*/0,
                            /*isPrivateExtern=*/false, /*includeInSymtab=*/true,
                            /*referencedDynamically=*/true);
+    break;
+
+  case MH_KEXT_BUNDLE:
+    // ld64 defines no header symbol for kexts.
     break;
 
     // The following symbols are N_SECT symbols, even though the header is not
