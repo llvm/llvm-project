@@ -5073,7 +5073,8 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // We don't import function bodies from other named module units since that
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
-      M && M->getTopLevelModule()->isNamedModule() &&
+      M && !(M->isGlobalModule() && F->hasAttr<GNUInlineAttr>()) &&
+      M->getTopLevelModule()->isNamedModule() &&
       getContext().getCurrentNamedModule() != M->getTopLevelModule()) {
     // There are practices to mark template member function as always-inline
     // and mark the template as extern explicit instantiation but not give
