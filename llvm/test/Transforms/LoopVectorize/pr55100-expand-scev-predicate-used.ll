@@ -4,15 +4,14 @@
 define void @test_pr55100(i32 %N) {
 ; CHECK-LABEL: @test_pr55100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[N:%.*]]
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_1]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[IV_1]], 10
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_2_HEADER_PREHEADER:%.*]], label [[EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       loop.2.header.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[IV_1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[N:%.*]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 18)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP7]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP3]], 2
