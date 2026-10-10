@@ -128,11 +128,11 @@ define i64 @rotl_64(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    sll.w $a1, $a1, $a2
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    maskeqz $a0, $a0, $t0
-; LA32S-NEXT:    or $a0, $a0, $t1
 ; LA32S-NEXT:    srai.w $a1, $a7, 31
 ; LA32S-NEXT:    and $a1, $a1, $a6
 ; LA32S-NEXT:    or $a1, $a3, $a1
-; LA32S-NEXT:    or $a0, $a4, $a0
+; LA32S-NEXT:    or $a2, $a4, $t1
+; LA32S-NEXT:    or $a0, $a2, $a0
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64:
@@ -219,12 +219,12 @@ define i64 @rotr_64(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    srli.w $a0, $a0, 1
 ; LA32S-NEXT:    srl.w $a0, $a0, $a2
 ; LA32S-NEXT:    or $a0, $a1, $a0
-; LA32S-NEXT:    maskeqz $a0, $a0, $t0
-; LA32S-NEXT:    or $a1, $a0, $t1
+; LA32S-NEXT:    maskeqz $a1, $a0, $t0
 ; LA32S-NEXT:    srai.w $a0, $a7, 31
 ; LA32S-NEXT:    and $a0, $a0, $a6
 ; LA32S-NEXT:    or $a0, $a3, $a0
-; LA32S-NEXT:    or $a1, $a4, $a1
+; LA32S-NEXT:    or $a2, $a4, $t1
+; LA32S-NEXT:    or $a1, $a2, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64:
@@ -467,12 +467,12 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    sll.w $a5, $t1, $a5
 ; LA32S-NEXT:    or $a0, $a0, $a5
 ; LA32S-NEXT:    maskeqz $a0, $a0, $t0
-; LA32S-NEXT:    or $a0, $a0, $a7
 ; LA32S-NEXT:    srl.w $a1, $a1, $a2
 ; LA32S-NEXT:    srai.w $a2, $a6, 31
 ; LA32S-NEXT:    and $a1, $a2, $a1
 ; LA32S-NEXT:    or $a1, $a3, $a1
-; LA32S-NEXT:    or $a0, $a4, $a0
+; LA32S-NEXT:    or $a2, $a4, $a7
+; LA32S-NEXT:    or $a0, $a2, $a0
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask:
@@ -559,12 +559,12 @@ define i64 @rotl_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    sll.w $a5, $t1, $a5
 ; LA32S-NEXT:    or $a0, $a0, $a5
 ; LA32S-NEXT:    maskeqz $a0, $a0, $t0
-; LA32S-NEXT:    or $a0, $a0, $a7
 ; LA32S-NEXT:    srl.w $a1, $a1, $a2
 ; LA32S-NEXT:    srai.w $a2, $a6, 31
 ; LA32S-NEXT:    and $a1, $a2, $a1
 ; LA32S-NEXT:    or $a1, $a3, $a1
-; LA32S-NEXT:    or $a0, $a4, $a0
+; LA32S-NEXT:    or $a2, $a4, $a7
+; LA32S-NEXT:    or $a0, $a2, $a0
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask_and_127_and_63:
@@ -677,12 +677,12 @@ define i64 @rotr_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    srl.w $a5, $t1, $a5
 ; LA32S-NEXT:    or $a1, $a1, $a5
 ; LA32S-NEXT:    maskeqz $a1, $a1, $t0
-; LA32S-NEXT:    or $a1, $a1, $a7
 ; LA32S-NEXT:    sll.w $a0, $a0, $a2
 ; LA32S-NEXT:    srai.w $a2, $a6, 31
 ; LA32S-NEXT:    and $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a3, $a0
-; LA32S-NEXT:    or $a1, $a4, $a1
+; LA32S-NEXT:    or $a2, $a4, $a7
+; LA32S-NEXT:    or $a1, $a2, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask:
@@ -768,12 +768,12 @@ define i64 @rotr_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32S-NEXT:    srl.w $a5, $t1, $a5
 ; LA32S-NEXT:    or $a1, $a1, $a5
 ; LA32S-NEXT:    maskeqz $a1, $a1, $t0
-; LA32S-NEXT:    or $a1, $a1, $a7
 ; LA32S-NEXT:    sll.w $a0, $a0, $a2
 ; LA32S-NEXT:    srai.w $a2, $a6, 31
 ; LA32S-NEXT:    and $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a3, $a0
-; LA32S-NEXT:    or $a1, $a4, $a1
+; LA32S-NEXT:    or $a2, $a4, $a7
+; LA32S-NEXT:    or $a1, $a2, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask_and_127_and_63:
