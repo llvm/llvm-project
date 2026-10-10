@@ -116,6 +116,9 @@ class Diagnostic<string summary, DiagClass DC, Severity defaultmapping> {
 class SFINAEFailure {
   SFINAEResponse SFINAE = SFINAE_SubstitutionFailure;
 }
+class SFINAESuppress {
+  SFINAEResponse SFINAE = SFINAE_Suppress;
+}
 class NoSFINAE {
   SFINAEResponse SFINAE = SFINAE_Report;
 }
