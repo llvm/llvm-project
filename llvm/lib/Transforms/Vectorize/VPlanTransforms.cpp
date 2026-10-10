@@ -6183,7 +6183,6 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                               const TargetTransformInfo &TTI,
                                                PredicatedScalarEvolution &PSE) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
@@ -6217,14 +6216,10 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (Op != WideIV)
         continue;
 
-      // Replacing a free truncate would add an induction update instruction to
-      // each iteration of the loop. The canonical induction is exempt, as it
-      // needs an update instruction regardless.
+      // The canonical induction is exempt, as it needs an update instruction
+      // regardless.
       auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return match(WideIV, m_CanonicalWidenIV()) ||
-               !TTI.isTruncateFree(
-                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
-                   toVectorTy(VPI.getScalarType(), VF));
+        return VF.isVector() || match(WideIV, m_CanonicalWidenIV());
       };
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               IsNarrowingProfitable, Range))
