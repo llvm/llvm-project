@@ -430,10 +430,10 @@ def AArch64ursra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                              (add node:$op1, (AArch64urshri_p (SVEAllActive), node:$op2, node:$op3))]>;
 
 // Replace pattern min(max(v1,v2),v3) by clamp. Min's operands are commutable.
-class ClampPatFrags<SDPatternOperator clamp_ty, SDPatternOperator minop,
+class ClampPatFrags<SDPatternOperator intrinsic, SDPatternOperator minop,
                     SDPatternOperator maxop>
 : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
-           [(clamp_ty node:$Zd, node:$Zn, node:$Zm),
+           [(intrinsic node:$Zd, node:$Zn, node:$Zm),
             (minop (SVEAllActive), (maxop (SVEAllActive), node:$Zd, node:$Zn), node:$Zm),
             (minop (SVEAllActive), node:$Zm, (maxop (SVEAllActive), node:$Zd, node:$Zn))]>;
 
