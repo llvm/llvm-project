@@ -1856,10 +1856,9 @@ public:
         return AnyValue::poison();
 
       const APInt &Cnt = Args[0].asInteger();
-      const uint64_t VF = VFC->getZExtValue();
-      const bool Scalable = ScalableC->isOne();
-
-      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
+      uint64_t MaxLanes = VFC->getZExtValue();
+      if (ScalableC->isOne())
+        MaxLanes *= Ctx.getVScale();
 
       uint64_t Res = 0;
       if (!Cnt.isZero()) {
@@ -1991,8 +1990,8 @@ public:
       return AnyValue();
     }
 
-    if (auto LibCallRes =
-            Lib.executeLibcall(LF, CB.getName(), CB.getType(), CalleeArgs))
+    if (auto LibCallRes = Lib.executeLibcall(LF, CB.getName(),
+                                             CB.getFunctionType(), CalleeArgs))
       return *LibCallRes;
 
     if (ExitInfo)

@@ -140,12 +140,10 @@ public:
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
 
-  bool validateBranchProtection(const ParsedTargetAttr &Attr,
+  bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
                                 const LangOptions &LO,
                                 StringRef &Err) const override;
-  std::optional<LangOptions::SignReturnAddressHardeningKind>
-  parseSignReturnAddressHardening(StringRef Spec) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
@@ -186,6 +184,8 @@ public:
   void getTargetDefinesARMV96A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV97A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV98A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

@@ -73,7 +73,7 @@ namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
-LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -84,6 +84,10 @@ LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
                clEnumValN(InstrProfCorrelator::BINARY, "binary",
                           "Use binary to correlate")));
 } // namespace llvm
+
+bool llvm::isProfileCorrelationEnabled() {
+  return ProfileCorrelate != InstrProfCorrelator::NONE;
+}
 
 namespace {
 

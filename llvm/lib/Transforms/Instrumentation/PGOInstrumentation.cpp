@@ -358,9 +358,12 @@ extern cl::opt<std::string> ViewBlockFreqFuncName;
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<bool> EnableVTableProfileUse;
-LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
-    ProfileCorrelate;
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
+
+bool llvm::isPGOInstrumentColdFunctionOnly() {
+  return PGOInstrumentColdFunctionOnly;
+}
 
 namespace {
 class FunctionInstrumenter final {

@@ -5011,7 +5011,7 @@ static MachineSchedRegistry ShufflerRegistry(
 // GraphWriter support for ScheduleDAGMILive.
 //===----------------------------------------------------------------------===//
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 
 template <>
 struct llvm::GraphTraits<ScheduleDAGMI *> : public GraphTraits<ScheduleDAG *> {
@@ -5083,7 +5083,7 @@ struct llvm::DOTGraphTraits<ScheduleDAGMI *> : public DefaultDOTGraphTraits {
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
 void ScheduleDAGMI::viewGraph(const Twine &Name, const Twine &Title) {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   ViewGraph(this, Name, false, Title);
 #else
   errs() << "ScheduleDAGMI::viewGraph is only available in debug builds on "

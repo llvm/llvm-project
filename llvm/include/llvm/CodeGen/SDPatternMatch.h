@@ -1182,6 +1182,11 @@ template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
 }
 
+/// Match a zext or sext
+template <typename Opnd> inline auto m_ZExtOrSExt(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), m_SExt(Op));
+}
+
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>

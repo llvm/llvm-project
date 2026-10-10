@@ -3709,18 +3709,13 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
-  if (ParsedAttrs.BranchProtection.empty()) {
-    if (!ParsedAttrs.SignReturnAddrHardening.empty())
-      return Diag(LiteralLoc,
-                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
-    return false;
-  }
-
   TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
-
+  if (ParsedAttrs.BranchProtection.empty())
+    return false;
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs, BPI, Context.getLangOpts(), DiagMsg)) {
+          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI,
+          Context.getLangOpts(), DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3729,19 +3724,6 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   }
   if (!DiagMsg.empty())
     Diag(LiteralLoc, diag::warn_unsupported_branch_protection_spec) << DiagMsg;
-
-  if (!ParsedAttrs.SignReturnAddrHardening.empty()) {
-    auto SignReturnAddrHardenOpt =
-        Context.getTargetInfo().parseSignReturnAddressHardening(
-            ParsedAttrs.SignReturnAddrHardening);
-    if (!SignReturnAddrHardenOpt)
-      return Diag(LiteralLoc, diag::err_invalid_harden_pac_ret_spec)
-             << ParsedAttrs.SignReturnAddrHardening;
-
-    if (BPI.SignReturnAddr == LangOptions::SignReturnAddressScopeKind::None)
-      return Diag(LiteralLoc,
-                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
-  }
 
   return false;
 }
@@ -6201,7 +6183,10 @@ static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static std::pair<Expr *, int>
 makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
                        const unsigned Idx) {
-  if (!E || S.DiagnoseUnexpandedParameterPack(E))
+  if (!E)
+    return {nullptr, 1};
+
+  if (S.DiagnoseUnexpandedParameterPack(E))
     return {};
 
   // Accept template arguments for now as they depend on something else.
@@ -6215,15 +6200,16 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
         << &AL << Idx << AANT_ArgumentIntegerConstant << E->getSourceRange();
     return {};
   }
-  // Make sure we can fit it in 4 bits.
-  if (!I->isIntN(4)) {
-    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
-        << toString(*I, 10, false) << 4 << /*Unsigned=*/1;
-    return {};
-  }
   if (*I < 0) {
     S.Diag(E->getExprLoc(), diag::warn_attribute_argument_n_negative)
         << &AL << Idx << E->getSourceRange();
+    return {};
+  }
+  // Make sure we can fit it in 8 bits, so the product below cannot overflow.
+  if (!I->isIntN(8)) {
+    S.Diag(E->getExprLoc(), diag::err_ice_too_large)
+        << toString(*I, 10, false) << 8 << /*Unsigned=*/1;
+    return {};
   }
 
   return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),

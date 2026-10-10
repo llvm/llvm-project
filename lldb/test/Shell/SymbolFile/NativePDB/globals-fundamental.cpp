@@ -494,187 +494,187 @@ const double *CPD = &D;
 
 bool &RBFalse = BFalse;
 // CHECK-NEXT: (lldb) target variable RBFalse
-// CHECK-NEXT: (bool &) RBFalse = {{.*}} (&::RBFalse = false)
+// CHECK-NEXT: (bool &) RBFalse = {{.*}} (&RBFalse = false)
 bool &RBTrue = BTrue;
 // CHECK-NEXT: (lldb) target variable RBTrue
-// CHECK-NEXT: (bool &) RBTrue = {{.*}} (&::RBTrue = true)
+// CHECK-NEXT: (bool &) RBTrue = {{.*}} (&RBTrue = true)
 char &RCA = CA;
 // CHECK-NEXT: (lldb) target variable RCA
-// CHECK-NEXT: (char &) RCA = {{.*}} (&::RCA = 'A')
+// CHECK-NEXT: (char &) RCA = {{.*}} (&RCA = 'A')
 char &RCZ = CZ;
 // CHECK-NEXT: (lldb) target variable RCZ
-// CHECK-NEXT: (char &) RCZ = {{.*}} (&::RCZ = 'Z')
+// CHECK-NEXT: (char &) RCZ = {{.*}} (&RCZ = 'Z')
 signed char &RSCa = SCa;
 // CHECK-NEXT: (lldb) target variable RSCa
-// CHECK-NEXT: (signed char &) RSCa = {{.*}} (&::RSCa = 'a')
+// CHECK-NEXT: (signed char &) RSCa = {{.*}} (&RSCa = 'a')
 signed char &RSCz = SCz;
 // CHECK-NEXT: (lldb) target variable RSCz
-// CHECK-NEXT: (signed char &) RSCz = {{.*}} (&::RSCz = 'z')
+// CHECK-NEXT: (signed char &) RSCz = {{.*}} (&RSCz = 'z')
 unsigned char &RUC24 = UC24;
 // CHECK-NEXT: (lldb) target variable RUC24
-// CHECK-NEXT: (unsigned char &) RUC24 = {{.*}} (&::RUC24 = '\x18')
+// CHECK-NEXT: (unsigned char &) RUC24 = {{.*}} (&RUC24 = '\x18')
 unsigned char &RUC42 = UC42;
 // CHECK-NEXT: (lldb) target variable RUC42
-// CHECK-NEXT: (unsigned char &) RUC42 = {{.*}} (&::RUC42 = '*')
+// CHECK-NEXT: (unsigned char &) RUC42 = {{.*}} (&RUC42 = '*')
 short &RSMax = SMax;
 // CHECK-NEXT: (lldb) target variable RSMax
-// CHECK-NEXT: (short &) RSMax = {{.*}} (&::RSMax = 32767)
+// CHECK-NEXT: (short &) RSMax = {{.*}} (&RSMax = 32767)
 short &RSMin = SMin;
 // CHECK-NEXT: (lldb) target variable RSMin
-// CHECK-NEXT: (short &) RSMin = {{.*}} (&::RSMin = -32768)
+// CHECK-NEXT: (short &) RSMin = {{.*}} (&RSMin = -32768)
 unsigned short &RUSMax = USMax;
 // CHECK-NEXT: (lldb) target variable RUSMax
-// CHECK-NEXT: (unsigned short &) RUSMax = {{.*}} (&::RUSMax = 65535)
+// CHECK-NEXT: (unsigned short &) RUSMax = {{.*}} (&RUSMax = 65535)
 unsigned short &RUSMin = USMin;
 // CHECK-NEXT: (lldb) target variable RUSMin
-// CHECK-NEXT: (unsigned short &) RUSMin = {{.*}} (&::RUSMin = 0)
+// CHECK-NEXT: (unsigned short &) RUSMin = {{.*}} (&RUSMin = 0)
 int &RIMax = IMax;
 // CHECK-NEXT: (lldb) target variable RIMax
-// CHECK-NEXT: (int &) RIMax = {{.*}} (&::RIMax = 2147483647)
+// CHECK-NEXT: (int &) RIMax = {{.*}} (&RIMax = 2147483647)
 int &RIMin = IMin;
 // CHECK-NEXT: (lldb) target variable RIMin
-// CHECK-NEXT: (int &) RIMin = {{.*}} (&::RIMin = -2147483648)
+// CHECK-NEXT: (int &) RIMin = {{.*}} (&RIMin = -2147483648)
 unsigned int &RUIMax = UIMax;
 // CHECK-NEXT: (lldb) target variable RUIMax
-// CHECK-NEXT: (unsigned int &) RUIMax = {{.*}} (&::RUIMax = 4294967295)
+// CHECK-NEXT: (unsigned int &) RUIMax = {{.*}} (&RUIMax = 4294967295)
 unsigned int &RUIMin = UIMin;
 // CHECK-NEXT: (lldb) target variable RUIMin
-// CHECK-NEXT: (unsigned int &) RUIMin = {{.*}} (&::RUIMin = 0)
+// CHECK-NEXT: (unsigned int &) RUIMin = {{.*}} (&RUIMin = 0)
 long &RLMax = LMax;
 // CHECK-NEXT: (lldb) target variable RLMax
-// CHECK-NEXT: (long &) RLMax = {{.*}} (&::RLMax = 2147483647)
+// CHECK-NEXT: (long &) RLMax = {{.*}} (&RLMax = 2147483647)
 long &RLMin = LMin;
 // CHECK-NEXT: (lldb) target variable RLMin
-// CHECK-NEXT: (long &) RLMin = {{.*}} (&::RLMin = -2147483648)
+// CHECK-NEXT: (long &) RLMin = {{.*}} (&RLMin = -2147483648)
 unsigned long &RULMax = ULMax;
 // CHECK-NEXT: (lldb) target variable RULMax
-// CHECK-NEXT: (unsigned long &) RULMax = {{.*}} (&::RULMax = 4294967295)
+// CHECK-NEXT: (unsigned long &) RULMax = {{.*}} (&RULMax = 4294967295)
 unsigned long &RULMin = ULMin;
 // CHECK-NEXT: (lldb) target variable RULMin
-// CHECK-NEXT: (unsigned long &) RULMin = {{.*}} (&::RULMin = 0)
+// CHECK-NEXT: (unsigned long &) RULMin = {{.*}} (&RULMin = 0)
 long long &RLLMax = LLMax;
 // CHECK-NEXT: (lldb) target variable RLLMax
-// CHECK-NEXT: (long long &) RLLMax = {{.*}} (&::RLLMax = 9223372036854775807)
+// CHECK-NEXT: (long long &) RLLMax = {{.*}} (&RLLMax = 9223372036854775807)
 long long &RLLMin = LLMin;
 // CHECK-NEXT: (lldb) target variable RLLMin
-// CHECK-NEXT: (long long &) RLLMin = {{.*}} (&::RLLMin = -9223372036854775808)
+// CHECK-NEXT: (long long &) RLLMin = {{.*}} (&RLLMin = -9223372036854775808)
 unsigned long long &RULLMax = ULLMax;
 // CHECK-NEXT: (lldb) target variable RULLMax
-// CHECK-NEXT: (unsigned long long &) RULLMax = {{.*}} (&::RULLMax = 18446744073709551615)
+// CHECK-NEXT: (unsigned long long &) RULLMax = {{.*}} (&RULLMax = 18446744073709551615)
 unsigned long long &RULLMin = ULLMin;
 // CHECK-NEXT: (lldb) target variable RULLMin
-// CHECK-NEXT: (unsigned long long &) RULLMin = {{.*}} (&::RULLMin = 0)
+// CHECK-NEXT: (unsigned long long &) RULLMin = {{.*}} (&RULLMin = 0)
 float &RF = F;
 // CHECK-NEXT: (lldb) target variable RF
-// CHECK-NEXT: (float &) RF = {{.*}} (&::RF = 3.1415)
+// CHECK-NEXT: (float &) RF = {{.*}} (&RF = 3.1415)
 double &RD = D;
 // CHECK-NEXT: (lldb) target variable RD
-// CHECK-NEXT: (double &) RD = {{.*}} (&::RD = 3.1415000000000002)
+// CHECK-NEXT: (double &) RD = {{.*}} (&RD = 3.1415000000000002)
 
 // const references to fundamental data types
 const bool &CRBFalse = BFalse;
 // CHECK-NEXT: (lldb) target variable CRBFalse
-// CHECK-NEXT: (const bool &) CRBFalse = {{.*}} (&::CRBFalse = false)
+// CHECK-NEXT: (const bool &) CRBFalse = {{.*}} (&CRBFalse = false)
 const bool &CRBTrue = BTrue;
 // CHECK-NEXT: (lldb) target variable CRBTrue
-// CHECK-NEXT: (const bool &) CRBTrue = {{.*}} (&::CRBTrue = true)
+// CHECK-NEXT: (const bool &) CRBTrue = {{.*}} (&CRBTrue = true)
 const char &CRCA = CA;
 // CHECK-NEXT: (lldb) target variable CRCA
-// CHECK-NEXT: (const char &) CRCA = {{.*}} (&::CRCA = 'A')
+// CHECK-NEXT: (const char &) CRCA = {{.*}} (&CRCA = 'A')
 const char &CRCZ = CZ;
 // CHECK-NEXT: (lldb) target variable CRCZ
-// CHECK-NEXT: (const char &) CRCZ = {{.*}} (&::CRCZ = 'Z')
+// CHECK-NEXT: (const char &) CRCZ = {{.*}} (&CRCZ = 'Z')
 const signed char &CRSCa = SCa;
 // CHECK-NEXT: (lldb) target variable CRSCa
-// CHECK-NEXT: (const signed char &) CRSCa = {{.*}} (&::CRSCa = 'a')
+// CHECK-NEXT: (const signed char &) CRSCa = {{.*}} (&CRSCa = 'a')
 const signed char &CRSCz = SCz;
 // CHECK-NEXT: (lldb) target variable CRSCz
-// CHECK-NEXT: (const signed char &) CRSCz = {{.*}} (&::CRSCz = 'z')
+// CHECK-NEXT: (const signed char &) CRSCz = {{.*}} (&CRSCz = 'z')
 const unsigned char &CRUC24 = UC24;
 // CHECK-NEXT: (lldb) target variable CRUC24
-// CHECK-NEXT: (const unsigned char &) CRUC24 = {{.*}} (&::CRUC24 = '\x18')
+// CHECK-NEXT: (const unsigned char &) CRUC24 = {{.*}} (&CRUC24 = '\x18')
 const unsigned char &CRUC42 = UC42;
 // CHECK-NEXT: (lldb) target variable CRUC42
-// CHECK-NEXT: (const unsigned char &) CRUC42 = {{.*}} (&::CRUC42 = '*')
+// CHECK-NEXT: (const unsigned char &) CRUC42 = {{.*}} (&CRUC42 = '*')
 const short &CRSMax = SMax;
 // CHECK-NEXT: (lldb) target variable CRSMax
-// CHECK-NEXT: (const short &) CRSMax = {{.*}} (&::CRSMax = 32767)
+// CHECK-NEXT: (const short &) CRSMax = {{.*}} (&CRSMax = 32767)
 const short &CRSMin = SMin;
 // CHECK-NEXT: (lldb) target variable CRSMin
-// CHECK-NEXT: (const short &) CRSMin = {{.*}} (&::CRSMin = -32768)
+// CHECK-NEXT: (const short &) CRSMin = {{.*}} (&CRSMin = -32768)
 const unsigned short &CRUSMax = USMax;
 // CHECK-NEXT: (lldb) target variable CRUSMax
-// CHECK-NEXT: (const unsigned short &) CRUSMax = {{.*}} (&::CRUSMax = 65535)
+// CHECK-NEXT: (const unsigned short &) CRUSMax = {{.*}} (&CRUSMax = 65535)
 const unsigned short &CRUSMin = USMin;
 // CHECK-NEXT: (lldb) target variable CRUSMin
-// CHECK-NEXT: (const unsigned short &) CRUSMin = {{.*}} (&::CRUSMin = 0)
+// CHECK-NEXT: (const unsigned short &) CRUSMin = {{.*}} (&CRUSMin = 0)
 const int &CRIMax = IMax;
 // CHECK-NEXT: (lldb) target variable CRIMax
-// CHECK-NEXT: (const int &) CRIMax = {{.*}} (&::CRIMax = 2147483647)
+// CHECK-NEXT: (const int &) CRIMax = {{.*}} (&CRIMax = 2147483647)
 const int &CRIMin = IMin;
 // CHECK-NEXT: (lldb) target variable CRIMin
-// CHECK-NEXT: (const int &) CRIMin = {{.*}} (&::CRIMin = -2147483648)
+// CHECK-NEXT: (const int &) CRIMin = {{.*}} (&CRIMin = -2147483648)
 const unsigned int &CRUIMax = UIMax;
 // CHECK-NEXT: (lldb) target variable CRUIMax
-// CHECK-NEXT: (const unsigned int &) CRUIMax = {{.*}} (&::CRUIMax = 4294967295)
+// CHECK-NEXT: (const unsigned int &) CRUIMax = {{.*}} (&CRUIMax = 4294967295)
 const unsigned int &CRUIMin = UIMin;
 // CHECK-NEXT: (lldb) target variable CRUIMin
-// CHECK-NEXT: (const unsigned int &) CRUIMin = {{.*}} (&::CRUIMin = 0)
+// CHECK-NEXT: (const unsigned int &) CRUIMin = {{.*}} (&CRUIMin = 0)
 const long &CRLMax = LMax;
 // CHECK-NEXT: (lldb) target variable CRLMax
-// CHECK-NEXT: (const long &) CRLMax = {{.*}} (&::CRLMax = 2147483647)
+// CHECK-NEXT: (const long &) CRLMax = {{.*}} (&CRLMax = 2147483647)
 const long &CRLMin = LMin;
 // CHECK-NEXT: (lldb) target variable CRLMin
-// CHECK-NEXT: (const long &) CRLMin = {{.*}} (&::CRLMin = -2147483648)
+// CHECK-NEXT: (const long &) CRLMin = {{.*}} (&CRLMin = -2147483648)
 const unsigned long &CRULMax = ULMax;
 // CHECK-NEXT: (lldb) target variable CRULMax
-// CHECK-NEXT: (const unsigned long &) CRULMax = {{.*}} (&::CRULMax = 4294967295)
+// CHECK-NEXT: (const unsigned long &) CRULMax = {{.*}} (&CRULMax = 4294967295)
 const unsigned long &CRULMin = ULMin;
 // CHECK-NEXT: (lldb) target variable CRULMin
-// CHECK-NEXT: (const unsigned long &) CRULMin = {{.*}} (&::CRULMin = 0)
+// CHECK-NEXT: (const unsigned long &) CRULMin = {{.*}} (&CRULMin = 0)
 const long long &CRLLMax = LLMax;
 // CHECK-NEXT: (lldb) target variable CRLLMax
-// CHECK-NEXT: (const long long &) CRLLMax = {{.*}} (&::CRLLMax = 9223372036854775807)
+// CHECK-NEXT: (const long long &) CRLLMax = {{.*}} (&CRLLMax = 9223372036854775807)
 const long long &CRLLMin = LLMin;
 // CHECK-NEXT: (lldb) target variable CRLLMin
-// CHECK-NEXT: (const long long &) CRLLMin = {{.*}} (&::CRLLMin = -9223372036854775808)
+// CHECK-NEXT: (const long long &) CRLLMin = {{.*}} (&CRLLMin = -9223372036854775808)
 const unsigned long long &CRULLMax = ULLMax;
 // CHECK-NEXT: (lldb) target variable CRULLMax
-// CHECK-NEXT: (const unsigned long long &) CRULLMax = {{.*}} (&::CRULLMax = 18446744073709551615)
+// CHECK-NEXT: (const unsigned long long &) CRULLMax = {{.*}} (&CRULLMax = 18446744073709551615)
 const unsigned long long &CRULLMin = ULLMin;
 // CHECK-NEXT: (lldb) target variable CRULLMin
-// CHECK-NEXT: (const unsigned long long &) CRULLMin = {{.*}} (&::CRULLMin = 0)
+// CHECK-NEXT: (const unsigned long long &) CRULLMin = {{.*}} (&CRULLMin = 0)
 const float &CRF = F;
 // CHECK-NEXT: (lldb) target variable CRF
-// CHECK-NEXT: (const float &) CRF = {{.*}} (&::CRF = 3.1415)
+// CHECK-NEXT: (const float &) CRF = {{.*}} (&CRF = 3.1415)
 const double &CRD = D;
 // CHECK-NEXT: (lldb) target variable CRD
-// CHECK-NEXT: (const double &) CRD = {{.*}} (&::CRD = 3.1415000000000002)
+// CHECK-NEXT: (const double &) CRD = {{.*}} (&CRD = 3.1415000000000002)
 
 char16_t &RC16_24 = C16_24;
 // CHECK: (lldb) target variable RC16_24
-// FIXME: (char16_t &) RC16_24 = {{.*}} (&::RC16_24 = U+0014)
+// FIXME: (char16_t &) RC16_24 = {{.*}} (&RC16_24 = U+0014)
 char32_t &RC32_42 = C32_42;
 // CHECK: (lldb) target variable RC32_42
-// FIXME: (char32_t &) RC32_42 = {{.*}} (&::RC32_42 = U+0022)
+// FIXME: (char32_t &) RC32_42 = {{.*}} (&RC32_42 = U+0022)
 wchar_t &RWC1 = WC1;
 // CHECK: (lldb) target variable RWC1
-// FIXME: (wchar_t &) RWC1 = {{.*}} (&::RWC1 = L'1')
+// FIXME: (wchar_t &) RWC1 = {{.*}} (&RWC1 = L'1')
 wchar_t &RWCP = WCP;
 // CHECK: (lldb) target variable RWCP
-// FIXME: (wchar_t &) RWCP = {{.*}} (&::RWCP = L'P')
+// FIXME: (wchar_t &) RWCP = {{.*}} (&RWCP = L'P')
 const char16_t &CRC16_24 = C16_24;
 // CHECK: (lldb) target variable CRC16_24
-// FIXME: (const char16_t &) CRC16_24 = {{.*}} (&::CRC16_24 = U+0014)
+// FIXME: (const char16_t &) CRC16_24 = {{.*}} (&CRC16_24 = U+0014)
 const char32_t &CRC32_42 = C32_42;
 // CHECK: (lldb) target variable CRC32_42
-// FIXME: (const char32_t &) CRC32_42 = {{.*}} (&::CRC32_42 = U+0022)
+// FIXME: (const char32_t &) CRC32_42 = {{.*}} (&CRC32_42 = U+0022)
 const wchar_t &CRWC1 = WC1;
 // CHECK: (lldb) target variable CRWC1
-// FIXME: (const wchar_t &) CRWC1 = {{.*}} (&::CRWC1 = L'1')
+// FIXME: (const wchar_t &) CRWC1 = {{.*}} (&CRWC1 = L'1')
 const wchar_t &CRWCP = WCP;
 // CHECK: (lldb) target variable CRWCP
-// FIXME: (const wchar_t &) CRWCP = {{.*}} (&::CRWCP = L'P')
+// FIXME: (const wchar_t &) CRWCP = {{.*}} (&CRWCP = L'P')
 
 
 // CHECK:      TranslationUnitDecl {{.*}}

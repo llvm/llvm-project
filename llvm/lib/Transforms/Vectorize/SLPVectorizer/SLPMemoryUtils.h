@@ -26,6 +26,7 @@ class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
+class IRBuilderBase;
 class SCEV;
 class ScalarEvolution;
 class TargetLibraryInfo;
@@ -46,6 +47,11 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
 ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
                                       const DataLayout &DL,
                                       bool IsReverse = false);
+
+/// Casts \p V between the widened strided access type and the entry vector
+/// type \p DstTy.
+Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
+                                const DataLayout &DL);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);

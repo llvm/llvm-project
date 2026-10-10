@@ -9,7 +9,6 @@ add_clang_library(clangCodeGenUtils
   BackendDiagnosticHandler.cpp
   CallUtils.cpp
   ClassUtils.cpp
-  CodeGenUtils.cpp
   EHPersonality.cpp
   ExprUtils.cpp
   FunctionUtils.cpp
@@ -17,6 +16,7 @@ add_clang_library(clangCodeGenUtils
   ModuleUtils.cpp
   RecordLayoutUtils.cpp
   StmtUtils.cpp
+  TargetUtils.cpp
 
   LINK_LIBS
   clangAST

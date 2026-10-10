@@ -3889,7 +3889,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  VPValue *Mask = getOperand(getNumOperands() - 1);
+  VPValue *Mask = getLastOperand();
   VPValue *EVL =
       isa<VPReductionEVLRecipe>(Red)
           ? getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1))
@@ -3911,7 +3911,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
     bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    getLastOperand()->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
     if (Negated)
@@ -4107,8 +4107,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // instruction cost.
     return 0;
   case Instruction::Call: {
-    auto *CalledFn =
-        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    auto *CalledFn = cast<Function>(getLastOperand()->getLiveInIRValue());
     Type *ResultTy = this->getScalarType();
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);

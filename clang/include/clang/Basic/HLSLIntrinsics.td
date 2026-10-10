@@ -1098,6 +1098,21 @@ def hlsl_barrier : HLSLBuiltin<"Barrier", "__builtin_hlsl_barrier"> {
   let Availability = SM6_8;
 }
 
+// Determines if the specified value x is finite.
+def hlsl_isfinite : HLSLOneArgBuiltin<"isfinite", "__builtin_hlsl_elementwise_isfinite"> {
+  let Doc = [{
+\fn T isfinite(T x)
+\brief Determines if the specified value \a x  is finite.
+\param x The specified input value.
+
+Returns a value of the same size as the input, with a value set
+to False if the x parameter is +INF, -INF, NaN, or QNaN. Otherwise, True.
+}];
+  let ReturnType = VaryingShape<BoolTy>;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
+}
+
 // Determines if the specified value x is infinite.
 def hlsl_isinf : HLSLOneArgBuiltin<"isinf", "__builtin_hlsl_elementwise_isinf"> {
   let Doc = [{

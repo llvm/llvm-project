@@ -6839,6 +6839,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "get_active_lane_mask: element type is not i1", Call);
     break;
   }
+  case Intrinsic::mask_beforefirst: {
+    Check(Call.getType()->getScalarType()->isIntegerTy(1),
+          "mask.beforefirst element type must be i1", Call);
+    break;
+  }
   case Intrinsic::experimental_get_vector_length: {
     auto *VF = cast<ConstantInt>(Call.getArgOperand(1));
     Check(!VF->isNegative() && !VF->isZero(),
@@ -7503,6 +7508,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
   // Target-specific intrinsic call checks.
   verifyAMDGPUIntrinsicCall(*this, ID, Call);
+  verifyNVVMIntrinsicCall(*this, ID, Call);
 }
 
 /// Carefully grab the subprogram from a local scope.

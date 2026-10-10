@@ -19,9 +19,9 @@
 
 namespace llvm::ubi {
 
-static uint64_t getMaxAlign(const DataLayout &DL) {
+static uint64_t getMaxAlign(const DataLayout &DL, unsigned AS) {
   // Return an alignment of 16 for 64-bit platforms, and 8 for 32-bit ones.
-  return DL.getPointerABIAlignment(0).value() >= 8 ? 16 : 8;
+  return DL.getPointerABIAlignment(AS).value() >= 8 ? 16 : 8;
 }
 
 Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
@@ -67,10 +67,11 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
 
   const auto &SizeVal = Args[0];
 
-  const uint64_t AllocSize = SizeVal.asInteger().getZExtValue();
+  const uint64_t AllocSize = SizeVal.asInteger().getLimitedValue();
+  const unsigned AS = Type->getPointerAddressSpace();
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
-      Ctx.allocate(AllocSize, getMaxAlign(DL), Name, 0,
+      Ctx.allocate(AllocSize, getMaxAlign(DL, AS), Name, AS,
                    MemInitKind::Uninitialized, AllocKind);
 
   if (!Obj) {
@@ -102,9 +103,10 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
   if (Overflow)
     return AnyValue::getNullValue(Ctx, Type);
+  const unsigned AS = Type->getPointerAddressSpace();
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
-      Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
+      Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL, AS), Name, AS,
                    MemInitKind::Zeroed, AllocKind);
 
   if (!Obj)
@@ -113,12 +115,12 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   return Ctx.deriveFromMemoryObject(Obj);
 }
 
-AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
+AnyValue Library::executeFree(ArrayRef<AnyValue> Args, unsigned AS) {
   const auto &PtrVal = Args[0];
 
   auto &Ptr = PtrVal.asPointer();
   // no-op when free is called with a null pointer.
-  if (Ptr.isNullPtr(/*AS=*/0, DL))
+  if (Ptr.isNullPtr(AS, DL))
     return AnyValue();
 
   MemoryObject *Obj = Ctx.checkProvenance(Ptr, [](const Provenance &) {
@@ -240,11 +242,14 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     }
 
     bool TypeMismatch =
-        (StringRef("diuoxXc").contains(Specifier) && !Arg.isInteger()) ||
+        (StringRef("diuoxXc").contains(Specifier) &&
+         !(Arg.isInteger() && (Arg.asInteger().getBitWidth() == 32 ||
+                               Arg.asInteger().getBitWidth() == 64))) ||
         (StringRef("feEgGaA").contains(Specifier) &&
          !(Arg.isFloat() &&
            &Arg.asFloat().getSemantics() == &APFloat::IEEEdouble())) ||
-        (StringRef("nps").contains(Specifier) && !Arg.isPointer());
+        (StringRef("nps").contains(Specifier) &&
+         !(Arg.isPointer() && Arg.asPointer().address().getBitWidth() <= 64));
 
     if (TypeMismatch) {
       Executor.reportImmediateUB()
@@ -343,8 +348,10 @@ AnyValue Library::executeTerminate() {
 }
 
 std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
-                                                Type *Type,
+                                                FunctionType *FuncType,
                                                 ArrayRef<AnyValue> Args) {
+  Type *Type = FuncType->getReturnType();
+
   unsigned Index = 0;
   for (const AnyValue &Arg : Args) {
     if (Arg.isPoison()) {
@@ -370,7 +377,8 @@ std::optional<AnyValue> Library::executeLibcall(LibFunc LF, StringRef Name,
   case LibFunc_free:
   case LibFunc_ZdaPv:
   case LibFunc_ZdlPv:
-    return executeFree(Args);
+    return executeFree(Args,
+                       FuncType->getParamType(0)->getPointerAddressSpace());
 
   case LibFunc_puts:
     return executePuts(Args);
