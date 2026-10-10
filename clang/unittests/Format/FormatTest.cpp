@@ -2833,6 +2833,83 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                Style);
 }
 
+TEST_F(FormatTest, FormatsSwitchStatementCompactCaseLabels) {
+  FormatStyle Style = getLLVMStyle();
+  Style.CompactCaseLabels = true;
+
+  Style.IndentCaseLabels = false;
+  verifyFormat("switch (n) {\n"
+               "break; case 0: {\n"
+               "  return false;\n"
+               "}\n"
+               "break; default: {\n"
+               "  return true;\n"
+               "}\n"
+               "}",
+               Style);
+
+  Style.IndentCaseLabels = true;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:\n"
+               "    foo();\n"
+               "  [[fallthrough]]; case 1:\n"
+               "    bar();\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  [[fallthrough]]; default:;\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "    while (x)\n"
+               "      break;\n"
+               "  case 2:\n"
+               "  break; default: {\n"
+               "    return true;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.AfterCaseLabel = true;
+  verifyFormat("switch (n)\n"
+               "{\n"
+               "  break; case 0:\n"
+               "  {\n"
+               "    foo();\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "  {\n"
+               "    bar();\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.IndentBraces = true;
+  verifyFormat("switch (n)\n"
+               "  {\n"
+               "    break; case 0:\n"
+               "      {\n"
+               "        foo();\n"
+               "      }\n"
+               "    break; case 1:\n"
+               "      {\n"
+               "        bar();\n"
+               "      }\n"
+               "  }",
+               Style);
+}
+
 TEST_F(FormatTest, CaseRanges) {
   verifyFormat("switch (x) {\n"
                "case 'A' ... 'Z':\n"

@@ -2838,6 +2838,20 @@ struct FormatStyle {
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
+  /// Keep the break keyword and the following case label on the same line.
+  ///
+  /// \code
+  ///    false:                       true:
+  ///    switch (n) {      vs.        switch (n) {
+  ///      case 1:                      case 1:
+  ///        foo();                       foo();
+  ///        break;                     break; case 2:
+  ///      case 2:                        bar();
+  ///        bar();                   }
+  ///    }
+  /// \endcode
+  bool CompactCaseLabels;
+
   /// If `true`, consecutive namespace declarations will be on the same
   /// line. If `false`, each namespace is declared on a new line.
   /// \code
@@ -6246,6 +6260,7 @@ struct FormatStyle {
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
+           CompactCaseLabels == R.CompactCaseLabels &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&

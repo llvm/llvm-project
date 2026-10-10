@@ -4208,6 +4208,23 @@ the configuration (without a prefix: `Auto`).
   #include <vector> // FOOBAR pragma: keep
   ```
 
+(compactcaselabels)=
+
+**CompactCaseLabels** (`Boolean`) {ref}`¶ <CompactCaseLabels>`
+
+: Keep the break keyword and the following case label on the same line.
+
+  ```c++
+  false:                       true:
+  switch (n) {      vs.        switch (n) {
+    case 1:                      case 1:
+      foo();                       foo();
+      break;                     break; case 2:
+    case 2:                        bar();
+      bar();                   }
+  }
+  ```
+
 (compactnamespaces)=
 
 **CompactNamespaces** (`Boolean`) {versionbadge}`clang-format 5` {ref}`¶ <CompactNamespaces>`
