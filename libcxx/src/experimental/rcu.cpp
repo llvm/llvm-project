@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "__rcu/rcu_domain.h"
 #include <__config>
 
 _LIBCPP_DIAGNOSTIC_PUSH
@@ -212,6 +213,8 @@ public:
 
 class rcu_domain::__impl : public rcu_domain_impl {};
 
+// exported symbols
+
 rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
   static rcu_domain default_domain;
   return default_domain;
@@ -220,17 +223,17 @@ rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
 rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
 rcu_domain::~rcu_domain() = default;
 
-void rcu_domain::lock() noexcept { __pimpl_->lock(); }
+void rcu_domain::__lock() noexcept { __pimpl_->lock(); }
 
-void rcu_domain::unlock() noexcept { __pimpl_->unlock(); }
+void rcu_domain::__unlock() noexcept { __pimpl_->unlock(); }
 
 void rcu_domain::__retire(__rcu_node* node) noexcept { __pimpl_->retire(node); }
 
-rcu_domain& rcu_default_domain() noexcept { return rcu_domain::__rcu_default_domain(); }
+void __rcu_synchronize(rcu_domain& dom) noexcept { __rcu_domain_access::__get_impl(dom)->synchronize(false); }
 
-void rcu_synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(false); }
+void __rcu_barrier(rcu_domain& dom) noexcept { __rcu_domain_access::__get_impl(dom)->synchronize(true); }
 
-void rcu_barrier(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(true); }
+// exported symbols end
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
