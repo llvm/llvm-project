@@ -139,6 +139,11 @@ public:
   LLVM_ABI bool
   containsMatchingVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
+  /// Return true if this is a fixed width vector or aggregate constant that
+  /// has an element for which \p PredFn returns true.
+  LLVM_ABI bool
+  containsMatchingElement(function_ref<bool(const Constant *)> PredFn) const;
+
   /// Return true if the value can vary between threads.
   LLVM_ABI bool isThreadDependent() const;
 

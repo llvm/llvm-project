@@ -104,6 +104,7 @@ define <3 x i4> @partial_undef_vec() {
 }
 
 @gv = external global i32
+declare void @fun()
 
 define { i32, i32 } @freeze_const_struct() {
 ; CHECK-LABEL: define { i32, i32 } @freeze_const_struct() {
@@ -174,6 +175,16 @@ define { i64, i32 } @freeze_const_struct_constexpr_member() {
 ;
   %f = freeze { i64, i32 } { i64 ptrtoint (ptr @gv to i64), i32 3 }
   ret { i64, i32 } %f
+}
+
+; A ConstantExpr member checked when it is a pointer to function
+; This eliminates dead code when using C++ pointer-to-member.
+define [2 x i64] @freeze_pointer_to_function() {
+; CHECK-LABEL: define [2 x i64] @freeze_pointer_to_function() {
+; CHECK-NEXT:    ret [2 x i64] [i64 ptrtoint (ptr @fun to i64), i64 0]
+;
+  %func.coerce = freeze [2 x i64] [i64 ptrtoint (ptr @fun to i64), i64 0]
+  ret [2 x i64] %func.coerce
 }
 
 ; Non-integer members.

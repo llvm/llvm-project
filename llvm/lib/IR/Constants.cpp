@@ -320,26 +320,6 @@ static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
 }
 
 static bool
-containsMatchingElement(const Constant *C,
-                        function_ref<bool(const Constant *)> PredFn) {
-  // Simple pruning for large size array. UndefValue is fine as it is filtered
-  // out by PredFn already.
-  if (isa<ConstantData>(C))
-    return false;
-
-  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
-  if (!NumElts)
-    return false;
-
-  for (unsigned I = 0; I != *NumElts; ++I) {
-    Constant *Elt = C->getAggregateElement(I);
-    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
-      return true;
-  }
-  return false;
-}
-
-static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
   Type *Ty = C->getType();
@@ -349,7 +329,26 @@ containsUndefinedElement(const Constant *C,
   if (HasFn(C))
     return true;
 
-  return containsMatchingElement(C, HasFn);
+  return C->containsMatchingElement(HasFn);
+}
+
+bool Constant::containsMatchingElement(
+    function_ref<bool(const Constant *)> PredFn) const {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(this))
+    return false;
+
+  std::optional<unsigned> NumElts = getNumWalkableElements(getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || Elt->containsMatchingElement(PredFn)))
+      return true;
+  }
+  return false;
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -372,7 +371,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingElement(this, IsaPred<ConstantExpr>);
+  return containsMatchingElement(IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
