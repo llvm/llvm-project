@@ -725,6 +725,13 @@ public:
 
   bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
 
+  std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) override;
+
+  /// Returns \p type qualified with target address space \p address_space.
+  CompilerType AddAddressSpaceModifier(const CompilerType &type,
+                                       uint32_t address_space);
+
   bool CanPassInRegisters(const CompilerType &type) override;
 
   bool SupportsLanguage(lldb::LanguageType language) override;
