@@ -15062,7 +15062,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   if (CRHS && VT == MVT::i16 && LHS.getOpcode() == ISD::TRUNCATE &&
       LHS.hasOneUse() && LHS.getOperand(0).getOpcode() == ISD::SRL) {
     auto *Shift = dyn_cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1));
-    if (Shift && Shift->getZExtValue() > 0 && Shift->getZExtValue() < 16 &&
+    if (Shift && Shift->getZExtValue() < 16 &&
         CRHS->getAPIntValue().isMask(16 - Shift->getZExtValue())) {
       SDLoc SL(N);
       SDValue Trunc =
