@@ -14,7 +14,7 @@
 #define SUPPORT_CONSTEXPR_HASH_H
 
 #include <__type_traits/is_unqualified.h>
-#include <__type_traits/underlying_type.h>
+#include <utility>
 
 #include "test_macros.h"
 #include <type_traits>
@@ -88,7 +88,7 @@ struct constexpr_hash<_Tp> {
       // return 1234ULL;
 
     } else if constexpr (std::is_enum_v<_Tp>) {
-      using type = std::__underlying_type_t<_Tp>;
+      using type = decltype(std::to_underlying(std::declval<_Tp>()));
       return constexpr_hash<type>()(static_cast<type>(__v));
     }
     __builtin_unreachable(); // todo: revisit
