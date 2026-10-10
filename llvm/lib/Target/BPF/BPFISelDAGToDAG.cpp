@@ -14,6 +14,7 @@
 #include "BPF.h"
 #include "BPFSubtarget.h"
 #include "BPFTargetMachine.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -308,7 +309,11 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
 
   LLVM_DEBUG(dbgs() << "Replacing load of size " << size << " with constant "
                     << val << '\n');
-  SDValue NVal = CurDAG->getConstant(val, DL, LD->getValueType(0));
+  APInt FoldedVal(LD->getValueType(0).getSizeInBits(), val);
+  if (LD->getExtensionType() == ISD::SEXTLOAD)
+    FoldedVal = APInt(LD->getMemoryVT().getSizeInBits(), val)
+                    .sext(FoldedVal.getBitWidth());
+  SDValue NVal = CurDAG->getConstant(FoldedVal, DL, LD->getValueType(0));
 
   // After replacement, the current node is dead, we need to
   // go backward one step to make iterator still work
