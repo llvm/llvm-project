@@ -1800,6 +1800,15 @@ def TestDialectCanonicalizerOp : TEST_Op<"dialect_canonicalizable"> {
   let results = (outs I32);
 }
 
+// Op for the fold tests in IR/fold-dispatch.mlir. It has no fold and no fold
+// trait, so only the fallback fold of the dialect can fold it. The
+// `legacy_dialect_fold` attribute configures that fallback; see the
+// configurable folds in TestOps.h.
+def TestFoldDispatchFallbackOp : TEST_Op<"fold_dispatch_fallback"> {
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (Symbol Binding)
 //===----------------------------------------------------------------------===//

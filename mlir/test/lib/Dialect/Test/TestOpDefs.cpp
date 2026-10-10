@@ -2324,3 +2324,71 @@ void test::ManyRegionsOp::build(
     state.addRegion(std::move(regionPtr));
   ManyRegionsOp::build(builder, state, {}, regions.size());
 }
+
+//===----------------------------------------------------------------------===//
+// Configurable folds
+//===----------------------------------------------------------------------===//
+
+/// Return the replacement that `element` of a `replace` list describes.
+static OpFoldResult getConfiguredReplacement(Operation *op,
+                                             ArrayRef<Attribute> operands,
+                                             Attribute element) {
+  auto ref = dyn_cast<TestFoldRefAttr>(element);
+  if (!ref)
+    return element;
+  switch (ref.getKind()) {
+  case FoldRefKind::Keep:
+    return {};
+  case FoldRefKind::Result:
+    return op->getResult(*ref.getIndex());
+  case FoldRefKind::Operand:
+    return op->getOperand(*ref.getIndex());
+  case FoldRefKind::OperandAttr:
+    return operands[*ref.getIndex()];
+  }
+  llvm_unreachable("unknown fold reference kind");
+}
+
+namespace {
+/// One fold of a configured op.
+struct ConfiguredFold {
+  /// The replacements, or null if the fold replaces no result.
+  ArrayAttr replace;
+  /// Whether the fold changed the op in place.
+  bool inPlace = false;
+};
+} // namespace
+
+/// Read the fold configuration `name` of `op` for one fold, and apply its
+/// in-place change. Return std::nullopt if `op` has no configuration.
+static std::optional<ConfiguredFold> consumeFoldConfig(Operation *op,
+                                                       StringRef name) {
+  auto config = op->getAttrOfType<DictionaryAttr>(name);
+  if (!config)
+    return std::nullopt;
+  NamedAttrList attrs(config);
+  ConfiguredFold fold;
+  fold.replace = dyn_cast_if_present<ArrayAttr>(attrs.get("replace"));
+  if (attrs.erase("in_place"))
+    fold.inPlace = true;
+  if (attrs.empty())
+    op->removeAttr(name);
+  else
+    op->setAttr(name, attrs.getDictionary(op->getContext()));
+  return fold;
+}
+
+LogicalResult test::getConfiguredLegacyFoldResults(
+    Operation *op, ArrayRef<Attribute> operands, StringRef name,
+    SmallVectorImpl<OpFoldResult> &results) {
+  std::optional<ConfiguredFold> fold = consumeFoldConfig(op, name);
+  if (!fold)
+    return failure();
+  assert(!(fold->replace && fold->inPlace) &&
+         "a legacy fold cannot replace results and change the op in place");
+  if (!fold->replace)
+    return success(fold->inPlace);
+  for (Attribute element : fold->replace)
+    results.push_back(getConfiguredReplacement(op, operands, element));
+  return success();
+}

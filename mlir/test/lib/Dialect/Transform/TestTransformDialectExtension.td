@@ -584,4 +584,19 @@ def TestInitializerExtensionOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestFoldOp
+  : Op<Transform_Dialect, "test_fold",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Folds each target op with `Operation::fold` and emits the fold result as a
+    remark on the target op. The remark says "failure", "in place", or lists
+    one entry per result, followed by "in place" if the fold also changed the
+    op in place.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
