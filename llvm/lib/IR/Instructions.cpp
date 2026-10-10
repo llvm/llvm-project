@@ -2990,7 +2990,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
     {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
-    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
+    {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5,18,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
   };
   // clang-format on
@@ -3127,6 +3127,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // inttoptr can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isIntOrIntVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3139,6 +3143,11 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (2), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // ptrtoint/ptrtoaddr can only fold through a bitcast if the source was
+      // already a pointer. A byte-to-pointer bitcast must stay as a separate
+      // bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3150,6 +3159,19 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     case 17:
       // (sitofp (zext x)) -> (uitofp x)
       return Instruction::UIToFP;
+    case 18:
+      // bitcast, bitcast -> bitcast, if neither SrcTy nor DstTy is a pointer,
+      //                              both are pointers in the same addrspace,
+      //                              or one is a pointer and the other a byte
+      // A pair of bitcasts through a byte must stay separate otherwise.
+      if (!SrcTy->isPtrOrPtrVectorTy() && !DstTy->isPtrOrPtrVectorTy())
+        return Instruction::BitCast;
+      if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace())
+        return Instruction::BitCast;
+      if (SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy())
+        return Instruction::BitCast;
+      return 0;
     case 99:
       // Cast combination can't happen (error in input). This is for all cases
       // where the MidTy is not the same for the two cast instructions.
