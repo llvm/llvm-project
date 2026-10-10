@@ -838,6 +838,7 @@ declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
     Globals.cpp
     IRAttributes.cpp
     IRCore.cpp
+    IRRemarks.cpp
     IRTypes.cpp
 )
 
