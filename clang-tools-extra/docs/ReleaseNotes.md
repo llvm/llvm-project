@@ -198,6 +198,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-redundant-branch-condition
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check fix for 
+  false negative when there are two declaration statement in if with && 
+  it skips the second one bind with first one only preveiously.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.
@@ -351,6 +356,7 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
   trailing semicolons and lost comments when the `if` body has no braces.
+
 
 #### Removed checks
 

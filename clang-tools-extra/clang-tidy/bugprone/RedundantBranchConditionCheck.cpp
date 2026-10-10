@@ -76,10 +76,9 @@ void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
       ifStmt(
           hasCondition(anyOf(
               declRefExpr(hasDeclaration(ImmutableVar)).bind(OuterIfVar1Str),
-              binaryOperator(
-                  hasOperatorName("&&"),
-                  hasEitherOperand(declRefExpr(hasDeclaration(ImmutableVar))
-                                       .bind(OuterIfVar2Str))))),
+              binaryOperator(hasOperatorName("&&"),
+                             forEach((declRefExpr(hasDeclaration(ImmutableVar))
+                                          .bind(OuterIfVar2Str)))))),
           hasThen(hasDescendant(
               ifStmt(hasCondition(anyOf(
                          declRefExpr(hasDeclaration(
