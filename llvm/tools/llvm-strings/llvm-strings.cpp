@@ -18,14 +18,19 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/WithColor.h"
 #include <cctype>
+#include <clocale>
+#include <cwctype>
 #include <string>
 
 using namespace llvm;
@@ -60,13 +65,20 @@ static constexpr int DefaultMinLength = 4;
 static int MinLength = DefaultMinLength;
 static bool PrintFileName;
 
+enum class Encoding { Ascii, Locale, Utf8 };
+static Encoding Encoding;
+
 enum class Radix { None, Octal, Hexadecimal, Decimal };
 static Radix Radix;
-} // namespace
 
 [[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   exit(1);
+}
+
+[[noreturn]] static void invalidArgValue(Arg *Arg) {
+  reportCmdLineError("'" + StringRef(Arg->getValue()) +
+                     "' is not a valid value for '" + Arg->getSpelling() + "'");
 }
 
 template <typename T>
@@ -78,12 +90,165 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
   }
 }
 
-static bool isStringChar(char C) { return isPrint(C) || C == '\t'; }
+template <enum Encoding> struct Strings {
+  Strings() = delete;
 
-static void strings(raw_ostream &OS, StringRef FileName,
-                    sys::fs::file_t Handle) {
+  // Tries to read one character from the bytes Cur...End and store it in Ch.
+  // Returns true if a (possibly invalid) character was read, false otherwise.
+  //
+  // If Cur...End starts with a valid complete character, Cur and MBState are
+  // updated and true is returned.
+  // If Cur...End is empty, or holds an incomplete character and AtEOF is false,
+  // Cur and MBState are unchanged, Ch is set to 0, and false is returned. This
+  // is intended to allow more bytes to be read and readChar to be called again.
+  // If Cur...End holds an incomplete character and AtEOF is true, or if
+  // Cur...End starts with an invalid character, the first bytes are skipped and
+  // MBState is reset to allow continuing from the next point, Ch is set to 0,
+  // and true is returned. This case is indistinguishable to the caller from a
+  // null byte being successfully converted to a null character, but a null
+  // character is never printable under any settings and that is how invalid
+  // bytes are treated as well.
+  //
+  // The number of skipped bytes for invalid characters follows the Unicode
+  // definition of the maximal subpart of an ill-formed subsequence, applied to
+  // arbitrary locales: it is the longest subsequence that could start a valid
+  // multibyte character, or if the initial byte cannot start a valid multibyte
+  // character, the initial byte. This allows consistent error recovery.
+  static bool readChar(const char *&Cur, const char *End,
+                       std::mbstate_t &MBState, bool AtEOF, UTF32 &Ch);
+
+  static bool isStringChar(UTF32 Ch);
+
+  static void endString(raw_ostream &OS, std::mbstate_t &MBState);
+
+  static void run(raw_ostream &OS, StringRef FileName, sys::fs::file_t Handle);
+};
+
+template <>
+bool Strings<Encoding::Ascii>::readChar(const char *&Cur, const char *End,
+                                        std::mbstate_t &MBState, bool AtEOF,
+                                        UTF32 &Ch) {
+  if (Cur == End)
+    return false;
+
+  Ch = *Cur++;
+  return true;
+}
+
+template <>
+bool Strings<Encoding::Locale>::readChar(const char *&Cur, const char *End,
+                                         std::mbstate_t &MBState, bool AtEOF,
+                                         UTF32 &Ch) {
+  if (Cur == End)
+    return false;
+
+  const char *Next = Cur;
+  std::mbstate_t NextMBState = MBState;
+  wchar_t WCh;
+  for (;;) {
+    // Read one byte at a time. This is usually not the best way to use
+    // mbrtowc(), usually it would make more sense to pass the size of the
+    // buffer, but the strings utility is unusual in that it is expected to
+    // encounter many bytes that do not form valid characters and it is more
+    // useful to optimise for this case.
+    const std::size_t BytesRead = std::mbrtowc(&WCh, Next, 1, &NextMBState);
+    switch (BytesRead) {
+    case 1:
+      ++Next;
+      Cur = Next;
+      MBState = NextMBState;
+      Ch = WCh;
+      return true;
+
+    case (std::size_t)-2:
+      // We encountered a byte that is a valid start or continuation of a
+      // multibyte character. If we have more bytes, carry on. If we don't
+      // have more bytes yet, but we are not at the end of file, return false.
+      // If we don't have more bytes and we are at the end of file, fall
+      // through to treat it as an error.
+      ++Next;
+      if (Next != End)
+        continue;
+      if (AtEOF)
+        return false;
+      LLVM_FALLTHROUGH;
+
+    case 0:
+    case (std::size_t)-1:
+      // We cannot form a valid non-null character.
+      //
+      // If we processed any bytes already that formed an incomplete multibyte
+      // character, treat those bytes as a single null character, otherwise
+      // treat the current byte as a single null character.
+      if (Next == Cur)
+        ++Next;
+      Cur = Next;
+      MBState = {};
+      Ch = 0;
+      return true;
+    }
+  }
+}
+
+template <>
+bool Strings<Encoding::Utf8>::readChar(const char *&Cur, const char *End,
+                                       std::mbstate_t &MBState, bool AtEOF,
+                                       UTF32 &Ch) {
+  if (Cur == End)
+    return false;
+
+  const UTF8 *UTF8Cur = reinterpret_cast<const UTF8 *>(Cur);
+  const UTF8 *UTF8Next = UTF8Cur;
+  const UTF8 *UTF8End = reinterpret_cast<const UTF8 *>(End);
+  UTF32 *UTF32Next = &Ch;
+  const auto Res = ConvertUTF8toUTF32(&UTF8Next, UTF8End, &UTF32Next, &Ch + 1,
+                                      strictConversion);
+  if (UTF8Next != UTF8Cur) {
+    assert(UTF32Next != &Ch);
+  } else if (Res == sourceExhausted && !AtEOF) {
+    return false;
+  } else {
+    assert(UTF32Next == &Ch);
+    UTF8Next += findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
+    Ch = 0;
+  }
+  Cur = reinterpret_cast<const char *>(UTF8Next);
+  return true;
+}
+
+template <> bool Strings<Encoding::Ascii>::isStringChar(UTF32 Ch) {
+  return Ch == '\t' || isPrint(Ch);
+}
+
+template <> bool Strings<Encoding::Locale>::isStringChar(UTF32 Ch) {
+  return Ch == L'\t' || std::iswprint(Ch);
+}
+
+template <> bool Strings<Encoding::Utf8>::isStringChar(UTF32 Ch) {
+  return Ch == u'\t' || sys::unicode::isPrintable(Ch);
+}
+
+template <enum Encoding Encoding>
+void Strings<Encoding>::endString(raw_ostream &OS, std::mbstate_t &MBState) {
+  OS << '\n';
+}
+
+template <>
+void Strings<Encoding::Locale>::endString(raw_ostream &OS,
+                                          std::mbstate_t &MBState) {
+  char Buf[MB_LEN_MAX];
+  // Note: This is only required for stateful encodings such as the
+  // ISO-2022 ones.
+  const std::size_t BytesWritten = std::wcrtomb(Buf, L'\0', &MBState);
+  Buf[BytesWritten - 1] = '\n';
+  OS << StringRef(Buf, BytesWritten);
+}
+
+template <enum Encoding Encoding>
+void Strings<Encoding>::run(raw_ostream &OS, StringRef FileName,
+                            sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  auto PrintHeader = [&OS, FileName](size_t StringStart) {
+  auto PrintHeader = [&OS, FileName](std::size_t StringStart) {
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
@@ -110,32 +275,43 @@ static void strings(raw_ostream &OS, StringRef FileName,
   // never needs an arbitrarily large buffer. Candidate therefore only ever
   // holds a run that is shorter than MinLength and that was cut off by the end
   // of a chunk.
-  const size_t Min = MinLength;
+  const std::size_t MinLengthChars = MinLength;
   SmallString<DefaultMinLength> Candidate;
+  std::size_t CandidateLengthChars = 0;
   bool InString = false;
+  std::mbstate_t MBState{};
   // Offset of the start of the current chunk within the file.
-  size_t ChunkOffset = 0;
-
-  Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
+  std::size_t ChunkOffset = 0;
 
   while (true) {
-    Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
-        Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
+    // Size of any partial character left over from the previous chunk.
+    const std::size_t PendingCharSizeBytes = Buffer.size();
+    Buffer.resize_for_overwrite(PendingCharSizeBytes +
+                                sys::fs::DefaultReadChunkSize);
+
+    Expected<std::size_t> ReadBytesOrErr = sys::fs::readNativeFile(
+        Handle,
+        MutableArrayRef(Buffer.begin() + PendingCharSizeBytes, Buffer.end()));
     if (!ReadBytesOrErr) {
       errs() << FileName << ": "
              << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
       return;
     }
-    size_t ChunkSize = *ReadBytesOrErr;
+    const bool AtEOF = *ReadBytesOrErr == 0;
+    const std::size_t ChunkSize = PendingCharSizeBytes + *ReadBytesOrErr;
     if (ChunkSize == 0)
       break;
+
+    Buffer.resize_for_overwrite(ChunkSize);
 
     // To prevent performance regression under O0, access the raw pointer
     // instead of using methods provided by the standard library, which are not
     // inlined under O0.
-    const char *const Begin = Buffer.data();
-    const char *const End = Begin + ChunkSize;
+    const char *Begin = Buffer.data();
+    const char *End = Begin + ChunkSize;
     const char *Cur = Begin;
+
+    UTF32 Ch;
 
     // Handle the remaining part from the previous chunk.
     // The previous chunk can be either shorter than MinSize or part of the
@@ -146,45 +322,62 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // With a large Min, the buffer must hold at least Min bytes, since we need
     // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
+      const char *StringEnd;
+      std::mbstate_t PrevMBState;
+      std::size_t LengthChars = 0;
+      bool EndOfChunk;
+
       // Find the end of the current string.
-      while (Cur != End && isStringChar(*Cur))
-        ++Cur;
-      size_t Len = Cur - Begin;
+      for (;;) {
+        StringEnd = Cur;
+        PrevMBState = MBState;
+        EndOfChunk = !readChar(Cur, End, MBState, AtEOF, Ch);
+        if (EndOfChunk || !isStringChar(Ch))
+          break;
+        ++LengthChars;
+      }
+
+      std::size_t SizeBytes = StringEnd - Begin;
       if (InString) {
         // Print the remaining part if the previous chunk has already printed
         // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
         // boundary.
         // Output: Header: aaaaabbbbb, where bbbbb is printed in here.
-        OS << StringRef(Begin, Len);
-      } else if (Candidate.size() + Len >= Min) {
-        // If the header hasn't been printed yet (e.g. the previous candidate
+        OS << StringRef(Begin, SizeBytes);
+      } else if (CandidateLengthChars + LengthChars >= MinLengthChars) {
+        // If the header hasn't been printed yet (i.e. the previous candidate
         // was smaller than Min), but we can print it now, print the header
         // first, followed by the candidate from the previous chunk and the
         // current string. E.g. aa | bbbbbb
         // Output Header: aabbbbbb, where aabbbbbb is printed in here.
         PrintHeader(ChunkOffset - Candidate.size());
-        OS << Candidate << StringRef(Begin, Len);
+        OS << Candidate << StringRef(Begin, SizeBytes);
         Candidate.clear();
+        CandidateLengthChars = 0;
         InString = true;
-      } else if (Cur == End) {
+      } else if (EndOfChunk) {
         // If the current chunk + previous candidate is still smaller than Min,
         // append it to Candidate.
-        Candidate.append(Begin, End);
+        Candidate.append(Begin, StringEnd);
+        CandidateLengthChars += LengthChars;
       } else {
         // If the string has terminated but is still smaller than Min, clear the
         // buffer since it is too short to print.
         Candidate.clear();
+        CandidateLengthChars = 0;
       }
 
-      if (Cur == End) {
+      if (EndOfChunk) {
         // Finish handling the current chunk and update ChunkOffset.
-        ChunkOffset += ChunkSize;
+        ChunkOffset += Cur - Begin;
+        Buffer.erase(Buffer.begin(), Cur);
         continue;
       }
+
       if (InString) {
         // We haven't reached the end of the chunk, which means the string is
-        // terminated. Add a '\n' to start printing a new string.
-        OS << '\n';
+        // terminated.
+        endString(OS, PrevMBState);
         InString = false;
       }
     }
@@ -192,19 +385,27 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // At this point, we are always at the start of a new string because the
     // remaining part of the previous string has already been handled.
     const char *StrHead = nullptr;
-    for (; Cur != End; ++Cur) {
-      if (isStringChar(*Cur)) {
+    std::size_t LengthChars = 0;
+    for (;;) {
+      const char *Prev = Cur;
+      std::mbstate_t PrevMBState = MBState;
+      if (!readChar(Cur, End, MBState, AtEOF, Ch))
+        break;
+      if (isStringChar(Ch)) {
         // Find the start of the next string.
         if (!StrHead)
-          StrHead = Cur;
+          StrHead = Prev;
+        ++LengthChars;
       } else if (StrHead) {
         // If it is not a printable character, we have reached the end of the
         // current string. Print it if long enough.
-        if (static_cast<size_t>(Cur - StrHead) >= Min) {
+        if (LengthChars >= MinLengthChars) {
           PrintHeader(ChunkOffset + (StrHead - Begin));
-          OS << StringRef(StrHead, Cur - StrHead) << '\n';
+          OS << StringRef(StrHead, Prev - StrHead);
+          endString(OS, PrevMBState);
         }
         StrHead = nullptr;
+        LengthChars = 0;
       }
     }
 
@@ -212,24 +413,32 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // print the header immediately and set the InString flag to avoid printing
     // it again.
     if (StrHead) {
-      size_t Len = End - StrHead;
       // Print it, or append it to Candidate if it is too short.
-      if (Len >= Min) {
+      if (LengthChars >= MinLengthChars) {
         PrintHeader(ChunkOffset + (StrHead - Begin));
-        OS << StringRef(StrHead, Len);
+        OS << StringRef(StrHead, Cur - StrHead);
         InString = true;
       } else {
-        Candidate.append(StrHead, End);
+        Candidate.append(StrHead, Cur);
+        CandidateLengthChars += LengthChars;
       }
     }
-    ChunkOffset += ChunkSize;
+
+    ChunkOffset += Cur - Begin;
+    Buffer.erase(Buffer.begin(), Cur);
+
+    if (AtEOF)
+      break;
   }
 
   if (InString)
-    OS << '\n';
+    endString(OS, MBState);
 }
+} // namespace
 
 int main(int argc, char **argv) {
+  std::setlocale(LC_ALL, "");
+
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -253,6 +462,20 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  Arg *EncodingArg = Args.getLastArg(OPT_encoding_EQ);
+  if (!EncodingArg) {
+    Encoding = Encoding::Locale;
+  } else {
+    auto EncodingVal = llvm::StringSwitch<std::optional<enum Encoding>>(
+                           EncodingArg->getValue())
+                           .Case("s", Encoding::Ascii)
+                           .Case("S", Encoding::Locale)
+                           .Case("utf8", Encoding::Utf8)
+                           .Default(std::nullopt);
+    if (!EncodingVal)
+      invalidArgValue(EncodingArg);
+    Encoding = *EncodingVal;
+  }
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
   Arg *RadixArg = Args.getLastArg(OPT_radix_EQ);
@@ -265,9 +488,7 @@ int main(int argc, char **argv) {
                 .Case("x", Radix::Hexadecimal)
                 .Default(Radix::None);
     if (Radix == Radix::None)
-      reportCmdLineError("'" + StringRef(RadixArg->getValue()) +
-                         "' is not a valid value for '" +
-                         RadixArg->getSpelling() + "'");
+      invalidArgValue(RadixArg);
   }
 
   if (MinLength == 0) {
@@ -275,13 +496,29 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  void (*const StringsImpl)(raw_ostream &OS, StringRef FileName,
+                            sys::fs::file_t Handle) = [] {
+    switch (Encoding) {
+    case Encoding::Ascii:
+      return Strings<Encoding::Ascii>::run;
+
+    case Encoding::Locale:
+      return Strings<Encoding::Locale>::run;
+
+    case Encoding::Utf8:
+      return Strings<Encoding::Utf8>::run;
+    }
+
+    llvm_unreachable("unhandled encoding");
+  }();
+
   std::vector<std::string> InputFileNames = Args.getAllArgValues(OPT_INPUT);
   if (InputFileNames.empty())
     InputFileNames.push_back("-");
 
   for (const auto &File : InputFileNames) {
     if (File == "-") {
-      strings(llvm::outs(), "{standard input}", sys::fs::getStdinHandle());
+      StringsImpl(llvm::outs(), "{standard input}", sys::fs::getStdinHandle());
     } else {
       Expected<sys::fs::file_t> FDOrErr =
           sys::fs::openNativeFileForRead(File, sys::fs::OF_TextWithCRLF);
@@ -291,7 +528,7 @@ int main(int argc, char **argv) {
                << '\n';
         continue;
       }
-      strings(llvm::outs(), File, *FDOrErr);
+      StringsImpl(llvm::outs(), File, *FDOrErr);
     }
   }
 
