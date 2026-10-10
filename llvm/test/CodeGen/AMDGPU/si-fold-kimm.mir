@@ -45,6 +45,25 @@ body: |
 ...
 
 ---
+name: fmamk_f16_inlinable_src2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GCN-LABEL: name: fmamk_f16_inlinable_src2
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_FMA_F16_gfx9_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMA_F16_gfx9_e64 0, [[COPY]], 0, 11878, 0, 14336, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_FMA_F16_gfx9_e64_]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 14336, implicit $exec
+    %2:vgpr_32 = contract nofpexcept V_FMAMK_F16 %0, 11878, %1, implicit $mode, implicit $exec
+    $vgpr0 = COPY %2
+...
+
+---
 name: fmaak_f32
 tracksRegLiveness: true
 body: |
@@ -80,6 +99,25 @@ body: |
     ; GCN-NEXT: $vgpr0 = COPY [[V_FMAMK_F32_]]
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 979789416, implicit $exec
+    %2:vgpr_32 = contract nofpexcept V_FMAMK_F32 %0, 778462824, %1, implicit $mode, implicit $exec
+    $vgpr0 = COPY %2
+...
+
+---
+name: fmamk_f32_inlinable_src2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GCN-LABEL: name: fmamk_f32_inlinable_src2
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMA_F32_e64 0, [[COPY]], 0, 778462824, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_FMA_F32_e64_]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 1056964608, implicit $exec
     %2:vgpr_32 = contract nofpexcept V_FMAMK_F32 %0, 778462824, %1, implicit $mode, implicit $exec
     $vgpr0 = COPY %2
 ...

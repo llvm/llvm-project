@@ -920,6 +920,48 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       MI->setDesc(TII->get(Opc));
     }
 
+    // Special case for v_fmamk_{f16, f32} formed by peephole-opt pass.
+    // If Src2 is a literal that can be represented inline then use v_fma.
+    if ((Opc == AMDGPU::V_FMAMK_F32 || Opc == AMDGPU::V_FMAMK_F16 ||
+         Opc == AMDGPU::V_FMAMK_F16_t16 || Opc == AMDGPU::V_FMAMK_F16_fake16) &&
+        OpNo == 3 && OpToFold.isImm()) {
+      unsigned NewOpc = AMDGPU::V_FMA_F32_e64;
+      switch (Opc) {
+      case AMDGPU::V_FMAMK_F16:
+        NewOpc = AMDGPU::V_FMA_F16_gfx9_e64;
+        break;
+      case AMDGPU::V_FMAMK_F16_t16:
+        NewOpc = AMDGPU::V_FMA_F16_gfx9_t16_e64;
+        break;
+      case AMDGPU::V_FMAMK_F16_fake16:
+        NewOpc = AMDGPU::V_FMA_F16_gfx9_fake16_e64;
+        break;
+      default:
+        break;
+      }
+      MI->setDesc(TII->get(NewOpc));
+      // Add modifiers to src operands
+      for (unsigned OpI = 3; OpI >= 1; --OpI) {
+        MachineOperand *Op = &MI->getOperand(OpI);
+        MI->insert(Op, {MachineOperand::CreateImm(0)});
+      }
+      // Add clamp, omod, op_sel
+      const AMDGPU::OpName Mods[] = {
+          AMDGPU::OpName::clamp, AMDGPU::OpName::omod, AMDGPU::OpName::op_sel};
+      for (AMDGPU::OpName Name : Mods) {
+        if (AMDGPU::hasNamedOperand(NewOpc, Name))
+          MI->addOperand(MachineOperand::CreateImm(0));
+      }
+      unsigned NewOpNo =
+          AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::src2);
+      bool FoldAsFMA = tryAddToFoldList(FoldList, MI, NewOpNo, OpToFold);
+      if (FoldAsFMA)
+        return true;
+      // Reset back to fmamk
+      TII->removeModOperands(*MI);
+      MI->setDesc(TII->get(Opc));
+    }
+
     // Special case for s_fmac_f32 if we are trying to fold into Src2.
     // By transforming into fmaak we can untie Src2 and make folding legal.
     if (Opc == AMDGPU::S_FMAC_F32 && OpNo == 3) {
