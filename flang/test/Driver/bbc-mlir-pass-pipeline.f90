@@ -49,6 +49,7 @@ end program
 
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   LoopInvariantCodeMotion
+! CHECK-NEXT:   LoopIdiomRecognize
 
 ! CHECK-NEXT: PolymorphicOpConversion
 ! CHECK-NEXT: 'func.func' Pipeline
