@@ -109,6 +109,7 @@ class InductiveRangeCheck {
   const SCEV *Step = nullptr;
   const SCEV *End = nullptr;
   Use *CheckUse = nullptr;
+  bool PassingDirection = true;
 
   friend class InductiveRangeCheckElimination;
 
@@ -169,7 +170,7 @@ public:
 
   /// This is the value the condition of the branch needs to evaluate to for the
   /// branch to take the hot successor (see (1) above).
-  bool getPassingDirection() { return true; }
+  bool getPassingDirection() const { return PassingDirection; }
 
   /// Computes a range for the induction variable (IndVar) in which the range
   /// check is redundant and can be constant-folded away.  The induction
@@ -195,12 +196,13 @@ class InductiveRangeCheckElimination {
   // of iterations cannot be estimated.
   std::optional<uint64_t> estimatedTripCount(const Loop &L);
 
-  bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, const SCEVAddRecExpr *&Index,
-                           const SCEV *&End);
+  bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, ICmpInst::Predicate Pred,
+                           const SCEVAddRecExpr *&Index, const SCEV *&End);
 
   void extractRangeChecksFromCond(Loop *L, Use &ConditionUse,
                                   SmallVectorImpl<InductiveRangeCheck> &Checks,
-                                  SmallPtrSetImpl<Value *> &Visited);
+                                  SmallPtrSetImpl<Value *> &Visited,
+                                  bool Negated);
 
   bool reassociateSubLHS(Loop *L, Value *VariantLHS, Value *InvariantRHS,
                          ICmpInst::Predicate Pred, const SCEVAddRecExpr *&Index,
@@ -231,12 +233,12 @@ public:
 /// SCEV being range checked, and set `End` to the upper or lower limit `Index`
 /// is being range checked.
 bool InductiveRangeCheckElimination::parseRangeCheckICmp(
-    Loop *L, ICmpInst *ICI, const SCEVAddRecExpr *&Index, const SCEV *&End) {
+    Loop *L, ICmpInst *ICI, ICmpInst::Predicate Pred,
+    const SCEVAddRecExpr *&Index, const SCEV *&End) {
   auto IsLoopInvariant = [this, L](Value *V) {
     return SE.isLoopInvariant(SE.getSCEV(V), L);
   };
 
-  ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
 
@@ -443,17 +445,30 @@ bool InductiveRangeCheckElimination::reassociateSubLHS(
 
 void InductiveRangeCheckElimination::extractRangeChecksFromCond(
     Loop *L, Use &ConditionUse, SmallVectorImpl<InductiveRangeCheck> &Checks,
-    SmallPtrSetImpl<Value *> &Visited) {
+    SmallPtrSetImpl<Value *> &Visited, bool Negated) {
   Value *Condition = ConditionUse.get();
   if (!Visited.insert(Condition).second)
     return;
 
-  // TODO: Do the same for OR, XOR, NOT etc?
-  if (match(Condition, m_LogicalAnd(m_Value(), m_Value()))) {
+  Value *Inner = nullptr;
+  if (match(Condition, m_Not(m_Value(Inner)))) {
+    User *Not = cast<User>(Condition);
+    unsigned InnerOp = Not->getOperand(0) == Inner ? 0 : 1;
+    extractRangeChecksFromCond(L, Not->getOperandUse(InnerOp), Checks, Visited,
+                               !Negated);
+    return;
+  }
+
+  // De Morgan's law lets us treat the negation of an OR as a conjunction of
+  // negated checks. Each check may then be replaced independently.
+  if ((Negated && match(Condition, m_LogicalOr(m_Value(), m_Value()))) ||
+      (!Negated && match(Condition, m_LogicalAnd(m_Value(), m_Value())))) {
+    // Logical OR may also be a select of the form A ? true : B.
+    unsigned SecondOp = Negated && isa<SelectInst>(Condition) ? 2 : 1;
     extractRangeChecksFromCond(L, cast<User>(Condition)->getOperandUse(0),
-                               Checks, Visited);
-    extractRangeChecksFromCond(L, cast<User>(Condition)->getOperandUse(1),
-                               Checks, Visited);
+                               Checks, Visited, Negated);
+    extractRangeChecksFromCond(L, cast<User>(Condition)->getOperandUse(SecondOp),
+                               Checks, Visited, Negated);
     return;
   }
 
@@ -463,7 +478,10 @@ void InductiveRangeCheckElimination::extractRangeChecksFromCond(
 
   const SCEV *End = nullptr;
   const SCEVAddRecExpr *IndexAddRec = nullptr;
-  if (!parseRangeCheckICmp(L, ICI, IndexAddRec, End))
+  ICmpInst::Predicate Pred = ICI->getPredicate();
+  if (Negated)
+    Pred = ICmpInst::getInversePredicate(Pred);
+  if (!parseRangeCheckICmp(L, ICI, Pred, IndexAddRec, End))
     return;
 
   assert(IndexAddRec && "IndexAddRec was not computed");
@@ -477,6 +495,7 @@ void InductiveRangeCheckElimination::extractRangeChecksFromCond(
   IRC.Begin = IndexAddRec->getStart();
   IRC.Step = IndexAddRec->getStepRecurrence(SE);
   IRC.CheckUse = &ConditionUse;
+  IRC.PassingDirection = !Negated;
   Checks.push_back(IRC);
 }
 
@@ -527,7 +546,7 @@ void InductiveRangeCheckElimination::extractRangeChecksFromBranch(
   }
 
   SmallPtrSet<Value *, 8> Visited;
-  extractRangeChecksFromCond(L, BI->getOperandUse(0), Checks, Visited);
+  extractRangeChecksFromCond(L, BI->getOperandUse(0), Checks, Visited, false);
 }
 
 /// If the type of \p S matches with \p Ty, return \p S. Otherwise, return
