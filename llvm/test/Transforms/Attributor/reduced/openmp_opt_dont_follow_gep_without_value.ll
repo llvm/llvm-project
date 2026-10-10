@@ -22,7 +22,7 @@ define weak_odr ptr @h(ptr %0) {
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-; CHECK: Function Attrs: norecurse nounwind memory(none)
+; CHECK: Function Attrs: norecurse nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -35,7 +35,7 @@ define weak_odr ptr @h(ptr %0) {
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { norecurse nounwind memory(none) }
+; CHECK: attributes #[[ATTR0]] = { norecurse nounwind willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

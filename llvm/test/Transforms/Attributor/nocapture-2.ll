@@ -587,14 +587,14 @@ declare ptr @readonly_unknown(ptr, ptr) readonly
 define void @not_captured_by_readonly_call(ptr %b) #0 {
 ; TUNIT: Function Attrs: noinline nosync nounwind memory(read) uwtable
 ; TUNIT-LABEL: define void @not_captured_by_readonly_call
-; TUNIT-SAME: (ptr readonly captures(none) [[B:%.*]]) #[[ATTR7:[0-9]+]] {
+; TUNIT-SAME: (ptr readonly [[B:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @readonly_unknown(ptr readonly [[B]], ptr readonly [[B]]) #[[ATTR13:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: noinline nosync nounwind memory(read) uwtable
 ; CGSCC-LABEL: define void @not_captured_by_readonly_call
-; CGSCC-SAME: (ptr readonly captures(none) [[B:%.*]]) #[[ATTR8:[0-9]+]] {
+; CGSCC-SAME: (ptr readonly [[B:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @readonly_unknown(ptr readonly [[B]], ptr readonly [[B]]) #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    ret void
@@ -612,14 +612,14 @@ entry:
 define ptr @not_captured_by_readonly_call_not_returned_either1(ptr %b, ptr returned %r) {
 ; TUNIT: Function Attrs: nosync nounwind memory(read)
 ; TUNIT-LABEL: define ptr @not_captured_by_readonly_call_not_returned_either1
-; TUNIT-SAME: (ptr readonly captures(none) [[B:%.*]], ptr readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
+; TUNIT-SAME: (ptr readonly [[B:%.*]], ptr readonly returned [[R:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @readonly_unknown(ptr readonly [[B]], ptr readonly [[R]]) #[[ATTR8]]
 ; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: nosync nounwind memory(read)
 ; CGSCC-LABEL: define ptr @not_captured_by_readonly_call_not_returned_either1
-; CGSCC-SAME: (ptr readonly captures(none) [[B:%.*]], ptr readonly returned [[R:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (ptr readonly [[B:%.*]], ptr readonly returned [[R:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @readonly_unknown(ptr readonly [[B]], ptr readonly [[R]]) #[[ATTR9]]
 ; CGSCC-NEXT:    ret ptr [[CALL]]
@@ -804,6 +804,27 @@ define void @b64613_positive(ptr noundef %p, i32 %i) {
 }
 
 attributes #0 = { noinline nounwind uwtable }
+
+; Whether the function returns depends on the address of %p.
+define void @diverge_if_null(ptr %p) {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
+; CHECK-LABEL: define void @diverge_if_null
+; CHECK-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P]], null
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp eq ptr %p, null
+  br i1 %c, label %loop, label %exit
+loop:
+  call void @diverge_if_null(ptr %p)
+  br label %loop
+exit:
+  ret void
+}
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable }

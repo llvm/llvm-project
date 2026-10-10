@@ -134,7 +134,7 @@ define internal %S @foo.1(ptr %foo.this) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[RETVAL:%.*]] = alloca [[S:%.*]], i32 0, align 8
 ; TUNIT-NEXT:    store ptr [[FOO_THIS]], ptr [[FOO_THIS]], align 8
-; TUNIT-NEXT:    call void @bar.2(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) [[RETVAL]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[FOO_THIS]]) #[[ATTR5:[0-9]+]]
+; TUNIT-NEXT:    call void @bar.2(ptr noalias nofree noundef nonnull writeonly align 8 captures(none) [[RETVAL]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[FOO_THIS]]) #[[ATTR3]]
 ; TUNIT-NEXT:    [[FOO_RET:%.*]] = load [[S]], ptr [[RETVAL]], align 8
 ; TUNIT-NEXT:    ret [[S]] [[FOO_RET]]
 ;
@@ -162,7 +162,7 @@ define internal void @bar.2(ptr %bar.this, ptr %bar.data) {
 ; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[BAR_THIS:%.*]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[BAR_DATA:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store ptr [[BAR_DATA]], ptr [[BAR_THIS]], align 8
-; TUNIT-NEXT:    call void @baz(ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[BAR_THIS]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[BAR_DATA]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @baz(ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[BAR_THIS]], ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[BAR_DATA]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
@@ -592,8 +592,7 @@ entry:
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind willreturn memory(write) }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
