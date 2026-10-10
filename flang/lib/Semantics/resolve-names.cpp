@@ -4413,6 +4413,19 @@ FindIntrinsicModuleUseAssociationRule(
 
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
+  // These attributes are never inherited from the use-associated symbol:
+  // PUBLIC/PRIVATE accessibility and SAVE are properties of the local
+  // declaration, not of the entity being use-associated.
+  static constexpr Attrs notInheritedFromUseAttrs{
+      Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
+  // Shared bookkeeping for the UseErrorDetails and UseDetails cases below,
+  // which must stay in sync with each other.
+  auto copyAttrsAndFlags{[&](Symbol &local, const Symbol &used) {
+    local.attrs() = used.attrs() & ~notInheritedFromUseAttrs;
+    local.implicitAttrs() =
+        local.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
+    local.flags() = used.flags();
+  }};
   Symbol *localSymbol{&originalLocal};
   if (auto *details{localSymbol->detailsIf<UseErrorDetails>()}) {
     details->add_occurrence(location, useSymbol);
@@ -4435,13 +4448,20 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       // be copied.
       localSymbol->set_details(GenericDetails{});
       localSymbol->get<GenericDetails>().set_kind(useGeneric->kind());
+    } else if (const auto *useError{useSymbol.detailsIf<UseErrorDetails>()}) {
+      // The module being use-associated wholesale already has an ambiguous
+      // name at this position (e.g. two distinct USEs of the same name that
+      // are themselves never referenced there, which F2023 14.2.2 p8 allows).
+      // Propagate that ambiguity to the local symbol rather than silently
+      // resolving it to one of the ambiguous module's own USE details; the
+      // latter would produce a local UseDetails whose target module file
+      // omits the name, so it would not survive a module file round trip.
+      localSymbol->set_details(UseErrorDetails{*useError});
+      copyAttrsAndFlags(*localSymbol, useSymbol);
+      return;
     } else { // just create UseDetails
       localSymbol->set_details(UseDetails{localName, useSymbol});
-      localSymbol->attrs() =
-          useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE, Attr::SAVE};
-      localSymbol->implicitAttrs() =
-          localSymbol->attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
-      localSymbol->flags() = useSymbol.flags();
+      copyAttrsAndFlags(*localSymbol, useSymbol);
       return;
     }
   }
