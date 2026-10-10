@@ -303,3 +303,13 @@ __UINT_LEAST32_TYPE__ test_vla(int n, const unsigned char *src) {
   buf[3] = src[3];
   return stdc_load8_leu32(buf);
 }
+
+// LE-LABEL: @test_leu32_from_bool(
+// LE: load i32, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_leu32_from_bool(
+// BE: load i32, ptr {{.+}}, align 1
+// BE: call i32 @llvm.bswap.i32(
+__UINT_LEAST32_TYPE__ test_leu32_from_bool(const bool *p) {
+  return stdc_load8_leu32((const unsigned char *)p);
+}

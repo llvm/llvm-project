@@ -2269,7 +2269,9 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  PrimType ElemT = *S.getContext().classify(ElemTy);
+  OptPrimType ElemT = S.getContext().classify(ElemTy);
+  if (!ElemT || !isIntegerOrBoolType(*ElemT))
+    return false;
   unsigned BitWidth = ByteWidth * 8;
   APInt Result = APInt::getZero(BitWidth);
 
@@ -2281,20 +2283,18 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
       Pointer BytePtr = Ptr.atIndex(BaseIdx + SrcIdx);
       if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
         return false;
-      uint64_t B;
-      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-        B = static_cast<uint64_t>(BytePtr.load<T>().toUnsigned());
+      INT_TYPE_SWITCH(*ElemT, {
+        Result |= APInt(BitWidth, BytePtr.load<T>().toAPSInt().getZExtValue())
+                  << (8 * I);
       });
-      Result |= APInt(BitWidth, B) << (8 * I);
     }
   } else {
     assert(ByteWidth == 1 && "non-array pointer, expected a 1-byte load");
     if (!CheckLoad(S, OpPC, Ptr, AK_Read))
       return false;
-    uint64_t B;
-    INT_TYPE_SWITCH_NO_BOOL(
-        ElemT, { B = static_cast<uint64_t>(Ptr.load<T>().toUnsigned()); });
-    Result = APInt(BitWidth, B);
+    INT_TYPE_SWITCH(*ElemT, {
+      Result = APInt(BitWidth, Ptr.load<T>().toAPSInt().getZExtValue());
+    });
   }
 
   bool IsSigned = Call->getType()->isSignedIntegerType();
