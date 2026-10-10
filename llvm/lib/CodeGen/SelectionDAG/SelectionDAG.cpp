@@ -3354,7 +3354,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
-    return KnownBits::makeConstant(*std::move(OptAPInt));
+    APInt V = *std::move(OptAPInt);
+
+    // Swap the low-order and high-order double of a ppc_fp128 when casting to
+    // i128, see #44482.
+    //
+    // A ppc_fp128 is two doubles, with the high-order double stored at the
+    // lower address. Reading that as an integer therefore puts the high-order
+    // double in the high 64 bits on big-endian targets and in the low 64 bits
+    // on little-endian targets.
+    //
+    // But APFloat::bitcastToAPInt is endianness-agnostic and always places the
+    // high-order double in the low 64 bits. Hence the two doubles must be
+    // flipped on big-endian targets.
+    if (getDataLayout().isBigEndian() && Op.getValueType() == MVT::ppcf128)
+      V = V.rotl(64);
+
+    return KnownBits::makeConstant(V);
   }
 
   if (Depth >= MaxRecursionDepth)
@@ -4164,7 +4180,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::FABS:
     // fabs clears the sign bit
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.makeNonNegative();
+    Known.Zero.setSignBit();
+    Known.One.clearSignBit();
     break;
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
@@ -4539,6 +4556,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     int FrameIdx = cast<FrameIndexSDNode>(Op)->getIndex();
     TLI->computeKnownBitsForStackObjectPointer(
         Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
+    break;
+  }
+  case ISD::VP_LOAD_FF: {
+    if (Op.getResNo() != 1)
+      break;
+    // The second result of vp.load.ff is an unsigned value that is less than or
+    // equal to the EVL operand.
+    KnownBits VLKB =
+        computeKnownBits(Op.getOperand(3), DemandedElts, Depth + 1);
+    // The new VL is also bounded by the largest vector length.
+    EVT ResVT = Op->getValueType(0);
+    auto ResKB = KnownBits::makeConstant(
+        APInt(BitWidth, ResVT.getVectorMinNumElements()));
+    if (ResVT.isScalableVector()) {
+      const Function &F = getMachineFunction().getFunction();
+      ResKB = KnownBits::mul(getVScaleRange(&F, BitWidth).toKnownBits(), ResKB);
+    }
+    Known.Zero.setHighBits(KnownBits::umin(VLKB, ResKB).countMinLeadingZeros());
     break;
   }
 
@@ -10014,6 +10049,18 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
   }
 }
 
+/// The length of a memory intrinsic (e.g. number of bytes to copy) is unsigned
+/// and may have any integer type. We zero-extend or truncate it to the pointer
+/// type of the narrower address space being accessed.
+static SDValue getMemIntrinsicSize(SelectionDAG &DAG, const SDLoc &dl,
+                                   SDValue Size, unsigned DstAS,
+                                   unsigned SrcAS) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MVT DstVT = TLI.getPointerTy(DAG.getDataLayout(), DstAS);
+  MVT SrcVT = TLI.getPointerTy(DAG.getDataLayout(), SrcAS);
+  return DAG.getZExtOrTrunc(Size, dl, DstVT.bitsLT(SrcVT) ? DstVT : SrcVT);
+}
+
 static bool isInTailCallPositionWrapper(const CallInst *CI,
                                         const SelectionDAG *SelDAG,
                                         bool AllowReturnsFirstArg) {
@@ -10135,6 +10182,8 @@ SDValue SelectionDAG::getMemcpy(
     const CallInst *CI, std::optional<bool> OverrideTailCall,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
     const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
+  Size = getMemIntrinsicSize(*this, dl, Size, DstPtrInfo.getAddrSpace(),
+                             SrcPtrInfo.getAddrSpace());
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   const MDNode *DstMemCacheHint =
@@ -10268,6 +10317,8 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  MachinePointerInfo SrcPtrInfo,
                                  const AAMDNodes &AAInfo,
                                  BatchAAResults *BatchAA) {
+  Size = getMemIntrinsicSize(*this, dl, Size, DstPtrInfo.getAddrSpace(),
+                             SrcPtrInfo.getAddrSpace());
   // Check to see if we should lower the memmove to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -10381,6 +10432,8 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                 const CallInst *CI,
                                 MachinePointerInfo DstPtrInfo,
                                 const AAMDNodes &AAInfo) {
+  Size = getMemIntrinsicSize(*this, dl, Size, DstPtrInfo.getAddrSpace(),
+                             DstPtrInfo.getAddrSpace());
   // Check to see if we should lower the memset to stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -10443,10 +10496,14 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
+    MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
     TargetLowering::ArgListTy Args;
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
-    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(getAnyExtOrTrunc(Src, dl, IntVT),
+                      Type::getIntNTy(Ctx, LibInfo->getIntSize()),
+                      LibInfo->getExtAttrForI32Param());
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
+
     CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
@@ -15195,24 +15252,28 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
 /// \param LibFunc Reference to library function (value of RTLIB::Libcall).
 /// \param Ptr Pointer used to save/load state.
 /// \param InChain Ingoing token chain.
+/// \param Node Node being legalized
 /// \returns Outgoing chain token.
 SDValue SelectionDAG::makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                            SDValue InChain,
-                                            const SDLoc &DLoc) {
+                                            SDValue InChain, SDNode *Node) {
   assert(InChain.getValueType() == MVT::Other && "Expected token chain");
-  TargetLowering::ArgListTy Args;
-  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   RTLIB::LibcallImpl LibcallImpl =
       Libcalls->getLibcallImpl(static_cast<RTLIB::Libcall>(LibFunc));
-  if (LibcallImpl == RTLIB::Unsupported)
-    reportFatalUsageError("emitting call to unsupported libcall");
+  if (LibcallImpl == RTLIB::Unsupported) {
+    getContext()->emitError(Twine("no libcall available for ") +
+                            Node->getOperationName(this));
+    return InChain;
+  }
 
+  TargetLowering::ArgListTy Args;
+  Args.emplace_back(Ptr, Ptr.getValueType().getTypeForEVT(*getContext()));
   SDValue Callee =
       getExternalSymbol(LibcallImpl, TLI->getPointerTy(getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(DLoc).setChain(InChain).setLibCallee(
-      Libcalls->getLibcallImplCallingConv(LibcallImpl),
-      Type::getVoidTy(*getContext()), Callee, std::move(Args));
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(Libcalls->getLibcallImplCallingConv(LibcallImpl),
+                    Type::getVoidTy(*getContext()), Callee, std::move(Args));
   return TLI->LowerCallTo(CLI).second;
 }
 

@@ -15,7 +15,6 @@
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -57,6 +56,10 @@ namespace llvm {
 namespace bolt {
 
 constexpr unsigned ColdFragAlign = 16;
+
+/// The longest single-instruction AArch64 branch.
+constexpr unsigned LongestJumpBits = 28;
+constexpr uint64_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
 
 static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
@@ -1069,11 +1072,8 @@ private:
     /// Estimated output offset of the cluster.
     uint64_t StartOffset{0};
 
-    /// Estimated bytes for thunks that may be inserted around this cluster.
-    uint64_t EstimatedThunkBytes{0};
-
-    /// Actual bytes for thunks emitted by this cluster.
-    uint64_t ActualThunkBytes{0};
+    /// Bytes for thunks emitted by this cluster.
+    uint64_t ThunkBytes{0};
 
     /// Number of function fragments in the cluster.
     size_t NumFragments{0};
@@ -1128,7 +1128,6 @@ private:
   void buildLayout();
   void printStats() const;
   void collectOutOfRangeReferences();
-  void estimateThunkBytes();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
                                               unsigned MaxThunks);
   void relaxCalls();
@@ -1335,17 +1334,11 @@ void ClusteredRelaxation::printStats() const {
   for (size_t I = 0; I < Clusters.size(); ++I) {
     const FragmentCluster &FC = Clusters[I];
 
-    assert(FC.ActualThunkBytes <= FC.EstimatedThunkBytes &&
-           "thunk estimate exceeded; range checks used a stale safety margin");
-
     BC.outs() << "BOLT-INFO: cluster: " << I << '\n'
               << "BOLT-INFO:   " << FC.NumFragments << " fragment(s)\n"
               << "BOLT-INFO:   " << FC.Size
               << " estimated bytes without thunks\n"
-              << "BOLT-INFO:   " << FC.EstimatedThunkBytes
-              << " estimated thunk bytes\n"
-              << "BOLT-INFO:   " << FC.ActualThunkBytes
-              << " actual thunk bytes\n";
+              << "BOLT-INFO:   " << FC.ThunkBytes << " thunk bytes\n";
   }
 
   if (NumShortThunkCalls)
@@ -1450,47 +1443,6 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
   }
 }
 
-void ClusteredRelaxation::estimateThunkBytes() {
-  // Conservatively estimate both branch chains and long thunks without range
-  // checks or cross-cluster reuse. Deduplicate targets within each cluster.
-  SmallVector<DenseSet<const MCSymbol *>, 4> BranchThunkTargets;
-  SmallVector<DenseSet<const MCSymbol *>, 4> LongThunkTargets;
-  BranchThunkTargets.resize(Clusters.size());
-  LongThunkTargets.resize(Clusters.size());
-
-  auto estimateBranchThunks = [&](const OutOfRangeRef &Ref) {
-    const bool IsForward = Ref.SourceCluster < Ref.TargetCluster;
-    auto getClusterAtHop = [&](unsigned Hop) {
-      return IsForward ? Ref.SourceCluster + Hop : Ref.SourceCluster - Hop;
-    };
-    const unsigned NumHops =
-        getClusterDistance(Ref.SourceCluster, Ref.TargetCluster);
-    for (unsigned Hop = 0; Hop < NumHops; ++Hop) {
-      const unsigned Cluster = getClusterAtHop(Hop);
-      if (BranchThunkTargets[Cluster].insert(Ref.TargetSymbol).second)
-        Clusters[Cluster].EstimatedThunkBytes += ShortThunkSize;
-    }
-  };
-
-  auto estimateLongThunk = [&](const OutOfRangeRef &Ref) {
-    if (LongThunkTargets[Ref.SourceCluster].insert(Ref.TargetSymbol).second)
-      Clusters[Ref.SourceCluster].EstimatedThunkBytes += LongThunkSize;
-  };
-
-  for (const OutOfRangeRef &Call : OutOfLayoutCalls)
-    estimateLongThunk(Call);
-
-  for (const auto &Calls : CallsByDistance) {
-    for (const OutOfRangeRef &Call : Calls) {
-      estimateBranchThunks(Call);
-      estimateLongThunk(Call);
-    }
-  }
-
-  for (const OutOfRangeRef &Branch : Branches)
-    estimateBranchThunks(Branch);
-}
-
 const MCSymbol *
 ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
                                                  unsigned MaxThunks) {
@@ -1546,7 +1498,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
         IsForward ? Cluster.ForwardThunkList : Cluster.BackwardThunkList;
     ThunkList.push_back(Thunk);
     registerBranchThunk(Cluster, Ref.TargetSymbol, Thunk);
-    Cluster.ActualThunkBytes += ShortThunkSize;
+    Cluster.ThunkBytes += ShortThunkSize;
     return Thunk;
   };
 
@@ -1560,14 +1512,12 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
   };
 
   auto isWithinClusterRange = [&](Position Source, Position Target) {
-    uint64_t EstimatedThunkBytes = 0;
-    for (unsigned I = Source.Cluster; I <= Target.Cluster; ++I)
-      EstimatedThunkBytes += Clusters[getClusterAtHop(I)].EstimatedThunkBytes;
-
     const uint64_t Distance = Source.Offset <= Target.Offset
                                   ? Target.Offset - Source.Offset
                                   : Source.Offset - Target.Offset;
-    return Distance + EstimatedThunkBytes < opts::MaxClusterSize;
+    // A hop across a full adjacent cluster can be exactly this far. The
+    // remaining branch range covers emitted thunks and output alignment.
+    return Distance <= opts::MaxClusterSize;
   };
 
   SmallVector<unsigned> ThunkClusters;
@@ -1667,7 +1617,7 @@ void ClusteredRelaxation::relaxCalls() {
         IsForward ? FC.ForwardThunkList : FC.BackwardThunkList;
     ThunkList.push_back(Thunk);
     registerLongThunk(FC, TargetSymbol, Thunk);
-    FC.ActualThunkBytes += LongThunkSize;
+    FC.ThunkBytes += LongThunkSize;
     return Thunk;
   };
 
@@ -1754,11 +1704,23 @@ bool ClusteredRelaxation::run() {
     return false;
 
   collectOutOfRangeReferences();
-  estimateThunkBytes();
   relaxCalls();
   relaxUnconditionalBranches();
   printStats();
   insertThunks();
+
+  // Warn if a cluster's thunks and a text-alignment gap exhaust the space
+  // reserved between a full cluster and the AArch64 B/BL branch reach. A hop
+  // can cross thunks from multiple clusters, so this is only a diagnostic.
+  const uint64_t Margin = LongestJumpSpan - opts::MaxClusterSize;
+  for (size_t I = 0; I < Clusters.size(); ++I) {
+    const uint64_t ThunkBytes = Clusters[I].ThunkBytes;
+    if (BC.AlignText > Margin || ThunkBytes > Margin - BC.AlignText)
+      BC.errs() << "BOLT-WARNING: cluster " << I << ": " << ThunkBytes
+                << " thunk bytes plus " << BC.AlignText
+                << " bytes for text alignment exceed the " << Margin
+                << "-byte branch safety margin\n";
+  }
 
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
              for (const auto *BF : OutputFunctions) { dbgs() << *BF << '\n'; });
@@ -1780,6 +1742,11 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
   assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
+
+  // Reserve at least one huge page of headroom for text-section alignment.
+  if (opts::ExperimentalRelaxation &&
+      opts::MaxClusterSize > LongestJumpSpan - BinaryContext::HugePageSize)
+    return createFatalBOLTError("--max-cluster-size must be at most 126 MiB");
 
   DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
 

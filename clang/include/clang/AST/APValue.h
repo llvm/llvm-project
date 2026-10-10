@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_APVALUE_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Reflection.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
@@ -21,6 +22,8 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 
@@ -62,33 +65,65 @@ public:
   void print(llvm::raw_ostream &Out, const PrintingPolicy &Policy) const;
 };
 
+/// Kind of source for a dynamic allocation.
+enum class DynAllocKind {
+  New,                // new expression
+  ArrayNew,           // new[] expression
+  StdAllocator,       // std::allocator::allocate call
+  None,               // not a dynamic allocation
+  BuiltinOperatorNew, // __operator_builtin_new call
+  ALLOC_KIND_MAX = BuiltinOperatorNew
+};
+
 /// Symbolic representation of a dynamic allocation.
 class DynamicAllocLValue {
-  unsigned Index;
+public:
+  static constexpr int NumLowBitsAvailable = 2;
+  static constexpr int NumAllocKindBits = 3;
+  static_assert((1 << NumAllocKindBits) - 1 >=
+                static_cast<int>(DynAllocKind::ALLOC_KIND_MAX));
+
+private:
+  // lower NumAlignmentBits: alignment exponent
+  // remaining bits: allocation index incremented by one
+  // value of zero indicates distinct empty state
+  LLVM_PREFERRED_TYPE(DynAllocKind)
+  uintptr_t AllocKind : NumAllocKindBits;
+  uintptr_t Index : sizeof(uintptr_t) * CHAR_BIT - NumAllocKindBits;
 
 public:
-  DynamicAllocLValue() : Index(0) {}
-  explicit DynamicAllocLValue(unsigned Index) : Index(Index + 1) {}
-  unsigned getIndex() { return Index - 1; }
+  DynamicAllocLValue() : AllocKind(0), Index(0) {}
+  explicit DynamicAllocLValue(unsigned Idx, DynAllocKind AllocKind)
+      : AllocKind(llvm::to_underlying(AllocKind)), Index(Idx + 1) {
+    assert(Idx <= getMaxIndex() && "Index is out of range");
+  }
+  unsigned getIndex() const { return Index - 1; }
+  DynAllocKind getAllocKind() const {
+    return static_cast<DynAllocKind>(AllocKind);
+  }
 
   explicit operator bool() const { return Index != 0; }
 
   const void *getOpaqueValue() const {
-    return reinterpret_cast<const void *>(static_cast<uintptr_t>(Index)
-                                          << NumLowBitsAvailable);
+    return reinterpret_cast<const void *>(
+        (Index << NumAllocKindBits | AllocKind) << NumLowBitsAvailable);
   }
   static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
-    V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    uintptr_t Combined =
+        reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
+    V.AllocKind = Combined & (1 << NumAllocKindBits) - 1;
+    V.Index = Combined >> NumAllocKindBits;
     return V;
   }
 
-  static unsigned getMaxIndex() {
-    return (std::numeric_limits<unsigned>::max() >> NumLowBitsAvailable) - 1;
+  static uintptr_t getMaxIndex() {
+    return (std::numeric_limits<uintptr_t>::max() >>
+            (NumLowBitsAvailable + NumAllocKindBits)) -
+           1;
   }
-
-  static constexpr int NumLowBitsAvailable = 3;
 };
+static_assert(sizeof(DynamicAllocLValue) == sizeof(uintptr_t));
 }
 
 namespace llvm {
@@ -142,7 +177,8 @@ public:
     Struct,
     Union,
     MemberPointer,
-    AddrLabelDiff
+    AddrLabelDiff,
+    Reflection
   };
 
   class alignas(uint64_t) LValueBase {
@@ -316,12 +352,23 @@ private:
     const AddrLabelExpr* LHSExpr;
     const AddrLabelExpr* RHSExpr;
   };
+  struct ReflectionData {
+    // OperandKind will eventually have support for
+    // Null, TypeSourceInfo, TemplateReference, NamespaceReference, DeclRefExpr.
+    // Operand stores the opaque pointer of the reflection operand.
+    // Depending on the value of OperandKind, we can perform the
+    // corresponding cast to the associated type.
+    // If OperandKind is Null, then the ReflectionData represents
+    // a null reflection, and therefore Operand should be a nullptr.
+    ReflectionKind OperandKind;
+    const void *Operand;
+  };
   struct MemberPointerData;
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
-  typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
-                                      ComplexAPFloat, Vec, Mat, Arr, StructData,
-                                      UnionData, AddrLabelDiffData>
+  typedef llvm::AlignedCharArrayUnion<
+      void *, APSInt, APFloat, ComplexAPSInt, ComplexAPFloat, Vec, Mat, Arr,
+      StructData, UnionData, AddrLabelDiffData, ReflectionData>
       DataType;
   static const size_t DataSize = sizeof(DataType);
 
@@ -415,6 +462,14 @@ public:
       : Kind(None), AllowConstexprUnknown(false) {
     MakeArray(InitElts, Size);
   }
+
+  /// Creates a new Reflection APValue.
+  /// \param OperandKind The kind of reflection.
+  /// \param Operand The entity being reflected.
+  APValue(ReflectionKind OperandKind, const void *Operand) : Kind(None) {
+    MakeReflection(OperandKind, Operand);
+  }
+
   /// Creates a new struct APValue.
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
@@ -481,6 +536,12 @@ public:
 
   ValueKind getKind() const { return Kind; }
 
+  /// Visit this value and every recursively nested value. Iteration order
+  /// is unspecified.
+  ///
+  /// Visitation stops if \p Visitor returns false.
+  void visit(llvm::function_ref<bool(const APValue &)> Visitor) const;
+
   bool isAbsent() const { return Kind == None; }
   bool isIndeterminate() const { return Kind == Indeterminate; }
   bool hasValue() const { return Kind != None && Kind != Indeterminate; }
@@ -498,6 +559,7 @@ public:
   bool isUnion() const { return Kind == Union; }
   bool isMemberPointer() const { return Kind == MemberPointer; }
   bool isAddrLabelDiff() const { return Kind == AddrLabelDiff; }
+  bool isReflection() const { return Kind == Reflection; }
 
   void dump() const;
   void dump(raw_ostream &OS, const ASTContext &Context) const;
@@ -717,6 +779,16 @@ public:
     return ((const AddrLabelDiffData *)(const char *)&Data)->RHSExpr;
   }
 
+  ReflectionKind getReflectionOperandKind() const {
+    assert(isReflection() && "Invalid accessor");
+    return ((const ReflectionData *)(const char *)&Data)->OperandKind;
+  }
+
+  const void *getReflectionOpaqueOperand() const {
+    assert(isReflection() && "Invalid accessor");
+    return ((const ReflectionData *)(const char *)&Data)->Operand;
+  }
+
   void setInt(APSInt I) {
     assert(isInt() && "Invalid accessor");
     *(APSInt *)(char *)&Data = std::move(I);
@@ -765,6 +837,11 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
+  void MakeReflection(ReflectionKind OperandKind, const void *Operand) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)Data.buffer) ReflectionData{OperandKind, Operand};
+    Kind = Reflection;
+  }
   void MakeInt(const APSInt &I) {
     assert(isAbsent() && "Bad state change");
     new ((void *)&Data) APSInt(std::move(I));

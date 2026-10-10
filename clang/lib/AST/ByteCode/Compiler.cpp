@@ -51,6 +51,15 @@ static bool isSideEffectFree(const Expr *E) {
   return false;
 }
 
+/// Whether the CheckArraySize op rejects an array with \p NumElems elements.
+static bool exceedsArraySizeLimit(const LangOptions &LangOpts,
+                                  uint64_t NumElems) {
+  if (NumElems > std::numeric_limits<unsigned>::max())
+    return true;
+  uint64_t Limit = LangOpts.ConstexprStepLimit;
+  return Limit != 0 && NumElems > Limit;
+}
+
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
@@ -139,7 +148,9 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-      this->Ctx->emitInitScope(*Idx, {});
+
+      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
+        this->Ctx->emitInitScope(*Idx, {});
     }
 
     Local.EnabledByDefault = this->LocalsAlwaysEnabled;
@@ -155,7 +166,8 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-      this->Ctx->emitInitScope(*Idx, {});
+      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
+        this->Ctx->emitInitScope(*Idx, {});
     }
   }
 
@@ -458,6 +470,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
+    // This *could* work I guess, but the current interpreter rejects (via
+    // checkLiteralType).
+    if (!Ctx.getLangOpts().HLSL && E->getType()->isConstantMatrixType())
+      return false;
+
     if (ToLValue && E->getType()->isPointerType()) {
       assert(!DiscardResult);
       if (!this->visit(SubExpr))
@@ -2704,7 +2721,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
       }
 
       UnsignedOrNone LocalIndex =
-          allocateLocal(std::move(Source), Arg->getType(), ScopeKind::Call);
+          allocateLocal(Source, Arg->getType(), ScopeKind::Call);
       if (!LocalIndex)
         return false;
 
@@ -3033,6 +3050,8 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
   OptPrimType SubExprT = classify(SubExpr);
   size_t Size = E->getArraySize().getZExtValue();
+  if (exceedsArraySizeLimit(Ctx.getLangOpts(), Size))
+    return this->emitCheckArraySize(Size, E);
 
   if (SubExprT) {
     // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
@@ -4036,8 +4055,10 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!CAT)
         return false;
       QualType ElemTy = CAT->getElementType();
-      unsigned NumElems = CAT->getZExtSize();
-      for (size_t I = 0; I != NumElems; ++I) {
+      uint64_t NumElems = CAT->getZExtSize();
+      if (exceedsArraySizeLimit(Ctx.getLangOpts(), NumElems))
+        return this->emitCheckArraySize(NumElems, E);
+      for (uint64_t I = 0; I != NumElems; ++I) {
         if (!this->emitConstUint64(I, E))
           return false;
         if (!this->emitArrayElemPtrUint64(E))
@@ -4224,8 +4245,10 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
     const CXXInheritedCtorInitExpr *E) {
   const CXXConstructorDecl *Ctor = E->getConstructor();
-  assert(!Ctor->isTrivial() &&
-         "Trivial CXXInheritedCtorInitExpr, implement. (possible?)");
+
+  if (Ctor->isTrivial())
+    return true;
+
   const Function *F = this->getFunction(Ctor);
   if (!F)
     return false;
@@ -4612,6 +4635,26 @@ bool Compiler<Emitter>::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
+  }
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -4908,8 +4951,16 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   const ConstantArrayType *ArrayType =
       Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
   const Record *R = getRecord(E->getType());
-  assert(Initializing);
   assert(SubExpr->isGLValue());
+  assert(!canClassify(E->getType()));
+
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   if (!this->visit(SubExpr))
     return false;
@@ -4924,7 +4975,11 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
-    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+    if (!this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
   assert(SecondFieldT == PT_Ptr);
 
@@ -4936,7 +4991,12 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
   if (!this->emitArrayElemPtrPop(PT_Uint64, E))
     return false;
-  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
+
+  if (!this->emitInitFieldPtr(R->getField(1u)->Offset, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
@@ -5128,6 +5188,8 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(QT);
     return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
+  case PT_Reflect:
+    return this->emitReflectValue(ReflectionKind::Null, nullptr, E);
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -5357,6 +5419,7 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, SourceInfo Info) {
   case PT_IntAP:
   case PT_IntAPS:
   case PT_FixedPoint:
+  case PT_Reflect:
     llvm_unreachable("Invalid integral type");
     break;
   }
@@ -5930,57 +5993,97 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
-
-    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
-      return this->visit(BaseExpr);
-    if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    QualType EntryType;
+    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
+      if (!this->visit(BaseExpr))
+        return false;
+      EntryType = BaseExpr->getType();
+    } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
+      EntryType = VD->getType();
+    } else if (Base.is<TypeInfoLValue>()) {
+      // The type_info object for the type the lvalue describes.
+      const Type *OperandType = Base.get<TypeInfoLValue>()
+                                    .getType()
+                                    ->getCanonicalTypeUnqualified()
+                                    .getTypePtr();
+      EntryType = Base.getTypeInfoType();
+      if (!this->emitGetTypeid(OperandType, EntryType.getTypePtr(), Info))
+        return false;
+    } else if (!Base) {
+      // An integer cast to a pointer.
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      QualType PtrType = E->isGLValue()
+                             ? Ctx.getASTContext().getPointerType(E->getType())
+                             : E->getType();
+      uint64_t Offset = Val.getLValueOffset().getQuantity();
+      if (!this->emitConstUint64(Offset, Info))
+        return false;
+      if (!this->emitGetIntPtrUint64(PtrType.getTypePtr(), Info))
+        return false;
+      EntryType = PtrType->getPointeeType();
+    } else {
+      return false;
+    }
 
-      QualType EntryType = VD->getType();
-      if (Val.hasLValuePath()) {
-        ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
-        for (auto &Entry : Path) {
-          if (EntryType->isArrayType()) {
-            uint64_t Index = Entry.getAsArrayIndex();
-            QualType ElemType =
-                EntryType->getAsArrayTypeUnsafe()->getElementType();
-            if (!this->emitConst(Index, PT_Uint64, Info))
+    if (Val.hasLValuePath()) {
+      for (auto &Entry : Val.getLValuePath()) {
+        if (EntryType->isArrayType()) {
+          uint64_t Index = Entry.getAsArrayIndex();
+          QualType ElemType =
+              EntryType->getAsArrayTypeUnsafe()->getElementType();
+          if (!this->emitConst(Index, PT_Uint64, Info))
+            return false;
+          if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
+            return false;
+          EntryType = ElemType;
+        } else {
+          assert(EntryType->isRecordType());
+          const Record *EntryRecord = getRecord(EntryType);
+          if (!EntryRecord)
+            return false;
+
+          const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
+          if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
+            unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
+            if (!this->emitGetPtrFieldPop(EntryOffset, Info))
               return false;
-            if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
-              return false;
-            EntryType = ElemType;
+            EntryType = FD->getType();
           } else {
-            assert(EntryType->isRecordType());
-            const Record *EntryRecord = getRecord(EntryType);
-            if (!EntryRecord)
-              return false;
-
-            const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
-            if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
-              unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
-              if (!this->emitGetPtrFieldPop(EntryOffset, Info))
+            const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
+            if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
+              if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
                 return false;
-              EntryType = FD->getType();
             } else {
-              const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
-              if (const Record::Base *B = EntryRecord->getBaseOrNull(Base)) {
-                if (!this->emitGetPtrBasePop(B->Offset, /*NullOK=*/false, Info))
-                  return false;
-              } else {
-                // Must be a virtual base.
-                assert(EntryRecord->findVirtualBase(Base));
-                if (!this->emitGetPtrVirtBasePop(Base, Info))
-                  return false;
-              }
-              EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
+              // Must be a virtual base.
+              assert(EntryRecord->findVirtualBase(Base));
+              if (!this->emitGetPtrVirtBasePop(Base, Info))
+                return false;
             }
+            EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
           }
         }
       }
-
-      return true;
     }
+
+    if (isPtrType(ValType))
+      return true;
+
+    // A pointer cast to an integer is stored as an lvalue; cast it the same
+    // way the source expression does.
+    if (ValType == PT_IntAP || ValType == PT_IntAPS) {
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      uint32_t BitWidth = Ctx.getBitWidth(E->getType());
+      return ValType == PT_IntAP
+                 ? this->emitCastPointerIntegralAP(BitWidth, Info)
+                 : this->emitCastPointerIntegralAPS(BitWidth, Info);
+    }
+    return this->emitCastPointerIntegral(ValType, Info);
   }
 
   return false;
@@ -6145,6 +6248,21 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!Ctx.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return this->emitInvalid(E);
+
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
+
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {

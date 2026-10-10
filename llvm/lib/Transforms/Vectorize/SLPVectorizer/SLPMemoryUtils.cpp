@@ -23,8 +23,10 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
@@ -39,6 +41,29 @@
 using namespace llvm;
 
 namespace llvm::slpvectorizer {
+
+Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
+                                const DataLayout &DL) {
+  bool ToPtr = cast<VectorType>(DstTy)->getElementType()->isPointerTy();
+  if (ToPtr == cast<VectorType>(V->getType())->getElementType()->isPointerTy())
+    return Builder.CreateBitOrPointerCast(V, DstTy);
+  if (ToPtr)
+    return Builder.CreateIntToPtr(
+        Builder.CreateBitCast(V, DL.getIntPtrType(DstTy)), DstTy);
+  return Builder.CreateBitCast(
+      Builder.CreatePtrToInt(V, DL.getIntPtrType(V->getType())), DstTy);
+}
+
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
+  if (!CI)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = CI->getValue() * ElementSize;
+  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,

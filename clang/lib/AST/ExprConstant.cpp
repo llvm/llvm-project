@@ -50,6 +50,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -61,8 +62,11 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -728,20 +732,16 @@ namespace {
     /// std::allocator<T>::allocate).
     const Expr *AllocExpr = nullptr;
 
-    enum Kind {
-      New,
-      ArrayNew,
-      StdAllocator
-    };
-
     /// Get the kind of the allocation. This must match between allocation
     /// and deallocation.
-    Kind getKind() const {
+    static DynAllocKind kindOfExpr(const Expr *AllocExpr) {
       if (auto *NE = dyn_cast<CXXNewExpr>(AllocExpr))
-        return NE->isArray() ? ArrayNew : New;
+        return NE->isArray() ? DynAllocKind::ArrayNew : DynAllocKind::New;
       assert(isa<CallExpr>(AllocExpr));
-      return StdAllocator;
+      return DynAllocKind::StdAllocator;
     }
+
+    DynAllocKind getKind() const { return kindOfExpr(AllocExpr); }
   };
 
   struct DynAllocOrder {
@@ -820,7 +820,7 @@ namespace {
     std::map<DynamicAllocLValue, DynAlloc, DynAllocOrder> HeapAllocs;
 
     /// The number of heap allocations performed so far in this evaluation.
-    unsigned NumHeapAllocs = 0;
+    uintptr_t NumHeapAllocs = 0;
 
     struct EvaluatingConstructorRAII {
       EvalInfo &EI;
@@ -1820,13 +1820,109 @@ APValue &CallStackFrame::createLocal(APValue::LValueBase Base, const void *Key,
   return Result;
 }
 
+CharUnits clang::GetAlignOfDynamicAlloc(const ASTContext &Ctx,
+                                        QualType AllocType,
+                                        DynAllocKind AllocKind) {
+  assert((AllocKind != DynAllocKind::None) &&
+         "should only be called on dynamically allocated blocks");
+  assert((AllocKind != DynAllocKind::BuiltinOperatorNew) &&
+         "__builtin_operator_new should have been allowed only from "
+         "std::allocator::allocate");
+
+  const TargetInfo &TI = Ctx.getTargetInfo();
+  uint64_t DefaultNewAlign = TI.getNewAlign();
+
+  uint64_t TypeAlignment = Ctx.getTypeAlign(AllocType);
+  assert(TypeAlignment > 0 && "Unknown alignment for allocated type!");
+
+  uint64_t AllocSize = Ctx.getTypeSize(AllocType);
+
+  if (AllocSize == 0) {
+    switch (AllocKind) {
+    // Allocating a zero-sized array is allowed, however it doesn't have
+    // any alignment guarantees.
+    case DynAllocKind::ArrayNew:
+    case DynAllocKind::StdAllocator:
+      return CharUnits::One();
+
+    // Flexible array members are allowed as only member as an extension.
+    // In this case the size of the type will be zero, but the allocation
+    // should still be suitable for the array element type.
+    case DynAllocKind::New:
+      return Ctx.toCharUnitsFromBits(TypeAlignment);
+
+    default:
+      llvm_unreachable("Unhandled DynAllocKind");
+    }
+  }
+
+  assert(TypeAlignment <= AllocSize && "Invalid alignment/size for type!");
+  assert(AllocSize % TypeAlignment == 0 && "Invalid alignment/size for type!");
+
+  // For new-extended alignment the ::operator new overload with
+  // std::align_val_t parameter is used. According to C++
+  // [basic.stc.dynamic.allocation]p3.1 this overload returns memory
+  // according to the requested alignment. No stricter guarantees are
+  // made.
+  if (TypeAlignment > DefaultNewAlign)
+    return Ctx.toCharUnitsFromBits(TypeAlignment);
+
+  switch (AllocKind) {
+  // According to C++ [allocator.members]p5 it is unspecified how the
+  // memory obtained from ::operator new is used by
+  // std::allocator::allocate, therefore be conservative here.
+  case DynAllocKind::StdAllocator:
+    return Ctx.toCharUnitsFromBits(TypeAlignment);
+
+  // The non-array form of new does not permit allocation overhead and
+  // therefore provides alignment as guaranteed by ::operator new.
+  // According to C++ [basic.stc.dynamic.allocation]p3.3 the allocation
+  // is suitably aligned for all objects without new-extended alignment
+  // with the exact size of the allocation. An object of the exact size
+  // AllocSize can have alignment of at most the lowest bit set in
+  // AllocSize.
+  case DynAllocKind::New:
+    return Ctx.toCharUnitsFromBits(
+        std::min(DefaultNewAlign, uint64_t(1) << llvm::countr_zero(AllocSize)));
+
+  case DynAllocKind::ArrayNew: {
+    const Type *ET = AllocType.getTypePtr()
+                         ->getArrayElementTypeNoTypeQual()
+                         ->getCanonicalTypeUnqualified()
+                         .getTypePtr();
+    // According to C++ [expr.new]p17, unless the element type of an
+    // array new expression is char, unsigned char or std::byte, the
+    // allocation may be offset into the allocation returned by
+    // ::operator new[]. Therefore no stricter alignment than the type's
+    // alignment is guaranteed. For char, unsigned char and std::byte
+    if (!ET->isSpecificBuiltinType(BuiltinType::UChar) &&
+        !ET->isSpecificBuiltinType(BuiltinType::Char_U) &&
+        !ET->isSpecificBuiltinType(BuiltinType::Char_S) && !ET->isStdByteType())
+      return Ctx.toCharUnitsFromBits(TypeAlignment);
+
+    // Otherwise, the allocation is offset from the result of ::operator
+    // new[] by a multiple of the strictest fundamental alignment.
+    // According C++ [basic.stc.dynamic.allocation]p3.2 the allocation
+    // returned by ::operator new[] is suitably aligned for all objects
+    // without new-extended alignment and size up to the allocated size.
+    uint64_t MaxFundamentalAlign =
+        std::max(TI.getLongLongAlign(), TI.getLongDoubleAlign());
+    return Ctx.toCharUnitsFromBits(std::min(
+        {DefaultNewAlign, MaxFundamentalAlign, llvm::bit_floor(AllocSize)}));
+  }
+
+  default:
+    llvm_unreachable("Unhandled DynAllocKind");
+  }
+}
+
 APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
   if (NumHeapAllocs > DynamicAllocLValue::getMaxIndex()) {
     FFDiag(E, diag::note_constexpr_heap_alloc_limit_exceeded);
     return nullptr;
   }
 
-  DynamicAllocLValue DA(NumHeapAllocs++);
+  DynamicAllocLValue DA(NumHeapAllocs++, DynAlloc::kindOfExpr(E));
   LV.set(APValue::LValueBase::getDynamicAlloc(DA, T));
   auto Result = HeapAllocs.emplace(std::piecewise_construct,
                                    std::forward_as_tuple(DA), std::tuple<>());
@@ -2616,6 +2712,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
   case APValue::Struct:
   case APValue::Union:
   case APValue::AddrLabelDiff:
+  case APValue::Reflection:
     return false;
   }
 
@@ -7794,7 +7891,7 @@ static const FunctionDecl *getVirtualOperatorDelete(QualType T) {
 /// a diagnostic and returns std::nullopt.
 static std::optional<DynAlloc *> CheckDeleteKind(EvalInfo &Info, const Expr *E,
                                                  const LValue &Pointer,
-                                                 DynAlloc::Kind DeallocKind) {
+                                                 DynAllocKind DeallocKind) {
   auto PointerAsString = [&] {
     return Pointer.toString(Info.Ctx, Info.Ctx.VoidPtrTy);
   };
@@ -7823,7 +7920,7 @@ static std::optional<DynAlloc *> CheckDeleteKind(EvalInfo &Info, const Expr *E,
   }
 
   bool Subobject = false;
-  if (DeallocKind == DynAlloc::New) {
+  if (DeallocKind == DynAllocKind::New) {
     Subobject = Pointer.Designator.MostDerivedPathLength != 0 ||
                 Pointer.Designator.isOnePastTheEnd();
   } else {
@@ -7867,7 +7964,7 @@ static bool HandleOperatorDeleteCall(EvalInfo &Info, const CallExpr *E) {
     return true;
   }
 
-  if (!CheckDeleteKind(Info, E, Pointer, DynAlloc::StdAllocator))
+  if (!CheckDeleteKind(Info, E, Pointer, DynAllocKind::StdAllocator))
     return false;
 
   Info.HeapAllocs.erase(Pointer.Base.get<DynamicAllocLValue>());
@@ -7978,7 +8075,8 @@ class APValueToBufferConverter {
     case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
-    case APValue::AddrLabelDiff: {
+    case APValue::AddrLabelDiff:
+    case APValue::Reflection: {
       Info.FFDiag(BCE->getBeginLoc(),
                   diag::note_constexpr_bit_cast_unsupported_type)
           << Ty;
@@ -10541,6 +10639,9 @@ static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
     return Info.Ctx.getDeclAlign(VD);
   if (const auto *E = Value.Base.dyn_cast<const Expr *>())
     return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
+  if (const auto &DA = Value.Base.dyn_cast<DynamicAllocLValue>())
+    return GetAlignOfDynamicAlloc(Info.getASTContext(), Value.Base.getType(),
+                                  DA.getAllocKind());
   return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
 }
 
@@ -10667,6 +10768,20 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
+
+    if (!Result.Base) {
+      // Null pointers are always aligned and align_up/align_down preserve null.
+      if (Result.Offset.isZero())
+        return true;
+
+      // Non-null pointers without a base (for example, integer-to-pointer
+      // casts such as (void *)32) do not have enough information to perform
+      // pointer arithmetic during constant evaluation.
+      Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+      return false;
+    }
+
     CharUnits BaseAlignment = getBaseAlignment(Info, Result);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
@@ -11223,6 +11338,59 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// Reflection expression evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ReflectionEvaluator : public ExprEvaluatorBase<ReflectionEvaluator> {
+
+  using BaseType = ExprEvaluatorBase<ReflectionEvaluator>;
+
+  APValue &Result;
+
+public:
+  ReflectionEvaluator(EvalInfo &E, APValue &Result)
+      : ExprEvaluatorBaseTy(E), Result(Result) {}
+
+  bool Success(const APValue &V, const Expr *E) {
+    Result = V;
+    return true;
+  }
+
+  bool VisitCXXReflectExpr(const CXXReflectExpr *E);
+  bool ZeroInitialization(const Expr *E);
+};
+
+bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
+  case ReflectionKind::Type: {
+    APValue ReflectionValue(ReflectionKind::Type, E->getOpaqueValue());
+    return Success(ReflectionValue, E);
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
+}
+
+bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
+  Result = APValue(ReflectionKind::Null, /*Operand=*/nullptr);
+  return true;
+}
+
+} // end anonymous namespace
+
+static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isMetaInfoType());
+  return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
 //===----------------------------------------------------------------------===//
 // Member Pointer Evaluation
 //===----------------------------------------------------------------------===//
@@ -15830,6 +15998,8 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
     return false;
 
   auto *CAT = cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
+  if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+    return false;
 
   uint64_t Elements = CAT->getZExtSize();
   Result = APValue(APValue::UninitArray(), Elements, Elements);
@@ -15876,6 +16046,8 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   bool HadZeroInit = Value->hasValue();
 
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(Type)) {
+    if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+      return false;
     unsigned FinalSize = CAT->getZExtSize();
 
     // Preserve the array filler if we had prior zero-initialization.
@@ -16364,8 +16536,11 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
+    case BuiltinType::MetaInfo:
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
@@ -16980,15 +17155,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // CRC32C polynomial (iSCSI polynomial, bit-reversed)
     static const uint32_t CRC32C_POLY = 0x82F63B78;
 
-    // Process each byte
-    uint32_t Result = static_cast<uint32_t>(CRCVal);
-    for (unsigned I = 0; I != DataBytes; ++I) {
-      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
-      Result ^= Byte;
-      for (int J = 0; J != 8; ++J) {
-        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
-      }
-    }
+    uint32_t Result = llvm::calculateReflectedCRC32(
+        static_cast<uint32_t>(CRCVal), DataVal, DataBytes, CRC32C_POLY);
 
     return Success(Result, E);
   };
@@ -17052,6 +17220,18 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
+      if (!Ptr.Base) {
+        // Null pointers are always aligned.
+        if (Ptr.Offset.isZero())
+          return Success(1, E);
+
+        Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_compute)
+            << Alignment;
+        // Reject non-null pointers without an underlying object.
+        // Do not interpret the pointer offset as an integer address.
+        return false;
+      }
+
       CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
@@ -19499,6 +19679,23 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return Success(CmpResult::Equal, E);
   }
 
+  if (LHSTy->isMetaInfoType() && RHSTy->isMetaInfoType()) {
+    APValue LHSValue, RHSValue;
+    llvm::FoldingSetNodeID LID, RID;
+    if (!Evaluate(LHSValue, Info, E->getLHS()))
+      return false;
+    LHSValue.Profile(LID);
+
+    if (!Evaluate(RHSValue, Info, E->getRHS()))
+      return false;
+    RHSValue.Profile(RID);
+
+    if (LID == RID)
+      return Success(CmpResult::Equal, E);
+    else
+      return Success(CmpResult::Unequal, E);
+  }
+
   return DoAfter();
 }
 
@@ -21580,6 +21777,55 @@ public:
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 
+    case Builtin::BIstdc_memreverse8:
+    case Builtin::BI__builtin_stdc_memreverse8: {
+      APSInt N;
+      if (!EvaluateInteger(E->getArg(0), N, Info))
+        return false;
+      uint64_t NElems = N.getZExtValue();
+
+      LValue Ptr;
+      if (!EvaluatePointer(E->getArg(1), Ptr, Info))
+        return false;
+
+      if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Assign) ||
+          Ptr.Designator.Invalid)
+        return false;
+
+      QualType CharTy = Ptr.Designator.getType(Info.Ctx);
+      uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
+      if (NElems > RemainingElems) {
+        uint64_t ArrayIndex =
+            Ptr.Designator.MostDerivedIsArrayElement
+                ? Ptr.Designator.Entries.back().getAsArrayIndex()
+                : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
+        APSInt Index =
+            APSInt::getUnsigned(llvm::SaturatingAdd(ArrayIndex, NElems - 1));
+        Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
+        return false;
+      }
+
+      if (NElems <= 1)
+        return true;
+
+      LValue Lo = Ptr;
+      LValue Hi = Ptr;
+      if (!HandleLValueArrayAdjustment(Info, E, Hi, CharTy, NElems - 1))
+        return false;
+
+      for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+        APValue LoVal, HiVal;
+        if (!handleLValueToRValueConversion(Info, E, CharTy, Lo, LoVal) ||
+            !handleLValueToRValueConversion(Info, E, CharTy, Hi, HiVal) ||
+            !handleAssignment(Info, E, Lo, CharTy, HiVal) ||
+            !handleAssignment(Info, E, Hi, CharTy, LoVal) ||
+            !HandleLValueArrayAdjustment(Info, E, Lo, CharTy, 1) ||
+            !HandleLValueArrayAdjustment(Info, E, Hi, CharTy, -1))
+          return false;
+      }
+      return true;
+    }
+
     default:
       return false;
     }
@@ -21621,7 +21867,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 
   std::optional<DynAlloc *> Alloc = CheckDeleteKind(
-      Info, E, Pointer, E->isArrayForm() ? DynAlloc::ArrayNew : DynAlloc::New);
+      Info, E, Pointer,
+      E->isArrayForm() ? DynAllocKind::ArrayNew : DynAllocKind::New);
   if (!Alloc)
     return false;
   QualType AllocType = Pointer.Base.getDynamicAllocType();
@@ -21692,6 +21939,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
       return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
+      return false;
+  } else if (T->isMetaInfoType()) {
+    if (!EvaluateReflection(E, Result, Info))
       return false;
   } else if (T->hasPointerRepresentation()) {
     LValue LV;
@@ -22107,14 +22357,16 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
+  EvaluationMode EM = Kind == ConstantExprKind::Initializer
+                          ? EvaluationMode::IgnoreSideEffects
+                          : EvaluationMode::ConstantExpression;
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
-                                  Kind);
+    interp::EvalSettings Settings(EM, Result, Kind);
     Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
+    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val) &&
+           !Result.HasSideEffects;
   }
 
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
@@ -22137,14 +22389,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // So we need to make sure temporary objects are destroyed after having
   // evaluating the expression (per C++23 [class.temporary]/p4).
   FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-      Result.HasSideEffects || !Scope.destroy())
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy())
     return false;
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
-  if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+  if (Result.HasSideEffects ||
+      !CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
     return false;
   if (!CheckMemoryLeaks(Info))
@@ -22894,7 +23146,7 @@ EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx, const Expr *E,
     return false;
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result, AllowRelaxedEval))
+  if (!E->isCXX11ConstantExpr(Ctx, Result, AllowRelaxedEval))
     return false;
 
   if (!Result.isInt())
@@ -22971,7 +23223,7 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
   return CheckICE(this, Ctx).Kind == IK_ICE;
 }
 
-bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
+bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                                bool AllowRelaxedEval) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
@@ -22981,12 +23233,8 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   assert(Ctx.getLangOpts().CPlusPlus);
 
   bool IsConst;
-  APValue Scratch;
-  if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
-    if (Result)
-      *Result = std::move(Scratch);
+  if (FastEvaluateAsRValue(this, Result, Ctx, IsConst) && Result.hasValue())
     return true;
-  }
 
   bool IsConstExpr;
   Expr::EvalStatus Status;
@@ -22995,13 +23243,13 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
-    IsConstExpr = Ctx.getInterpContext().evaluateAsRValue(
-        Settings, this, Result ? *Result : Scratch);
+    IsConstExpr =
+        Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result);
   } else {
     // Build evaluation settings.
     EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
     IsConstExpr =
-        ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
+        ::EvaluateAsRValue(Info, this, Result) &&
         // NOTE: We don't produce a diagnostic for this, but the callers that
         // call us on arbitrary full-expressions should generally not care.
         Info.discardCleanups() && !Status.HasSideEffects;

@@ -73,7 +73,7 @@ namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
-LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
+cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
     cl::init(InstrProfCorrelator::NONE),
@@ -84,6 +84,10 @@ LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
                clEnumValN(InstrProfCorrelator::BINARY, "binary",
                           "Use binary to correlate")));
 } // namespace llvm
+
+bool llvm::isProfileCorrelationEnabled() {
+  return ProfileCorrelate != InstrProfCorrelator::NONE;
+}
 
 namespace {
 
@@ -573,7 +577,15 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
-    bool RC = promoteCandidates(NumPromoted);
+    // Move L's candidates out of LoopToCandidates before promoting them, as
+    // promoting a counter to an enclosing loop may insert a new key into
+    // LoopToCandidates and trigger DenseMap::grow().
+    auto &OrigCandidates = LoopToCandidates[&L];
+    SmallVector<LoadStorePair, 8> Candidates = std::move(OrigCandidates);
+    OrigCandidates.clear();
+    bool RC = promoteCandidates(Candidates, NumPromoted);
+    assert(LoopToCandidates[&L].empty() &&
+           "Did not expect new candidates to be added to current loop");
     // In certain case, e.g. with -fprofile-update=atomic, we want to generate
     // atomic updates of the PGO counters, but also perform promotion of these
     // updates out of loops to reduce train time. The strategy is:
@@ -582,16 +594,17 @@ public:
     //  2) perform the promotion (in promoteCandidates function), then
     //  3) convert all (promoted and unpromotable) updates to atomicRMW.
     // This requires that promoted candidates are set to nullptr in the
-    // LoopToCandidates[&L] array by the promoteCandidates() function.
+    // Candidates array by the promoteCandidates() function.
     if (IsAtomic)
-      for (auto &Cand : LoopToCandidates[&L])
+      for (auto &Cand : Candidates)
         if (Cand.first != nullptr && Cand.second != nullptr)
           makeAtomic(Cand.first, Cand.second);
     return RC;
   }
 
 private:
-  bool promoteCandidates(int64_t *NumPromoted) {
+  bool promoteCandidates(SmallVectorImpl<LoadStorePair> &Candidates,
+                         int64_t *NumPromoted) {
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
@@ -611,9 +624,8 @@ private:
     if (MaxProm == 0)
       return false;
 
-    [[maybe_unused]] auto *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
     unsigned Promoted = 0;
-    for (auto &Cand : LoopToCandidates[&L]) {
+    for (auto &Cand : Candidates) {
       SmallVector<PHINode *, 4> NewPHIs;
       SSAUpdater SSA(&NewPHIs);
       Value *InitVal = ConstantInt::get(Cand.first->getType(), 0);
@@ -636,8 +648,6 @@ private:
           ExitBlocks, InsertPts, LoopToCandidates, LI, IsAtomic);
       Promoter.run(SmallVector<Instruction *, 2>({Cand.first, Cand.second}));
 
-      assert(LoopToCandidates.isPointerIntoBucketsArray(Ptr) &&
-             "References into LoopToCandidates might be invalid");
       Cand = {nullptr, nullptr};
 
       Promoted++;

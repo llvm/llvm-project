@@ -52,6 +52,8 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -60,6 +62,7 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -998,6 +1001,32 @@ private:
   }
 };
 
+// Use the max outlined entry count. Instrumentation counts should already
+// match across merged callbacks, but sample profiles can differ. Returns
+// nullopt when no callback entry count is available.
+static std::optional<uint64_t>
+getMergedWrapperEntryCount(ArrayRef<CallInst *> ForkCalls,
+                           unsigned CallbackOpNo) {
+  std::optional<uint64_t> EntryCount;
+  for (CallInst *CI : ForkCalls) {
+    auto *Callback = dyn_cast<Function>(
+        CI->getArgOperand(CallbackOpNo)->stripPointerCasts());
+    if (!Callback)
+      continue;
+    if (std::optional<uint64_t> EC = Callback->getEntryCount())
+      // Each callback runs once per wrapper entry, so the counts should match.
+      // The Sample profiles can disagree slightly, so take the largest.
+      EntryCount = EntryCount ? std::max(*EntryCount, *EC) : *EC;
+  }
+  return EntryCount;
+}
+
+static bool moduleHasSampleProfile(const Module &M) {
+  std::unique_ptr<ProfileSummary> Summary(
+      ProfileSummary::getFromMD(M.getProfileSummary(/*IsCS=*/false)));
+  return Summary && Summary->getKind() == ProfileSummary::PSK_Sample;
+}
+
 struct OpenMPOpt {
 
   using OptimizationRemarkGetter =
@@ -1162,9 +1191,8 @@ private:
     BasicBlock *StartBB = nullptr, *EndBB = nullptr;
     auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                          ArrayRef<BasicBlock *> DeallocBlocks) {
-      BasicBlock *CGStartBB = CodeGenIP.getBlock();
-      BasicBlock *CGEndBB =
-          SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
+      BasicBlock *CGStartBB = CodeGenIP.getNodeParent();
+      BasicBlock *CGEndBB = SplitBlock(CGStartBB, &*CodeGenIP, DT, LI);
       assert(StartBB != nullptr && "StartBB should not be null");
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
@@ -1203,9 +1231,8 @@ private:
 
       auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                            ArrayRef<BasicBlock *> DeallocBlocks) {
-        BasicBlock *CGStartBB = CodeGenIP.getBlock();
-        BasicBlock *CGEndBB =
-            SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
+        BasicBlock *CGStartBB = CodeGenIP.getNodeParent();
+        BasicBlock *CGEndBB = SplitBlock(CGStartBB, &*CodeGenIP, DT, LI);
         assert(SeqStartBB != nullptr && "SeqStartBB should not be null");
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
@@ -1253,14 +1280,13 @@ private:
         }
       }
 
-      OpenMPIRBuilder::LocationDescription Loc(
-          InsertPointTy(ParentBB, ParentBB->end()), DL);
+      OpenMPIRBuilder::LocationDescription Loc(ParentBB->end(), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
       cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
                                                      OMPD_parallel));
 
-      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+      UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getNodeParent());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1323,10 +1349,8 @@ private:
                                NextForkCI->getPrevNode());
       }
 
-      OpenMPIRBuilder::LocationDescription Loc(InsertPointTy(BB, BB->end()),
-                                               DL);
+      OpenMPIRBuilder::LocationDescription Loc(BB->end(), DL);
       IRBuilder<>::InsertPoint AllocaIP(
-          &OriginalFn->getEntryBlock(),
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
@@ -1335,12 +1359,21 @@ private:
               Loc, AllocaIP, /* DeallocBlocks */ {}, BodyGenCB, PrivCB, FiniCB,
               nullptr, nullptr, OMP_PROC_BIND_default,
               /* IsCancellable */ false));
-      UncondBrInst::Create(AfterBB, AfterIP.getBlock());
+      UncondBrInst::Create(AfterBB, AfterIP.getNodeParent());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
+      std::optional<uint64_t> WrapperCount =
+          getMergedWrapperEntryCount(MergableCIs, CallbackCalleeOperand);
+      // Leave the wrapper unprofiled when no callback has an entry count.
+      if (WrapperCount)
+        OutlinedFn->setEntryCount(*WrapperCount);
+      // Only sample PGO treats a profiled caller with no callsite weight as
+      // cold. Instrumentation profiles derive that count from the entry count.
+      const bool SampleProfile =
+          moduleHasSampleProfile(*OriginalFn->getParent());
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
@@ -1359,6 +1392,12 @@ private:
             CallInst::Create(FT, Callee, Args, "", CI->getIterator());
         if (CI->getDebugLoc())
           NewCI->setDebugLoc(CI->getDebugLoc());
+        // Each body runs once per wrapper entry. Without a callsite weight,
+        // sample PGO treats these calls as cold.
+        if (WrapperCount && SampleProfile) {
+          setFittedBranchWeights(*NewCI, {*WrapperCount},
+                                 /*IsExpected=*/false);
+        }
 
         // Forward parameter attributes from the callback to the callee.
         for (unsigned U = CallbackFirstArgOperand, E = CI->arg_size(); U < E;
@@ -1372,9 +1411,7 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              {InsertPointTy(NewCI->getParent(),
-                             NewCI->getNextNode()->getIterator()),
-               NewCI->getDebugLoc()},
+              {NewCI->getNextNode()->getIterator(), NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1801,8 +1838,7 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(&Entry,
-                                     Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrDbgOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =
@@ -1880,11 +1916,9 @@ private:
       // The IRBuilder uses the insertion block to get to the module, this is
       // unfortunate but we work around it for now. No instruction is emitted
       // here, so there is no debug location to preserve.
-      if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
+      if (!OMPInfoCache.OMPBuilder.getInsertionPoint().isValid())
         OMPInfoCache.OMPBuilder.updateToLocation(
-            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
-                                            F.getEntryBlock().begin()),
-             DebugLoc()});
+            {F.getEntryBlock().begin(), DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -4082,7 +4116,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
       LoopInfo *LI = nullptr;
       DominatorTree *DT = nullptr;
       MemorySSAUpdater *MSU = nullptr;
-      using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
 
       BasicBlock *ParentBB = RegionStartI->getParent();
       Function *Fn = ParentBB->getParent();
@@ -4178,8 +4211,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // Go to tid check BB in ParentBB.
       const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
       ParentBB->getTerminator()->eraseFromParent();
-      OpenMPIRBuilder::LocationDescription Loc(
-          InsertPointTy(ParentBB, ParentBB->end()), DL);
+      OpenMPIRBuilder::LocationDescription Loc(ParentBB->end(), DL);
       OMPInfoCache.OMPBuilder.updateToLocation(Loc);
       uint32_t SrcLocStrSize;
       auto *SrcLocStr =
@@ -4191,7 +4223,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       // Add check for Tid in RegionCheckTidBB
       RegionCheckTidBB->getTerminator()->eraseFromParent();
       OpenMPIRBuilder::LocationDescription LocRegionCheckTid(
-          InsertPointTy(RegionCheckTidBB, RegionCheckTidBB->end()), DL);
+          RegionCheckTidBB->end(), DL);
       OMPInfoCache.OMPBuilder.updateToLocation(LocRegionCheckTid);
       FunctionCallee HardwareTidFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
@@ -4211,9 +4243,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
       OMPInfoCache.OMPBuilder.updateToLocation(
-          {InsertPointTy(RegionBarrierBB,
-                         RegionBarrierBB->getFirstInsertionPt()),
-           DL});
+          {RegionBarrierBB->getFirstInsertionPt(), DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
@@ -4622,10 +4652,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     WorkFnAI->setDebugLoc(DLoc);
 
     OMPInfoCache.OMPBuilder.updateToLocation(
-        OpenMPIRBuilder::LocationDescription(
-            IRBuilder<>::InsertPoint(StateMachineBeginBB,
-                                     StateMachineBeginBB->end()),
-            DLoc));
+        OpenMPIRBuilder::LocationDescription(StateMachineBeginBB->end(), DLoc));
 
     Value *Ident = KernelInfo::getIdentFromKernelEnvironment(KernelEnvC);
     Value *GTid = KernelInitCB;

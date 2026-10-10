@@ -520,8 +520,8 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
 
 bool TargetTransformInfo::isLegalAltInstr(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask) const {
-  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask);
+    const SmallBitVector &OpcodeMask, ArrayRef<const Value *> Scalars) const {
+  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask, Scalars);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
@@ -552,6 +552,13 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
+}
+
+bool TargetTransformInfo::hasMultiVectorLoadStore(
+    unsigned NumVectors, TTI::MaskSource Mask, VectorType *VectorTy,
+    bool IsStore, std::optional<Instruction::CastOps> CastHint) const {
+  return TTIImpl->hasMultiVectorLoadStore(NumVectors, Mask, VectorTy, IsStore,
+                                          CastHint);
 }
 
 bool TargetTransformInfo::isLegalInterleavedAccessType(
@@ -762,10 +769,6 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
-}
-
-bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
-  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -1020,6 +1023,48 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
 }
 
 TargetTransformInfo::OperandValueInfo
+TargetTransformInfo::getOperandInfo(ArrayRef<Value *> Ops) {
+  assert(!Ops.empty());
+  const auto *Op0 = Ops.front();
+
+  const bool IsConstant = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V) &&
+           !isa<UndefValue>(V);
+  });
+  const bool IsUniform = all_of(Ops, [=](Value *V) {
+    // TODO: We should allow undef elements here
+    return V == Op0;
+  });
+  const bool IsPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isPowerOf2();
+    return false;
+  });
+  const bool IsNegatedPowerOfTwo = all_of(Ops, [](Value *V) {
+    // TODO: We should allow undef elements here
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+      return CI->getValue().isNegatedPowerOf2();
+    return false;
+  });
+
+  TTI::OperandValueKind VK = TTI::OK_AnyValue;
+  if (IsConstant && IsUniform)
+    VK = TTI::OK_UniformConstantValue;
+  else if (IsConstant)
+    VK = TTI::OK_NonUniformConstantValue;
+  else if (IsUniform)
+    VK = TTI::OK_UniformValue;
+
+  TTI::OperandValueProperties VP = TTI::OP_None;
+  VP = IsPowerOfTwo ? TTI::OP_PowerOf2 : VP;
+  VP = IsNegatedPowerOfTwo ? TTI::OP_NegatedPowerOf2 : VP;
+
+  return {VK, VP};
+}
+
+TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::commonOperandInfo(const Value *X, const Value *Y) {
   OperandValueInfo OpInfoX = getOperandInfo(X);
   if (X == Y)
@@ -1053,9 +1098,10 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 
 InstructionCost TargetTransformInfo::getAltInstrCost(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost =
-      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+    ArrayRef<const Value *> Scalars) const {
+  InstructionCost Cost = TTIImpl->getAltInstrCost(
+      VecTy, Opcode0, Opcode1, OpcodeMask, CostKind, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

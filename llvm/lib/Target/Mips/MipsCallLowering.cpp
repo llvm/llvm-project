@@ -477,7 +477,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildCopy(
       Register(Mips::GP),
       MF.getInfo<MipsFunctionInfo>()->getGlobalBaseRegForGlobalISel(MF));
-    MIB.addDef(Mips::GP, RegState::Implicit);
+    MIB.addUse(Mips::GP, RegState::Implicit);
   }
   MIRBuilder.insertInstr(MIB);
   if (MIB->getOpcode() == Mips::JALRPseudo) {
