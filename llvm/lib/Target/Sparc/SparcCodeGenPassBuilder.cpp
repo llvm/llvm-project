@@ -31,7 +31,9 @@ public:
   explicit SparcCodeGenPassBuilder(SparcTargetMachine &TM,
                                    const CGPassBuilderOption &Opts,
                                    PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {}
+      : CodeGenPassBuilder(TM, Opts, PIC) {
+    Opt.MISchedPostRA = true;
+  }
 
 protected:
   void addIRPasses(PassManagerWrapper &PMW) override;

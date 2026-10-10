@@ -4,6 +4,13 @@
 ; RUN: llc -mtriple=sparcv9 -misched-postra -enable-post-misched < %s \
 ; RUN:   | FileCheck %s --check-prefix=V9
 
+;; LEON5 enables post-RA scheduling in its scheduling model, both as the
+;; target and as the tune processor, in both pass managers.
+; RUN: llc -mtriple=sparc -mcpu=leon5 < %s | FileCheck %s --check-prefix=LEON5
+; RUN: llc -mtriple=sparc -mcpu=leon5 -enable-new-pm < %s \
+; RUN:   | FileCheck %s --check-prefix=LEON5
+; RUN: llc -mtriple=sparc -mtune=leon5 < %s | FileCheck %s --check-prefix=LEON5
+
 ;; RESTORE switches to the caller's register window, so the add that reads the
 ;; loaded value in %i0 must not be moved after it.
 define i32 @restore_boundary(ptr %p) nounwind {
@@ -24,6 +31,15 @@ define i32 @restore_boundary(ptr %p) nounwind {
 ; V9-NEXT:    ld [%i0], %i0
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore %i0, 1, %o0
+;
+; LEON5-LABEL: restore_boundary:
+; LEON5:       ! %bb.0:
+; LEON5-NEXT:    save %sp, -96, %sp
+; LEON5-NEXT:    call g
+; LEON5-NEXT:    nop
+; LEON5-NEXT:    ld [%i0], %i0
+; LEON5-NEXT:    ret
+; LEON5-NEXT:    restore %i0, 1, %o0
   call void @g()
   %v = load i32, ptr %p
   %x = add i32 %v, 1
@@ -49,6 +65,15 @@ define i32 @restore_boundary_tail_call(ptr %p, i32 %b) nounwind {
 ; V9-NEXT:    ld [%i0], %i0
 ; V9-NEXT:    call h
 ; V9-NEXT:    restore %i0, 1, %o0
+;
+; LEON5-LABEL: restore_boundary_tail_call:
+; LEON5:       ! %bb.0:
+; LEON5-NEXT:    save %sp, -96, %sp
+; LEON5-NEXT:    call g
+; LEON5-NEXT:    nop
+; LEON5-NEXT:    ld [%i0], %i0
+; LEON5-NEXT:    call h
+; LEON5-NEXT:    restore %i0, 1, %o0
   call void @g()
   %v = load i32, ptr %p
   %x = add i32 %v, 1
@@ -78,6 +103,15 @@ define void @leaf_tail_call(ptr %p, ptr %q, i32 %c) nounwind {
 ; V9-NEXT:    mulx %o3, %o1, %o1
 ; V9-NEXT:    call ext
 ; V9-NEXT:    mov %g1, %o7
+;
+; LEON5-LABEL: leaf_tail_call:
+; LEON5:       ! %bb.0:
+; LEON5-NEXT:    ld [%o0], %o0
+; LEON5-NEXT:    mov %o7, %g1
+; LEON5-NEXT:    ld [%o1], %o1
+; LEON5-NEXT:    smul %o0, %o1, %o1
+; LEON5-NEXT:    call ext
+; LEON5-NEXT:    mov %g1, %o7
   %x = load i32, ptr %p
   %y = load i32, ptr %q
   %z = mul i32 %x, %y

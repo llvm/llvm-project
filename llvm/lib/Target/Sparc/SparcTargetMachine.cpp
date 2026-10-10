@@ -145,7 +145,9 @@ namespace {
 class SparcPassConfig : public TargetPassConfig {
 public:
   SparcPassConfig(SparcTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+  }
 
   SparcTargetMachine &getSparcTargetMachine() const {
     return getTM<SparcTargetMachine>();
