@@ -24594,8 +24594,8 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
-// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C.
-// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C.
+// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C+1.
+// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C+1.
 // Fold (smax (smin X, (1 << C) - 1), 0) -> riscv_usati X, C.
 // Fold (smin (smax X, 0, (1 << C) - 1) -> riscv_usati X, C.
 static SDValue combineMinMaxToSat(SDNode *N,
