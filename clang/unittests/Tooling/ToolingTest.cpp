@@ -744,6 +744,56 @@ TEST(ClangToolTest, ArgumentAdjusters) {
   EXPECT_FALSE(Found);
 }
 
+TEST(ClangToolTest, InvocationWrapper) {
+  FixedCompilationDatabase Compilations("/", std::vector<std::string>());
+
+  ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
+  Tool.mapVirtualFile("/a.cc", "void a() {}");
+
+  std::unique_ptr<FrontendActionFactory> Action(
+      newFrontendActionFactory<SyntaxOnlyAction>());
+
+  bool InWrapper = false;
+  bool AdjusterRanInWrapper = false;
+  bool AdjusterRan = false;
+  Tool.appendArgumentsAdjuster(
+      [&](const CommandLineArguments &Args, StringRef /*unused*/) {
+        AdjusterRan = true;
+        AdjusterRanInWrapper = InWrapper;
+        return Args;
+      });
+
+  unsigned WrapperCalls = 0;
+  Tool.setInvocationWrapper(
+      [&](const CompileCommand &Cmd, llvm::function_ref<bool()> Invoke) {
+        ++WrapperCalls;
+        EXPECT_TRUE(StringRef(Cmd.Filename).ends_with("a.cc"));
+        EXPECT_EQ("/", Cmd.Directory);
+        InWrapper = true;
+        bool Result = Invoke();
+        InWrapper = false;
+        return Result;
+      });
+  int Result = Tool.run(Action.get());
+#ifndef _WIN32
+  // "/a.cc" is not an absolute path on Windows, so the mapped virtual file is
+  // not found there and the parse fails. The wrapper still runs either way.
+  EXPECT_EQ(0, Result);
+#else
+  (void)Result;
+#endif
+  EXPECT_EQ(1u, WrapperCalls);
+  EXPECT_TRUE(AdjusterRan);
+  EXPECT_TRUE(AdjusterRanInWrapper);
+
+  // A wrapper that doesn't invoke the action fails the run.
+  AdjusterRan = false;
+  Tool.setInvocationWrapper(
+      [](const CompileCommand &, llvm::function_ref<bool()>) { return false; });
+  EXPECT_EQ(1, Tool.run(Action.get()));
+  EXPECT_FALSE(AdjusterRan);
+}
+
 TEST(ClangToolTest, NoDoubleSyntaxOnly) {
   FixedCompilationDatabase Compilations("/", {"-fsyntax-only"});
 
