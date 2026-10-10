@@ -3664,10 +3664,13 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
     }
 
-    F->addMetadata(
+    // A function definition is annotated when its declaration is created and
+    // again when its body is emitted. Replace the attachment instead of adding
+    // a second one, so that a function carries exactly one type identifier.
+    F->setMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(getLLVMContext(),
-                            {CreateMetadataIdentifierForCallGraphType(QT)}));
+        llvm::MDTuple::get(getLLVMContext(),
+                           {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
