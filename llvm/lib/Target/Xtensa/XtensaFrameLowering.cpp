@@ -88,19 +88,29 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // new_offset = SP + diff_to_128_aligned_address
     // This is safe to do because we increased the stack size by MaxAlignment.
     MCRegister Reg, RegMisAlign;
-    if (MaxAlignment > 32) {
+    if (MaxAlignment > 16) {
       TII.loadImmediate(MBB, MBBI, &RegMisAlign, MaxAlignment - 1);
       TII.loadImmediate(MBB, MBBI, &Reg, MaxAlignment);
+      // NB: align off SP, not FP: FP still holds an incoming argument at this
+      // point (it is materialized below).
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::AND))
           .addReg(RegMisAlign, RegState::Define)
-          .addReg(FP)
+          .addReg(SP)
           .addReg(RegMisAlign);
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::SUB), RegMisAlign)
-          .addReg(Reg)
+          .addReg(Reg, RegState::Kill)
           .addReg(RegMisAlign);
-      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ADD), SP)
+      // Any SP update after ENTRY must go through MOVSP so the register
+      // window save area is relocated (cf. XtensaInstrInfo::adjustStackPtr);
+      // a plain ADD corrupts the caller if a window spill lands between ENTRY
+      // and the update. Compute the aligned SP in a scratch register first.
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      MCRegister AlignedSP = MRI.createVirtualRegister(&Xtensa::ARRegClass);
+      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ADD), AlignedSP)
           .addReg(SP)
           .addReg(RegMisAlign, RegState::Kill);
+      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::MOVSP), SP)
+          .addReg(AlignedSP, RegState::Kill);
     }
 
     // Store FP register in A8, because FP may be used to pass function
