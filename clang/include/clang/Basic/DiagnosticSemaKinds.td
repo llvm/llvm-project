@@ -11988,6 +11988,56 @@ def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
 def err_openclcxx_placement_new : Error<
   "use of placement new requires explicit declaration">;
 
+// OpenCL C Cooperative Matrix.
+def err_coopmat_without_pragma
+    : Error<"cooperative matrix types require OpenCL extension '%0' to be enabled via pragma">;
+
+def err_invalid_coopmat_attr
+    : Error<"invalid '%0' argument of cooperative matrix attribute">;
+
+def err_invalid_coopmat_mem_layout
+    : Error<"memory layout for cooperative matrix load/store should be "
+            "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
+            "CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR">;
+
+def err_invalid_coopmat_stride_type
+    : Error<"stride argument for load/store of cooperative matrix must have "
+            "type 'size_t'">;
+
+def err_coopmat_mismatch_element_and_pointer_type
+    : Error<"inconsistent between cooperative matrix element type and buffer "
+            "pointer type">;
+
+def err_invalid_coopmat_arg
+    : Error<"argument must be a valid cooperative matrix type">;
+
+def err_invalid_coopmat_memory_operand_type
+    : Error<"fourth argument of 'coop_mat_mulAdd' must have enum type">;
+
+def err_invalid_coopmat_assignment
+    : Error<"builtin return value should be assigned to cooperative matrix "
+            "type variable">;
+
+def err_invalid_coopmat_use : Error<"argument of cooperative matrix must have '%0' use">;
+
+def err_mismatched_coopmat_element_types
+    : Error<"inconsistent cooperative matrix element types">;
+
+def err_invalid_coopmat_element_type
+    : Error<"%0 is invalid cooperative matrix element type">;
+
+def err_coopmat_shapes_incompatible
+    : Error<"two cooperative matrices with incompatible shapes">;
+
+def err_unsupported_coopmat_binary_operator
+    : Error<"unsupported cooperative matrix binary operator">;
+
+def err_unsupported_coopmat_scalar_operator
+    : Error<"unsupported cooperative matrix scalar operator">;
+
+def err_incompatible_coopmat_types
+    : Error<"incompatible cooperative matrix types">;
+
 // MIG routine annotations.
 def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
   "'mig_server_routine' attribute only applies to routines that return a kern_return_t">,

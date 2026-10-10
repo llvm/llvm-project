@@ -259,6 +259,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_IntegralToFloating:
     case CK_LValueBitCast:
     case CK_MatrixCast:
+    case CK_CoopMatrixCast:
     case CK_MemberPointerToBoolean:
     case CK_NonAtomicToAtomic:
     case CK_ObjCObjectLValueCast:
@@ -1688,6 +1689,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:

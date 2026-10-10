@@ -2335,6 +2335,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_masked_store:
   case Builtin::BI__builtin_masked_compress_store:
   case Builtin::BI__builtin_masked_scatter:
+  case Builtin::BIcoop_mat_load:
+  case Builtin::BIcoop_mat_store:
+  case Builtin::BIcoop_mat_mulAdd:
+  case Builtin::BIcoop_mat_binary_add:
+  case Builtin::BIcoop_mat_binary_sub:
+  case Builtin::BIcoop_mat_binary_mul:
+  case Builtin::BIcoop_mat_binary_div:
+  case Builtin::BIcoop_mat_scalar_mul:
+  case Builtin::BIcoop_mat_scalar_neg:
+  case Builtin::BIcoop_mat_init:
+  case Builtin::BIcoop_mat_length:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_isinf_sign: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);

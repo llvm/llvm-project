@@ -16583,6 +16583,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 
   case Type::BlockPointer:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
@@ -20211,6 +20212,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
@@ -21143,6 +21145,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:

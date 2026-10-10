@@ -2215,6 +2215,17 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   }
 
+  case Type::CooperativeMatrix: {
+    const auto *MT = cast<CooperativeMatrixType>(T);
+    TypeInfo ElementInfo = getTypeInfo(MT->getElementType());
+    // The internal layout of a cooperative matrix value is implementation
+    // defined. Initially be ABI compatible with arrays with respect to
+    // alignment and size.
+    Width = ElementInfo.Width * MT->getNumRows() * MT->getNumColumns();
+    Align = ElementInfo.Align;
+    break;
+  }
+
   case Type::Builtin:
     switch (cast<BuiltinType>(T)->getKind()) {
     default: llvm_unreachable("Unknown builtin type!");
@@ -3546,6 +3557,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::Pipe:
   case Type::BitInt:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
     OS << "?";
     return;
 
@@ -4381,6 +4393,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::ExtVector:
   case Type::DependentSizedExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::DependentSizedMatrix:
   case Type::DependentAddressSpace:
   case Type::ObjCObject:
@@ -4924,6 +4937,40 @@ QualType ASTContext::getConstantMatrixType(
   auto *New = new (*this, alignof(ConstantMatrixType))
       ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical, Layout);
   MatrixTypes.insert(New, Token);
+  Types.push_back(New);
+  return QualType(New, 0);
+}
+
+QualType ASTContext::getCooperativeMatrixType(QualType ElementTy,
+                                              unsigned Scope, unsigned NumRows,
+                                              unsigned NumColumns,
+                                              unsigned Use) const {
+  llvm::FoldingSetNodeID ID;
+  CooperativeMatrixType::Profile(ID, ElementTy, Scope, NumRows, NumColumns, Use,
+                                 Type::CooperativeMatrix);
+
+  assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
+         "need a valid element type");
+  assert(CooperativeMatrixType::isScopeValid(Scope) &&
+         "need valid matrix scope");
+  assert(CooperativeMatrixType::isUseValid(Use) && "need valid matrix use");
+  llvm::FoldingSetInsertToken Token;
+  if (CooperativeMatrixType *MTP = CooperativeMatrixTypes.lookup(ID, Token))
+    return QualType(MTP, 0);
+
+  QualType Canonical;
+  if (!ElementTy.isCanonical()) {
+    Canonical = getCooperativeMatrixType(getCanonicalType(ElementTy), Scope,
+                                         NumRows, NumColumns, Use);
+
+    CooperativeMatrixType *NewIP = CooperativeMatrixTypes.lookup(ID, Token);
+    assert(!NewIP && "Matrix type shouldn't already exist in the map");
+    (void)NewIP;
+  }
+
+  auto *New = new (*this, TypeAlignment) CooperativeMatrixType(
+      ElementTy, Scope, NumRows, NumColumns, Use, Canonical);
+  CooperativeMatrixTypes.insert(New, Token);
   Types.push_back(New);
   return QualType(New, 0);
 }
@@ -9796,6 +9843,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
 
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
     if (NotEncodedT)
       *NotEncodedT = T;
     return;
@@ -10762,6 +10810,17 @@ static bool areCompatMatrixTypes(const ConstantMatrixType *LHS,
   return LHS->getElementType() == RHS->getElementType() &&
          LHS->getNumRows() == RHS->getNumRows() &&
          LHS->getNumColumns() == RHS->getNumColumns();
+}
+
+/// Return true if the two specified cooperative matrix types are compatible.
+static bool areCompatCoopMatrixTypes(const CooperativeMatrixType *LHS,
+                                     const CooperativeMatrixType *RHS) {
+  assert(LHS->isCanonicalUnqualified() && RHS->isCanonicalUnqualified());
+  return LHS->getElementType() == RHS->getElementType() &&
+         LHS->getScope() == RHS->getScope() &&
+         LHS->getNumRows() == RHS->getNumRows() &&
+         LHS->getNumColumns() == RHS->getNumColumns() &&
+         LHS->getUse() == RHS->getUse();
 }
 
 bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
@@ -12276,6 +12335,11 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   case Type::ConstantMatrix:
     if (areCompatMatrixTypes(LHSCan->castAs<ConstantMatrixType>(),
                              RHSCan->castAs<ConstantMatrixType>()))
+      return LHS;
+    return {};
+  case Type::CooperativeMatrix:
+    if (areCompatCoopMatrixTypes(LHSCan->castAs<CooperativeMatrixType>(),
+                                 RHSCan->castAs<CooperativeMatrixType>()))
       return LHS;
     return {};
   case Type::ObjCObject: {
@@ -14642,6 +14706,17 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     return Ctx.getConstantMatrixType(getCommonElementType(Ctx, MX, MY),
                                      MX->getNumRows(), MX->getNumColumns());
   }
+  case Type::CooperativeMatrix: {
+    const auto *MX = cast<CooperativeMatrixType>(X),
+               *MY = cast<CooperativeMatrixType>(Y);
+    assert(MX->getScope() == MY->getScope());
+    assert(MX->getNumRows() == MY->getNumRows());
+    assert(MX->getNumColumns() == MY->getNumColumns());
+    assert(MX->getUse() == MY->getUse());
+    return Ctx.getCooperativeMatrixType(getCommonElementType(Ctx, MX, MY),
+                                        MX->getScope(), MX->getNumRows(),
+                                        MX->getNumColumns(), MX->getUse());
+  }
   case Type::DependentSizedMatrix: {
     const auto *MX = cast<DependentSizedMatrixType>(X),
                *MY = cast<DependentSizedMatrixType>(Y);
@@ -14796,6 +14871,7 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(ConstantArray)
     CANONICAL_TYPE(ArrayParameter)
     CANONICAL_TYPE(ConstantMatrix)
+    CANONICAL_TYPE(CooperativeMatrix)
     CANONICAL_TYPE(Enum)
     CANONICAL_TYPE(ExtVector)
     CANONICAL_TYPE(FunctionNoProto)

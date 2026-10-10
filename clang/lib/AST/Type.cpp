@@ -1286,6 +1286,18 @@ public:
                                      T->getNumColumns(), T->getLayout());
   }
 
+  QualType VisitCooperativeMatrixType(const CooperativeMatrixType *T) {
+    QualType elementType = recurse(T->getElementType());
+    if (elementType.isNull())
+      return {};
+    if (elementType.getAsOpaquePtr() == T->getElementType().getAsOpaquePtr())
+      return QualType(T, 0);
+
+    return Ctx.getCooperativeMatrixType(elementType, T->getScope(),
+                                        T->getNumRows(), T->getNumColumns(),
+                                        T->getUse());
+  }
+
   QualType VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
     QualType UnderlyingType = recurse(T->getUnderlyingType());
     if (UnderlyingType.isNull())
@@ -2190,6 +2202,10 @@ public:
   }
 
   Type *VisitConstantMatrixType(const ConstantMatrixType *T) {
+    return Visit(T->getElementType());
+  }
+
+  Type *VisitCooperativeMatrixType(const CooperativeMatrixType *T) {
     return Visit(T->getElementType());
   }
 
@@ -5166,6 +5182,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<VectorType>(T)->getElementType());
   case Type::ConstantMatrix:
     return Cache::get(cast<ConstantMatrixType>(T)->getElementType());
+  case Type::CooperativeMatrix:
+    return Cache::get(cast<CooperativeMatrixType>(T)->getElementType());
   case Type::FunctionNoProto:
     return Cache::get(cast<FunctionType>(T)->getReturnType());
   case Type::FunctionProto: {
@@ -5268,6 +5286,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::ConstantMatrix:
     return computeTypeLinkageInfo(
         cast<ConstantMatrixType>(T)->getElementType());
+  case Type::CooperativeMatrix:
+    return computeTypeLinkageInfo(
+        cast<CooperativeMatrixType>(T)->getElementType());
   case Type::FunctionNoProto:
     return computeTypeLinkageInfo(cast<FunctionType>(T)->getReturnType());
   case Type::FunctionProto: {
@@ -5472,6 +5493,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Vector:
   case Type::ExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::DependentSizedMatrix:
   case Type::DependentAddressSpace:
   case Type::FunctionProto:
