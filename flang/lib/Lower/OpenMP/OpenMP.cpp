@@ -2901,6 +2901,60 @@ genFlushOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                     operandRange);
 }
 
+/// Rebind linear allocatables to an in-loop descriptor over the linear address.
+static void bindLinearAllocatables(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    const ConstructQueue &queue,
+    llvm::ArrayRef<std::pair<mlir::omp::BlockArgOpenMPOpInterface,
+                             const ObjectEntryBlockArgs &>>
+        wrapperArgs) {
+  llvm::SmallVector<mlir::Value> linearVars;
+  for (auto [argGeneratingOp, blockArgs] : wrapperArgs) {
+    mlir::Operation *wrapperOp = argGeneratingOp.getOperation();
+    if (auto simdOp = mlir::dyn_cast<mlir::omp::SimdOp>(wrapperOp))
+      llvm::append_range(linearVars, simdOp.getLinearVars());
+    else if (auto wsloopOp = mlir::dyn_cast<mlir::omp::WsloopOp>(wrapperOp))
+      llvm::append_range(linearVars, wsloopOp.getLinearVars());
+  }
+  if (linearVars.empty())
+    return;
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> boundSyms;
+  for (const UnitConstruct &unit : queue) {
+    for (const Clause &clause : unit.clauses) {
+      const auto *linear = std::get_if<clause::Linear>(&clause.u);
+      if (!linear)
+        continue;
+      for (const Object &object : std::get<ObjectList>(linear->t)) {
+        const semantics::Symbol *sym = object.sym();
+        if (!semantics::IsAllocatable(sym->GetUltimate()) ||
+            !boundSyms.insert(sym).second)
+          continue;
+
+        mlir::Value descAddr = converter.getSymbolAddress(*sym);
+        auto *dataAddr = llvm::find_if(linearVars, [&](mlir::Value var) {
+          auto boxAddr = var.getDefiningOp<fir::BoxAddrOp>();
+          auto load =
+              boxAddr ? boxAddr.getVal().getDefiningOp<fir::LoadOp>() : nullptr;
+          return load && load.getMemref() == descAddr;
+        });
+        if (dataAddr == linearVars.end())
+          continue;
+
+        mlir::Type boxType = fir::unwrapRefType(descAddr.getType());
+        mlir::Value box =
+            fir::EmboxOp::create(firOpBuilder, loc, boxType, *dataAddr);
+        mlir::Value newDescAddr = firOpBuilder.createTemporary(loc, boxType);
+        fir::StoreOp::create(firOpBuilder, loc, box, newDescAddr);
+        converter.bindSymbol(
+            *sym, fir::MutableBoxValue(newDescAddr, /*lenParameters=*/{},
+                                       /*mutableProperties=*/{}));
+      }
+    }
+  }
+}
+
 static mlir::omp::LoopNestOp genLoopNestOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -2914,6 +2968,7 @@ static mlir::omp::LoopNestOp genLoopNestOp(
     llvm::function_ref<void(mlir::Operation *)> loopPostIvCb = nullptr) {
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
+    bindLinearAllocatables(converter, loc, queue, wrapperArgs);
     if (loopPostIvCb)
       loopPostIvCb(op);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
