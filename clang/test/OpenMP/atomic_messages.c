@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -ferror-limit 150 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -ferror-limit 150 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -395,6 +395,74 @@ void hint(void) {
   a += 1;
 #pragma omp atomic hint(1) hint(1) // omp45-error 2 {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{directive '#pragma omp atomic' cannot contain more than one 'hint' clause}}
   a += 1;
+}
+
+void gh107979(void) {
+  int x = 0, v = 0;
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  --0; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  0++; // expected-error {{expression is not assignable}}
+#pragma omp atomic update
+  // expected-error@+2 {{the statement for 'atomic update' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  0 += 1; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  // expected-error@+2 {{the statement for 'atomic capture' must be an expression statement of form 'v = ++x;', 'v = --x;', 'v = x++;', 'v = x--;', 'v = x binop= expr;', 'v = x = x binop expr' or 'v = x = expr binop x', where x and v are both lvalue expressions with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  v = 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  (void)(0--); // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  x ? 0-- : 1; // expected-error {{expression is not assignable}}
+  const int c = 0; // expected-note {{variable 'c' declared const here}}
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected a valid expression}}
+  c += 1; // expected-error {{cannot assign to variable 'c' with const-qualified type 'const int'}}
+#pragma omp atomic read
+  0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic write
+  0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic capture
+  { v = x; 0--; } // expected-error {{expression is not assignable}}
+#ifdef OMP51
+#pragma omp atomic compare
+  // omp51-error@+2 {{the statement for 'atomic compare' must be a compound statement of form '{x = expr ordop x ? expr : x;}', '{x = x ordop expr? expr : x;}', '{x = x == e ? d : x;}', '{x = e == x ? d : x;}', or 'if(expr ordop x) {x = expr;}', 'if(x ordop expr) {x = expr;}', 'if(x == e) {x = d;}', 'if(e == x) {x = d;}' where 'x' is an lvalue expression with scalar type, 'expr', 'e', and 'd' are expressions with scalar type, and 'ordop' is one of '<' or '>'}}
+  // omp51-note@+1 {{expected assignment statement}}
+  0--; // expected-error {{expression is not assignable}}
+#endif
+  int w = 0--; // expected-error {{expression is not assignable}}
+#pragma omp atomic
+  w++;
+#pragma omp atomic
+  w += 1;
+#pragma omp atomic
+  w = w + 1;
+#pragma omp atomic read
+  v = w;
+#pragma omp atomic write
+  w = 1;
+#pragma omp atomic capture
+  v = w++;
+#pragma omp atomic capture
+  { v = w; w++; }
+#pragma omp atomic capture
+  { w++; v = w; }
+#pragma omp atomic
+  x--;
 }
 
 #ifdef OMP51
