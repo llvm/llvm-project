@@ -468,6 +468,7 @@ struct GenericKernelTy {
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
     case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
+    case OMP_TGT_EXEC_MODE_SPMD_STRIDED_LOOP:
       return true;
     }
     return false;
