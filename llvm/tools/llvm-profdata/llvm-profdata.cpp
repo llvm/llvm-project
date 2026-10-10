@@ -348,8 +348,7 @@ static cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
-    cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
-               clEnumValN(memprof::Version3, "3", "version 3"),
+    cl::values(clEnumValN(memprof::Version3, "3", "version 3"),
                clEnumValN(memprof::Version4, "4", "version 4")));
 
 static cl::opt<bool> MemProfFullSchema(

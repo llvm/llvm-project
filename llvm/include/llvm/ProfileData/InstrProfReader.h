@@ -598,10 +598,6 @@ using OnDiskHashTableImplV3 =
 
 using MemProfRecordHashTable =
     OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
-using MemProfFrameHashTable =
-    OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
-using MemProfCallStackHashTable =
-    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -702,10 +698,6 @@ private:
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
   std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
-  /// MemProf frame profile data on-disk indexed via frame id.
-  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
-  /// MemProf call stack data on-disk indexed via call stack id.
-  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
   /// The starting address of the frame array.
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
@@ -715,7 +707,6 @@ private:
   /// The data access profiles, deserialized from binary data.
   std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
-  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeRadixTreeBased(const unsigned char *Start,
                                   const unsigned char *Ptr,
                                   memprof::IndexedVersion Version);
