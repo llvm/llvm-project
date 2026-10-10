@@ -109,6 +109,12 @@ static cl::opt<float> ImportHotMultiplier(
     "import-hot-multiplier", cl::init(10.0), cl::Hidden, cl::value_desc("x"),
     cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
 
+static cl::opt<bool> ImportCriticalNoInline(
+    "import-critical-noinline", cl::init(false), cl::Hidden,
+    cl::desc("Import noinline functions at critical call sites, whose import "
+             "the calling module requested explicitly (e.g. with the GUIDs in "
+             "its function_entry_count metadata)"));
+
 static cl::opt<float> ImportCriticalMultiplier(
     "import-critical-multiplier", cl::init(100.0), cl::Hidden,
     cl::value_desc("x"),
@@ -294,7 +300,8 @@ static auto qualifyCalleeCandidates(
 /// order of CalleeSummaryList entries). While looking for a callee definition,
 /// sets \p TooLargeOrNoInlineSummary to the last seen too-large or noinline
 /// candidate; other modules may want to know the function summary or
-/// declaration even if a definition is not needed.
+/// declaration even if a definition is not needed. \p AllowNoInline accepts
+/// noinline candidates.
 ///
 /// FIXME: select "best" instead of first that fits. But what is "best"?
 /// - The smallest: more likely to be inlined.
@@ -308,7 +315,8 @@ selectCallee(const ModuleSummaryIndex &Index,
              ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
              unsigned Threshold, StringRef CallerModulePath,
              const GlobalValueSummary *&TooLargeOrNoInlineSummary,
-             FunctionImporter::ImportFailureReason &Reason) {
+             FunctionImporter::ImportFailureReason &Reason,
+             bool AllowNoInline) {
   // Records the last summary with reason noinline or too-large.
   TooLargeOrNoInlineSummary = nullptr;
   auto QualifiedCandidates =
@@ -330,8 +338,9 @@ selectCallee(const ModuleSummaryIndex &Index,
       continue;
     }
 
-    // Don't bother importing the definition if we can't inline it anyway.
-    if (Summary->fflags().NoInline && !ForceImportAll) {
+    // Don't bother importing the definition if we can't inline it anyway,
+    // unless the caller asked for it for another reason.
+    if (Summary->fflags().NoInline && !ForceImportAll && !AllowNoInline) {
       TooLargeOrNoInlineSummary = Summary;
       Reason = FunctionImporter::ImportFailureReason::NoInline;
       continue;
@@ -982,7 +991,8 @@ void ModuleImportsManager::computeImportForFunction(
       const GlobalValueSummary *SummaryForDeclImport = nullptr;
       CalleeSummary =
           selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                       Summary.modulePath(), SummaryForDeclImport, Reason);
+                       Summary.modulePath(), SummaryForDeclImport, Reason,
+                       IsCriticalCallsite && ImportCriticalNoInline);
       if (!CalleeSummary) {
         // There isn't a callee for definition import but one for declaration
         // import.
