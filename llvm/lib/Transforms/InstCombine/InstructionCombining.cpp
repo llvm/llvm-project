@@ -1844,10 +1844,37 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   // expression. That's just an instruction in hiding.
   // Also reject the case where we simplify back to the phi node. We wouldn't
   // be able to remove it in that case.
-  Value *NewVal = simplifyInstructionWithOperands(
-      &I, Ops, SQ.getWithInstruction(InBB->getTerminator()));
-  if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr()))
-    return NewVal;
+  CondBrInst *EdgeBI = dyn_cast<CondBrInst>(InBB->getTerminator());
+  bool HasEdgeCond =
+      EdgeBI && EdgeBI->getSuccessor(0) != EdgeBI->getSuccessor(1) &&
+      (EdgeBI->getSuccessor(0) == PN->getParent() ||
+       EdgeBI->getSuccessor(1) == PN->getParent());
+  if (HasEdgeCond) {
+    CondContext CC(EdgeBI->getCondition());
+    CC.Invert = EdgeBI->getSuccessor(0) != PN->getParent();
+    findValuesAffectedByCondition(
+        EdgeBI->getCondition(), false,
+        [&](Value *V) { CC.AffectedValues.insert(V); });
+    SimplifyQuery Q =
+        SQ.getWithInstruction(InBB->getTerminator()).getWithCondContext(CC);
+    for (Value *&Op : Ops) {
+      if (isa<Constant>(Op) || !Op->getType()->isIntegerTy())
+        continue;
+      if (!CC.AffectedValues.contains(Op))
+        continue;
+      KnownBits Known = computeKnownBits(Op, Q);
+      if (Known.isConstant())
+        Op = ConstantInt::get(Op->getType(), Known.getConstant());
+    }
+    Value *NewVal = simplifyInstructionWithOperands(&I, Ops, Q);
+    if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr()))
+      return NewVal;
+  } else {
+    Value *NewVal = simplifyInstructionWithOperands(
+        &I, Ops, SQ.getWithInstruction(InBB->getTerminator()));
+    if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr()))
+      return NewVal;
+  }
 
   // Check if incoming PHI value can be replaced with constant
   // based on implied condition.
