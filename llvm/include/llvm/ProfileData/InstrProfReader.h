@@ -760,11 +760,14 @@ private:
   // Index to the current record in the record array.
   unsigned RecordIndex = 0;
 
-  // Read the profile summary. Return a pointer pointing to one byte past the
-  // end of the summary data if it exists or the input \c Cur.
+  // Read the profile summary. On success, return a pointer pointing to one
+  // byte past the end of the summary data if it exists or the input \c Cur.
+  // Returns an error if the summary header is corrupted or runs past the end
+  // of the profile buffer.
   // \c UseCS indicates whether to use the context-sensitive profile summary.
-  const unsigned char *readSummary(IndexedInstrProf::ProfVersion Version,
-                                   const unsigned char *Cur, bool UseCS);
+  Expected<const unsigned char *>
+  readSummary(IndexedInstrProf::ProfVersion Version, const unsigned char *Cur,
+              bool UseCS);
 
 public:
   IndexedInstrProfReader(
