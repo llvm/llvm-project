@@ -3388,6 +3388,17 @@ TEST(TargetParserTest, testAMDGPUgetLocalMemorySize) {
   EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch900, true), 65536u);
   EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch1030, true),
             131072u);
+
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true, 131072),
+            131072u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, false, 131072),
+            65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true, 65536),
+            65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true, 262144),
+            196608u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true, 0), 196608u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true), 196608u);
 }
 
 TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
@@ -3426,6 +3437,23 @@ TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
   EXPECT_EQ(
       AMDGPU::getAddressableLocalMemorySize(Triple::AMDGPUSubArch1030, true),
       65536u);
+
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, true, 131072),
+      131072u);
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, false, 131072),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, true, 65536),
+      65536u);
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, true, 262144),
+      196608u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, true, 0),
+            196608u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, true),
+            196608u);
 }
 
 TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
