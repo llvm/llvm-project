@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMJITLink
   ELF_hexagon.cpp
   ELF_loongarch.cpp
   ELF_mips.cpp
+  ELF_ppc32.cpp
   ELF_ppc64.cpp
   ELF_riscv.cpp
   ELF_systemz.cpp
@@ -50,6 +51,7 @@ add_llvm_component_library(LLVMJITLink
   hexagon.cpp
   loongarch.cpp
   mips.cpp
+  ppc32.cpp
   ppc64.cpp
   riscv.cpp
   systemz.cpp
