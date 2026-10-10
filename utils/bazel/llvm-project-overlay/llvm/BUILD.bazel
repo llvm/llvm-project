@@ -1942,6 +1942,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InstrumentationOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Instrumentation",
+    tbl_outs = {
+        "lib/Transforms/Instrumentation/InstrumentationOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Instrumentation/InstrumentationOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Instrumentation",
     srcs = glob([
@@ -1959,7 +1970,9 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOffloading",
+        ":InstrumentationOptionsTableGen",
         ":MC",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -2093,6 +2106,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Instrumentation",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -3489,6 +3503,8 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":RISCVMCOptionsTableGen",
+            ":RISCVOptionsTableGen",
             ":riscv_isel_target_gen",
         ],
     },
@@ -4113,6 +4129,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/MCTargetDesc/RISCVMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCVOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

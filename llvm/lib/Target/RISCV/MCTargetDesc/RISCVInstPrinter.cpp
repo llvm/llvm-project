@@ -20,7 +20,6 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -30,26 +29,18 @@ using namespace llvm;
 #define PRINT_ALIAS_INSTR
 #include "RISCVGenAsmWriter.inc"
 
-static cl::opt<bool>
-    NoAliases("riscv-no-aliases",
-              cl::desc("Disable the emission of assembler pseudo instructions"),
-              cl::init(false), cl::Hidden);
-
-static cl::opt<bool> EmitX8AsFP("riscv-emit-x8-as-fp",
-                                cl::desc("Emit x8 as fp instead of s0"),
-                                cl::init(false), cl::Hidden);
-
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
-// TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
-// member.
+// TODO: Make RISCVInstPrinter::getRegisterName non-static so that this and
+// EmitX8AsFP can be members.
 static bool ArchRegNames;
+static bool EmitX8AsFP;
 
-// The command-line flags above are used by llvm-mc and llc. They can be used by
-// `llvm-objdump`, but we override their values here to handle options passed to
-// `llvm-objdump` with `-M` (which matches GNU objdump). There did not seem to
-// be an easier way to allow these options in all these tools, without doing it
-// this way.
+// -riscv-no-aliases and -riscv-emit-x8-as-fp are used by llvm-mc and llc. They
+// can be used by `llvm-objdump`, but we override their values here to handle
+// options passed to `llvm-objdump` with `-M` (which matches GNU objdump). There
+// did not seem to be an easier way to allow these options in all these tools,
+// without doing it this way.
 bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   if (Opt == "no-aliases") {
     PrintAliases = false;
@@ -74,11 +65,12 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   bool Res = false;
   const MCInst *NewMI = MI;
   MCInst UncompressedMI;
-  if (PrintAliases && !NoAliases)
+  if (PrintAliases && !CLOpts.no_aliases)
     Res = RISCVRVC::uncompress(UncompressedMI, *MI, STI);
   if (Res)
     NewMI = &UncompressedMI;
-  if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
+  if (!PrintAliases || CLOpts.no_aliases ||
+      !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
@@ -182,7 +174,8 @@ void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   auto FRMArg =
       static_cast<RISCVFPRndMode::RoundingMode>(MI->getOperand(OpNo).getImm());
-  if (PrintAliases && !NoAliases && FRMArg == RISCVFPRndMode::RoundingMode::DYN)
+  if (PrintAliases && !CLOpts.no_aliases &&
+      FRMArg == RISCVFPRndMode::RoundingMode::DYN)
     return;
   O << ", " << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
@@ -399,7 +392,8 @@ const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
   // - X8_H: used for f16 register in zhinx
   // - X8_W: used for f32 register in zfinx
   // - X8_X9: used for GPR Pair
-  if (!ArchRegNames && EmitX8AsFP && Reg == RISCV::X8)
+  if (!ArchRegNames && (EmitX8AsFP || RISCVMCOptions::Global.emit_x8_as_fp) &&
+      Reg == RISCV::X8)
     return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);

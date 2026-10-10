@@ -13637,8 +13637,9 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
           VecScale = std::max(VecScale, Scale);
         }
       } else {
-        // A splat is a single broadcast.
-        if (HasFusedAlt && isSplat(TE.Scalars))
+        // A splat is a single broadcast. In loops, its per-lane count, scaled
+        // by the trip count, rejects the profitable trees.
+        if ((HasFusedAlt || HasTreeLoop) && isSplat(TE.Scalars))
           Count = !isConstant(TE.Scalars.front());
         else
           Count = TE.Scalars.size() - count_if(TE.Scalars, isConstant);
@@ -21064,9 +21065,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         case Instruction::SExt:
         case Instruction::ZExt:
         case Instruction::Trunc: {
-          // Split roots keep their operands in the combined sub-nodes, so there
-          // is no single operand to take the context hint from.
-          if (E.State == TreeEntry::SplitVectorize)
+          // Split and gather roots have no operand entry to take the context
+          // hint from.
+          if (E.isGather() || E.State == TreeEntry::SplitVectorize)
             break;
           const TreeEntry *OpTE = getOperandEntry(&E, 0);
           CCH = getCastContextHint(*OpTE);
@@ -21198,8 +21199,9 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
       isFixedVectorShuffle(GatheredExtracts, Mask, AC);
   if (!Res || all_of(Mask, equal_to(PoisonMaskElem))) {
     // TODO: try to check other subsets if possible.
-    // Restore the original VL if attempt was not successful.
+    // Restore the original VL and mask if attempt was not successful.
     copy(SavedVL, VL.begin());
+    Mask.assign(VL.size(), PoisonMaskElem);
     return std::nullopt;
   }
   // Restore unused scalars from mask, if some of the extractelements were not
@@ -24068,10 +24070,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                  R == LaneI->getOperand(0) && L != R;
         if (Opcode == Instruction::Add)
           // sub C, x emitted as x + -C.
-          return isa<Constant>(LaneI->getOperand(0)) &&
-                 !isa<Constant>(LaneI->getOperand(1));
+          return isa<ConstantInt>(LaneI->getOperand(0)) &&
+                 !isa<ConstantInt>(LaneI->getOperand(1));
         // add x, C emitted as -C - x.
-        return isa<Constant>(L) && !isa<Constant>(R);
+        return isa<ConstantInt>(L) && !isa<ConstantInt>(R);
       };
       if (any_of(enumerate(E->Scalars), [&](const auto &P) {
             auto *LaneI = dyn_cast<Instruction>(P.value());
