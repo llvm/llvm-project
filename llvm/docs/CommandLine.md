@@ -1586,14 +1586,18 @@ A member is named after its option, `enable_foo` for `-enable-foo`; a named `def
 
 The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
 A `ValueField`, of an integer type, `float`, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+A `ListField<"foo-ids", "unsigned", ...>` is an `ArrayRef<unsigned>`, replacing a `cl::list` with `cl::CommaSeparated`: each `-foo-ids=1,2` or `-foo-ids 1,2` appends its values.
+A reader applies a `cl::list_init` default to an empty list, since a given option never leaves it empty.
 An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
 An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
+An `EnumListField` is a `ListField` whose values map to enumerators as in an `EnumField`.
+A `FlagOrEnumField` takes one more argument, the enumerator the bare option selects, replacing `cl::ValueOptional`: with `"FooMode::Fast"`, `-foo-mode` sets `FooMode::Fast`, and `-foo-mode safe` does not consume `safe`.
 A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
 Both accept `--` for `-`.
 Only `-help-hidden` lists the options, like `cl::Hidden`.
 
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
-A `std::optional` member defaulting to `std::nullopt` tells whether the option was given, which a `cl::opt` asks with `getNumOccurrences()`.
+An `OptionalValueField` or `OptionalEnumField` takes no default; its `std::optional` member stays `std::nullopt` unless the option is given, replacing `getNumOccurrences()`.
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
