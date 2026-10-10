@@ -1,3 +1,14 @@
+//===- constexpr_hash.h - Classes for representing statements -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines a constexpr `hash`
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef SUPPORT_CONSTEXPR_HASH_H
 #define SUPPORT_CONSTEXPR_HASH_H
@@ -13,7 +24,6 @@ namespace support {
 
 #if TEST_STD_VER >= 26
 
-// TODO: document the constraints of using this at runtime OR make it consteval only
 template <typename _Tp>
 struct constexpr_hash;
 
