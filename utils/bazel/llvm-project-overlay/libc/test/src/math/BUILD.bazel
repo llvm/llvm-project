@@ -181,6 +181,7 @@ math_mpfr_test(
     deps = [
         "//libc:__support_math_exp10f_double_eval",
         "//libc:__support_math_exp10f_float_eval",
+        "//libc:__support_math_exp10f_integer_eval",
     ],
 )
 
@@ -191,6 +192,7 @@ math_mpfr_test(
     deps = [
         "//libc:__support_math_exp2f_double_eval",
         "//libc:__support_math_exp2f_float_eval",
+        "//libc:__support_math_exp2f_integer_eval",
     ],
 )
 
