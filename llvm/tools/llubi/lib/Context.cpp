@@ -1279,6 +1279,7 @@ bool Context::isValid(raw_ostream &OS) const {
     switch (Ty->getTypeID()) {
     case Type::X86_AMXTyID:
     case Type::TargetExtTyID:
+    case Type::TokenTyID:
       OS << "Unsupported type " << *Ty << '\n';
       return false;
     case Type::ScalableVectorTyID:
