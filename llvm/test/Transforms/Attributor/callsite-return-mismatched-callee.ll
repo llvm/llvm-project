@@ -1,7 +1,7 @@
 ; RUN: opt -passes=verify -disable-output %s
 ; RUN: opt -passes=attributor-cgscc -disable-output %s
 
-define internal void @callee_void() {
+define void @callee_void() {
   ret void
 }
 
