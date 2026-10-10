@@ -2119,7 +2119,6 @@ class DependentVectorTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, DependentVectorTypeLoc,
                              DependentVectorType, VectorTypeLocInfo> {
 public:
-
   /// The location used for the vector type's local source range, e.g.
   ///    T __attribute__((vector_size(N)))
   ///    ^
