@@ -8,6 +8,7 @@
 typedef float matrix3x3 __attribute__((matrix_type(3, 3)));
 typedef float matrix3x2 __attribute__((matrix_type(3, 2)));
 typedef float matrix2x3 __attribute__((matrix_type(2, 3)));
+typedef int matrixi3x3 __attribute__((matrix_type(3, 3)));
 
 matrix3x3 a;
 
