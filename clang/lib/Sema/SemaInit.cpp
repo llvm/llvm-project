@@ -5672,8 +5672,7 @@ static void TryReferenceInitializationCore(Sema &S,
         (S.getLangOpts().CPlusPlus17 || T2->isRecordType() ||
          T2->isArrayType())))) {
     if (isWebAssemblyGlobalReference(S, Initializer)) {
-      Sequence.SetFailed(
-          InitializationSequence::FK_WasmGlobalReferenceBinding);
+      Sequence.SetFailed(InitializationSequence::FK_WasmGlobalReferenceBinding);
       return;
     }
 
