@@ -3700,6 +3700,13 @@ mapBuiltinToOpcode(StringRef DemangledCall,
   return std::make_tuple(-1, 0, 0);
 }
 
+bool isBuiltin(StringRef DemangledCall,
+               SPIRV::InstructionSet::InstructionSet Set) {
+  SmallVector<Register> Args;
+  return lookupBuiltin(DemangledCall, Set, Register(), nullptr, Args) !=
+         nullptr;
+}
+
 /// Checks that scalar/vector numeric arguments of \p Call match the types
 /// implied by their mangling in \p DemangledCall. Pointers and opaque
 /// builtin types (images, samplers, pipes, etc.) are not validated here, as

@@ -1319,7 +1319,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
                                    "memrchr.cmp");
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr,
                                            B.getInt64(Pos), "memrchr.ptr_plus");
-      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1338,10 +1339,13 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
   Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  if (auto *AndSI = dyn_cast<SelectInst>(And))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*AndSI, DEBUG_TYPE);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
       B.CreateInBoundsGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
-  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  return B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                          "memrchr.sel");
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {

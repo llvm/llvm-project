@@ -1765,7 +1765,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
     Info.flags = (MachineMemOperand::MOLoad | MOCooperative);
@@ -1778,7 +1778,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    Info.memVT = MVT::getVT(CI.getArgOperand(1)->getType());
     Info.ptrVal = CI.getArgOperand(0);
     Info.align.reset();
     Info.flags = (MachineMemOperand::MOStore | MOCooperative);
@@ -2525,8 +2525,7 @@ bool SITargetLowering::isUniformLoad(const LoadSDNode *Load) const {
           (Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
            Load->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
           (Load->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-           Load->isSimple() && Subtarget->getScalarizeGlobalBehavior() &&
-           isMemOpHasNoClobberedMemOperand(Load)));
+           Load->isSimple() && isMemOpHasNoClobberedMemOperand(Load)));
 }
 
 MachinePointerInfo
@@ -13664,8 +13663,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      (AS == AMDGPUAS::GLOBAL_ADDRESS &&
-       Subtarget->getScalarizeGlobalBehavior() && Load->isSimple() &&
+      (AS == AMDGPUAS::GLOBAL_ADDRESS && Load->isSimple() &&
        (Load->isInvariant() || isMemOpHasNoClobberedMemOperand(Load)))) {
     if ((!Op->isDivergent() || AMDGPU::isUniformMMO(MMO)) &&
         Alignment >= Align(4) && NumElements < 32) {

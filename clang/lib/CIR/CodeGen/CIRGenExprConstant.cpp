@@ -375,9 +375,9 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
       mlir::ArrayAttr indices = builder.getArrayAttr(
           {builder.getI32IntegerAttr(apOp.getAddressPoint().getIndex()),
            builder.getI32IntegerAttr(apOp.getAddressPoint().getOffset())});
-      elements[0] =
-          cir::GlobalViewAttr::get(cir::VPtrType::get(builder.getContext()),
-                                   apOp.getNameAttr(), indices);
+      elements[0] = cir::GlobalViewAttr::get(
+          cir::VPtrType::get(builder.getContext()), apOp.getNameAttr(), indices,
+          /*addressPoint=*/true);
     }
 
     unsigned baseNo = 0;

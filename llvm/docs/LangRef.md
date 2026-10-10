@@ -2346,7 +2346,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -9511,6 +9512,23 @@ An example of module flags:
    The behavior is to emit an error if the `llvm.module.flags` does not
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
+
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
 
 ### Synthesized Functions Module Flags Metadata
 
