@@ -19,6 +19,7 @@
 #include "test_macros.h"
 #include <type_traits>
 #include <bit>
+#include <cstddef>
 
 namespace support {
 
