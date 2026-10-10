@@ -1185,6 +1185,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- Added the `typefunchash` and `typefunchashpointersplit` token assignment
+  modes for `-fsanitize=alloc-token`, selected with
+  `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
+  the allocated type and the name of the function containing the allocation.
+
 ### Python Binding Changes
 
 - Fixed a crash (`SIGFPE`) when traversing an AST via the visitor callbacks
