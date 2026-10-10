@@ -26,9 +26,20 @@
 #ifndef LLVM_SUPPORT_SUFFIXTREE_NODE_H
 #define LLVM_SUPPORT_SUFFIXTREE_NODE_H
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Compiler.h"
+#include <algorithm>
+#include <climits>
+#include <cstdint>
 
 namespace llvm {
+
+/// An index stored in a pointer-sized value.
+/// Reserve at least one bit for the child tag.
+using SuffixTreeIndex =
+    PointerEmbeddedInt<unsigned, std::min(sizeof(unsigned) * CHAR_BIT,
+                                          sizeof(uintptr_t) * CHAR_BIT - 1)>;
 
 /// A node in a suffix tree which represents a substring or suffix.
 struct SuffixTreeNode {
@@ -148,7 +159,9 @@ public:
   /// A child existing on an unsigned integer implies that from the mapping
   /// represented by the current node, there is a way to reach another
   /// mapping by tacking that character on the end of the current string.
-  DenseMap<unsigned, SuffixTreeNode *> Children;
+  /// Leaves are represented by their incoming edge start indices.
+  DenseMap<unsigned, PointerUnion<SuffixTreeInternalNode *, SuffixTreeIndex>>
+      Children;
 
   SuffixTreeInternalNode(unsigned StartIdx, unsigned EndIdx,
                          SuffixTreeInternalNode *Link)
