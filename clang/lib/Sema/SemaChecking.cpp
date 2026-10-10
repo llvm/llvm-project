@@ -1406,9 +1406,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   }
 
   case Builtin::BIsprintf:
-  case Builtin::BI__builtin___sprintf_chk: {
-    size_t FormatIndex = BuiltinID == Builtin::BIsprintf ? 1 : 3;
-    auto *FormatExpr = TheCall->getArg(FormatIndex)->IgnoreParenImpCasts();
+  case Builtin::BI__builtin_sprintf:
+  case Builtin::BI__builtin___sprintf_chk:
+  case Builtin::BIvsprintf:
+  case Builtin::BI__builtin_vsprintf:
+  case Builtin::BI__builtin___vsprintf_chk: {
+    bool IsChk = BuiltinID == Builtin::BI__builtin___sprintf_chk ||
+                 BuiltinID == Builtin::BI__builtin___vsprintf_chk;
+    std::optional<unsigned> FormatIndex = Checker.TranslateIndex(IsChk ? 3 : 1);
+    if (!FormatIndex)
+      return;
+    auto *FormatExpr = TheCall->getArg(*FormatIndex)->IgnoreParenImpCasts();
 
     StringRef FormatStrRef;
     size_t StrLen;
@@ -1423,7 +1431,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                      : diag::warn_format_overflow_non_kprintf;
         AccessSize = llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                          .extOrTrunc(SizeTypeWidth);
-        if (BuiltinID == Builtin::BI__builtin___sprintf_chk) {
+        if (IsChk) {
           BufferSize = Checker.ComputeExplicitObjectSizeArgument(2);
         } else {
           BufferSize = Checker.ComputeSizeArgument(0);

@@ -27,9 +27,12 @@ extern "C" {
 #endif
 
 extern int sprintf(char *str, const char *format, ...);
+extern int vsprintf(char *str, const char *format, __builtin_va_list ap);
 
 #if defined(USE_BUILTINS)
 #define memcpy(x,y,z) __builtin_memcpy(x,y,z)
+#define sprintf(x, ...) __builtin_sprintf(x, __VA_ARGS__)
+#define vsprintf(x, y, z) __builtin_vsprintf(x, y, z)
 // Also test the Windows winsock2.h signature where len is a signed int.
 int recv(int, char *, int, int);
 int recvfrom(int, char *, int, int, struct sockaddr *, int *);
@@ -297,6 +300,33 @@ void call_sprintf(void) {
   sprintf(buf, "%+.3f", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "%.0e", 9.f);
   sprintf(buf, "5%.1e", 9.f); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+}
+
+void call_vsprintf_chk(char *buf) {
+  __builtin_va_list list;
+  __builtin___vsprintf_chk(buf, 1, 6, "hell\n", list);
+  __builtin___vsprintf_chk(buf, 1, 5, "hell\n", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
+  __builtin___vsprintf_chk(buf, 1, 6, "hell\0 boy", list); // expected-warning {{format string contains '\0' within the string body}}
+  __builtin___vsprintf_chk(buf, 1, 2, "hell\0 boy", list); // expected-warning {{format string contains '\0' within the string body}} \
+                                                           // expected-warning {{'vsprintf' will always overflow; destination buffer has size 2, but format string expands to at least 5}}
+  __builtin___vsprintf_chk(buf, 1, 2, "%d", list);
+  __builtin___vsprintf_chk(buf, 1, 1, "%d", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
+  __builtin___vsprintf_chk(buf, 1, 9, "%f", list);
+  __builtin___vsprintf_chk(buf, 1, 8, "%f", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 8, but format string expands to at least 9}}
+}
+
+void call_vsprintf(void) {
+  char buf[6];
+  __builtin_va_list list;
+  vsprintf(buf, "hell\0 boy", list); // expected-warning {{format string contains '\0' within the string body}}
+  vsprintf(buf, "hello b\0y", list); // expected-warning {{format string contains '\0' within the string body}} \
+                                     // expected-warning {{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+  vsprintf(buf, "hello", list);
+  vsprintf(buf, "hello!", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  vsprintf(buf, "1234%d", list);
+  vsprintf(buf, "12345%d", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  vsprintf(buf, "%.3f", list);
+  vsprintf(buf, "5%.3f", list); // expected-warning {{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
 }
 
 void call_umask(mode_t runtime_mode) {
