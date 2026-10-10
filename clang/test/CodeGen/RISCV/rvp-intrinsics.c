@@ -36,6 +36,16 @@ uint32_t test_rev_32(uint32_t a) {
 uint64_t test_rev_64(uint64_t a) {
   return __riscv_rev_64(a);
 }
+
+// RV64-LABEL: define dso_local i64 @test_rev16_64(
+// RV64-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.rev16.64(i64 [[A]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t test_rev16_64(uint64_t a) {
+  return __riscv_rev16_64(a);
+}
 #endif
 
 /* Scalar Saturating Addition and Subtraction */

@@ -1199,6 +1199,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // P extension scalar bitmanip
+  case RISCV::BI__builtin_riscv_rev16_64:
+    ID = Intrinsic::riscv_rev16_64;
+    break;
+
   // Packed Widening Shifts
   case RISCV::BI__builtin_riscv_pwsll_s_u16x4:
   case RISCV::BI__builtin_riscv_pwsll_s_u32x2:
