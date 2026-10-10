@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
@@ -339,16 +340,12 @@ LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
       EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr), L(L) {
 
   using namespace shared;
-
   ErrorAsOutParameter _(&Err);
-
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  WFs[ES.intern("__orc_rt_resolve_tag")] =
-      ES.wrapAsyncWithSPS<SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr)>(
-          this, &LazyReexportsManager::resolve);
-
-  Err = ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  using ResolveSPSSig = SPSExpected<SPSExecutorSymbolDef>(SPSExecutorAddr);
+  Err = ES.registerCallControllerHandlers(
+      PlatformJD, bindCallControllerHandlerSPS<ResolveSPSSig>(
+                      SymbolNameSpec::c("__orc_rt_resolve_tag"), this,
+                      &LazyReexportsManager::resolve));
 }
 
 std::unique_ptr<MaterializationUnit>

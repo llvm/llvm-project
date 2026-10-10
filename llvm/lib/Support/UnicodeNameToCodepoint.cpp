@@ -320,7 +320,7 @@ struct GeneratedNamesData {
   uint32_t End;
 };
 
-// Unicode 15.1 Table 4-8. Name Derivation Rule Prefix Strings
+// Unicode 18.0 Name Derivation Rule Prefix Strings (extracted/DerivedName.txt)
 static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400, 0x4DBF},
     {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFF},
@@ -334,11 +334,13 @@ static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x31350, 0x323AF},
     {"CJK UNIFIED IDEOGRAPH-", 0x323B0, 0x33479},
     {"EGYPTIAN HIEROGLYPH-", 0x13460, 0x143FA},
-    {"TANGUT IDEOGRAPH-", 0x17000, 0x187F7},
-    {"TANGUT IDEOGRAPH-", 0x18D00, 0x18D08},
-    {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00, 0x18CD5},
+    {"TANGUT IDEOGRAPH-", 0x17000, 0x187FF},
+    {"TANGUT IDEOGRAPH-", 0x18D00, 0x18D20},
+    {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00, 0x18CDA},
+    {"KHITAN SMALL SCRIPT CHARACTER-", 0x18CFF, 0x18CFF},
+    {"JURCHEN CHARACTER-", 0x18E00, 0x19191},
     {"NUSHU CHARACTER-", 0x1B170, 0x1B2FB},
-    {"SEAL CHARACTER-", 0x3D000, 0x3FC3F},
+    {"SMALL SEAL CHARACTER-", 0x3D000, 0x3FC3F},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0xF900, 0xFA6D},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0xFA70, 0xFAD9},
     {"CJK COMPATIBILITY IDEOGRAPH-", 0x2F800, 0x2FA1D},

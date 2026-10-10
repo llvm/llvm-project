@@ -834,6 +834,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPFlattenDirective(OMPFlattenDirective *Node) {
+  Indent() << "#pragma omp flatten";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
   Indent() << "#pragma omp split";
   PrintOMPExecutableDirective(Node);
@@ -2671,8 +2676,17 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 }
 
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for the remaining reflection kinds.
+  OS << "^^";
+  switch (S->getKind()) {
+  case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    break;
+  case ReflectionKind::Type:
+    S->getTypeSourceInfo()->getType().print(OS, Policy);
+    break;
+  }
 }
 
 void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {

@@ -20,6 +20,16 @@
 # CHECK-SEG-AFTER: .bolt.reserved PROGBITS [[#ADDR:]] [[#OFF:]]
 # CHECK-SEG-AFTER: LOAD 0x{{0*}}[[#OFF]] 0x{{0*}}[[#ADDR]] {{.*}} R E 0x200000
 
+## Check that mismatched syms don't trip perf2bolt
+# RUN: llvm-nm %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS-AFTER
+# CHECK-SYMS-AFTER-DAG: __bolt_reserved_start
+# CHECK-SYMS-AFTER-DAG: __bolt_reserved_end
+# RUN: llvm-strip -N __bolt_reserved_end %t.bolt
+# RUN: llvm-bolt-heatmap %t.bolt --pa -p %t/preagg -o %t.hm 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-HM
+# CHECK-HM-NOT: BOLT-ERROR
+# CHECK-HM: HEATMAP: building heat map
+
 #--- src.c
 int main() { return 0; }
 
@@ -31,3 +41,6 @@ SECTIONS {
     __bolt_reserved_end = .;
   }
 } INSERT AFTER .text;
+
+#--- preagg
+S 200000 1

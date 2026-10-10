@@ -271,7 +271,7 @@ char VirtRegRewriterLegacy::ID = 0;
 
 char &llvm::VirtRegRewriterID = VirtRegRewriterLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(VirtRegRewriterLegacy, "virtregrewriter",
+INITIALIZE_PASS_BEGIN(VirtRegRewriterLegacy, "virt-reg-rewriter",
                       "Virtual Register Rewriter", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
@@ -279,7 +279,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(VirtRegRewriterLegacy, "virtregrewriter",
+INITIALIZE_PASS_END(VirtRegRewriterLegacy, "virt-reg-rewriter",
                     "Virtual Register Rewriter", false, false)
 
 void VirtRegRewriterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {

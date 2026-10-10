@@ -7,6 +7,10 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
+; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
+; RUN:llc -O3 -mtriple=spirv-- -enable-new-pm < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
@@ -225,6 +229,13 @@
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      SPIRV Assembly Printer
 ; SPIRV-Opt-NEXT:      Free MachineFunction
+
+; SPIRV-NPM:OpCapability Linkage
+; SPIRV-NPM:OpName %[[#FN:]] "empty"
+; SPIRV-NPM:%[[#VOID:]] = OpTypeVoid
+; SPIRV-NPM:%[[#FN]] = OpFunction %[[#VOID]] None %[[#]]
+; SPIRV-NPM:OpReturn
+; SPIRV-NPM:OpFunctionEnd
 
 define void @empty() {
   ret void
