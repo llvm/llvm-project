@@ -2260,6 +2260,29 @@ TEST_F(VPBasicBlockTest, VPRegionBlockCloneSyncsCanonicalIVNUW) {
   EXPECT_FALSE(Clone->hasCanonicalIVNUW());
 }
 
+TEST_F(VPRecipeTest, VPWidenCompressStoreExpandLoadIntr) {
+  VPlan &Plan = getPlan();
+
+  IntegerType *Int64 = IntegerType::get(C, 64);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPValue *Value = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 8));
+
+  VPWidenMemIntrinsicRecipe ExpandLoad(Intrinsic::masked_expandload,
+                                       {Addr, Mask, Plan.getPoison(Int64)},
+                                       Int64, Align(8));
+
+  VPWidenMemIntrinsicRecipe CompressStore(Intrinsic::masked_compressstore,
+                                          {Value, Addr, Mask}, Int64, Align(8));
+
+  auto VF = ElementCount::getFixed(4);
+  for (VPWidenMemIntrinsicRecipe *Intr : {&ExpandLoad, &CompressStore}) {
+    EXPECT_EQ(Intr->getMask(), Mask);
+    EXPECT_EQ(Intr->getAccessType(VF)->getScalarType(), Int64);
+    EXPECT_EQ(Intr->getOperand(Intr->getAddrOpIdx()), Addr);
+  }
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueConstructUserAfterMaterialization) {
   VPlan &Plan = getPlan();

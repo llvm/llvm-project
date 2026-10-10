@@ -439,10 +439,12 @@ VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   switch (VPID) {
   default:
     return std::nullopt;
+  case Intrinsic::masked_compressstore:
   case Intrinsic::vp_store:
   case Intrinsic::vp_scatter:
   case Intrinsic::experimental_vp_strided_store:
     return 1;
+  case Intrinsic::masked_expandload:
   case Intrinsic::vp_load:
   case Intrinsic::vp_load_ff:
   case Intrinsic::vp_gather:
