@@ -1306,6 +1306,10 @@ bool Context::isValid(raw_ostream &OS) const {
       }
       [[fallthrough]];
     case Type::StructTyID:
+      if (auto *STy = dyn_cast<StructType>(Ty); STy && STy->isOpaque()) {
+        OS << "Unsupported opaque struct type %" << STy->getName() << "\n";
+        return false;
+      }
       if (ValidAggTys.contains(Ty))
         return true;
       for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I)
