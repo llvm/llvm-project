@@ -6,24 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces that let a statically-shaped
-// memref be promoted into a single vector SSA value, provided every access to
-// the buffer is a whole-buffer read or write (or a whole-sub-region access of
-// such a buffer via a subview). With these models, Mem2Reg replaces the memory
-// slot with a vector value, threading it as the reaching definition:
+// This file implements Mem2Reg `PromotableMemOpInterface` models for
+// `vector.transfer_read` and `vector.transfer_write`. These models promote a
+// memref slot to a single vector SSA value. The models for `memref.copy` and
+// `memref.subview` live in the MemRef dialect.
 //
-//   * `vector.transfer_read` of the whole buffer becomes a use of the current
-//     vector value; `vector.transfer_write` of the whole buffer becomes a new
-//     definition of it (see the `PromotableMemOpInterface` models below).
+// Transfers must meet the criteria in `isPromotableTransfer`: their vector type
+// must match the slot's value type, their indices must be zero, and their
+// permutation map must be the identity. A read uses the slot's current value;
+// a write defines its next value. For transfers with a mask operand or through
+// a dynamic subview, `arith.select` supplies padding for inactive read lanes
+// and preserves the previous value for inactive write lanes.
 //
-// Accesses that are not whole-(sub-)buffer -- masked or partial transfers,
-// non-zero transfer indices -- are left untouched, so the buffer is not
-// promoted.
+// Transfers wrapped in `vector.mask` prevent promotion because that op does
+// not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
+// promote accesses inside a region.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Vector/Transforms/MemorySlotOpInterfaceImpl.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/Transforms/MemorySlotOpInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -36,11 +41,24 @@ using namespace mlir::vector;
 //  Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns whether `xferOp` accesses exactly the whole contents of `slot`, so
-/// it can act as a plain whole-buffer load/store during Mem2Reg.
+/// Returns whether `xferOp` can be promoted to a load/store of `slot`'s vector
+/// value. This requires that the transfer's sole use of the slot is as its
+/// base, the transferred vector type equals `slot.valueType`, the indices are
+/// all zero (origin), and the permutation map is the identity.
+///
+/// Partial accesses through dynamic subviews or with mask operands are
+/// reconstructed with `arith.select` during promotion.
+///
+/// For a dynamic subview, the aliaser masks writes to preserve the parent value
+/// outside the subview's extent. Reads are masked here because they need the
+/// transfer's padding operand, which the aliaser does not have.
+///
+/// A transfer's mask operand is combined with the subview mask using
+/// `arith.andi` for reads. For writes, `getStored` applies it with a separate
+/// `arith.select` to preserve inactive lanes.
 static bool
-isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
-                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   // The sole blocking use must be the slot pointer as the transfer's base.
   if (blockingUses.size() != 1)
     return false;
@@ -67,15 +85,8 @@ isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // All dimensions must be in bounds. An out-of-bounds dimension means the
-  // transfer reaches past the buffer, so a read would materialize padding
-  // rather than buffer contents and a write would only cover part of the
-  // buffer: in neither case does the transfer stand in for the whole slot.
-  if (xferOp.hasOutOfBoundsDim())
-    return false;
-
-  // A mask could make the access partial.
-  if (xferOp.getMask())
+  // Out-of-bounds is allowed only for a dynamic view.
+  if (xferOp.hasOutOfBoundsDim() && !memref::isDynamicSubViewSlot(slot.ptr))
     return false;
 
   return true;
@@ -86,7 +97,7 @@ isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
+/// Mem2Reg model for a `vector.transfer_read` of the slot.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
                                                      vector::TransferReadOp> {
@@ -105,23 +116,39 @@ struct TransferReadOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    return isWholeBufferTransfer(cast<VectorTransferOpInterface>(op), slot,
-                                 blockingUses);
+    return isPromotableTransfer(cast<VectorTransferOpInterface>(op), slot,
+                                blockingUses);
   }
 
+  // Replace the read with the reaching definition, selecting padding for lanes
+  // outside the subview's extent or disabled by the transfer's mask.
   DeletionKind
   removeBlockingUses(Operation *op, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses,
                      OpBuilder &builder, Value reachingDefinition,
                      const DataLayout &dataLayout) const {
-    // Whole-buffer read: replace the loaded vector with the reaching
-    // definition.
-    cast<vector::TransferReadOp>(op).getVector().replaceAllUsesWith(
-        reachingDefinition);
+    auto readOp = cast<vector::TransferReadOp>(op);
+    Location loc = op->getLoc();
+    Value mask = memref::buildDynamicSubViewMask(builder, loc, slot.ptr);
+    if (Value opMask = readOp.getMask())
+      mask = mask
+                 ? arith::AndIOp::create(builder, loc, mask, opMask).getResult()
+                 : opMask;
+
+    Value result = reachingDefinition;
+    if (mask) {
+      Value padSplat = vector::BroadcastOp::create(
+          builder, loc, readOp.getVectorType(), readOp.getPadding());
+      result = arith::SelectOp::create(builder, loc, mask, reachingDefinition,
+                                       padSplat);
+    }
+    readOp.getVector().replaceAllUsesWith(result);
     return DeletionKind::Delete;
   }
 };
 
+/// Mem2Reg model for a `vector.transfer_write` to the slot, which qualifies
+/// under the same `isPromotableTransfer` criteria.
 struct TransferWriteOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferWriteOpMemOpModel,
                                                      vector::TransferWriteOp> {
@@ -131,20 +158,30 @@ struct TransferWriteOpMemOpModel
     return cast<vector::TransferWriteOp>(op).getBase() == slot.ptr;
   }
 
+  // The stored value is the transfer's vector, with inactive lanes preserved
+  // from the reaching definition when the transfer has a mask.
   Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
                   Value reachingDef, const DataLayout &dataLayout) const {
-    return cast<vector::TransferWriteOp>(op).getValueToStore();
+    auto writeOp = cast<vector::TransferWriteOp>(op);
+    Value stored = writeOp.getValueToStore();
+    // A dynamic-view extent is composed separately, by the aliaser's
+    // `projectAliasValueToSlotValue`.
+    if (Value mask = writeOp.getMask())
+      stored = arith::SelectOp::create(builder, op->getLoc(), mask, stored,
+                                       reachingDef);
+    return stored;
   }
 
   bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    // No self-store guard needed: a vector value can never equal a memref slot.
-    return isWholeBufferTransfer(cast<VectorTransferOpInterface>(op), slot,
-                                 blockingUses);
+    return isPromotableTransfer(cast<VectorTransferOpInterface>(op), slot,
+                                blockingUses);
   }
 
+  // `getStored` already provided the value for later uses, so the write can
+  // simply be erased.
   DeletionKind
   removeBlockingUses(Operation *op, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -153,7 +190,6 @@ struct TransferWriteOpMemOpModel
     return DeletionKind::Delete;
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
