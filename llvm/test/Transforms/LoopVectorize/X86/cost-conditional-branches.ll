@@ -668,15 +668,10 @@ exit:
 define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-LABEL: @test_predicated_udiv(
 ; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <32 x i1> poison, i1 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <32 x i1> [[BROADCAST_SPLATINSERT2]], <32 x i1> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <32 x i1> [[BROADCAST_SPLAT1]], splat (i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <32 x i32> poison, i32 [[D:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT1]], <32 x i32> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -689,57 +684,38 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 896
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i32> @llvm.usub.sat.v32i32(<32 x i32> [[STEP_ADD_3]], <32 x i32> splat (i32 1))
-; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i32> @llvm.masked.udiv.v32i32(<32 x i32> [[TMP2]], <32 x i32> [[BROADCAST_SPLAT2]], <32 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <32 x i32> [[TMP3]] to <32 x i64>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP4]]
-; CHECK-NEXT:    [[TMP132:%.*]] = extractelement <32 x i64> [[PREDPHI]], i64 31
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK-NEXT:    br label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VEC_EPILOG_PH:%.*]], !prof [[PROF11:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 896, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT3]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <8 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[D]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <8 x i32> poison, i32 [[VEC_EPILOG_RESUME_VAL]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT7]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[BROADCAST_SPLAT8]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX63:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT81:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND64:%.*]] = phi <8 x i32> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT82:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX63:%.*]] = phi i32 [ 896, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT81:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND64:%.*]] = phi <8 x i32> [ <i32 896, i32 897, i32 898, i32 899, i32 900, i32 901, i32 902, i32 903>, [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT82:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT81]] = add nuw i32 [[INDEX63]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT82]] = add <8 x i32> [[VEC_IND64]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP167:%.*]] = icmp eq i32 [[INDEX_NEXT81]], 1000
 ; CHECK-NEXT:    br i1 [[TMP167]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.usub.sat.v8i32(<8 x i32> [[VEC_IND64]], <8 x i32> splat (i32 1))
-; CHECK-NEXT:    [[TMP166:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[TMP8]], <8 x i32> [[BROADCAST_SPLAT]], <8 x i1> [[TMP6]])
-; CHECK-NEXT:    [[TMP168:%.*]] = zext <8 x i32> [[TMP166]] to <8 x i64>
-; CHECK-NEXT:    [[PREDPHI83:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP168]]
-; CHECK-NEXT:    [[TMP169:%.*]] = extractelement <8 x i64> [[PREDPHI83]], i64 7
-; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 896, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 896, [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[THEN:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[THEN:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @llvm.usub.sat.i32(i32 [[IV]], i32 1)
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[CALL]], [[D]]
+; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[CALL]], [[D:%.*]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[UDIV]] to i64
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[MERGE:%.*]] = phi i64 [ [[ZEXT]], [[THEN]] ], [ 0, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = phi i64 [ [[MERGE]], [[LOOP_LATCH]] ], [ [[TMP132]], [[MIDDLE_BLOCK]] ], [ [[TMP169]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[MERGE_LCSSA:%.*]] = phi i64 [ [[MERGE]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[MERGE_LCSSA]]
 ;
 entry:
