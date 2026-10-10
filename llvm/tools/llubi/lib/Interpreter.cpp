@@ -160,12 +160,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                          bool IsInput) {
     if (!Val.isDenormal())
       return Val;
-    if (IsInput) {
-      // Non-deterministically choose between flushing or preserving the
-      // denormal value.
-      if (Ctx.getRandomBool())
-        return Val;
-    }
+    // Input flushing is required, but output flushing is optional. Model both
+    // permitted output behaviors when the mode allows flushing.
+    if (!IsInput &&
+        (Mode == DenormalMode::PositiveZero ||
+         Mode == DenormalMode::PreserveSign) &&
+        Ctx.getRandomBool())
+      return Val;
     if (Mode == DenormalMode::PositiveZero)
       return APFloat::getZero(Val.getSemantics(), false);
     if (Mode == DenormalMode::PreserveSign)
@@ -2516,7 +2517,8 @@ public:
           ValidateRes.isPoison())
         return ValidateRes;
 
-      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
+      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output,
+                                /*IsInput=*/false);
 
       return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
     });
