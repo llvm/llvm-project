@@ -5626,9 +5626,9 @@ static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
     return true;
 
   // Accessing bits past the end of the value is poison.
-  const APInt *Off;
-  return match(Offset, m_APInt(Off)) &&
-         Off->getZExtValue() + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
+  uint64_t Off;
+  return match(Offset, m_ConstantInt(Off)) &&
+         Off + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
              Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
 }
 
