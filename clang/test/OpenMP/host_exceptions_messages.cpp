@@ -19,6 +19,10 @@ void baz(bool b) {
     throw 1; // expected-error {{cannot use 'throw' with exceptions disabled}}
 }
 
+void rethrow() {
+  throw; // expected-error {{cannot use 'throw' with exceptions disabled}}
+}
+
 // A 'device_type(nohost)' function is not emitted by a host -fopenmp compilation, but
 // -fopenmp-simd ignores 'declare target' and does emit it.
 #pragma omp begin declare target device_type(nohost)
