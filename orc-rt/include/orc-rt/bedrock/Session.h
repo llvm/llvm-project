@@ -25,6 +25,7 @@
 
 #include "orc-rt-c/config.h"
 #include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/LogLevel.h"
 #include "orc-rt-c/support/WrapperFunction.h"
 
 #include <cassert>
@@ -139,7 +140,7 @@ public:
       OnControllerCallReturnFn Wrapped;
     };
 
-    ControllerAccess(Session &S) : S(S) {}
+    ControllerAccess(Session &S) noexcept : S(S) {}
 
     /// Initiate connection with controller.
     ///
@@ -326,7 +327,7 @@ public:
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
   Session(ExecutorProcessInfo EPI, DispatchFn Dispatch,
-          ErrorReporterFn ReportError);
+          ErrorReporterFn ReportError) noexcept;
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;

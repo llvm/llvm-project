@@ -7,7 +7,7 @@ function(get_library_name path name)
   list(FILTER suffixes EXCLUDE REGEX "^\\s*$")
   # Do not strip the "lib" prefix for Windows because MSVC-style linkers don't
   # implicitly add the "lib" prefix.
-  if(prefixes AND NOT Win32)
+  if(prefixes AND NOT WIN32)
     string(REPLACE ";" "|" prefixes "${prefixes}")
     string(REGEX REPLACE "^(${prefixes})" "" path ${path})
   endif()
