@@ -387,14 +387,10 @@ define <4 x float> @twosrc_intrinsic(ptr %pSrc1, ptr %pSrc2) {
 ;
 ; CHECK-GI-LABEL: twosrc_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    ldp q2, q3, [x1]
-; CHECK-GI-NEXT:    uzp1 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp1 v5.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    fmul v0.4s, v5.4s, v4.4s
-; CHECK-GI-NEXT:    fmla v0.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-GI-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    fmla v0.4s, v4.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
@@ -434,14 +430,10 @@ define <4 x float> @twosrc2_intrinsic(ptr %pSrc1, ptr %pSrc2) {
 ;
 ; CHECK-GI-LABEL: twosrc2_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    ldp q2, q3, [x1]
-; CHECK-GI-NEXT:    uzp1 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp1 v5.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    fmul v0.4s, v5.4s, v4.4s
-; CHECK-GI-NEXT:    fmla v0.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-GI-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-GI-NEXT:    fmla v0.4s, v4.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
@@ -477,11 +469,9 @@ define <4 x float> @vld2_intrinsic(ptr %pSrc) {
 ;
 ; CHECK-GI-LABEL: vld2_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v0.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    fmul v0.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    fmla v0.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %intrinsic.load.0 = load <8 x float>, ptr %pSrc, align 4

@@ -1545,11 +1545,10 @@ define void @vld2_intrinsic(ptr nocapture readonly %pSrc, ptr noalias nocapture 
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:  .LBB17_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldp q0, q1, [x0], #32
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v2.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    fmla v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v2.4s, v1.4s, v1.4s
 ; CHECK-GI-NEXT:    str q2, [x1, x8]
 ; CHECK-GI-NEXT:    add x8, x8, #16
 ; CHECK-GI-NEXT:    cmp x8, #1, lsl #12 // =4096
@@ -1782,15 +1781,11 @@ define void @twosrc_intrinsic(ptr nocapture readonly %pSrc, ptr nocapture readon
 ; CHECK-GI-NEXT:    add x9, x0, x8
 ; CHECK-GI-NEXT:    add x10, x1, x8
 ; CHECK-GI-NEXT:    add x8, x8, #32
-; CHECK-GI-NEXT:    ldp q0, q1, [x9]
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
 ; CHECK-GI-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-GI-NEXT:    ldp q2, q3, [x10]
-; CHECK-GI-NEXT:    uzp1 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp1 v5.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    uzp2 v1.4s, v2.4s, v3.4s
-; CHECK-GI-NEXT:    fmul v4.4s, v5.4s, v4.4s
-; CHECK-GI-NEXT:    fmla v4.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
+; CHECK-GI-NEXT:    fmul v4.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v4.4s, v3.4s, v1.4s
 ; CHECK-GI-NEXT:    str q4, [x2], #16
 ; CHECK-GI-NEXT:    b.ne .LBB20_1
 ; CHECK-GI-NEXT:  // %bb.2: // %while.end
@@ -1872,12 +1867,11 @@ define void @vld2_multiuse_intrinsic(ptr nocapture readonly %pSrc, ptr noalias n
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:  .LBB21_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-GI-NEXT:    ldp q0, q1, [x0], #32
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    fmul v1.4s, v2.4s, v2.4s
-; CHECK-GI-NEXT:    fmla v1.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    str q1, [x1, x8]
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
+; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    fmul v2.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    fmla v2.4s, v1.4s, v1.4s
+; CHECK-GI-NEXT:    str q2, [x1, x8]
 ; CHECK-GI-NEXT:    add x8, x8, #16
 ; CHECK-GI-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-GI-NEXT:    b.ne .LBB21_1

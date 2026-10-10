@@ -86,11 +86,9 @@ define void @load_factor2(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr q0, [x0]
-; CHECK-GI-NEXT:    uzp1 v1.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    uzp2 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    // fake_use: $d1 $q1
-; CHECK-GI-NEXT:    // fake_use: $d0 $q0
+; CHECK-GI-NEXT:    ld2 { v0.8b, v1.8b }, [x0]
+; CHECK-GI-NEXT:    // fake_use: $d0
+; CHECK-GI-NEXT:    // fake_use: $d1 $d0_d1
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <16 x i8>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i8> %interleaved.vec, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -152,23 +150,10 @@ define void @load_factor3(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    mov s2, v0.s[0]
-; CHECK-GI-NEXT:    mov s3, v0.s[1]
-; CHECK-GI-NEXT:    mov s4, v0.s[2]
-; CHECK-GI-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v4.s[1], v1.s[1]
-; CHECK-GI-NEXT:    ldr q0, [x0, #32]
-; CHECK-GI-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-GI-NEXT:    mov v3.s[2], v1.s[3]
-; CHECK-GI-NEXT:    mov v4.s[2], v0.s[0]
-; CHECK-GI-NEXT:    mov v2.s[3], v0.s[1]
-; CHECK-GI-NEXT:    mov v3.s[3], v0.s[2]
-; CHECK-GI-NEXT:    mov v4.s[3], v0.s[3]
-; CHECK-GI-NEXT:    // fake_use: $q2
-; CHECK-GI-NEXT:    // fake_use: $q3
-; CHECK-GI-NEXT:    // fake_use: $q4
+; CHECK-GI-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1
+; CHECK-GI-NEXT:    // fake_use: $q2 $q0_q1_q2
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <12 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -178,6 +163,236 @@ define void @load_factor3(ptr %ptr) {
   tail call void (...) @llvm.fake.use(<4 x i32> %v1)
   tail call void (...) @llvm.fake.use(<4 x i32> %v2)
   ret void
+}
+
+define <10 x i32> @load_factor3_x25(ptr %ptr) {
+; NEON-LABEL: load_factor3_x25:
+; NEON:       // %bb.0:
+; NEON-NEXT:    ldp q1, q0, [x0, #48]
+; NEON-NEXT:    ldr q3, [x0, #32]
+; NEON-NEXT:    ldp q2, q5, [x0]
+; NEON-NEXT:    ldp q17, q18, [x0, #80]
+; NEON-NEXT:    mov v4.16b, v1.16b
+; NEON-NEXT:    rev64 v7.4s, v0.4s
+; NEON-NEXT:    mov v6.16b, v2.16b
+; NEON-NEXT:    rev64 v16.4s, v5.4s
+; NEON-NEXT:    mov v19.16b, v18.16b
+; NEON-NEXT:    mov v4.s[1], v1.s[3]
+; NEON-NEXT:    mov v6.s[1], v2.s[3]
+; NEON-NEXT:    mov v7.s[0], v1.s[1]
+; NEON-NEXT:    mov v16.s[0], v2.s[1]
+; NEON-NEXT:    mov v19.s[1], v18.s[3]
+; NEON-NEXT:    mov v4.s[2], v0.s[2]
+; NEON-NEXT:    mov v0.s[0], v1.s[2]
+; NEON-NEXT:    ldr d1, [x0, #112]
+; NEON-NEXT:    mov v6.s[2], v5.s[2]
+; NEON-NEXT:    mov v5.s[0], v2.s[2]
+; NEON-NEXT:    mov v7.s[3], v17.s[2]
+; NEON-NEXT:    zip1 v2.4s, v18.4s, v1.4s
+; NEON-NEXT:    mov v16.s[3], v3.s[2]
+; NEON-NEXT:    mov v1.s[0], v18.s[2]
+; NEON-NEXT:    mov v0.s[2], v17.s[0]
+; NEON-NEXT:    mov v4.s[3], v17.s[1]
+; NEON-NEXT:    mov v5.s[2], v3.s[0]
+; NEON-NEXT:    mov v6.s[3], v3.s[1]
+; NEON-NEXT:    trn2 v2.4s, v18.4s, v2.4s
+; NEON-NEXT:    add v1.4s, v19.4s, v1.4s
+; NEON-NEXT:    mov v0.s[3], v17.s[3]
+; NEON-NEXT:    mov v5.s[3], v3.s[3]
+; NEON-NEXT:    add v3.4s, v4.4s, v7.4s
+; NEON-NEXT:    add v4.4s, v6.4s, v16.4s
+; NEON-NEXT:    add v1.4s, v1.4s, v2.4s
+; NEON-NEXT:    add v0.4s, v3.4s, v0.4s
+; NEON-NEXT:    add v3.4s, v4.4s, v5.4s
+; NEON-NEXT:    str d1, [x8, #32]
+; NEON-NEXT:    stp q3, q0, [x8]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: load_factor3_x25:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x25, [sp, #-64]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
+; NO_NEON-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
+; NO_NEON-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 64
+; NO_NEON-NEXT:    .cfi_offset w19, -8
+; NO_NEON-NEXT:    .cfi_offset w20, -16
+; NO_NEON-NEXT:    .cfi_offset w21, -24
+; NO_NEON-NEXT:    .cfi_offset w22, -32
+; NO_NEON-NEXT:    .cfi_offset w23, -40
+; NO_NEON-NEXT:    .cfi_offset w24, -48
+; NO_NEON-NEXT:    .cfi_offset w25, -64
+; NO_NEON-NEXT:    ldp w10, w9, [x0, #48]
+; NO_NEON-NEXT:    ldp w12, w11, [x0, #72]
+; NO_NEON-NEXT:    ldp w14, w13, [x0, #112]
+; NO_NEON-NEXT:    ldp w15, w16, [x0, #104]
+; NO_NEON-NEXT:    ldp w18, w17, [x0, #96]
+; NO_NEON-NEXT:    ldp w2, w1, [x0, #88]
+; NO_NEON-NEXT:    ldp w3, w4, [x0, #80]
+; NO_NEON-NEXT:    add w17, w18, w17
+; NO_NEON-NEXT:    add w14, w16, w14
+; NO_NEON-NEXT:    add w11, w12, w11
+; NO_NEON-NEXT:    add w9, w10, w9
+; NO_NEON-NEXT:    add w13, w14, w13
+; NO_NEON-NEXT:    add w14, w17, w15
+; NO_NEON-NEXT:    add w12, w4, w2
+; NO_NEON-NEXT:    add w11, w11, w3
+; NO_NEON-NEXT:    orr x13, x14, x13, lsl #32
+; NO_NEON-NEXT:    ldp w16, w10, [x0, #16]
+; NO_NEON-NEXT:    ldp w18, w2, [x0, #8]
+; NO_NEON-NEXT:    ldp w5, w4, [x0]
+; NO_NEON-NEXT:    ldp w7, w6, [x0, #24]
+; NO_NEON-NEXT:    ldp w20, w19, [x0, #64]
+; NO_NEON-NEXT:    ldp w21, w22, [x0, #56]
+; NO_NEON-NEXT:    ldp w24, w23, [x0, #40]
+; NO_NEON-NEXT:    ldp w25, w0, [x0, #32]
+; NO_NEON-NEXT:    add w12, w12, w1
+; NO_NEON-NEXT:    add w20, w22, w20
+; NO_NEON-NEXT:    add w6, w7, w6
+; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
+; NO_NEON-NEXT:    add w16, w2, w16
+; NO_NEON-NEXT:    add w2, w5, w4
+; NO_NEON-NEXT:    add w0, w0, w24
+; NO_NEON-NEXT:    add w10, w16, w10
+; NO_NEON-NEXT:    add w14, w20, w19
+; NO_NEON-NEXT:    add w16, w0, w23
+; NO_NEON-NEXT:    add w9, w9, w21
+; NO_NEON-NEXT:    add w12, w6, w25
+; NO_NEON-NEXT:    stp x11, x13, [x8, #24]
+; NO_NEON-NEXT:    add w13, w2, w18
+; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
+; NO_NEON-NEXT:    orr x12, x12, x16, lsl #32
+; NO_NEON-NEXT:    orr x10, x13, x10, lsl #32
+; NO_NEON-NEXT:    stp x12, x9, [x8, #8]
+; NO_NEON-NEXT:    str x10, [x8]
+; NO_NEON-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; NO_NEON-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
+; NO_NEON-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
+; NO_NEON-NEXT:    ldr x25, [sp], #64 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_factor3_x25:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add x9, x0, #48
+; CHECK-GI-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    ld3 { v3.4s, v4.4s, v5.4s }, [x9]
+; CHECK-GI-NEXT:    add x9, x0, #96
+; CHECK-GI-NEXT:    ld3 { v16.2s, v17.2s, v18.2s }, [x9]
+; CHECK-GI-NEXT:    add v6.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    add v7.4s, v3.4s, v4.4s
+; CHECK-GI-NEXT:    add v19.2s, v16.2s, v17.2s
+; CHECK-GI-NEXT:    add v0.4s, v6.4s, v2.4s
+; CHECK-GI-NEXT:    add v1.4s, v7.4s, v5.4s
+; CHECK-GI-NEXT:    add v2.2s, v19.2s, v18.2s
+; CHECK-GI-NEXT:    stp q0, q1, [x8]
+; CHECK-GI-NEXT:    str d2, [x8, #32]
+; CHECK-GI-NEXT:    ret
+  %interleaved.vec = load <30 x i32>, ptr %ptr, align 4
+  %v0 = shufflevector <30 x i32> %interleaved.vec, <30 x i32> poison, <10 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27>
+  %v1 = shufflevector <30 x i32> %interleaved.vec, <30 x i32> poison, <10 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22, i32 25, i32 28>
+  %v2 = shufflevector <30 x i32> %interleaved.vec, <30 x i32> poison, <10 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23, i32 26, i32 29>
+  %a = add <10 x i32> %v0, %v1
+  %b = add <10 x i32> %a, %v2
+  ret <10 x i32> %b
+}
+
+define <8 x i32> @load_factor3_x2(ptr %ptr) {
+; NEON-IAENABLED-LABEL: load_factor3_x2:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
+; NEON-IAENABLED-NEXT:    ld3 { v3.4s, v4.4s, v5.4s }, [x0]
+; NEON-IAENABLED-NEXT:    add v6.4s, v3.4s, v4.4s
+; NEON-IAENABLED-NEXT:    add v7.4s, v0.4s, v1.4s
+; NEON-IAENABLED-NEXT:    add v0.4s, v7.4s, v2.4s
+; NEON-IAENABLED-NEXT:    add v1.4s, v6.4s, v5.4s
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: load_factor3_x2:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    ldp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ldr q5, [x0, #32]
+; NEON-IADISABLED-NEXT:    ldp q1, q3, [x0, #48]
+; NEON-IADISABLED-NEXT:    mov v4.16b, v0.16b
+; NEON-IADISABLED-NEXT:    rev64 v7.4s, v2.4s
+; NEON-IADISABLED-NEXT:    mov v6.16b, v1.16b
+; NEON-IADISABLED-NEXT:    rev64 v16.4s, v3.4s
+; NEON-IADISABLED-NEXT:    mov v4.s[1], v0.s[3]
+; NEON-IADISABLED-NEXT:    mov v6.s[1], v1.s[3]
+; NEON-IADISABLED-NEXT:    mov v7.s[0], v0.s[1]
+; NEON-IADISABLED-NEXT:    mov v16.s[0], v1.s[1]
+; NEON-IADISABLED-NEXT:    mov v4.s[2], v2.s[2]
+; NEON-IADISABLED-NEXT:    mov v2.s[0], v0.s[2]
+; NEON-IADISABLED-NEXT:    ldr q0, [x0, #80]
+; NEON-IADISABLED-NEXT:    mov v6.s[2], v3.s[2]
+; NEON-IADISABLED-NEXT:    mov v3.s[0], v1.s[2]
+; NEON-IADISABLED-NEXT:    mov v7.s[3], v5.s[2]
+; NEON-IADISABLED-NEXT:    mov v16.s[3], v0.s[2]
+; NEON-IADISABLED-NEXT:    mov v2.s[2], v5.s[0]
+; NEON-IADISABLED-NEXT:    mov v4.s[3], v5.s[1]
+; NEON-IADISABLED-NEXT:    mov v3.s[2], v0.s[0]
+; NEON-IADISABLED-NEXT:    mov v6.s[3], v0.s[1]
+; NEON-IADISABLED-NEXT:    mov v2.s[3], v5.s[3]
+; NEON-IADISABLED-NEXT:    mov v3.s[3], v0.s[3]
+; NEON-IADISABLED-NEXT:    add v1.4s, v6.4s, v16.4s
+; NEON-IADISABLED-NEXT:    add v0.4s, v4.4s, v7.4s
+; NEON-IADISABLED-NEXT:    add v0.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    add v1.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: load_factor3_x2:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x19, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w19, -16
+; NO_NEON-NEXT:    ldp w9, w8, [x0, #60]
+; NO_NEON-NEXT:    ldp w11, w10, [x0, #72]
+; NO_NEON-NEXT:    ldp w13, w12, [x0, #88]
+; NO_NEON-NEXT:    ldp w15, w14, [x0, #80]
+; NO_NEON-NEXT:    ldp w3, w17, [x0, #52]
+; NO_NEON-NEXT:    ldp w5, w4, [x0, #44]
+; NO_NEON-NEXT:    add w13, w14, w13
+; NO_NEON-NEXT:    add w10, w11, w10
+; NO_NEON-NEXT:    add w8, w9, w8
+; NO_NEON-NEXT:    ldp w11, w9, [x0]
+; NO_NEON-NEXT:    ldp w18, w14, [x0, #16]
+; NO_NEON-NEXT:    ldp w1, w2, [x0, #8]
+; NO_NEON-NEXT:    ldp w19, w6, [x0, #36]
+; NO_NEON-NEXT:    add w4, w4, w3
+; NO_NEON-NEXT:    ldr w16, [x0, #68]
+; NO_NEON-NEXT:    add w9, w11, w9
+; NO_NEON-NEXT:    ldp w3, w7, [x0, #28]
+; NO_NEON-NEXT:    ldr w0, [x0, #24]
+; NO_NEON-NEXT:    add w6, w19, w6
+; NO_NEON-NEXT:    add w18, w2, w18
+; NO_NEON-NEXT:    add w4, w4, w17
+; NO_NEON-NEXT:    add w11, w0, w3
+; NO_NEON-NEXT:    add w0, w9, w1
+; NO_NEON-NEXT:    add w1, w18, w14
+; NO_NEON-NEXT:    add w2, w11, w7
+; NO_NEON-NEXT:    add w3, w6, w5
+; NO_NEON-NEXT:    add w5, w8, w16
+; NO_NEON-NEXT:    add w6, w10, w15
+; NO_NEON-NEXT:    add w7, w13, w12
+; NO_NEON-NEXT:    ldr x19, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_factor3_x2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add x8, x0, #48
+; CHECK-GI-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0]
+; CHECK-GI-NEXT:    ld3 { v3.4s, v4.4s, v5.4s }, [x8]
+; CHECK-GI-NEXT:    add v6.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    add v7.4s, v3.4s, v4.4s
+; CHECK-GI-NEXT:    add v0.4s, v6.4s, v2.4s
+; CHECK-GI-NEXT:    add v1.4s, v7.4s, v5.4s
+; CHECK-GI-NEXT:    ret
+  %interleaved.vec = load <24 x i32>, ptr %ptr, align 4
+  %v0 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
+  %v1 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
+  %v2 = shufflevector <24 x i32> %interleaved.vec, <24 x i32> poison, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
+  %a = add <8 x i32> %v0, %v1
+  %b = add <8 x i32> %a, %v2
+  ret <8 x i32> %b
 }
 
 define void @load_factor4(ptr %ptr) {
@@ -239,24 +454,11 @@ define void @load_factor4(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    mov s2, v0.s[0]
-; CHECK-GI-NEXT:    mov s3, v0.s[1]
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    mov v2.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v3.s[1], v1.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[2]
-; CHECK-GI-NEXT:    ldp q1, q4, [x0, #32]
-; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-GI-NEXT:    mov v3.s[2], v1.s[1]
-; CHECK-GI-NEXT:    mov v0.s[2], v1.s[2]
-; CHECK-GI-NEXT:    mov v2.s[3], v4.s[0]
-; CHECK-GI-NEXT:    mov v3.s[3], v4.s[1]
-; CHECK-GI-NEXT:    mov v0.s[3], v4.s[2]
+; CHECK-GI-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
+; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1
 ; CHECK-GI-NEXT:    // fake_use: $q2
-; CHECK-GI-NEXT:    // fake_use: $q3
-; CHECK-GI-NEXT:    // fake_use: $q0
-; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q2 $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -511,11 +713,9 @@ define void @load_ptrvec_factor2(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_ptrvec_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    zip1 v2.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    zip2 v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    // fake_use: $q2
+; CHECK-GI-NEXT:    ld2 { v0.2d, v1.2d }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1 $q0_q1
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <4 x ptr>, ptr %ptr, align 4
   %v0 = shufflevector <4 x ptr> %interleaved.vec, <4 x ptr> poison, <2 x i32> <i32 0, i32 2>
@@ -561,14 +761,10 @@ define void @load_ptrvec_factor3(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_ptrvec_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    ldr q2, [x0, #32]
-; CHECK-GI-NEXT:    ext v3.16b, v0.16b, v2.16b, #8
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[1]
-; CHECK-GI-NEXT:    mov v1.d[1], v2.d[1]
+; CHECK-GI-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
-; CHECK-GI-NEXT:    // fake_use: $q3
 ; CHECK-GI-NEXT:    // fake_use: $q1
+; CHECK-GI-NEXT:    // fake_use: $q2 $q0_q1_q2
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <6 x ptr>, ptr %ptr, align 4
   %v0 = shufflevector <6 x ptr> %interleaved.vec, <6 x ptr> poison, <2 x i32> <i32 0, i32 3>
@@ -622,17 +818,11 @@ define void @load_ptrvec_factor4(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_ptrvec_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q2, q0, [x0, #16]
-; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    ldr q3, [x0, #48]
-; CHECK-GI-NEXT:    zip1 v4.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    zip2 v0.2d, v1.2d, v0.2d
-; CHECK-GI-NEXT:    zip1 v1.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    // fake_use: $q4
+; CHECK-GI-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
 ; CHECK-GI-NEXT:    // fake_use: $q1
 ; CHECK-GI-NEXT:    // fake_use: $q2
+; CHECK-GI-NEXT:    // fake_use: $q3 $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <8 x ptr>, ptr %ptr, align 4
   %v0 = shufflevector <8 x ptr> %interleaved.vec, <8 x ptr> poison, <2 x i32> <i32 0, i32 4>
@@ -803,11 +993,9 @@ define void @load_undef_mask_factor2(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_undef_mask_factor2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    uzp1 v2.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    // fake_use: $q2
+; CHECK-GI-NEXT:    ld2 { v0.4s, v1.4s }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1 $q0_q1
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <8 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <4 x i32> <i32 poison, i32 2, i32 poison, i32 6>
@@ -866,20 +1054,10 @@ define void @load_undef_mask_factor3(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_undef_mask_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    mov s2, v0.s[0]
-; CHECK-GI-NEXT:    mov s3, v0.s[1]
-; CHECK-GI-NEXT:    mov v2.s[1], v0.s[3]
-; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
-; CHECK-GI-NEXT:    dup v0.4s, v0.s[2]
-; CHECK-GI-NEXT:    mov v2.s[2], v1.s[2]
-; CHECK-GI-NEXT:    mov v3.s[2], v1.s[3]
-; CHECK-GI-NEXT:    ldr q1, [x0, #32]
-; CHECK-GI-NEXT:    mov v2.s[3], v1.s[1]
-; CHECK-GI-NEXT:    mov v3.s[3], v1.s[2]
-; CHECK-GI-NEXT:    // fake_use: $q2
-; CHECK-GI-NEXT:    // fake_use: $q3
+; CHECK-GI-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1
+; CHECK-GI-NEXT:    // fake_use: $q2 $q0_q1_q2
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <12 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -941,17 +1119,11 @@ define void @load_undef_mask_factor4(ptr %ptr) {
 ;
 ; CHECK-GI-LABEL: load_undef_mask_factor4:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldp q0, q1, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    zip1 v3.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    trn2 v4.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    zip2 v5.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    // fake_use: $q3
-; CHECK-GI-NEXT:    // fake_use: $q4
-; CHECK-GI-NEXT:    // fake_use: $q5
+; CHECK-GI-NEXT:    ld4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
 ; CHECK-GI-NEXT:    // fake_use: $q0
+; CHECK-GI-NEXT:    // fake_use: $q1
+; CHECK-GI-NEXT:    // fake_use: $q2
+; CHECK-GI-NEXT:    // fake_use: $q3 $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = load <16 x i32>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
@@ -1044,11 +1216,11 @@ define void @store_undef_mask_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov s5, v2.s[2]
 ; CHECK-GI-NEXT:    mov v6.s[1], v2.s[1]
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI16_0]
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v3.16b, { v0.16b, v1.16b }, v3.16b
 ; CHECK-GI-NEXT:    mov v5.s[1], v0.s[3]
@@ -1730,15 +1902,15 @@ define void @store_general_mask_factor3_undeflane(ptr %ptr, <32 x i32> %v0, <32 
 ;
 ; CHECK-GI-LABEL: store_general_mask_factor3_undeflane:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_2
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_2
 ; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI28_2]
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_1
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI30_2]
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_1
 ; CHECK-GI-NEXT:    ldr q3, [sp]
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI28_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-GI-NEXT:    tbl v0.16b, { v3.16b, v4.16b }, v0.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_0]
 ; CHECK-GI-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v1.16b
 ; CHECK-GI-NEXT:    mov v5.16b, v3.16b
 ; CHECK-GI-NEXT:    tbl v2.16b, { v4.16b, v5.16b }, v2.16b
@@ -1835,9 +2007,9 @@ define void @no_interleave(<4 x float> %a0) {
 ; CHECK-GI-LABEL: no_interleave:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI32_0]
 ; CHECK-GI-NEXT:    adrp x8, :got:g
 ; CHECK-GI-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
@@ -3024,9 +3196,9 @@ define void @store_factor2_intrinsic(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 ; NEON-IADISABLED:       // %bb.0:
 ; NEON-IADISABLED-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; NEON-IADISABLED-NEXT:    // kill: def $d1 killed $d1 def $q1
-; NEON-IADISABLED-NEXT:    adrp x8, .LCPI43_0
+; NEON-IADISABLED-NEXT:    adrp x8, .LCPI45_0
 ; NEON-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
-; NEON-IADISABLED-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; NEON-IADISABLED-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
 ; NEON-IADISABLED-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; NEON-IADISABLED-NEXT:    str q0, [x0]
 ; NEON-IADISABLED-NEXT:    ret
