@@ -35,6 +35,19 @@ public:
 
   virtual llvm::StringRef GetPluginName() = 0;
 
+  /// Return the LLDB settings needed to debug this accelerator.
+  ///
+  /// The settings select the accelerator dynamic loader and identify this
+  /// server-side plugin. They also determine whether dynamic-loader packets
+  /// are sent over the accelerator or native connection.
+  virtual std::optional<LLDBSettings> GetLLDBSettings() {
+    LLDBSettings settings;
+    settings.dyld_plugin_name = "accelerator-gdb-remote";
+    settings.gpu_plugin_name = GetPluginName();
+    settings.send_dyld_packet_to_gpu = true;
+    return settings;
+  }
+
   virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
 
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>

@@ -150,6 +150,23 @@ bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,
               llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorActions &data);
 
+/// LLDB-specific settings for a process debugged over GDB-remote.
+struct LLDBSettings {
+  /// The name of the DynamicLoader plugin to use. If empty, LLDB selects the
+  /// plugin automatically from the target triple.
+  std::string dyld_plugin_name;
+  /// The server-side GPU plugin associated with this process, if any. This is
+  /// only needed when send_dyld_packet_to_gpu is false.
+  std::string gpu_plugin_name;
+  /// Send the dynamic-loader packet to the GPU connection when true, or the
+  /// native process's connection when false.
+  bool send_dyld_packet_to_gpu = true;
+};
+
+bool fromJSON(const llvm::json::Value &value, LLDBSettings &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const LLDBSettings &data);
+
 /// Response from the plugin when a breakpoint is hit.
 struct AcceleratorBreakpointHitResponse {
   /// Set to true if this breakpoint should be disabled.
