@@ -436,6 +436,81 @@ static InstructionCost computeSpeculationCost(const User *I,
   return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 }
 
+static InstructionCost collectTwoWordAddCosts(
+    BasicBlock *BB, const TargetTransformInfo &TTI,
+    SmallPtrSetImpl<Instruction *> &ZeroCostInstructions) {
+  InstructionCost Total = 0;
+
+  for (Instruction &I : *BB) {
+    auto *Hi = dyn_cast<BinaryOperator>(&I);
+    if (!Hi || Hi->getOpcode() != Instruction::Add ||
+        !Hi->getType()->isIntegerTy() || Hi->use_empty())
+      continue;
+
+    unsigned Width = Hi->getType()->getIntegerBitWidth();
+    if (Width != 32 && Width != 64)
+      continue;
+
+    for (unsigned N = 0; N != 2; ++N) {
+      auto *Ext = dyn_cast<ZExtInst>(Hi->getOperand(N));
+      auto *Tmp = dyn_cast<BinaryOperator>(Hi->getOperand(1 - N));
+      if (!Ext || !Ext->hasOneUse() || !Tmp ||
+          Tmp->getOpcode() != Instruction::Add || !Tmp->hasOneUse())
+        continue;
+
+      auto *Carry = dyn_cast<ExtractValueInst>(Ext->getOperand(0));
+      if (!Carry || !Carry->hasOneUse() ||
+          Carry->getNumIndices() != 1 || *Carry->idx_begin() != 1)
+        continue;
+
+      auto *Overflow =
+          dyn_cast<IntrinsicInst>(Carry->getAggregateOperand());
+      if (!Overflow ||
+          Overflow->getIntrinsicID() != Intrinsic::uadd_with_overflow ||
+          !Overflow->hasNUses(2) ||
+          Overflow->getArgOperand(0)->getType() != Hi->getType() ||
+          ZeroCostInstructions.contains(Overflow))
+        continue;
+
+      ExtractValueInst *Lo = nullptr;
+      for (User *U : Overflow->users()) {
+        auto *EV = dyn_cast<ExtractValueInst>(U);
+        if (EV && EV->getNumIndices() == 1 && *EV->idx_begin() == 0)
+          Lo = EV;
+      }
+
+      if (!Lo || Lo->getParent() != BB || Ext->getParent() != BB ||
+          Tmp->getParent() != BB || Carry->getParent() != BB ||
+          Overflow->getParent() != BB)
+        continue;
+
+      // Keep the initial experiment limited to plain wrapping additions.
+      if (Hi->hasNoSignedWrap() || Hi->hasNoUnsignedWrap() ||
+          Tmp->hasNoSignedWrap() || Tmp->hasNoUnsignedWrap())
+        continue;
+
+      Type *WideTy = IntegerType::get(I.getContext(), Width * 2);
+      InstructionCost WideCost = TTI.getArithmeticInstrCost(
+          Instruction::Add, WideTy,
+          TargetTransformInfo::TCK_SizeAndLatency);
+      if (!WideCost.isValid())
+        continue;
+
+      Total += WideCost;
+      ZeroCostInstructions.insert(Hi);
+      ZeroCostInstructions.insert(Tmp);
+      ZeroCostInstructions.insert(Ext);
+      ZeroCostInstructions.insert(Carry);
+      ZeroCostInstructions.insert(Overflow);
+      ZeroCostInstructions.insert(Lo);
+
+      break;
+    }
+  }
+
+  return Total;
+}
+
 /// If we have a merge point of an "if condition" as accepted above,
 /// return true if the specified value dominates the block.  We don't handle
 /// the true generality of domination here, just a special case which works
@@ -3932,8 +4007,10 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // instructions.  While we are at it, keep track of the instructions
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
-  SmallPtrSet<Instruction *, 2> ZeroCostInstructions;
+  SmallPtrSet<Instruction *, 8> ZeroCostInstructions;
   InstructionCost Cost = 0;
+  for (BasicBlock *IfBlock : IfBlocks)
+    Cost += collectTwoWordAddCosts(IfBlock, TTI, ZeroCostInstructions);
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
   if (SpeculateUnpredictables && IsUnpredictable)
