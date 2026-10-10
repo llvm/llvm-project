@@ -917,7 +917,7 @@ enum : unsigned {
   //
   // Only valid for ELFOSABI_AMDGPU_HSA and ELFABIVERSION_AMDGPU_HSA_V4.
   EF_AMDGPU_FEATURE_SRAMECC_V4 = 0xc00,
-  // SRAMECC is not supported.
+  // SRAMECC mode selection is not supported.
   EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 = 0x000,
   // SRAMECC is any/default/unspecified.
   EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 = 0x400,
