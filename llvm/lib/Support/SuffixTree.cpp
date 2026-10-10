@@ -192,6 +192,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       // There's a match with FirstChar, so look for the point in the tree to
       // insert a new node.
       SuffixTreeNode *NextNode = It->second;
+      unsigned NextStartIdx = NextNode->getStartIdx();
 
       // A leaf edge reaches the current prefix end, so it cannot be consumed.
       if (auto *NextInternalNode = dyn_cast<SuffixTreeInternalNode>(NextNode)) {
@@ -211,7 +212,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       unsigned LastChar = Str[EndIdx];
 
       // Is the string we're trying to insert a substring of the next node?
-      if (Str[NextNode->getStartIdx() + Active.Len] == LastChar) {
+      if (Str[NextStartIdx + Active.Len] == LastChar) {
         // If yes, then we're done for this step. Remember our insertion point
         // and move to the next end index. At this point, we have an implicit
         // suffix tree.
@@ -239,8 +240,7 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
 
       // The node s from the diagram
       SuffixTreeInternalNode *SplitNode = insertInternalNode(
-          Active.Node, NextNode->getStartIdx(),
-          NextNode->getStartIdx() + Active.Len - 1, FirstChar);
+          Active.Node, NextStartIdx, NextStartIdx + Active.Len - 1, FirstChar);
 
       // Insert the new node representing the new substring into the tree as
       // a child of the split node. This is the node l from the diagram.
@@ -249,8 +249,9 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
 
       // Make the old node a child of the split node and update its start
       // index. This is the node n from the diagram.
+      NextStartIdx += Active.Len;
       NextNode->incrementStartIdx(Active.Len);
-      unsigned Edge = Str[NextNode->getStartIdx()];
+      unsigned Edge = Str[NextStartIdx];
       if (!isBoundary(Edge) || SplitNode->getConcatLen() >= MinLength)
         SplitNode->Children[Edge] = NextNode;
 
