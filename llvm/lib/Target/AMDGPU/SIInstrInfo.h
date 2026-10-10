@@ -38,6 +38,10 @@ class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
+namespace AMDGPU {
+struct WMMAProperties;
+}
+
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
 
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
@@ -1035,6 +1039,9 @@ public:
     return SIInstrFlags::isSWMMAC(get(Opcode));
   }
 
+  /// Extract normalized WMMA coexecution properties from \p MI.
+  AMDGPU::WMMAProperties getWMMAProperties(const MachineInstr &MI) const;
+
   bool isDOT(uint32_t Opcode) const { return SIInstrFlags::isDOT(get(Opcode)); }
 
   bool isXDLWMMA(const MachineInstr &MI) const;
@@ -1842,8 +1849,8 @@ public:
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, AMDGPU::OpName OpName) const;
 
-  /// Get the repeat rate for a VALU instruction from the scheduling model.
-  /// Returns 1 for regular VALU, >1 for long-latency VALU (packed, F64, etc.)
+  /// Return the throughput limiting resource occupancy from the scheduling
+  /// model, or zero when the model supplies no positive occupancy.
   unsigned getRepeatRate(const MachineInstr &MI) const;
 };
 

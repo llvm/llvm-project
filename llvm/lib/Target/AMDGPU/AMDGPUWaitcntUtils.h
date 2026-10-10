@@ -17,7 +17,14 @@
 
 namespace llvm {
 
+class Function;
+class GCNSubtarget;
+
 namespace AMDGPU {
+
+/// Return whether expert scheduling mode 2 is available and enabled for \p F.
+/// An explicit command line option overrides the function attribute.
+bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F);
 
 enum InstCounterType {
   LOAD_CNT = 0, // VMcnt prior to gfx12.
