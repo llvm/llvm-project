@@ -31,12 +31,14 @@ void foo() {
                     "34,"    // REG_34(RA_SIGN_STATE)
                      "1,"    // expression_length(1)
                     "0x31\n" // DW_OP_lit1
-      "add sp, sp, 16\n"     // Restore SP's value before the stack frame is
-                             // created.
+      "mov x16, sp\n"        // Save the current SP.
+      "add sp, %0, 16\n"     // Restore the SP used to sign the LR.
       "paciasp\n"            // Sign the LR.
       "str lr, [sp, -0x8]\n" // Overwrite LR on the stack.
-      "sub sp, sp, 16\n"     // Restore SP's value.
-  );
+      "mov sp, x16\n"        // Restore SP's value.
+      :
+      : "r"(__builtin_frame_address(0))
+      : "x16", "memory");
   bar();
   _Exit(-1);
 }
