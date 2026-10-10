@@ -9061,7 +9061,7 @@ def err_typecheck_deleted_function : Error<
 def err_expected_class_or_namespace : Error<"%0 is not a class"
   "%select{ or namespace|, namespace, or enumeration}1">;
 def err_invalid_declarator_scope : Error<"cannot define or redeclare %0 here "
-  "because namespace %1 does not enclose namespace %2">;
+  "because namespace %1 does not enclose %select{namespace|struct|class|union|enum}2 %3">;
 def err_export_non_namespace_scope_name : Error<
   "cannot export %0 as it is not at namespace scope">;
 def err_redeclaration_non_exported : Error <
