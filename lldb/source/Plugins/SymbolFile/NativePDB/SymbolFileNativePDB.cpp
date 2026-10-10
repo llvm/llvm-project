@@ -2365,6 +2365,63 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
         return;
     }
   }
+
+  // Typedefs aren't type records, they only exist as S_UDT symbols.
+  std::vector<uint32_t> typedef_matches;
+  m_typedef_base_names.GetValues(query.GetTypeBasename(), typedef_matches);
+  for (uint32_t gid : typedef_matches) {
+    PdbGlobalSymId global{gid, false};
+    if (!query.ContextMatches(GetContextForTypedef(global)))
+      continue;
+
+    TypeSP type_sp = GetOrCreateTypedef(global);
+    if (!type_sp)
+      continue;
+
+    results.InsertUnique(type_sp);
+    if (results.Done(query))
+      return;
+  }
+}
+
+std::vector<CompilerContext>
+SymbolFileNativePDB::GetContextForTypedef(PdbGlobalSymId id) {
+  CVSymbol sym = m_index->ReadSymbolRecord(id);
+  if (sym.kind() != S_UDT)
+    return {};
+  auto udt_or_err = SymbolDeserializer::deserializeAs<UDTSym>(sym);
+  if (!udt_or_err) {
+    llvm::consumeError(udt_or_err.takeError());
+    return {};
+  }
+
+  std::optional<Type::ParsedName> parsed_name =
+      Type::GetTypeScopeAndBasename(udt_or_err->Name);
+  if (!parsed_name)
+    return {{CompilerContextKind::Typedef, ConstString(udt_or_err->Name)}};
+
+  // The scopes of a typedef are namespaces, unless there is a record with the
+  // same qualified name.
+  std::vector<CompilerContext> ctx;
+  std::string scope_name;
+  for (llvm::StringRef scope : parsed_name->scope) {
+    if (!scope_name.empty())
+      scope_name += "::";
+    scope_name += scope;
+
+    CompilerContextKind kind = CompilerContextKind::Namespace;
+    for (TypeIndex ti : m_index->tpi().findRecordsByName(scope_name)) {
+      CVType cvt = m_index->tpi().getType(ti);
+      if (IsTagRecord(cvt)) {
+        kind = CVTagRecord::create(cvt).contextKind();
+        break;
+      }
+    }
+    ctx.emplace_back(kind, ConstString(scope));
+  }
+  ctx.emplace_back(CompilerContextKind::Typedef,
+                   ConstString(parsed_name->basename));
+  return ctx;
 }
 
 void SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
@@ -2413,16 +2470,7 @@ size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
                      "Failed to deserialize UDTSym record: {0}");
       continue;
     }
-    UDTSym udt = std::move(*udt_or_err);
-    bool is_typedef = true;
-    if (IsTagRecord(PdbTypeSymId{udt.Type, false}, m_index->tpi())) {
-      CVType cvt = m_index->tpi().getType(udt.Type);
-      llvm::StringRef name = CVTagRecord::create(cvt).name();
-      if (name == udt.Name)
-        is_typedef = false;
-    }
-
-    if (is_typedef)
+    if (IsTypedefUdt(*udt_or_err))
       GetOrCreateTypedef(global);
   }
 
@@ -2608,7 +2656,18 @@ TypeSP SymbolFileNativePDB::GetOrCreateTypedef(PdbGlobalSymId id) {
   if (iter != m_types.end())
     return iter->second;
 
-  return CreateTypedef(id);
+  TypeSP type = CreateTypedef(id);
+  if (type)
+    m_types[toOpaqueUid(id)] = type;
+  return type;
+}
+
+bool SymbolFileNativePDB::IsTypedefUdt(const UDTSym &udt) {
+  // Clang and MSVC also emit an S_UDT for each tag type, named like the tag.
+  if (!IsTagRecord(PdbTypeSymId{udt.Type, false}, m_index->tpi()))
+    return true;
+  CVType cvt = m_index->tpi().getType(udt.Type);
+  return CVTagRecord::create(cvt).name() != udt.Name;
 }
 
 size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
@@ -2975,6 +3034,23 @@ void SymbolFileNativePDB::BuildParentMap() {
   // After calling Append(), the type-name map needs to be sorted again to be
   // able to look up a type by its name.
   m_type_base_names.Sort(std::less<uint32_t>());
+
+  for (const uint32_t gid : m_index->globals().getGlobalsTable()) {
+    CVSymbol sym = m_index->symrecords().readRecord(gid);
+    if (sym.kind() != S_UDT)
+      continue;
+    auto udt_or_err = SymbolDeserializer::deserializeAs<UDTSym>(sym);
+    if (!udt_or_err) {
+      llvm::consumeError(udt_or_err.takeError());
+      continue;
+    }
+    if (!IsTypedefUdt(*udt_or_err))
+      continue;
+    llvm::StringRef base_name =
+        MSVCUndecoratedNameParser::DropScope(udt_or_err->Name);
+    m_typedef_base_names.Append(ConstString(base_name), gid);
+  }
+  m_typedef_base_names.Sort(std::less<uint32_t>());
 
   // Now that we know the forward -> full mapping of all type indices, we can
   // re-write all the indices.  At the end of this process, we want a mapping
