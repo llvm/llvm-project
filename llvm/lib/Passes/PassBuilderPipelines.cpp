@@ -2206,6 +2206,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // flattening of blocks.
   LateFPM.addPass(DivRemPairsPass());
 
+  // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
+  // TODO: move this furter up so that it can be optimized by GVN, etc.
+  if (Opts.enable_mergeicmps)
+    LateFPM.addPass(MergeICmpsPass());
+  LateFPM.addPass(ExpandMemCmpPass());
+
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
                                       .convertSwitchRangeToICmp(true)
