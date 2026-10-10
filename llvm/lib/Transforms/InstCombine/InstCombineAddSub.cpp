@@ -3103,9 +3103,12 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       }
     }
   }
-  if (match(Op0, m_And(m_Add(m_Value(X), m_Power2(AddC)), m_APInt(AndC))) &&
-      X == Op1 && *AddC == ~*AndC) {
-    return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *AddC));
+
+  // ((X + C) & ~C) - X -> X & C where C is a power of 2.
+  if (match(Op0,
+            m_And(m_Add(m_Specific(Op1), m_Power2(AddC)), m_APInt(AndC))) &&
+      *AddC == ~*AndC) {
+    return BinaryOperator::CreateAnd(Op1, ConstantInt::get(Ty, *AddC));
   }
 
   return TryToNarrowDeduceFlags();
