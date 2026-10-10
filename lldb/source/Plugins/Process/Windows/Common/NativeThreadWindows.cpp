@@ -51,30 +51,10 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
   if (resume_state == current_state)
     return Status();
 
+  lldb::addr_t step_start_pc = LLDB_INVALID_ADDRESS;
   if (resume_state == eStateStepping) {
-    Log *log = GetLog(LLDBLog::Thread);
-
-    uint32_t flags_index =
-        GetRegisterContext().ConvertRegisterKindToRegisterNumber(
-            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
-    uint64_t flags_value =
-        GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
-    const ArchSpec &arch = GetProcess().GetArchitecture();
-    switch (arch.GetMachine()) {
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      flags_value |= 0x100; // Set the trap flag on the CPU
-      break;
-    case llvm::Triple::aarch64:
-    case llvm::Triple::arm:
-    case llvm::Triple::thumb:
-      flags_value |= 0x200000; // The SS bit in PState
-      break;
-    default:
-      LLDB_LOG(log, "single stepping unsupported on this architecture");
-      break;
-    }
-    GetRegisterContext().WriteRegisterFromUnsigned(flags_index, flags_value);
+    step_start_pc = GetRegisterContext().GetPC(LLDB_INVALID_ADDRESS);
+    SetSingleStepFlag();
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {
@@ -96,9 +76,47 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
     } while (previous_suspend_count > 1);
     m_state = eStateRunning;
     m_single_stepping = resume_state == eStateStepping;
+    m_step_start_pc = step_start_pc;
   }
 
   return Status();
+}
+
+void NativeThreadWindows::SetSingleStepFlag() {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  uint32_t flags_index =
+      GetRegisterContext().ConvertRegisterKindToRegisterNumber(
+          eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
+  uint64_t flags_value =
+      GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
+  const ArchSpec &arch = GetProcess().GetArchitecture();
+  switch (arch.GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    flags_value |= 0x100; // Set the trap flag on the CPU
+    break;
+  case llvm::Triple::aarch64:
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    flags_value |= 0x200000; // The SS bit in PState
+    break;
+  default:
+    LLDB_LOG(log, "single stepping unsupported on this architecture");
+    break;
+  }
+  GetRegisterContext().WriteRegisterFromUnsigned(flags_index, flags_value);
+}
+
+bool NativeThreadWindows::CompleteStepWithoutTrap() {
+  lldb::addr_t start_pc = std::exchange(m_step_start_pc, LLDB_INVALID_ADDRESS);
+  if (start_pc == LLDB_INVALID_ADDRESS ||
+      (m_stop_info.reason != eStopReasonInvalid &&
+       m_stop_info.reason != eStopReasonNone) ||
+      GetRegisterContext().GetPC(start_pc) == start_pc)
+    return false;
+  m_step_trap_pending = true;
+  return true;
 }
 
 std::string NativeThreadWindows::GetName() {

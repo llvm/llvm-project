@@ -28,10 +28,21 @@ public:
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);
 
-  /// Whether the current resume single-steps this thread.
+  /// Whether the last DoResume() single-stepped this thread.
   bool IsSingleStepping() const { return m_single_stepping; }
 
+  /// Called when a stop is reported. Returns true if the single step of the
+  /// last DoResume() moved the PC but its trap was not handled: the kernel
+  /// holds that trap until the thread runs again.
+  bool CompleteStepWithoutTrap();
+
   void ClearSingleStepping() { m_single_stepping = false; }
+
+  bool TakePendingStepTrap() {
+    return std::exchange(m_step_trap_pending, false);
+  }
+
+  void SetSingleStepFlag();
 
   std::string GetName() override;
 
@@ -63,6 +74,8 @@ protected:
   lldb::StateType m_state = lldb::StateType::eStateInvalid;
   std::string m_name;
   bool m_single_stepping = false;
+  lldb::addr_t m_step_start_pc = LLDB_INVALID_ADDRESS;
+  bool m_step_trap_pending = false;
   std::unique_ptr<NativeRegisterContextWindows> m_reg_context_up;
   // Cache address and index of the watchpoints and hardware breakpoints since
   // the register context does not.
