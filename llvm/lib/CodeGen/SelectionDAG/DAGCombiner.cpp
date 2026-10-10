@@ -20880,6 +20880,8 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     if (N0.getOperand(0).getValueType() == MVT::f80 && VT == MVT::f16)
       return SDValue();
 
+    // Folding can make the code slower. For example, on X86 without FP16,
+    // f64->f32->f16 is two instructions, but f64->f16 is a libcall.
     if (!TLI.shouldFoldFPRoundPair(VT, N0.getOperand(0).getValueType()))
       return SDValue();
 
