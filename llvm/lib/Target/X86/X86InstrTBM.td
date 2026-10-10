@@ -15,7 +15,7 @@
 //
 let Predicates = [HasTBM], Defs = [EFLAGS] in {
 
-multiclass tbm_bextri<bits<8> opc, RegisterClass RC, string OpcodeStr,
+multiclass tbm_bextri<bits<8> opc, DAGOperand RC, string OpcodeStr,
                       X86MemOperand x86memop, PatFrag ld_frag,
                       SDNode OpNode, Operand immtype,
                       SDPatternOperator immoperator,
@@ -33,15 +33,15 @@ multiclass tbm_bextri<bits<8> opc, RegisterClass RC, string OpcodeStr,
                 XOP, XOPA, Sched<[Sched.Folded]>;
 }
 
-defm BEXTRI32 : tbm_bextri<0x10, GR32, "bextr{l}", i32mem, loadi32,
+defm BEXTRI32 : tbm_bextri<0x10, gr32_norex2, "bextr{l}", i32mem_norex2, loadi32,
                            X86bextri, i32imm, timm, WriteBEXTR>;
 let ImmT = Imm32S in
-defm BEXTRI64 : tbm_bextri<0x10, GR64, "bextr{q}", i64mem, loadi64,
+defm BEXTRI64 : tbm_bextri<0x10, gr64_norex2, "bextr{q}", i64mem_norex2, loadi64,
                            X86bextri, i64i32imm,
                            i64timmSExt32, WriteBEXTR>, REX_W;
 
 multiclass tbm_binary_rm<bits<8> opc, Format FormReg, Format FormMem,
-                         RegisterClass RC, string OpcodeStr,
+                         DAGOperand RC, string OpcodeStr,
                          X86MemOperand x86memop, X86FoldableSchedWrite Sched> {
 let hasSideEffects = 0 in {
   def rr : I<opc,  FormReg, (outs RC:$dst), (ins RC:$src),
@@ -57,10 +57,10 @@ let hasSideEffects = 0 in {
 multiclass tbm_binary_intr<bits<8> opc, string OpcodeStr,
                            X86FoldableSchedWrite Sched,
                            Format FormReg, Format FormMem> {
-  defm NAME#32 : tbm_binary_rm<opc, FormReg, FormMem, GR32, OpcodeStr#"{l}",
-                               i32mem, Sched>;
-  defm NAME#64 : tbm_binary_rm<opc, FormReg, FormMem, GR64, OpcodeStr#"{q}",
-                               i64mem, Sched>, REX_W;
+  defm NAME#32 : tbm_binary_rm<opc, FormReg, FormMem, gr32_norex2, OpcodeStr#"{l}",
+                               i32mem_norex2, Sched>;
+  defm NAME#64 : tbm_binary_rm<opc, FormReg, FormMem, gr64_norex2, OpcodeStr#"{q}",
+                               i64mem_norex2, Sched>, REX_W;
 }
 
 defm BLCFILL : tbm_binary_intr<0x01, "blcfill", WriteALU, MRM1r, MRM1m>;
