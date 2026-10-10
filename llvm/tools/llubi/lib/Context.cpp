@@ -701,11 +701,12 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
   };
   if (Val.isPoison()) {
     for (uint32_t I = 0, E = NewOffsetInBits - OffsetInBits; I < E;) {
-      uint32_t NumBitsInByte = std::min(8 - (OffsetInBits + I) % 8, E - I);
-      assert(((OffsetInBits ^ (OffsetInBits + NumBitsInByte - 1)) & ~7) == 0 &&
+      uint32_t BitsStart = OffsetInBits + I;
+      uint32_t NumBitsInByte = std::min(8 - BitsStart % 8, E - I);
+      assert(((BitsStart ^ (BitsStart + NumBitsInByte - 1)) & ~7) == 0 &&
              "Across byte boundary.");
-      Bytes[(OffsetInBits + I) / 8].poisonBits(static_cast<uint8_t>(
-          ((1U << NumBitsInByte) - 1) << ((OffsetInBits + I) % 8)));
+      Bytes[BitsStart / 8].poisonBits(static_cast<uint8_t>(
+          ((1U << NumBitsInByte) - 1) << (BitsStart % 8)));
       I += NumBitsInByte;
     }
   } else if (Ty->isIntegerTy()) {
