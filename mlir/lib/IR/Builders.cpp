@@ -478,93 +478,115 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult
-OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
-                   SmallVectorImpl<Operation *> *materializedConstants) {
-  assert(results.empty() && "expected empty results");
-  ResultRange opResults = op->getResults();
-
-  results.reserve(opResults.size());
-  auto cleanupFailure = [&] {
-    results.clear();
-    return failure();
-  };
-
+NormalizedOpFoldResults OpBuilder::tryFold(Operation *op) {
   // If this operation is already a constant, there is nothing to do.
   if (matchPattern(op, m_Constant()))
-    return cleanupFailure();
+    return {};
 
-  // Try to fold the operation.
-  SmallVector<OpFoldResult, 4> foldResults;
   LDBG() << "Trying to fold: "
          << OpWithFlags(op, OpPrintingFlags().skipRegions());
-  if (failed(op->fold(foldResults)))
-    return cleanupFailure();
+  NormalizedOpFoldResults foldResults = op->fold();
 
-  // Bound the number of in-place fold iterations. Legitimate chains are very
-  // short (e.g. foldCommutative swaps once, then the op folds to a value).
-  // Without a bound, circular SSA uses in graph regions can cause an infinite
-  // loop (e.g. addi(x, 0) where x is the op's own result).
+  // Bound the number of in-place folds. Legitimate chains are very short (e.g.
+  // foldCommutative swaps once, then the op folds to a value). Without a bound,
+  // circular SSA uses in graph regions can cause an infinite loop (e.g.
+  // addi(x, 0) where x is the op's own result).
   constexpr int kMaxInPlaceFolds = 64;
-  int count = 0;
-  do {
-    LDBG() << "Folded in place #" << count
-           << " times: " << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    if (++count >= kMaxInPlaceFolds) {
-      LDBG() << "Aborting after " << kMaxInPlaceFolds
-             << " in-place fold iterations: "
+  int numInPlaceFolds = 0;
+  while (succeeded(foldResults) && !foldResults.replacesAny()) {
+    if (++numInPlaceFolds == kMaxInPlaceFolds) {
+      LDBG() << "Aborting after " << kMaxInPlaceFolds << " in-place folds: "
              << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      return cleanupFailure();
+      return {};
     }
-  } while (foldResults.empty() && succeeded(op->fold(foldResults)));
+    foldResults = op->fold();
+  }
+  if (numInPlaceFolds == 0)
+    return foldResults;
+  // Each fold before the last one only changed `op` in place.
+  foldResults.setModifiedInPlace();
+  return foldResults;
+}
 
-  // An in-place fold does not require generation of any constants.
-  if (foldResults.empty())
-    return success();
+FailureOr<SmallVector<Value>> OpBuilder::materializeFoldResults(
+    Operation *op, const NormalizedOpFoldResults &foldResults, bool liveOnly) {
+  SmallVector<Value> replacements(op->getNumResults());
 
   // A temporary builder used for creating constants during folding.
   OpBuilder cstBuilder(context);
   SmallVector<Operation *, 1> generatedConstants;
 
-  // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto [foldResult, expectedType] :
-       llvm::zip_equal(foldResults, opResults.getTypes())) {
+  for (auto [index, result] : llvm::enumerate(op->getResults())) {
+    OpFoldResult foldResult = foldResults[index];
+    if (!foldResult || (liveOnly && result.use_empty()))
+      continue;
 
-    // Normal values get pushed back directly.
-    if (auto value = llvm::dyn_cast_if_present<Value>(foldResult)) {
-      results.push_back(value);
+    // Normal values are used directly.
+    if (auto value = llvm::dyn_cast<Value>(foldResult)) {
+      replacements[index] = value;
       continue;
     }
 
     // Otherwise, try to materialize a constant operation.
     if (!dialect)
-      return cleanupFailure();
+      return failure();
 
     // Ask the dialect to materialize a constant operation for this value.
     Attribute attr = cast<Attribute>(foldResult);
-    auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
-                                                 op->getLoc());
+    auto *constOp = dialect->materializeConstant(
+        cstBuilder, attr, result.getType(), op->getLoc());
     if (!constOp) {
       // Erase any generated constants.
       for (Operation *cst : generatedConstants)
         cst->erase();
-      return cleanupFailure();
+      return failure();
     }
     assert(matchPattern(constOp, m_Constant()));
+    assert(constOp->getResultTypes()[0] == result.getType() &&
+           "materializeConstant produced incorrect result type");
 
     generatedConstants.push_back(constOp);
-    results.push_back(constOp->getResult(0));
+    replacements[index] = constOp->getResult(0);
   }
 
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
 
-  // Return materialized constant operations.
-  if (materializedConstants)
-    *materializedConstants = std::move(generatedConstants);
+  return replacements;
+}
 
+SmallVector<Operation *>
+OpBuilder::getMaterializedConstants(const NormalizedOpFoldResults &foldResults,
+                                    ArrayRef<Value> values) {
+  SmallVector<Operation *> constants;
+  for (auto [foldResult, value] :
+       llvm::zip_equal(foldResults.getReplacements(), values))
+    if (value && isa<Attribute>(foldResult))
+      constants.push_back(value.getDefiningOp());
+  return constants;
+}
+
+LogicalResult
+OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
+                   SmallVectorImpl<Operation *> *materializedConstants) {
+  assert(results.empty() && "expected empty results");
+  NormalizedOpFoldResults foldResults = tryFold(op);
+  if (!foldResults.replacesAll())
+    return success(foldResults.modifiedInPlace());
+
+  FailureOr<SmallVector<Value>> replacements =
+      materializeFoldResults(op, foldResults, /*liveOnly=*/false);
+  if (failed(replacements))
+    return failure();
+  llvm::append_range(results, *replacements);
+
+  if (materializedConstants) {
+    materializedConstants->clear();
+    llvm::append_range(*materializedConstants,
+                       getMaterializedConstants(foldResults, *replacements));
+  }
   return success();
 }
 

@@ -47,13 +47,34 @@ struct PartialFoldOp : public Op<PartialFoldOp, OpTrait::NResults<2>::Impl,
   }
 };
 
+struct ConstantOp : public Op<ConstantOp, OpTrait::OneResult,
+                              OpTrait::ZeroOperands, OpTrait::ConstantLike> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConstantOp)
+  using Op::Op;
+  using FoldAdaptor = FoldAdaptorImpl<ConstantOp>;
+  static ArrayRef<StringRef> getAttributeNames() {
+    static StringRef names[] = {"value"};
+    return names;
+  }
+  static StringRef getOperationName() { return "fold_test.constant"; }
+  OpFoldResult fold(FoldAdaptor) { return getOperation()->getAttr("value"); }
+};
+
 struct FoldTestDialect : public Dialect {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FoldTestDialect)
   static constexpr StringLiteral getDialectNamespace() { return "fold_test"; }
   explicit FoldTestDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
                 TypeID::get<FoldTestDialect>()) {
-    addOperations<PartialFoldOp>();
+    addOperations<PartialFoldOp, ConstantOp>();
+  }
+
+  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
+                                 Location loc) final {
+    OperationState state(loc, ConstantOp::getOperationName());
+    state.addAttribute("value", value);
+    state.addTypes(type);
+    return builder.create(state);
   }
 };
 } // namespace op_fold_results_test
@@ -534,6 +555,45 @@ TEST_F(OpFoldResultsTest, NullFoldHookFails) {
   SmallVector<OpFoldResult> results;
   EXPECT_TRUE(failed(op->fold(results)));
   EXPECT_TRUE(results.empty());
+}
+
+TEST_F(OpFoldResultsTest, OpBuilderLegacyTryFold) {
+  Block block;
+  OpBuilder b(&context);
+  b.setInsertionPointToEnd(&block);
+  Location loc = b.getUnknownLoc();
+  Value producer =
+      b.create(loc, b.getStringAttr("foo.producer"), {}, {i32})->getResult(0);
+  Operation *op =
+      b.create(loc, b.getStringAttr("fold_test.partial"), {}, {i32, i32});
+  Attribute attr = b.getI32IntegerAttr(1);
+  SmallVector<Value> results;
+  SmallVector<Operation *> constants;
+
+  // A partial fold counts only for its in-place change, and no fold follows
+  // it.
+  unsigned calls = 0;
+  bool inPlace = false;
+  opFoldFn = [&](Operation *) {
+    ++calls;
+    OpFoldResults result{attr, nullptr};
+    result.setModifiedInPlace(inPlace);
+    return result;
+  };
+  EXPECT_TRUE(failed(b.tryFold(op, results, &constants)));
+  inPlace = true;
+  EXPECT_TRUE(succeeded(b.tryFold(op, results, &constants)));
+  EXPECT_EQ(calls, 2u);
+  EXPECT_TRUE(results.empty());
+  EXPECT_TRUE(constants.empty());
+
+  // A full fold materializes its constants.
+  opFoldFn = [&](Operation *) -> OpFoldResults { return {attr, producer}; };
+  ASSERT_TRUE(succeeded(b.tryFold(op, results, &constants)));
+  ASSERT_EQ(results.size(), 2u);
+  ASSERT_EQ(constants.size(), 1u);
+  EXPECT_EQ(results[0], constants[0]->getResult(0));
+  EXPECT_EQ(results[1], producer);
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
