@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RCU_RCU_LIST_H
 #define _LIBCPP___RCU_RCU_LIST_H
 
+#include <__assert>
 #include <__config>
 #include <__rcu/rcu_domain.h>
 #include <atomic>
@@ -67,6 +68,8 @@ struct rcu_atomic_list_view_entry {
   __rcu_node* tail_ = nullptr;
 };
 
+// Like rcu_singly_list_view, but operations can be done without external synchronization and
+// are lockfree.
 class rcu_atomic_list_view {
   std::atomic<rcu_atomic_list_view_entry> entry_{};
 
@@ -74,8 +77,8 @@ class rcu_atomic_list_view {
 
 public:
   void push_front(__rcu_node* node) noexcept {
+    _LIBCPP_ASSERT_INTERNAL(node->__next_ == nullptr, "The node pushed to the rcu_atomic_list_view must not be linked");
     auto expected_entry = entry_.load(std::memory_order_relaxed);
-    auto original_next  = node->__next_;
     while (true) {
       auto new_entry = [&] {
         if (expected_entry.head_ == nullptr) {
@@ -89,7 +92,7 @@ public:
               expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
         break;
       } else {
-        node->__next_ = original_next;
+        node->__next_ = nullptr;
       }
     }
   }
