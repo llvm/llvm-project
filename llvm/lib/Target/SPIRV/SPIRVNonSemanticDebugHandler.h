@@ -190,10 +190,6 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   DenseMap<std::pair<const DIBasicType *, uint64_t>, MCRegister>
       ConstantValueRegs;
 
-  // Cache of already-emitted DebugTypeFunction instructions, keyed by operand
-  // ids (flags, return type, parameters).
-  DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
-
   // Cache of already-emitted DebugOperation instructions, keyed by NonSemantic
   // opcode followed by the 32-bit operation arguments. Inline size 3 is the
   // spec maximum (opcode plus at most two operands: BitPiece, Fragment).
@@ -361,13 +357,6 @@ private:
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
                          SPIRV::ModuleAnalysisInfo &MAI);
-
-  /// Return a cached DebugTypeFunction id when \p Ops matches a prior emission,
-  /// otherwise emit and cache a new instruction.
-  MCRegister getOrEmitDebugTypeFunction(ArrayRef<MCRegister> Ops,
-                                        MCRegister VoidTypeReg,
-                                        MCRegister ExtInstSetReg,
-                                        SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
   MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);
