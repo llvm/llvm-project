@@ -63,6 +63,9 @@ private:
 
   bool legalizeGLOBAL_VALUE(MachineInstr &MI, MachineRegisterInfo &MRI,
                             LegalizerHelper &Helper) const;
+
+  bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif
