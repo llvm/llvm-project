@@ -112,18 +112,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x:_(<2 x i32>) = COPY $x0
     ; CHECK-NEXT: %one:_(i32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %one_v:_(<2 x i32>) = G_DUP %one(i32)
+    ; CHECK-NEXT: %one_v:_(<2 x i32>) = G_SPLAT_VECTOR %one(i32)
     ; CHECK-NEXT: %two:_(i32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %two_v:_(<2 x i32>) = G_DUP %two(i32)
+    ; CHECK-NEXT: %two_v:_(<2 x i32>) = G_SPLAT_VECTOR %two(i32)
     ; CHECK-NEXT: %or:_(<2 x i32>) = G_OR %x, %one_v
     ; CHECK-NEXT: %and:_(<2 x i32>) = G_AND %or, %two_v
     ; CHECK-NEXT: $x0 = COPY %and(<2 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(<2 x i32>) = COPY $x0
     %one:_(i32) = G_CONSTANT i32 1
-    %one_v:_(<2 x i32>) = G_DUP %one
+    %one_v:_(<2 x i32>) = G_SPLAT_VECTOR %one
     %two:_(i32) = G_CONSTANT i32 2
-    %two_v:_(<2 x i32>) = G_DUP %two
+    %two_v:_(<2 x i32>) = G_SPLAT_VECTOR %two
     %or:_(<2 x i32>) = G_OR %x, %one_v
     %and:_(<2 x i32>) = G_AND %or, %two_v
     $x0 = COPY %and(<2 x i32>)

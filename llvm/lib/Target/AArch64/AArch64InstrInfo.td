@@ -8287,12 +8287,12 @@ def : Pat<(v8bf16 (AArch64dup (bf16 FPR16:$Rn))),
             (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
             (i64 0)))>;
 
-// Patterns for importing fpr i8 G_DUP under GISel.
-def : Pat<(v8i8 (AArch64dup (i8 FPR8:$Rn))),
+// Patterns for importing fpr i8 G_SPLAT_VECTOR under GISel.
+def : Pat<(v8i8 (splat_vector (i8 FPR8:$Rn))),
           (v8i8 (DUPv8i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
-def : Pat<(v16i8 (AArch64dup (i8 FPR8:$Rn))),
+def : Pat<(v16i8 (splat_vector (i8 FPR8:$Rn))),
           (v16i8 (DUPv16i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;

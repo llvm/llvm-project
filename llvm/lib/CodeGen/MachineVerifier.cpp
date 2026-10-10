@@ -1990,8 +1990,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector()) {
-      report("Destination type must be a scalable vector", MI);
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
       break;
     }
 

@@ -9,10 +9,9 @@ body: |
     %1:_(<2 x s32>) = G_IMPLICIT_DEF
     %2:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
 
-    ; CHECK: Destination type must be a scalable vector
+    ; CHECK: Destination type must be a vector
     %3:_(s32) = G_SPLAT_VECTOR %0
 
-    ; CHECK: Destination type must be a scalable vector
     %4:_(<2 x s32>) = G_SPLAT_VECTOR %0
 
     ; CHECK: Source type must be a scalar or pointer
