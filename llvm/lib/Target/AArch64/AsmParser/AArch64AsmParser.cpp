@@ -5997,55 +5997,62 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc,
                  "expected compatible register or floating-point constant");
   case Match_InvalidMemoryIndexedSImm6:
-    return Error(Loc, "index must be an integer in range [-32, 31].");
+    return Error(Loc, "immediate must be an integer in range [-32, 31].");
   case Match_InvalidMemoryIndexedSImm5:
-    return Error(Loc, "index must be an integer in range [-16, 15].");
+    return Error(Loc, "immediate must be an integer in range [-16, 15].");
   case Match_InvalidMemoryIndexed1SImm4:
-    return Error(Loc, "index must be an integer in range [-8, 7].");
+    return Error(Loc, "immediate must be an integer in range [-8, 7].");
   case Match_InvalidMemoryIndexed2SImm4:
-    return Error(Loc, "index must be a multiple of 2 in range [-16, 14].");
+    return Error(Loc, "immediate must be a multiple of 2 in range [-16, 14].");
   case Match_InvalidMemoryIndexed3SImm4:
-    return Error(Loc, "index must be a multiple of 3 in range [-24, 21].");
+    return Error(Loc, "immediate must be a multiple of 3 in range [-24, 21].");
   case Match_InvalidMemoryIndexed4SImm4:
-    return Error(Loc, "index must be a multiple of 4 in range [-32, 28].");
+    return Error(Loc, "immediate must be a multiple of 4 in range [-32, 28].");
   case Match_InvalidMemoryIndexed16SImm4:
-    return Error(Loc, "index must be a multiple of 16 in range [-128, 112].");
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-128, 112].");
   case Match_InvalidMemoryIndexed32SImm4:
-    return Error(Loc, "index must be a multiple of 32 in range [-256, 224].");
+    return Error(Loc,
+                 "immediate must be a multiple of 32 in range [-256, 224].");
   case Match_InvalidMemoryIndexed1SImm6:
-    return Error(Loc, "index must be an integer in range [-32, 31].");
+    return Error(Loc, "immediate must be an integer in range [-32, 31].");
   case Match_InvalidMemoryIndexedSImm8:
-    return Error(Loc, "index must be an integer in range [-128, 127].");
+    return Error(Loc, "immediate must be an integer in range [-128, 127].");
   case Match_InvalidMemoryIndexedSImm9:
-    return Error(Loc, "index must be an integer in range [-256, 255].");
+    return Error(Loc, "immediate must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexed16SImm9:
-    return Error(Loc, "index must be a multiple of 16 in range [-4096, 4080].");
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-4096, 4080].");
   case Match_InvalidMemoryIndexed8SImm10:
-    return Error(Loc, "index must be a multiple of 8 in range [-4096, 4088].");
+    return Error(Loc,
+                 "immediate must be a multiple of 8 in range [-4096, 4088].");
   case Match_InvalidMemoryIndexed4SImm7:
-    return Error(Loc, "index must be a multiple of 4 in range [-256, 252].");
+    return Error(Loc,
+                 "immediate must be a multiple of 4 in range [-256, 252].");
   case Match_InvalidMemoryIndexed8SImm7:
-    return Error(Loc, "index must be a multiple of 8 in range [-512, 504].");
+    return Error(Loc,
+                 "immediate must be a multiple of 8 in range [-512, 504].");
   case Match_InvalidMemoryIndexed16SImm7:
-    return Error(Loc, "index must be a multiple of 16 in range [-1024, 1008].");
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-1024, 1008].");
   case Match_InvalidMemoryIndexed8UImm5:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 248].");
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 248].");
   case Match_InvalidMemoryIndexed8UImm3:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 56].");
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 56].");
   case Match_InvalidMemoryIndexed4UImm5:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 124].");
+    return Error(Loc, "immediate must be a multiple of 4 in range [0, 124].");
   case Match_InvalidMemoryIndexed2UImm5:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 62].");
+    return Error(Loc, "immediate must be a multiple of 2 in range [0, 62].");
   case Match_InvalidMemoryIndexed8UImm6:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 504].");
   case Match_InvalidMemoryIndexed16UImm6:
-    return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
+    return Error(Loc, "immediate must be a multiple of 16 in range [0, 1008].");
   case Match_InvalidMemoryIndexed4UImm6:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
+    return Error(Loc, "immediate must be a multiple of 4 in range [0, 252].");
   case Match_InvalidMemoryIndexed2UImm6:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 126].");
+    return Error(Loc, "immediate must be a multiple of 2 in range [0, 126].");
   case Match_InvalidMemoryIndexed1UImm6:
-    return Error(Loc, "index must be in range [0, 63].");
+    return Error(Loc, "immediate must be in range [0, 63].");
   case Match_InvalidMemoryWExtend8:
     return Error(Loc,
                  "expected 'uxtw' or 'sxtw' with optional shift of #0");
@@ -6077,15 +6084,16 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc,
                  "expected 'lsl' or 'sxtx' with optional shift of #0 or #4");
   case Match_InvalidMemoryIndexed1:
-    return Error(Loc, "index must be an integer in range [0, 4095].");
+    return Error(Loc, "immediate must be an integer in range [0, 4095].");
   case Match_InvalidMemoryIndexed2:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 8190].");
+    return Error(Loc, "immediate must be a multiple of 2 in range [0, 8190].");
   case Match_InvalidMemoryIndexed4:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 16380].");
+    return Error(Loc, "immediate must be a multiple of 4 in range [0, 16380].");
   case Match_InvalidMemoryIndexed8:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 32760].");
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 32760].");
   case Match_InvalidMemoryIndexed16:
-    return Error(Loc, "index must be a multiple of 16 in range [0, 65520].");
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [0, 65520].");
   case Match_InvalidImm0_0:
     return Error(Loc, "immediate must be 0.");
   case Match_InvalidImm0_1:

@@ -5,12 +5,12 @@
 // Immediate out of lower bound [-16, 14].
 
 st2w {z12.s, z13.s}, p4, [x12, #-18, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2w {z12.s, z13.s}, p4, [x12, #-18, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st2w {z7.s, z8.s}, p3, [x1, #16, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2w {z7.s, z8.s}, p3, [x1, #16, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -19,12 +19,12 @@ st2w {z7.s, z8.s}, p3, [x1, #16, MUL VL]
 // Immediate not a multiple of two.
 
 st2w {z12.s, z13.s}, p4, [x12, #-7, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2w {z12.s, z13.s}, p4, [x12, #-7, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st2w {z7.s, z8.s}, p3, [x1, #5, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: st2w {z7.s, z8.s}, p3, [x1, #5, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
