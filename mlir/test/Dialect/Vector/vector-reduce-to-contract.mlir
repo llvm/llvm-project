@@ -529,12 +529,9 @@ func.func @contract_result_transpose(%lhs : vector<2x4x4xf32>, %rhs: vector<4x8x
 
 // -----
 
-// Regression test for the one-sided broadcast fold in CombineContractBroadcast.
-// Folding a broadcast-like shape_cast into only one operand of a contraction
-// must be rejected: the pass used to accept it whenever a single reduction pair
-// remained, leaving the other retained reductions unpaired. Those became free
-// dimensions and produced an invalid scalar-result vector.contract. Here the
-// fold is refused, so the shape_cast, broadcast and contract are preserved.
+// Test that CombineContractBroadcast is not combining this case, as that would
+// result in the reduction iterators of the other operand becoming unpaired and
+// produce an invalid scalar-result vector.contract.
 
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> ()>
