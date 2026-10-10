@@ -2565,6 +2565,88 @@ SymbolFileNativePDB::GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
   return CreateLocalVariable(scope_id, var_id, is_param, is_constant);
 }
 
+VariableSP
+SymbolFileNativePDB::GetOrCreateLocalStaticVariable(PdbCompilandSymId scope_id,
+                                                    PdbCompilandSymId var_id) {
+  auto iter = m_local_variables.find(toOpaqueUid(var_id));
+  if (iter != m_local_variables.end())
+    return iter->second;
+
+  Block *block = GetOrCreateBlock(scope_id);
+  if (!block)
+    return nullptr;
+
+  CVSymbol sym = m_index->ReadSymbolRecord(var_id);
+  TypeIndex ti;
+  llvm::StringRef name;
+  uint16_t section = 0;
+  uint32_t offset = 0;
+  ValueType scope = eValueTypeVariableStatic;
+  switch (sym.kind()) {
+  case S_LDATA32: {
+    DataSym ds(sym.kind());
+    if (auto err = SymbolDeserializer::deserializeAs<DataSym>(sym, ds)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize DataSym record: {0}");
+      return nullptr;
+    }
+    ti = ds.Type;
+    name = ds.Name;
+    section = ds.Segment;
+    offset = ds.DataOffset;
+    break;
+  }
+  case S_LTHREAD32: {
+    ThreadLocalDataSym tlds(sym.kind());
+    if (auto err =
+            SymbolDeserializer::deserializeAs<ThreadLocalDataSym>(sym, tlds)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                     "Failed to deserialize ThreadLocalDataSym record: {0}");
+      return nullptr;
+    }
+    ti = tlds.Type;
+    name = tlds.Name;
+    section = tlds.Segment;
+    offset = tlds.DataOffset;
+    scope = eValueTypeVariableThreadLocal;
+    break;
+  }
+  default:
+    return nullptr;
+  }
+
+  TypeSP type_sp = GetOrCreateType(ti);
+  if (!type_sp)
+    return nullptr;
+  SymbolFileTypeSP sftype =
+      std::make_shared<SymbolFileType>(*this, type_sp->GetID());
+
+  ModuleSP module_sp = GetObjectFile()->GetModule();
+  DWARFExpressionList location(
+      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
+      nullptr);
+  Declaration decl;
+  VariableSP var_sp = std::make_shared<Variable>(
+      toOpaqueUid(var_id), name.str().c_str(), /*mangled=*/nullptr, sftype,
+      scope, block, Variable::RangeList(), &decl, location, /*external=*/false,
+      /*artificial=*/false, /*location_is_constant_data=*/false,
+      /*static_member=*/false);
+
+  CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
+  if (cii) {
+    auto ts_or_err =
+        GetTypeSystemForLanguage(GetOrCreateCompileUnit(*cii)->GetLanguage());
+    if (auto err = ts_or_err.takeError())
+      llvm::consumeError(std::move(err));
+    else if (auto ts = *ts_or_err)
+      if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+        ast_builder->EnsureVariable(scope_id, var_id);
+  }
+
+  m_local_variables[toOpaqueUid(var_id)] = var_sp;
+  return var_sp;
+}
+
 TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   CVSymbol sym = m_index->ReadSymbolRecord(id);
   if (sym.kind() != S_UDT) {
@@ -2708,6 +2790,12 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
       variable = GetOrCreateLocalVariable(block_id, child_sym_id,
                                           /*is_param=*/false,
                                           /*is_constant=*/true);
+      if (variable)
+        variables->AddVariableIfUnique(variable);
+      break;
+    case S_LDATA32:
+    case S_LTHREAD32:
+      variable = GetOrCreateLocalStaticVariable(block_id, child_sym_id);
       if (variable)
         variables->AddVariableIfUnique(variable);
       break;
