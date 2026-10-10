@@ -33169,6 +33169,11 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
   Type *MemType = AI->getType();
 
+  // x86 has no native atomic RMW operations for vectors; expanded to a CmpXChg
+  // loop.
+  if (MemType->isVectorTy())
+    return AtomicExpansionKind::CmpXChg;
+
   // If the operand is too big, we must see if cmpxchg8/16b is available
   // and default to library calls otherwise.
   if (MemType->getPrimitiveSizeInBits() > NativeWidth) {
