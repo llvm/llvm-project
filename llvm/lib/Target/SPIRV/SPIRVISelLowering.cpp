@@ -289,27 +289,23 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
-static void validateLifetimeStart(const SPIRVSubtarget &STI,
-                                  MachineRegisterInfo *MRI,
+// The SPIR-V spec requires the Size operand of OpLifetimeStart/OpLifetimeStop
+// to be 0 if Pointer points to a non-void type. As in SPIRV-LLVM-Translator,
+// i8 (uchar*) is treated as void*. For any other pointee, set Size to 0, which
+// covers the whole object Pointer points to.
+static void validateLifetimeStart(MachineRegisterInfo *MRI,
                                   SPIRVGlobalRegistry &GR, MachineInstr &I) {
   Register PtrReg = I.getOperand(0).getReg();
   MachineFunction *MF = I.getParent()->getParent();
   Register PtrTypeReg = getTypeReg(MRI, PtrReg);
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(PtrTypeReg, MF);
-  SPIRVTypeInst PonteeElemType = PtrType ? GR.getPointeeType(PtrType) : nullptr;
-  if (!PonteeElemType || PonteeElemType->getOpcode() == SPIRV::OpTypeVoid ||
-      (PonteeElemType->getOpcode() == SPIRV::OpTypeInt &&
-       PonteeElemType->getOperand(1).getImm() == 8))
+  SPIRVTypeInst PointeeElemType =
+      PtrType ? GR.getPointeeType(PtrType) : nullptr;
+  if (!PointeeElemType || PointeeElemType->getOpcode() == SPIRV::OpTypeVoid ||
+      (PointeeElemType->getOpcode() == SPIRV::OpTypeInt &&
+       PointeeElemType->getOperand(1).getImm() == 8))
     return;
-  // To keep the code valid a bitcast must be inserted
-  SPIRV::StorageClass::StorageClass SC =
-      static_cast<SPIRV::StorageClass::StorageClass>(
-          PtrType->getOperand(1).getImm());
-  MachineIRBuilder MIB(I);
-  LLVMContext &Context = MF->getFunction().getContext();
-  SPIRVTypeInst NewPtrType =
-      GR.getOrCreateSPIRVPointerType(IntegerType::getInt8Ty(Context), MIB, SC);
-  doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
+  I.getOperand(1).setImm(0);
 }
 
 static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
@@ -638,7 +634,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       case SPIRV::OpLifetimeStart:
       case SPIRV::OpLifetimeStop:
         if (MI.getOperand(1).getImm() > 0)
-          validateLifetimeStart(STI, MRI, GR, MI);
+          validateLifetimeStart(MRI, GR, MI);
         break;
       case SPIRV::OpGroupAsyncCopy:
         validatePtrUnwrapStructField(STI, MRI, GR, MI, 3);
