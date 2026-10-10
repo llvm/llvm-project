@@ -82,6 +82,9 @@ class LLVM_ABI GOFFObjectFile : public ObjectFile {
   SmallVector<SectionEntryImpl, 256> SectionList;
   mutable DenseMap<uint32_t, SmallVector<uint8_t>> SectionDataCache;
 
+  // The flag to skip GOFF ED symbols or not during symbol traversal.
+  bool SkipEDSymbols = true;
+
   // Flattened data for all logical records (record type + continuous data
   // without headers).
   SmallVector<std::pair<GOFF::RecordType, SmallVector<uint8_t>>> FlattenedData;
@@ -139,6 +142,9 @@ public:
   bool isSectionNoLoad(DataRefImpl Sec) const;
   bool isSectionReadOnlyData(DataRefImpl Sec) const;
   bool isSectionZeroInit(DataRefImpl Sec) const;
+  Error getSectionUniqueName(DataRefImpl Sec,
+                             SmallVectorImpl<char> &Result) const;
+  void setSkipEDSymbols(bool Skip) { SkipEDSymbols = Skip; }
 
 private:
   // SymbolRef.
@@ -154,6 +160,8 @@ private:
   const uint8_t *getSymbolEsdRecord(DataRefImpl Symb) const;
   bool isSymbolUnresolved(DataRefImpl Symb) const;
   bool isSymbolIndirect(DataRefImpl Symb) const;
+  bool isEDSymbol(DataRefImpl Symb) const;
+  Expected<StringRef> getSymbolName(uint32_t SymIndex) const;
 
   // SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
