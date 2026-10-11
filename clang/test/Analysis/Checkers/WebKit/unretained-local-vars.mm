@@ -649,6 +649,23 @@ void iterateReturnValue() {
     [obj doWork];
 }
 
+void iterateLocalWithStructuredBinding() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get())
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    (void)obj;
+}
+
+void iterateLocalWithStructuredBindingClearedInBody() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get()) {
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    // expected-warning@-2{{Local variable '[obj]' is a raw pointer to RetainPtr-capable type}}
+    array = nullptr;
+    (void)obj;
+  }
+}
+
 void iterateRawLocal() {
   NSArray *array = provideArray();
   // expected-warning@-1{{Local variable 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
