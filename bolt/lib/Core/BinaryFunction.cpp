@@ -1811,15 +1811,21 @@ bool BinaryFunction::scanExternalRefs() {
         // keep the target in place instead. Note that ADRP is excluded by
         // hasPCRelOperand(), and that linker-relaxed sequences have already
         // been handled above.
-        if (BC.MIB->hasPCRelOperand(Instruction)) {
+        //
+        // Symbols without a function, such as __hot_start or _end, cannot be
+        // kept in place. Patch the instruction for them as usual: the patch is
+        // correct if the new value is in range, and fails loudly otherwise.
+        if (BC.MIB->hasPCRelOperand(Instruction) &&
+            llvm::all_of(RefSymbols, [&](const MCSymbol *Symbol) {
+              return BC.getFunctionForSymbol(Symbol);
+            })) {
           for (const MCSymbol *Symbol : RefSymbols) {
             BC.errs()
                 << "BOLT-WARNING: unable to update PC-relative reference to "
                 << Symbol->getName() << " at 0x"
                 << Twine::utohexstr(AbsoluteInstrAddr)
                 << ". Will not optimize the target\n";
-            if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol))
-              TargetBF->setIgnored();
+            BC.getFunctionForSymbol(Symbol)->setIgnored();
           }
           continue;
         }
