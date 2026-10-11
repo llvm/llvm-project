@@ -215,6 +215,7 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/redundant-branch-condition>` check fix for 
   false negative when there are two declaration statement in if with && 
   it skips the second one bind with first one only preveiously.
+  
 - Improved {doc}`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
   positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
