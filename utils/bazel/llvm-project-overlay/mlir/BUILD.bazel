@@ -8971,7 +8971,7 @@ cc_library(
         ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
-        ":ArithTransforms",
+        ":ArithUtils",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
         ":IR",

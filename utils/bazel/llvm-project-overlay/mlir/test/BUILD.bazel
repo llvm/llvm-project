@@ -554,6 +554,7 @@ cc_library(
         "//llvm:Support",
         "//mlir:ArithToSPIRV",
         "//mlir:ArithTransforms",
+        "//mlir:ArithUtils",
         "//mlir:ControlFlowToSPIRV",
         "//mlir:FuncDialect",
         "//mlir:FuncToSPIRV",
