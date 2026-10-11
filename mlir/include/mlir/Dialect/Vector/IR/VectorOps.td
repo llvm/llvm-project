@@ -103,12 +103,17 @@ def Vector_ContractionOp :
     Depending on its iterator type and on the operands it indexes, a dimension
     is one of the following kinds:
 
-    | Iterator type | In output | In lhs and rhs | Kind                       |
-    | ------------- | --------- | -------------- | -------------------------- |
-    | "parallel"    | yes       | both           | batch                      |
-    | "parallel"    | yes       | one of them    | free                       |
-    | "reduction"   | no        | both           | contracting                |
-    | "reduction"   | no        | one of them    | reduction on one operand   |
+    | Iterator type | In output | In lhs and rhs | Kind                     |
+    | ------------- | --------- | -------------- | ------------------------ |
+    | "parallel"    | yes       | both           | batch                    |
+    | "parallel"    | yes       | lhs only       | free (M-like)            |
+    | "parallel"    | yes       | rhs only       | free (N-like)            |
+    | "reduction"   | no        | both           | contracting              |
+    | "reduction"   | no        | one of them    | reduction on one operand |
+
+    The M-like and N-like terms follow
+    [`linalg.contract`](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgcontract-linalgcontractop)
+    terminology.
 
     An indexing map attribute list must be specified with an entry for lhs, rhs
     and acc arguments. An indexing map attribute specifies a mapping from each
