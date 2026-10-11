@@ -199,10 +199,6 @@ struct ModuleAnalysisInfo {
   MCRegister getNextIDRegister() {
     return MCRegister((1U << 31) | getNextID());
   }
-  bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    return BBNumToRegMap.contains(Key);
-  }
   // Convert MBB's number to corresponding ID register.
   MCRegister getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());

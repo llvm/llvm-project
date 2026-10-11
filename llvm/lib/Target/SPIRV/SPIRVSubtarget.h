@@ -137,13 +137,6 @@ public:
   static bool classof(const TargetSubtargetInfo *ST) {
     return ST->getTargetTriple().isSPIRV();
   }
-
-  static constexpr unsigned MaxLegalAddressSpace = 6;
-
-  // Adds known SPIR-V extensions to the global list of allowed extensions that
-  // SPIRVSubtarget module owns as
-  // cl::opt<ExtensionSet, ...> global variable.
-  static void addExtensionsToClOpt(const ExtensionSet &AllowList);
 };
 } // namespace llvm
 

@@ -101,9 +101,6 @@ public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM), TM(TM) {}
 
-  SPIRVTargetMachine &getSPIRVTargetMachine() const {
-    return getTM<SPIRVTargetMachine>();
-  }
   void addMachineSSAOptimization() override;
   void addIRPasses() override;
   void addISelPrepare() override;
