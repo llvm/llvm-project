@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 -start-before=amdgpu-lower-vgpr-encoding -o - %s | FileCheck -check-prefixes=GCN,ASM %s
+# RUN: llc -mtriple=amdgpu12.50 -mattr=+real-true16 -start-before=amdgpu-lower-vgpr-encoding -o - %s | llvm-mc -triple=amdgpu12.50 -mattr=+real-true16 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 --mattr=+real-true16 - | FileCheck -check-prefixes=GCN,DIS %s
+
+# Each instruction below has a register in src0 and a non-inline literal in
+# src1, and needs an MSB mode change that commuting cannot avoid. The pass
+# commutes it (moving the literal into src0), finds the commuted form still
+# incompatible, and commutes it back. Moving the literal back out of src0 must
+# be legal, otherwise the instruction stays commuted while the mode is set for
+# the original operand order, and the high VGPR is read from the wrong bank.
+# The DIS run checks the encoded registers, not just the printed ones.
+
+# ASM-LABEL: {{^}}commute_literal_src0_mode_change:
+# DIS-LABEL: <commute_literal_src0_mode_change>:
+---
+name:            commute_literal_src0_mode_change
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr10, $vgpr330_lo16
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: v_add_nc_u32_e64 v0, v10, v10
+    $vgpr0 = V_ADD_U32_e64 $vgpr10, $vgpr10, 0, implicit $exec
+
+    ; Needs dst=1 and src0=1. Commuting would need src1=1 instead, so the
+    ; original order is restored.
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: v_and_b16 v74.l /*v330.l*/, v74.l /*v330.l*/, 0xff
+    $vgpr330_lo16 = V_AND_B16_t16_e64 0, $vgpr330_lo16, 0, 255, 0, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0, implicit $vgpr330_lo16
+...
+
+# ASM-LABEL: {{^}}commute_literal_dst_mode_change:
+# DIS-LABEL: <commute_literal_dst_mode_change>:
+---
+name:            commute_literal_dst_mode_change
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr300
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: v_mov_b32_e32 v0, 0
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+
+    ; Needs dst=1 and src0=1. Commuting cannot help with a dst mismatch, so the
+    ; original order is restored.
+    ; GCN-NEXT: s_set_vgpr_msb 0x41
+    ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=0 src2=0
+    ; GCN-NEXT: v_mul_lo_u32 v6 /*v262*/, v44 /*v300*/, 0x1e00
+    $vgpr262 = V_MUL_LO_U32_e64 $vgpr300, 7680, implicit $exec
+    S_ENDPGM 0, implicit $vgpr0, implicit $vgpr262
+...

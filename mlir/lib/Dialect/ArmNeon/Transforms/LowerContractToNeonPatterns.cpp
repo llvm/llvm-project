@@ -454,7 +454,7 @@ public:
 class LowerContractionToNeonI8MMPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
     if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())
@@ -473,7 +473,7 @@ public:
 class LowerContractionToNeonBFMMLAPattern
     : public OpRewritePattern<vector::ContractionOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override {
     if (cast<vector::MaskableOpInterface>(op.getOperation()).isMasked())

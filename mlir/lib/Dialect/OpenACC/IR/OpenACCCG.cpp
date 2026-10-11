@@ -94,7 +94,7 @@ static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
 
 struct ComputeRegionRemoveDuplicateArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -146,7 +146,7 @@ struct ComputeRegionRemoveDuplicateArgs
 
 struct ComputeRegionRemoveUnusedArgs
     : public OpRewritePattern<ComputeRegionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ComputeRegionOp op,
                                 PatternRewriter &rewriter) const override {

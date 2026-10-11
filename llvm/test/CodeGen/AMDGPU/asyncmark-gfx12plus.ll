@@ -51,12 +51,12 @@ define void @interleaved_with_wave_barrier(ptr addrspace(1) %foo, ptr addrspace(
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
 ; GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
-; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, 0x54, v0
+; GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 0x54
 ; GISEL-NEXT:    global_load_b32 v12, v[8:9], off offset:44
 ; GISEL-NEXT:    global_load_b32 v13, v[0:1], off offset:4
 ; GISEL-NEXT:    v_add_nc_u32_e32 v3, 0x54, v2
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v1, vcc_lo
-; GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, 0x58, v8
+; GISEL-NEXT:    v_add_co_u32 v10, vcc_lo, v8, 0x58
 ; GISEL-NEXT:    ; wave barrier
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v9, vcc_lo

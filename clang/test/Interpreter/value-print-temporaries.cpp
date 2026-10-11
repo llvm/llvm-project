@@ -3,6 +3,9 @@
 //
 // RUN: cat %s | clang-repl | FileCheck %s
 
+// The test is flaky with ASan: https://github.com/llvm/llvm-project/issues/102858
+// UNSUPPORTED: asan
+
 int Dtors = 0;
 struct S { ~S() { ++Dtors; } };
 int f(S) { return 42; }

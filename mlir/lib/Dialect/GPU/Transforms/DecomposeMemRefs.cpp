@@ -127,7 +127,7 @@ static bool checkLayout(Value val) {
 
 namespace {
 struct FlattenLoad : public OpRewritePattern<memref::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -151,7 +151,7 @@ struct FlattenLoad : public OpRewritePattern<memref::LoadOp> {
 };
 
 struct FlattenStore : public OpRewritePattern<memref::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::StoreOp op,
                                 PatternRewriter &rewriter) const override {
@@ -176,7 +176,7 @@ struct FlattenStore : public OpRewritePattern<memref::StoreOp> {
 };
 
 struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::SubViewOp op,
                                 PatternRewriter &rewriter) const override {

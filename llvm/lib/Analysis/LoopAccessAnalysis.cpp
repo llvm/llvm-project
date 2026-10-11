@@ -1697,8 +1697,8 @@ public:
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA), LI(LI), DT(DT),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1807,6 +1807,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;

@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -165,6 +166,31 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
          TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
          TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
+InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
+                                          Type *SrcTy, Type *DstTy,
+                                          const DataLayout &DL,
+                                          TTI::CastContextHint CCH,
+                                          TTI::TargetCostKind CostKind) {
+  bool ToPtr = cast<VectorType>(DstTy)->getElementType()->isPointerTy();
+  if (ToPtr == cast<VectorType>(SrcTy)->getElementType()->isPointerTy())
+    return TTI.getCastInstrCost(Instruction::BitCast, DstTy, SrcTy, CCH,
+                                CostKind);
+  // The ptr/int conversion keeps the vector shape, the bitcast transforms the
+  // resulting integer vector.
+  if (ToPtr) {
+    Type *IntVecTy = DL.getIntPtrType(DstTy);
+    return TTI.getCastInstrCost(Instruction::IntToPtr, DstTy, IntVecTy, CCH,
+                                CostKind) +
+           TTI.getCastInstrCost(Instruction::BitCast, IntVecTy, SrcTy, CCH,
+                                CostKind);
+  }
+  Type *IntVecTy = DL.getIntPtrType(SrcTy);
+  return TTI.getCastInstrCost(Instruction::PtrToInt, IntVecTy, SrcTy, CCH,
+                              CostKind) +
+         TTI.getCastInstrCost(Instruction::BitCast, DstTy, IntVecTy, CCH,
+                              CostKind);
 }
 
 InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,

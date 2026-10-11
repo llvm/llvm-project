@@ -400,6 +400,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/wait.h entrypoints
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitid
     libc.src.sys.wait.waitpid
 
     # sys/xattr.h entrypoints
@@ -443,8 +444,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcflush
     libc.src.termios.tcgetattr
     libc.src.termios.tcgetsid
+    libc.src.termios.tcgetwinsize
     libc.src.termios.tcsendbreak
     libc.src.termios.tcsetattr
+    libc.src.termios.tcsetwinsize
 
     # unistd.h entrypoints
     libc.src.unistd.alarm

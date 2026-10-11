@@ -30,7 +30,7 @@ namespace {
 ///     : tensor<5x10xf32> to tensor<2x2xf32>
 struct DropRedundantRankExpansionOnExtractSliceOfInsertSlice
     : public OpRewritePattern<ExtractSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractSliceOp extractSliceOp,
                                 PatternRewriter &rewriter) const override {
