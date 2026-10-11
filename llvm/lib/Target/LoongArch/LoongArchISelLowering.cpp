@@ -11912,6 +11912,15 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero.setBitsFrom(1);
     break;
   }
+  case LoongArchISD::VALL_ZERO:
+  case LoongArchISD::VANY_ZERO:
+  case LoongArchISD::VALL_NONZERO:
+  case LoongArchISD::VANY_NONZERO: {
+    // Materialized as literal 0/1 by the Pseudo{,X}VB{Z,NZ}_[BHWD]'s custom
+    // inserter, emitVecCondBranchPseudo().
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
   case LoongArchISD::VPICK_ZEXT_ELT: {
     assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
     EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
