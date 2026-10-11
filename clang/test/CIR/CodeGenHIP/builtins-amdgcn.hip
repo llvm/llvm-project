@@ -112,6 +112,26 @@ __device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out)
   *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
 }
 
+// CIR-LABEL: @_Z14test_grid_sizePj
+// CIR: %[[P:.*]] = cir.call_llvm_intrinsic "amdgcn.dispatch.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// CIR: %[[OFF:.*]] = cir.const #cir.int<12> : !u64i
+// CIR: %[[GEP:.*]] = cir.ptr_stride %[[P]], %[[OFF]]
+// CIR: %[[PTR:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!void, target_address_space(4)> -> !cir.ptr<!u32i, target_address_space(4)>
+// CIR: cir.load invariant align(4) %[[PTR]]
+// CIR: cir.const #cir.int<16> : !u64i
+// CIR: cir.const #cir.int<20> : !u64i
+// LLVM-LABEL: @_Z14test_grid_sizePj
+// LLVM: [[P:%.*]] = call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// LLVM: [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[P]], i{{32|64}} 12
+// LLVM: load i32, ptr addrspace(4) [[GEP]], align 4, {{.*}}!invariant.load
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 16
+// LLVM: getelementptr i8, ptr addrspace(4) %{{.*}}, i{{32|64}} 20
+__device__ void test_grid_size(unsigned *out) {
+  out[0] = __builtin_amdgcn_grid_size_x();
+  out[1] = __builtin_amdgcn_grid_size_y();
+  out[2] = __builtin_amdgcn_grid_size_z();
+}
+
 // CIR-LABEL: @_Z12test_rcp_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.rcp" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z12test_rcp_f32Pff
