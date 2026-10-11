@@ -4345,6 +4345,37 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+#define ARBITRARY_FP_FORMAT(Src, LLVMName)                                     \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_f16:              \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_bf16:             \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_f32:
+#include "clang/Basic/ArbitraryFPFormats.def"
+    {
+      StringRef FormatName;
+      switch (BuiltinID) {
+#define ARBITRARY_FP_FORMAT(Src, LLVMName)                                     \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_f16:              \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_bf16:             \
+  case Builtin::BI__builtin_elementwise_convert_from_##Src##_f32:              \
+    FormatName = LLVMName;                                                     \
+    break;
+#include "clang/Basic/ArbitraryFPFormats.def"
+      default:
+        llvm_unreachable("builtin is missing from ArbitraryFPFormats.def");
+      }
+
+      Value *Src = EmitScalarExpr(E->getArg(0));
+      // __mfp8 lowers to <1 x i8>; the intrinsic wants a plain i8.
+      if (E->getArg(0)->getType()->isMFloat8Type())
+        Src = Builder.CreateBitCast(Src, Builder.getInt8Ty());
+      llvm::Type *DstTy = ConvertType(E->getType());
+      llvm::Function *F = CGM.getIntrinsic(
+          llvm::Intrinsic::convert_from_arbitrary_fp, {DstTy, Src->getType()});
+      llvm::Value *Format = llvm::MetadataAsValue::get(
+          getLLVMContext(), llvm::MDString::get(getLLVMContext(), FormatName));
+      return RValue::get(Builder.CreateCall(F, {Src, Format}));
+    }
+
   case Builtin::BI__builtin_elementwise_abs: {
     Value *Result;
     QualType QT = E->getArg(0)->getType();
