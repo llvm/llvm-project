@@ -1315,23 +1315,20 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX12-5-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX12-5-SDAG-NEXT:    global_load_u16 v1, v[0:1], off scope:SCOPE_SYS
-; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GFX12-5-SDAG-NEXT:    global_load_u16 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX12-5-SDAG-NEXT:    global_load_u16 v3, v[0:1], off scope:SCOPE_SYS
+; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v4, 0xffff, v0
+; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v3, v0, v1
-; GFX12-5-SDAG-NEXT:    v_max_u32_e32 v0, v0, v1
-; GFX12-5-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_sub_nc_u32 v0, v0, v3
+; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v5, v4, v2
+; GFX12-5-SDAG-NEXT:    v_max_u32_e32 v2, v4, v2
+; GFX12-5-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_sub_nc_u32 v2, v2, v5
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-5-SDAG-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX12-5-SDAG-NEXT:    v_add_nc_u32_e32 v2, v2, v3
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-SDAG-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12-5-SDAG-NEXT:    global_store_b16 v4, v2, s[0:1]
 ; GFX12-5-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-5-GISEL-LABEL: v_sad_u32_i16_pat2:
@@ -1344,29 +1341,28 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX12-5-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX12-5-GISEL-NEXT:    global_load_u16 v1, v[0:1], off scope:SCOPE_SYS
-; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-GISEL-NEXT:    s_and_b32 s4, 0xffff, s2
 ; GFX12-5-GISEL-NEXT:    global_load_u16 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-5-GISEL-NEXT:    global_load_u16 v3, v[0:1], off scope:SCOPE_SYS
+; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-5-GISEL-NEXT:    s_and_b32 s4, 0xffff, s2
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX12-5-GISEL-NEXT:    s_and_b32 s5, 0xffff, s3
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s4, s5
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s2, s3
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s2, s3, s2
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s5
-; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-5-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-5-GISEL-NEXT:    v_mov_b16_e32 v2.l, s2
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-GISEL-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12-5-GISEL-NEXT:    global_store_b16 v3, v2, s[0:1]
 ; GFX12-5-GISEL-NEXT:    s_endpgm
   %a = load volatile i16, ptr addrspace(1) poison
   %b = load volatile i16, ptr addrspace(1) poison
@@ -1527,20 +1523,17 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX12-5-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX12-5-SDAG-NEXT:    global_load_u8 v1, v[0:1], off scope:SCOPE_SYS
-; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GFX12-5-SDAG-NEXT:    global_load_u8 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v3, v0, v1
-; GFX12-5-SDAG-NEXT:    v_max_u32_e32 v0, v0, v1
+; GFX12-5-SDAG-NEXT:    global_load_u8 v3, v[0:1], off scope:SCOPE_SYS
+; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v4, v0, v2
+; GFX12-5-SDAG-NEXT:    v_max_u32_e32 v2, v0, v2
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-5-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_sub_nc_u32 v0, v0, v3
-; GFX12-5-SDAG-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; GFX12-5-SDAG-NEXT:    v_dual_sub_nc_u32 v2, v2, v4 :: v_dual_mov_b32 v4, 0
+; GFX12-5-SDAG-NEXT:    v_add_nc_u32_e32 v2, v2, v3
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-SDAG-NEXT:    global_store_b8 v1, v0, s[0:1]
+; GFX12-5-SDAG-NEXT:    global_store_b8 v4, v2, s[0:1]
 ; GFX12-5-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-5-GISEL-LABEL: v_sad_u32_i8_pat2:
@@ -1553,26 +1546,25 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX12-5-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX12-5-GISEL-NEXT:    global_load_u8 v1, v[0:1], off scope:SCOPE_SYS
-; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GFX12-5-GISEL-NEXT:    global_load_u8 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-5-GISEL-NEXT:    global_load_u8 v3, v[0:1], off scope:SCOPE_SYS
+; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
+; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s2, s3
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s2, s3
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s2, s3, s2
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s5
-; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-5-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-GISEL-NEXT:    global_store_b8 v1, v0, s[0:1]
+; GFX12-5-GISEL-NEXT:    global_store_b8 v3, v2, s[0:1]
 ; GFX12-5-GISEL-NEXT:    s_endpgm
   %a = load volatile i8, ptr addrspace(1) poison
   %b = load volatile i8, ptr addrspace(1) poison
