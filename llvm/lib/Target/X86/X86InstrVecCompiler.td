@@ -133,7 +133,7 @@ let Predicates = [HasAVX, NoVLX] in {
   defm : subvec_zero_lowering<"DQA", VR128, v32i8, v16i8, sub_xmm>;
 }
 
-let Predicates = [HasAVXNECONVERT, NoVLX] in
+let Predicates = [HasAVX2, NoVLX] in
   defm : subvec_zero_lowering<"DQA", VR128, v16bf16, v8bf16, sub_xmm>;
 
 let Predicates = [HasVLX] in {
@@ -181,7 +181,7 @@ let Predicates = [HasFP16, HasVLX] in {
   defm : subvec_zero_lowering<"APSZ256", VR256X, v32f16, v16f16, sub_ymm>;
 }
 
-let Predicates = [HasBF16, HasVLX] in {
+let Predicates = [HasBWI, HasVLX] in {
   defm : subvec_zero_lowering<"APSZ128", VR128X, v16bf16, v8bf16, sub_xmm>;
   defm : subvec_zero_lowering<"APSZ128", VR128X, v32bf16, v8bf16, sub_xmm>;
   defm : subvec_zero_lowering<"APSZ256", VR256X, v32bf16, v16bf16, sub_ymm>;

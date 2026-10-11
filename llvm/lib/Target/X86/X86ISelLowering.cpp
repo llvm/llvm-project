@@ -2294,7 +2294,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
 
     for (auto VT : {MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16,
-                    MVT::v16f16, MVT::v8f16}) {
+                    MVT::v16f16, MVT::v8f16, MVT::v16bf16, MVT::v8bf16}) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
@@ -2484,7 +2484,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI())) {
     addRegisterClass(MVT::v8bf16, Subtarget.hasAVX512() ? &X86::VR128XRegClass
                                                         : &X86::VR128RegClass);
     addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
@@ -2515,7 +2515,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
@@ -9466,7 +9466,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return LowerBUILD_VECTORvXi1(Op, dl, DAG, Subtarget);
 
   if (VT.getVectorElementType() == MVT::bf16 &&
-      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16()))
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBWI()))
     return LowerBUILD_VECTORvXbf16(Op, DAG, Subtarget);
 
   if (SDValue VectorCst = materializeVectorConstant(Op, dl, DAG, Subtarget))
@@ -22888,6 +22888,11 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
          Subtarget.hasAVXNECONVERT()))
       return Op;
+    // Without native conversions, round in vector registers instead of
+    // unrolling to libcalls.
+    if (VT.isVector() && SVT.getScalarType() == MVT::f32 && !IsStrict &&
+        !Subtarget.hasBF16() && !Subtarget.hasAVXNECONVERT())
+      return expandFP_ROUND(Op.getNode(), DAG);
     return SDValue();
   }
 
@@ -34409,8 +34414,9 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked load op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
@@ -34457,8 +34463,9 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked store op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
-                                  ScalarVT == MVT::f16))) &&
+          (Subtarget.hasBWI() &&
+           (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+            ScalarVT == MVT::f16 || ScalarVT == MVT::bf16))) &&
          "Unsupported masked store op.");
 
   // This operation is legal for targets with VLX, but without
@@ -55082,18 +55089,6 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
-  // vXbf16 types are only legal with BF16/AVXNECONVERT, but the masked load
-  // itself doesn't need them. Load as vXi16 so it isn't scalarized.
-  if (VT.getScalarType() == MVT::bf16 && !TLI.isTypeLegal(VT) &&
-      Mld->getExtensionType() == ISD::NON_EXTLOAD) {
-    EVT IntVT = VT.changeVectorElementTypeToInteger();
-    SDValue NewLd = DAG.getMaskedLoad(
-        IntVT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(), Mask,
-        DAG.getBitcast(IntVT, Mld->getPassThru()), IntVT, Mld->getMemOperand(),
-        Mld->getAddressingMode(), ISD::NON_EXTLOAD);
-    return DCI.CombineTo(N, DAG.getBitcast(VT, NewLd), NewLd.getValue(1));
-  }
-
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
   if (SDValue NewMask =
@@ -55213,15 +55208,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
     // Otherwise don't combine if this store already truncates.
     return SDValue();
-  }
-
-  // vXbf16 types are only legal with BF16/AVXNECONVERT, but the masked store
-  // itself doesn't need them. Store as vXi16 so it isn't scalarized.
-  if (VT.getScalarType() == MVT::bf16 && !TLI.isTypeLegal(VT)) {
-    EVT IntVT = VT.changeVectorElementTypeToInteger();
-    return DAG.getMaskedStore(Mst->getChain(), DL, DAG.getBitcast(IntVT, Value),
-                              Mst->getBasePtr(), Mst->getOffset(), Mask, IntVT,
-                              Mst->getMemOperand(), Mst->getAddressingMode());
   }
 
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split

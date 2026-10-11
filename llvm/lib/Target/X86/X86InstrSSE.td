@@ -7280,7 +7280,7 @@ def : Pat<(v32i8 (X86SubVBroadcastld128 addr:$src)),
           (VBROADCASTF128rm addr:$src)>;
 }
 
-let Predicates = [HasAVXNECONVERT, NoVLX] in
+let Predicates = [HasAVX2, NoVLX] in
   def : Pat<(v16bf16 (X86SubVBroadcastld128 addr:$src)),
             (VBROADCASTF128rm addr:$src)>;
 
@@ -8033,7 +8033,7 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 
-let Predicates = [HasAVXNECONVERT, NoVLX] in
+let Predicates = [HasAVX2, NoVLX] in
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8bf16, v16bf16, loadv8bf16, loadv16bf16>;
 
 //===----------------------------------------------------------------------===//
@@ -8058,7 +8058,7 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vextract_lowering<"VEXTRACTI128", v32i8,  v16i8>;
 }
 
-let Predicates = [HasAVXNECONVERT, NoVLX] in
+let Predicates = [HasAVX2, NoVLX] in
   defm : vextract_lowering<"VEXTRACTI128", v16bf16, v8bf16>;
 
 //===----------------------------------------------------------------------===//
