@@ -825,7 +825,7 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
 /// Fold tensor.pad(linalg.fill) into linalg.fill if the padding value and the
 /// filling value are the same.
 struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
@@ -864,7 +864,7 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
 /// tensor.insert_slice(<input>, linalg.fill) if the padding value and the
 /// filling value are the same.
 struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -1059,7 +1059,7 @@ struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
 /// Fold a concat with all elements being fills of the same value
 /// into a fill of the concat result shape.
 struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::ConcatOp concatOp,
                                 PatternRewriter &rewriter) const override {

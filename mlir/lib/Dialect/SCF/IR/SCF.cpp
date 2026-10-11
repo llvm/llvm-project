@@ -3672,7 +3672,7 @@ static bool hasDuplicates(ValueRange args) {
 /// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WhileOp loop,
                                 PatternRewriter &rewriter) const override {

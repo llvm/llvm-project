@@ -2182,7 +2182,7 @@ namespace {
 ///   ...
 ///   %e999 = llvm.extractvalue %i999[999]
 struct ResolveExtractValueSource : public OpRewritePattern<InsertValueOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertValueOp insertOp,
                                 PatternRewriter &rewriter) const override {

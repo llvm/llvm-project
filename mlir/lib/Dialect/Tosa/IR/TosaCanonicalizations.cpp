@@ -250,7 +250,7 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct AvgPool2dAdaptiveToAvgPool2d
     : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -274,7 +274,7 @@ struct AvgPool2dAdaptiveToAvgPool2d
 };
 
 struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -321,7 +321,7 @@ void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
 }
 
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -369,7 +369,7 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct MaxPool2dAdaptiveToMaxPool2d
     : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -491,7 +491,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
 
 struct ConsolidateTransposeOptimization
     : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -529,7 +529,7 @@ struct ConsolidateTransposeOptimization
 
 // Determines the case when tosa.transpose is a tosa.reshape operation.
 struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -590,7 +590,7 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
