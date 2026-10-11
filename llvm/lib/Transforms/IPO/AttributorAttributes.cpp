@@ -262,7 +262,8 @@ static bool isDenselyPacked(Type *Ty, const DataLayout &DL) {
     StartPos += DL.getTypeAllocSizeInBits(ElTy);
   }
 
-  return true;
+  // Check for tail padding.
+  return StartPos == Layout->getSizeInBits();
 }
 
 /// Get pointer operand of memory accessing instruction. If \p I is
