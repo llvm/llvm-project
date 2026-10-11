@@ -107,6 +107,7 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #else
 #  include <__config>
 #  include <__cstddef/size_t.h>
+#  include <__fwd/mbstate_t.h>
 #  include <__memory/addressof.h>
 #  include <__type_traits/copy_cv.h>
 #  include <__type_traits/is_constant_evaluated.h>
@@ -114,7 +115,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/remove_cv.h>
 #  include <cwctype>
-
 #  include <wchar.h>
 
 #  ifndef _LIBCPP_WCHAR_H
@@ -131,7 +131,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
 using ::tm _LIBCPP_USING_IF_EXISTS;
 using ::wint_t _LIBCPP_USING_IF_EXISTS;
 using ::FILE _LIBCPP_USING_IF_EXISTS;
