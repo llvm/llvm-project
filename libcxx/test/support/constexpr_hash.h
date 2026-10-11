@@ -25,8 +25,12 @@ namespace support {
 
 #if TEST_STD_VER >= 26
 
-template <typename Key>
-struct constexpr_hash;
+template <class Key>
+struct constexpr_hash {
+  constexpr_hash()                                 = delete;
+  constexpr_hash(const constexpr_hash&)            = delete;
+  constexpr_hash& operator=(const constexpr_hash&) = delete;
+};
 
 // we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
 template <class Key>
@@ -97,13 +101,6 @@ struct constexpr_hash<Key> {
 
   constexpr_hash() noexcept                        = default;
   constexpr_hash& operator=(const constexpr_hash&) = default;
-};
-
-template <class Key>
-struct constexpr_hash {
-  constexpr_hash()                                 = delete;
-  constexpr_hash(const constexpr_hash&)            = delete;
-  constexpr_hash& operator=(const constexpr_hash&) = delete;
 };
 
 } // namespace support
