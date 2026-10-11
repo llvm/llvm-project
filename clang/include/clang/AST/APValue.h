@@ -22,6 +22,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
@@ -534,6 +535,12 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const;
 
   ValueKind getKind() const { return Kind; }
+
+  /// Visit this value and every recursively nested value. Iteration order
+  /// is unspecified.
+  ///
+  /// Visitation stops if \p Visitor returns false.
+  void visit(llvm::function_ref<bool(const APValue &)> Visitor) const;
 
   bool isAbsent() const { return Kind == None; }
   bool isIndeterminate() const { return Kind == Indeterminate; }

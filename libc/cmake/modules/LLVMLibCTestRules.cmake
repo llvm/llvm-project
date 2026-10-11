@@ -214,8 +214,8 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           # object. External baremetal startup code can reference the public C exit
           # symbol, so use the public-packaging object for exit in this configuration.
           if(dep STREQUAL "libc.src.stdlib.exit" AND
-             NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
-             LIBC_TARGET_OS_IS_BAREMETAL)
+            NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
+            LIBC_TARGET_OS_IS_BAREMETAL)
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
           list(APPEND dep_obj ${object_file_raw})
@@ -875,7 +875,7 @@ function(add_libc_hermetic test_name)
   endif()
 
   if(LIBC_ENABLE_COVERAGE)
-     set(coverage_deps
+    set(coverage_deps
       libc.src.stdio.fclose
       libc.src.stdio.fdopen
       libc.src.stdio.feof
@@ -1041,7 +1041,7 @@ function(add_libc_hermetic test_name)
   if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
-       ${fq_target_name}.__libc__
+      ${fq_target_name}.__libc__
     )
   endif()
 

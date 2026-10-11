@@ -1948,11 +1948,7 @@ static void addFullyUnrolledInstructionsToIgnore(
   auto *Cmp = L->getLatchCmpInst();
   if (Cmp)
     InstsToIgnore.insert(Cmp);
-  for (const auto &KV : IL) {
-    // Extract the key by hand so that it can be used in the lambda below.  Note
-    // that captured structured bindings are a C++20 extension.
-    PHINode *IV = KV.first;
-
+  for (PHINode *IV : IL.keys()) {
     // The induction is free: a widened induction generates a vector phi with
     // its start value and an increment that is dead without a backedge.
     InstsToIgnore.insert(IV);
@@ -2836,8 +2832,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
   BasicBlock *Latch = TheLoop->getLoopLatch();
-  for (const auto &Induction : Legal->getInductionVars()) {
-    auto *Ind = Induction.first;
+  for (PHINode *Ind : Legal->getInductionVars().keys()) {
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
     // Determine if all users of the induction variable are uniform after
@@ -5335,17 +5330,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (const auto &Reduction : Legal->getReductionVars()) {
-    const RecurrenceDescriptor &RedDes = Reduction.second;
-    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
-    VecValuesToIgnore.insert_range(Casts);
+  for (const RecurrenceDescriptor &RedDes :
+       Legal->getReductionVars().values()) {
+    VecValuesToIgnore.insert_range(RedDes.getCastInsts());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (const auto &Induction : Legal->getInductionVars()) {
-    const InductionDescriptor &IndDes = Induction.second;
+  for (const InductionDescriptor &IndDes : Legal->getInductionVars().values())
     VecValuesToIgnore.insert_range(IndDes.getCastInsts());
-  }
 }
 
 void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
@@ -7892,12 +7884,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // Bail out early if either the SCEV or memory runtime checks are known to
       // fail. In that case, the vector loop would never execute.
       using namespace llvm::PatternMatch;
-      if (Checks.getSCEVChecks().first &&
-          match(Checks.getSCEVChecks().first, m_One()))
+      if ((Checks.getSCEVChecks().first &&
+           match(Checks.getSCEVChecks().first, m_One())) ||
+          (Checks.getMemRuntimeChecks().first &&
+           match(Checks.getMemRuntimeChecks().first, m_One()))) {
+        reportVectorizationFailure(
+            "runtime checks are known to fail, so we will never enter the "
+            "vector loop",
+            "RuntimeChecksNeverEnterVectorLoop", ORE, L);
         return false;
-      if (Checks.getMemRuntimeChecks().first &&
-          match(Checks.getMemRuntimeChecks().first, m_One()))
-        return false;
+      }
     }
 
     // Check if it is profitable to vectorize with runtime checks.

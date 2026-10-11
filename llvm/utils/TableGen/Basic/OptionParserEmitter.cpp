@@ -283,8 +283,9 @@ static void emitOptionsStruct(const Record &Struct,
       PrintFatalError(R->getLoc(),
                       "a member is set by a FlagOrEq or SeparateOrEq");
     StringRef Type = R->getValueAsString("FieldType");
-    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault")
-      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool member");
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault" &&
+        !R->getValue("BareValue"))
+      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool or has a BareValue");
     Fields.push_back(R);
   }
   // Members in declaration order.
@@ -307,8 +308,10 @@ static void emitOptionsStruct(const Record &Struct,
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
-  OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Support/Allocator.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
         "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
@@ -321,9 +324,10 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
-  OS << "  /// Sets the member that \\p A names. Returns false if the value is "
-        "invalid.\n";
-  OS << "  bool apply(const llvm::opt::Arg &A);\n";
+  OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
+        "Alloc.\n  /// Returns false if the value is invalid.\n";
+  OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
+        "&Alloc);\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
@@ -339,11 +343,15 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
   OS << "  return T;\n}\n\n";
-  OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
+  OS << "bool " << Qualified
+     << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
+    if (R->getValue("BareValue"))
+      OS << "    if (!A.getNumValues()) { " << Member << " = "
+         << R->getValueAsString("BareValue") << "; return true; }\n";
     if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
       SmallVector<StringRef> Values;
       R->getValueAsString("Values").split(Values, ',');
@@ -352,11 +360,14 @@ static void emitOptionsStruct(const Record &Struct,
       if (Values.size() != Enumerators.size())
         PrintFatalError(R->getLoc(), "an EnumField needs one enumerator per "
                                      "value");
-      OS << "    {\n      llvm::StringRef V = A.getValue();\n";
+      // The generic lambda sets a scalar, a std::optional, or a list element.
+      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+         << ", Alloc, [](llvm::StringRef V, auto &X) {\n";
       for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
-        OS << "      if (V == \"" << Value << "\") {\n        " << Member
-           << " = " << Enumerator << ";\n        return true;\n      }\n";
-      OS << "      return false;\n    }\n";
+        OS << "      if (V == \"" << Value
+           << "\") {\n        X = " << Enumerator
+           << ";\n        return true;\n      }\n";
+      OS << "      return false;\n    });\n";
       continue;
     }
     // A FlagOrEq without a value means =true.
@@ -365,7 +376,7 @@ static void emitOptionsStruct(const Record &Struct,
             ? "A.getNumValues() ? A.getValue() : \"true\""
             : "A.getValue()";
     OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
-       << ");\n";
+       << ", Alloc);\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
   OS << "#endif // OPTIONS_STRUCT_DEFS\n";

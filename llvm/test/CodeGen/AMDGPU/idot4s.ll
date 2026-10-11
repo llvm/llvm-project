@@ -3372,15 +3372,15 @@ define amdgpu_kernel void @idot4_nonstandard_signed(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v6.l, v3.h
 ; GFX11-DL-TRUE16-NEXT:    v_bfe_i32 v2, v0, 0, 8
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-DL-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v1.l
-; GFX11-DL-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v4.l
+; GFX11-DL-TRUE16-NEXT:    v_and_b16 v0.l, v1.l, 0xff
+; GFX11-DL-TRUE16-NEXT:    v_and_b16 v0.h, v4.l, 0xff
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v5.l
 ; GFX11-DL-TRUE16-NEXT:    v_bfe_i32 v5, v6, 0, 8
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 24, v3
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v0.l, v0.l, v1.l
-; GFX11-DL-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v4.h
+; GFX11-DL-TRUE16-NEXT:    v_and_b16 v1.l, v4.h, 0xff
 ; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v5.l
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 24, v4
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)

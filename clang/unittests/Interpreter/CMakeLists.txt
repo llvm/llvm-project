@@ -38,7 +38,9 @@ set(CLANG_REPL_TEST_SOURCES
 )
 
 if(NOT EMSCRIPTEN)
-  list(APPEND CLANG_REPL_TEST_SOURCES DeviceOffloadTest.cpp)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    DeviceOffloadTest.cpp
+    )
 endif()
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)
