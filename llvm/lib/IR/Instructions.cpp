@@ -3498,8 +3498,15 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
       return false;
     return SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy();
   case Instruction::BitCast: {
-    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
-    PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
+    Type *SrcScalarTy = SrcTy->getScalarType();
+    if (SrcScalarTy->isTargetExtTy() || !SrcScalarTy->isSingleValueType())
+      return false;
+    Type *DstScalarTy = DstTy->getScalarType();
+    if (DstScalarTy->isTargetExtTy() || !DstScalarTy->isSingleValueType())
+      return false;
+
+    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcScalarTy);
+    PointerType *DstPtrTy = dyn_cast<PointerType>(DstScalarTy);
 
     // BitCast implies a no-op cast of type only. No bits change.
     // However, you can't cast pointers to anything but pointers/bytes.
