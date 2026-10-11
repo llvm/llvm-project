@@ -58,6 +58,8 @@ InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
                                    TargetTransformInfo::TargetCostKind CostKind,
                                    bool IsReverse = false);
 
+/// Describe a single compressed load for costing and generating the vector
+/// instruction.
 struct CompressedLoadInfo {
   bool IsMasked = false;
   unsigned InterleaveFactor = 0;
