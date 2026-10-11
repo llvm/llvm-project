@@ -552,6 +552,40 @@ int move_construct_from_checked(std::expected<int, int> b) {
   return *a;
 }
 
+void construct_nested_from_inner_with_error() {
+  std::expected<int, int> inner(std::unexpect, 1);
+  std::expected<std::expected<int, int>, int> outer(inner);
+  outer.value();
+}
+
+void construct_nested_from_inner_rvalue_with_error() {
+  std::expected<std::expected<int, int>, int> outer(
+      std::expected<int, int>(std::unexpect, 1));
+  outer.value();
+}
+
+void construct_nested_from_unchecked_inner(std::expected<int, int> inner) {
+  std::expected<std::expected<int, int>, int> outer(inner);
+  outer.value();
+}
+
+void convert_nested_from_checked(
+    std::expected<std::expected<long, int>, int> b) {
+  if (!b)
+    return;
+  std::expected<std::expected<int, int>, int> a(b);
+  a.value();
+}
+
+struct FromExpected {
+  FromExpected(std::expected<int, int>);
+};
+
+void construct_from_expected_as_value(std::expected<int, int> b) {
+  std::expected<FromExpected, int> a(b);
+  a.value();
+}
+
 int error_access_after_default_construct() {
   std::expected<int, int> e;
   return e.error();
@@ -592,6 +626,20 @@ int copy_construct_from_unchecked(std::expected<int, int> b) {
   auto a = b;
   return *a;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+void error_access_after_construct_nested_from_inner_with_error() {
+  std::expected<int, int> inner(std::unexpect, 1);
+  std::expected<std::expected<int, int>, int> outer(inner);
+  outer.error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
+}
+
+void convert_nested_from_unchecked(
+    std::expected<std::expected<long, int>, int> b) {
+  std::expected<std::expected<int, int>, int> a(b);
+  a.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
 }
 
 // FIXME: should warn once converting assignments are modeled.
