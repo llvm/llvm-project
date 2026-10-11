@@ -120,7 +120,7 @@ private:
   void
   insertPHIStore(BasicBlock *PredBlock, Value *PredVal, AllocaInst *SpillSlot,
                  SmallVectorImpl<std::pair<BasicBlock *, Value *>> &Worklist);
-  AllocaInst *insertPHILoads(PHINode *PN, Function &F);
+  AllocaInst *insertPHILoads(PHINode *PN, Function &F, AllocaInst *SpillSlot);
   void replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
                           DenseMap<BasicBlock *, Value *> &Loads, Function &F);
   bool prepareExplicitEH(Function &F);
@@ -955,13 +955,27 @@ bool WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
 
       Changed = true;
 
-      AllocaInst *SpillSlot = insertPHILoads(PN, F);
-      if (SpillSlot)
-        insertPHIStores(PN, SpillSlot);
-
       PHINodes.push_back(PN);
     }
   }
+
+  // Stores for one EH PHI can introduce uses of another EH PHI that was
+  // previously used only by EH PHIs. Revisit the PHIs until all such uses have
+  // been replaced with loads, inserting stores only once for each spill slot.
+  DenseMap<PHINode *, AllocaInst *> SpillSlots;
+  bool InsertedStores;
+  do {
+    InsertedStores = false;
+    for (PHINode *PN : PHINodes) {
+      AllocaInst *&SpillSlot = SpillSlots[PN];
+      AllocaInst *NewSpillSlot = insertPHILoads(PN, F, SpillSlot);
+      if (!SpillSlot && NewSpillSlot) {
+        SpillSlot = NewSpillSlot;
+        insertPHIStores(PN, SpillSlot);
+        InsertedStores = true;
+      }
+    }
+  } while (InsertedStores);
 
   for (auto *PN : PHINodes) {
     // There may be lingering uses on other EH PHIs being removed
@@ -1378,12 +1392,15 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
 
 // TODO: Share loads when one use dominates another, or when a catchpad exit
 // dominates uses (needs dominators).
-AllocaInst *WinEHPrepareImpl::insertPHILoads(PHINode *PN, Function &F) {
+AllocaInst *WinEHPrepareImpl::insertPHILoads(PHINode *PN, Function &F,
+                                             AllocaInst *SpillSlot) {
   BasicBlock *PHIBlock = PN->getParent();
-  AllocaInst *SpillSlot = nullptr;
   Instruction *EHPad = &*PHIBlock->getFirstNonPHIIt();
 
   if (!EHPad->isTerminator()) {
+    if (SpillSlot)
+      return SpillSlot;
+
     // If the EHPad isn't a terminator, then we can insert a load in this block
     // that will dominate all uses.
     SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
@@ -1536,10 +1553,14 @@ void WinEHPrepareImpl::replaceUseWithLoad(
 
     U.set(Load);
   } else {
-    // Reload right before the old use.
+    // PHI stores can overwrite the spill slot at the end of this block. Load
+    // values used by stores on entry to preserve parallel PHI assignments.
+    auto InsertPt = isa<StoreInst>(UsingInst)
+                        ? UsingInst->getParent()->getFirstInsertionPt()
+                        : UsingInst->getIterator();
     auto *Load = new LoadInst(V->getType(), SpillSlot,
                               Twine(V->getName(), ".wineh.reload"),
-                              /*isVolatile=*/false, UsingInst->getIterator());
+                              /*isVolatile=*/false, InsertPt);
     U.set(Load);
   }
 }

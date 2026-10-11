@@ -357,3 +357,233 @@ cleanupexit:
   call void @llvm.bar()
   cleanupret from %cp0 unwind label %cleanup2
 }
+
+; Demoting the outer PHI inserts a store of the inner PHI in catch.inner.
+; That new use must be demoted too, even if the inner PHI was visited first.
+; CHECK-LABEL: @rethrow_phi(
+define void @rethrow_phi() personality ptr @__CxxFrameHandler3 {
+entry:
+  ; CHECK: entry:
+  ; CHECK-DAG: [[InnerSlot:%phi.inner.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: [[OuterSlot:%phi.outer.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: store i32 0, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %second unwind label %dispatch.inner
+
+second:
+  ; CHECK: second:
+  ; CHECK-DAG: store i32 1, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %exit unwind label %dispatch.inner
+
+dispatch.inner:
+  ; CHECK: dispatch.inner:
+  ; CHECK-NEXT: %cs.inner = catchswitch
+  %phi.inner = phi i32 [ 0, %entry ], [ 1, %second ]
+  %cs.inner = catchswitch within none [label %catch.inner] unwind label %dispatch.outer
+
+catch.inner:
+  ; CHECK: catch.inner:
+  ; CHECK-NEXT: %cp.inner = catchpad
+  ; CHECK-NEXT: [[InnerReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: store i32 [[InnerReload]], ptr [[OuterSlot]]
+  ; CHECK-NEXT: invoke void @f()
+  %cp.inner = catchpad within %cs.inner [ptr null, i32 64, ptr null]
+  invoke void @f() [ "funclet"(token %cp.inner) ]
+          to label %unreachable unwind label %dispatch.outer
+
+unreachable:
+  unreachable
+
+dispatch.outer:
+  ; CHECK: dispatch.outer:
+  ; CHECK-NEXT: %cs.outer = catchswitch
+  %phi.outer = phi i32 [ -1, %dispatch.inner ], [ %phi.inner, %catch.inner ]
+  %cs.outer = catchswitch within none [label %catch.outer] unwind to caller
+
+catch.outer:
+  ; CHECK: catch.outer:
+  ; CHECK-NEXT: %cp.outer = catchpad
+  ; CHECK-NEXT: [[OuterReload:%[^ ]+]] = load i32, ptr [[OuterSlot]]
+  ; CHECK-NEXT: call void @h(i32 [[OuterReload]])
+  %cp.outer = catchpad within %cs.outer [ptr null, i32 0, ptr null]
+  call void @h(i32 %phi.outer) [ "funclet"(token %cp.outer) ]
+  catchret from %cp.outer to label %exit
+
+exit:
+  ret void
+}
+
+; Changing the block order must not change how the PHIs are demoted.
+; CHECK-LABEL: @rethrow_phi_reordered(
+define void @rethrow_phi_reordered() personality ptr @__CxxFrameHandler3 {
+entry:
+  ; CHECK: entry:
+  ; CHECK-DAG: [[InnerSlot:%phi.inner.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: [[OuterSlot:%phi.outer.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: store i32 0, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %second unwind label %dispatch.inner
+
+second:
+  ; CHECK: second:
+  ; CHECK-DAG: store i32 1, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %exit unwind label %dispatch.inner
+
+dispatch.outer:
+  ; CHECK: dispatch.outer:
+  ; CHECK-NEXT: %cs.outer = catchswitch
+  %phi.outer = phi i32 [ -1, %dispatch.inner ], [ %phi.inner, %catch.inner ]
+  %cs.outer = catchswitch within none [label %catch.outer] unwind to caller
+
+catch.outer:
+  ; CHECK: catch.outer:
+  ; CHECK-NEXT: %cp.outer = catchpad
+  ; CHECK-NEXT: [[OuterReload:%[^ ]+]] = load i32, ptr [[OuterSlot]]
+  ; CHECK-NEXT: call void @h(i32 [[OuterReload]])
+  %cp.outer = catchpad within %cs.outer [ptr null, i32 0, ptr null]
+  call void @h(i32 %phi.outer) [ "funclet"(token %cp.outer) ]
+  catchret from %cp.outer to label %exit
+
+dispatch.inner:
+  ; CHECK: dispatch.inner:
+  ; CHECK-NEXT: %cs.inner = catchswitch
+  %phi.inner = phi i32 [ 0, %entry ], [ 1, %second ]
+  %cs.inner = catchswitch within none [label %catch.inner] unwind label %dispatch.outer
+
+catch.inner:
+  ; CHECK: catch.inner:
+  ; CHECK-NEXT: %cp.inner = catchpad
+  ; CHECK-NEXT: [[InnerReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: store i32 [[InnerReload]], ptr [[OuterSlot]]
+  ; CHECK-NEXT: invoke void @f()
+  %cp.inner = catchpad within %cs.inner [ptr null, i32 64, ptr null]
+  invoke void @f() [ "funclet"(token %cp.inner) ]
+          to label %unreachable unwind label %dispatch.outer
+
+unreachable:
+  unreachable
+
+exit:
+  ret void
+}
+
+; An existing spill slot must be reused when a later demotion adds another use.
+; CHECK-LABEL: @rethrow_phi_used(
+define void @rethrow_phi_used() personality ptr @__CxxFrameHandler3 {
+entry:
+  ; CHECK: entry:
+  ; CHECK-DAG: [[InnerSlot:%phi.inner.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: [[OuterSlot:%phi.outer.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: store i32 0, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %second unwind label %dispatch.inner
+
+second:
+  ; CHECK: second:
+  ; CHECK-DAG: store i32 1, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %exit unwind label %dispatch.inner
+
+dispatch.inner:
+  %phi.inner = phi i32 [ 0, %entry ], [ 1, %second ]
+  %cs.inner = catchswitch within none [label %catch.inner] unwind label %dispatch.outer
+
+catch.inner:
+  ; CHECK: catch.inner:
+  ; CHECK-NEXT: %cp.inner = catchpad
+  ; CHECK-NEXT: [[StoreReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: [[InnerReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: call void @h(i32 [[InnerReload]])
+  ; CHECK-NEXT: store i32 [[StoreReload]], ptr [[OuterSlot]]
+  ; CHECK-NEXT: invoke void @f()
+  %cp.inner = catchpad within %cs.inner [ptr null, i32 64, ptr null]
+  call void @h(i32 %phi.inner) [ "funclet"(token %cp.inner) ]
+  invoke void @f() [ "funclet"(token %cp.inner) ]
+          to label %unreachable unwind label %dispatch.outer
+
+unreachable:
+  unreachable
+
+dispatch.outer:
+  %phi.outer = phi i32 [ -1, %dispatch.inner ], [ %phi.inner, %catch.inner ]
+  %cs.outer = catchswitch within none [label %catch.outer] unwind to caller
+
+catch.outer:
+  ; CHECK: catch.outer:
+  ; CHECK-NEXT: %cp.outer = catchpad
+  ; CHECK-NEXT: [[OuterReload:%[^ ]+]] = load i32, ptr [[OuterSlot]]
+  ; CHECK-NEXT: call void @h(i32 [[OuterReload]])
+  %cp.outer = catchpad within %cs.outer [ptr null, i32 0, ptr null]
+  call void @h(i32 %phi.outer) [ "funclet"(token %cp.outer) ]
+  catchret from %cp.outer to label %exit
+
+exit:
+  ret void
+}
+
+; EH PHIs can depend on each other through a catchret back to the root funclet.
+; Snapshot the outer PHI before overwriting its spill slot on the backedge.
+; CHECK-LABEL: @rethrow_phi_cycle(
+define void @rethrow_phi_cycle() personality ptr @__CxxFrameHandler3 {
+entry:
+  ; CHECK: entry:
+  ; CHECK-DAG: [[InnerSlot:%phi.inner.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: [[OuterSlot:%phi.outer.wineh.spillslot]] = alloca i32
+  ; CHECK-DAG: store i32 0, ptr [[InnerSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %exit unwind label %dispatch.inner
+
+dispatch.inner:
+  %phi.inner = phi i32 [ 0, %entry ], [ %phi.outer, %reenter ]
+  %cs.inner = catchswitch within none [label %catch.inner] unwind label %dispatch.outer
+
+catch.inner:
+  ; CHECK: catch.inner:
+  ; CHECK-NEXT: %cp.inner = catchpad
+  ; CHECK-NEXT: [[InnerReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: store i32 [[InnerReload]], ptr [[OuterSlot]]
+  ; CHECK-NEXT: invoke void @f()
+  %cp.inner = catchpad within %cs.inner [ptr null, i32 64, ptr null]
+  invoke void @f() [ "funclet"(token %cp.inner) ]
+          to label %unreachable unwind label %dispatch.outer
+
+unreachable:
+  unreachable
+
+dispatch.outer:
+  %phi.outer = phi i32 [ -1, %dispatch.inner ], [ %phi.inner, %catch.inner ]
+  %cs.outer = catchswitch within none [label %catch.outer] unwind to caller
+
+catch.outer:
+  %cp.outer = catchpad within %cs.outer [ptr null, i32 64, ptr null]
+  call void @h(i32 %phi.outer) [ "funclet"(token %cp.outer) ]
+  catchret from %cp.outer to label %reenter
+
+reenter:
+  ; CHECK: reenter:
+  ; CHECK-NEXT: [[LoopReload:%[^ ]+]] = load i32, ptr [[OuterSlot]]
+  ; CHECK-DAG: store i32 -1, ptr [[OuterSlot]]
+  ; CHECK-DAG: store i32 [[LoopReload]], ptr [[InnerSlot]]
+  ; CHECK: invoke void @f()
+  invoke void @f()
+          to label %exit unwind label %dispatch.inner
+
+exit:
+  ret void
+}
