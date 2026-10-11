@@ -15,6 +15,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -212,6 +213,24 @@ bool isGuardedScopeEmbeddedInGuardianScope(const VarDecl *Guarded,
   }
 
   return false;
+}
+
+// Returns the fast enumeration statement whose element is declared as V as in
+// "for (T *V in Collection)".
+static const ObjCForCollectionStmt *
+findObjCForCollectionStmtOfElement(const VarDecl *V) {
+  ASTContext &Ctx = V->getASTContext();
+  for (auto &VarParent : Ctx.getParents(*V)) {
+    auto *DS = VarParent.get<DeclStmt>();
+    if (!DS || !DS->isSingleDecl())
+      continue;
+    for (auto &DeclStmtParent : Ctx.getParents(*DS)) {
+      auto *FCS = DeclStmtParent.get<ObjCForCollectionStmt>();
+      if (FCS && FCS->getElement() == DS)
+        return FCS;
+    }
+  }
+  return nullptr;
 }
 
 static const VarDecl *findAssignedVar(const Expr *DestExpr) {
@@ -426,6 +445,13 @@ public:
     std::optional<bool> IsUncountedPtr = isUnsafePtr(SinkType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *Origin = nullptr;
+      // The element of a fast enumeration is kept alive by the collection,
+      // which can't be mutated during the enumeration. Treat the collection as
+      // the initial value of the element.
+      if (!Value) {
+        if (auto *FCS = findObjCForCollectionStmtOfElement(V))
+          Value = FCS->getCollection();
+      }
       if (Value) {
         if (isPtrOriginSafe(V, Value, DeclWithIssue, Origin, SinkType))
           return;
@@ -506,9 +532,16 @@ public:
       if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
         if (MaybeGuardian->isLocalVarDecl() &&
             (Model->isSafePtr(Record) ||
-             isRefcountedStringsHack(MaybeGuardian)) &&
-            isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-          return true;
+             isRefcountedStringsHack(MaybeGuardian))) {
+          // The collection of a fast enumeration is evaluated before the loop
+          // body is entered so the guardian only needs to outlive the body.
+          if (auto *FCS = findObjCForCollectionStmtOfElement(V)) {
+            GuardianVisitor Visitor(MaybeGuardian);
+            return Visitor.TraverseStmt(const_cast<Stmt *>(FCS->getBody()));
+          }
+          if (isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+            return true;
+        }
       }
     }
 
