@@ -95,4 +95,16 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.read
       libc.src.unistd.write
   )
+  add_integration_test(
+    atexit_thread_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      atexit_thread_test.cpp
+    DEPENDS
+      libc.src.pthread.pthread_create
+      libc.src.pthread.pthread_exit
+      libc.src.pthread.pthread_join
+      libc.src.stdlib.__cxa_thread_atexit_impl
+  )
 endif()
