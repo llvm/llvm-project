@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CoverageExclusions.h"
 #include "CoverageExporterJson.h"
 #include "CoverageExporterLcov.h"
 #include "CoverageFilters.h"
@@ -20,6 +21,7 @@
 #include "CoverageViewOptions.h"
 #include "RenderingSupport.h"
 #include "SourceCoverageView.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
@@ -67,6 +69,12 @@ public:
   int run(Command Cmd, int argc, const char **argv);
 
 private:
+  enum class SourceExclusionScope {
+    SelectedFiles,
+    SelectedFilesAndReferences,
+    AllFiles,
+  };
+
   /// Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
@@ -125,6 +133,11 @@ private:
   /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
+  /// Load coverage exclusion markers from source files required by the output.
+  bool loadSourceExclusions(const CoverageMapping &Coverage,
+                            ArrayRef<std::string> SelectedSourceFiles,
+                            SourceExclusionScope Scope);
+
   /// Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
                            CoveragePrinter *Printer, bool ShowFilenames);
@@ -144,6 +157,8 @@ private:
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
   CoverageFilters FilenameFilters;
+  CoverageExclusions SourceExclusions;
+  bool FiltersRequireSourceExclusions = false;
 
   /// True if InputSourceFiles are provided.
   bool HadSourceFiles = false;
@@ -298,13 +313,64 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
   return *LoadedSourceFiles.back().second;
 }
 
+bool CodeCoverageTool::loadSourceExclusions(
+    const CoverageMapping &Coverage, ArrayRef<std::string> SelectedSourceFiles,
+    SourceExclusionScope Scope) {
+  if (!ViewOpts.RespectCoverageExclusionMarkers)
+    return true;
+
+  SmallVector<StringRef> Files;
+  SmallSet<StringRef, 16> Seen;
+  auto AddFile = [&](StringRef Filename) {
+    if (Seen.insert(Filename).second)
+      Files.push_back(Filename);
+  };
+
+  if (Scope == SourceExclusionScope::AllFiles) {
+    for (StringRef Filename : Coverage.getUniqueSourceFiles())
+      AddFile(Filename);
+  } else {
+    if (SelectedSourceFiles.empty()) {
+      for (StringRef Filename : Coverage.getUniqueSourceFiles())
+        if (!FilenameFilters.matchesFilename(Filename))
+          AddFile(Filename);
+    } else {
+      for (StringRef Filename : SelectedSourceFiles)
+        AddFile(Filename);
+    }
+
+    if (Scope == SourceExclusionScope::SelectedFilesAndReferences) {
+      size_t NumSelectedFiles = Files.size();
+      for (size_t I = 0; I != NumSelectedFiles; ++I) {
+        StringRef SourceFile = Files[I];
+        for (const auto &Function : Coverage.getCoveredFunctions(SourceFile))
+          for (StringRef Filename : Function.Filenames)
+            AddFile(Filename);
+      }
+    }
+  }
+
+  for (StringRef Filename : Files) {
+    auto SourceBuffer = getSourceFile(Filename);
+    if (!SourceBuffer)
+      return false;
+    if (Error E = SourceExclusions.parse(Filename, SourceBuffer->getBuffer())) {
+      error(toString(std::move(E)), Filename);
+      return false;
+    }
+  }
+  ViewOpts.SourceExclusions = &SourceExclusions;
+  return true;
+}
+
 void CodeCoverageTool::attachExpansionSubViews(
     SourceCoverageView &View, ArrayRef<ExpansionRecord> Expansions,
     const CoverageMapping &Coverage) {
   if (!ViewOpts.ShowExpandedRegions)
     return;
   for (const auto &Expansion : Expansions) {
-    auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
+    auto ExpansionCoverage = applyCoverageExclusions(
+        ViewOpts.SourceExclusions, Coverage.getCoverageForExpansion(Expansion));
     if (ExpansionCoverage.empty())
       continue;
     auto SourceBuffer = getSourceFile(ExpansionCoverage.getFilename());
@@ -365,7 +431,8 @@ void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
 std::unique_ptr<SourceCoverageView>
 CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
                                      const CoverageMapping &Coverage) {
-  auto FunctionCoverage = Coverage.getCoverageForFunction(Function);
+  auto FunctionCoverage = applyCoverageExclusions(
+      ViewOpts.SourceExclusions, Coverage.getCoverageForFunction(Function));
   if (FunctionCoverage.empty())
     return nullptr;
   auto SourceBuffer = getSourceFile(FunctionCoverage.getFilename());
@@ -391,7 +458,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = Coverage.getCoverageForFile(SourceFile);
+  auto FileCoverage = applyCoverageExclusions(
+      ViewOpts.SourceExclusions, Coverage.getCoverageForFile(SourceFile));
   if (FileCoverage.empty())
     return nullptr;
 
@@ -412,12 +480,18 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
       continue;
 
     for (const FunctionRecord *Function : Group.getInstantiations()) {
+      if (ViewOpts.SourceExclusions &&
+          ViewOpts.SourceExclusions->isFunctionExcluded(*Function, SourceFile))
+        continue;
+
       std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
       StringRef Funcname = DC.demangle(Function->Name);
 
       if (Function->ExecutionCount > 0) {
-        auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
+        auto SubViewCoverage =
+            applyCoverageExclusions(ViewOpts.SourceExclusions,
+                                    Coverage.getCoverageForFunction(*Function));
         auto SubViewExpansions = SubViewCoverage.getExpansions();
         auto SubViewBranches = SubViewCoverage.getBranches();
         auto SubViewMCDCRecords = SubViewCoverage.getMCDCRecords();
@@ -805,6 +879,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
+  cl::opt<bool> RespectCoverageExclusionMarkers(
+      "respect-coverage-exclusion-markers", cl::Optional,
+      cl::desc("Exclude coverage for LLVM_COVERAGE_EXCLUDE_* and "
+               "LCOV_EXCL_* source markers"));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -921,6 +1000,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
         RegionCoverageGtFilter.getNumOccurrences() ||
         LineCoverageLtFilter.getNumOccurrences() ||
         LineCoverageGtFilter.getNumOccurrences()) {
+      FiltersRequireSourceExclusions = true;
       auto StatFilterer = std::make_unique<CoverageFilters>();
       if (RegionCoverageLtFilter.getNumOccurrences())
         StatFilterer->push_back(std::make_unique<RegionCoverageFilter>(
@@ -978,6 +1058,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.RespectCoverageExclusionMarkers = RespectCoverageExclusionMarkers;
 
     return 0;
   };
@@ -1178,6 +1259,14 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
         SourceFiles.push_back(std::string(Filename));
     }
 
+  SourceExclusionScope ExclusionScope =
+      ViewOpts.ShowExpandedRegions || ViewOpts.hasOutputDirectory() ||
+              FiltersRequireSourceExclusions
+          ? SourceExclusionScope::SelectedFilesAndReferences
+          : SourceExclusionScope::SelectedFiles;
+  if (!loadSourceExclusions(*Coverage, SourceFiles, ExclusionScope))
+    return 1;
+
   // Create an index out of the source files.
   if (ViewOpts.hasOutputDirectory()) {
     if (Error E = Printer->createIndexFile(SourceFiles, *Coverage, Filters)) {
@@ -1192,7 +1281,10 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
         FilenameFunctionMap;
     for (const auto &SourceFile : SourceFiles)
       for (const auto &Function : Coverage->getCoveredFunctions(SourceFile))
-        if (Filters.matches(*Coverage, Function))
+        if ((!ViewOpts.SourceExclusions ||
+             !ViewOpts.SourceExclusions->isFunctionExcluded(Function,
+                                                            SourceFile)) &&
+            Filters.matches(*Coverage, Function, ViewOpts.SourceExclusions))
           FilenameFunctionMap[SourceFile].push_back(&Function);
 
     // Only print filter matching functions for each file.
@@ -1283,6 +1375,16 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
+  if (ShowFunctionSummaries && SourceFiles.empty()) {
+    error("source files must be specified when -show-functions=true is "
+          "specified");
+    return 1;
+  }
+
+  if (!loadSourceExclusions(*Coverage, SourceFiles,
+                            SourceExclusionScope::SelectedFilesAndReferences))
+    return 1;
+
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
@@ -1290,12 +1392,6 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
-    if (SourceFiles.empty()) {
-      error("source files must be specified when -show-functions=true is "
-            "specified");
-      return 1;
-    }
-
     Report.renderFunctionReports(SourceFiles, DC, llvm::outs());
   }
   return 0;
@@ -1358,6 +1454,18 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     error("could not load coverage information");
     return 1;
   }
+
+  SourceExclusionScope ExclusionScope;
+  if (ViewOpts.Format == CoverageViewOptions::OutputFormat::Text &&
+      !ViewOpts.ExportSummaryOnly && !ViewOpts.SkipFunctions)
+    ExclusionScope = SourceExclusionScope::AllFiles;
+  else if (ViewOpts.Format == CoverageViewOptions::OutputFormat::Lcov &&
+           ViewOpts.SkipBranches)
+    ExclusionScope = SourceExclusionScope::SelectedFiles;
+  else
+    ExclusionScope = SourceExclusionScope::SelectedFilesAndReferences;
+  if (!loadSourceExclusions(*Coverage, SourceFiles, ExclusionScope))
+    return 1;
 
   std::unique_ptr<CoverageExporter> Exporter;
 
