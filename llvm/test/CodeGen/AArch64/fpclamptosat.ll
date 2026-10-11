@@ -494,16 +494,16 @@ entry:
 }
 
 define i64 @utest_f16i64(half %x) {
-; CHECK-LABEL: utest_f16i64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixunshfti
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x0, x0, xzr, eq
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: utest_f16i64:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: utest_f16i64:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptoui half %x to i128
   %0 = icmp ult i128 %conv, 18446744073709551616
@@ -513,20 +513,30 @@ entry:
 }
 
 define i64 @ustest_f16i64(half %x) {
-; CHECK-LABEL: ustest_f16i64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixhfti
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csel x8, x0, xzr, lt
-; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    cmp xzr, x8
-; CHECK-NEXT:    ngcs xzr, x9
-; CHECK-NEXT:    csel x0, x8, xzr, lt
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: ustest_f16i64:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-CVT-NEXT:    asr x9, x8, #63
+; CHECK-CVT-NEXT:    cmp x9, #1
+; CHECK-CVT-NEXT:    csel x8, x8, xzr, lt
+; CHECK-CVT-NEXT:    csinc x9, x9, xzr, lt
+; CHECK-CVT-NEXT:    cmp xzr, x8
+; CHECK-CVT-NEXT:    ngcs xzr, x9
+; CHECK-CVT-NEXT:    csel x0, x8, xzr, lt
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: ustest_f16i64:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-FP16-NEXT:    asr x9, x8, #63
+; CHECK-FP16-NEXT:    cmp x9, #1
+; CHECK-FP16-NEXT:    csel x8, x8, xzr, lt
+; CHECK-FP16-NEXT:    csinc x9, x9, xzr, lt
+; CHECK-FP16-NEXT:    cmp xzr, x8
+; CHECK-FP16-NEXT:    ngcs xzr, x9
+; CHECK-FP16-NEXT:    csel x0, x8, xzr, lt
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i128
   %0 = icmp slt i128 %conv, 18446744073709551616
@@ -987,16 +997,16 @@ entry:
 }
 
 define i64 @utest_f16i64_mm(half %x) {
-; CHECK-LABEL: utest_f16i64_mm:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixunshfti
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    csel x0, x0, xzr, eq
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: utest_f16i64_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: utest_f16i64_mm:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzs x0, h0
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptoui half %x to i128
   %spec.store.select = call i128 @llvm.umin.i128(i128 %conv, i128 18446744073709551616)
@@ -1005,19 +1015,28 @@ entry:
 }
 
 define i64 @ustest_f16i64_mm(half %x) {
-; CHECK-LABEL: ustest_f16i64_mm:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __fixhfti
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x8, x1, xzr, lt
-; CHECK-NEXT:    csel x9, x0, xzr, lt
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csel x0, xzr, x9, mi
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-CVT-LABEL: ustest_f16i64_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-CVT-NEXT:    asr x9, x8, #63
+; CHECK-CVT-NEXT:    cmp x9, #1
+; CHECK-CVT-NEXT:    csinc x9, x9, xzr, lt
+; CHECK-CVT-NEXT:    csel x8, x8, xzr, lt
+; CHECK-CVT-NEXT:    cmp x9, #0
+; CHECK-CVT-NEXT:    csel x0, xzr, x8, mi
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: ustest_f16i64_mm:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-FP16-NEXT:    asr x9, x8, #63
+; CHECK-FP16-NEXT:    cmp x9, #1
+; CHECK-FP16-NEXT:    csinc x9, x9, xzr, lt
+; CHECK-FP16-NEXT:    csel x8, x8, xzr, lt
+; CHECK-FP16-NEXT:    cmp x9, #0
+; CHECK-FP16-NEXT:    csel x0, xzr, x8, mi
+; CHECK-FP16-NEXT:    ret
 entry:
   %conv = fptosi half %x to i128
   %spec.store.select = call i128 @llvm.smin.i128(i128 %conv, i128 18446744073709551616)

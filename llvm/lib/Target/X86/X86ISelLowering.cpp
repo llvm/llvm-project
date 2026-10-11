@@ -35843,6 +35843,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     EVT SrcVT = Src.getValueType();
 
+    // f16 fits in i64, so the generic expansion needs no libcall.
+    if (VT == MVT::i128 && Subtarget.isTargetWin64() && SrcVT == MVT::f16)
+      return;
+
     SDValue Res;
     if (isBF16orSoftF16(SrcVT, Subtarget)) {
       EVT NVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
@@ -36020,9 +36024,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     assert(!VT.isVector() && "Vectors should have been handled above!");
 
-    if ((Subtarget.hasDQI() && VT == MVT::i64 &&
-         (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
-        (Subtarget.hasFP16() && SrcVT == MVT::f16)) {
+    if (VT == MVT::i64 &&
+        ((Subtarget.hasDQI() && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
+         (Subtarget.hasFP16() && SrcVT == MVT::f16))) {
       assert(!Subtarget.is64Bit() && "i64 should be legal");
       unsigned NumElts = Subtarget.hasVLX() ? 2 : 8;
       // If we use a 128-bit result we might need to use a target specific node.

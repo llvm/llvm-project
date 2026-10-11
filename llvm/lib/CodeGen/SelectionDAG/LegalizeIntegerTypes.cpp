@@ -4341,6 +4341,29 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT(SDNode *N, SDValue &Lo,
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
 
+  // If every finite input fits in the signed half-width type (e.g. f16),
+  // convert to that type and extend the result. No libcall is needed.
+  // Soft-promoted inputs keep the libcall.
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  int MaxExp =
+      APFloat::semanticsMaxExponent(Op.getValueType().getFltSemantics());
+  if (MaxExp + 2 <= (int)NVT.getSizeInBits() &&
+      getTypeAction(Op.getValueType()) == TargetLowering::TypeLegal) {
+    unsigned NewOpc =
+        TLI.getPreferredFPToIntOpcode(N->getOpcode(), Op.getValueType(), NVT);
+    if (IsStrict) {
+      Lo = DAG.getNode(NewOpc, dl, {NVT, MVT::Other}, {Chain, Op});
+      ReplaceValueWith(SDValue(N, 1), Lo.getValue(1));
+    } else {
+      Lo = DAG.getNode(NewOpc, dl, NVT, Op);
+    }
+    Hi = IsSigned ? DAG.getNode(ISD::SRA, dl, NVT, Lo,
+                                DAG.getShiftAmountConstant(
+                                    NVT.getSizeInBits() - 1, NVT, dl))
+                  : DAG.getConstant(0, dl, NVT);
+    return;
+  }
+
   // If the input is bf16 or needs to be soft promoted, extend to f32.
   if (getTypeAction(Op.getValueType()) == TargetLowering::TypeSoftPromoteHalf ||
       Op.getValueType() == MVT::bf16) {
