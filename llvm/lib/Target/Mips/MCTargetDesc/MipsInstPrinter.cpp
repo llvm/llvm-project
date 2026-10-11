@@ -142,6 +142,13 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   MAI.printExpr(O, *Op.getExpr());
 }
 
+template <unsigned FromEnd>
+void MipsInstPrinter::printOperandFromEnd(const MCInst *MI, int OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  printOperand(MI, MI->getNumOperands() - FromEnd, STI, O);
+}
+
 void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
@@ -198,36 +205,11 @@ void MipsInstPrinter::printMemOperand(const MCInst *MI, int opNum,
   // If PIC target the target is loaded as the
   // pattern lw $25,%call16($28)
 
-  // opNum can be invalid if instruction had reglist as operand.
-  // MemOperand is always last operand of instruction (base + offset).
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case Mips::SWM32_MM:
-  case Mips::LWM32_MM:
-  case Mips::SWM16_MM:
-  case Mips::SWM16_MMR6:
-  case Mips::LWM16_MM:
-  case Mips::LWM16_MMR6:
-    opNum = MI->getNumOperands() - 2;
-    break;
-  }
-
   WithMarkup M = markup(O, Markup::Memory);
   printOperand(MI, opNum + 1, STI, O);
   O << "(";
   printOperand(MI, opNum, STI, O);
   O << ")";
-}
-
-void MipsInstPrinter::printMemOperandEA(const MCInst *MI, int opNum,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  // when using stack locations for not load/store instructions
-  // print the same way as all normal 3 operand instructions.
-  printOperand(MI, opNum, STI, O);
-  O << ", ";
-  printOperand(MI, opNum + 1, STI, O);
 }
 
 void MipsInstPrinter::printFCCOperand(const MCInst *MI, int opNum,

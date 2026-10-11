@@ -408,10 +408,9 @@ class BRK_MMR6_DESC : BRK_FT<"break">;
 class CACHE_HINT_MMR6_DESC<string instr_asm, Operand MemOpnd>
       : MMR6Arch<instr_asm> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins MemOpnd:$addr, uimm5:$hint);
-  string AsmString = !strconcat(instr_asm, "\t$hint, $addr");
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset, uimm5:$hint);
+  string AsmString = !strconcat(instr_asm, "\t$hint, ${offset}(${base})");
   list<dag> Pattern = [];
-  string DecoderMethod = "DecodeCacheOpMM";
 }
 
 class CACHE_MMR6_DESC : CACHE_HINT_MMR6_DESC<"cache", mem_mm_12>;
@@ -421,9 +420,8 @@ class LB_LBU_MMR6_DESC_BASE<string instr_asm, Operand MemOpnd,
                             RegisterOperand GPROpnd>
     : MMR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins MemOpnd:$addr);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
-  string DecoderMethod = "DecodeLoadByte15";
+  dag InOperandList = (ins MemBase:$base, MemOpnd:$offset);
+  string AsmString = !strconcat(instr_asm, "\t$rt, ${offset}(${base})");
   bit mayLoad = 1;
 }
 class LB_MMR6_DESC : LB_LBU_MMR6_DESC_BASE<"lb", mem_mm_16, GPR32Opnd>;
@@ -713,49 +711,49 @@ class MFHC0_MMR6_DESC : MFC0_MMR6_DESC_BASE<"mfhc0", GPR32Opnd, COP0Opnd>;
 class MFHC2_MMR6_DESC : MFC2_MMR6_DESC_BASE<"mfhc2", GPR32Opnd, COP2Opnd>;
 
 class LDC1_D64_MMR6_DESC : MipsR6Inst, HARDFLOAT, FGR_64 {
-  dag InOperandList = (ins mem_mm_16:$addr);
+  dag InOperandList = (ins MemBase:$base, mem_mm_16:$offset);
   dag OutOperandList = (outs FGR64Opnd:$ft);
-  string AsmString = !strconcat("ldc1", "\t$ft, $addr");
-  list<dag> Pattern = [(set FGR64Opnd:$ft, (load addrimm16:$addr))];
+  string AsmString = !strconcat("ldc1", "\t$ft, ${offset}(${base})");
+  list<dag> Pattern =
+      [(set FGR64Opnd:$ft, (load (addrimm16 MemBase:$base, iPTR:$offset)))];
   Format f = FrmFI;
   string BaseOpcode = "ldc1";
   bit mayLoad = 1;
-  let DecoderMethod = "DecodeFMemMMR2";
 }
 
 class SDC1_D64_MMR6_DESC : MipsR6Inst, HARDFLOAT, FGR_64 {
-  dag InOperandList = (ins FGR64Opnd:$ft, mem_mm_16:$addr);
+  dag InOperandList = (ins FGR64Opnd:$ft, MemBase:$base, mem_mm_16:$offset);
   dag OutOperandList = (outs);
-  string AsmString = !strconcat("sdc1", "\t$ft, $addr");
-  list<dag> Pattern = [(store FGR64Opnd:$ft, addrimm16:$addr)];
+  string AsmString = !strconcat("sdc1", "\t$ft, ${offset}(${base})");
+  list<dag> Pattern =
+      [(store FGR64Opnd:$ft, (addrimm16 MemBase:$base, iPTR:$offset))];
   Format f = FrmFI;
   string BaseOpcode = "sdc1";
   bit mayStore = 1;
-  let DecoderMethod = "DecodeFMemMMR2";
 }
 
 class LDC2_LWC2_MMR6_DESC_BASE<string opstr> {
   dag OutOperandList = (outs COP2Opnd:$rt);
-  dag InOperandList = (ins mem_mm_11:$addr);
-  string AsmString = !strconcat(opstr, "\t$rt, $addr");
-  list<dag> Pattern = [(set COP2Opnd:$rt, (load addrimm11:$addr))];
+  dag InOperandList = (ins MemBase:$base, mem_mm_11:$offset);
+  string AsmString = !strconcat(opstr, "\t$rt, ${offset}(${base})");
+  list<dag> Pattern =
+      [(set COP2Opnd:$rt, (load (addrimm11 MemBase:$base, iPTR:$offset)))];
   Format f = FrmFI;
   string BaseOpcode = opstr;
   bit mayLoad = 1;
-  string DecoderMethod = "DecodeFMemCop2MMR6";
 }
 class LDC2_MMR6_DESC : LDC2_LWC2_MMR6_DESC_BASE<"ldc2">;
 class LWC2_MMR6_DESC : LDC2_LWC2_MMR6_DESC_BASE<"lwc2">;
 
 class SDC2_SWC2_MMR6_DESC_BASE<string opstr> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins COP2Opnd:$rt, mem_mm_11:$addr);
-  string AsmString = !strconcat(opstr, "\t$rt, $addr");
-  list<dag> Pattern = [(store COP2Opnd:$rt, addrimm11:$addr)];
+  dag InOperandList = (ins COP2Opnd:$rt, MemBase:$base, mem_mm_11:$offset);
+  string AsmString = !strconcat(opstr, "\t$rt, ${offset}(${base})");
+  list<dag> Pattern =
+      [(store COP2Opnd:$rt, (addrimm11 MemBase:$base, iPTR:$offset))];
   Format f = FrmFI;
   string BaseOpcode = opstr;
   bit mayStore = 1;
-  string DecoderMethod = "DecodeFMemCop2MMR6";
 }
 class SDC2_MMR6_DESC : SDC2_SWC2_MMR6_DESC_BASE<"sdc2">;
 class SWC2_MMR6_DESC : SDC2_SWC2_MMR6_DESC_BASE<"swc2">;
@@ -779,21 +777,19 @@ class GINVT_MMR6_DESC : GINV_MMR6_DESC_BASE<"ginvt", GPR32Opnd>;
 
 class SC_MMR6_DESC_BASE<string opstr> {
   dag OutOperandList = (outs GPR32Opnd:$dst);
-  dag InOperandList = (ins GPR32Opnd:$rt, mem_mm_9:$addr);
-  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  dag InOperandList = (ins GPR32Opnd:$rt, MemBase:$base, mem_mm_9:$offset);
+  string AsmString = !strconcat(opstr, "\t$rt, ${offset}(${base})");
   string BaseOpcode = opstr;
   bit mayStore = 1;
   string Constraints = "$rt = $dst";
-  string DecoderMethod = "DecodeMemMMImm9";
 }
 
 class LL_MMR6_DESC_BASE<string opstr> {
   dag OutOperandList = (outs GPR32Opnd:$rt);
-  dag InOperandList = (ins mem_mm_9:$addr);
-  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  dag InOperandList = (ins MemBase:$base, mem_mm_9:$offset);
+  string AsmString = !strconcat(opstr, "\t$rt, ${offset}(${base})");
   string BaseOpcode = opstr;
   bit mayLoad = 1;
-  string DecoderMethod = "DecodeMemMMImm9";
 }
 
 class SC_MMR6_DESC : SC_MMR6_DESC_BASE<"sc">;
@@ -1011,9 +1007,7 @@ class CLASS_S_MMR6_DESC  : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd>;
 class CLASS_D_MMR6_DESC  : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd>;
 
 class STORE_MMR6_DESC_BASE<string opstr, DAGOperand RO>
-    : Store<opstr, RO>, MMR6Arch<opstr> {
-  let DecoderMethod = "DecodeMemMMImm16";
-}
+    : Store<opstr, RO>, MMR6Arch<opstr>;
 class SB_MMR6_DESC : STORE_MMR6_DESC_BASE<"sb", GPR32Opnd>;
 
 class SH_MMR6_DESC : STORE_MMR6_DESC_BASE<"sh", GPR32Opnd>;
@@ -1052,12 +1046,12 @@ class XOR16_MMR6_DESC : LogicRMM16<"xor16", GPRMM16Opnd>,
 
 class LW_MMR6_DESC : MMR6Arch<"lw">, MipsR6Inst {
   dag OutOperandList = (outs GPR32Opnd:$rt);
-  dag InOperandList = (ins mem:$addr);
-  string AsmString = "lw\t$rt, $addr";
-  let DecoderMethod = "DecodeMemMMImm16";
+  dag InOperandList = (ins MemBase:$base, imm_offset:$offset);
+  string AsmString = "lw\t$rt, ${offset}(${base})";
   let canFoldAsLoad = 1;
   let mayLoad = 1;
-  list<dag> Pattern = [(set GPR32Opnd:$rt, (load addrDefault:$addr))];
+  list<dag> Pattern =
+      [(set GPR32Opnd:$rt, (load (addrDefault MemBase:$base, iPTR:$offset)))];
 }
 
 class LUI_MMR6_DESC : IsAsCheapAsAMove, MMR6Arch<"lui">, MipsR6Inst{
@@ -1078,9 +1072,7 @@ class SYNC_MMR6_DESC : MMR6Arch<"sync">, MipsR6Inst {
   bit HasSideEffects = 1;
 }
 
-class SYNCI_MMR6_DESC : SYNCI_FT<"synci", mem_mm_16> {
-  let DecoderMethod = "DecodeSynciR6";
-}
+class SYNCI_MMR6_DESC : SYNCI_FT<"synci", mem_mm_16>;
 
 class RDPGPR_MMR6_DESC : MMR6Arch<"rdpgpr">, MipsR6Inst {
   dag OutOperandList = (outs GPR32Opnd:$rt);
@@ -1103,31 +1095,32 @@ class SIGRIE_MMR6_DESC : MipsR6Inst {
 }
 
 class LWM16_MMR6_DESC
-    : MicroMipsInst16<(outs reglist16:$rt), (ins mem_mm_4sp:$addr),
-                      !strconcat("lwm16", "\t$rt, $addr"), [],
-                      FrmI>,
+    : MicroMipsInst16<(outs reglist16:$rt),
+                     (ins MemBaseSPRegList:$base, mem_mm_4sp_lsl2:$offset),
+                     !strconcat("lwm16", "\t$rt, ${offset}(${base})"), [],
+                     FrmI>,
       MMR6Arch<"lwm16"> {
-  let DecoderMethod = "DecodeMemMMReglistImm4Lsl2";
   let mayLoad = 1;
   ComplexPattern Addr = addr;
 }
 
 class SWM16_MMR6_DESC
-    : MicroMipsInst16<(outs), (ins reglist16:$rt, mem_mm_4sp:$addr),
-                      !strconcat("swm16", "\t$rt, $addr"), [],
-                      FrmI>,
+    : MicroMipsInst16<(outs),
+                     (ins reglist16:$rt,
+                          MemBaseSPRegList:$base, mem_mm_4sp_lsl2:$offset),
+                     !strconcat("swm16", "\t$rt, ${offset}(${base})"), [],
+                     FrmI>,
       MMR6Arch<"swm16"> {
-  let DecoderMethod = "DecodeMemMMReglistImm4Lsl2";
   let mayStore = 1;
   ComplexPattern Addr = addr;
 }
 
 class SB16_MMR6_DESC_BASE<string opstr, DAGOperand RTOpnd,
-                          Operand MemOpnd>
-    : MicroMipsInst16<(outs), (ins RTOpnd:$rt, MemOpnd:$addr),
-                      !strconcat(opstr, "\t$rt, $addr"), [], FrmI>,
+                         Operand MemOpnd>
+    : MicroMipsInst16<(outs),
+                     (ins RTOpnd:$rt, GPRMM16Opnd:$base, MemOpnd:$offset),
+                     !strconcat(opstr, "\t$rt, ${offset}(${base})"), [], FrmI>,
       MMR6Arch<opstr> {
-  let DecoderMethod = "DecodeMemMMImm4";
   let mayStore = 1;
 }
 
@@ -1139,10 +1132,11 @@ class SW16_MMR6_DESC
     : SB16_MMR6_DESC_BASE<"sw16", GPRMM16OpndZero, mem_mm_4_lsl2>;
 
 class SWSP_MMR6_DESC
-    : MicroMipsInst16<(outs), (ins GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset),
-                      !strconcat("sw", "\t$rt, $offset"), [], FrmI>,
+    : MicroMipsInst16<(outs),
+                     (ins GPR32Opnd:$rt, MemBaseSP:$base,
+                          mem_mm_sp_imm5_lsl2:$offset),
+                     !strconcat("sw", "\t$rt, ${offset}(${base})"), [], FrmI>,
       MMR6Arch<"swsp"> {
-  let DecoderMethod = "DecodeMemMMSPImm5Lsl2";
   let mayStore = 1;
 }
 
@@ -1363,9 +1357,8 @@ def SIGRIE_MMR6 : R6MMR6Rel, SIGRIE_MMR6_DESC, SIGRIE_MMR6_ENC,
                   ISA_MICROMIPS32R6;
 def XOR_MMR6 : StdMMR6Rel, XOR_MMR6_DESC, XOR_MMR6_ENC, ISA_MICROMIPS32R6;
 def XORI_MMR6 : StdMMR6Rel, XORI_MMR6_DESC, XORI_MMR6_ENC, ISA_MICROMIPS32R6;
-let DecoderMethod = "DecodeMemMMImm16" in {
-  def SW_MMR6 : StdMMR6Rel, SW_MMR6_DESC, SW_MMR6_ENC, ISA_MICROMIPS32R6;
-}
+def SW_MMR6 : StdMMR6Rel, SW_MMR6_DESC, SW_MMR6_ENC, ISA_MICROMIPS32R6;
+
 /// Floating Point Instructions
 let mayRaiseFPException = 1, Uses = [FCR31] in {
   def FADD_S_MMR6 : StdMMR6Rel, FADD_S_MMR6_ENC, FADD_S_MMR6_DESC,
@@ -1668,8 +1661,10 @@ def : MipsInstAlias<"b16 $offset", (BC16_MMR6 brtarget10_mm:$offset), 0>,
 //
 //===----------------------------------------------------------------------===//
 
-def : MipsPat<(store GPRMM16:$src, addrimm4lsl2:$addr),
-              (SW16_MMR6 GPRMM16:$src, addrimm4lsl2:$addr)>, ISA_MICROMIPS32R6;
+def : MipsPat<(store GPRMM16:$src,
+                    (addrimm4lsl2 MemBase:$addr_base, iPTR:$addr_offset)),
+              (SW16_MMR6 GPRMM16:$src, $addr_base, $addr_offset)>,
+              ISA_MICROMIPS32R6;
 def : MipsPat<(subc GPR32:$lhs, GPR32:$rhs),
               (SUBU_MMR6 GPR32:$lhs, GPR32:$rhs)>, ISA_MICROMIPS32R6;
 
