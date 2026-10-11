@@ -338,6 +338,17 @@ Makes programs 10x faster by doing Special New Thing.
   argument. Before, each one could read and write any memory, so loads of
   loop-invariant values weren't hoisted out of loops of tile operations.
 
+* Non-temporal stores (`!nontemporal` metadata) now have the same
+  memory-ordering semantics as normal stores, as is required by the LLVM IR
+  specification. In order to guarantee this behavior, the backend now
+  automatically inserts `sfence` instructions after a non-temporal stores and
+  before function return or potential synchronization points, such as calls to
+  unknown functions (post-inlining).
+
+  Note that if this causes an `sfence` inside of an inner loop (e.g. because of
+  an unknown call in the loop), that may have extremely high overhead, but
+  typical block-copy loops will not be impacted.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on

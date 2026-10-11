@@ -70,6 +70,7 @@
 ; CHECK-NEXT:       Lazy Branch Probability Analysis 
 ; CHECK-NEXT:       Lazy Block Frequency Analysis 
 ; CHECK-NEXT:       Expand indirectbr instructions 
+; CHECK-NEXT:       X86 Fence Non-Temporal Stores
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
