@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wlifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-field-origin-escape -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
 View definition_before_header(View a);
@@ -700,3 +700,94 @@ S foo() {
   return S(create_up());
 }
 } // namespace GH193747
+
+namespace field_origin_escape {
+
+class Context {
+public:
+  // This method should be annotated with lifetimebound.
+  std::string_view method() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return method_;                 // expected-note {{param returned here}}
+  }
+
+private:
+  std::string method_ = "42";
+};
+
+class ContextAnnotated {
+public:
+  std::string_view method() const [[clang::lifetimebound]] {
+    return method_;
+  }
+
+private:
+  std::string method_ = "42";
+};
+
+class ContextWrapper {
+public:
+  explicit ContextWrapper(Context &inner,          // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+                          ContextAnnotated &annot) // expected-warning {{parameter in intra-TU constructor should be marked [[clang::lifetimebound]]}}
+      : inner_(inner), annot_(annot) {}
+
+  Context &inner() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'inner_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return inner_;         // expected-note {{returned here}}
+  }
+
+  // This method should NOT be annotated with lifetimebound.
+  std::string_view method() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'inner_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return inner_.method();         // expected-note {{returned here}}
+  }
+
+  std::string_view annot_method() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'annot_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return annot_.method();               // expected-note {{returned here}}
+  }
+
+private:
+  Context &inner_;          // expected-note {{escapes to this field}}
+  ContextAnnotated &annot_; // expected-note {{escapes to this field}}
+};
+
+struct FieldTypes {
+  int val_;
+  int *ptr_;
+  int &ref_;
+  std::string str_;
+  std::string_view view_;
+
+  // Loans to fields (depend on enclosing object, not field origin).
+  int &get_val_ref() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return val_;       // expected-note {{param returned here}}
+  }
+  int *get_val_ptr() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return &val_;      // expected-note {{param returned here}}
+  }
+  std::string_view get_str_view() const { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return str_;                          // expected-note {{param returned here}}
+  }
+  int *&get_ptr_ref() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return ptr_;        // expected-note {{param returned here}}
+  }
+
+  // Origins of fields -> field-origin-escape warning, no lifetimebound suggestion on 'this'.
+  int *get_ptr() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'ptr_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return ptr_;         // expected-note {{returned here}}
+  }
+  int &get_ptr_deref() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'ptr_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return *ptr_;              // expected-note {{returned here}}
+  }
+  int &get_ref() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'ref_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return ref_;         // expected-note {{returned here}}
+  }
+  int *get_ref_addr() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'ref_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return &ref_;             // expected-note {{returned here}}
+  }
+  std::string_view get_view() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'view_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return view_;                     // expected-note {{returned here}}
+  }
+  const char *get_view_data() const { // expected-warning {{return value depends on the lifetime of the object referenced by field 'view_', which cannot be expressed with [[clang::lifetimebound]]}}
+    return view_.data();              // expected-note {{returned here}}
+  }
+};
+
+} // namespace field_origin_escape

@@ -72,6 +72,11 @@ inline bool ShouldCheckInapplicableLifetimebound(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_inapplicable_lifetimebound, D->getBeginLoc());
 }
 
+inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
+  return !S.getDiagnostics().isIgnored(
+      diag::warn_lifetime_safety_field_origin_escape, D->getBeginLoc());
+}
+
 inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -114,6 +119,7 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
          ShouldCheckLifetimeboundViolations(S, D) ||
          ShouldCheckMisplacedLifetimebound(S, D) ||
          ShouldCheckInapplicableLifetimebound(S, D) ||
+         ShouldCheckFieldOriginEscape(S, D) ||
          ShouldSuggestLifetimeAnnotations(S, D);
 }
 
@@ -127,6 +133,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
   LSOpts.CheckMisplacedLifetimebound = ShouldCheckMisplacedLifetimebound(S, D);
   LSOpts.CheckInapplicableLifetimebound =
       ShouldCheckInapplicableLifetimebound(S, D);
+  LSOpts.CheckFieldOriginEscape = ShouldCheckFieldOriginEscape(S, D);
   return LSOpts;
 }
 
@@ -455,6 +462,15 @@ public:
 
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
+  }
+
+  void reportFieldOriginEscape(const CXXMethodDecl *MD, const FieldDecl *FD,
+                               const Expr *EscapeExpr) override {
+    S.Diag(MD->getLocation(), diag::warn_lifetime_safety_field_origin_escape)
+        << getDiagSubjectDescription(FD) << MD->getNameInfo().getSourceRange();
+
+    S.Diag(EscapeExpr->getBeginLoc(), diag::note_lifetime_safety_returned_here)
         << EscapeExpr->getSourceRange();
   }
 
