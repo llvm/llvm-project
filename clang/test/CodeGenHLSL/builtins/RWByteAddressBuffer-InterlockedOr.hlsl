@@ -17,8 +17,8 @@ RWByteAddressBuffer BAB : register(u0);
 // DXCHECK:  %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr {{.*}}
 // DXCHECK:  %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %{{.*}})
 // DXCHECK:  atomicrmw or ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
-// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1), ptr {{.*}}
-// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %[[HANDLE]], i32 %{{.*}})
+// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1), ptr {{.*}}
+// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1) %[[HANDLE]], i32 %{{.*}})
 // SPVCHECK: atomicrmw or ptr addrspace(11) %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
 export void test_bab_int_2arg(uint off, int v) {
   BAB.InterlockedOr(off, v);
@@ -29,8 +29,8 @@ export void test_bab_int_2arg(uint off, int v) {
 // DXCHECK:  %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %{{.*}})
 // DXCHECK:  %[[R:.*]] = atomicrmw or ptr %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
 // DXCHECK:  store i32 %[[R]], ptr {{.*}}
-// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1), ptr {{.*}}
-// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %[[HANDLE]], i32 %{{.*}})
+// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1), ptr {{.*}}
+// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1) %[[HANDLE]], i32 %{{.*}})
 // SPVCHECK: %[[R:.*]] = atomicrmw or ptr addrspace(11) %[[PTR]], i32 %{{.*}} syncscope("device") monotonic
 // SPVCHECK: store i32 %[[R]], ptr {{.*}}
 export void test_bab_uint_3arg(uint off, uint v, out uint orig) {
@@ -41,8 +41,8 @@ export void test_bab_uint_3arg(uint off, uint v, out uint orig) {
 // DXCHECK:  %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr {{.*}}
 // DXCHECK:  %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %{{.*}})
 // DXCHECK:  atomicrmw or ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
-// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1), ptr {{.*}}
-// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %[[HANDLE]], i32 %{{.*}})
+// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1), ptr {{.*}}
+// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1) %[[HANDLE]], i32 %{{.*}})
 // SPVCHECK: atomicrmw or ptr addrspace(11) %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
 export void test_bab_int64_2arg(uint off, int64_t v) {
   BAB.InterlockedOr64(off, v);
@@ -53,8 +53,8 @@ export void test_bab_int64_2arg(uint off, int64_t v) {
 // DXCHECK:  %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %{{.*}})
 // DXCHECK:  %[[R:.*]] = atomicrmw or ptr %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
 // DXCHECK:  store i64 %[[R]], ptr {{.*}}
-// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1), ptr {{.*}}
-// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %[[HANDLE]], i32 %{{.*}})
+// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1), ptr {{.*}}
+// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1, 1) %[[HANDLE]], i32 %{{.*}})
 // SPVCHECK: %[[R:.*]] = atomicrmw or ptr addrspace(11) %[[PTR]], i64 %{{.*}} syncscope("device") monotonic
 // SPVCHECK: store i64 %[[R]], ptr {{.*}}
 export void test_bab_uint64_3arg(uint off, uint64_t v, out uint64_t orig) {

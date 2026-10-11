@@ -2142,7 +2142,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVUntypedPointerType(
   [[maybe_unused]] const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-         !ST.isShader() && "Untyped pointers are not available");
+         "Untyped pointers are not available");
   unsigned AddressSpace = storageClassToAddressSpace(SC);
   // Use STK_UntypedPointer handle keyed by address space only.
   auto Handle = SPIRV::irhandle_untyped_pointer(AddressSpace);
