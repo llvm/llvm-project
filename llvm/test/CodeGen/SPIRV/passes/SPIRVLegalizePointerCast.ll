@@ -362,3 +362,23 @@ entry:
   store i16 %i16val, ptr addrspace(10) @outI16, align 2
   ret void
 }
+
+; A constant workgroup array index can become an i8 GEP followed by a ptrcast.
+; Rebuild its byte offset as logical indices instead of byte-wise accesses.
+
+@WorkgroupValues = internal addrspace(3) global [257 x i32] zeroinitializer,
+  align 4
+
+define void @workgroupStore() {
+; CHECK-LABEL: define void @workgroupStore(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: %[[PTR:.*]] = call ptr addrspace(3) {{.*}}@llvm.spv.gep.p3.p3(
+; CHECK-SAME: i1 true, ptr addrspace(3) @WorkgroupValues, i64 0, i64 256)
+; CHECK: call void @llvm.spv.assign.ptr.type.p3(
+; CHECK-SAME: ptr addrspace(3) %[[PTR]], metadata i32 poison, i32 3)
+; CHECK: store i32 42, ptr addrspace(3) %[[PTR]], align 4
+entry:
+  store i32 42, ptr addrspace(3) getelementptr inbounds
+    (i8, ptr addrspace(3) @WorkgroupValues, i64 1024), align 4
+  ret void
+}
