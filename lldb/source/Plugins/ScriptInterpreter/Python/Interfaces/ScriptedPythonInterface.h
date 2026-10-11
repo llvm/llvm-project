@@ -416,6 +416,43 @@ public:
 
     m_object_instance_sp = StructuredData::GenericSP(
         new StructuredPythonObject(std::move(result)));
+
+    // An object handed over by the script wasn't built from the metadata,
+    // which may even describe its creator, so describe it from the object
+    // itself and don't attribute the metadata's arguments to it.
+    std::string qualified_class_name = script_obj ? "" : class_name.str();
+    FileSpec source_path =
+        script_obj ? FileSpec() : m_scripted_metadata->GetSourcePath();
+    PythonString obj_module_name =
+        obj_class.GetAttributeValue("__module__").AsType<PythonString>();
+    if (obj_module_name.IsValid()) {
+      if (qualified_class_name.empty())
+        qualified_class_name =
+            llvm::formatv("{0}.{1}", obj_module_name.GetString(),
+                          obj_class_name.GetString())
+                .str();
+      if (!source_path) {
+        source_path =
+            m_interpreter.GetImportedModulePath(obj_module_name.GetString());
+        // LoadScriptingModule only records the modules it imports itself, so
+        // their submodules and modules imported any other way need their
+        // __file__.
+        if (!source_path) {
+          if (llvm::Expected<FileSpec> path_or_err = GetScriptedModulePath())
+            source_path = *path_or_err;
+          else
+            LLDB_LOG_ERROR(GetLog(LLDBLog::Script), path_or_err.takeError(),
+                           "failed to find the file defining {1}: {0}",
+                           qualified_class_name);
+        }
+      }
+    }
+    if (!script_obj)
+      m_scripted_metadata->SetSourcePath(source_path);
+    RegisterInstance(m_interpreter.GetScriptedInstanceRegistry(),
+                     qualified_class_name, std::move(source_path),
+                     script_obj ? nullptr : m_scripted_metadata->GetArgsSP());
+
     return m_object_instance_sp;
   }
 
