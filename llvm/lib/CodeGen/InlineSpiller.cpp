@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -29,12 +30,15 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -75,7 +79,21 @@ RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::init(false), cl::Hidden,
                        cl::desc("Restrict remat for statepoint operands"));
 
+static cl::opt<bool> EnableSpillJoinCleanup(
+    "enable-spill-join-cleanup", cl::Hidden, cl::init(true),
+    cl::desc("Eliminate partially redundant stores in the inline spiller"));
+
+STATISTIC(NumJoinSpillsRemoved, "Number of spill stores removed from joins");
+STATISTIC(NumJoinReloadsRemoved, "Number of dead join spill reloads removed");
+
 namespace {
+struct SpillAccess {
+  Register Reg;
+  int FI;
+  TypeSize Bytes = TypeSize::getZero();
+  unsigned DataOp;
+};
+
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
   LiveIntervals &LIS;
@@ -87,6 +105,8 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
   LiveRegMatrix *Matrix;
+  LiveDebugVariables *DebugVars;
+  SmallSetVector<Register, 8> ShrunkRegs;
 
   InsertPointAnalysis IPA;
 
@@ -128,13 +148,25 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
                       SmallVectorImpl<MachineInstr *> &SpillsToRm,
                       DenseMap<MachineBasicBlock *, Register> &SpillsToIns);
 
+  bool getSpillAccess(const MachineInstr &MI, bool IsLoad,
+                      SpillAccess &Access) const;
+  bool clobbersSpillInputs(const MachineInstr &MI,
+                           const MachineInstr &Store) const;
+  MachineInstr *findSpillReload(MachineBasicBlock &Pred,
+                                const MachineInstr &Store,
+                                const SpillAccess &Access) const;
+  bool canSpillBeforeTerminator(MachineBasicBlock &Pred,
+                                const MachineInstr &Store, Register Reg) const;
+  void eliminateJoinSpills(LiveRangeEdit &Edit);
+
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
                    MachineFunction &mf, VirtRegMap &vrm, LiveRegMatrix *matrix)
       : MF(mf), LIS(Analyses.LIS), LSS(Analyses.LSS), MDT(Analyses.MDT),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()), MBFI(Analyses.MBFI),
-        Matrix(matrix), IPA(LIS, mf.getNumBlockIDs()) {}
+        Matrix(matrix), DebugVars(Analyses.DebugVars),
+        IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             Register Original);
@@ -1793,6 +1825,236 @@ void HoistSpillHelper::runHoistSpills(
   }
 }
 
+bool HoistSpillHelper::getSpillAccess(const MachineInstr &MI, bool IsLoad,
+                                      SpillAccess &Access) const {
+  if (MI.isBundled() || MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy) || MI.hasOrderedMemoryRef() ||
+      MI.memoperands().size() != 1 || MI.mayLoad() != IsLoad ||
+      MI.mayStore() == IsLoad)
+    return false;
+
+  // The target queries certify a pure stack access, even when a spill pseudo
+  // carries a conservative unmodeled-side-effects flag.
+  Access.Bytes = TypeSize::getZero();
+  Access.Reg = IsLoad ? TII.isLoadFromStackSlot(MI, Access.FI, Access.Bytes)
+                      : TII.isStoreToStackSlot(MI, Access.FI, Access.Bytes);
+  if (!Access.Reg || !Access.Reg.isVirtual() || !Access.Bytes ||
+      Access.Bytes.isScalable() || Access.FI < 0 ||
+      !MF.getFrameInfo().isSpillSlotObjectIndex(Access.FI))
+    return false;
+
+  const MachineMemOperand &MMO = **MI.memoperands_begin();
+  const auto *PSV =
+      dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO.getPseudoValue());
+  if (!PSV || PSV->getFrameIndex() != Access.FI || MMO.getOffset() != 0 ||
+      MMO.getSize() != LocationSize::precise(Access.Bytes))
+    return false;
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Access.Reg);
+  if (TRI.getRegSizeInBits(*RC) != Access.Bytes * 8)
+    return false;
+
+  // Require a complete value and no hidden definitions. Comparing the other
+  // operands below also covers target addressing and predication operands.
+  bool FoundData = false;
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isRegMask())
+      return false;
+    if (!MO.isReg())
+      continue;
+    if (MO.getSubReg() || MO.isUndef() || MO.isInternalRead())
+      return false;
+    if (MO.getReg() == Access.Reg) {
+      if (FoundData || MO.isDef() != IsLoad || MO.isImplicit())
+        return false;
+      FoundData = true;
+      Access.DataOp = I;
+    } else if (MO.isDef() || (MO.getReg() && (!MO.getReg().isPhysical() ||
+                                              !MRI.isReserved(MO.getReg())))) {
+      return false;
+    }
+  }
+  return FoundData;
+}
+
+bool HoistSpillHelper::clobbersSpillInputs(const MachineInstr &MI,
+                                           const MachineInstr &Store) const {
+  for (const MachineOperand &MO : Store.operands()) {
+    if (MO.isReg() && MO.getReg() && MI.modifiesRegister(MO.getReg(), &TRI))
+      return true;
+  }
+  return false;
+}
+
+MachineInstr *
+HoistSpillHelper::findSpillReload(MachineBasicBlock &Pred,
+                                  const MachineInstr &Store,
+                                  const SpillAccess &Access) const {
+  Register Reg = Access.Reg;
+  unsigned Count = 0;
+  for (MachineInstr &MI : llvm::reverse(Pred)) {
+    if (++Count > 64 || MI.isBundled() || MI.isCall() || MI.isInlineAsm() ||
+        MI.getFlag(MachineInstr::FrameSetup) ||
+        MI.getFlag(MachineInstr::FrameDestroy) || MI.mayStore() ||
+        MI.hasOrderedMemoryRef())
+      return nullptr;
+
+    if (MI.isFullCopy() && MI.getNumOperands() == 2 &&
+        MI.getOperand(0).getReg() == Reg &&
+        MI.getOperand(1).getReg().isVirtual() && !MI.getOperand(1).isUndef() &&
+        TRI.getRegSizeInBits(*MRI.getRegClass(MI.getOperand(1).getReg())) ==
+            Access.Bytes * 8) {
+      Reg = MI.getOperand(1).getReg();
+      continue;
+    }
+
+    SpillAccess Load;
+    bool IsReload = getSpillAccess(MI, true, Load);
+    if (MI.hasUnmodeledSideEffects() && !IsReload)
+      return nullptr;
+    if (IsReload && Load.Reg == Reg && Load.FI == Access.FI &&
+        Load.Bytes == Access.Bytes &&
+        MI.getNumOperands() == Store.getNumOperands()) {
+      SmallVector<const MachineOperand *, 8> LoadOps, StoreOps;
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        if (I != Load.DataOp)
+          LoadOps.push_back(&MI.getOperand(I));
+        if (I != Access.DataOp)
+          StoreOps.push_back(&Store.getOperand(I));
+      }
+      if (llvm::all_of(llvm::zip(LoadOps, StoreOps), [](const auto &Ops) {
+            return std::get<0>(Ops)->isIdenticalTo(*std::get<1>(Ops));
+          }))
+        return &MI;
+    }
+    if (MI.modifiesRegister(Reg, &TRI) || clobbersSpillInputs(MI, Store))
+      return nullptr;
+  }
+  return nullptr;
+}
+
+bool HoistSpillHelper::canSpillBeforeTerminator(MachineBasicBlock &Pred,
+                                                const MachineInstr &Store,
+                                                Register Reg) const {
+  auto Insert = Pred.getFirstTerminator();
+  SlotIndex End = LIS.getMBBEndIdx(&Pred);
+  SlotIndex Idx = Insert == Pred.end() ? End.getPrevSlot()
+                                       : LIS.getInstructionIndex(*Insert);
+  const LiveInterval &LI = LIS.getInterval(Reg);
+  if (!LI.liveAt(Idx) || LI.getVNInfoAt(Idx) != LI.getVNInfoBefore(End))
+    return false;
+  if (LI.hasSubRanges()) {
+    LaneBitmask Covered;
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      if (!SR.liveAt(Idx) || SR.getVNInfoAt(Idx) != SR.getVNInfoBefore(End))
+        return false;
+      Covered |= SR.LaneMask;
+    }
+    if (Covered != MRI.getMaxLaneMaskForVReg(Reg))
+      return false;
+  }
+  for (const MachineInstr &MI : make_range(Insert, Pred.end()))
+    if (!MI.isBranch() || MI.isBundled() || MI.hasUnmodeledSideEffects() ||
+        MI.mayLoadOrStore() || clobbersSpillInputs(MI, Store))
+      return false;
+  return true;
+}
+
+/// Distribute a join spill onto the incoming path that still needs it. The
+/// other path already has the value in the slot, so its reload may become dead.
+void HoistSpillHelper::eliminateJoinSpills(LiveRangeEdit &Edit) {
+  // Allocators using this cleanup must maintain the collected debug locations.
+  if (!DebugVars || MF.exposesReturnsTwice())
+    return;
+
+  // The dominance-based hoisting phase is finished. Do not retain its pointers
+  // while dead-definition elimination deletes or rewrites instructions.
+  MergeableSpills.clear();
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.pred_size() != 2 || MBB.isEHPad() || MBB.isEHScopeReturnBlock() ||
+        llvm::any_of(MBB.predecessors(), [&](const auto *Pred) {
+          return Pred == &MBB || Pred->succ_size() != 1 || Pred->isEHPad();
+        }))
+      continue;
+
+    for (unsigned Count = 0; Count != 16 && !MBB.empty(); ++Count) {
+      MachineInstr &Store = MBB.front();
+      SpillAccess Access;
+      if (!getSpillAccess(Store, false, Access) ||
+          !LSS.hasInterval(Access.FI) || !LIS.hasInterval(Access.Reg) ||
+          (!VRM.hasPhys(Access.Reg) &&
+           !PendingReassignments.contains(Access.Reg)))
+        break;
+      SlotIndex StoreIdx = LIS.getInstructionIndex(Store);
+      const LiveInterval &LI = LIS.getInterval(Access.Reg);
+      VNInfo *VNI = LI.getVNInfoAt(StoreIdx);
+      if (!VNI || !VNI->isPHIDef() || VNI->def != LIS.getMBBStartIdx(&MBB))
+        break;
+
+      SmallVector<SlotIndex, 2> Reloads;
+      MachineBasicBlock *NeedsStore = nullptr;
+      bool Legal = true;
+      for (MachineBasicBlock *Pred : MBB.predecessors()) {
+        if (!canSpillBeforeTerminator(*Pred, Store, Access.Reg)) {
+          Legal = false;
+          break;
+        }
+        if (MachineInstr *Load = findSpillReload(*Pred, Store, Access))
+          Reloads.push_back(LIS.getInstructionIndex(*Load));
+        else
+          NeedsStore = Pred;
+      }
+      if (!Legal || Reloads.empty())
+        break;
+
+      LiveInterval &StackLI = LSS.getInterval(Access.FI);
+      VNInfo *StackVNI = StackLI.getValNumInfo(0);
+      // Preserve the slot through the join after removing its store, including
+      // gaps where a predecessor's reload used to end the slot's lifetime.
+      StackLI.addSegment(LiveRange::Segment(LIS.getMBBStartIdx(&MBB),
+                                            StoreIdx.getRegSlot(), StackVNI));
+      for (SlotIndex Idx : Reloads)
+        StackLI.addSegment(LiveRange::Segment(
+            Idx.getRegSlot(),
+            LIS.getMBBEndIdx(LIS.getInstructionFromIndex(Idx)->getParent()),
+            StackVNI));
+      if (NeedsStore) {
+        MachineInstr *Clone = MF.CloneMachineInstr(&Store);
+        Clone->clearKillInfo();
+        NeedsStore->insert(NeedsStore->getFirstTerminator(), Clone);
+        SlotIndex NewIdx = LIS.InsertMachineInstrInMaps(*Clone);
+        // The store starts the slot's lifetime on this predecessor. Its old
+        // live range need not cover the incoming value of the register.
+        StackLI.addSegment(LiveRange::Segment(
+            NewIdx.getRegSlot(), LIS.getMBBEndIdx(NeedsStore), StackVNI));
+      }
+      LLVM_DEBUG(dbgs() << "Removing join spill: " << Store);
+      Store.setDesc(TII.get(TargetOpcode::KILL));
+      SmallVector<MachineInstr *, 2> Dead{&Store};
+      Edit.eliminateDeadDefs(Dead, {});
+      ++NumJoinSpillsRemoved;
+
+      for (SlotIndex Idx : Reloads) {
+        MachineInstr *Load = LIS.getInstructionFromIndex(Idx);
+        if (!Load) {
+          ++NumJoinReloadsRemoved;
+          continue;
+        }
+        if (!Load->allDefsAreDead())
+          continue;
+        // Target-certified pure reload pseudos can carry conservative side
+        // effect flags. KILL lets LiveRangeEdit remove their dead definitions.
+        LLVM_DEBUG(dbgs() << "Removing join reload: " << *Load);
+        Load->setDesc(TII.get(TargetOpcode::KILL));
+        Dead.push_back(Load);
+        Edit.eliminateDeadDefs(Dead, {});
+        ++NumJoinReloadsRemoved;
+      }
+    }
+  }
+}
+
 /// For spills with equal values, remove redundant spills and hoist those left
 /// to less hot spots.
 ///
@@ -1887,6 +2149,9 @@ void HoistSpillHelper::hoistAllSpills() {
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
 
+  if (EnableSpillJoinCleanup)
+    eliminateJoinSpills(Edit);
+
   // Flush vregs that were unassigned from the matrix during shrinking but
   // were not split (so LRE_DidCloneVirtReg never re-assigned them).
   for (auto &[VReg, PhysReg] : PendingReassignments) {
@@ -1895,6 +2160,10 @@ void HoistSpillHelper::hoistAllSpills() {
     Matrix->assign(LIS.getInterval(VReg), PhysReg);
   }
   PendingReassignments.clear();
+
+  for (Register Reg : ShrunkRegs)
+    DebugVars->shrinkRegister(Reg);
+  ShrunkRegs.clear();
 }
 
 /// Called when a virtual register's live interval is about to be shrunk.
@@ -1902,6 +2171,9 @@ void HoistSpillHelper::hoistAllSpills() {
 /// later LRE_DidCloneVirtReg or by hoistAllSpills' flush, and stash the
 /// physreg in PendingReassignments since the unassign clears VRM.
 void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
+  if (EnableSpillJoinCleanup && DebugVars &&
+      (VRM.hasPhys(VirtReg) || PendingReassignments.contains(VirtReg)))
+    ShrunkRegs.insert(VirtReg);
   if (!Matrix || !VRM.hasPhys(VirtReg) || !LIS.hasInterval(VirtReg))
     return;
 
@@ -1915,6 +2187,9 @@ void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
 /// Forcibly remove the register from LiveRegMatrix before it's deleted,
 /// preventing dangling pointers.
 bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
+  if (EnableSpillJoinCleanup && DebugVars &&
+      (VRM.hasPhys(VirtReg) || PendingReassignments.contains(VirtReg)))
+    ShrunkRegs.insert(VirtReg);
   PendingReassignments.erase(VirtReg);
   if (Matrix && VRM.hasPhys(VirtReg)) {
     const LiveInterval &LI = LIS.getInterval(VirtReg);
@@ -1926,6 +2201,8 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
+  if (EnableSpillJoinCleanup && DebugVars)
+    DebugVars->splitRegister(Old, {New}, LIS);
   // New is freshly created by LiveRangeEdit::eliminateDeadDefs and its interval
   // is guaranteed to exist on every path below.
   assert(LIS.hasInterval(New) && "Cloned vreg without live interval");
