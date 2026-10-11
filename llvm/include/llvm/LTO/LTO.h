@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
@@ -110,6 +111,13 @@ LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
 class LTO;
 struct SymbolResolution;
 
+struct SectionResolution {
+  bool Keep = false;
+};
+
+using SectionResolverFn =
+    llvm::function_ref<SectionResolution(StringRef SectionName)>;
+
 /// An input file. This is a symbol table wrapper that only exposes the
 /// information that an LTO client should need in order to do symbol resolution.
 class InputFile {
@@ -159,22 +167,21 @@ public:
   public:
     Symbol(const irsymtab::Symbol &S) : irsymtab::Symbol(S) {}
 
-    using irsymtab::Symbol::isUndefined;
-    using irsymtab::Symbol::isCommon;
-    using irsymtab::Symbol::isWeak;
-    using irsymtab::Symbol::isIndirect;
-    using irsymtab::Symbol::getName;
-    using irsymtab::Symbol::getIRName;
-    using irsymtab::Symbol::getVisibility;
     using irsymtab::Symbol::canBeOmittedFromSymbolTable;
-    using irsymtab::Symbol::isTLS;
-    using irsymtab::Symbol::getComdatIndex;
-    using irsymtab::Symbol::getCommonSize;
-    using irsymtab::Symbol::getCommonAlignment;
     using irsymtab::Symbol::getCOFFWeakExternalFallback;
-    using irsymtab::Symbol::getSectionName;
+    using irsymtab::Symbol::getComdatIndex;
+    using irsymtab::Symbol::getCommonAlignment;
+    using irsymtab::Symbol::getCommonSize;
+    using irsymtab::Symbol::getIRName;
+    using irsymtab::Symbol::getName;
+    using irsymtab::Symbol::getVisibility;
+    using irsymtab::Symbol::isCommon;
     using irsymtab::Symbol::isExecutable;
+    using irsymtab::Symbol::isIndirect;
+    using irsymtab::Symbol::isTLS;
+    using irsymtab::Symbol::isUndefined;
     using irsymtab::Symbol::isUsed;
+    using irsymtab::Symbol::isWeak;
 
     // Returns whether this symbol is a library call that LTO code generation
     // may emit references to. Such symbols must be considered external, as
@@ -417,7 +424,8 @@ public:
   /// Add an input file to the LTO link, using the provided symbol resolutions.
   /// The symbol resolutions must appear in the enumeration order given by
   /// InputFile::symbols().
-  Error add(std::unique_ptr<InputFile> Obj, ArrayRef<SymbolResolution> Res);
+  Error add(std::unique_ptr<InputFile> Obj, ArrayRef<SymbolResolution> Res,
+            SectionResolverFn SectionResolver = {});
 
   /// Set the list of functions implemented in bitcode that were not extracted
   /// from an archive. Such functions may not be referenced, as they have
@@ -621,18 +629,20 @@ private:
   // to the resolutions for the remaining modules in the InputFile.
   Expected<ArrayRef<SymbolResolution>>
   addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
-            unsigned ModI, ArrayRef<SymbolResolution> Res);
+            unsigned ModI, ArrayRef<SymbolResolution> Res,
+            SectionResolverFn SectionResolver);
 
   Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
   addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                 BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                ArrayRef<SymbolResolution> Res);
+                ArrayRef<SymbolResolution> Res,
+                SectionResolverFn SectionResolver);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
   Expected<ArrayRef<SymbolResolution>>
   addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-             ArrayRef<SymbolResolution> Res);
+             ArrayRef<SymbolResolution> Res, SectionResolverFn SectionResolver);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
