@@ -91,7 +91,7 @@ public:
         }
       }();
       if (entry_.compare_exchange_weak(
-              expected_entry, new_entry, std::memory_order_relaxed, std::memory_order_relaxed)) {
+              expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
         break;
       } else {
         node->__next_ = nullptr;
@@ -104,7 +104,7 @@ inline void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexc
   if (other.entry_.load(std::memory_order_relaxed).empty()) {
     return;
   }
-  auto entry = other.entry_.exchange(rcu_atomic_list_view_entry{nullptr, nullptr}, std::memory_order_relaxed);
+  auto entry = other.entry_.exchange(rcu_atomic_list_view_entry{nullptr, nullptr}, std::memory_order_acquire);
   rcu_singly_list_view tmp;
   tmp.head_ = entry.head_;
   tmp.tail_ = entry.tail_;
