@@ -8,6 +8,7 @@
 typedef float matrix3x3 __attribute__((matrix_type(3, 3)));
 typedef float matrix3x2 __attribute__((matrix_type(3, 2)));
 typedef float matrix2x3 __attribute__((matrix_type(2, 3)));
+typedef int matrixi3x3 __attribute__((matrix_type(3, 3)));
 
 matrix3x3 a;
 
@@ -213,3 +214,59 @@ void matrix_subscript_expr_non_const_indices() {
 
 // LLVM: %[[ELEM:.*]] = extractelement <9 x float> %[[TMP_MATRIX]], i64 %[[FLAT_IDX]]
 // LLVM: store float %[[ELEM]], ptr %[[B_ADDR]], align 4
+
+void fp_matrix_scalar_div() {
+  matrix3x3 matrix;
+  float scalar = 3.0f;
+  matrix3x3 result = matrix / scalar;
+}
+
+// CIR: %[[MATRIX_ADDR:.*]] = cir.alloca "matrix" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+// CIR: %[[SCALAR_ADDR:.*]] = cir.alloca "scalar" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[RESULT_ADDR:.*]] = cir.alloca "result" {{.*}} init : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+// CIR: %[[CONST_3:.*]] = cir.const #cir.fp<3.000000e+00> : !cir.float
+// CIR: cir.store {{.*}} %[[CONST_3]], %[[SCALAR_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+// CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>, !cir.matrix<3 x 3 x !cir.float>
+// CIR: %[[TMP_SCALAR:.*]] = cir.load {{.*}} %[[SCALAR_ADDR]] : !cir.ptr<!cir.float>, !cir.float
+// CIR: %[[SPLAT_SCALAR:.*]] = cir.vec.splat %[[TMP_SCALAR]] : !cir.float, !cir.matrix<3 x 3 x !cir.float>
+// CIR: %[[RESULT:.*]] = cir.fdiv %[[TMP_MATRIX]], %[[SPLAT_SCALAR]] : !cir.matrix<3 x 3 x !cir.float>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[RESULT_ADDR]] : !cir.matrix<3 x 3 x !cir.float>, !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+
+// LLVM: %[[MATRIX_ADDR:.*]] = alloca [9 x float], align 4
+// LLVM: %[[SCALAR_ADDR:.*]] = alloca float, align 4
+// LLVM: %[[RESULT_ADDR:.*]] = alloca [9 x float], align 4
+// LLVM: store float 3.000000e+00, ptr %[[SCALAR_ADDR]], align 4
+// LLVM: %[[TMP_MATRIX:.*]] = load <9 x float>, ptr %[[MATRIX_ADDR]], align 4
+// LLVM: %[[TMP_SCALAR:.*]] = load float, ptr %[[SCALAR_ADDR]], align 4
+// LLVM: %[[SPLAT_SCALAR_INSERT:.*]] = insertelement <9 x float> poison, float %[[TMP_SCALAR]], i64 0
+// LLVM: %[[SPLAT_SCALAR:.*]] = shufflevector <9 x float> %[[SPLAT_SCALAR_INSERT]], <9 x float> poison, <9 x i32> zeroinitializer
+// LLVM: %[[RESULT:.*]] = fdiv <9 x float> %[[TMP_MATRIX]], %[[SPLAT_SCALAR]]
+// LLVM: store <9 x float> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
+
+void int_matrix_scalar_div() {
+  matrixi3x3 matrix;
+  int scalar = 3;
+  matrixi3x3 result = matrix / scalar;
+}
+
+// CIR: %[[MATRIX_ADDR:.*]] = cir.alloca "matrix" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !s32i>>
+// CIR: %[[SCALAR_ADDR:.*]] = cir.alloca "scalar" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[RESULT_ADDR:.*]] = cir.alloca "result" {{.*}} init : !cir.ptr<!cir.matrix<3 x 3 x !s32i>>
+// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: cir.store {{.*}} %[[CONST_3]], %[[SCALAR_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[TMP_MATRIX:.*]] = cir.load {{.*}} %[[MATRIX_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !s32i>>, !cir.matrix<3 x 3 x !s32i>
+// CIR: %[[TMP_SCALAR:.*]] = cir.load {{.*}} %[[SCALAR_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[SPLAT_SCALAR:.*]] = cir.vec.splat %[[TMP_SCALAR]] : !s32i, !cir.matrix<3 x 3 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.div %[[TMP_MATRIX]], %[[SPLAT_SCALAR]] : !cir.matrix<3 x 3 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[RESULT_ADDR]] : !cir.matrix<3 x 3 x !s32i>, !cir.ptr<!cir.matrix<3 x 3 x !s32i>>
+
+// LLVM: %[[MATRIX_ADDR:.*]] = alloca [9 x i32], align 4
+// LLVM: %[[SCALAR_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[RESULT_ADDR:.*]] = alloca [9 x i32], align 4
+// LLVM: store i32 3, ptr %[[SCALAR_ADDR]], align 4
+// LLVM: %[[TMP_MATRIX:.*]] = load <9 x i32>, ptr %[[MATRIX_ADDR]], align 4
+// LLVM: %[[TMP_SCALAR:.*]] = load i32, ptr %[[SCALAR_ADDR]], align 4
+// LLVM: %[[SPLAT_SCALAR_INSERT:.*]] = insertelement <9 x i32> poison, i32 %[[TMP_SCALAR]], i64 0
+// LLVM: %[[SPLAT_SCALAR:.*]] = shufflevector <9 x i32> %[[SPLAT_SCALAR_INSERT]], <9 x i32> poison, <9 x i32> zeroinitializer
+// LLVM: %[[RESULT:.*]] = sdiv <9 x i32> %[[TMP_MATRIX]], %[[SPLAT_SCALAR]]
+// LLVM: store <9 x i32> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
