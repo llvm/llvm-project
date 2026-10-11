@@ -2062,18 +2062,43 @@ public:
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: size expression and attribute locations (or keyword if we
-// ever fully support altivec syntax).
+// FIXME: keyword location if we ever fully support altivec syntax.
 struct VectorTypeLocInfo {
   SourceLocation NameLoc;
+  SourceLocation AttrLoc;
+  Expr *SizeExpr;
 };
 
+// FIXME: Make VectorTypeLoc a common base for fixed-size and dependent vector
+// type locations, similar to MatrixTypeLoc.
 class VectorTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, VectorTypeLoc,
                                              VectorType, VectorTypeLocInfo> {
 public:
+  /// The location used for the vector type's local source range, e.g.
+  ///    int __attribute__((vector_size(16)))
+  ///    ^~~
+  ///    int __attribute__((ext_vector_type(4)))
+  ///    ^~~
   SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
-
   void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  /// The location of the attribute name, i.e.
+  ///    int __attribute__((vector_size(16)))
+  ///                       ^~~~~~~~~~~
+  ///    int __attribute__((ext_vector_type(4)))
+  ///                       ^~~~~~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrLoc = Loc; }
+
+  /// The attribute's size operand, if it has one.
+  ///    int __attribute__((vector_size(16)))
+  ///                                   ^~
+  ///    int __attribute__((ext_vector_type(4)))
+  ///                                       ^
+  ///
+  /// The size is in bytes for vector_size and in elements for ext_vector_type.
+  Expr *getSizeExpr() const { return getLocalData()->SizeExpr; }
+  void setSizeExpr(Expr *E) { getLocalData()->SizeExpr = E; }
 
   SourceRange getLocalSourceRange() const {
     return SourceRange(getNameLoc(), getNameLoc());
@@ -2081,6 +2106,8 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
+    setAttrNameLoc(Loc);
+    setSizeExpr(nullptr);
   }
 
   TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
@@ -2088,15 +2115,27 @@ public:
   QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
 };
 
-// FIXME: size expression and attribute locations (or keyword if we
-// ever fully support altivec syntax).
 class DependentVectorTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, DependentVectorTypeLoc,
                              DependentVectorType, VectorTypeLocInfo> {
 public:
+  /// The location used for the vector type's local source range, e.g.
+  ///    T __attribute__((vector_size(N)))
+  ///    ^
   SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
-
   void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  /// The location of the attribute name, i.e.
+  ///    T __attribute__((vector_size(N)))
+  ///                     ^~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrLoc = Loc; }
+
+  /// The attribute's size operand in bytes, if it has one.
+  ///    T __attribute__((vector_size(N)))
+  ///                                 ^
+  Expr *getSizeExpr() const { return getLocalData()->SizeExpr; }
+  void setSizeExpr(Expr *E) { getLocalData()->SizeExpr = E; }
 
   SourceRange getLocalSourceRange() const {
     return SourceRange(getNameLoc(), getNameLoc());
@@ -2104,6 +2143,8 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
+    setAttrNameLoc(Loc);
+    setSizeExpr(nullptr);
   }
 
   TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
@@ -2111,20 +2152,33 @@ public:
   QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
 };
 
-// FIXME: size expression and attribute locations.
 class ExtVectorTypeLoc
     : public InheritingConcreteTypeLoc<VectorTypeLoc, ExtVectorTypeLoc,
                                        ExtVectorType> {};
 
-// FIXME: attribute locations.
 // For some reason, this isn't a subtype of VectorType.
 class DependentSizedExtVectorTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, DependentSizedExtVectorTypeLoc,
                              DependentSizedExtVectorType, VectorTypeLocInfo> {
 public:
+  /// The location used for the vector type's local source range, e.g.
+  ///    T __attribute__((ext_vector_type(N)))
+  ///    ^
   SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
 
   void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  /// The location of the attribute name, i.e.
+  ///    T __attribute__((ext_vector_type(N)))
+  ///                     ^~~~~~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrLoc = Loc; }
+
+  /// The attribute's size operand in elements, if it has one.
+  ///    T __attribute__((ext_vector_type(N)))
+  ///                                     ^
+  Expr *getSizeExpr() const { return getLocalData()->SizeExpr; }
+  void setSizeExpr(Expr *E) { getLocalData()->SizeExpr = E; }
 
   SourceRange getLocalSourceRange() const {
     return SourceRange(getNameLoc(), getNameLoc());
@@ -2132,6 +2186,8 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setNameLoc(Loc);
+    setAttrNameLoc(Loc);
+    setSizeExpr(nullptr);
   }
 
   TypeLoc getElementLoc() const { return getInnerTypeLoc(); }

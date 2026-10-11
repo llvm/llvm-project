@@ -6215,14 +6215,17 @@ QualType TreeTransform<Derived>::TransformDependentVectorType(
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult Size = getDerived().TransformExpr(T->getSizeExpr());
+  Expr *OrigSize = TL.getSizeExpr();
+  if (!OrigSize)
+    OrigSize = T->getSizeExpr();
+  ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
     return QualType();
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
-      Size.get() != T->getSizeExpr()) {
+      Size.get() != OrigSize) {
     Result = getDerived().RebuildDependentVectorType(
         ElementType, Size.get(), T->getAttributeLoc(), T->getVectorKind());
     if (Result.isNull())
@@ -6234,9 +6237,13 @@ QualType TreeTransform<Derived>::TransformDependentVectorType(
     DependentVectorTypeLoc NewTL =
         TLB.push<DependentVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   } else {
     VectorTypeLoc NewTL = TLB.push<VectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   }
 
   return Result;
@@ -6248,7 +6255,6 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
                                       DependentSizedExtVectorTypeLoc TL) {
   const DependentSizedExtVectorType *T = TL.getTypePtr();
 
-  // FIXME: ext vector locs should be nested
   QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
@@ -6257,18 +6263,19 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult Size = getDerived().TransformExpr(T->getSizeExpr());
+  Expr *OrigSize = TL.getSizeExpr();
+  if (!OrigSize)
+    OrigSize = T->getSizeExpr();
+  ExprResult Size = getDerived().TransformExpr(OrigSize);
   Size = SemaRef.ActOnConstantExpression(Size);
   if (Size.isInvalid())
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      ElementType != T->getElementType() ||
-      Size.get() != T->getSizeExpr()) {
-    Result = getDerived().RebuildDependentSizedExtVectorType(ElementType,
-                                                             Size.get(),
-                                                         T->getAttributeLoc());
+  if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+      Size.get() != OrigSize) {
+    Result = getDerived().RebuildDependentSizedExtVectorType(
+        ElementType, Size.get(), T->getAttributeLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -6278,9 +6285,13 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
     DependentSizedExtVectorTypeLoc NewTL
       = TLB.push<DependentSizedExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   } else {
     ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
+    NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+    NewTL.setSizeExpr(Size.get());
   }
 
   return Result;
@@ -6430,6 +6441,8 @@ QualType TreeTransform<Derived>::TransformVectorType(TypeLocBuilder &TLB,
 
   VectorTypeLoc NewTL = TLB.push<VectorTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
+  NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+  NewTL.setSizeExpr(TL.getSizeExpr());
 
   return Result;
 }
@@ -6445,15 +6458,16 @@ QualType TreeTransform<Derived>::TransformExtVectorType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() ||
       ElementType != T->getElementType()) {
-    Result = getDerived().RebuildExtVectorType(ElementType,
-                                               T->getNumElements(),
-                                               /*FIXME*/ SourceLocation());
+    Result = getDerived().RebuildExtVectorType(ElementType, T->getNumElements(),
+                                               TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
 
   ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
+  NewTL.setAttrNameLoc(TL.getAttrNameLoc());
+  NewTL.setSizeExpr(TL.getSizeExpr());
 
   return Result;
 }

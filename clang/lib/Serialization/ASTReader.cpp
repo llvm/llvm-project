@@ -7666,19 +7666,25 @@ void TypeLocReader::VisitDependentAddressSpaceTypeLoc(
 void TypeLocReader::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitVectorTypeLoc(VectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitDependentVectorTypeLoc(
     DependentVectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  VisitVectorTypeLoc(TL);
 }
 
 void TypeLocReader::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {
