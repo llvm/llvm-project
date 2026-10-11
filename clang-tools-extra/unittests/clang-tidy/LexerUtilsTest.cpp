@@ -48,6 +48,30 @@ static bool isRawIdentifierNamed(const Token &Tok, StringRef Name) {
 
 namespace {
 
+TEST(LexerUtilsTest, GetRawTokens) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  int alpha = 0;
+  int beta = 0;
+  bool value = $range[[alpha /* ignored */ && beta]];
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "range");
+  const std::vector<Token> Tokens =
+      utils::lexer::getRawTokens(Range, SM, LangOpts);
+  ASSERT_EQ(3u, Tokens.size());
+  EXPECT_EQ("alpha", utils::lexer::getTokenName(Tokens[0]));
+  EXPECT_TRUE(Tokens[1].is(tok::ampamp));
+  EXPECT_EQ("beta", utils::lexer::getTokenName(Tokens[2]));
+}
+
 TEST(LexerUtilsTest, GetCommentsInRangeAdjacentComments) {
   llvm::Annotations Code(R"cpp(
 void f() {
