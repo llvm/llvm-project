@@ -3826,12 +3826,16 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
-          SynthesizedProperty = PD;
           SourceLocation Loc = PD->getLocation();
           PUnit = getOrCreateFile(Loc);
           PLine = getLineNumber(Loc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
+          bool GetterIsStub = !Getter || Getter->isSynthesizedAccessorStub();
+          bool SetterIsStub = PD->isReadOnly() || !Setter ||
+                              Setter->isSynthesizedAccessorStub();
+          if (GetterIsStub && SetterIsStub)
+            SynthesizedProperty = PD;
           PropertyNode = DBuilder.createObjCProperty(
               PD->getName(), PUnit, PLine,
               hasDefaultGetterName(PD, Getter)
