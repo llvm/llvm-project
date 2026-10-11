@@ -21,6 +21,8 @@ namespace orc_rt {
 
 using SPSSymbolLookupSet = SPSSequence<SPSTuple<SPSString, bool>>;
 
+using SPSSymbolLookupResult = SPSSequence<SPSOptional<SPSExecutorAddr>>;
+
 /// SPS serialization for SymbolLookupFlags as a bool.
 ///
 /// RequiredSymbol serializes as true, WeaklyReferencedSymbol as false. This

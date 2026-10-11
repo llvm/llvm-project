@@ -60,14 +60,13 @@ TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
 }
 
 TEST(SPSSymbolLookupSetTest, SymbolLookupResultSerialization) {
-  using SPSTag = SPSSequence<SPSOptional<SPSExecutorAddr>>;
   int X = 0;
   SymbolLookupResult R;
   R.push_back(&X);
   R.push_back(nullptr);
   R.push_back(std::nullopt);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupResult>(
+  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
       SymbolLookupResult(), seqEqual<SymbolLookupResult>);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupResult>(
+  blobSerializationRoundTrip<SPSSymbolLookupResult, SymbolLookupResult>(
       R, seqEqual<SymbolLookupResult>);
 }
