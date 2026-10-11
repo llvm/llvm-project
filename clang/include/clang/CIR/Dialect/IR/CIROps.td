@@ -4902,11 +4902,13 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
       points and introduce structured control flow that transfers
       execution to `final_suspend`.
 
-    - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
-      else. Corresponds to `co_await promise.final_suspend()`. Resuming
-      past this point is undefined behavior in valid programs, so its
-      `resume` edge is expected to be dead in practice, but is kept for
-      structural symmetry with the other two suspend regions.
+    - `final_suspend`: at most one `cir.await`, marked `final`. Nothing
+      else. Corresponds to `co_await promise.final_suspend()`. Suspending
+      at this final suspend point is valid: the coroutine stays suspended
+      until it is destroyed. Resuming past this point is undefined behavior
+      in valid programs, so its `resume` edge is expected to be dead in
+      practice, but is kept for structural symmetry with the other two
+      suspend regions.
 
     - `gro`: TODO.
 
@@ -4914,10 +4916,10 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
 
     - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
       Reached by an explicit `destroy()` call on a suspended handle, by
-      normal completion through `final_suspend`, or by an exception
-      escaping the coroutine. Falls through to `exit` except when reached
-      due to an escaping exception, where it continues propagating that
-      exception instead.
+      normal completion through `initial_suspend`, `final_suspend`, or
+      by an exception escaping the coroutine. Falls through to `exit`
+      except when reached due to an escaping exception, where it continues
+      propagating that exception instead.
 
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
@@ -5061,10 +5063,9 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
 ]> {
   let summary = "Coroutine return operation";
   let description = [{
-    The `cir.co_return` operation models a coroutine return point inside a
-    `cir.coro.body` region.
-    This operation is expected to appear only within a `cir.coro.body` region,
-    but it may be nested within other operations or regions inside that body.
+    The `cir.co_return` operation models a coroutine return point inside the
+    `body` region of a `cir.coroutine`. It may be nested within other
+    operations or regions inside that body.
   }];
 
   let assemblyFormat = [{

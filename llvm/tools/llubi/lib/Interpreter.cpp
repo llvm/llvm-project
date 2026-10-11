@@ -1894,7 +1894,7 @@ public:
         case BooleanKind::False:
           break;
         case BooleanKind::Poison:
-          return AnyValue::poison();
+          return AnyValue::getPoisonValue(Ctx, RetTy);
         }
       }
 
@@ -2143,6 +2143,7 @@ public:
       Value *CalledOperand = CB.getCalledOperand();
       if (isNoopInlineAsm(CalledOperand, CB.getType())) {
         CurrentFrame->ResolvedCallee = nullptr;
+        CurrentFrame->CalleeRetVal = AnyValue();
         returnFromCallee();
         return;
       }
