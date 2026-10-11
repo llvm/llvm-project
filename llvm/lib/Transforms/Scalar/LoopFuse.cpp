@@ -58,6 +58,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -99,6 +100,8 @@ STATISTIC(OnlySecondCandidateIsGuarded,
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
+STATISTIC(NumDepChecksReused,
+          "Dependence checks answered by an equivalent access pair");
 
 #ifndef NDEBUG
 static cl::opt<bool>
@@ -1181,6 +1184,78 @@ private:
     return true;
   }
 
+  /// Return true if \p I0 and \p I1 are stores of the same SSA value. Fusion
+  /// is then safe regardless of aliasing, because writing the same value twice
+  /// is idempotent.
+  static bool storeSameValue(const Instruction &I0, const Instruction &I1) {
+    auto *S0 = dyn_cast<StoreInst>(&I0);
+    auto *S1 = dyn_cast<StoreInst>(&I1);
+    return S0 && S1 && S0->getValueOperand() == S1->getValueOperand();
+  }
+
+  /// Loads and stores often address the same object through the same pointer
+  /// computation and differ only by a constant byte offset, e.g. after full
+  /// unrolling of an inner loop. Such accesses have the same "shape": the same
+  /// pointer up to a constant, the same accessed type, the same block, the same
+  /// kind (load or store) and the same AA metadata. Moving both accesses of a
+  /// pair by the same number of bytes does not change which iterations touch
+  /// the same memory, so two access pairs with the same pair of shapes and the
+  /// same offset difference have the same dependences, and the result of a
+  /// dependence check for one of them holds for the other.
+  struct AccessShape {
+    unsigned ID;
+    int64_t Offset;
+  };
+
+  /// Shapes found so far, bucketed by the properties that must match exactly.
+  /// Each bucket holds one representative pointer per shape.
+  using ShapeBucketKey =
+      std::tuple<const SCEV *, Type *, const BasicBlock *, unsigned, AAMDNodes>;
+  struct ShapeInfo {
+    DenseMap<ShapeBucketKey, SmallVector<std::pair<const SCEV *, unsigned>, 4>>
+        Buckets;
+    DenseMap<const Instruction *, std::optional<AccessShape>> Shapes;
+    unsigned NumShapes = 0;
+  };
+
+  /// Maximum number of shapes in one bucket. Beyond this, accesses are not
+  /// grouped, which bounds the cost of grouping.
+  static constexpr unsigned MaxShapesPerBucket = 8;
+
+  /// Return the shape and constant offset of \p I, or std::nullopt if \p I is
+  /// not a simple load or store, or could not be grouped.
+  std::optional<AccessShape> getAccessShape(Instruction &I, ShapeInfo &Info) {
+    auto [It, Inserted] = Info.Shapes.try_emplace(&I);
+    if (!Inserted)
+      return It->second;
+
+    std::optional<AccessShape> &Shape = It->second;
+    bool IsSimple = false;
+    if (auto *Load = dyn_cast<LoadInst>(&I))
+      IsSimple = Load->isSimple();
+    else if (auto *Store = dyn_cast<StoreInst>(&I))
+      IsSimple = Store->isSimple();
+    if (!IsSimple)
+      return Shape;
+
+    const SCEV *Ptr = SE.getSCEV(getLoadStorePointerOperand(&I));
+    ShapeBucketKey Key(SE.getPointerBase(Ptr), getLoadStoreType(&I),
+                       I.getParent(), isa<StoreInst>(I), I.getAAMetadata());
+    auto &Bucket = Info.Buckets[Key];
+    for (auto [RepPtr, ID] : Bucket) {
+      std::optional<APInt> Diff = SE.computeConstantDifference(Ptr, RepPtr);
+      if (Diff && Diff->getSignificantBits() <= 64) {
+        Shape = AccessShape{ID, Diff->getSExtValue()};
+        return Shape;
+      }
+    }
+    if (Bucket.size() < MaxShapesPerBucket) {
+      Bucket.emplace_back(Ptr, Info.NumShapes);
+      Shape = AccessShape{Info.NumShapes++, 0};
+    }
+    return Shape;
+  }
+
   /// Return true if the dependences between @p I0 (in @p L0) and @p I1 (in
   /// @p L1) allow loop fusion of @p L0 and @p L1.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
@@ -1194,14 +1269,6 @@ private:
     auto DepResult = DI.depends(&I0, &I1);
     if (!DepResult)
       return true;
-    // If two stores write the same SSA value, fusion is safe regardless of
-    // aliasing - writing the same value twice is idempotent.
-    if (isa<StoreInst>(I0) && isa<StoreInst>(I1)) {
-      auto *S0 = cast<StoreInst>(&I0);
-      auto *S1 = cast<StoreInst>(&I1);
-      if (S0->getValueOperand() == S1->getValueOperand())
-        return true;
-    }
 #ifndef NDEBUG
     if (VerboseFusionDebugging) {
       LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
@@ -1305,24 +1372,48 @@ private:
               return false;
             }
 
+    // Pairs of accesses with the same shapes and the same offset difference
+    // have the same dependences (see AccessShape), so check only one pair of
+    // each such class and reuse the result for the others.
+    ShapeInfo Shapes;
+    DenseMap<std::tuple<unsigned, unsigned, int64_t>, bool> CheckedPairs;
+    auto AllowFusion = [&](Instruction &I0, Instruction &I1) {
+      if (storeSameValue(I0, I1))
+        return true;
+      std::optional<std::tuple<unsigned, unsigned, int64_t>> PairKey;
+      std::optional<AccessShape> S0 = getAccessShape(I0, Shapes);
+      std::optional<AccessShape> S1 = getAccessShape(I1, Shapes);
+      if (S0 && S1)
+        if (std::optional<int64_t> Diff = checkedSub(S1->Offset, S0->Offset))
+          PairKey.emplace(S0->ID, S1->ID, *Diff);
+      if (PairKey) {
+        auto It = CheckedPairs.find(*PairKey);
+        if (It != CheckedPairs.end()) {
+          ++NumDepChecksReused;
+          return It->second;
+        }
+      }
+      bool Allowed = dependencesAllowFusion(FC0, FC1, I0, I1);
+      if (PairKey)
+        CheckedPairs[*PairKey] = Allowed;
+      return Allowed;
+    };
+
     for (Instruction *WriteL0 : FC0.MemWrites) {
       for (Instruction *WriteL1 : FC1.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
+        if (!AllowFusion(*WriteL0, *WriteL1))
           return false;
-        }
       for (Instruction *ReadL1 : FC1.MemReads)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *ReadL1)) {
+        if (!AllowFusion(*WriteL0, *ReadL1))
           return false;
-        }
     }
 
     // Write-write and write-read pairs are already covered above; only the
     // read-before-write pairs from FC0 reads to FC1 writes remain.
     for (Instruction *ReadL0 : FC0.MemReads)
       for (Instruction *WriteL1 : FC1.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
+        if (!AllowFusion(*ReadL0, *WriteL1))
           return false;
-        }
 
     return true;
   }
