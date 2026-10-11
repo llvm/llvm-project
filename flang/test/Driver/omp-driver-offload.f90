@@ -230,3 +230,41 @@
 ! OFFLOAD-TARGETS-NOT: --offload-targets
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
 ! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+
+! Verify the implicit default mapper alloactable members flags are applied to both host
+! and device phases of the offload compilation when the negative flag is used and ignored
+! in the positive case as it is the default.
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fimplicit-default-mapper-allocatable-members --offload-arch=gfx90a \
+! RUN:   | FileCheck %s --check-prefix=ENABLE-IMP-MAPPER
+
+! ENABLE-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
+! ENABLE-IMP-MAPPER-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
+! ENABLE-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
+! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fno-implicit-default-mapper-allocatable-members --offload-arch=gfx90a \
+! RUN:   | FileCheck %s --check-prefix=DISABLE-IMP-MAPPER
+
+! DISABLE-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+! DISABLE-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+
+! Verify when multiple flags passed the final flag wins out
+
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fimplicit-default-mapper-allocatable-members \
+! RUN:  -fimplicit-default-mapper-allocatable-members \
+! RUN: --offload-arch=gfx90a -fno-implicit-default-mapper-allocatable-members \
+! RUN:   | FileCheck %s --check-prefix=MULTI-IMP-MAPPER
+
+! MULTI-IMP-MAPPER: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! MULTI-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+! MULTI-IMP-MAPPER-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! MULTI-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
