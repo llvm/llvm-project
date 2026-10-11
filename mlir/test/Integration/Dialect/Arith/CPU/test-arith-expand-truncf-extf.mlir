@@ -1,5 +1,5 @@
 // Check various edge cases for truncf/extf ops involving f32 and the f4E2M1FN,
-// f8E4M3FN and f8E5M2 types.
+// f8E4M3FN and f8E5M2 types, and between bf16 and f8E5M2.
 
 // RUN: mlir-opt %s --convert-func-to-llvm \
 // RUN:             --arith-expand="include-f4e2m1=true include-f8e4m3fn=true include-f8e5m2=true" \
@@ -52,6 +52,23 @@ func.func @check_extf_f8E5M2(%in : f8E5M2) -> () {
 // magnitude rounds to infinity rather than saturating or becoming NaN.
 func.func @check_truncf_f8E5M2(%in : f32) -> () {
   %trunc = arith.truncf %in : f32 to f8E5M2
+  %bitcast = arith.bitcast %trunc : f8E5M2 to i8
+  %res = arith.extui %bitcast : i8 to i64
+  vector.print %res : i64
+  return
+}
+
+// BF16 has the same width as the F16 pivot type used by the F8E5M2 expansion.
+func.func @check_extf_f8E5M2_to_bf16(%in : f8E5M2) -> () {
+  %res = arith.extf %in : f8E5M2 to bf16
+  %bitcast = arith.bitcast %res : bf16 to i16
+  %ext = arith.extui %bitcast : i16 to i64
+  vector.print %ext : i64
+  return
+}
+
+func.func @check_truncf_bf16_to_f8E5M2(%in : bf16) -> () {
+  %trunc = arith.truncf %in : bf16 to f8E5M2
   %bitcast = arith.bitcast %trunc : f8E5M2 to i8
   %res = arith.extui %bitcast : i8 to i64
   vector.print %res : i64
@@ -318,5 +335,44 @@ func.func @entry() {
   // CHECK: -inf
   %lowerE5m2 = arith.truncf %lowerThanMin : f32 to f8E5M2
   func.call @check_extf_f8E5M2(%lowerE5m2) : (f8E5M2) -> ()
+
+  // BF16 <-> F8E5M2 checks.
+  %bf16One = arith.constant 1.0 : bf16
+  %bf16E5m2Max = arith.constant 57344.0 : bf16
+  %bf16Ovf = arith.constant 70000.0 : bf16
+  %bf16Inf = arith.constant 0x7F80 : bf16
+  %bf16Nan = arith.constant 0x7FC0 : bf16
+  // 2^-16, the smallest F8E5M2 subnormal.
+  %bf16MinSub = arith.constant 0x3780 : bf16
+  // -2^-17, a tie between -0 and the smallest negative subnormal.
+  %bf16NegTie = arith.constant 0xB700 : bf16
+
+  // CHECK: 60
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16One) : (bf16) -> ()
+  // CHECK: 123
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16E5m2Max) : (bf16) -> ()
+  // CHECK: 124
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16Ovf) : (bf16) -> ()
+  // CHECK: 124
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16Inf) : (bf16) -> ()
+  // CHECK: 126
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16Nan) : (bf16) -> ()
+  // CHECK: 1
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16MinSub) : (bf16) -> ()
+  // CHECK: 128
+  func.call @check_truncf_bf16_to_f8E5M2(%bf16NegTie) : (bf16) -> ()
+
+  %e5m2OneAndAQuarter = arith.constant 0x3D : f8E5M2
+  %e5m2MaxBits = arith.constant 0x7B : f8E5M2
+  %e5m2NegInf = arith.constant 0xFC : f8E5M2
+  %e5m2MinSub = arith.constant 0x01 : f8E5M2
+  // CHECK: 16288
+  func.call @check_extf_f8E5M2_to_bf16(%e5m2OneAndAQuarter) : (f8E5M2) -> ()
+  // CHECK: 18272
+  func.call @check_extf_f8E5M2_to_bf16(%e5m2MaxBits) : (f8E5M2) -> ()
+  // CHECK: 65408
+  func.call @check_extf_f8E5M2_to_bf16(%e5m2NegInf) : (f8E5M2) -> ()
+  // CHECK: 14208
+  func.call @check_extf_f8E5M2_to_bf16(%e5m2MinSub) : (f8E5M2) -> ()
   return
 }

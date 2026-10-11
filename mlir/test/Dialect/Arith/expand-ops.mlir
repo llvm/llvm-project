@@ -751,6 +751,63 @@ func.func @truncf_vector_f32_to_f8E5M2(%arg0 : vector<4xf32>) -> vector<4xf8E5M2
 
 // -----
 
+// BF16 has the same width as the F16 pivot type, so there is no direct extf
+// between them: the expansion goes through F32. It used to emit an invalid
+// `arith.extf f16 to bf16`.
+func.func @extf_f8E5M2_to_bf16(%arg0 : f8E5M2) -> bf16 {
+    %0 = arith.extf %arg0 : f8E5M2 to bf16
+    return %0 : bf16
+}
+
+// CHECK-LABEL: @extf_f8E5M2_to_bf16
+// CHECK: %[[F16:.+]] = arith.bitcast %{{.+}} : i16 to f16
+// CHECK: arith.extf %[[F16]] : f16 to f32
+// CHECK: %[[RESULT:.+]] = arith.bitcast %{{.+}} : i16 to bf16
+// CHECK: return %[[RESULT]]
+
+// -----
+
+func.func @extf_vector_f8E5M2_to_bf16(%arg0 : vector<4xf8E5M2>) -> vector<4xbf16> {
+    %0 = arith.extf %arg0 : vector<4xf8E5M2> to vector<4xbf16>
+    return %0 : vector<4xbf16>
+}
+
+// CHECK-LABEL: @extf_vector_f8E5M2_to_bf16
+// CHECK: arith.extf %{{.+}} : vector<4xf16> to vector<4xf32>
+// CHECK: arith.bitcast %{{.+}} : vector<4xi16> to vector<4xbf16>
+// CHECK: return
+
+// -----
+
+// BF16 has the same width as the F16 pivot type, so there is no direct truncf
+// between them: the expansion goes through F32. It used to emit an invalid
+// `arith.truncf bf16 to f16`.
+func.func @truncf_bf16_to_f8E5M2(%arg0 : bf16) -> f8E5M2 {
+    %0 = arith.truncf %arg0 : bf16 to f8E5M2
+    return %0 : f8E5M2
+}
+
+// CHECK-LABEL: @truncf_bf16_to_f8E5M2
+// CHECK: %[[F32:.+]] = arith.bitcast %{{.+}} : i32 to f32
+// CHECK: %[[H16:.+]] = arith.truncf %[[F32]] : f32 to f16
+// CHECK: arith.cmpf une, %[[H16]], %[[H16]] : f16
+// CHECK: %[[RESULT:.+]] = arith.bitcast %{{.+}} : i8 to f8E5M2
+// CHECK: return %[[RESULT]]
+
+// -----
+
+func.func @truncf_vector_bf16_to_f8E5M2(%arg0 : vector<4xbf16>) -> vector<4xf8E5M2> {
+    %0 = arith.truncf %arg0 : vector<4xbf16> to vector<4xf8E5M2>
+    return %0 : vector<4xf8E5M2>
+}
+
+// CHECK-LABEL: @truncf_vector_bf16_to_f8E5M2
+// CHECK: arith.truncf %{{.+}} : vector<4xf32> to vector<4xf16>
+// CHECK: arith.bitcast %{{.+}} : vector<4xi8> to vector<4xf8E5M2>
+// CHECK: return
+
+// -----
+
 func.func @extf_f8E4M3FN_to_f32(%arg0 : f8E4M3FN) -> f32 {
     %0 = arith.extf %arg0 : f8E4M3FN to f32
     return %0 : f32
