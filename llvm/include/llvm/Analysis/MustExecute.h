@@ -547,6 +547,12 @@ private:
   DenseMap<const BasicBlock *, std::unique_ptr<BackwardContextTy>>
       BackwardContextMap;
 
+  /// The last program point queried by isInContextOf and its summaries.
+  const Instruction *LastPP = nullptr;
+  const Instruction *LastForwardStop = nullptr;
+  const ForwardContextTy *LastForwardContext = nullptr;
+  const BackwardContextTy *LastBackwardContext = nullptr;
+
   /// Return the forward context after the terminator of \p BB.
   const ForwardContextTy &getForwardContext(const BasicBlock *BB);
 
