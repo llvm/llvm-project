@@ -84,3 +84,19 @@ func.func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
 // CHECK:           memref.store
 
 // CHECK-LABEL: func private @async_dispatch_fn
+
+// -----
+
+// Unsigned bounds are not supported by the trip-count computation; the loop
+// is left untouched.
+// CHECK-LABEL: @unsigned_loop_1d(
+// CHECK-NOT:     async.execute
+// CHECK:         scf.parallel unsigned (
+// CHECK-NOT:     async.execute
+func.func @unsigned_loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
+  scf.parallel unsigned (%i) = (%arg0) to (%arg1) step (%arg2) {
+    %one = arith.constant 1.0 : f32
+    memref.store %one, %arg3[%i] : memref<?xf32>
+  }
+  return
+}

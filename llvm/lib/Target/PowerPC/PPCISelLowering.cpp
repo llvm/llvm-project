@@ -18855,7 +18855,8 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align PPCTargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   switch (Subtarget.getCPUDirective()) {
   default: break;
   case PPC::DIR_970:
@@ -19116,8 +19117,7 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     R.second = &PPC::CRRCRegClass;
   }
   // FIXME: This warning should ideally be emitted in the front end.
-  const auto &TM = getTargetMachine();
-  if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI()) {
+  if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI()) {
     if (((R.first >= PPC::V20 && R.first <= PPC::V31) ||
          (R.first >= PPC::VF20 && R.first <= PPC::VF31)) &&
         (R.second == &PPC::VSRCRegClass || R.second == &PPC::VSFRCRegClass))
@@ -21141,7 +21141,7 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
     IRBuilderBase &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
   assert(shouldInlineQuadwordAtomics() && "Only support quadword now");
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   Type *ValTy = Incr->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Type *Int64Ty = Type::getInt64Ty(M->getContext());
@@ -21163,7 +21163,7 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
   assert(shouldInlineQuadwordAtomics() && "Only support quadword now");
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Module *M = Builder.getModule();
   Type *ValTy = CmpVal->getType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *IntCmpXchg =

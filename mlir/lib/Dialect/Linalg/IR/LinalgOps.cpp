@@ -825,7 +825,7 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
 /// Fold tensor.pad(linalg.fill) into linalg.fill if the padding value and the
 /// filling value are the same.
 struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
@@ -864,7 +864,7 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
 /// tensor.insert_slice(<input>, linalg.fill) if the padding value and the
 /// filling value are the same.
 struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -1059,7 +1059,7 @@ struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
 /// Fold a concat with all elements being fills of the same value
 /// into a fill of the concat result shape.
 struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::ConcatOp concatOp,
                                 PatternRewriter &rewriter) const override {
@@ -5081,24 +5081,12 @@ Speculation::Speculatability BatchMatmulOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 //
 namespace {
-struct ArityGroupAndKind {
-  // The enum class {Unary, Binary, Ternary, ..}
-  ElementwiseArityGroup arityGroup;
-
-  // The kind (e.g. `exp` or `add`) belonging to the arity group.
-  union Kind {
-    UnaryFn unaryFn;
-    BinaryFn binaryFn;
-    TernaryFn ternaryFn;
-  } kind;
-};
-
 unsigned getArityGroupAsUInt(ElementwiseArityGroup arityGroup) {
   return static_cast<unsigned>(arityGroup);
 }
 } // namespace
 
-static ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind) {
   constexpr int lastUnary = static_cast<int>(ElementwiseCaseLimits::LastUnary);
   constexpr int lastBinary =
       static_cast<int>(ElementwiseCaseLimits::LastBinary);
@@ -6180,7 +6168,9 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -6280,6 +6270,9 @@ bool PackOp::isLikePad() {
 ::mlir::LogicalResult
 PackOp::fold(FoldAdaptor adaptor,
              ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
   std::optional<Attribute> paddingValue;
@@ -6313,7 +6306,9 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref PackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 
@@ -6646,7 +6641,9 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -6763,7 +6760,9 @@ bool UnPackOp::isLikeUnPad() {
 ::mlir::LogicalResult
 UnPackOp::fold(FoldAdaptor adaptor,
                ::llvm::SmallVectorImpl<OpFoldResult> &results) {
-  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!hasPureTensorSemantics())
     return failure();
 
@@ -6795,7 +6794,9 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!op.hasPureTensorSemantics())
       return failure();
 

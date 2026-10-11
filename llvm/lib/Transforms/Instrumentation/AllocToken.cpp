@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/AllocToken.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -37,7 +38,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -57,44 +57,6 @@ using TokenMode = AllocTokenMode;
 
 namespace {
 
-//===--- Command-line options ---------------------------------------------===//
-
-cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
-                                  cl::desc("The allocation function prefix"),
-                                  cl::Hidden, cl::init("__alloc_token_"));
-
-cl::opt<uint64_t>
-    ClMaxTokens("alloc-token-max",
-                cl::desc("Maximum number of tokens (0 = target SIZE_MAX)"),
-                cl::Hidden, cl::init(0));
-
-cl::opt<bool>
-    ClFastABI("alloc-token-fast-abi",
-              cl::desc("The token ID is encoded in the function name"),
-              cl::Hidden, cl::init(false));
-
-// Instrument libcalls only by default - compatible allocators only need to take
-// care of providing standard allocation functions. With extended coverage, also
-// instrument non-libcall allocation function calls with !alloc_token
-// metadata.
-cl::opt<bool>
-    ClExtended("alloc-token-extended",
-               cl::desc("Extend coverage to custom allocation functions"),
-               cl::Hidden, cl::init(false));
-
-// C++ defines ::operator new (and variants) as replaceable (vs. standard
-// library versions), which are nobuiltin, and are therefore not covered by
-// isAllocationFn(). Cover by default, as users of AllocToken are already
-// required to provide token-aware allocation functions (no defaults).
-cl::opt<bool> ClCoverReplaceableNew("alloc-token-cover-replaceable-new",
-                                    cl::desc("Cover replaceable operator new"),
-                                    cl::Hidden, cl::init(true));
-
-cl::opt<uint64_t> ClFallbackToken(
-    "alloc-token-fallback",
-    cl::desc("The default fallback token where none could be determined"),
-    cl::Hidden, cl::init(0));
-
 //===--- Statistics -------------------------------------------------------===//
 
 STATISTIC(NumFunctionsModified, "Functions modified");
@@ -104,7 +66,7 @@ STATISTIC(NumAllocationsInstrumented, "Allocations instrumented");
 
 /// Returns the !alloc_token metadata if available.
 ///
-/// Expected format is: !{<type-name>, <contains-pointer>}
+/// Expected format is: !{<type-name>, <contains-pointer>[, <function-name>]}
 MDNode *getAllocTokenMetadata(const CallBase &CB) {
   MDNode *Ret = nullptr;
   if (auto *II = dyn_cast<IntrinsicInst>(&CB);
@@ -119,9 +81,11 @@ MDNode *getAllocTokenMetadata(const CallBase &CB) {
     if (!Ret)
       return nullptr;
   }
-  assert(Ret->getNumOperands() == 2 && "bad !alloc_token");
+  assert((Ret->getNumOperands() == 2 || Ret->getNumOperands() == 3) &&
+         "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
   assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
+  assert(Ret->getNumOperands() == 2 || isa<MDString>(Ret->getOperand(2)));
   return Ret;
 }
 
@@ -179,7 +143,9 @@ private:
 /// hash function.
 class TypeHashMode : public ModeBase {
 public:
-  using ModeBase::ModeBase;
+  TypeHashMode(const IntegerType &TokenTy, uint64_t MaxTokens,
+               uint64_t Fallback)
+      : ModeBase(TokenTy, MaxTokens), Fallback(Fallback) {}
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
 
@@ -191,7 +157,7 @@ public:
     }
     // Fallback.
     remarkNoMetadata(CB, ORE);
-    return ClFallbackToken;
+    return Fallback;
   }
 
 protected:
@@ -207,6 +173,8 @@ protected:
              << "' without source-level type token";
     });
   }
+
+  const uint64_t Fallback;
 };
 
 /// Implementation for TokenMode::TypeHashPointerSplit.
@@ -222,16 +190,50 @@ public:
                                      MaxTokens))
         return *Token;
     }
-    // Pick the fallback token (ClFallbackToken), which by default is 0, meaning
-    // it'll fall into the pointer-less bucket. Override by setting
-    // -alloc-token-fallback if that is the wrong choice.
+    // Pick the fallback token, which by default is 0, meaning it'll fall into
+    // the pointer-less bucket. Override by setting -alloc-token-fallback if
+    // that is the wrong choice.
     remarkNoMetadata(CB, ORE);
-    return ClFallbackToken;
+    return Fallback;
   }
 };
 
+/// Implementation for TokenMode::TypeFuncHash and
+/// TokenMode::TypeFuncHashPointerSplit.
+class TypeFuncHashMode : public TypeHashMode {
+public:
+  TypeFuncHashMode(const IntegerType &TokenTy, uint64_t MaxTokens,
+                   uint64_t Fallback, TokenMode Mode)
+      : TypeHashMode(TokenTy, MaxTokens, Fallback), Mode(Mode) {}
+
+  uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
+    MDNode *N = getAllocTokenMetadata(CB);
+    if (!N) {
+      remarkNoMetadata(CB, ORE);
+      return Fallback;
+    }
+    // Generated for another mode, whose tokens may already be in the module.
+    if (N->getNumOperands() != 3) {
+      CB.getContext().emitError(
+          &CB, "!alloc_token without function name is incompatible with mode " +
+                   getAllocTokenModeAsString(Mode));
+      return Fallback;
+    }
+    AllocTokenMetadata Metadata{cast<MDString>(N->getOperand(0))->getString(),
+                                containsPointer(N),
+                                cast<MDString>(N->getOperand(2))->getString()};
+    if (Metadata.TypeName.empty())
+      remarkNoMetadata(CB, ORE);
+    return *getAllocToken(Mode, Metadata, MaxTokens);
+  }
+
+private:
+  const TokenMode Mode;
+};
+
 // Apply opt overrides and module flags.
-static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
+static AllocTokenOptions resolveOptions(const InstrumentationOptions &CLOpts,
+                                        AllocTokenOptions Opts,
                                         const Module &M) {
   auto IntModuleFlagOrNull = [&](StringRef Key) {
     return mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
@@ -248,21 +250,19 @@ static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
     Opts.Extended |= Val->isOne();
 
   // Allow overriding options from command line options.
-  if (ClMaxTokens.getNumOccurrences())
-    Opts.MaxTokens = ClMaxTokens;
-  if (ClFastABI.getNumOccurrences())
-    Opts.FastABI = ClFastABI;
-  if (ClExtended.getNumOccurrences())
-    Opts.Extended = ClExtended;
+  Opts.MaxTokens = CLOpts.alloc_token_max.value_or(Opts.MaxTokens);
+  Opts.FastABI = valueOr(CLOpts.alloc_token_fast_abi, Opts.FastABI);
+  Opts.Extended = valueOr(CLOpts.alloc_token_extended, Opts.Extended);
 
   return Opts;
 }
 
 class AllocToken {
 public:
-  explicit AllocToken(AllocTokenOptions Opts, Module &M,
-                      ModuleAnalysisManager &MAM)
-      : Options(resolveOptions(std::move(Opts), M)), Mod(M),
+  AllocToken(const InstrumentationOptions &CLOpts, AllocTokenOptions Opts,
+             Module &M, ModuleAnalysisManager &MAM)
+      : CLOpts(CLOpts), Options(resolveOptions(CLOpts, std::move(Opts), M)),
+        Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         Mode(IncrementMode(*IntPtrTy, Options.MaxTokens)) {
     switch (Options.Mode) {
@@ -273,10 +273,17 @@ public:
                                M.createRNG(DEBUG_TYPE));
       break;
     case TokenMode::TypeHash:
-      Mode.emplace<TypeHashMode>(*IntPtrTy, Options.MaxTokens);
+      Mode.emplace<TypeHashMode>(*IntPtrTy, Options.MaxTokens,
+                                 CLOpts.alloc_token_fallback);
       break;
     case TokenMode::TypeHashPointerSplit:
-      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, Options.MaxTokens);
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, Options.MaxTokens,
+                                             CLOpts.alloc_token_fallback);
+      break;
+    case TokenMode::TypeFuncHash:
+    case TokenMode::TypeFuncHashPointerSplit:
+      Mode.emplace<TypeFuncHashMode>(*IntPtrTy, Options.MaxTokens,
+                                     CLOpts.alloc_token_fallback, Options.Mode);
       break;
     }
   }
@@ -289,8 +296,8 @@ private:
   shouldInstrumentCall(const CallBase &CB, const TargetLibraryInfo &TLI) const;
 
   /// Returns true for functions that are eligible for instrumentation.
-  static bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                                      const TargetLibraryInfo &TLI);
+  bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
+                               const TargetLibraryInfo &TLI) const;
 
   /// Returns true for isAllocationFn() functions that we should ignore.
   static bool ignoreInstrumentableLibFunc(LibFunc Func);
@@ -313,6 +320,7 @@ private:
     return std::visit([&](auto &&Mode) { return Mode(CB, ORE); }, Mode);
   }
 
+  const InstrumentationOptions &CLOpts;
   const AllocTokenOptions Options;
   Module &Mod;
   IntegerType *IntPtrTy = Mod.getDataLayout().getIntPtrType(Mod.getContext());
@@ -321,7 +329,7 @@ private:
   DenseMap<std::pair<LibFunc, uint64_t>, FunctionCallee> TokenAllocFunctions;
   // Selected mode.
   std::variant<IncrementMode, RandomMode, TypeHashMode,
-               TypeHashPointerSplitMode>
+               TypeHashPointerSplitMode, TypeFuncHashMode>
       Mode;
 };
 
@@ -407,7 +415,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
 }
 
 bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                                         const TargetLibraryInfo &TLI) {
+                                         const TargetLibraryInfo &TLI) const {
   if (ignoreInstrumentableLibFunc(Func))
     return false;
 
@@ -424,7 +432,7 @@ bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
   case LibFunc_size_returning_new_aligned_hot_cold:
     return true;
 
-  // See comment above ClCoverReplaceableNew.
+  // See the comment on -alloc-token-cover-replaceable-new.
   case LibFunc_Znwj:
   case LibFunc_ZnwjRKSt9nothrow_t:
   case LibFunc_ZnwjSt11align_val_t:
@@ -449,7 +457,7 @@ bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    return ClCoverReplaceableNew;
+    return CLOpts.alloc_token_cover_replaceable_new;
 
   default:
     return false;
@@ -530,7 +538,7 @@ FunctionCallee AllocToken::getTokenAllocFunction(const CallBase &CB,
   // Copy params, and append token ID type.
   Type *RetTy = OldFTy->getReturnType();
   SmallVector<Type *, 4> NewParams{OldFTy->params()};
-  std::string TokenAllocName = ClFuncPrefix;
+  std::string TokenAllocName = CLOpts.alloc_token_prefix.str();
   if (Options.FastABI)
     TokenAllocName += utostr(TokenID) + "_";
   else
@@ -562,7 +570,7 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
     : Options(std::move(Opts)) {}
 
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  AllocToken Pass(Options, M, MAM);
+  AllocToken Pass(InstrumentationOptions::Global, Options, M, MAM);
   bool Modified = false;
 
   for (Function &F : M) {

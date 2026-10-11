@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
+#include "InstrumentationOptions.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,15 +32,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "lower-allow-check"
-
-static cl::opt<int>
-    HotPercentileCutoff("lower-allow-check-percentile-cutoff-hot",
-                        cl::desc("Hot percentile cutoff."));
-
-static cl::opt<float>
-    RandomRate("lower-allow-check-random-rate",
-               cl::desc("Probability value in the range [0.0, 1.0] of "
-                        "unconditional pseudo-random checks."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
@@ -75,6 +67,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 
 static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
                              const LowerAllowCheckPass::Options &Opts) {
+  const InstrumentationOptions &CLOpts = InstrumentationOptions::Global;
   // Lazy analysis getters.
   auto GetBFI = [&AM, &F, BFI = (BlockFrequencyInfo *)nullptr]() mutable
       -> const BlockFrequencyInfo & {
@@ -108,8 +101,8 @@ static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
   };
 
   auto GetCutoff = [&](const IntrinsicInst *II) -> unsigned {
-    if (HotPercentileCutoff.getNumOccurrences())
-      return HotPercentileCutoff;
+    if (CLOpts.lower_allow_check_percentile_cutoff_hot)
+      return *CLOpts.lower_allow_check_percentile_cutoff_hot;
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
       if (Kind->getZExtValue() < Opts.cutoffs.size())
@@ -130,8 +123,9 @@ static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
   };
 
   auto ShouldRemoveRandom = [&]() {
-    return RandomRate.getNumOccurrences() &&
-           !std::bernoulli_distribution(RandomRate)(GetRng());
+    return CLOpts.lower_allow_check_random_rate &&
+           !std::bernoulli_distribution(*CLOpts.lower_allow_check_random_rate)(
+               GetRng());
   };
 
   auto ShouldRemove = [&](const IntrinsicInst *II) {
@@ -201,8 +195,9 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
 }
 
 bool LowerAllowCheckPass::IsRequested() {
-  return RandomRate.getNumOccurrences() ||
-         HotPercentileCutoff.getNumOccurrences();
+  const InstrumentationOptions &CLOpts = InstrumentationOptions::Global;
+  return CLOpts.lower_allow_check_random_rate ||
+         CLOpts.lower_allow_check_percentile_cutoff_hot;
 }
 
 void LowerAllowCheckPass::printPipeline(
