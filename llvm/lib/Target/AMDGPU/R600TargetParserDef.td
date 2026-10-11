@@ -7,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/TargetSubtarget.td"
-
-def NullALU : InstrItinClass;
-def ALU_NULL : FuncUnit;
-
 include "AMDGPUFeatures.td"
 include "R600Schedule.td"
 include "R600Features.td"
