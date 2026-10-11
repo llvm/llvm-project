@@ -657,10 +657,6 @@ static int CompareSCEVComplexity(const LoopInfo *const LI, SCEVUse LHS,
   if (LHS.getPointer() == RHS.getPointer())
     return (int)LHS.getUseNoWrapFlags() - (int)RHS.getUseNoWrapFlags();
 
-  const SCEV *LCanon = LHS.getCanonical(), *RCanon = RHS.getCanonical();
-  if (LCanon != RCanon && (LHS != LCanon || RHS != RCanon))
-    return CompareSCEVComplexity(LI, LCanon, RCanon, DT);
-
   // Primarily, sort the SCEVs by their getSCEVType().
   SCEVTypes LType = LHS->getSCEVType(), RType = RHS->getSCEVType();
   if (LType != RType)
