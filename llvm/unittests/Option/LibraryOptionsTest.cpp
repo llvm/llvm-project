@@ -30,11 +30,14 @@ namespace {
 
 // The struct -gen-opt-parser-defs generates: every spelling sets its member.
 TEST(LibraryOptionsTest, Apply) {
+  BumpPtrAllocator Alloc;
   TestLibraryOptions O;
   EXPECT_FALSE(O.enable);
   EXPECT_EQ(O.count, 3u);
   EXPECT_EQ(O.limit, std::nullopt);
+  EXPECT_THAT(O.list, testing::IsEmpty());
   EXPECT_EQ(O.mode, test::Mode::A);
+  EXPECT_THAT(O.modes, testing::IsEmpty());
   EXPECT_EQ(O.override, BoolOrDefault::Default);
   EXPECT_EQ(O.print, std::nullopt);
   EXPECT_EQ(O.ratio, 0.5);
@@ -47,7 +50,7 @@ TEST(LibraryOptionsTest, Apply) {
         Argv, MissingIndex, MissingCount);
     std::vector<bool> Applied;
     for (const opt::Arg *A : Args)
-      Applied.push_back(O.apply(*A));
+      Applied.push_back(O.apply(*A, Alloc));
     return Applied;
   };
   EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-limit=0",
@@ -77,15 +80,27 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_THAT(Apply({"-lib-print"}), testing::Each(true));
   EXPECT_EQ(O.print, test::Mode::B);
 
+  // Each occurrence of a list appends its comma-separated values.
+  EXPECT_THAT(Apply({"-lib-list=1,2", "-lib-list", "3"}), testing::Each(true));
+  EXPECT_THAT(O.list, testing::ElementsAre(1u, 2u, 3u));
+  EXPECT_THAT(Apply({"-lib-modes=b,a", "-lib-modes", "b"}),
+              testing::Each(true));
+  EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
+                                            test::Mode::B));
+
   // A rejected value leaves the member unchanged.
   EXPECT_THAT(
-      Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x", "-lib-mode=c",
-             "-lib-override=y", "-lib-print=c", "-lib-ratio=y"}),
+      Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x", "-lib-list=4,x",
+             "-lib-list=", "-lib-mode=c", "-lib-modes=a,c", "-lib-override=y",
+             "-lib-print=c", "-lib-ratio=y"}),
       testing::Each(false));
   EXPECT_TRUE(O.enable);
   EXPECT_EQ(O.count, 7u);
   EXPECT_EQ(O.limit, 0u);
+  EXPECT_THAT(O.list, testing::ElementsAre(1u, 2u, 3u));
   EXPECT_EQ(O.mode, test::Mode::B);
+  EXPECT_THAT(O.modes, testing::ElementsAre(test::Mode::B, test::Mode::A,
+                                            test::Mode::B));
   EXPECT_EQ(O.override, BoolOrDefault::False);
   EXPECT_EQ(O.print, test::Mode::B);
   EXPECT_EQ(O.ratio, 0.25);
@@ -102,7 +117,9 @@ TEST(LibraryOptionsTest, BoolOrDefault) {
 TEST(LibraryOptionsTest, Parser) {
   opt::LibraryOptionsParser P(
       TestLibraryOptions::optTable,
-      [](const opt::Arg &A) { return TestLibraryOptions::Global.apply(A); },
+      [](const opt::Arg &A, BumpPtrAllocator &Alloc) {
+        return TestLibraryOptions::Global.apply(A, Alloc);
+      },
       [] { TestLibraryOptions::Global = TestLibraryOptions(); });
 
   std::vector<std::string> Rows;
@@ -113,14 +130,16 @@ TEST(LibraryOptionsTest, Parser) {
       Rows,
       testing::ElementsAre(
           "lib-count|=<value>|An unsigned", "lib-enable||A bool",
-          "lib-limit|=<value>|An optional", "lib-mode|=<a|b>|An enum",
+          "lib-limit|=<value>|An optional", "lib-list|=<value>|A list",
+          "lib-modes|=<a|b>|An enum list", "lib-mode|=<a|b>|An enum",
           "lib-override||An optional bool", "lib-path|=<value>|A string",
           "lib-print|[=<a|b>]|A flag or enum", "lib-ratio|=<value>|A double",
           "lib-tristate|=<Default|Enable|Disable>|A tri-state"));
 
+  BumpPtrAllocator Alloc;
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
-    std::string Err = toString(P.parse(Argv, Consumed));
+    std::string Err = toString(P.parse(Argv, Consumed, Alloc));
     return std::to_string(Consumed) + " " + Err;
   };
   EXPECT_EQ(Parse({"-lib-count", "5"}), "2 ");
@@ -146,10 +165,12 @@ TEST(LibraryOptionsTest, Register) {
   opt::RegisterLibraryOptions<TestLibraryOptions> Registration;
   const TestLibraryOptions &G = TestLibraryOptions::Global;
   std::string Path = "-lib-path=q";
-  const char *Args[] = {"prog", "-lib-count", "5", "-lib-enable", Path.c_str()};
+  const char *Args[] = {"prog",        "-lib-count", "5",
+                        "-lib-enable", Path.c_str(), "-lib-list=1,2"};
   EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, "", &nulls()));
   EXPECT_EQ(G.count, 5u);
   EXPECT_TRUE(G.enable);
+  EXPECT_THAT(G.list, testing::ElementsAre(1u, 2u));
   // A StringRef member does not refer to the caller's argument.
   Path.assign(Path.size(), 'x');
   EXPECT_EQ(G.Path, "q");
@@ -157,6 +178,13 @@ TEST(LibraryOptionsTest, Register) {
   EXPECT_EQ(G.count, 3u);
   EXPECT_FALSE(G.enable);
   EXPECT_EQ(G.Path, "p");
+  EXPECT_THAT(G.list, testing::IsEmpty());
+  // Options parse again after a reset frees their storage.
+  const char *Again[] = {"prog", "-lib-path=r", "-lib-list=3", "-lib-list=4"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(std::size(Again), Again, "", &nulls()));
+  EXPECT_EQ(G.Path, "r");
+  EXPECT_THAT(G.list, testing::ElementsAre(3u, 4u));
   cl::ResetCommandLineParser();
 }
 

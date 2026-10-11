@@ -271,6 +271,16 @@ emitCUFRegistrationCall(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, func, args);
 }
 
+/// Return true if \p mod defines runtime type information placed in the
+/// section shared with device code.
+static bool definesSharedTypeInfo(mlir::ModuleOp mod) {
+  for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>())
+    if (definesGlobal(globalOp) &&
+        globalOp.getSection() == cudaSharedTypeInfoSection)
+      return true;
+  return false;
+}
+
 static bool hasRegisteredGlobals(mlir::ModuleOp mod,
                                  mlir::SymbolTable gpuSymTable,
                                  bool cudaUnified) {
@@ -414,6 +424,44 @@ struct CUFAddConstructor
       mlir::LLVM::CallOp::create(builder, loc, funcTy, cufRegisterAllocatorRef);
     }
 
+    // Device code reads the runtime type information defined here through its
+    // host address, so its pages must be registered with the CUDA runtime.
+    // The section bounds are local to the executable or shared library being
+    // linked, and every unit defining type information registers the same
+    // range.
+    if (cudaManagedTypeInfo && definesSharedTypeInfo(mod)) {
+      auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(ctx);
+      auto getSectionBound = [&](llvm::StringRef prefix) -> mlir::Value {
+        std::string name = (prefix + cudaSharedTypeInfoSection).str();
+        auto bound = mod.lookupSymbol<mlir::LLVM::GlobalOp>(name);
+        if (!bound) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPointToEnd(mod.getBody());
+          bound = mlir::LLVM::GlobalOp::create(
+              builder, loc, mlir::IntegerType::get(ctx, 8),
+              /*isConstant=*/false, mlir::LLVM::Linkage::ExternWeak, name,
+              mlir::Attribute{});
+          bound.setVisibility_(mlir::LLVM::Visibility::Hidden);
+        }
+        return mlir::LLVM::AddressOfOp::create(builder, loc, bound);
+      };
+      mlir::Value begin = getSectionBound("__start_");
+      mlir::Value end = getSectionBound("__stop_");
+      auto rangeFuncTy = mlir::LLVM::LLVMFunctionType::get(
+          voidTy, {llvmPtrTy, llvmPtrTy}, /*isVarArg=*/false);
+      llvm::StringRef rangeFuncName = RTNAME_STRING(CUFRegisterHostMemoryRange);
+      if (!mod.lookupSymbol(rangeFuncName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        auto rangeFunc = mlir::LLVM::LLVMFuncOp::create(
+            builder, loc, rangeFuncName, rangeFuncTy);
+        rangeFunc.setVisibility(mlir::SymbolTable::Visibility::Private);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, rangeFuncTy,
+                                 mlir::SymbolRefAttr::get(ctx, rangeFuncName),
+                                 mlir::ValueRange{begin, end});
+    }
+
     auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(cudaDeviceModuleName);
     if (gpuMod) {
       mlir::SymbolTable gpuSymTable(gpuMod);
@@ -532,7 +580,6 @@ struct CUFAddConstructor
                 builder.getI64IntegerAttr(szBytes));
           }
         }
-
         if (hasNonAllocManagedGlobal) {
           // Initialize the module after all variables are registered so the
           // runtime populates managed variable unified memory pointers. With
@@ -575,6 +622,46 @@ struct CUFAddConstructor
           llvm::SmallVector<mlir::Value> initArgs{
               fir::runtime::createArguments(builder, loc, initFTy, handle)};
           fir::CallOp::create(builder, loc, initFunc, initArgs);
+
+          // Device code reads each shared type descriptor through a managed
+          // pointer (see CUFSharedTypeInfo). Now that the managed memory is
+          // allocated, store the host address of the type descriptor in it.
+          // The runtime may leave a pointer that no device code references
+          // null; nothing reads it, so the store is skipped.
+          for (fir::GlobalOp globalOp : mod.getOps<fir::GlobalOp>()) {
+            auto typeDescRef = globalOp->getAttrOfType<mlir::FlatSymbolRefAttr>(
+                cudaHostTypeDescAttrName);
+            if (!typeDescRef)
+              continue;
+            auto typeDesc =
+                symTab.lookup<fir::GlobalOp>(typeDescRef.getValue());
+            auto ptrGlobal = mod.lookupSymbol<fir::GlobalOp>(
+                (globalOp.getSymName() + managedPtrSuffix).str());
+            if (!typeDesc || !ptrGlobal)
+              continue;
+            mlir::Value ptrRef = fir::AddrOfOp::create(
+                builder, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
+            mlir::Value managedAddr = fir::LoadOp::create(builder, loc, ptrRef);
+            mlir::Value isSet = builder.genIsNotNullAddr(loc, managedAddr);
+            mlir::Block *currentBlock = builder.getInsertionBlock();
+            mlir::Region *region = currentBlock->getParent();
+            mlir::Block *storeBlock =
+                builder.createBlock(region, region->end());
+            mlir::Block *nextBlock = builder.createBlock(region, region->end());
+            builder.setInsertionPointToEnd(currentBlock);
+            mlir::LLVM::CondBrOp::create(builder, loc, isSet, storeBlock,
+                                         nextBlock);
+            builder.setInsertionPointToStart(storeBlock);
+            mlir::Value dest = builder.createConvert(
+                loc, fir::ReferenceType::get(globalOp.getType()), managedAddr);
+            mlir::Value typeDescAddr = fir::AddrOfOp::create(
+                builder, loc, typeDesc.resultType(), typeDesc.getSymbol());
+            mlir::Value value =
+                builder.createConvert(loc, globalOp.getType(), typeDescAddr);
+            fir::StoreOp::create(builder, loc, value, dest);
+            mlir::LLVM::BrOp::create(builder, loc, nextBlock);
+            builder.setInsertionPointToStart(nextBlock);
+          }
           mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
         }
       }
