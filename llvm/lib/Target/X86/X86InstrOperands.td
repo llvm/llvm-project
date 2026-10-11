@@ -475,9 +475,7 @@ def u8imm : Operand<i8> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// Unsigned 8-bit immediate used as a vector element index. Its value type is
-// the pointer-sized vector index type, so patterns on insertelt/extractelt
-// get a concrete index type per HwMode instead of iPTR.
+// Unsigned 8-bit immediate used as a vector element index based on HwMode.
 def vecidximm : Operand<X86VecIdxVT> {
   let PrintMethod = "printU8Imm";
   let ParserMatchClass = ImmUnsignedi8AsmOperand;

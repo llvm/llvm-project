@@ -272,9 +272,6 @@ defvar X86_32 = DefaultMode;
 def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
 def X86_64_X32 : HwMode<[IsX32Mode]>;
 
-// Type of the vector element index (ISD::INSERT_VECTOR_ELT/EXTRACT_VECTOR_ELT),
-// which is pointer-sized (see TargetLoweringBase::getVectorIdxWidth). Unlike
-// iPTR, it is a concrete type per HwMode, so GlobalISel can import patterns
-// using it.
+// Type of the vector element index matching getVectorIdxWidth.
 def X86VecIdxVT : ValueTypeByHwMode<[X86_32, X86_64, X86_64_X32],
                                     [i32,    i64,    i32]>;

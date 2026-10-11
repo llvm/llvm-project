@@ -9,7 +9,7 @@
 ; A variable index can't be encoded in PINSR*, the insert goes through memory.
 ; No x32 RUN lines: GlobalISel can't select variable pointer offsets there yet.
 
-define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) {
+define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) nounwind {
 ; X64-SDAG-LABEL: insert_v4i32_var_idx:
 ; X64-SDAG:       # %bb.0:
 ; X64-SDAG-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -34,7 +34,6 @@ define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) {
 ; X86-SDAG-LABEL: insert_v4i32_var_idx:
 ; X86-SDAG:       # %bb.0:
 ; X86-SDAG-NEXT:    subl $28, %esp
-; X86-SDAG-NEXT:    .cfi_def_cfa_offset 32
 ; X86-SDAG-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SDAG-NEXT:    andl $3, %eax
 ; X86-SDAG-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -42,13 +41,11 @@ define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) {
 ; X86-SDAG-NEXT:    movl %ecx, (%esp,%eax,4)
 ; X86-SDAG-NEXT:    movaps (%esp), %xmm0
 ; X86-SDAG-NEXT:    addl $28, %esp
-; X86-SDAG-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SDAG-NEXT:    retl
 ;
 ; X86-FAST-LABEL: insert_v4i32_var_idx:
 ; X86-FAST:       # %bb.0:
 ; X86-FAST-NEXT:    subl $28, %esp
-; X86-FAST-NEXT:    .cfi_def_cfa_offset 32
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-FAST-NEXT:    movaps %xmm0, (%esp)
@@ -56,13 +53,11 @@ define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) {
 ; X86-FAST-NEXT:    movl %ecx, (%esp,%eax,4)
 ; X86-FAST-NEXT:    movaps (%esp), %xmm0
 ; X86-FAST-NEXT:    addl $28, %esp
-; X86-FAST-NEXT:    .cfi_def_cfa_offset 4
 ; X86-FAST-NEXT:    retl
 ;
 ; X86-GISEL-LABEL: insert_v4i32_var_idx:
 ; X86-GISEL:       # %bb.0:
 ; X86-GISEL-NEXT:    subl $28, %esp
-; X86-GISEL-NEXT:    .cfi_def_cfa_offset 32
 ; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-GISEL-NEXT:    movl %esp, %edx
@@ -73,7 +68,6 @@ define <4 x i32> @insert_v4i32_var_idx(<4 x i32> %v, i32 %e, i32 %i) {
 ; X86-GISEL-NEXT:    movl %eax, (%ecx)
 ; X86-GISEL-NEXT:    movaps (%esp), %xmm0
 ; X86-GISEL-NEXT:    addl $28, %esp
-; X86-GISEL-NEXT:    .cfi_def_cfa_offset 4
 ; X86-GISEL-NEXT:    retl
   %r = insertelement <4 x i32> %v, i32 %e, i32 %i
   ret <4 x i32> %r

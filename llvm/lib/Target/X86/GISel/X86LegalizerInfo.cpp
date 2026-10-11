@@ -51,7 +51,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasLZCNT = Subtarget.hasLZCNT();
   bool HasBMI = Subtarget.hasBMI();
 
-  const LLT p0 = LLT::pointer(0, Subtarget.isTarget64BitLP64() ? 64 : 32);
+  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -80,7 +80,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT v16s32 = LLT::fixed_vector(16, 32);
   const LLT v8s64 = LLT::fixed_vector(8, 64);
 
-  const LLT sVecIdx = LLT::scalar(p0.getSizeInBits());
+  const LLT sVecIdx =
+      STI.getTargetLowering()->getVectorIdxLLT(TM.createDataLayout());
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;
   const LLT s32MaxVector = HasAVX512 ? v16s32 : HasAVX ? v8s32 : v4s32;
@@ -564,12 +565,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
-      .customIf([=](const LegalityQuery &Query) {
-        return (HasSSE41 &&
-                typeTupleInSet(0, 1, 2, {{v4s32, s32, sVecIdx}})(Query)) ||
-               (HasSSE41 && Is64Bit &&
-                typeTupleInSet(0, 1, 2, {{v2s64, s64, sVecIdx}})(Query));
-      });
+      .customFor(HasSSE41, {{v4s32, s32, sVecIdx}})
+      .customFor(HasSSE41 && Is64Bit, {{v2s64, s64, sVecIdx}});
 
   getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
       .legalIf([=](const LegalityQuery &Query) {
