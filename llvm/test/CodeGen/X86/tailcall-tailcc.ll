@@ -29,10 +29,10 @@ define dso_local tailcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; X86-LABEL: tailcaller:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    jmp tailcallee # TAILCALL
 entry:
