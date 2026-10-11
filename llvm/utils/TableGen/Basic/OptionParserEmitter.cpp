@@ -267,7 +267,7 @@ static void emitOptionsStruct(const Record &Struct,
                               ArrayRef<const Record *> Opts, raw_ostream &OS) {
   struct Member {
     std::string Name;
-    StringRef Type, Default, Spelling;
+    StringRef Type, Default, Spelling, Condition;
   };
   std::vector<const Record *> Fields;
   for (const Record *R : Opts) {
@@ -298,7 +298,8 @@ static void emitOptionsStruct(const Record &Struct,
   StringMap<StringRef> MemberSpelling;
   for (const Record *R : ByID) {
     Member M{getMemberName(*R, Prefix), R->getValueAsString("FieldType"),
-             R->getValueAsString("FieldDefault"), R->getValueAsString("Name")};
+             R->getValueAsString("FieldDefault"), R->getValueAsString("Name"),
+             getOptionalString(*R, "Condition")};
     auto [It, Inserted] = MemberSpelling.try_emplace(M.Name, M.Spelling);
     if (!Inserted)
       PrintFatalError(R->getLoc(),
@@ -319,8 +320,13 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
     OS << "  using StringRef = llvm::StringRef;\n";
-  for (const Member &M : Members)
+  for (const Member &M : Members) {
+    if (!M.Condition.empty())
+      OS << "#if " << M.Condition << '\n';
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
+    if (!M.Condition.empty())
+      OS << "#endif\n";
+  }
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
@@ -347,6 +353,9 @@ static void emitOptionsStruct(const Record &Struct,
      << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
+    StringRef Condition = getOptionalString(*R, "Condition");
+    if (!Condition.empty())
+      OS << "#if " << Condition << '\n';
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
     if (R->getValue("BareValue"))
@@ -368,15 +377,17 @@ static void emitOptionsStruct(const Record &Struct,
            << "\") {\n        X = " << Enumerator
            << ";\n        return true;\n      }\n";
       OS << "      return false;\n    });\n";
-      continue;
+    } else {
+      // A FlagOrEq without a value means =true.
+      StringRef Value =
+          R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq"
+              ? "A.getNumValues() ? A.getValue() : \"true\""
+              : "A.getValue()";
+      OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
+         << ", Alloc);\n";
     }
-    // A FlagOrEq without a value means =true.
-    StringRef Value =
-        R->getValueAsDef("Kind")->getValueAsString("Name") == "FlagOrEq"
-            ? "A.getNumValues() ? A.getValue() : \"true\""
-            : "A.getValue()";
-    OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
-       << ", Alloc);\n";
+    if (!Condition.empty())
+      OS << "#endif\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
   OS << "#endif // OPTIONS_STRUCT_DEFS\n";
@@ -649,12 +660,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
     // Where a Condition is false, row 0's zero visibility makes the parser
     // treat the option as unknown.
+    unsigned Extra = ExtraOffset.lookup(&R);
     StringRef Condition = getOptionalString(R, "Condition");
     if (Condition.empty())
-      OS << ", " << ExtraOffset.lookup(&R);
+      OS << ", " << Extra;
     else
-      OS << ",\n#if " << Condition << "\n      " << ExtraOffset.lookup(&R)
-         << "\n#else\n      0\n#endif\n     ";
+      OS << ",\n#if " << Condition << '\n' << Extra << "\n#else\n0\n#endif\n";
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
     OS << ", llvm::opt::Option::"
