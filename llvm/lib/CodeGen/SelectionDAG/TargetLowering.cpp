@@ -30,6 +30,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -40,6 +41,10 @@
 #include <list>
 using namespace llvm;
 using namespace llvm::SDPatternMatch;
+
+namespace llvm {
+extern cl::opt<bool> DisableDAGKnownBits;
+} // namespace llvm
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLowering::TargetLowering(const TargetMachine &tm,
@@ -834,6 +839,9 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     SelectionDAG &DAG, unsigned Depth) const {
   EVT VT = Op.getValueType();
 
+  if (DisableDAGKnownBits)
+    return SDValue();
+
   // Limit search depth.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return SDValue();
@@ -1304,6 +1312,9 @@ bool TargetLowering::SimplifyDemandedBits(
 
   // Don't know anything.
   Known = KnownBits(BitWidth);
+
+  if (DisableDAGKnownBits)
+    return false;
 
   EVT VT = Op.getValueType();
   bool IsLE = TLO.DAG.getDataLayout().isLittleEndian();
