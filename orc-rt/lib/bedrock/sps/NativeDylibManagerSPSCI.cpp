@@ -23,9 +23,9 @@ ORC_RT_SPS_WRAPPER_IMPL(
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_NativeDylibManager_lookup,
-    SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSExecutorAddr,
-        SPSSequence<SPSTuple<SPSString, bool>>),
+    SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(SPSExecutorAddr,
+                                                           SPSExecutorAddr,
+                                                           SPSSymbolLookupSet),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::lookup))
 
 static std::pair<SymbolNameSpec, const void *>
