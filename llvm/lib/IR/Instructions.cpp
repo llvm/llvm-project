@@ -1837,18 +1837,13 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!isa<VectorType>(V1->getType()) || V1->getType() != V2->getType())
     return false;
 
-  // Make sure the mask elements make sense.
-  int V1Size =
-      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-  for (int Elem : Mask)
-    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
-      return false;
-
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
-      return false;
+    return (Mask[0] == 0 || Mask[0] == PoisonMaskElem) && all_equal(Mask);
 
-  return true;
+  // Make sure the mask elements make sense.
+  int64_t V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
+  auto [MinIt, MaxIt] = std::minmax_element(Mask.begin(), Mask.end());
+  return *MinIt >= PoisonMaskElem && *MaxIt < V1Size * 2;
 }
 
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
@@ -1955,7 +1950,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   return ConstantVector::get(MaskConst);
 }
 
-static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
+static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int64_t NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
