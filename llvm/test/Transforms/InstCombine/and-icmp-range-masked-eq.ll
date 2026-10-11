@@ -7,11 +7,7 @@ declare void @use_i8(i8)
 ; Issue #230800: only -1 is in {-1,0,1} with bit 7 and bit 0 set.
 define i1 @range_and_mask_single(i8 %x) {
 ; CHECK-LABEL: @range_and_mask_single(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i8 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], -127
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i8 %x, 1
@@ -25,11 +21,7 @@ define i1 @range_and_mask_single(i8 %x) {
 ; Operands commuted.
 define i1 @range_and_mask_commuted(i8 %x) {
 ; CHECK-LABEL: @range_and_mask_commuted(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i8 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], -127
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[BITS]], [[IN_RANGE]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i8 %x, 1
@@ -43,11 +35,7 @@ define i1 @range_and_mask_commuted(i8 %x) {
 ; Logical and must be handled too (poison-safe).
 define i1 @range_and_mask_logical(i8 %x) {
 ; CHECK-LABEL: @range_and_mask_logical(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i8 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], -127
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i8 %x, 1
@@ -61,11 +49,7 @@ define i1 @range_and_mask_logical(i8 %x) {
 ; Logical and commuted.
 define i1 @range_and_mask_logical_commuted(i8 %x) {
 ; CHECK-LABEL: @range_and_mask_logical_commuted(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i8 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], -127
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[BITS]], [[IN_RANGE]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i8 %x, 1
@@ -79,11 +63,7 @@ define i1 @range_and_mask_logical_commuted(i8 %x) {
 ; nsw on the add does not matter.
 define i1 @range_and_mask_nsw(i8 %x) {
 ; CHECK-LABEL: @range_and_mask_nsw(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add nsw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i8 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X]], -127
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add nsw i8 %x, 1
@@ -109,11 +89,7 @@ define i1 @range_and_mask_empty(i8 %x) {
 ; Wider type: i16.
 define i1 @range_and_mask_i16(i16 %x) {
 ; CHECK-LABEL: @range_and_mask_i16(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i16 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i16 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i16 [[X]], -32767
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i16 [[MASKED]], -32767
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i16 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i16 %x, 1
@@ -127,11 +103,7 @@ define i1 @range_and_mask_i16(i16 %x) {
 ; Wider type: i32.
 define i1 @range_and_mask_i32(i32 %x) {
 ; CHECK-LABEL: @range_and_mask_i32(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult i32 [[OFFSET]], 3
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X]], -2147483647
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i32 [[MASKED]], -2147483647
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i32 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i32 %x, 1
@@ -145,11 +117,7 @@ define i1 @range_and_mask_i32(i32 %x) {
 ; Vector splat.
 define <2 x i1> @range_and_mask_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @range_and_mask_vec(
-; CHECK-NEXT:    [[OFFSET:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp ult <2 x i8> [[OFFSET]], splat (i8 3)
-; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i8> [[X]], splat (i8 -127)
-; CHECK-NEXT:    [[BITS:%.*]] = icmp eq <2 x i8> [[MASKED]], splat (i8 -127)
-; CHECK-NEXT:    [[BOTH:%.*]] = and <2 x i1> [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq <2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[BOTH]]
 ;
   %offset = add <2 x i8> %x, <i8 1, i8 1>
@@ -169,7 +137,7 @@ define i1 @range_and_mask_extra_use(i8 %x) {
 ; CHECK-NEXT:    [[BITS:%.*]] = icmp eq i8 [[MASKED]], -127
 ; CHECK-NEXT:    call void @use(i1 [[IN_RANGE]])
 ; CHECK-NEXT:    call void @use(i1 [[BITS]])
-; CHECK-NEXT:    [[BOTH:%.*]] = and i1 [[IN_RANGE]], [[BITS]]
+; CHECK-NEXT:    [[BOTH:%.*]] = icmp eq i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[BOTH]]
 ;
   %offset = add i8 %x, 1
