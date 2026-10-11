@@ -173,6 +173,7 @@ struct ParameterStmt; // R851
 struct OldParameterStmt;
 struct PointerStmt; // R853
 struct ProtectedStmt; // R855
+struct ProtectedTargetStmt; // F2028 R863
 struct SaveStmt; // R856
 struct TargetStmt; // R859
 struct ValueStmt; // R861
@@ -386,9 +387,10 @@ struct OtherSpecificationStmt {
       common::Indirection<IntentStmt>, common::Indirection<IntrinsicStmt>,
       common::Indirection<NamelistStmt>, common::Indirection<OptionalStmt>,
       common::Indirection<PointerStmt>, common::Indirection<ProtectedStmt>,
-      common::Indirection<SaveStmt>, common::Indirection<TargetStmt>,
-      common::Indirection<ValueStmt>, common::Indirection<VolatileStmt>,
-      common::Indirection<CommonStmt>, common::Indirection<EquivalenceStmt>,
+      common::Indirection<ProtectedTargetStmt>, common::Indirection<SaveStmt>,
+      common::Indirection<TargetStmt>, common::Indirection<ValueStmt>,
+      common::Indirection<VolatileStmt>, common::Indirection<CommonStmt>,
+      common::Indirection<EquivalenceStmt>,
       common::Indirection<BasedPointerStmt>,
       common::Indirection<CUDAAttributesStmt>>
       u;
@@ -995,9 +997,11 @@ struct ComponentArraySpec {
 //        access-spec | ALLOCATABLE |
 //        CODIMENSION lbracket coarray-spec rbracket |
 //        CONTIGUOUS | DIMENSION ( component-array-spec ) | POINTER |
+// (F2028) PROTECTED_TARGET |
 // (CUDA) CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
 EMPTY_CLASS(Allocatable);
 EMPTY_CLASS(Pointer);
+EMPTY_CLASS(ProtectedTarget);
 EMPTY_CLASS(Contiguous);
 // CUDA-data-attr [( IMPLICIT )]
 // The (IMPLICIT) qualifier marks an attribute that the compiler applied on the
@@ -1013,7 +1017,8 @@ struct CUDADataAttrSpec {
 struct ComponentAttrSpec {
   UNION_CLASS_BOILERPLATE(ComponentAttrSpec);
   std::variant<AccessSpec, Allocatable, CoarraySpec, Contiguous,
-      ComponentArraySpec, Pointer, CUDADataAttrSpec, ErrorRecovery>
+      ComponentArraySpec, Pointer, ProtectedTarget, CUDADataAttrSpec,
+      ErrorRecovery>
       u;
 };
 
@@ -1422,8 +1427,8 @@ struct AttrSpec {
   UNION_CLASS_BOILERPLATE(AttrSpec);
   std::variant<AccessSpec, Allocatable, Asynchronous, CoarraySpec, Contiguous,
       ArraySpec, External, IntentSpec, Intrinsic, LanguageBindingSpec, Optional,
-      Parameter, Pointer, Protected, RankClause, Save, Target, Value, Volatile,
-      CUDADataAttrSpec>
+      Parameter, Pointer, Protected, ProtectedTarget, RankClause, Save, Target,
+      Value, Volatile, CUDADataAttrSpec>
       u;
 };
 
@@ -1615,6 +1620,9 @@ WRAPPER_CLASS(PointerStmt, std::list<PointerDecl>);
 
 // R855 protected-stmt -> PROTECTED [::] entity-name-list
 WRAPPER_CLASS(ProtectedStmt, std::list<Name>);
+
+// F2028 R863 protected-target-stmt -> PROTECTED_TARGET [::] variable-name-list
+WRAPPER_CLASS(ProtectedTargetStmt, std::list<Name>);
 
 // R857 saved-entity -> object-name | proc-pointer-name | / common-block-name /
 // R858 proc-pointer-name -> name

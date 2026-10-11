@@ -178,6 +178,18 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
+// Returns the PROTECTED_TARGET pointer through which the designated object is
+// reached, if any. With isPointerDefinition, the designated pointer itself is
+// skipped.
+const Symbol *FindProtectedTarget(
+    const Symbol &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTarget(
+    const SomeExpr &, bool isPointerDefinition = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
