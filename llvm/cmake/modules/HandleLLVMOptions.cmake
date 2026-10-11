@@ -1443,37 +1443,34 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
         "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
       set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
     endif()
-  endif()
-endif()
+    find_program(CCACHE_PROGRAM ccache)
+    if(NOT CCACHE_PROGRAM)
+      message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
+    endif()
+    message(STATUS "CCache program: ${CCACHE_PROGRAM}")
 
-if(LLVM_CCACHE_BUILD)
-  find_program(CCACHE_PROGRAM ccache)
-  if(NOT CCACHE_PROGRAM)
-    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
-  endif()
-  message(STATUS "CCache program: ${CCACHE_PROGRAM}")
-
-  if(CMAKE_HOST_WIN32)
-    execute_process(COMMAND ${CCACHE_PROGRAM} --version
+    if(CMAKE_HOST_WIN32)
+      execute_process(COMMAND ${CCACHE_PROGRAM} --version
       OUTPUT_VARIABLE CCACHE_VERSION_OUT
       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REPLACE "\n" ";" CCACHE_VERSION_OUT_LIST "${CCACHE_VERSION_OUT}")
-    list(GET CCACHE_VERSION_OUT_LIST 0 CCACHE_VERSION_OUT_FIRST)
-    if (CCACHE_VERSION_OUT_FIRST MATCHES "^ccache version ([0-9]+\.[0-9]+.*)")
-      set(CCACHE_VERSION ${CMAKE_MATCH_1})
-    endif()
-    set(CCACHE_VERSION ${CCACHE_VERSION} CACHE STRING "CCache version number" FORCE)
-    message(STATUS "CCache version: ${CCACHE_VERSION}")
-    if (CCACHE_VERSION VERSION_GREATER_EQUAL "4.8")
-      message(STATUS "CCache supports command line configuration")
-      # We store this as a separate option to support command line configuration on windows without PCH
-      set(CCACHE_SUPPORTS_CLI_OPTIONS TRUE)
-    else()
-      set(CCACHE_SUPPORTS_CLI_OPTIONS FALSE)
-      set(CMAKE_DISABLE_PRECOMPILE_HEADERS TRUE)
-      message(WARNING "Using ccache with precompiled headers on Windows is "
+      string(REPLACE "\n" ";" CCACHE_VERSION_OUT_LIST "${CCACHE_VERSION_OUT}")
+      list(GET CCACHE_VERSION_OUT_LIST 0 CCACHE_VERSION_OUT_FIRST)
+      if (CCACHE_VERSION_OUT_FIRST MATCHES "^ccache version ([0-9]+\.[0-9]+.*)")
+        set(CCACHE_VERSION ${CMAKE_MATCH_1})
+      endif()
+      set(CCACHE_VERSION ${CCACHE_VERSION} CACHE STRING "CCache version number" FORCE)
+      message(STATUS "CCache version: ${CCACHE_VERSION}")
+      if (CCACHE_VERSION VERSION_GREATER_EQUAL "4.8")
+        message(STATUS "CCache supports command line configuration")
+        # We store this as a separate option to support command line configuration on windows without PCH
+        set(CCACHE_SUPPORTS_CLI_OPTIONS TRUE)
+      else()
+        set(CCACHE_SUPPORTS_CLI_OPTIONS FALSE)
+        set(CMAKE_DISABLE_PRECOMPILE_HEADERS TRUE)
+        message(WARNING "Using ccache with precompiled headers on Windows is "
         "not supported with ccache versions older than 4.8 "
         "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+      endif()
     endif()
   endif()
 endif()
@@ -1520,9 +1517,6 @@ if(NOT CMAKE_HOST_WIN32)
     # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
     # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
     # particular changing from ON to OFF) updates the default.
-    #
-    # Note that this is currently not relevant on Windows, as we disable PCH
-    # there by default (see above).
     set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
   endif()
   if (LLVM_CCACHE_MAXSIZE)
