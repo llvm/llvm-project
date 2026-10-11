@@ -27,6 +27,10 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
       Ty->isTuple())
     return false;
 
+  // Data member pointers have scalar evaluation kind.
+  if (const auto *MPT = dyn_cast<MemberPointerType>(Ty))
+    return MPT->isFunctionPointer();
+
   // A matrix type is modeled as an array but lowers to a single flattened
   // vector and has scalar evaluation kind in classic CodeGen, so it is not an
   // aggregate for ABI purposes.
@@ -290,8 +294,8 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
       // is returned indirectly with ByVal=false. This is the RAA path and is
       // distinct from getIndirectReturnResult (plain aggregates), which uses
       // ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
+      FI.getReturnInfo() = ArgInfo::getIndirect(
+          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace(RT));
       return true;
     }
   }
