@@ -19,46 +19,22 @@ define void @extractvalue_sunk_apart_from_scalarized_call(ptr noalias %a, ptr no
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[INDEX]], i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP0]], i64 1)
-; CHECK-NEXT:    [[TMP40:%.*]] = extractvalue { i64, i1 } [[TMP3]], 0
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <2 x i64> poison, i64 [[TMP40]], i64 0
-; CHECK-NEXT:    [[TMP42:%.*]] = insertvalue { <2 x i64>, <2 x i1> } poison, <2 x i64> [[TMP41]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP3]], 1
-; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP42]], 1
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x i1> [[TMP43]], i1 [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP45:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP42]], <2 x i1> [[TMP44]], 1
-; CHECK-NEXT:    [[TMP46:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP47:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP45]], 0
-; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <2 x i64> [[TMP47]], i64 [[TMP46]], i64 1
-; CHECK-NEXT:    [[TMP49:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP45]], <2 x i64> [[TMP48]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP49]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i1> [[TMP9]], i1 [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP50:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP49]], <2 x i1> [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP1]], i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP2]], i64 1)
-; CHECK-NEXT:    [[TMP51:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <2 x i64> poison, i64 [[TMP51]], i64 0
-; CHECK-NEXT:    [[TMP53:%.*]] = insertvalue { <2 x i64>, <2 x i1> } poison, <2 x i64> [[TMP52]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP3]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i1> poison, i1 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i1> [[TMP9]], i1 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; CHECK-NEXT:    [[TMP54:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP53]], 1
-; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <2 x i1> [[TMP54]], i1 [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP56:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP53]], <2 x i1> [[TMP55]], 1
-; CHECK-NEXT:    [[TMP57:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
-; CHECK-NEXT:    [[TMP58:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP56]], 0
-; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <2 x i64> [[TMP58]], i64 [[TMP57]], i64 1
-; CHECK-NEXT:    [[TMP60:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP56]], <2 x i64> [[TMP59]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP60]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i1> poison, i1 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i1> [[TMP13]], i1 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP61:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP60]], <2 x i1> [[TMP14]], 1
-; CHECK-NEXT:    [[TMP62:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP50]], 1
-; CHECK-NEXT:    [[TMP63:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP61]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[TMP15]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = zext <2 x i1> [[TMP62]] to <2 x i64>
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i1> [[TMP63]] to <2 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = zext <2 x i1> [[TMP10]] to <2 x i64>
+; CHECK-NEXT:    [[TMP18:%.*]] = zext <2 x i1> [[TMP14]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP19]], i64 2
 ; CHECK-NEXT:    store <2 x i64> [[TMP17]], ptr [[TMP19]], align 8
@@ -146,23 +122,10 @@ define void @extractvalue_of_hoisted_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[N]], i64 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { <2 x i64>, <2 x i1> } poison, <2 x i64> [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP18]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i1> [[TMP19]], i1 [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP21:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP18]], <2 x i1> [[TMP20]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP21]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i64> [[TMP23]], i64 [[TMP22]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP21]], <2 x i64> [[TMP24]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP25]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i1> [[BROADCAST_SPLATINSERT]], i1 [[TMP4]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP25]], <2 x i1> [[TMP5]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP15]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP17]] to <2 x i64>
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i64>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -170,7 +133,7 @@ define void @extractvalue_of_hoisted_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP7]], i64 2
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP16]], [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP1]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP10]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP10]], align 8
@@ -230,42 +193,18 @@ define void @narrow_extractvalue_of_scalarized_call(ptr noalias %a, ptr noalias 
 ; CHECK-NEXT:    [[TMP6:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[TMP2]], i64 2)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[TMP3]], i64 2)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP35:%.*]] = insertvalue { <4 x i64>, <4 x i1> } poison, <4 x i64> [[TMP11]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP36:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP35]], 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i1> [[TMP36]], i1 [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP41:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP35]], <4 x i1> [[TMP37]], 1
-; CHECK-NEXT:    [[TMP42:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP41]], 0
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <4 x i64> [[TMP43]], i64 [[TMP42]], i64 1
-; CHECK-NEXT:    [[TMP45:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP41]], <4 x i64> [[TMP44]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP45]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP10]], i64 1
-; CHECK-NEXT:    [[TMP46:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP45]], <4 x i1> [[TMP14]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP46]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i64> [[TMP24]], i64 [[TMP23]], i64 2
-; CHECK-NEXT:    [[TMP26:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP46]], <4 x i64> [[TMP25]], 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP26]], 1
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i1> [[TMP28]], i1 [[TMP27]], i64 2
-; CHECK-NEXT:    [[TMP30:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP26]], <4 x i1> [[TMP29]], 1
-; CHECK-NEXT:    [[TMP31:%.*]] = extractvalue { i64, i1 } [[TMP7]], 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP30]], 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i64> [[TMP32]], i64 [[TMP31]], i64 3
-; CHECK-NEXT:    [[TMP34:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP30]], <4 x i64> [[TMP33]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP34]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i1> poison, i1 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP10]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i1> [[TMP14]], i1 [[TMP27]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i1> [[TMP15]], i1 [[TMP12]], i64 3
-; CHECK-NEXT:    [[TMP38:%.*]] = insertvalue { <4 x i64>, <4 x i1> } [[TMP34]], <4 x i1> [[TMP16]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP40:%.*]] = extractvalue { <4 x i64>, <4 x i1> } [[TMP38]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = zext <4 x i1> [[TMP40]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = zext <4 x i1> [[TMP16]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP18]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP39]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -318,45 +257,6 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP41:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[INDEX]], i64 1)
-; CHECK-NEXT:    [[TMP13:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP40]], i64 1)
-; CHECK-NEXT:    [[TMP43:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
-; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x i64> poison, i64 [[TMP43]], i64 0
-; CHECK-NEXT:    [[TMP45:%.*]] = insertvalue { <2 x i64>, <2 x i1> } poison, <2 x i64> [[TMP44]], 0
-; CHECK-NEXT:    [[TMP46:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
-; CHECK-NEXT:    [[TMP47:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP45]], 1
-; CHECK-NEXT:    [[TMP48:%.*]] = insertelement <2 x i1> [[TMP47]], i1 [[TMP46]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP45]], <2 x i1> [[TMP48]], 1
-; CHECK-NEXT:    [[TMP49:%.*]] = extractvalue { i64, i1 } [[TMP13]], 0
-; CHECK-NEXT:    [[TMP50:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <2 x i64> [[TMP50]], i64 [[TMP49]], i64 1
-; CHECK-NEXT:    [[TMP52:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP12]], <2 x i64> [[TMP51]], 0
-; CHECK-NEXT:    [[TMP53:%.*]] = extractvalue { i64, i1 } [[TMP13]], 1
-; CHECK-NEXT:    [[TMP54:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP52]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i1> [[TMP54]], i1 [[TMP53]], i64 1
-; CHECK-NEXT:    [[TMP55:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP52]], <2 x i1> [[TMP19]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP41]], i64 1)
-; CHECK-NEXT:    [[TMP27:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP42]], i64 1)
-; CHECK-NEXT:    [[TMP56:%.*]] = extractvalue { i64, i1 } [[TMP20]], 0
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <2 x i64> poison, i64 [[TMP56]], i64 0
-; CHECK-NEXT:    [[TMP58:%.*]] = insertvalue { <2 x i64>, <2 x i1> } poison, <2 x i64> [[TMP57]], 0
-; CHECK-NEXT:    [[TMP26:%.*]] = extractvalue { i64, i1 } [[TMP20]], 1
-; CHECK-NEXT:    [[TMP59:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP58]], 1
-; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <2 x i1> [[TMP59]], i1 [[TMP26]], i64 0
-; CHECK-NEXT:    [[TMP61:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP58]], <2 x i1> [[TMP60]], 1
-; CHECK-NEXT:    [[TMP62:%.*]] = extractvalue { i64, i1 } [[TMP27]], 0
-; CHECK-NEXT:    [[TMP63:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP61]], 0
-; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <2 x i64> [[TMP63]], i64 [[TMP62]], i64 1
-; CHECK-NEXT:    [[TMP33:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP61]], <2 x i64> [[TMP64]], 0
-; CHECK-NEXT:    [[TMP34:%.*]] = extractvalue { i64, i1 } [[TMP27]], 1
-; CHECK-NEXT:    [[TMP35:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP33]], 1
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i1> [[TMP35]], i1 [[TMP34]], i64 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertvalue { <2 x i64>, <2 x i1> } [[TMP33]], <2 x i1> [[TMP36]], 1
-; CHECK-NEXT:    [[TMP38:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP55]], 1
-; CHECK-NEXT:    [[TMP39:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP37]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP1]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
@@ -366,9 +266,10 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[INDEX]], i64 1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP38]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP7]] to i64
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
@@ -376,9 +277,11 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
 ; CHECK:       [[PRED_STORE_IF2]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP12]], i64 1)
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { i64, i1 } [[TMP13]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { i64, i1 } [[TMP13]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP38]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext i1 [[TMP14]] to i64
 ; CHECK-NEXT:    store i64 [[TMP17]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
@@ -386,9 +289,11 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; CHECK:       [[PRED_STORE_IF4]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP20:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP19]], i64 1)
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { i64, i1 } [[TMP20]], 0
+; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { i64, i1 } [[TMP20]], 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[TMP39]], i64 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i1 [[TMP21]] to i64
 ; CHECK-NEXT:    store i64 [[TMP24]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
@@ -396,9 +301,11 @@ define void @extractvalues_sunk_with_scalarized_call(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP25]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_IF6]]:
+; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP27:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[TMP26]], i64 1)
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { i64, i1 } [[TMP27]], 0
+; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { i64, i1 } [[TMP27]], 1
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP29]]
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i1> [[TMP39]], i64 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = zext i1 [[TMP28]] to i64
 ; CHECK-NEXT:    store i64 [[TMP31]], ptr [[TMP30]], align 8
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]

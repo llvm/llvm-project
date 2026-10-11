@@ -111,8 +111,8 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx>
 ; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[VP5]]>
 ; CHECK-NEXT:      REPLICATE ir<%call> = call @foo(ir<%in_val>)
-; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
-; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-NEXT:      REPLICATE ir<%extract_a> = extractvalue ir<%call>
+; CHECK-NEXT:      REPLICATE ir<%extract_b> = extractvalue ir<%call>
 ; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%arrayidx2>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%extract_a>

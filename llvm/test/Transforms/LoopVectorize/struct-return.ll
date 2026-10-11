@@ -282,34 +282,22 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi { i64, i64 } [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_STORE_IF]] ]
+; CHECK-NEXT:    [[TMP32:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_STORE_IF]] ]
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[PRED_CALL_IF1:.*]], label %[[PRED_CALL_CONTINUE2:.*]]
 ; CHECK:       [[PRED_CALL_IF1]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR4]]
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP11]]) #[[ATTR4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64 } [[TMP12]], 0
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <2 x i64> [[TMP32]], i64 [[TMP13]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE2]]
 ; CHECK:       [[PRED_CALL_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi { i64, i64 } [ poison, %[[PRED_STORE_CONTINUE]] ], [ [[TMP24]], %[[PRED_CALL_IF1]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { <2 x i64>, <2 x i64> } poison, <2 x i64> [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i64 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP7]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP30:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP7]], <2 x i64> [[TMP14]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { i64, i64 } [[TMP12]], 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP30]], 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <2 x i64> [[TMP32]], i64 [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP30]], <2 x i64> [[TMP33]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { i64, i64 } [[TMP12]], 1
-; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP19]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP20]], i64 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP19]], <2 x i64> [[TMP22]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP23]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = phi <2 x i64> [ [[TMP32]], %[[PRED_STORE_CONTINUE]] ], [ [[TMP33]], %[[PRED_CALL_IF1]] ]
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <2 x i64> @llvm.masked.udiv.v2i64(<2 x i64> [[TMP25]], <2 x i64> [[WIDE_LOAD]], <2 x i1> [[TMP1]])
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE1:.*]]
 ; CHECK:       [[PRED_STORE_IF2]]:
@@ -814,27 +802,14 @@ define void @struct_return_replicate_extractvalue_cse(ptr noalias %in, ptr noali
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP1]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call { i64, i64 } @bar_i64(i64 [[TMP3]]) #[[ATTR4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { i64, i64 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { <2 x i64>, <2 x i64> } poison, <2 x i64> [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i64 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP7]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP7]], <2 x i64> [[TMP10]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP11]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP11]], <2 x i64> [[TMP14]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { i64, i64 } [[TMP4]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP15]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i64 } [[TMP2]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { i64, i64 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i64> [[TMP17]], i64 [[TMP16]], i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { <2 x i64>, <2 x i64> } [[TMP15]], <2 x i64> [[TMP18]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP19]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[TMP19]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[OUT_A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <2 x i64> [[TMP20]], ptr [[TMP22]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP18]], ptr [[TMP22]], align 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[OUT_B]], i64 [[INDEX]]
-; CHECK-NEXT:    store <2 x i64> [[TMP21]], ptr [[TMP23]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP18]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -892,35 +867,28 @@ define float @struct_return_tail_folded_predicated_for_and_live_outs(ptr noalias
 ; CHECK:       [[PRED_CALL_IF]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call { float, float } @foo(float [[TMP4]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { float, float } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { float, float } [[TMP5]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE]]
 ; CHECK:       [[PRED_CALL_CONTINUE]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi { float, float } [ poison, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[PRED_CALL_IF]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <2 x float> [ poison, %[[VECTOR_BODY]] ], [ [[TMP11]], %[[PRED_CALL_IF]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi <2 x float> [ poison, %[[VECTOR_BODY]] ], [ [[TMP9]], %[[PRED_CALL_IF]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_CALL_IF1:.*]], label %[[PRED_CALL_CONTINUE2:.*]]
 ; CHECK:       [[PRED_CALL_IF1]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = tail call { float, float } @foo(float [[TMP8]]) #[[ATTR6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call { float, float } @foo(float [[TMP8]]) #[[ATTR6]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { float, float } [[TMP10]], 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP18]], i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { float, float } [[TMP10]], 1
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x float> [[TMP23]], float [[TMP22]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_CALL_CONTINUE2]]
 ; CHECK:       [[PRED_CALL_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi { float, float } [ poison, %[[PRED_CALL_CONTINUE]] ], [ [[TMP9]], %[[PRED_CALL_IF1]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { float, float } [[TMP6]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP12]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { float, float } [[TMP6]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP13]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP13]], <2 x float> [[TMP16]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { float, float } [[TMP10]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP17]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP18]], i64 1
-; CHECK-NEXT:    [[TMP21:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP17]], <2 x float> [[TMP20]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { float, float } [[TMP10]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP21]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x float> [[TMP23]], float [[TMP22]], i64 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP21]], <2 x float> [[TMP24]], 1
-; CHECK-NEXT:    [[TMP26]] = extractvalue { <2 x float>, <2 x float> } [[TMP25]], 0
+; CHECK-NEXT:    [[TMP26]] = phi <2 x float> [ [[TMP19]], %[[PRED_CALL_CONTINUE]] ], [ [[TMP20]], %[[PRED_CALL_IF1]] ]
+; CHECK-NEXT:    [[TMP28:%.*]] = phi <2 x float> [ [[TMP23]], %[[PRED_CALL_CONTINUE]] ], [ [[TMP24]], %[[PRED_CALL_IF1]] ]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <2 x float> [[VECTOR_RECUR]], <2 x float> [[TMP26]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP25]], 1
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[INDEX]]
