@@ -1220,7 +1220,7 @@ static void addX86InterruptAttrs(const FunctionDecl *FD, llvm::GlobalValue *GV,
   if (FD->getNumParams() == 0)
     return;
 
-  auto PtrTy = cast<PointerType>(FD->getParamDecl(0)->getType());
+  const auto *PtrTy = FD->getParamDecl(0)->getType()->castAs<PointerType>();
   llvm::Type *ByValTy = CGM.getTypes().ConvertType(PtrTy->getPointeeType());
   llvm::Attribute NewAttr = llvm::Attribute::getWithByValType(
     Fn->getContext(), ByValTy);
