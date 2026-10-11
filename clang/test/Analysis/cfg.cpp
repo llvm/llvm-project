@@ -32,6 +32,14 @@
 // WARNINGS-NEXT: (CXXConstructExpr, struct named)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.13], struct named)
 // CHECK-NEXT:  13: struct named myNamed;
+// CHECK-NEXT:  14: [B1.13] (Lifetime ends)
+// CHECK-NEXT:  15: [B1.11] (Lifetime ends)
+// CHECK-NEXT:  16: [B1.9] (Lifetime ends)
+// CHECK-NEXT:  17: [B1.7] (Lifetime ends)
+// CHECK-NEXT:  18: [B1.5] (Lifetime ends)
+// CHECK-NEXT:  19: [B1.4] (Lifetime ends)
+// CHECK-NEXT:  20: [B1.2] (Lifetime ends)
+// CHECK-NEXT:  21: [B1.1] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 void checkDeclStmts() {
@@ -101,6 +109,7 @@ public:
 // CHECK-NEXT:   6: [B1.5] (ImplicitCastExpr, LValueToRValue, A *)
 // CHECK-NEXT:   7: [B1.6]->~A() (Implicit destructor)
 // CHECK-NEXT:   8: delete [B1.6]
+// CHECK-NEXT:   9: [B1.4] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK: [B0 (EXIT)]
@@ -124,6 +133,7 @@ void test_deletedtor() {
 // CHECK-NEXT:   7: [B1.6] (ImplicitCastExpr, LValueToRValue, A *)
 // CHECK-NEXT:   8: [B1.7]->~A() (Implicit destructor)
 // CHECK-NEXT:   9: delete [] [B1.7]
+// CHECK-NEXT:  10: [B1.5] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK: [B0 (EXIT)]
@@ -149,6 +159,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK: 1: 1
 // CHECK-NEXT: 2: return
 // CHECK-NEXT: ~B() (Implicit destructor)
+// CHECK-NEXT: [B4.2] (Lifetime ends)
 // CHECK-NEXT: Preds (1)
 // CHECK-NEXT: Succs (1): B0
   int test1(int *x) {
@@ -161,6 +172,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK: 1: 1
 // CHECK-NEXT: 2: return
 // CHECK-NEXT: destructor
+// CHECK-NEXT: [B4.6] (Lifetime ends)
 // CHECK-NEXT: Preds (1)
 // CHECK-NEXT: Succs (1): B0
   int test2(int *x) {
@@ -178,6 +190,7 @@ namespace NoReturnSingleSuccessor {
 // CHECK-NEXT:    1: x
 // CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:    3: return [B1.2];
+// CHECK-NEXT:    4: [B2.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (5): B3 B4 B5 B6 B2(Unreachable)
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B2]
@@ -244,6 +257,7 @@ int test_enum_with_extension(enum MyEnum value) {
 // CHECK-NEXT:    1: x
 // CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:    3: return [B1.2];
+// CHECK-NEXT:    4: [B2.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (4): B3 B4 B5 B6
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B2]
@@ -313,6 +327,8 @@ int test_enum_with_extension_default(enum MyEnum value) {
 // ANALYZER-NEXT:  6:  (CXXConstructExpr, [B1.7], MyClass)
 // CHECK-NEXT:  7: new ([B1.4]) MyClass([B1.6])
 // CHECK-NEXT:  8: MyClass *obj = new (buffer) MyClass();
+// CHECK-NEXT:  9: [B1.8] (Lifetime ends)
+// CHECK-NEXT: 10: [B1.1] (Lifetime ends)
 // CHECK-NEXT:  Preds (1): B2
 // CHECK-NEXT:  Succs (1): B0
 // CHECK: [B0 (EXIT)]
@@ -346,6 +362,8 @@ void test_placement_new() {
 // ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], MyClass[5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
+// CHECK-NEXT: 10: [B1.9] (Lifetime ends)
+// CHECK-NEXT: 11: [B1.1] (Lifetime ends)
 // CHECK-NEXT:  Preds (1): B2
 // CHECK-NEXT:  Succs (1): B0
 // CHECK: [B0 (EXIT)]
@@ -390,6 +408,7 @@ void test_lifetime_extended_temporaries() {
     3;
   }
   // CHECK: LifetimeExtend(4)
+  // CHECK-NEXT: (FullExprCleanup collected 2 MTEs: [B1.38], [B1.45])
   // CHECK-NEXT: ~LifetimeExtend()
   // CHECK-NEXT: ~LifetimeExtend()
   // CHECK-NEXT: : 4
@@ -422,6 +441,7 @@ void test_lifetime_extended_temporaries() {
 // ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], A)
 // CHECK-NEXT:    2: A a;
 // CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:    4: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:  [B0 (EXIT)]

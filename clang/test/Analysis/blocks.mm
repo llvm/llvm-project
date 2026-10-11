@@ -81,6 +81,7 @@ void testBlockWithCaptureByReference() {
 // CHECK-NEXT:   3: __attribute__((blocks("byref"))) StructWithCopyConstructor s(5);
 // CHECK-NEXT:   4: ^{ }
 // CHECK-NEXT:   5: (void)([B1.4]) (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:   6: [B1.3] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 
