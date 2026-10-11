@@ -1,0 +1,8 @@
+# REQUIRES: zlib
+
+# RUN: llvm-offload-binary -o %t --compress --compression-format=zlib --compression-level=9 --image=file=%s,arch=abc,triple=x-y-z
+# RUN: llvm-offload-binary %t --image=file=%t.out,arch=abc,triple=x-y-z
+# RUN: diff %s %t.out
+# RUN: not llvm-offload-binary -o %t.bad --compress --compression-format=zlib --compression-level=12 --image=file=%s,arch=abc,triple=x-y-z 2>&1 | FileCheck %s
+
+# CHECK: invalid zlib compression level 12; expected a value in [0, 9]

@@ -82,6 +82,8 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   BundlerArgs.push_back(BundlerOutputArg);
 
   addOffloadCompressArgs(Args, BundlerArgs);
+  if (Args.hasArg(options::OPT_v))
+    BundlerArgs.push_back("--verbose");
 
   const char *Bundler = Args.MakeArgString(
       T.getToolChain().GetProgramPath("clang-offload-bundler"));
