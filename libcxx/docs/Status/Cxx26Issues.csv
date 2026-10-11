@@ -146,7 +146,7 @@
 "`LWG4245 <https://wg21.link/LWG4245>`__","Operators that interact with ``counted_iterator`` and ``default_sentinel_t`` should be ``noexcept``","2025-06 (Sofia)","","","`#148226 <https://github.com/llvm/llvm-project/issues/148226>`__",""
 "`LWG4247 <https://wg21.link/LWG4247>`__","Header ``<stdbit.h>`` is not yet freestanding","2025-06 (Sofia)","","","`#148227 <https://github.com/llvm/llvm-project/issues/148227>`__",""
 "","","","","","",""
-"`LWG2991 <https://wg21.link/LWG2991>`__","``variant copy`` constructor missing ``noexcept(see below)``","2025-11 (Kona)","","","`#171301 <https://github.com/llvm/llvm-project/issues/171301>`__",""
+"`LWG2991 <https://wg21.link/LWG2991>`__","``variant copy`` constructor missing ``noexcept(see below)``","2025-11 (Kona)","|Complete|","24","`#171301 <https://github.com/llvm/llvm-project/issues/171301>`__",""
 "`LWG3090 <https://wg21.link/LWG3090>`__","What is §[time.duration.cons]p4's ""no overflow is induced in the conversion"" intended to mean?","2025-11 (Kona)","","","`#171302 <https://github.com/llvm/llvm-project/issues/171302>`__",""
 "`LWG3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","2025-11 (Kona)","|Complete|","16","`#105356 <https://github.com/llvm/llvm-project/issues/105356>`__",""
 "`LWG3454 <https://wg21.link/LWG3454>`__","``pointer_traits::pointer_to`` should be ``constexpr``","2025-11 (Kona)","|Complete|","16","`#171307 <https://github.com/llvm/llvm-project/issues/171307>`__",""
