@@ -253,6 +253,12 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (const Symbol *pointer{FindProtectedTarget(
+          dataRef, flags.test(DefinabilityFlag::PointerDefinition))}) {
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_en_US,
+        *pointer);
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -270,6 +276,12 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (const Symbol *pointer{FindProtectedTarget(
+          original, flags.test(DefinabilityFlag::PointerDefinition))}) {
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_en_US,
+        *pointer);
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -397,6 +409,11 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
+  } else if (const Symbol *pointer{FindProtectedTarget(
+                 expr, flags.test(DefinabilityFlag::PointerDefinition))}) {
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_en_US,
+        *pointer);
   } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};

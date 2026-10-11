@@ -510,6 +510,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         "Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
     return false;
   }
+  if (IsProtectedTarget(*ultimate_) && !allocateInfo_.gotSource) { // F2028 C869
+    context.Say(name_.source,
+        "An ALLOCATE statement for a PROTECTED_TARGET pointer must have SOURCE="_err_en_US);
+    return false;
+  }
   bool gotSourceExprOrTypeSpec{allocateInfo_.gotMold ||
       allocateInfo_.gotTypeSpec || allocateInfo_.gotSource};
   if (hasDeferredTypeParameter_ && !gotSourceExprOrTypeSpec) {

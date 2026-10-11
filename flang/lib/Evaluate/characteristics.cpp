@@ -281,8 +281,10 @@ llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
 }
 
 bool DummyDataObject::operator==(const DummyDataObject &that) const {
-  return type == that.type && attrs == that.attrs && intent == that.intent &&
-      coshape == that.coshape && cudaDataAttr == that.cudaDataAttr;
+  return type == that.type &&
+      (attrs - Attr::ProtectedTarget) == (that.attrs - Attr::ProtectedTarget) &&
+      intent == that.intent && coshape == that.coshape &&
+      cudaDataAttr == that.cudaDataAttr;
 }
 
 static bool IsOkWithSequenceAssociation(
@@ -372,7 +374,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   if (!IdenticalSignificantAttrs(attrs, actual.attrs)) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";
-      auto differences{attrs ^ actual.attrs};
+      auto differences{(attrs ^ actual.attrs) - Attr::ProtectedTarget};
       auto sep{": "s};
       differences.IterateOverMembers([&](DummyDataObject::Attr x) {
         *whyNot += sep + std::string{EnumToString(x)};
@@ -439,6 +441,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
               {Attr::VALUE, DummyDataObject::Attr::Value},
               {Attr::VOLATILE, DummyDataObject::Attr::Volatile},
               {Attr::POINTER, DummyDataObject::Attr::Pointer},
+              {Attr::PROTECTED_TARGET, DummyDataObject::Attr::ProtectedTarget},
               {Attr::TARGET, DummyDataObject::Attr::Target},
           });
       result->intent = GetIntent(symbol.attrs());

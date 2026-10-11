@@ -67,6 +67,12 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *pointer{FindProtectedTarget(*expr)}) { // F2028 C873
+      evaluate::SayWithDeclaration(messages, *pointer,
+          "PROTECTED_TARGET pointer '%s' or its subobject requires an explicit interface"_err_en_US,
+          pointer->name());
+      return;
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +405,18 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  const Symbol *protectedTargetActual{
+      scope ? FindProtectedTarget(actual) : nullptr};
+  // Intrinsic dummies without explicit intent have INTENT(IN) (F2028 17.2.1).
+  bool badProtectedTargetActual{!dummyIsPointer &&
+      dummy.intent != common::Intent::In &&
+      !(intrinsic && dummy.intent == common::Intent::Default) &&
+      protectedTargetActual};
+  if (badProtectedTargetActual) { // F2028 C874
+    evaluate::SayWithDeclaration(messages, *protectedTargetActual,
+        "PROTECTED_TARGET pointer '%s' or its subobject requires INTENT(IN) for nonpointer %s"_err_en_US,
+        protectedTargetActual->name(), dummyName);
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{
@@ -829,7 +847,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
-  if (scope) {
+  // Pointer-association checking below diagnoses F2028 C872.
+  bool badProtectedTargetPointerActual{scope && dummyIsPointer &&
+      !dummy.attrs.test(
+          characteristics::DummyDataObject::Attr::ProtectedTarget) &&
+      (protectedTargetActual ||
+          (actualIsPointer &&
+              FindProtectedTarget(actual, /*isPointerDefinition=*/true)))};
+  if (scope && !badProtectedTargetActual && !badProtectedTargetPointerActual) {
     std::optional<parser::MessageFixedText> undefinableMessage;
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {

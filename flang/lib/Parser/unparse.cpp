@@ -634,6 +634,7 @@ public:
   void Post(const Optional &) { Word("OPTIONAL"); }
   void Post(const Parameter &) { Word("PARAMETER"); }
   void Post(const Protected &) { Word("PROTECTED"); }
+  void Post(const ProtectedTarget &) { Word("PROTECTED_TARGET"); }
   void Post(const Save &) { Word("SAVE"); }
   void Post(const Target &) { Word("TARGET"); }
   void Post(const Value &) { Word("VALUE"); }
@@ -718,6 +719,9 @@ public:
   }
   void Unparse(const ProtectedStmt &x) { // R855
     Word("PROTECTED :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const ProtectedTargetStmt &x) { // F2028 R863
+    Word("PROTECTED_TARGET :: "), Walk(x.v, ", ");
   }
   void Unparse(const SaveStmt &x) { // R856
     Word("SAVE"), Walk(" :: ", x.v, ", ");

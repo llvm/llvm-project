@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -325,6 +326,63 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
+}
+
+static const Symbol *FindProtectedTarget(
+    const SymbolVector &symbols, bool isPointerDefinition) {
+  for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+    const Symbol &symbol{it->get().GetUltimate()};
+    if (isPointerDefinition) {
+      isPointerDefinition = false;
+      continue;
+    }
+    if (IsPointer(symbol)) {
+      // Where a pointer component's target is referenced, it is not a subobject
+      // of the base object. The component is a subobject in contexts concerning
+      // its own pointer association (F2028 9.4.2p5).
+      return IsProtectedTarget(symbol) ? &symbol : nullptr;
+    }
+    if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()};
+        assoc && assoc->expr() && evaluate::IsVariable(*assoc->expr())) {
+      return FindProtectedTarget(*assoc->expr());
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(
+    const Symbol &symbol, bool isPointerDefinition) {
+  return FindProtectedTarget(
+      evaluate::GetSymbolVector(symbol), isPointerDefinition);
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &dataRef, bool isPointerDefinition) {
+  return FindProtectedTarget(
+      evaluate::GetSymbolVector(dataRef), isPointerDefinition);
+}
+
+const Symbol *FindProtectedTarget(
+    const SomeExpr &expr, bool isPointerDefinition) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(*dataRef, isPointerDefinition);
+  } else if (isPointerDefinition) {
+    if (const auto *proc{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+      if (const auto *component{proc->GetComponent()}) {
+        return FindProtectedTarget(component->base());
+      }
+    }
+  } else {
+    if (const auto *ref{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *proc{ref->proc().GetSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*proc)};
+            result && IsProtectedTarget(*result)) {
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 bool IsBindCProcedure(const Symbol &original) {

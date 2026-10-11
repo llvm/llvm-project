@@ -476,6 +476,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>(contiguous) ||
     construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
+    construct<ComponentAttrSpec>(protectedTargetAttr) ||
     extension<LanguageFeature::CUDA>(
         construct<ComponentAttrSpec>(Parser<CUDADataAttrSpec>{})) ||
     construct<ComponentAttrSpec>(recovery(
@@ -756,7 +757,8 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(construct<Intrinsic>("INTRINSIC"_tok)) ||
     construct<AttrSpec>(languageBindingSpec) || construct<AttrSpec>(optional) ||
     construct<AttrSpec>(construct<Parameter>("PARAMETER"_tok)) ||
-    construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedAttr) ||
+    construct<AttrSpec>(pointer) || construct<AttrSpec>(protectedTargetAttr) ||
+    construct<AttrSpec>(protectedAttr) ||
     construct<AttrSpec>("RANK" >>
         construct<RankClause>(parenthesized(scalarIntConstantExpr))) ||
     construct<AttrSpec>(save) ||
@@ -1049,6 +1051,10 @@ TYPE_PARSER(
 // R855 protected-stmt -> PROTECTED [::] entity-name-list
 TYPE_PARSER(
     construct<ProtectedStmt>("PROTECTED" >> maybe("::"_tok) >> listOfNames))
+
+// F2028 R863 protected-target-stmt -> PROTECTED_TARGET [::] variable-name-list
+TYPE_PARSER(construct<ProtectedTargetStmt>(
+    "PROTECTED_TARGET" >> maybe("::"_tok) >> listOfNames))
 
 // R856 save-stmt -> SAVE [[::] saved-entity-list]
 TYPE_PARSER(construct<SaveStmt>(
