@@ -75,11 +75,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(eq),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(eq),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -105,11 +105,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(ne),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(ne),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -135,11 +135,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(ugt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(ugt),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -165,11 +165,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(uge),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(uge),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -195,11 +195,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(ult),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(ult),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -225,11 +225,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(ule),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(ule),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -255,11 +255,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(sgt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(sgt),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -285,11 +285,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(sge),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(sge),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -315,11 +315,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(slt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(slt),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -345,11 +345,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
-    %2(s1) = G_ICMP intpred(sle),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(i32) = COPY $r0
+    %1(i32) = COPY $r1
+    %2(i1) = G_ICMP intpred(sle),  %0(i32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -371,11 +371,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(true),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(true),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -397,11 +397,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(false),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(false),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -428,11 +428,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(oeq),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(oeq),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -459,11 +459,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ogt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ogt),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -490,11 +490,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(oge),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(oge),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -521,11 +521,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(olt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(olt),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -552,11 +552,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ole),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ole),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -583,11 +583,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ord),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ord),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -614,11 +614,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ugt),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ugt),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -645,11 +645,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(uge),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(uge),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -676,11 +676,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ult),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ult),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -707,11 +707,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ule),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ule),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -738,11 +738,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(une),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(une),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -769,11 +769,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(uno),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(uno),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -803,11 +803,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(one),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(one),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -837,11 +837,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $s1
-    %2(s1) = G_FCMP floatpred(ueq),  %0(s32), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f32) = COPY $s0
+    %1(f32) = COPY $s1
+    %2(i1) = G_FCMP floatpred(ueq),  %0(f32), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -863,11 +863,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(true),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(true),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -889,11 +889,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(false),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(false),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -920,11 +920,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(oeq),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(oeq),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -951,11 +951,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ogt),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ogt),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -982,11 +982,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(oge),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(oge),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1013,11 +1013,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(olt),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(olt),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1044,11 +1044,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ole),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ole),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1075,11 +1075,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ord),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ord),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1106,11 +1106,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ugt),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ugt),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1137,11 +1137,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(uge),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(uge),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1168,11 +1168,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ult),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ult),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1199,11 +1199,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ule),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ule),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1230,11 +1230,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(une),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(une),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1261,11 +1261,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(uno),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(uno),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1295,11 +1295,11 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(one),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(one),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
@@ -1329,10 +1329,10 @@ body:             |
     ; CHECK: [[ANDri:%[0-9]+]]:gpr = ANDri [[MOVCCi1]], 1, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[ANDri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
-    %1(s64) = COPY $d1
-    %2(s1) = G_FCMP floatpred(ueq),  %0(s64), %1
-    %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
+    %0(f64) = COPY $d0
+    %1(f64) = COPY $d1
+    %2(i1) = G_FCMP floatpred(ueq),  %0(f64), %1
+    %3(i32) = G_ZEXT %2(i1)
+    $r0 = COPY %3(i32)
     BX_RET 14, $noreg, implicit $r0
 ...

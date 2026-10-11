@@ -40,11 +40,22 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  const LLT i32 = LLT::integer(32);
+  const LLT f32 = LLT::float32();
+  const LLT f64 = LLT::float64();
+
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
     verify(*ST.getInstrInfo());
     return;
   }
+
+  getActionDefinitionsBuilder(G_BITCAST)
+      .legalForCartesianProduct({s32})
+      .legalForCartesianProduct({s64});
+
+  getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32}, {s1, s8, s16});
@@ -131,8 +142,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
           .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .legalFor({{p0, s32}})
-      .minScalar(1, s32);
+      .legalFor({{p0, i32}})
+      .minScalar(1, i32);
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
@@ -140,7 +151,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   if (!ST.useSoftFloat() && ST.hasVFP2Base()) {
     getActionDefinitionsBuilder(
         {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FCONSTANT, G_FNEG})
-        .legalFor({s32, s64});
+        .legalFor({f32, f64});
 
     LoadStoreBuilder
         .legalForTypesWithMemDesc({{s64, p0, s64, 32}})
@@ -148,18 +159,18 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
     PhiBuilder.legalFor({s64});
 
     getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({s1},
-                                                                 {s32, s64});
+                                                                 {f32, f64});
 
     getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
     getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
 
-    getActionDefinitionsBuilder(G_FPEXT).legalFor({{s64, s32}});
-    getActionDefinitionsBuilder(G_FPTRUNC).legalFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_FPEXT).legalFor({{f64, f32}});
+    getActionDefinitionsBuilder(G_FPTRUNC).legalFor({{f32, f64}});
 
     getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-        .legalForCartesianProduct({s32}, {s32, s64});
+        .legalForCartesianProduct({i32}, {f32, f64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-        .legalForCartesianProduct({s32, s64}, {s32});
+        .legalForCartesianProduct({f32, f64}, {i32});
 
     getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_GET_FPMODE})
         .legalFor({s32});
@@ -168,7 +179,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
     getActionDefinitionsBuilder(G_RESET_FPMODE).custom();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
-        .libcallFor({s32, s64});
+        .libcallFor({f32, f64});
 
     LoadStoreBuilder.maxScalar(0, s32);
 
@@ -177,20 +188,20 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
     getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
 
     getActionDefinitionsBuilder(G_FCMP).customForCartesianProduct({s1},
-                                                                  {s32, s64});
+                                                                  {f32, f64});
 
     if (AEABI(ST))
       setFCmpLibcallsAEABI();
     else
       setFCmpLibcallsGNU();
 
-    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{s64, s32}});
-    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_FPEXT).libcallFor({{f64, f32}});
+    getActionDefinitionsBuilder(G_FPTRUNC).libcallFor({{f32, f64}});
 
     getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-        .libcallForCartesianProduct({s32}, {s32, s64});
+        .libcallForCartesianProduct({i32}, {f32, f64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-        .libcallForCartesianProduct({s32, s64}, {s32});
+        .libcallForCartesianProduct({f32, f64}, {i32});
 
     getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
         .libcall();
@@ -202,11 +213,11 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   LoadStoreBuilder.lower();
 
   if (!ST.useSoftFloat() && ST.hasVFP4Base())
-    getActionDefinitionsBuilder(G_FMA).legalFor({s32, s64});
+    getActionDefinitionsBuilder(G_FMA).legalFor({f32, f64});
   else
-    getActionDefinitionsBuilder(G_FMA).libcallFor({s32, s64});
+    getActionDefinitionsBuilder(G_FMA).libcallFor({f32, f64});
 
-  getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
+  getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({f32, f64});
 
   if (ST.hasV5TOps() && !ST.isThumb1Only()) {
     getActionDefinitionsBuilder(G_CTLZ)
@@ -390,7 +401,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     // destination of the original instruction for the remainder.
     Type *ArgTy = Type::getInt32Ty(Ctx);
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
-    Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+    Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::integer(32)),
                           OriginalResult};
     auto Status = Helper.createLibcall(Libcall, {RetRegs, RetTy, 0},
                                        {{MI.getOperand(1).getReg(), ArgTy, 0},
@@ -427,7 +438,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
 
     SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
-      auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      auto LibcallResult = MRI.createGenericVirtualRegister(LLT::integer(32));
       auto Status =
           Helper.createLibcall(Libcall.LibcallID, {LibcallResult, RetTy, 0},
                                {{MI.getOperand(2).getReg(), ArgTy, 0},
@@ -453,7 +464,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
       } else {
         // We need to compare against 0.
         assert(CmpInst::isIntPredicate(ResultPred) && "Unsupported predicate");
-        auto Zero = MIRBuilder.buildConstant(LLT::scalar(32), 0);
+        auto Zero = MIRBuilder.buildConstant(LLT::integer(32), 0);
         MIRBuilder.buildICmp(ResultPred, ProcessedResult, LibcallResult, Zero);
       }
       Results.push_back(ProcessedResult);
@@ -482,7 +493,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
   }
   case G_SET_FPMODE: {
     // New FPSCR = (FPSCR & FPStatusBits) | (Modes & ~FPStatusBits)
-    LLT FPEnvTy = LLT::scalar(32);
+    LLT FPEnvTy = LLT::integer(32);
     auto FPEnv = MRI.createGenericVirtualRegister(FPEnvTy);
     Register Modes = MI.getOperand(0).getReg();
     MIRBuilder.buildGetFPEnv(FPEnv);
@@ -498,7 +509,7 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
   case G_RESET_FPMODE: {
     // To get the default FP mode all control bits are cleared:
     // FPSCR = FPSCR & (FPStatusBits | FPReservedBits)
-    LLT FPEnvTy = LLT::scalar(32);
+    LLT FPEnvTy = LLT::integer(32);
     auto FPEnv = MIRBuilder.buildGetFPEnv(FPEnvTy);
     auto NotModeBitMask = MIRBuilder.buildConstant(
         FPEnvTy, ARM::FPStatusBits | ARM::FPReservedBits);

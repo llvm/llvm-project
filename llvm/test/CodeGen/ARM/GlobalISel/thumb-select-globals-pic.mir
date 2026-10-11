@@ -32,10 +32,10 @@ body:             |
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @internal_global
     ; ELF: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @internal_global
 
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @internal_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @internal_global)
+    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_global)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
     ; CHECK: $r0 = COPY [[V]]
 
     tBX_RET 14, $noreg, implicit $r0
@@ -61,10 +61,10 @@ body:             |
     ; ELF: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-got) @external_global
     ; ELF: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
 
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @external_global)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @external_global)
+    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_global)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
     ; CHECK: $r0 = COPY [[V]]
 
     tBX_RET 14, $noreg, implicit $r0
@@ -87,10 +87,10 @@ body:             |
     ; DARWIN-NOMOVT: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-nonlazy) @internal_constant
     ; ELF: [[G:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel @internal_constant
 
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @internal_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @internal_constant)
+    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @internal_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @internal_constant)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
     ; CHECK: $r0 = COPY [[V]]
 
     tBX_RET 14, $noreg, implicit $r0
@@ -116,10 +116,10 @@ body:             |
     ; ELF: [[G_GOT:%[0-9]+]]:tgpr = tLDRLIT_ga_pcrel target-flags(arm-got) @external_constant
     ; ELF: [[G:%[0-9]+]]:gpr = t2LDRi12 [[G_GOT]], 0, 14 /* CC::al */, $noreg :: (load (s32) from got)
 
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @external_constant)
-    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (s32) from @external_constant)
+    %1(i32) = G_LOAD %0(p0) :: (load (i32) from @external_constant)
+    ; CHECK: [[V:%[0-9]+]]:gpr = t2LDRi12 [[G]], 0, 14 /* CC::al */, $noreg :: (load (i32) from @external_constant)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
     ; CHECK: $r0 = COPY [[V]]
 
     tBX_RET 14, $noreg, implicit $r0
