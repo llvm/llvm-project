@@ -1031,13 +1031,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
-  // 'Expand' implements FCOPYSIGN without calling an external library.
-  setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Expand);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
-  setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
+  setOperationAction(
+      ISD::FCOPYSIGN,
+      {MVT::f16, MVT::v2f16, MVT::bf16, MVT::v2bf16, MVT::f32, MVT::f64},
+      Custom);
 
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
@@ -2250,8 +2247,6 @@ SDValue NVPTXTargetLowering::LowerShiftLeftParts(SDValue Op,
   }
 }
 
-/// If the types match, convert the generic copysign to the NVPTXISD version,
-/// otherwise bail ensuring that mismatched cases are properly expaned.
 SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -2261,10 +2256,48 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
 
-  if (!SrcVT.bitsEq(VT))
-    return SDValue();
+  auto DstBits = VT.getSizeInBits();
+  auto SrcBits = SrcVT.getSizeInBits();
+  MVT IntVT = MVT::getIntegerVT(DstBits);
+  MVT SrcIntVT = MVT::getIntegerVT(SrcBits);
+  SDValue Mag = DAG.getBitcast(IntVT, In1);
+  SDValue Sign = DAG.getBitcast(SrcIntVT, In2);
+  SDValue MagLo;
+  if (VT == MVT::f64) {
+    // Only the high word changes. Keep sign extension and bitwise operations
+    // 32-bit so ptxas can combine them without materializing a 64-bit sign.
+    IntVT = MVT::i32;
+    DstBits = IntVT.getSizeInBits();
+    std::tie(MagLo, Mag) = DAG.SplitScalar(Mag, DL, IntVT, IntVT);
+  }
 
-  return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
+  // DAG combining can remove FP_ROUND or FP_EXTEND from a scalar sign operand.
+  assert((!VT.isVector() || SrcVT == VT) &&
+         "Unexpected mismatched vector copysign operands");
+  if (SrcBits > DstBits) {
+    Sign = DAG.getNode(
+        ISD::SRL, DL, SrcIntVT, Sign,
+        DAG.getShiftAmountConstant(SrcBits - DstBits, SrcIntVT, DL));
+    Sign = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Sign);
+  } else if (SrcBits < DstBits) {
+    Sign = DAG.getNode(ISD::SIGN_EXTEND, DL, IntVT, Sign);
+  }
+  APInt SignMask =
+      VT.isVector() ? APInt(32, 0x80008000) : APInt::getSignMask(DstBits);
+  // This is equivalent to:
+  //    (Mag & ~SignMask) | (Sign & SignMask)
+  // which uses 4 input values (including the 2 constants). We can instead
+  // write it as:
+  //    Mag ^ ((Mag ^ Sign) & SignMask)
+  // which only uses 3 inputs, so ptxas can fuse it into a single lop3
+  // instruction.
+  SDValue Diff = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Sign);
+  Diff = DAG.getNode(ISD::AND, DL, IntVT, Diff,
+                     DAG.getConstant(SignMask, DL, IntVT));
+  SDValue Result = DAG.getNode(ISD::XOR, DL, IntVT, Mag, Diff);
+  if (VT == MVT::f64)
+    Result = DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64, MagLo, Result);
+  return DAG.getBitcast(VT, Result);
 }
 
 SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
