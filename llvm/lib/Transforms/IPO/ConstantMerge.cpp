@@ -82,12 +82,22 @@ static Align getAlign(GlobalVariable *GV) {
       GV->getDataLayout().getPreferredAlign(GV));
 }
 
+/// Returns the value of linker output section attribute of the global variable.
+static StringRef getLinkerOutputSection(const GlobalVariable &GV) {
+  Attribute OutputSection = GV.getAttribute("linker_output_section");
+  return OutputSection.isValid() ? OutputSection.getValueAsString()
+                                 : StringRef();
+}
+
 static bool
 isUnmergeableGlobal(GlobalVariable *GV,
                     const SmallPtrSetImpl<const GlobalValue *> &UsedGlobals) {
   // Only process constants with initializers in the default address space.
   return !GV->isConstant() || !GV->hasDefinitiveInitializer() ||
-         GV->getType()->getAddressSpace() != 0 || GV->hasSection() ||
+         GV->getType()->getAddressSpace() != 0 ||
+         // Globals with an explicit section but no known linker output section
+         // are not mergeable.
+         (GV->hasSection() && getLinkerOutputSection(*GV).empty()) ||
          // Don't touch thread-local variables.
          GV->isThreadLocal() ||
          // Don't touch values marked with attribute(used).
@@ -141,8 +151,9 @@ static bool mergeConstants(Module &M) {
   FindUsedValues(M.getGlobalVariable("llvm.used"), UsedGlobals);
   FindUsedValues(M.getGlobalVariable("llvm.compiler.used"), UsedGlobals);
 
-  // Map unique constants to globals.
-  DenseMap<Constant *, GlobalVariable *> CMap;
+  // Two identical constants can only be merged if their output section match
+  // hence key on constant initializer and output section both.
+  DenseMap<std::pair<StringRef, Constant *>, GlobalVariable *> CMap;
 
   SmallVector<std::pair<GlobalVariable *, GlobalVariable *>, 32>
       SameContentReplacements;
@@ -182,7 +193,7 @@ static bool mergeConstants(Module &M) {
       Constant *Init = GV.getInitializer();
 
       // Check to see if the initializer is already known.
-      GlobalVariable *&Slot = CMap[Init];
+      GlobalVariable *&Slot = CMap[{getLinkerOutputSection(GV), Init}];
 
       // If this is the first constant we find or if the old one is local,
       // replace with the current one. If the current is externally visible
@@ -210,7 +221,7 @@ static bool mergeConstants(Module &M) {
       Constant *Init = GV.getInitializer();
 
       // Check to see if the initializer is already known.
-      auto Found = CMap.find(Init);
+      auto Found = CMap.find({getLinkerOutputSection(GV), Init});
       if (Found == CMap.end())
         continue;
 

@@ -1,0 +1,110 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && split-file %s %t
+# RUN: opt -module-hash -module-summary %t/1.ll -o %t/1.1.o
+# RUN: opt -module-hash -module-summary %t/2.ll -o %t/1.2.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/3.s -o %t/1.3.o
+# RUN: cp -f %t/script.t %t/1.script.t
+# RUN: rm -Rf %t/1.cache && mkdir %t/1.cache
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -plugin-opt=-function-sections -e main -T %t/1.script.t %t/1.1.o %t/1.2.o %t/1.3.o -o %t/1.out
+# RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS %s
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -plugin-opt=-function-sections -e main -T %t/1.script.t %t/1.1.o %t/1.2.o %t/1.3.o -o %t/1.out
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+# RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS %s
+# RUN: cp -f %t/script2.t %t/1.script.t
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -plugin-opt=-function-sections -e main -T %t/1.script.t %t/1.1.o %t/1.2.o %t/1.3.o -o %t/1.out
+# RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS %s
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+# RUN: cp -f %t/script2a.t %t/1.script.t
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -plugin-opt=-function-sections -e main -T %t/1.script.t %t/1.1.o %t/1.2.o %t/1.3.o -o %t/1.out
+# RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS2 %s
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+# RUN: llvm-ar cr %t/1.lib.a %t/1.3.o
+# RUN: llvm-ar cr %t/1.lib.a %t/1.2.o
+# RUN: llvm-ar cr %t/1.lib.a %t/1.1.o
+# RUN: cp -f %t/script3.t %t/1.script.t
+# RUN: rm -Rf %t/1.cache && mkdir %t/1.cache
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -plugin-opt=-function-sections -e main -T %t/1.script.t %t/1.lib.a -o %t/1.out
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+# RUN: rm %t/1.lib.a
+# RUN: llvm-ar cr %t/1.lib.a %t/1.1.o
+# RUN: llvm-ar cr %t/1.lib.a %t/1.2.o
+# RUN: llvm-ar cr %t/1.lib.a %t/1.3.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections --thinlto-cache-dir=%t/1.cache \
+# RUN:   -e main -T %t/1.script.t %t/1.lib.a -o %t/1.out
+# RUN: ls %t/1.cache | FileCheck --check-prefix=LLVMCACHE-TWO --check-prefix=LLVMCACHE %s
+
+# SECTIONS: .alltext
+# SECTIONS-NOT: ] .text
+
+# SECTIONS2-NOT: .special
+
+# LLVMCACHE-TWO-COUNT-2: llvmcache-[[X:[[:xdigit:]]+]]
+# LLVMCACHE-NOT:         llvmcache-[[X:[[:xdigit:]]+]]
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+declare i32 @otherfun()
+declare i32 @otherfun2()
+
+define i32 @myfun() section ".text.myfun" {
+  %a = call i32 @otherfun()
+  %b = call i32 @otherfun2()
+  %c = add i32 %a, %b
+  ret i32 %c
+}
+
+#--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @otherfun() section ".text.otherfun" {
+  ret i32 23
+}
+
+define i32 @otherfun2() section ".text.otherfun2" {
+  ret i32 42
+}
+
+#--- 3.s
+.text
+.section .text.main,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  bl myfun
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+  .special : { *.2.o(.text.otherfun2) }
+  .alltext : { *(.text.*) }
+}
+
+#--- script2.t
+/* Identical to script.t except for this comment */
+SECTIONS {
+  .special : { *.2.o(.text.otherfun2) }
+  .alltext : { *(.text.*) }
+}
+
+#--- script2a.t
+SECTIONS {
+  .special : { *.2.o(.text.nomatch) }
+  .alltext : { *(.text.*) }
+}
+
+#--- script3.t
+/* Identical to script.t except for this comment */
+SECTIONS {
+  .special : { *.lib.a:(.text.otherfun2) }
+  .alltext : { *(.text.*) }
+}
