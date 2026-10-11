@@ -49,6 +49,10 @@ using namespace mlir::gpu;
 
 #include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
 
+namespace mlir::gpu {
+#include "mlir/Dialect/GPU/IR/GPUTypeConstraints.cpp.inc"
+} // namespace mlir::gpu
+
 //===----------------------------------------------------------------------===//
 // GPU Device Mapping Attributes
 //===----------------------------------------------------------------------===//
@@ -210,9 +214,7 @@ Type MMAMatrixType::getElementType() const { return getImpl()->elementType; }
 StringRef MMAMatrixType::getOperand() const { return getImpl()->getOperand(); }
 
 bool MMAMatrixType::isValidElementType(Type elementType) {
-  return elementType.isF16() || elementType.isF32() || elementType.isF64() ||
-         elementType.isUnsignedInteger(8) || elementType.isSignedInteger(8) ||
-         elementType.isInteger(32);
+  return isValidMMAMatrixElementType(elementType);
 }
 
 LogicalResult
@@ -2196,6 +2198,27 @@ LogicalResult SubgroupMmaComputeOp::verify() {
     return emitError("operand shapes do not satisfy matmul constraints");
 
   return success();
+}
+
+bool SubgroupMmaInsertThreadLocalOp::canBitcastToMatrixElement(
+    Type valueType, Type elementType) {
+  return valueType.isSignlessInteger() &&
+         (elementType.isSignedInteger() || elementType.isUnsignedInteger()) &&
+         valueType.getIntOrFloatBitWidth() ==
+             elementType.getIntOrFloatBitWidth();
+}
+
+LogicalResult SubgroupMmaInsertThreadLocalOp::verify() {
+  Type valueType = getValue().getType();
+  Type elementType =
+      cast<gpu::MMAMatrixType>(getMatrix().getType()).getElementType();
+  if (valueType == elementType)
+    return success();
+  if (canBitcastToMatrixElement(valueType, elementType))
+    return success();
+  return emitOpError("expected value type to match matrix element type, or "
+                     "be a matching-width signless integer for a signed or "
+                     "unsigned integer matrix");
 }
 
 LogicalResult MemcpyOp::fold(FoldAdaptor adaptor,
