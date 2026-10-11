@@ -979,6 +979,15 @@ void get_in_trivial_context(const SingleEntryHashMap<int, Ref<RefCountable>>& ma
   }
 }
 
+Ref<RefCountable> makeEmptyRef() { return HashTableEmptyValue; }
+
+void null_temporary_from_free_function() {
+  {
+    auto* foo = HashTraits<Ref<RefCountable>>::peek(makeEmptyRef()); // no-warning
+    foo->trivial();
+  }
+}
+
 Ref<RefCountable> makeRef(RefCountable& obj) { return obj; }
 
 void non_null_temporary(RefCountable& obj) {

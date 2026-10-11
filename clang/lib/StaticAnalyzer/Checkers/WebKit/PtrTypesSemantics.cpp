@@ -1250,8 +1250,8 @@ public:
       auto *Ctor = CE->getConstructor();
       if (!Ctor || !isOwnerPtr(safeGetName(Ctor->getParent())))
         return false;
-      if (!CE->getNumArgs())
-        return Ctor->isDefaultConstructor();
+      if (Ctor->isDefaultConstructor())
+        return true;
       if (CE->getNumArgs() != 1)
         return false;
       auto *Arg = CE->getArg(0)->IgnoreParenImpCasts();
@@ -1267,8 +1267,9 @@ public:
     }
     if (auto *CE = dyn_cast<CallExpr>(E)) {
       auto *Callee = CE->getDirectCallee();
-      if (!Callee || (isa<CXXMethodDecl>(Callee) &&
-                      cast<CXXMethodDecl>(Callee)->isVirtual()))
+      if (!Callee)
+        return false;
+      if (auto *MD = dyn_cast<CXXMethodDecl>(Callee); MD && MD->isVirtual())
         return false;
       auto *Body = dyn_cast_or_null<CompoundStmt>(Callee->getBody());
       if (!Body || Body->size() != 1)
