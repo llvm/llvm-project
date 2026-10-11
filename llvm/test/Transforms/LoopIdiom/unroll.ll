@@ -23,7 +23,7 @@ define void @test(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[F:%.*]], i8 0, i64 range(i64 0, 17179869177) [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -83,7 +83,7 @@ define void @test_pattern(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 range(i64 0, 4294967295) [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
