@@ -1910,6 +1910,13 @@ public:
   void emitLoopConditionVariable(const clang::VarDecl &d,
                                  CapturedCleanups &condCleanup);
 
+  /// Emit \p d with captured cleanups. Set \p guardDestruction if the cleanup
+  /// region covers initialization. Otherwise it must be reached only after
+  /// initialization.
+  void emitAutoVarDeclWithCapturedCleanups(const clang::VarDecl &d,
+                                           CapturedCleanups &cleanups,
+                                           bool guardDestruction = false);
+
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
   /// emission is not directly an alloca), the allocatedSeparately parameter can
