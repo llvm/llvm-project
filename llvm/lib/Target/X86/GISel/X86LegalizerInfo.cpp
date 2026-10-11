@@ -663,7 +663,7 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeGLOBAL_VALUE(MI, MRI, Helper);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return legalizeInsertVectorElt(MI, MRI, Helper);
+    return legalizeINSERT_VECTOR_ELT(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -1061,9 +1061,8 @@ bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
   return true;
 }
 
-bool X86LegalizerInfo::legalizeInsertVectorElt(MachineInstr &MI,
-                                               MachineRegisterInfo &MRI,
-                                               LegalizerHelper &Helper) const {
+bool X86LegalizerInfo::legalizeINSERT_VECTOR_ELT(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
   auto IdxVal =
