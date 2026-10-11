@@ -1793,6 +1793,14 @@ public:
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
+  /// Returns the function type that identifies \p FD as an indirect call
+  /// target or callee in the call graph section. Virtual methods are
+  /// identified by the type of the method that introduced the virtual function
+  /// (the root of their override chain) so that calls through pointers to any
+  /// class of the hierarchy match the overriders they can reach, even if those
+  /// have a covariant return type.
+  QualType GetCallGraphFunctionType(const FunctionDecl *FD) const;
+
   /// Create and attach callgraph metadata if the function is a potential
   /// indirect call target to support call graph section.
   void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
