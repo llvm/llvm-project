@@ -25,6 +25,35 @@ uint32_t test_rev_32(uint32_t a) { return __riscv_rev_32(a); }
 uint64_t test_rev_64(uint64_t a) { return __riscv_rev_64(a); }
 #endif
 
+// Scalar averaging addition and subtraction
+// CHECK-LABEL: test_aadd_i32:
+// RV32:        aadd{{[[:space:]]}}
+// RV64:        paadd.w
+int32_t test_aadd_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_aadd_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_aaddu_u32:
+// RV32:        aaddu{{[[:space:]]}}
+// RV64:        paaddu.w
+uint32_t test_aaddu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_aaddu_u32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asub_i32:
+// RV32:        asub{{[[:space:]]}}
+// RV64:        pasub.w
+int32_t test_asub_i32(int32_t rs1, int32_t rs2) {
+  return __riscv_asub_i32(rs1, rs2);
+}
+
+// CHECK-LABEL: test_asubu_u32:
+// RV32:        asubu{{[[:space:]]}}
+// RV64:        pasubu.w
+uint32_t test_asubu_u32(uint32_t rs1, uint32_t rs2) {
+  return __riscv_asubu_u32(rs1, rs2);
+}
+
 // CHECK-LABEL: test_sadd_i32:
 // RV32:        sadd{{[[:space:]]}}
 // RV64:        psadd.w
