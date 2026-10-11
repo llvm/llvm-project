@@ -18897,6 +18897,82 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getSignedConstant(CB, DL, VT));
 }
 
+// add (ext (add (ext X), (ext Y))),
+//     (ext (add (ext U), (ext V)))
+//   -> ext (add (add (ext X), (ext Y)), (add (ext U), (ext V)))
+static SDValue combineExtAddOfExtAdds(SDNode *N, SelectionDAG &DAG) {
+  auto IsAddOfExts = [](SDValue Add, std::optional<unsigned> &ExtOpc,
+                        bool RequireOneUseAdd =
+                            true) -> std::pair<SDValue, SDValue> {
+    if (Add.getOpcode() != ISD::ADD)
+      return {SDValue(), SDValue()};
+
+    if (RequireOneUseAdd && !Add.hasOneUse())
+      return {SDValue(), SDValue()};
+
+    SDValue LHSExt = Add.getOperand(0);
+    SDValue RHSExt = Add.getOperand(1);
+    if (ExtOpc) {
+      if (LHSExt.getOpcode() != *ExtOpc)
+        return {SDValue(), SDValue()};
+    } else {
+      unsigned LHSOpc = LHSExt.getOpcode();
+      if (LHSOpc != ISD::SIGN_EXTEND && LHSOpc != ISD::ZERO_EXTEND)
+        return {SDValue(), SDValue()};
+      ExtOpc = LHSOpc;
+    }
+
+    if (RHSExt.getOpcode() != *ExtOpc)
+      return {SDValue(), SDValue()};
+
+    if (!LHSExt.hasOneUse() || !RHSExt.hasOneUse())
+      return {SDValue(), SDValue()};
+
+    return {LHSExt, RHSExt};
+  };
+
+  std::optional<unsigned> ExtOpc;
+  auto [LHSExt, RHSExt] =
+      IsAddOfExts(SDValue(N, 0), ExtOpc, /*RequireOneUseAdd=*/false);
+
+  if (!LHSExt || !RHSExt)
+    return SDValue();
+
+  SDValue LHSAdd = LHSExt.getOperand(0);
+  SDValue RHSAdd = RHSExt.getOperand(0);
+  auto [LHSAddExt0, LHSAddExt1] = IsAddOfExts(LHSAdd, ExtOpc);
+  if (!LHSAddExt0 || !LHSAddExt1)
+    return SDValue();
+  auto [RHSAddExt0, RHSAddExt1] = IsAddOfExts(RHSAdd, ExtOpc);
+  if (!RHSAddExt0 || !RHSAddExt1)
+    return SDValue();
+
+  // The entire reduction tree must be symetrical with respect
+  // to value types.
+  EVT NarrowVT = LHSAddExt0.getOperand(0).getValueType();
+  if (NarrowVT != LHSAddExt1.getOperand(0).getValueType() ||
+      NarrowVT != RHSAddExt0.getOperand(0).getValueType() ||
+      NarrowVT != RHSAddExt1.getOperand(0).getValueType() ||
+      LHSAdd.getValueType() != RHSAdd.getValueType() ||
+      LHSExt.getValueType() != RHSExt.getValueType() ||
+      LHSExt.getValueType() != N->getValueType(0) || !NarrowVT.isInteger())
+    return SDValue();
+
+  // An addition had the ability to increase the number of non-sign bits
+  // by one. If the original extension widens the data by at least two bits,
+  // then it the second layer of addition will not overflow.
+  EVT SrcVT = LHSAdd.getValueType();
+  unsigned NarrowBits = NarrowVT.getScalarSizeInBits();
+  unsigned SrcBits = SrcVT.getScalarSizeInBits();
+  if (SrcBits < NarrowBits + 2 ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, SrcVT, LHSAdd, RHSAdd);
+  return DAG.getNode(*ExtOpc, DL, N->getValueType(0), Add);
+}
+
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
 // mul (zext, zext) -> zext (mul (zext, zext))
@@ -19336,6 +19412,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineExtAddOfExtAdds(N, DAG))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
