@@ -823,6 +823,8 @@ void collectLoopRelatedInfo(
     int64_t numCollapse, mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
 
+  mlir::SaveStateStack<LoopControlContext> context{converter.getStateStack(),
+                                                   eval};
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
@@ -1471,27 +1473,90 @@ semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
 }
 
 void collectEnclosingConstructTraits(
-    mlir::Operation *op,
+    AbstractConverter &converter, const pft::Evaluation *evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  // Collect enclosing OpenMP operations so variants chosen by an outer
-  // metadirective are part of this metadirective's context. For example, an
-  // inner metadirective inside `target` and an outer-selected `parallel` must
-  // be able to match construct={target, parallel}. The final reverse yields
-  // outermost-to-innermost order as required by OMPContext.
-  for (; op; op = op->getParentOp()) {
-    if (mlir::isa<mlir::omp::WsloopOp>(op))
-      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-    if (mlir::isa<mlir::omp::ParallelOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_parallel_parallel);
-    if (mlir::isa<mlir::omp::TeamsOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_teams_teams);
-    if (mlir::isa<mlir::omp::TargetOp>(op))
-      constructTraits.push_back(
-          llvm::omp::TraitProperty::construct_target_target);
+  const auto *loopControl =
+      converter.getStateStack().getStackTop<LoopControlContext>();
+  // Use the loop owner's ancestors: host evaluation may have TARGET current
+  // while evaluating a nested loop's bounds.
+  if (loopControl)
+    evaluation = &loopControl->evaluation;
+
+  llvm::SmallVector<const OpenMPContextFrame *, 4> frames;
+  converter.getStateStack().stackWalk<OpenMPContextFrame>(
+      [&](OpenMPContextFrame &frame) {
+        frames.push_back(&frame);
+        return mlir::WalkResult::advance();
+      });
+  std::reverse(frames.begin(), frames.end());
+  llvm::SmallVector<bool, 4> usedFrames(frames.size(), false);
+
+  llvm::SmallVector<const pft::Evaluation *, 8> ancestors;
+  for (const pft::Evaluation *parent = evaluation ? evaluation->parentConstruct
+                                                  : nullptr;
+       parent; parent = parent->parentConstruct) {
+    ancestors.push_back(parent);
   }
-  std::reverse(constructTraits.begin(), constructTraits.end());
+  std::reverse(ancestors.begin(), ancestors.end());
+
+  auto append = [&](llvm::omp::Directive directive) {
+    semantics::omp::AppendDirectiveContextTraits(directive, constructTraits);
+  };
+  auto getDirective =
+      [&](const pft::Evaluation &eval) -> std::optional<llvm::omp::Directive> {
+    std::optional<llvm::omp::Directive> directive;
+    if (const auto *omp = eval.getIf<parser::OpenMPConstruct>()) {
+      directive = parser::omp::GetOmpDirectiveName(*omp).v;
+    } else if (const auto *decl =
+                   eval.getIf<parser::OpenMPDeclarativeConstruct>()) {
+      // A metadirective before the first executable statement is declarative.
+      if (std::holds_alternative<parser::OmpMetadirectiveDirective>(decl->u))
+        directive = llvm::omp::Directive::OMPD_metadirective;
+    }
+    if (directive == llvm::omp::Directive::OMPD_metadirective)
+      for (const OpenMPContextFrame *frame : frames)
+        if (&frame->evaluation == &eval && frame->isReplacement)
+          return frame->directive;
+    return directive;
+  };
+  for (const pft::Evaluation *ancestor : ancestors) {
+    std::optional<llvm::omp::Directive> directive = getDirective(*ancestor);
+    if (!directive)
+      continue;
+    // An ancestor supplies the full source context, including constituents
+    // whose bodies also have active frames. Count each construct only once.
+    for (auto [index, frame] : llvm::enumerate(frames))
+      if (&frame->evaluation == ancestor)
+        usedFrames[index] = true;
+    append(*directive);
+  }
+
+  // Use entered frames for clauses. Loop bounds use the source prefix below,
+  // which is available even before the owner's frames are entered.
+  for (auto [index, frame] : llvm::enumerate(frames)) {
+    if (usedFrames[index] || frame->isReplacement)
+      continue;
+    if (loopControl && &frame->evaluation == evaluation)
+      continue;
+    append(frame->directive);
+  }
+
+  if (!loopControl)
+    return;
+  std::optional<llvm::omp::Directive> directive = getDirective(*evaluation);
+  if (!directive)
+    return;
+  // Bounds precede the first loop-associated constituent in source order.
+  // TARGET TEAMS DISTRIBUTE PARALLEL DO therefore retains TARGET and TEAMS.
+  for (llvm::omp::Directive leaf :
+       llvm::omp::getLeafConstructsOrSelf(*directive)) {
+    llvm::omp::Association association =
+        llvm::omp::getDirectiveAssociation(leaf);
+    if (association == llvm::omp::Association::LoopNest ||
+        association == llvm::omp::Association::LoopSequence)
+      break;
+    append(leaf);
+  }
 }
 
 const semantics::Symbol *
@@ -1535,9 +1600,8 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   }
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(
-      converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
-      constructTraits);
+  collectEnclosingConstructTraits(converter, converter.getCurrentEvaluation(),
+                                  constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(converter.getModuleOp(), constructTraits);
 

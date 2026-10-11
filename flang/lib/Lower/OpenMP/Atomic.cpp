@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Atomic.h"
+#include "Utils.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -559,6 +560,8 @@ void Fortran::lower::omp::lowerAtomic(
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const parser::OmpDirectiveSpecification &dirSpec = construct.BeginDir();
+  mlir::SaveStateStack<OpenMPContextFrame> context{converter.getStateStack(),
+                                                   eval, dirSpec.DirId()};
   omp::List<omp::Clause> clauses = makeClauses(dirSpec.Clauses(), semaCtx);
   lower::StatementContext stmtCtx;
 

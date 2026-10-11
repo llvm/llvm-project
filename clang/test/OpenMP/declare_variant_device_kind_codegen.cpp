@@ -82,21 +82,29 @@
 
 // Verify no unexpected global symbol aliasing
 // CHECK-NOT: @{{[^ ]+}} = {{.*}}alias
+// CHECK-LABEL: define {{.*}}i32 @main()
+// CHECK: call {{.*}}i32 @_Z3foov()
+// CHECK: call {{.*}}i32 @_Z5bazzzv()
+// CHECK: call {{.*}}i32 @_Z4testv()
+// CHECK: call {{.*}}i32 @_ZL10stat_used_v()
+// CHECK: ret i32
 
-// CHECK-NOT: ret i32 {{1|4|81|84}}
-// CHECK-DAG: declare {{.*}}i32 @_Z5bazzzv()
-// CHECK-DAG: define {{.*}}i32 @_Z3bazv()
-// CHECK-DAG: ret i32 2
-// CHECK-DAG: ret i32 3
-// CHECK-DAG: ret i32 5
-// CHECK-DAG: ret i32 6
-// CHECK-DAG: ret i32 7
-// CHECK-DAG: ret i32 82
-// CHECK-DAG: ret i32 83
-// CHECK-DAG: ret i32 85
-// CHECK-DAG: ret i32 86
-// CHECK-DAG: ret i32 87
-// CHECK-NOT: ret i32 {{4|81|84}}
+// CHECK-LABEL: define {{.*}}void @_Z3xxxv()
+// CHECK: call {{.*}}i32 @_ZN12SpecialFuncs7method_Ev(
+// CHECK: call {{.*}}i32 @_ZN16SpecSpecialFuncs7method_Ev(
+// CHECK: ret void
+
+// CHECK-LABEL: define {{.*}}i32 @_Z6int_fnv()
+// CHECK-DAG: call {{.*}}i32 @_Z5prio1v()
+// CHECK-DAG: call {{.*}}i32 @_ZL5prio2v()
+// CHECK: ret i32
+
+// CHECK-LABEL: define {{.*}}i32 @_Z18fn_linkage_variantv()
+// CHECK: ret i32 85
+// CHECK-LABEL: define {{.*}}i32 @fn_linkage_variant1()
+// CHECK: ret i32 86
+// CHECK-LABEL: define {{.*}}i32 @_Z3fn2v()
+// CHECK: ret i32 87
 
 #ifndef HEADER
 #define HEADER
@@ -108,8 +116,9 @@
 #define WRONG host, nohost
 #endif // HOST
 #ifdef CPU
-#define SUBSET cpu
-#define CORRECT cpu, any
+// kind(any) must appear alone and is equivalent to omitting kind.
+#define SUBSET any
+#define CORRECT cpu
 #define WRONG cpu, gpu
 #endif // CPU
 #ifdef NOHOST
@@ -199,7 +208,7 @@ static int prio4() { return 84; }
 #pragma omp declare variant(prio3) match(device = {kind(SUBSET)})
 static int prio1_() { return 1; }
 
-int int_fn() { return prio1_(); }
+int int_fn() { return prio_() + prio1_(); }
 
 int fn_linkage_variant() { return 85; }
 extern "C" {

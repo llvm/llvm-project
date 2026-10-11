@@ -193,6 +193,8 @@ public:
     Record->push_back(llvm::to_underlying(Value));
   }
 
+  void writeString(StringRef Value) { Writer->AddString(Value, *Record); }
+
   void writeUnsignedOrNone(UnsignedOrNone Value) {
     Record->push_back(Value.toInternalRepresentation());
   }

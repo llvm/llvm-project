@@ -10066,12 +10066,14 @@ struct OMPTraitProperty {
   llvm::omp::TraitProperty Kind = llvm::omp::TraitProperty::invalid;
 
   /// The raw string as we parsed it. This is needed for the `isa` trait set
-  /// (which accepts anything) and (later) extensions.
+  /// (which accepts anything) and extensions.
   StringRef RawString;
 };
 
 struct OMPTraitSelector {
   Expr *ScoreOrCondition = nullptr;
+  /// Preserve the condition before template substitution for subset checks.
+  Expr *OriginalCondition = nullptr;
   llvm::omp::TraitSelector Kind = llvm::omp::TraitSelector::invalid;
   SmallVector<OMPTraitProperty, 1> Properties;
 };
