@@ -5358,7 +5358,7 @@ static bool hasNoWrapProblem(const BinaryOperator &BO, CmpInst::Predicate Pred,
 }
 
 bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
-                                                CmpInst::Predicate &Pred,
+                                                CmpInst::Predicate Pred,
                                                 Value *&LHS, Value *&RHS,
                                                 const SimplifyQuery &Q) {
   auto *BO0 = dyn_cast<BinaryOperator>(Op0);
@@ -5471,11 +5471,12 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
     if (!IsSigned)
       return isKnownNonZero(Z, Q);
 
-    if (isKnownPositive(Z, Q))
+    WithCache<const Value *> ZCache(Z);
+    if (isKnownPositive(ZCache, Q))
       return true;
 
-    if (isKnownNegative(Z, Q)) {
-      Pred = ICmpInst::getSwappedPredicate(Pred);
+    if (isKnownNegative(ZCache, Q)) {
+      std::swap(LHS, RHS);
       return true;
     }
 
@@ -5617,9 +5618,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   // Fold comparisons of binops with a removable common operand.
   Value *LHS;
   Value *RHS;
-  CmpInst::Predicate NewPred = Pred;
-  if (matchCommonBinOpOperands(Op0, Op1, NewPred, LHS, RHS, Q))
-    return new ICmpInst(NewPred, LHS, RHS);
+  if (matchCommonBinOpOperands(Op0, Op1, Pred, LHS, RHS, Q))
+    return new ICmpInst(Pred, LHS, RHS);
 
   if (ICmpInst::isRelational(Pred)) {
     // Return if both X and Y is divisible by Z/-Z.

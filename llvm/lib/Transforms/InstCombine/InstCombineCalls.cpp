@@ -2532,14 +2532,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto *Cmp = cast<CmpIntrinsic>(II);
     Value *I0 = Cmp->getLHS(), *I1 = Cmp->getRHS();
     Value *LHS, *RHS;
-    CmpInst::Predicate Pred = Cmp->getLTPredicate();
-    if (matchCommonBinOpOperands(I0, I1, Pred, LHS, RHS,
-                                 SQ.getWithInstruction(II))) {
-      if (ICmpInst::isGT(Pred))
-        std::swap(LHS, RHS);
+    if (matchCommonBinOpOperands(I0, I1, Cmp->getLTPredicate(), LHS, RHS,
+                                 SQ.getWithInstruction(II)))
       return replaceInstUsesWith(
           CI, Builder.CreateIntrinsic(II->getType(), IID, {LHS, RHS}));
-    }
 
     if (IID == Intrinsic::ucmp)
       break;
