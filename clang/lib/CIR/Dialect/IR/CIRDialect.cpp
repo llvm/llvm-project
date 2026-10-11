@@ -3722,12 +3722,27 @@ void cir::AwaitOp::getSuccessorRegions(
     return;
   }
 
-  // Branching from suspend or resume: exit to the parent operation.
+  // Branching from suspend: if terminated by a suspend_point with a condition
+  // (vetoable suspend), false branches to resume and true exits to parent op.
+  if (&getSuspend() == parentRegion) {
+    if (auto suspendPoint = dyn_cast<CoroSuspendPoint>(
+            point.getTerminatorPredecessorOrNull())) {
+      if (suspendPoint.getCond()) {
+        regions.emplace_back(getOperation());
+        regions.emplace_back(&getResume());
+        return;
+      }
+    }
+  }
+
+  // Branching from suspend (unconditional) or resume: exit to the parent
+  // operation.
   regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::AwaitOp::verify() {
-  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
+  if (this->getReady().empty() ||
+      !isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
   if (this->getSuspend().empty())
     return emitOpError("suspend region must not be empty");

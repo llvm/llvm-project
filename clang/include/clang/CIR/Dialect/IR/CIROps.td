@@ -5327,11 +5327,28 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
     - destroy: transfers through the enclosing `cir.cleanup.scope`s to the
       `cir.coroutine`'s `destroy` region when the coroutine handle is
       destroyed.
+
+    When the optional `cond` operand is present, a `false` value vetoes the
+    suspension and control branches directly to the `resume` region of the
+    enclosing `cir.await`. A `true` value indicates the coroutine actually
+    suspends.
   }];
 
+  let arguments = (ins Optional<CIR_AnyBoolType>:$cond);
+
   let assemblyFormat = [{
-    attr-dict
+    (`(` $cond^ `)`)? attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins), [{
+      /* No operands. */
+    }]>,
+    OpBuilder<(ins "mlir::Value":$cond), [{
+      if (cond)
+        $_state.addOperands(cond);
+    }]>
+  ];
 
   let hasLLVMLowering = false;
 }
