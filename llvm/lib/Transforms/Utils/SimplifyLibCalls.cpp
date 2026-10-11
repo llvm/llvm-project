@@ -2848,9 +2848,9 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   }
 
   // log(exp{,2,10}(y)) -> y*log({e,2,10})
-  // TODO: There is no exp10() intrinsic yet.
   if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
-           ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
+      ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2 ||
+      ArgID == Intrinsic::exp10) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)
       // FIXME: Add more precise value of e for long double.
