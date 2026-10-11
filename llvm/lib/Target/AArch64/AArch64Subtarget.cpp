@@ -208,7 +208,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseN2:
   case NeoverseN3:
   case NeoverseV3AE:
-    PrefFunctionAlignment = Align(16);
+    PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
