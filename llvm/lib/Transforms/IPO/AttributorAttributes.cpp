@@ -585,6 +585,10 @@ struct AACalleeToCallSite : public BaseType {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     auto CalleePred = [&](ArrayRef<const Function *> Callees) {
       for (const Function *Callee : Callees) {
+        if (IRPKind == IRPosition::IRP_CALL_SITE_RETURNED &&
+            Callee->getReturnType() != CB.getType())
+          return false;
+
         IRPosition FnPos =
             IRPKind == llvm::IRPosition::IRP_CALL_SITE_RETURNED
                 ? IRPosition::returned(*Callee,
