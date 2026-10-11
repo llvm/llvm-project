@@ -1638,6 +1638,21 @@ mlir::spirv::getNativeVectorShape(Operation *op) {
       .Default(std::nullopt);
 }
 
+bool mlir::spirv::hasMultiRankVectorType(Operation *op) {
+  auto isMultiRankVector = [](Type type) {
+    auto vectorType = dyn_cast<VectorType>(type);
+    return vectorType && vectorType.getRank() > 1;
+  };
+  return op
+      ->walk([&](Operation *nestedOp) {
+        if (llvm::any_of(nestedOp->getOperandTypes(), isMultiRankVector) ||
+            llvm::any_of(nestedOp->getResultTypes(), isMultiRankVector))
+          return WalkResult::interrupt();
+        return WalkResult::advance();
+      })
+      .wasInterrupted();
+}
+
 LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   MLIRContext *context = op->getContext();
   RewritePatternSet patterns(context);
