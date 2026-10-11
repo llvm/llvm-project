@@ -185,10 +185,10 @@ bool VectorizerParams::isInterleaveForced() {
   return ::VectorizationInterleave.getNumOccurrences() > 0;
 }
 
-const SCEV *
-llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                                const SymbolicStrideMap &PtrToStride,
-                                Value *Ptr) {
+const SCEV *llvm::replaceSymbolicStrideSCEV(
+    PredicatedScalarEvolution &PSE, const Loop *Lp,
+    const SymbolicStrideMap &PtrToStride, Value *Ptr,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   const SCEV *OrigSCEV = PSE.getSCEV(Ptr);
 
   // If there is an entry in the map return the SCEV of the pointer with the
@@ -200,11 +200,18 @@ llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
   ScalarEvolution *SE = PSE.getSE();
   const SCEV *CT = SE->getOne(StrideSCEV->getType());
-  PSE.addPredicate(*SE->getEqualPredicate(StrideSCEV, CT));
-  const SCEV *Expr = PSE.getSCEV(Ptr);
-
-  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV
-	     << " by: " << *Expr << "\n");
+  const SCEV *Expr;
+  const SCEVPredicate *EqPred = SE->getEqualPredicate(StrideSCEV, CT);
+  if (Predicates) {
+    Predicates->push_back(EqPred);
+    Expr = SE->rewriteUsingPredicate(OrigSCEV, Lp,
+                                     SCEVUnionPredicate(*Predicates, *SE));
+  } else {
+    PSE.addPredicate(*EqPred);
+    Expr = PSE.getSCEV(Ptr);
+  }
+  LLVM_DEBUG(dbgs() << "LAA: Replacing SCEV: " << *OrigSCEV << " by: " << *Expr
+                    << "\n");
   return Expr;
 }
 
@@ -1690,8 +1697,8 @@ public:
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
-      : TheLoop(TheLoop), BAA(*AA), AST(BAA), LI(LI), DT(DT), DepCands(DA),
-        PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
+      : TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA), LI(LI), DT(DT),
+        DepCands(DA), PSE(PSE), LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
   }
@@ -1800,6 +1807,9 @@ private:
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
+
+  /// Capture analysis for BAA.
+  EarliestEscapeAnalysis EEA;
 
   /// Batched alias analysis results.
   BatchAAResults BAA;
@@ -2168,7 +2178,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
                for (const auto &[Idx, Q] : enumerate(RTCheckPtrs)) dbgs()
                << "\t(" << Idx << ") " << *Q.getPointer() << "\n");
   } else {
-    RTCheckPtrs = {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+    RTCheckPtrs = {
+        {replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr), false}};
   }
 
   /// Check whether all pointers can participate in a runtime bounds check. They
@@ -2200,7 +2211,7 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
       PSE.addPredicates(Predicates);
       Predicates.clear();
       if (auto *StrideAR = dyn_cast<SCEVAddRecExpr>(
-              replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr)))
+              replaceSymbolicStrideSCEV(PSE, TheLoop, StridesMap, Ptr)))
         AR = StrideAR;
       P.setPointer(AR);
     }
@@ -2553,7 +2564,8 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    const Loop *Lp, const DominatorTree &DT,
                    const SymbolicStrideMap &StridesMap, bool ShouldCheckWrap,
                    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+  const SCEV *PtrScev =
+      replaceSymbolicStrideSCEV(PSE, Lp, StridesMap, Ptr, Predicates);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
 
@@ -2583,21 +2595,6 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
       dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
              << *Ptr << " SCEV: " << *AR << "\n");
   return std::nullopt;
-}
-
-/// Check whether the access through \p Ptr has a constant stride.
-std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
-                                          Type *AccessTy, Value *Ptr,
-                                          const Loop *Lp,
-                                          const DominatorTree &DT,
-                                          const SymbolicStrideMap &StridesMap,
-                                          bool Assume, bool ShouldCheckWrap) {
-  SmallVector<const SCEVPredicate *> Predicates;
-  std::optional<int64_t> Stride =
-      getPtrStride(PSE, AccessTy, Ptr, Lp, DT, StridesMap, ShouldCheckWrap,
-                   Assume ? &Predicates : nullptr);
-  PSE.addPredicates(Predicates);
-  return Stride;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
@@ -3699,7 +3696,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides,
                       true)) {
       ++NumReads;
       IsReadOnlyPtr = true;

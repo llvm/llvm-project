@@ -49,25 +49,6 @@ STATISTIC(NumVRegSpilled,
 STATISTIC(NumVRegReloaded,
           "Number of registers within vector register groups reloaded");
 
-static cl::opt<bool> PreferWholeRegisterMove(
-    "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
-    cl::desc("Prefer whole register move for vector registers."));
-
-static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
-    "riscv-force-machine-combiner-strategy", cl::Hidden,
-    cl::desc("Force machine combiner to use a specific strategy for machine "
-             "trace metrics evaluation."),
-    cl::init(MachineTraceStrategy::TS_NumStrategies),
-    cl::values(clEnumValN(MachineTraceStrategy::TS_Local, "local",
-                          "Local strategy."),
-               clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
-                          "MinInstrCount strategy.")));
-
-static cl::opt<bool> OutlinerEnableRegSave(
-    "riscv-outliner-regsave", cl::init(true), cl::Hidden,
-    cl::desc("Enable RegSave strategy in machine outliner (save X5 to a "
-             "temporary register when X5 is live across outlined calls)."));
-
 namespace llvm::RISCVVPseudosTable {
 
 using namespace RISCV;
@@ -262,7 +243,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
                                    MachineBasicBlock::const_iterator MBBI,
                                    MachineBasicBlock::const_iterator &DefMBBI,
                                    RISCVVType::VLMUL LMul) {
-  if (PreferWholeRegisterMove)
+  if (STI.getCLOpts().prefer_whole_register_move)
     return false;
 
   assert(MBBI->getOpcode() == TargetOpcode::COPY &&
@@ -2317,7 +2298,9 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 }
 
 MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
-  if (ForceMachineCombinerStrategy.getNumOccurrences() == 0) {
+  std::optional<MachineTraceStrategy> Forced =
+      STI.getCLOpts().force_machine_combiner_strategy;
+  if (!Forced) {
     // The option is unused. Choose Local strategy only for in-order cores. When
     // scheduling model is unspecified, use MinInstrCount strategy as more
     // generic one.
@@ -2327,7 +2310,7 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
                : MachineTraceStrategy::TS_Local;
   }
   // The strategy was forced by the option.
-  return ForceMachineCombinerStrategy;
+  return *Forced;
 }
 
 void RISCVInstrInfo::finalizeInsInstrs(
@@ -3561,8 +3544,7 @@ bool RISCVInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -3597,7 +3579,7 @@ bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
   }
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
     return false;
   BaseOps.push_back(BaseOp);
   return true;
@@ -3672,7 +3654,7 @@ bool RISCVInstrInfo::shouldClusterMemOps(
 // function) and set it as appropriate.
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo *TRI) const {
+    LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore())
     return false;
 
@@ -3708,13 +3690,12 @@ bool RISCVInstrInfo::areMemAccessesTriviallyDisjoint(
   // base registers are identical, and the offset of a lower memory access +
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   LocationSize WidthA = LocationSize::precise(0),
                WidthB = LocationSize::precise(0);
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
@@ -3905,7 +3886,7 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (OutlinerEnableRegSave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;
@@ -3973,7 +3954,7 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   if (MOCI != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
 
-  if (OutlinerEnableRegSave && MOCI == MachineOutlinerDefault) {
+  if (STI.getCLOpts().outliner_regsave && MOCI == MachineOutlinerDefault) {
     // Set per-candidate overhead based on X5 availability
     for (auto &C : RepeatedSequenceLocs) {
 
@@ -4144,12 +4125,12 @@ std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
 }
 
 // MIR printer helper function to annotate Operands with a comment.
-std::string RISCVInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+std::string RISCVInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                    const MachineOperand &Op,
+                                                    unsigned OpIdx) const {
   // Print a generic comment for this operand if there is one.
   std::string GenericComment =
-      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx);
   if (!GenericComment.empty())
     return GenericComment;
 

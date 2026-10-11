@@ -14,7 +14,7 @@
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
 #include "OffloadPrint.hpp"
-#include "PluginManager.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
@@ -48,6 +48,12 @@ struct ol_platform_impl_t {
     if (llvm::Error Err = init())
       return std::move(Err);
     return llvm::ArrayRef(Devices);
+  }
+
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
   }
 
   /// Direct access to the plugin, may be uninitialized if accessed here.
@@ -295,9 +301,12 @@ struct OffloadContext;
 // This pointer is non-null if and only if the context is valid and fully
 // initialized
 static std::atomic<OffloadContext *> OffloadContextVal;
-std::mutex OffloadContextValMutex;
+static std::mutex &getOffloadContextMutex() {
+  static std::mutex Mutex;
+  return Mutex;
+}
 // Set once the vendor runtimes may have been torn down at process exit.
-// Guarded by OffloadContextValMutex.
+// Guarded by getOffloadContextMutex().
 static bool ShutDownAtExit = false;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
@@ -372,7 +381,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
 }
 
 Error olInit_impl(const ol_init_args_t *InitArgs) {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   if (ShutDownAtExit)
     return createOffloadError(ErrorCode::UNINITIALIZED,
@@ -413,7 +422,7 @@ static Error destroyContext(OffloadContext *Context) {
 }
 
 Error olShutDown_impl() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   // The context may already have been released at process exit, calls that
   // balance an earlier olInit are still valid.
@@ -434,7 +443,7 @@ Error olShutDown_impl() {
 // In these cases we register a specific handler to shut it down with the proper
 // ordering. If this is necessary than the shutdown implementation is skipped.
 static void shutDownAtExit() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
   ShutDownAtExit = true;
   if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
     consumeError(destroyContext(Context));
@@ -461,6 +470,8 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_ACTIVE:
+    return Info.write<bool>(Platform->isActive());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);

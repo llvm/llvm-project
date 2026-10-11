@@ -22,8 +22,8 @@ define i32 @ptrtoaddr_expanded_twice(ptr %bound, ptr %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 3, [[BOUND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[INDVAR]], -4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[BOUND]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoaddr ptr [[READ_LCSSA]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP16]], i64 [[TMP15]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[UMAX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 2

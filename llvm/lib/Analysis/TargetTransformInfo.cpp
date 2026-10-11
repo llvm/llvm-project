@@ -520,8 +520,8 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
 
 bool TargetTransformInfo::isLegalAltInstr(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask) const {
-  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask);
+    const SmallBitVector &OpcodeMask, ArrayRef<const Value *> Scalars) const {
+  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask, Scalars);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
@@ -769,10 +769,6 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
-}
-
-bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
-  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -1102,9 +1098,10 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 
 InstructionCost TargetTransformInfo::getAltInstrCost(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost =
-      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+    ArrayRef<const Value *> Scalars) const {
+  InstructionCost Cost = TTIImpl->getAltInstrCost(
+      VecTy, Opcode0, Opcode1, OpcodeMask, CostKind, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
