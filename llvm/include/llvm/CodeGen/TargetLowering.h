@@ -646,6 +646,12 @@ public:
     return BypassSlowDivWidths;
   }
 
+  /// Returns true if the target wants to bypass div/rem instructions with
+  /// a constant divisor.
+  bool shouldBypassConstantDivisor() const {
+    return ShouldBypassConstantDivisor;
+  }
+
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }
@@ -2735,6 +2741,16 @@ protected:
     HasExtractBitsInsn = hasExtractInsn;
   }
 
+  /// Tells the code generator to bypass a div/rem with a constant divisor.
+  /// A div/rem with a constant divisor is normally converted to a
+  /// multiplication by a magic constant. Bypassing it may introduce a more
+  /// complex CFG. Set this to true if the target's multiplication is slow
+  /// enough that it is worth introducing branches to use a narrower
+  /// division.
+  void setShouldBypassConstantDivisor(bool ShouldBypassConstantDivisor = true) {
+    this->ShouldBypassConstantDivisor = ShouldBypassConstantDivisor;
+  }
+
   /// Tells the code generator not to expand logic operations on comparison
   /// predicates into separate sequences that increase the amount of flow
   /// control.
@@ -3830,6 +3846,14 @@ private:
   /// generator to bypass 32-bit integer div/rem with an 8-bit unsigned integer
   /// div/rem when the operands are positive and less than 256.
   DenseMap <unsigned int, unsigned int> BypassSlowDivWidths;
+
+  /// Tells the code generator to bypass a div/rem with a constant divisor.
+  /// A div/rem with a constant divisor is normally converted to a
+  /// multiplication by a magic constant. Bypassing it may introduce a more
+  /// complex CFG. Set this to true if the target's multiplication is slow
+  /// enough that it is worth introducing branches to use a narrower
+  /// division.
+  bool ShouldBypassConstantDivisor;
 
   /// Tells the code generator that it shouldn't generate extra flow control
   /// instructions and should attempt to combine flow control instructions via
