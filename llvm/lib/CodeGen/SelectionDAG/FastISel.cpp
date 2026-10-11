@@ -1171,7 +1171,8 @@ bool FastISel::selectCall(const User *I) {
       ExtraInfo |= InlineAsm::Extra_MayUnwind;
     if (Call->isConvergent())
       ExtraInfo |= InlineAsm::Extra_IsConvergent;
-    ExtraInfo |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
+    if (IA->getDialect() == InlineAsm::AD_Intel)
+      ExtraInfo |= InlineAsm::Extra_AsmDialect;
 
     MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                       TII.get(TargetOpcode::INLINEASM));
