@@ -1,0 +1,40 @@
+## Test a big archive whose member header points at a next member outside the
+## file. The offset is read from the archive and its field is wide enough to
+## hold any 64-bit value, so it has to be checked before it is turned into a
+## pointer.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: yaml2obj %s -o t1.o
+# RUN: cp t1.o t2.o
+# RUN: llvm-ar q t.a t1.o t2.o
+
+## Set the first member's NextOffset to 2^64-1. Added to the start of the
+## buffer that wraps to just before it, which used to pass the "past the end of
+## the archive" check in getNext() and have the member header read from there.
+# RUN: cp t.a next_offset.a
+# RUN: %python -c "f = open('next_offset.a', 'r+b'); d = f.read(); o = int(d[68:88]); f.seek(o + 20); f.write(b'18446744073709551615')"
+# RUN: not llvm-ar t next_offset.a 2>&1 | FileCheck -DFILE=next_offset.a --check-prefix=NEXT %s
+
+## The unmodified archive still reads back.
+# RUN: llvm-ar t t.a | FileCheck --check-prefix=VALID %s
+
+# NEXT: error: truncated or malformed archive (malformed AIX big archive: next archive member offset 0xffffffffffffffff goes past the end of file)
+
+# VALID:      t1.o
+# VALID-NEXT: t2.o
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
