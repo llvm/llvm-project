@@ -14,7 +14,9 @@
 
 #include "SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -210,32 +212,53 @@ private:
     return false;
   }
 
+  class ForwardPostOrderTraversal
+      : public PostOrderTraversalBase<ForwardPostOrderTraversal,
+                                      GraphTraits<BasicBlock *>> {
+    const ConvergenceRegionAnalyzer &Analyzer;
+
+  public:
+    ForwardPostOrderTraversal(const ConvergenceRegionAnalyzer &Analyzer,
+                              BasicBlock *From)
+        : Analyzer(Analyzer) {
+      init(From);
+    }
+
+    bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To) {
+      return !(From && Analyzer.isBackEdge(*From, To)) &&
+             Visited.insert(To).second;
+    }
+
+  private:
+    SmallPtrSet<BasicBlock *, 16> Visited;
+  };
+
   SmallPtrSet<BasicBlock *, 0>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
+    ForwardPostOrderTraversal Traversal(*this, From);
+    SmallVector<BasicBlock *, 16> PostOrder(Traversal.begin(), Traversal.end());
+
+    // |PostOrder| puts successors before predecessors, so reachability to a
+    // match propagates in one linear scan instead of per-path recursion.
     SmallPtrSet<BasicBlock *, 0> Output;
+    for (auto *BB : PostOrder) {
+      bool ReachesMatch = false;
+      auto *Terminator = BB->getTerminator();
+      for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
+        auto *To = Terminator->getSuccessor(i);
+        if (!isBackEdge(BB, To) && Output.contains(To))
+          ReachesMatch = true;
+      }
 
-    if (isMatch(From))
-      Output.insert(From);
+      if (isMatch(BB) || ReachesMatch)
+        Output.insert(BB);
 
-    auto *Terminator = From->getTerminator();
-    for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
-      auto *To = Terminator->getSuccessor(i);
-      // Ignore back edges.
-      if (isBackEdge(From, To))
-        continue;
-
-      auto ChildSet = findPathsToMatch(LI, To, isMatch);
-      if (ChildSet.size() == 0)
-        continue;
-
-      Output.insert(ChildSet.begin(), ChildSet.end());
-      Output.insert(From);
-      if (LI.isLoopHeader(From)) {
-        auto *L = LI.getLoopFor(From);
-        for (auto *BB : L->getBlocks()) {
-          Output.insert(BB);
-        }
+      // A qualifying path through a loop header brings in the whole loop.
+      if (ReachesMatch && LI.isLoopHeader(BB)) {
+        auto *L = LI.getLoopFor(BB);
+        for (auto *LoopBB : L->getBlocks())
+          Output.insert(LoopBB);
       }
     }
 
