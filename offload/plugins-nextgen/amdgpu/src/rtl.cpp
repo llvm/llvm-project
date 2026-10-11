@@ -3050,7 +3050,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         llvm_unreachable("Invalid pattern size");
       }
 
-      if (hasPendingWorkImpl(AsyncInfoWrapper)) {
+      auto Pending = hasPendingWorkImpl(AsyncInfoWrapper);
+      if (auto Err = Pending.takeError())
+        return Err;
+
+      if (*Pending) {
         AMDGPUStreamTy *Stream = nullptr;
         if (auto Err = getStream(AsyncInfoWrapper, Stream))
           return Err;
