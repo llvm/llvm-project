@@ -19,6 +19,7 @@ extern ExitCallbackList at_quick_exit_callbacks;
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
   call_exit_callbacks(at_quick_exit_callbacks);
+  // TODO: flushing should happen here
   internal::exit(status);
 }
 
