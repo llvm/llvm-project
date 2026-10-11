@@ -3944,19 +3944,23 @@ bool UnwrappedLineParser::parseEnum() {
   if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
     return false;
 
-  if (IsCpp) {
-    // Eat up enum class ...
-    if (FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
-      nextToken();
-    while (FormatTok->is(tok::l_square))
-      if (!handleCppAttributes())
-        return false;
-  }
+  // Eat up enum class ...
+  if (IsCpp && FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
+    nextToken();
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(TT_AttributeMacro)) {
+      nextToken();
+      continue;
+    }
+    if (IsCpp && FormatTok->is(tok::l_square)) {
+      if (handleCppAttributes())
+        continue;
+      return false;
+    }
     if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {

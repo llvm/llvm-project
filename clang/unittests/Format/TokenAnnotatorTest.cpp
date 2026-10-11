@@ -692,6 +692,34 @@ TEST_F(TokenAnnotatorTest, UnderstandsEnums) {
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_EnumLBrace);
   EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_EnumRBrace);
+
+  auto Style = getLLVMStyle();
+  Style.AttributeMacros = {"AttributeA", "AttributeB"};
+  Tokens = annotate("enum class AttributeA AttributeB Enum {};", Style);
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum class AttributeA [[nodiscard]] AttributeB Enum {};",
+                    Style);
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[3], tok::l_square, TT_AttributeLSquare);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum __attribute__((deprecated)) Foo {};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_EnumRBrace);
+
+  Tokens = annotate("enum __declspec(deprecated) Foo {};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_EnumLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_EnumRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsExportBlock) {
