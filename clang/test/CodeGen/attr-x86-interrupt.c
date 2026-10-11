@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_WIN
 // RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_WIN
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnux32 %s -emit-llvm -o - | FileCheck %s --check-prefix=X86_64_LINUX
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -DTEST_TYPEDEF %s -emit-llvm -o - | FileCheck %s --check-prefix=TYPEDEF
 
 #ifdef __x86_64__
 typedef __UINT64_TYPE__ uword;
@@ -12,6 +13,11 @@ typedef __UINT32_TYPE__ uword;
 
 __attribute__((interrupt)) void foo7(int *a, uword b) {}
 __attribute__((interrupt)) void foo8(int *a) {}
+#ifdef TEST_TYPEDEF
+typedef int *int_ptr;
+__attribute__((interrupt)) void foo_typedef(int_ptr a) {}
+// TYPEDEF: define{{.*}} x86_intrcc void @foo_typedef(ptr noundef byval(i32) %{{.+}})
+#endif
 // X86_64_LINUX: @llvm.compiler.used = appending global [2 x ptr] [ptr @foo7, ptr @foo8], section "llvm.metadata"
 // X86_64_LINUX: define{{.*}} x86_intrcc void @foo7(ptr noundef byval(i32) %{{.+}}, i64 noundef %{{.+}})
 // X86_64_LINUX: define{{.*}} x86_intrcc void @foo8(ptr noundef byval(i32) %{{.+}})
