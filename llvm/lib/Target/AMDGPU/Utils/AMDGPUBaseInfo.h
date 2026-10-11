@@ -1178,6 +1178,9 @@ unsigned getXcntBitMask(const IsaVersion &Version);
 /// depends on the ISA version.
 unsigned getStorecntBitMask(const IsaVersion &Version);
 
+/// \returns barrier member count bit mask in M0 for given isa \p Version.
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version);
+
 namespace Hwreg {
 
 using HwregId = EncodingField<5, 0>;
