@@ -4,8 +4,8 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00>, <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, <4 x float> <float poison, float 0.000000e+00, float poison, float poison>, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP9:%.*]], %[[BB1]] ]
