@@ -10956,17 +10956,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
 
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
-  const Function &F = MF.getFunction();
-
-  // Can F be deduplicated by the linker? If it can, don't outline from it.
-  if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
-    return false;
-
-  // Don't outline from functions with section markings; the program could
-  // expect that all the code is in the named section.
-  // FIXME: Allow outlining from multiple functions with the same section
-  // marking.
-  if (F.hasSection())
+  if (!TargetInstrInfo::isFunctionSafeToOutlineFrom(MF,
+                                                    OutlineFromLinkOnceODRs))
     return false;
 
   // Outlining from functions with redzones is unsafe since the outliner may

@@ -2240,6 +2240,14 @@ public:
   virtual void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const;
 
+  /// Return true if the target supports outlining candidates from multiple
+  /// input sections in one pass.
+  ///
+  /// A target that enables this must not independently reject functions with
+  /// a section marking in isFunctionSafeToOutlineFrom(), otherwise such
+  /// functions never reach the outliner and this hook has no effect.
+  virtual bool supportsSectionAwareOutlining() const { return false; }
+
 protected:
   /// Target-dependent implementation for getOutliningTypeImpl.
   virtual outliner::InstrType
@@ -2316,8 +2324,19 @@ public:
   /// same output for any set of given inputs.
   virtual bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                            bool OutlineFromLinkOnceODRs) const {
-    llvm_unreachable("Target didn't implement "
-                     "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
+    const Function &F = MF.getFunction();
+
+    // Can F be deduplicated by the linker? If it can, don't outline from it.
+    if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
+      return false;
+
+    // Allow outlining from named section functions if the target can place the
+    // outlined function in the same section.
+    if (F.hasSection() && !supportsSectionAwareOutlining())
+      return false;
+
+    // It's safe to outline from MF.
+    return true;
   }
 
   /// Return true if the function should be outlined from by default.
