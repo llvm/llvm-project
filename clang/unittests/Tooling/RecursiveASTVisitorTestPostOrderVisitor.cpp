@@ -29,7 +29,7 @@ public:
   bool shouldTraversePostOrder() const { return VisitPostOrder; }
 
   bool VisitUnaryOperator(UnaryOperator *Op) {
-    VisitedNodes.push_back(std::string(Op->getOpcodeStr(Op->getOpcode())));
+    VisitedNodes.push_back(std::string(Op->getOpcodeStr()));
     return true;
   }
 
