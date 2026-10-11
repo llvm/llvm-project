@@ -1165,6 +1165,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FCANONICALIZE,
                        ISD::SCALAR_TO_VECTOR,
                        ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND,
                        ISD::SIGN_EXTEND_INREG,
                        ISD::ANY_EXTEND,
                        ISD::EXTRACT_VECTOR_ELT,
@@ -15056,6 +15057,22 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
+  // and (trunc (srl x, c)), mask => srl (trunc x), c
+  // if mask keeps exactly the bits that srl leaves in the low half
+  if (CRHS && VT == MVT::i16 && LHS.getOpcode() == ISD::TRUNCATE &&
+      LHS.hasOneUse() && LHS.getOperand(0).getOpcode() == ISD::SRL) {
+    auto *Shift = dyn_cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1));
+    if (Shift && Shift->getZExtValue() < 16 &&
+        CRHS->getAPIntValue().isMask(16 - Shift->getZExtValue())) {
+      SDLoc SL(N);
+      SDValue Trunc =
+          DAG.getNode(ISD::TRUNCATE, SL, VT, LHS.getOperand(0).getOperand(0));
+      return DAG.getNode(
+          ISD::SRL, SL, VT, Trunc,
+          DAG.getShiftAmountConstant(Shift->getZExtValue(), VT, SL));
+    }
+  }
+
   // (and (fcmp ord x, x), (fcmp une (fabs x), inf)) ->
   // fp_class x, ~(s_nan | q_nan | n_infinity | p_infinity)
   if (LHS.getOpcode() == ISD::SETCC && RHS.getOpcode() == ISD::SETCC) {
@@ -16056,6 +16073,9 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   if (!Src->hasOneUse())
     return SDValue();
 
+  if (SDValue Ext = performExtendTruncShiftCombine(N, DCI))
+    return Ext;
+
   // TODO: We bail out below if SrcOffset is not in the first dword (>= 4). It's
   // possible we're missing out on some combine opportunities, but we'd need to
   // weigh the cost of extracting the byte from the upper dwords.
@@ -16091,6 +16111,48 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
 
   return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, V0, V1,
                      DAG.getConstant(PermMask, DL, MVT::i32));
+}
+
+// zext (srl (trunc x), c) => and (srl x, c), lowbits
+// aext (srl (trunc x), c) => and (srl x, c), lowbits
+// sext (sra (trunc x), 8) => sext_inreg (srl x, 8), i8
+SDValue
+SITargetLowering::performExtendTruncShiftCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes)
+    return SDValue();
+
+  const unsigned Opc = N->getOpcode();
+  const bool IsSigned = Opc == ISD::SIGN_EXTEND;
+  SDValue Src = N->getOperand(0);
+  if (N->getValueType(0) != MVT::i32 || Src.getValueType() != MVT::i16 ||
+      Src.getOpcode() != (IsSigned ? ISD::SRA : ISD::SRL) || !Src.hasOneUse() ||
+      Src.getOperand(0).getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  // A uniform i16 srl is promoted to i32 later and yields the same nodes.
+  // Skip it so that the node order, and with it the schedule, stays the same.
+  if (!IsSigned && !Src->isDivergent())
+    return SDValue();
+
+  SDValue X = Src.getOperand(0).getOperand(0);
+  auto *Shift = dyn_cast<ConstantSDNode>(Src.getOperand(1));
+  if (X.getValueType() != MVT::i32 || !Shift || Shift->getZExtValue() == 0 ||
+      Shift->getZExtValue() >= 16 || (IsSigned && Shift->getZExtValue() != 8))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  const unsigned Width = 16 - Shift->getZExtValue();
+  SDValue Srl = DAG.getNode(
+      ISD::SRL, SL, MVT::i32, X,
+      DAG.getShiftAmountConstant(Shift->getZExtValue(), MVT::i32, SL));
+  if (IsSigned)
+    return DAG.getNode(ISD::SIGN_EXTEND_INREG, SL, MVT::i32, Srl,
+                       DAG.getValueType(MVT::i8));
+  return DAG.getNode(
+      ISD::AND, SL, MVT::i32, Srl,
+      DAG.getConstant(maskTrailingOnes<uint32_t>(Width), SL, MVT::i32));
 }
 
 SDValue
@@ -19331,6 +19393,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
     return performZeroOrAnyExtendCombine(N, DCI);
+  case ISD::SIGN_EXTEND:
+    return performExtendTruncShiftCombine(N, DCI);
   case ISD::SIGN_EXTEND_INREG:
     return performSignExtendInRegCombine(N, DCI);
   case AMDGPUISD::FP_CLASS:
