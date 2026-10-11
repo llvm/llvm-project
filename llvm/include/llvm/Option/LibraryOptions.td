@@ -27,7 +27,6 @@ class BuildCondition<code expr> {
   code Expr = expr;
 }
 def AssertsOnly : BuildCondition<"!defined(NDEBUG)">;
-def DumpOnly : BuildCondition<"!defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)">;
 
 // The member an option sets, and the member's type and default value.
 // `let Condition = AssertsOnly in` makes the option unknown, and removes the
