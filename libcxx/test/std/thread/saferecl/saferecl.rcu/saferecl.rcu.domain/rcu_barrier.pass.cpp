@@ -16,6 +16,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <latch>
 #include <rcu>
 #include <stop_token>
 #include <thread>
@@ -176,6 +177,47 @@ int main(int, char**) {
     writer_threads.clear();
     collector_threads.clear();
     assert(ctor_count.load() == dtor_count.load());
+  }
+  {
+    // object destroyed on another thread's rcu_barrier.
+    // this thread's rcu_barrier should still wait
+    // until the destructor of its retired object is returned
+
+    std::atomic_bool main_barrier_start(false);
+    std::atomic_bool t2_barrier_start(false);
+    std::atomic_bool deleter_started(false);
+    std::atomic_bool can_delete(false);
+
+    auto t2 = support::make_test_jthread([&] {
+      t2_barrier_start.wait(false);
+      std::rcu_barrier();
+    });
+
+    auto t3 = support::make_test_jthread([&] {
+      deleter_started.wait(false);
+      main_barrier_start.store(true);
+      main_barrier_start.notify_all();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      can_delete.store(true);
+      can_delete.notify_all();
+    });
+
+    int destruction_count = 0;
+    auto* ptr             = new TestClass1(destruction_count);
+    std::rcu_retire(ptr, [&](TestClass1* obj) {
+      deleter_started.store(true);
+      deleter_started.notify_all();
+      can_delete.wait(false);
+      delete obj;
+    });
+
+    t2_barrier_start.store(true);
+    t2_barrier_start.notify_all();
+
+    main_barrier_start.wait(false);
+
+    std::rcu_barrier();
+    assert(destruction_count == 1);
   }
 
   return 0;
