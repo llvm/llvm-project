@@ -2013,6 +2013,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPreRewrite();
   addPass(&VirtRegRewriterID);
 
+  addPass(createRegAllocScoringPass());
+
   addPass(&AMDGPUMarkLastScratchLoadID);
 
   return true;
