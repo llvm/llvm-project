@@ -4518,6 +4518,29 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataAsValueOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MetadataAsValueOp : CIR_Op<"metadata_as_value", [Pure]> {
+  let summary = "Wrap a metadata attribute as an SSA value";
+  let description = [{
+    Provides `metadata` arguments to `cir.call_llvm_intrinsic`. Lowers to
+    `llvm.mlir.metadata_as_value`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"agent">>
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyMDAttr:$metadata);
+  let results = (outs CIR_MetadataType:$res);
+
+  let assemblyFormat = "$metadata attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // RegisterExitDtorOp
 //===----------------------------------------------------------------------===//
 
@@ -4571,14 +4594,15 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
   let description = [{
     `cir.call_llvm_intrinsic` operation represents a call-like expression which has
     return type and arguments that maps directly to a llvm intrinsic.
-    It only records intrinsic `intrinsic_name`.
+    It only records intrinsic `intrinsic_name`. Arguments of LLVM `metadata`
+    type are passed as `!cir.metadata` values.
   }];
 
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = (ins
                    StrAttr:$intrinsic_name,
                    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags,
-                   Variadic<CIR_AnyType>:$arg_ops);
+                   Variadic<AnyTypeOf<[CIR_AnyType, CIR_MetadataType]>>:$arg_ops);
 
   let skipDefaultBuilders = 1;
 

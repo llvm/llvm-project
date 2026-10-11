@@ -1236,6 +1236,18 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataType
+//===----------------------------------------------------------------------===//
+
+def CIR_MetadataType : CIR_Type<"Metadata", "metadata"> {
+  let summary = "CIR metadata type";
+  let description = [{
+    Mirrors the LLVM IR `metadata` type. Only valid as an operand of
+    `cir.call_llvm_intrinsic`.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 

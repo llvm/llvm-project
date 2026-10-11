@@ -45,3 +45,25 @@ module {
     cir.return %0 : !f32
   }
 }
+
+module {
+  // Metadata operands are passed as !cir.metadata values.
+  // CHECK-LABEL: llvm.func @metadata_operand
+  // CHECK:         %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"is.gfx900">>
+  // CHECK:         llvm.call_intrinsic "llvm.spv.named.boolean.spec.constant"(%{{.*}}, %{{.*}}, %[[MD]]) : (i32, i1, !llvm.metadata) -> i1
+  cir.func @metadata_operand(%arg0: !s32i, %arg1: !cir.bool) -> !cir.bool {
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"is.gfx900">>
+    %1 = cir.call_llvm_intrinsic "spv.named.boolean.spec.constant" %arg0, %arg1, %0 : (!s32i, !cir.bool, !cir.metadata) -> !cir.bool
+    cir.return %1 : !cir.bool
+  }
+
+  // CHECK-LABEL: llvm.func @metadata_nested
+  // CHECK:         llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"a">, #llvm.md_node<>>
+  // CHECK:         llvm.mlir.metadata_as_value #llvm.md_string<"b">
+  cir.func @metadata_nested() {
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"a">, #cir.md_node<>>
+    %1 = cir.metadata_as_value #cir.md_string<"b">
+    cir.call_llvm_intrinsic "donothing" : () -> ()
+    cir.return
+  }
+}

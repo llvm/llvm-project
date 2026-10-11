@@ -1977,6 +1977,45 @@ def CIR_EhUnexpectedAttr : CIR_UnitAttr<"EhUnexpected", "eh_unexpected"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MDStringAttr & MDNodeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MDStringAttr : CIR_Attr<"MDString", "md_string"> {
+  let summary = "Metadata string";
+  let description = [{
+    A metadata string, lowered to `llvm::MDString`.
+
+    Example:
+    ```mlir
+    #cir.md_string<"agent">
+    ```
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{ `<` $value `>` }];
+  let canHaveIllegalCXXABIType = 0;
+}
+
+def CIR_MDNodeAttr : CIR_Attr<"MDNode", "md_node"> {
+  let summary = "Metadata node";
+  let description = [{
+    Lowered to `llvm::MDNode`. Operands are `#cir.md_string` or `#cir.md_node`.
+
+    Example:
+    ```mlir
+    #cir.md_node<#cir.md_string<"agent">>
+    ```
+  }];
+
+  let parameters = (ins OptionalArrayRefParameter<"mlir::Attribute">:$operands);
+  let assemblyFormat = [{ `<` (`>`) : ($operands^ `>`)? }];
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+def CIR_AnyMDAttr : AnyAttrOf<[CIR_MDStringAttr, CIR_MDNodeAttr]>;
+
+//===----------------------------------------------------------------------===//
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 

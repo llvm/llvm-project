@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @md_node_bad_operand() {
+    // expected-error@+1 {{metadata node operands must be #cir.md_string or #cir.md_node}}
+    %0 = cir.metadata_as_value #cir.md_node<#cir.int<0> : !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @metadata_as_value_bad_attr() {
+    // expected-error@+1 {{attribute 'metadata' failed to satisfy constraint}}
+    %0 = cir.metadata_as_value #cir.bool<true> : !cir.bool
+    cir.return
+  }
+}
