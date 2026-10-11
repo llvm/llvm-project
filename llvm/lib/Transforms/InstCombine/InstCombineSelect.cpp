@@ -5437,6 +5437,23 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // select ((X & 1) != 0), Y, 0 --> X & Y, if Y is 0 or 1
+  // select ((X & 1) == 0), 0, Y --> X & Y, if Y is 0 or 1
+  Value *LowBitX;
+  CmpPredicate LowBitPred;
+  if (match(CondVal, m_ICmp(LowBitPred, m_And(m_Value(LowBitX), m_One()),
+                            m_ZeroInt())) &&
+      ICmpInst::isEquality(LowBitPred) && LowBitX->getType() == SelType) {
+    bool IsNE = LowBitPred == ICmpInst::ICMP_NE;
+    Value *LowBitTrueVal = IsNE ? TrueVal : FalseVal;
+    Value *LowBitFalseVal = IsNE ? FalseVal : TrueVal;
+    if (match(LowBitFalseVal, m_Zero()) &&
+        impliesPoison(LowBitTrueVal, CondVal) &&
+        llvm::computeKnownBits(LowBitTrueVal, SQ.getWithInstruction(&SI))
+                .countMaxActiveBits() == 1)
+      return BinaryOperator::CreateAnd(LowBitX, LowBitTrueVal);
+  }
+
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
                                            m_Specific(CondVal), m_Value())))) {
