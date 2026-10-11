@@ -36,8 +36,7 @@ define void @test() {
 ; CHECK-NEXT:    [[I_1_LCSSA:%.*]] = phi i16 [ [[I_1]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[I_2_LCSSA:%.*]] = phi i16 [ [[I_2]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[I_3_LCSSA:%.*]] = phi i16 [ [[I_3]], [[FOR_COND]] ]
-; CHECK-NEXT:    [[I_0_LCSSA1:%.*]] = phi i16 [ [[I_0]], [[FOR_COND]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[I_0_LCSSA1]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[I_0_LCSSA]], 10
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_COND_SPLIT_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.cond.split.preheader:
 ; CHECK-NEXT:    br label [[FOR_COND_SPLIT:%.*]]

@@ -37,15 +37,14 @@ define i8 @exit_cond_inc_ult(i8 %len) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[ENTRY_SPLIT_SPLIT:.*]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT]]:
 ; CHECK-NEXT:    [[COUNT_NEXT_LCSSA_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
-; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
+; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[INC_LCSSA]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_SPLIT_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_SPLIT_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_SPLIT:.*]]
 ; CHECK:       [[LOOP_SPLIT]]:
-; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[IV_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[INC_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT_SPLIT:%.*]] = phi i8 [ [[COUNT_NEXT_SPLIT:%.*]], %[[LATCH_SPLIT]] ], [ [[COUNT_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[SPLIT_SPLIT:%.*]] = icmp ult i8 [[IV_SPLIT]], 10
 ; CHECK-NEXT:    br i1 false, label %[[THEN_SPLIT:.*]], label %[[ELSE_SPLIT:.*]]
@@ -129,15 +128,14 @@ define i8 @exit_on_true_cond(i8 %len) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[ENTRY_SPLIT_SPLIT:.*]], label %[[LOOP]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT]]:
 ; CHECK-NEXT:    [[COUNT_NEXT_LCSSA_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
-; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
+; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[INC_LCSSA]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_SPLIT_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_SPLIT_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_SPLIT:.*]]
 ; CHECK:       [[LOOP_SPLIT]]:
-; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[IV_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[INC_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT_SPLIT:%.*]] = phi i8 [ [[COUNT_NEXT_SPLIT:%.*]], %[[LATCH_SPLIT]] ], [ [[COUNT_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[SPLIT_SPLIT:%.*]] = icmp ult i8 [[IV_SPLIT]], 10
 ; CHECK-NEXT:    br i1 false, label %[[THEN_SPLIT:.*]], label %[[ELSE_SPLIT:.*]]
@@ -222,15 +220,14 @@ define i8 @exit_cond_inc_slt(i8 %len) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[ENTRY_SPLIT_SPLIT:.*]]
 ; CHECK:       [[ENTRY_SPLIT_SPLIT]]:
 ; CHECK-NEXT:    [[COUNT_NEXT_LCSSA_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
-; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i8 [ [[INC]], %[[LATCH]] ]
+; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i8 [ [[COUNT_NEXT]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[INC_LCSSA]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_SPLIT_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_SPLIT_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_SPLIT:.*]]
 ; CHECK:       [[LOOP_SPLIT]]:
-; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[IV_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i8 [ [[INC_SPLIT:%.*]], %[[LATCH_SPLIT:.*]] ], [ [[INC_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[COUNT_SPLIT:%.*]] = phi i8 [ [[COUNT_NEXT_SPLIT:%.*]], %[[LATCH_SPLIT]] ], [ [[COUNT_LCSSA]], %[[LOOP_SPLIT_PREHEADER]] ]
 ; CHECK-NEXT:    [[SPLIT_SPLIT:%.*]] = icmp slt i8 [[IV_SPLIT]], 10
 ; CHECK-NEXT:    br i1 false, label %[[THEN_SPLIT:.*]], label %[[ELSE_SPLIT:.*]]

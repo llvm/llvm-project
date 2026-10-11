@@ -34,6 +34,8 @@ struct ConditionInfo {
   CmpPredicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
   /// AddRec llvm value
   Value *AddRecValue = nullptr;
+  /// Non PHI AddRec llvm value
+  Value *NonPHIAddRecValue = nullptr;
   /// Bound llvm value
   Value *BoundValue = nullptr;
   /// AddRec SCEV
@@ -113,6 +115,12 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
   Cond.AddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
   if (!Cond.AddRecSCEV)
     return false;
+
+  // If the induction variable is a PHI node, the value from the backedge is
+  // used instead.
+  Cond.NonPHIAddRecValue = Cond.AddRecValue;
+  if (auto *PN = dyn_cast<PHINode>(Cond.AddRecValue))
+    Cond.NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
 
   // The BoundSCEV should be evaluated at loop entry.
   Cond.BoundSCEV = BoundSCEV;
@@ -358,6 +366,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
 #endif
   // Update phi nodes in header of post-loop.
   bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
+  Value *ExitingCondLCSSAPhi = nullptr;
   for (PHINode &PN : L.getHeader()->phis()) {
     // Create LCSSA phi node in preheader of post-loop.
     PHINode *LCSSAPhi =
@@ -372,22 +381,41 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // Update the start value of phi node in post-loop with the LCSSA phi node.
     PHINode *PostLoopPN = cast<PHINode>(VMap[&PN]);
     PostLoopPN->setIncomingValueForBlock(PostLoopPreHeader, LCSSAPhi);
+
+    // Find PHI with exiting condition from pre-loop. The PHI should be
+    // SCEVAddRecExpr and have same incoming value from backedge with
+    // ExitingCond.
+    //
+    // TODO: Separate SCEV queries from PHI node updates.
+    if (!SE.isSCEVable(PN.getType()))
+      continue;
+
+    const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+    if (PhiSCEV && ExitingCond.NonPHIAddRecValue ==
+                       PN.getIncomingValueForBlock(L.getLoopLatch()))
+      ExitingCondLCSSAPhi = LCSSAPhi;
   }
 
   // Add conditional branch to check we can skip post-loop in its preheader,
   // and update DT. The post-loop runs only if the original loop would not have
   // exited either, so check the original exiting condition with the original
-  // bound.
+  // bound on the value it tests in the last iteration of the pre-loop. If the
+  // latch tests the PHI rather than its value from the backedge, that is the
+  // PHI itself instead of ExitingCondLCSSAPhi.
   Instruction *OrigBI = PostLoopPreHeader->getTerminator();
-  PHINode *ExitingAddRecLCSSA =
-      Builder.CreatePHI(ExitingCond.AddRecValue->getType(), 1,
-                        ExitingCond.AddRecValue->getName() + ".lcssa");
-  ExitingAddRecLCSSA->addIncoming(ExitingCond.AddRecValue, L.getExitingBlock());
+  Value *ExitingValue = ExitingCondLCSSAPhi;
+  if (ExitingCondLCSSAPhi && isExitingLatch &&
+      isa<PHINode>(ExitingCond.AddRecValue)) {
+    PHINode *PNLCSSA =
+        Builder.CreatePHI(ExitingCond.AddRecValue->getType(), 1,
+                          ExitingCond.AddRecValue->getName() + ".lcssa");
+    PNLCSSA->addIncoming(ExitingCond.AddRecValue, L.getExitingBlock());
+    ExitingValue = PNLCSSA;
+  }
   ICmpInst::Predicate Pred = ExitingCond.Pred;
   if (ExitsOnTrue)
     Pred = ICmpInst::getInversePredicate(Pred);
-  Value *Cond =
-      Builder.CreateICmp(Pred, ExitingAddRecLCSSA, ExitingCond.BoundValue);
+  Value *Cond = Builder.CreateICmp(Pred, ExitingValue, ExitingCond.BoundValue);
   Builder.CreateCondBr(Cond, PostLoop->getHeader(), PostLoop->getExitBlock());
   OrigBI->eraseFromParent();
   DT.changeImmediateDominator(PostLoop->getExitBlock(), PostLoopPreHeader);

@@ -82,8 +82,7 @@ define void @umax_variable_split_loop_bound_and_exit_cond_inc_with_sgt(i64 %a, p
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
@@ -164,8 +163,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt(ptr noalias %s
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
@@ -293,8 +291,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_eq(ptr noalias %sr
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
@@ -423,8 +420,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sge(ptr noalias %s
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
@@ -553,8 +549,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_step_is_not_one(pt
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
@@ -905,8 +900,7 @@ define void @constant_split_loop_bound_and_exit_cond_inc_with_sgt_and_is_not_sce
 ; CHECK:       loop.ph.split.split:
 ; CHECK-NEXT:    [[IS_NOT_SCEVABLE_PHI_LCSSA:%.*]] = phi double [ 1.000000e+00, [[FOR_INC]] ]
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i64 [[IV_LCSSA]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.split.preheader:
 ; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
