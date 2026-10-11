@@ -539,9 +539,6 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   AddrLabelSymbols = nullptr;
 
-  // Initialize TargetLoweringObjectFile.
-  TM.getObjFileLowering()->Initialize(OutContext, TM);
-
   TM.getObjFileLowering()->getModuleMetadata(M);
 
   // On AIX, we delay emitting any section information until

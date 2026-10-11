@@ -219,6 +219,8 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
   MMI.getTarget().verifyOptionsConsistency(M);
+  MMI.getTarget().getObjFileLowering()->Initialize(MMI.getContext(),
+                                                   MMI.getTarget());
   return false;
 }
 
@@ -244,5 +246,7 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
   MMI.getTarget().verifyOptionsConsistency(M);
+  MMI.getTarget().getObjFileLowering()->Initialize(MMI.getContext(),
+                                                   MMI.getTarget());
   return Result(MMI);
 }
