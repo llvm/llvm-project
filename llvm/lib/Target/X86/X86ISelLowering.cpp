@@ -222,8 +222,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
     // In 32-bit mode these are custom lowered.  In 64-bit mode F32 and F64
     // are Legal, f80 is custom lowered.
-    setOperationAction(ISD::FP_TO_SINT,        MVT::i64, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
+    if (Subtarget.is64Bit() || Subtarget.hasX87() || Subtarget.hasDQI() ||
+        Subtarget.hasFP16()) {
+      setOperationAction(ISD::FP_TO_SINT,        MVT::i64, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
+    }
 
     // Handle FP_TO_UINT by promoting the destination to a larger signed
     // conversion.
@@ -235,8 +238,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i16, Promote);
     setOperationAction(ISD::FP_TO_UINT,        MVT::i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT,        MVT::i64, Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
+    if (Subtarget.is64Bit() || Subtarget.hasX87() || Subtarget.hasDQI() ||
+        Subtarget.hasFP16()) {
+      setOperationAction(ISD::FP_TO_UINT,        MVT::i64, Custom);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
+    }
 
     setOperationAction(ISD::LRINT,             MVT::f32, Custom);
     setOperationAction(ISD::LRINT,             MVT::f64, Custom);
@@ -21247,6 +21253,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                            bool IsSigned,
                                            SDValue &Chain) const {
+  assert(DAG.getSubtarget<X86Subtarget>().hasX87() && "Expected X87");
   bool IsStrict = Op->isStrictFPOpcode();
   SDLoc DL(Op);
 
@@ -22467,13 +22474,16 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Fall back to X87.
-  if (SDValue V = FP_TO_INTHelper(Op, DAG, IsSigned, Chain)) {
-    if (IsStrict)
-      return DAG.getMergeValues({V, Chain}, dl);
-    return V;
+  if (Subtarget.hasX87()) {
+    if (SDValue V = FP_TO_INTHelper(Op, DAG, IsSigned, Chain)) {
+      if (IsStrict)
+        return DAG.getMergeValues({V, Chain}, dl);
+      return V;
+    }
+    llvm_unreachable("Expected FP_TO_INTHelper to handle all remaining cases.");
   }
 
-  llvm_unreachable("Expected FP_TO_INTHelper to handle all remaining cases.");
+  return SDValue();
 }
 
 SDValue X86TargetLowering::LowerLRINT_LLRINT(SDValue Op,
@@ -36064,10 +36074,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (SDValue V = FP_TO_INTHelper(SDValue(N, 0), DAG, IsSigned, Chain)) {
-      Results.push_back(V);
-      if (IsStrict)
-        Results.push_back(Chain);
+    if (Subtarget.hasX87()) {
+      if (SDValue V = FP_TO_INTHelper(SDValue(N, 0), DAG, IsSigned, Chain)) {
+        Results.push_back(V);
+        if (IsStrict)
+          Results.push_back(Chain);
+      }
     }
     return;
   }
