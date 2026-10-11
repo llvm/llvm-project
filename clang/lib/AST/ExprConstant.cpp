@@ -17176,10 +17176,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
-    // The type was checked when we built the expression.
-    unsigned Type =
-        E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
-    assert(Type <= 3 && "unexpected type");
+    APSInt TypeValue = E->getArg(1)->EvaluateKnownConstInt(Info.Ctx);
+    if (TypeValue < 0 || TypeValue > 3) {
+      Info.FFDiag(E->getArg(1), diag::note_constexpr_builtin_arg_out_of_range)
+          << TypeValue << 0 << 3;
+      return false;
+    }
+    unsigned Type = TypeValue.getZExtValue();
 
     bool IsDynamic = BuiltinOp == Builtin::BI__builtin_dynamic_object_size;
     if (std::optional<uint64_t> Size =
