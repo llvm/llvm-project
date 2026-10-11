@@ -1377,7 +1377,9 @@ add_fp_unittest(
   SRCS
     exp2_test.cpp
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.exp2
+    libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
