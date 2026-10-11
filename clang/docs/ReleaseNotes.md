@@ -1179,6 +1179,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Diagnostic changes
 
+- Improved diagnostics and error recovery for nested `_Pragma` and Microsoft
+  `__pragma` expressions, including arguments that cross macro expansion
+  boundaries. Annotation arguments no longer appear as empty quoted strings,
+  and inner pragma terminators no longer disrupt subsequent declarations.
 - For self-assignments during initialization (`T v = v;`), `core.uninitialized.Assign` will not report them as uninitialized accesses (except C++ reference types), and the checks will be delayed until the first accesses of these variables; `deadcode.DeadStores` will not report them as dead stores. (#GH187530)
 
 (release-notes-sanitizers)=

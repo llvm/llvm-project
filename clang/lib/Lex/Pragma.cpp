@@ -35,6 +35,7 @@
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -169,6 +170,21 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
     return;
 
   ++NumPragma;
+
+  // Record this pragma's lexer stack depth so Lex() can distinguish its eod
+  // from an eod left by a nested pragma. For example:
+  //
+  //   #pragma vtordisp(_Pragma("clang __debug dump x"))
+  //   int after;
+  //
+  // The inner __debug dump leaves its arguments and eod for the parser:
+  //
+  //   annot_pragma_dump x <inner eod> ) <outer eod>
+  //
+  // Lex() must skip the inner eod so the outer handler's error recovery also
+  // consumes the trailing ')' and leaves the following declaration intact.
+  PragmaLexerStackDepths.push_back(IncludeMacroStack.size());
+  llvm::scope_exit PragmaScope([this] { PragmaLexerStackDepths.pop_back(); });
 
   // Invoke the first level of pragma handlers which reads the namespace id.
   Token Tok;
@@ -353,6 +369,16 @@ void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
 /// HandleMicrosoft__pragma - Like Handle_Pragma except the pragma text
 /// is not enclosed within a string literal.
 void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
+  // Expanding the captured arguments can execute nested pragmas before the
+  // outer handler runs. For example:
+  //
+  //   __pragma(optimize("", _Pragma("clang __debug dump x")))
+  //
+  // Keep a boundary active during capture too, so Lex() skips the inner
+  // __debug dump's leftover eod rather than including it in PragmaToks.
+  PragmaLexerStackDepths.push_back(IncludeMacroStack.size());
+  llvm::scope_exit PragmaScope([this] { PragmaLexerStackDepths.pop_back(); });
+
   // During macro pre-expansion, check the syntax now but put the tokens back
   // into the token stream for later consumption. Same as Handle_Pragma.
   TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
@@ -402,6 +428,7 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   // Push the tokens onto the stack.
   EnterTokenStream(TokArray, PragmaToks.size(), true, true,
                    /*IsReinject*/ false);
+  CurTokenLexer->IsPragmaLexer = true;
 
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK___pragma, PragmaLoc});
@@ -1487,6 +1514,8 @@ struct PragmaWarningHandler : public PragmaHandler {
         II = Tok.getIdentifierInfo();
         if (!II && !Tok.is(tok::numeric_constant)) {
           PP.Diag(Tok, diag::warn_pragma_warning_spec_invalid);
+          if (Tok.isAnnotation())
+            PP.DiscardUntilEndOfDirective();
           return;
         }
 
@@ -1630,6 +1659,8 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
         Callbacks->PragmaExecCharsetPop(DiagLoc);
     } else {
       PP.Diag(Tok, diag::warn_pragma_exec_charset_spec_invalid);
+      if (Tok.isAnnotation())
+        PP.DiscardUntilEndOfDirective();
       return;
     }
 

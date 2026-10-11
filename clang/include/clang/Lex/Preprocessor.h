@@ -883,6 +883,10 @@ private:
   };
   std::vector<IncludeStackInfo> IncludeMacroStack;
 
+  /// Stack depths of the pragmas whose arguments are being read. Track all
+  /// active scopes so that macro stack pops update enclosing boundaries too.
+  SmallVector<size_t, 4> PragmaLexerStackDepths;
+
   /// Actions invoked when some preprocessor activity is
   /// encountered (e.g. a file is \#included, etc).
   std::unique_ptr<PPCallbacks> Callbacks;
@@ -2655,6 +2659,11 @@ private:
     CurLexerSubmodule = IncludeMacroStack.back().TheSubmodule;
     CurLexerCallback = IncludeMacroStack.back().CurLexerCallback;
     IncludeMacroStack.pop_back();
+
+    // A __pragma can start in a macro and finish in its enclosing token stream.
+    // Keep all active pragma boundaries within the remaining lexer stack.
+    for (size_t &Depth : PragmaLexerStackDepths)
+      Depth = std::min(Depth, IncludeMacroStack.size());
   }
 
   void PropagateLineStartLeadingSpaceInfo(Token &Result);
