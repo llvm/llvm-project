@@ -43,11 +43,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU __rcu_domain_export {
   static void __unlock(rcu_domain& __dom) noexcept;
 };
 
-class rcu_domain {
+class _LIBCPP_AVAILABILITY_RCU rcu_domain {
   class __impl;
   unique_ptr<__impl> __pimpl_;
 
-  friend __rcu_domain_export;
+  friend _LIBCPP_AVAILABILITY_RCU __rcu_domain_export;
 
   _LIBCPP_EXPORTED_FROM_ABI rcu_domain();
 
@@ -67,15 +67,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI void unlock() noexcept { __rcu_domain_export::__unlock(*this); }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI rcu_domain& rcu_default_domain() noexcept {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_RCU rcu_domain& rcu_default_domain() noexcept {
   return __rcu_domain_export::__rcu_default_domain();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void rcu_synchronize(rcu_domain& __dom = rcu_default_domain()) noexcept {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_RCU void
+rcu_synchronize(rcu_domain& __dom = rcu_default_domain()) noexcept {
   __rcu_domain_export::__synchronize(__dom);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void rcu_barrier(rcu_domain& __dom = rcu_default_domain()) noexcept {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_RCU void
+rcu_barrier(rcu_domain& __dom = rcu_default_domain()) noexcept {
   __rcu_domain_export::__barrier(__dom);
 }
 
@@ -102,7 +104,8 @@ struct __rcu_node_with_deleter : __rcu_node {
 };
 
 template <class _Tp, class _Dp = default_delete<_Tp>>
-_LIBCPP_HIDE_FROM_ABI void rcu_retire(_Tp* __tp, _Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_RCU void
+rcu_retire(_Tp* __tp, _Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) {
   static_assert(std::is_move_constructible_v<_Dp>);
   static_assert(requires(_Dp __dp, _Tp* __ptr) { __dp(__ptr); }, "Deleter must be callable with a pointer");
 
