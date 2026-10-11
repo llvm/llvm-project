@@ -198,7 +198,9 @@ using ShRSIOpLowering =
 using ShRUIOpLowering =
     VectorConvertToLLVMPattern<arith::ShRUIOp, LLVM::LShrOp>;
 using SIToFPOpLowering =
-    VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
+    VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp,
+                               AttrConvertPassThrough,
+                               /*FailOnUnsupportedFP=*/true>;
 using SubFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
                                           /*HasRoundingMode=*/false,
