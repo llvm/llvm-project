@@ -1076,20 +1076,20 @@ int lr_testfn(int y) LOCK_RETURNED(mu1);
 
 int lr_testfn(int y) {
   int x LOCK_RETURNED(mu1) = y; // \
-    // expected-warning {{'lock_returned' attribute only applies to functions}}
+    // expected-warning {{'lock_returned' attribute on a variable requires the variable to be of function pointer type}}
   return x;
 };
 
 int lr_test_var LOCK_RETURNED(mu1); // \
-  // expected-warning {{'lock_returned' attribute only applies to functions}}
+  // expected-warning {{'lock_returned' attribute on a variable requires the variable to be of function pointer type}}
 
 void lr_fun_params(int lvar LOCK_RETURNED(mu1)); // \
-  // expected-warning {{'lock_returned' attribute only applies to functions}}
+  // expected-warning {{'lock_returned' attribute on a variable requires the variable to be of function pointer type}}
 
 class LrFoo {
  private:
   int test_field LOCK_RETURNED(mu1); // \
-    // expected-warning {{'lock_returned' attribute only applies to functions}}
+    // expected-warning {{'lock_returned' attribute on a field requires the field to be of function pointer type}}
   void test_method() LOCK_RETURNED(mu1);
 };
 
@@ -1768,6 +1768,7 @@ void (*fp_requires)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1);
 void (*fp_excludes)(void) LOCKS_EXCLUDED(mu1);
 bool (*fp_trylock)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1);
 void (*fp_assert)(void) ASSERT_EXCLUSIVE_LOCK(mu1);
+Mutex *(*fp_returned)(void) LOCK_RETURNED(&mu1);
 void (*fp_shared_lock)(void) SHARED_LOCK_FUNCTION(mu1);
 void (*fp_shared_require)(void) SHARED_LOCKS_REQUIRED(mu1);
 void (*fp_shared_trylock)(void) SHARED_TRYLOCK_FUNCTION(true, mu1);
@@ -1776,10 +1777,12 @@ struct FPFields {
   void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu1);
   void (*unlock)(void) UNLOCK_FUNCTION(mu1);
   void (*requires_mu)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1);
+  Mutex *(*returned)(void) LOCK_RETURNED(&mu1);
 };
 
 // Function pointer parameters and references-to-function-pointer.
 void fp_param(void (*pf)(void) EXCLUSIVE_LOCK_FUNCTION(mu1));
+void fp_param_returned(Mutex *(*pf)(void) LOCK_RETURNED(&mu1));
 void fp_param_assert(void (*pf)(void) ASSERT_EXCLUSIVE_LOCK(mu1));
 void fp_param_try(bool (*pf)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1));
 void fp_ref(void (*&rf)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1));
@@ -1794,6 +1797,14 @@ struct FnRefFields {
 };
 void fn_ref_param(void (&rf)(void) EXCLUSIVE_LOCK_FUNCTION(mu1));
 void fn_ref_param_requires(void (&rf)(void) EXCLUSIVE_LOCKS_REQUIRED(mu1));
+Mutex &mu1_impl(void);
+Mutex &(&fn_ref_returned)(void) LOCK_RETURNED(mu1) = mu1_impl;
+
+// lock_returned may name the pointee's parameters.
+struct MutexHolder {
+  Mutex mu;
+};
+Mutex *(*fp_returned_param)(MutexHolder *h) LOCK_RETURNED(&h->mu);
 
 int bad_fp_var EXCLUSIVE_LOCK_FUNCTION(mu1); // \
   // expected-warning {{'exclusive_lock_function' attribute on a variable requires the variable to be of function pointer type}}
@@ -1821,6 +1832,8 @@ struct DependentFPFields {
     // expected-warning {{'exclusive_lock_function' attribute on a field requires the field to be of function pointer type}}
   FuncPtr requires_mu EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
     // expected-warning {{'exclusive_locks_required' attribute on a field requires the field to be of function pointer type}}
+  FuncPtr returned LOCK_RETURNED(&mu1); // \
+    // expected-warning {{'lock_returned' attribute on a field requires the field to be of function pointer type}}
 };
 
 typedef void (*GoodLockFn)(void);
