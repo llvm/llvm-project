@@ -161,6 +161,12 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
   bool HasCFI = false;
   bool IsLeaf = true;
 
+  // Inlining assumes every non-tail-call branch targets a block in the callee.
+  for (const BinaryBasicBlock &BB : BF)
+    for (const MCInst &Inst : BB)
+      if (BC.MIB->isExternalBranch(Inst))
+        return INL_NONE;
+
   // Perform necessary checks unless the option overrides it.
   if (!opts::mustConsider(BF)) {
     if (BF.hasSDTMarker())

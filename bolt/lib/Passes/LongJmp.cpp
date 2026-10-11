@@ -828,10 +828,12 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
           continue;
 
         const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
-        BB->eraseInstruction(BB->findInstruction(Inst));
-
         BinaryBasicBlock::BinaryBranchInfo BI;
         BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
+        if (!TargetBB)
+          continue;
+
+        BB->eraseInstruction(BB->findInstruction(Inst));
 
         // Erasing the unconditional branch shrinks BB by one instruction.
         BinaryBasicBlock *TrampolineBB =
