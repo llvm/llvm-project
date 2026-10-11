@@ -310,7 +310,7 @@ namespace {
     }
 
     void deleteAndRecombine(SDNode *N);
-    bool recursivelyDeleteUnusedNodes(SDNode *N);
+    bool recursivelyDeleteUnusedNodes(SDNode *N, SDNode *Replacement = nullptr);
 
     /// Replaces all uses of the results of one DAG node with new values.
     SDValue CombineTo(SDNode *N, const SDValue *To, unsigned NumTo,
@@ -1815,9 +1815,21 @@ bool DAGCombiner::PromoteLoad(SDValue Op) {
 /// Note that this both deletes the nodes and removes them from the worklist.
 /// It also adds any nodes who have had a user deleted to the worklist as they
 /// may now have only one use and subject to other combines.
-bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N) {
+bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N, SDNode *Replacement) {
   if (!N->use_empty())
     return false;
+
+  // When a wide TokenFactor is replaced by another TokenFactor (e.g. after
+  // inlining or pruning operands), don't revisit the operands carried over to
+  // the replacement: they did not lose a user, and revisiting all of them each
+  // time such a TokenFactor is rebuilt is quadratic.
+  const unsigned WideTokenFactorThreshold = 64;
+  SmallPtrSet<SDNode *, 16> CarriedOver;
+  if (Replacement && N->getOpcode() == ISD::TokenFactor &&
+      Replacement->getOpcode() == ISD::TokenFactor &&
+      N->getNumOperands() > WideTokenFactorThreshold)
+    for (const SDValue &Op : Replacement->op_values())
+      CarriedOver.insert(Op.getNode());
 
   SmallSetVector<SDNode *, 16> Nodes;
   Nodes.insert(N);
@@ -1828,7 +1840,8 @@ bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N) {
 
     if (N->use_empty()) {
       for (const SDValue &ChildN : N->op_values())
-        Nodes.insert(ChildN.getNode());
+        if (!CarriedOver.contains(ChildN.getNode()))
+          Nodes.insert(ChildN.getNode());
 
       removeFromWorklist(N);
       DAG.DeleteNode(N);
@@ -1954,7 +1967,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // may not be dead if the replacement process recursively simplified to
     // something else needing this node. This will also take care of adding any
     // operands which have lost a user to the worklist.
-    recursivelyDeleteUnusedNodes(N);
+    recursivelyDeleteUnusedNodes(N, RV.getNode());
   }
 
   // If the root changed (e.g. it was a dead load, update the root).
