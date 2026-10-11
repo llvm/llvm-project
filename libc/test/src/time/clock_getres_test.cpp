@@ -1,4 +1,4 @@
-//===-- Unittests for clock_getres- ---------------------------------------===//
+//===-- Unittests for clock_getres ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/time_macros.h"
 #include "src/time/clock_getres.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
