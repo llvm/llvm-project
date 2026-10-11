@@ -5471,18 +5471,18 @@ public:
   }
 };
 
-class DocumentationData {
-public:
+struct DocumentationData {
   const Record *Documentation;
-  const Record *Attribute;
+  const Record *Category;
+  std::vector<const Record *> Attributes;
   std::string Heading;
   SpellingList SupportedSpellings;
 
-  DocumentationData(const Record &Documentation, const Record &Attribute,
-                    std::pair<std::string, SpellingList> HeadingAndSpellings)
-      : Documentation(&Documentation), Attribute(&Attribute),
-        Heading(std::move(HeadingAndSpellings.first)),
-        SupportedSpellings(std::move(HeadingAndSpellings.second)) {}
+  DocumentationData(const Record &Documentation,
+                    ArrayRef<const Record *> Attributes)
+      : Documentation(&Documentation),
+        Category(Documentation.getValueAsDef("Category")),
+        Attributes(Attributes) {}
 };
 
 static void WriteCategoryHeader(const Record *DocCategory,
@@ -5496,6 +5496,16 @@ static void WriteCategoryHeader(const Record *DocCategory,
   OS << ContentStr.trim();
 
   OS << "\n\n";
+}
+
+static std::string getAttributeReferenceCategoryFileName(StringRef Name) {
+  std::string FileName;
+  for (char C : Name) {
+    if (llvm::isAlnum(C))
+      FileName += C;
+  }
+  FileName += ".md";
+  return FileName;
 }
 
 static std::pair<std::string, SpellingList>
@@ -5559,6 +5569,24 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
   return std::make_pair(std::move(Heading), std::move(SupportedSpellings));
 }
 
+static DocumentationData
+createDocumentationData(const Record &Documentation,
+                        ArrayRef<const Record *> Attributes) {
+  DocumentationData Doc(Documentation, Attributes);
+  StringRef CategoryName = Doc.Category->getValueAsString("Name");
+  for (const Record *Attribute : Attributes) {
+    auto [AttributeHeading, AttributeSpellings] =
+        GetAttributeHeadingAndSpellings(Documentation, *Attribute,
+                                        CategoryName);
+    if (Doc.Heading.empty())
+      Doc.Heading = std::move(AttributeHeading);
+    else if (Doc.Heading != AttributeHeading)
+      Doc.Heading += ", " + AttributeHeading;
+    Doc.SupportedSpellings.merge(AttributeSpellings);
+  }
+  return Doc;
+}
+
 static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
   if (StringRef Label = Doc.Documentation->getValueAsString("Label");
@@ -5602,7 +5630,7 @@ static void WriteDocumentation(const RecordKeeper &Records,
 
     OS << " - ";
     if (getPragmaAttributeSupport(Records).isAttributedSupported(
-            *Doc.Attribute))
+            *Doc.Attributes.front()))
       OS << "Yes";
     OS << "\n:::\n\n";
   }
@@ -5624,6 +5652,37 @@ static void WriteDocumentation(const RecordKeeper &Records,
   OS << ContentStr.trim();
 
   OS << "\n\n\n";
+}
+
+using AttributesByDocumentation =
+    DenseMap<const Record *, std::vector<const Record *>>;
+using DocumentationByCategory =
+    std::map<std::string, AttributesByDocumentation>;
+
+static DocumentationByCategory
+GatherAttributeDocumentation(const RecordKeeper &Records) {
+  DocumentationByCategory DocsByCategory;
+  for (const Record *Attribute : Records.getAllDerivedDefinitions("Attr")) {
+    std::vector<const Record *> Docs =
+        Attribute->getValueAsListOfDefs("Documentation");
+    for (const Record *Doc : Docs) {
+      StringRef CategoryName =
+          Doc->getValueAsDef("Category")->getValueAsString("Name");
+      if (CategoryName == "InternalOnly") {
+        if (Docs.size() > 1)
+          PrintFatalError(Doc->getLoc(),
+                          "Attribute is \"InternalOnly\", but has multiple "
+                          "documentation categories");
+        continue;
+      }
+
+      // Reverse Attr -> Documentation into Category -> Documentation -> Attrs.
+      // Attribute insertion order determines combined heading and spelling
+      // order for documentation shared by multiple attributes.
+      DocsByCategory[CategoryName.str()][Doc].push_back(Attribute);
+    }
+  }
+  return DocsByCategory;
 }
 
 void GetListOfUndocumentedAttributes(
@@ -5678,111 +5737,45 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
 
-  OS << Documentation->getValueAsString("Intro") << "\n";
+  StringRef Intro = Documentation->getValueAsString("Intro");
+  DocumentationByCategory DocsByCategory =
+      GatherAttributeDocumentation(Records);
 
-  // Gather the Documentation lists from each of the attributes, based on the
-  // category provided.
-  struct CategoryLess {
-    bool operator()(const Record *L, const Record *R) const {
-      return L->getValueAsString("Name") < R->getValueAsString("Name");
-    }
-  };
+  // Emit the top-level file which includes each category sub-file.
+  OS << "//--- AttributeReference.md\n";
+  OS << Intro.trim() << "\n\n";
+  for (const auto &[CatName, _] : DocsByCategory) {
+    OS << ":::{include} AttributeReference/"
+       << getAttributeReferenceCategoryFileName(CatName) << "\n";
+    OS << ":::\n\n";
+  }
 
-  std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
-      MergedDocs;
-
-  std::vector<DocumentationData> UndocumentedDocs;
-  const Record *UndocumentedCategory = nullptr;
-
-  // Collect documentation data, grouping by category and heading.
-  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
-    const Record &Attr = *A;
-    std::vector<const Record *> Docs =
-        Attr.getValueAsListOfDefs("Documentation");
-
-    for (const auto *D : Docs) {
-      const Record &Doc = *D;
-      const Record *Category = Doc.getValueAsDef("Category");
-      // If the category is "InternalOnly", then there cannot be any other
-      // documentation categories (otherwise, the attribute would be
-      // emitted into the docs).
-      StringRef Cat = Category->getValueAsString("Name");
-      if (Cat == "InternalOnly" && Docs.size() > 1)
-        PrintFatalError(Doc.getLoc(),
-                        "Attribute is \"InternalOnly\", but has multiple "
-                        "documentation categories");
-
-      if (Cat == "InternalOnly")
-        continue;
-
-      // Track the Undocumented category Record for later grouping
-      if (Cat == "Undocumented" && !UndocumentedCategory)
-        UndocumentedCategory = Category;
-
-      // Generate Heading and Spellings.
-      auto HeadingAndSpellings =
-          GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
-
-      // Handle Undocumented category separately - no content merging
-      if (Cat == "Undocumented" && UndocumentedCategory) {
-        UndocumentedDocs.push_back(
-            DocumentationData(Doc, Attr, std::move(HeadingAndSpellings)));
-        continue;
-      }
-
-      auto &CategoryDocs = MergedDocs[Category];
-
-      std::string key = Doc.getValueAsString("Content").str();
-      uint32_t keyHash = llvm::hash_value(key);
-
-      // If the content already exists, merge the documentation.
-      auto It = CategoryDocs.find(keyHash);
-      if (It != CategoryDocs.end()) {
-        // Merge heading
-        if (It->second.Heading != HeadingAndSpellings.first)
-          It->second.Heading += ", " + HeadingAndSpellings.first;
-        // Merge spellings
-        It->second.SupportedSpellings.merge(HeadingAndSpellings.second);
-        // Merge content
-        It->second.Documentation = &Doc; // Update reference
+  // Reduce and sort each category's documentation immediately before emitting
+  // its split file.
+  for (const auto &[CategoryName, AttributesByDoc] : DocsByCategory) {
+    std::vector<DocumentationData> CategoryDocs;
+    for (const auto &[Doc, Attributes] : AttributesByDoc) {
+      // Undocumented is a shared sentinel rather than shared prose, so retain
+      // one entry per attribute for that category.
+      if (CategoryName == "Undocumented") {
+        for (const Record *Attribute : Attributes)
+          CategoryDocs.push_back(
+              createDocumentationData(*Doc, ArrayRef(Attribute)));
       } else {
-        // Create new entry for unique content
-        CategoryDocs.emplace(keyHash,
-                             DocumentationData(Doc, Attr, HeadingAndSpellings));
+        CategoryDocs.push_back(createDocumentationData(*Doc, Attributes));
       }
     }
-  }
 
-  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
-      SplitDocs;
+    // Emit docs alphabetically by heading.
+    llvm::sort(CategoryDocs,
+               [](const DocumentationData &L, const DocumentationData &R) {
+                 return L.Heading < R.Heading;
+               });
 
-  for (auto &CategoryPair : MergedDocs) {
-
-    std::vector<DocumentationData> MD;
-    for (auto &DocPair : CategoryPair.second)
-      MD.push_back(std::move(DocPair.second));
-
-    SplitDocs.emplace(CategoryPair.first, MD);
-  }
-
-  // Append Undocumented category entries
-  if (!UndocumentedDocs.empty() && UndocumentedCategory) {
-    SplitDocs.emplace(UndocumentedCategory, UndocumentedDocs);
-  }
-
-  // Having split the attributes out based on what documentation goes where,
-  // we can begin to generate sections of documentation.
-  for (auto &I : SplitDocs) {
-    WriteCategoryHeader(I.first, OS);
-
-    sort(I.second,
-         [](const DocumentationData &D1, const DocumentationData &D2) {
-           return D1.Heading < D2.Heading;
-         });
-
-    // Walk over each of the attributes in the category and write out their
-    // documentation.
-    for (const auto &Doc : I.second)
+    OS << "//--- AttributeReference/"
+       << getAttributeReferenceCategoryFileName(CategoryName) << "\n";
+    WriteCategoryHeader(CategoryDocs.front().Category, OS);
+    for (const DocumentationData &Doc : CategoryDocs)
       WriteDocumentation(Records, Doc, OS);
   }
 }
