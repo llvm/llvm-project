@@ -45,8 +45,8 @@ int main() {
   *((void **)a) = fake_vtable + 2; // UB here
   break_optimization(a);
 
-  // CFI: 1
-  // NCFI: 1
+  // CFI: {{^1$}}
+  // NCFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   // CFI-NOT: foo
