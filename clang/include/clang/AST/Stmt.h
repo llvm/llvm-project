@@ -3096,10 +3096,10 @@ public:
 
   SourceLocation getBeginLoc() const { return getKwLoc(); }
   SourceLocation getEndLoc() const {
-    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+    return isNamed() ? getLabelLoc() : getKwLoc();
   }
 
-  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+  bool isNamed() const { return TargetLabel != nullptr; }
 
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
@@ -3109,7 +3109,9 @@ public:
   void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a named break/continue, get the loop or switch statement
-  /// that this targets.
+  /// that this targets. May return null if the target LabelStmt has not
+  /// yet been created. Asserts if this is an unnamed break/continue.
+  /// \pre `isNamed()`
   const Stmt *getNamedLoopOrSwitch() const;
 
   // Iterators

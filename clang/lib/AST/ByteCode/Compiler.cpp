@@ -7226,10 +7226,10 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     return false;
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *BreakScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
+
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.BreakLabel) {
         TargetLabel = *LI.BreakLabel;
@@ -7238,6 +7238,10 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    if (!TargetLoop)
+      return this->emitUnsupported(S);
+
     for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
@@ -7266,10 +7270,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     return false;
 
   OptLabelTy TargetLabel = std::nullopt;
-  const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
   const VariableScope<Emitter> *ContinueScope = nullptr;
 
-  if (!TargetLoop) {
+  if (!S->isNamed()) {
     for (const auto &LI : llvm::reverse(LabelInfoStack)) {
       if (LI.ContinueLabel) {
         TargetLabel = *LI.ContinueLabel;
@@ -7278,6 +7281,10 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   } else {
+    const Stmt *TargetLoop = S->getNamedLoopOrSwitch();
+    if (!TargetLoop)
+      return this->emitUnsupported(S);
+
     for (auto LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.ContinueLabel;
