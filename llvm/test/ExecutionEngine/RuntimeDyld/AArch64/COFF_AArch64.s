@@ -80,6 +80,17 @@ ldr1:
   ldr  x0, [x0, #:lo12:_const]
   ret
 
+# A non-zero PAGEOFFSET_12L addend: LDR scales imm12 by the access size, so the
+# addend read back out of the instruction has to be scaled to bytes first.
+# rtdyld-check: decode_operand(ldr_addend, 2) = (tgt+8)[11:3]
+  .globl  _test_ldr_reloc_with_addend
+  .align  2
+_test_ldr_reloc_with_addend:
+  adrp x0, tgt+8
+ldr_addend:
+  ldr  x0, [x0, :lo12:tgt+8]
+  ret
+
   .globl  _test_add_reloc
   .align  2
 
