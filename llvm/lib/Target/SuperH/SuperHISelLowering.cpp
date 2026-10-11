@@ -432,11 +432,15 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
     auto DL = SDLoc(C);
 
     // Zero and One are special cases with fast instructions.
-    if (C->isZero())
-      return SDValue(DAG.getMachineNode(SH::FLDI0, DL, C->getValueType(0)), 0);
+    // NOTE:  FLDI only exists with FPU feature-set, so only try them
+    //        when enabled.
+    if (Subtarget->hasFPU()) {
+      if (C->isZero())
+        return SDValue(DAG.getMachineNode(SH::FLDI0, DL, C->getValueType(0)), 0);
 
-    if (C->isOne())
-      return SDValue(DAG.getMachineNode(SH::FLDI1, DL, C->getValueType(0)), 0);
+      if (C->isOne())
+        return SDValue(DAG.getMachineNode(SH::FLDI1, DL, C->getValueType(0)), 0);
+    }
 
     // lower to constpool.
     SDValue Const = DAG.getTargetConstantFP(*C->getConstantFPValue(), DL, C->getValueType(0));
