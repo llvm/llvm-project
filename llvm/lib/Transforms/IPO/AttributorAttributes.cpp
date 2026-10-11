@@ -10136,7 +10136,7 @@ bool AANoUndef::isImpliedByIR(Attributor &A, const IRPosition &IRP,
 
   Value &Val = IRP.getAssociatedValue();
   if (IRP.getPositionKind() != IRPosition::IRP_RETURNED &&
-      isGuaranteedNotToBeUndefOrPoison(&Val)) {
+      A.getInfoCache().isGuaranteedNotToBeUndefOrPoison(Val)) {
     LLVMContext &Ctx = Val.getContext();
     A.manifestAttrs(IRP, Attribute::get(Ctx, Attribute::NoUndef));
     return true;

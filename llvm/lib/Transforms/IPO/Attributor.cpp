@@ -25,6 +25,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
@@ -4106,6 +4107,13 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
                     << " functions, result: " << Changed << ".\n");
   return Changed == ChangeStatus::CHANGED;
+}
+
+bool InformationCache::isGuaranteedNotToBeUndefOrPoison(const Value &V) {
+  auto [It, Inserted] = GuaranteedNotUndefOrPoison.try_emplace(&V);
+  if (Inserted)
+    It->second = llvm::isGuaranteedNotToBeUndefOrPoison(&V);
+  return It->second;
 }
 
 void AADepGraph::viewGraph() { llvm::ViewGraph(this, "Dependency Graph"); }
