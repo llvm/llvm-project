@@ -23,6 +23,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_target_unittest(AMDGPUTests
+  AMDGPUEventTrackingTest.cpp
   AMDGPUMCExprTest.cpp
   AMDGPUUnitTests.cpp
   CSETest.cpp
