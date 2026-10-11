@@ -33,8 +33,8 @@ define i32 @popcount_i64(i64 %a) nounwind uwtable readnone ssp {
 ; CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
 ; CPOP-NEXT:    [[SUB:%.*]] = add i64 [[A_ADDR_04]], -1
 ; CPOP-NEXT:    [[AND]] = and i64 [[SUB]], [[A_ADDR_04]]
-; CPOP-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CPOP-NEXT:    [[TCDEC]] = sub nuw i32 [[TCPHI]], 1
+; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CPOP:       while.end.loopexit:
 ; CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]
@@ -97,8 +97,8 @@ define i32 @popcount_i32(i32 %a) nounwind uwtable readnone ssp {
 ; CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
 ; CPOP-NEXT:    [[SUB:%.*]] = add i32 [[A_ADDR_04]], -1
 ; CPOP-NEXT:    [[AND]] = and i32 [[SUB]], [[A_ADDR_04]]
-; CPOP-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CPOP-NEXT:    [[TCDEC]] = sub nuw i32 [[TCPHI]], 1
+; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CPOP:       while.end.loopexit:
 ; CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP0]], [[WHILE_BODY]] ]
@@ -162,8 +162,8 @@ define i32 @popcount_i128(i128 %a) nounwind uwtable readnone ssp {
 ; CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
 ; CPOP-NEXT:    [[SUB:%.*]] = add i128 [[A_ADDR_04]], -1
 ; CPOP-NEXT:    [[AND]] = and i128 [[SUB]], [[A_ADDR_04]]
-; CPOP-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CPOP-NEXT:    [[TCDEC]] = sub nuw i32 [[TCPHI]], 1
+; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CPOP:       while.end.loopexit:
 ; CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]
@@ -244,8 +244,8 @@ define i32 @popcount2(i64 %a, i32 %mydata1, i32 %mydata2) nounwind uwtable readn
 ; CPOP-NEXT:    [[MUL]] = mul nsw i32 [[INC]], [[MYDATA1_ADDR_011]]
 ; CPOP-NEXT:    [[CONV:%.*]] = trunc i64 [[AND]] to i32
 ; CPOP-NEXT:    [[MUL1]] = mul nsw i32 [[CONV]], [[MYDATA2_ADDR_012]]
-; CPOP-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
-; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp sle i32 [[TCDEC]], 0
+; CPOP-NEXT:    [[TCDEC]] = sub nuw i32 [[TCPHI]], 1
+; CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
 ; CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CPOP:       while.end.loopexit:
 ; CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]

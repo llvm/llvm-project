@@ -3047,8 +3047,13 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
     if (NewCount != PopCnt)
       (cast<Instruction>(NewCount))->setDebugLoc(DL);
 
-    // TripCnt is exactly the number of iterations the loop has
-    TripCnt = NewCount;
+    // TripCnt is exactly the number of iterations the loop has. Unlike the
+    // counter, it must not wrap, so only use the counter's type if it can hold
+    // the bit width of Var as an unsigned value.
+    unsigned VarBitWidth = Var->getType()->getIntegerBitWidth();
+    TripCnt = CntPhi->getType()->getIntegerBitWidth() > Log2_32(VarBitWidth)
+                  ? PopCntZext
+                  : PopCnt;
 
     // If the population counter's initial value is not zero, insert Add Inst.
     Value *CntInitVal = CntPhi->getIncomingValueForBlock(PreHead);
@@ -3066,8 +3071,8 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   {
     ICmpInst *PreCond = cast<ICmpInst>(PreCondBr->getCondition());
 
-    Value *Opnd0 = PopCntZext;
-    Value *Opnd1 = ConstantInt::get(PopCntZext->getType(), 0);
+    Value *Opnd0 = TripCnt;
+    Value *Opnd1 = ConstantInt::get(TripCnt->getType(), 0);
     if (PreCond->getOperand(0) != Var)
       std::swap(Opnd0, Opnd1);
 
@@ -3107,16 +3112,18 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
     PHINode *TcPhi = PHINode::Create(Ty, 2, "tcphi");
     TcPhi->insertBefore(Body->begin());
 
+    // The trip count may only fit Ty as an unsigned value, so decrement it
+    // with nuw and compare it unsigned.
     Builder.SetInsertPoint(LbCond);
     Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1), "tcdec",
+                          /*HasNUW=*/true, /*HasNSW=*/false));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
 
     CmpInst::Predicate Pred =
-        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_SLE;
+        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_EQ;
     LbCond->setPredicate(Pred);
     LbCond->setOperand(0, TcDec);
     LbCond->setOperand(1, ConstantInt::get(Ty, 0));
