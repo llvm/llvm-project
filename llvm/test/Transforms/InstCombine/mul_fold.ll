@@ -605,6 +605,47 @@ define i130 @mul130_low_one_extra_user(i130 %in0, i130 %in1) {
   ret i130 %retLo
 }
 
+; Both operands have known-zero upper bits
+define i32 @mul32_low_knownbits_both_zext(i16 %a, i16 %b) {
+; CHECK-LABEL: @mul32_low_knownbits_both_zext(
+; CHECK-NEXT:    [[IN0:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[IN1:%.*]] = zext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[RETLO:%.*]] = mul nuw i32 [[IN1]], [[IN0]]
+; CHECK-NEXT:    ret i32 [[RETLO]]
+;
+  %in0 = zext i16 %a to i32
+  %in1 = zext i16 %b to i32
+  %In0Hi = lshr i32 %in0, 16
+  %In1Hi = lshr i32 %in1, 16
+  %m10 = mul i32 %In1Hi, %in0
+  %m01 = mul i32 %in1, %In0Hi
+  %m00 = mul i32 %in1, %in0
+  %addc = add i32 %m10, %m01
+  %shl = shl i32 %addc, 16
+  %retLo = add i32 %shl, %m00
+  ret i32 %retLo
+}
+
+; One operand with known-zero upper bits, the other with `and`
+define i32 @mul32_low_knownbits_one_zext(i16 %a, i32 %in1) {
+; CHECK-LABEL: @mul32_low_knownbits_one_zext(
+; CHECK-NEXT:    [[IN0:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1:%.*]], [[IN0]]
+; CHECK-NEXT:    ret i32 [[RETLO]]
+;
+  %in0 = zext i16 %a to i32
+  %In0Hi = lshr i32 %in0, 16
+  %In1Lo = and i32 %in1, 65535
+  %In1Hi = lshr i32 %in1, 16
+  %m10 = mul i32 %In1Hi, %in0
+  %m01 = mul i32 %In1Lo, %In0Hi
+  %m00 = mul i32 %In1Lo, %in0
+  %addc = add i32 %m10, %m01
+  %shl = shl i32 %addc, 16
+  %retLo = add i32 %shl, %m00
+  ret i32 %retLo
+}
+
 ; Negative case: Skip odd bitwidth type
 define i9 @mul9_low(i9 %in0, i9 %in1) {
 ; CHECK-LABEL: @mul9_low(
