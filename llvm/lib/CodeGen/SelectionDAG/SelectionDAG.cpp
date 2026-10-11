@@ -14519,7 +14519,8 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     if (AlignBits)
-      return commonAlignment(Align(1ull << std::min(31U, AlignBits)), GVOffset);
+      return commonAlignment(Align::fromLog2(std::min(31U, AlignBits)),
+                             GVOffset);
   }
 
   // If this is a direct reference to a stack slot, use information about the

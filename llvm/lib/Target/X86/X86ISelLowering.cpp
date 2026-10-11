@@ -65673,6 +65673,6 @@ Align X86TargetLowering::getPrefLoopAlignment(
   std::optional<int> InnermostAlign =
       Subtarget.getCLOpts().experimental_pref_innermost_loop_alignment;
   if (ML && ML->isInnermost() && InnermostAlign)
-    return Align(1ULL << *InnermostAlign);
+    return Align::fromLog2(*InnermostAlign);
   return TargetLowering::getPrefLoopAlignment();
 }

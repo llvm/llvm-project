@@ -7781,7 +7781,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (I) {
     unsigned Opcode = I->DstOp;
     if (Alignment <
-        Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
+        Align::fromLog2((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT))
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {

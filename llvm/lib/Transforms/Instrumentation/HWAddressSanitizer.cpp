@@ -282,7 +282,7 @@ private:
   public:
     void init(const InstrumentationOptions &Opts, Triple &TargetTriple,
               bool InstrumentWithCalls, bool CompileKernel);
-    Align getObjectAlignment() const { return Align(1ULL << Scale); }
+    Align getObjectAlignment() const { return Align::fromLog2(Scale); }
     bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
     bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
     bool isInTls() const { return Kind == OffsetKind::kTls; }
