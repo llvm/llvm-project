@@ -4708,7 +4708,8 @@ public:
                                   const Twine &name = "");
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
-                                  const Twine &name = "");
+                                  const Twine &name = "",
+                                  bool IsConvergent = false);
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                     const Twine &Name = "");
   llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
@@ -5566,6 +5567,10 @@ private:
   // |Bundles|, if convergence tokens are used.
   void
   addConvergenceControlBundle(SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
+  // Marks |Call| convergent if |IsConvergent| and its callee does not already
+  // imply it.
+  void setConvergentCallSite(llvm::CallBase *Call, bool IsConvergent);
 
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.

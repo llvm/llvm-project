@@ -1090,9 +1090,10 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       EmitObjCAutoreleasePoolCleanup(token);
     }
 
-    for (llvm::Function *Decl : Decls)
+    for (llvm::Function *Decl : Decls) {
       if (Decl)
-        EmitRuntimeCall(Decl);
+        EmitRuntimeCall(Decl, {}, "", Decl->isConvergent());
+    }
 
     Scope.ForceCleanup();
 
@@ -1124,8 +1125,9 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       llvm::Constant *Arg;
       std::tie(CalleeTy, Callee, Arg) = DtorsOrStermFinalizers[e - i - 1];
 
+      bool IsConvergent = getLangOpts().assumeFunctionsAreConvergent();
       SmallVector<llvm::OperandBundleDef> BundleList;
-      if (auto *F = dyn_cast<llvm::Function>(Callee); F && F->isConvergent())
+      if (IsConvergent)
         addConvergenceControlBundle(BundleList);
 
       llvm::CallBase *CI = nullptr;
@@ -1155,6 +1157,8 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());
+
+      setConvergentCallSite(CI, IsConvergent);
     }
   }
 

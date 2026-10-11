@@ -3529,6 +3529,16 @@ void CodeGenFunction::addConvergenceControlBundle(
   Bundles.emplace_back("convergencectrl", ParentToken);
 }
 
+void CodeGenFunction::setConvergentCallSite(llvm::CallBase *Call,
+                                            bool IsConvergent) {
+  if (IsConvergent && !Call->isConvergent())
+    Call->setConvergent();
+
+  assert((IsConvergent || !Call->isConvergent() ||
+          !CGM.shouldEmitConvergenceTokens()) &&
+         "convergent call is missing a convergence control token");
+}
+
 llvm::ConvergenceControlInst *
 CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB) {
   llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
