@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -verify -x c %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -verify -x c++ %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL1.2 -fsyntax-only -verify -x cl %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -fsyntax-only -verify -x cl %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -fsyntax-only -verify -x cl %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fsyntax-only -verify -x c %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fsyntax-only -verify -x c++ %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL1.2 -fsyntax-only -verify -x cl %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL2.0 -fsyntax-only -verify -x cl %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL3.0 -fsyntax-only -verify -x cl %s
 
 // expected-no-diagnostics
 
