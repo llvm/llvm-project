@@ -412,3 +412,33 @@ entry:
   store i32 %m3, ptr getelementptr inbounds nuw (i8, ptr @out, i64 12), align 4
   ret void
 }
+
+; The or chains are flattened into a single node. The absorbing all-ones
+; operand of the lane 1 must not get poison as the other operand: the poison is
+; not frozen in the flattened node.
+define void @reassoc_absorbing_lane(ptr %p) {
+; CHECK-LABEL: define void @reassoc_absorbing_lane(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], <i32 -3, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 -1, i32 255>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> <i32 256, i32 poison>, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], <i32 16, i32 -1>
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %p, i64 4
+  %l0 = load i32, ptr %p, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %s0 = sub i32 %l0, 3
+  %o0 = or i32 %s0, 16
+  %r0 = or i32 256, %o0
+  %a1 = add i32 %l1, -1
+  %b1 = and i32 %a1, 255
+  %r1 = or i32 %b1, -1
+  store i32 %r0, ptr %p, align 4
+  store i32 %r1, ptr %p1, align 4
+  ret void
+}
