@@ -48612,6 +48612,23 @@ static SDValue combineToExtendBoolVectorInReg(
   unsigned NumElts = VT.getVectorNumElements();
   assert(NumElts == SclVT.getSizeInBits() && "Unexpected bool vector size");
 
+  // If the scalar integer doesn't split evenly into the vector element size
+  // (e.g. i12 -> v12i8), extend it to the next multiple, extend that and
+  // extract the original elements.
+  if (NumElts > EltSizeInBits && (NumElts % EltSizeInBits) != 0) {
+    unsigned WideNumElts = alignTo(NumElts, EltSizeInBits);
+    LLVMContext &Ctx = *DAG.getContext();
+    EVT WideVT = EVT::getVectorVT(Ctx, SVT, WideNumElts);
+    EVT WideBoolVT = EVT::getVectorVT(Ctx, MVT::i1, WideNumElts);
+    SDValue WideN0 = DAG.getBitcast(
+        WideBoolVT, DAG.getNode(ISD::ANY_EXTEND, DL,
+                                EVT::getIntegerVT(Ctx, WideNumElts), N00));
+    if (SDValue Ext = combineToExtendBoolVectorInReg(Opcode, DL, WideVT, WideN0,
+                                                     DAG, DCI, Subtarget))
+      return DAG.getExtractSubvector(DL, VT, Ext, 0);
+    return SDValue();
+  }
+
   // Broadcast the scalar integer to the vector elements.
   if (NumElts > EltSizeInBits) {
     // If the scalar integer is greater than the vector element size, then we
@@ -48621,7 +48638,8 @@ static SDValue combineToExtendBoolVectorInReg(
     assert((NumElts % EltSizeInBits) == 0 && "Unexpected integer scale");
     unsigned Scale = NumElts / EltSizeInBits;
     EVT BroadcastVT = EVT::getVectorVT(*DAG.getContext(), SclVT, EltSizeInBits);
-    bool UseBroadcast = Subtarget.hasInt256() &&
+    // The broadcast shuffle offsets below assume a power-of-2 scalar size.
+    bool UseBroadcast = Subtarget.hasInt256() && isPowerOf2_32(NumElts) &&
                         (!BroadcastVT.is128BitVector() || isa<LoadSDNode>(N00));
     Vec = UseBroadcast
               ? DAG.getSplat(BroadcastVT, DL, N00)
