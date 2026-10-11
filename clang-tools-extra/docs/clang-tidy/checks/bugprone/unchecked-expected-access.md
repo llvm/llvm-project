@@ -107,5 +107,28 @@ void o(std::expected<int, Error> e) {
 
 ## Limitations
 
-The check does not yet model `swap` of `std::expected`. For example, it does
-not know that after `a.swap(b)`, `a` holds a value if `b` held one before.
+The check does not yet model some member functions of `std::expected`. These
+are known, temporary limitations:
+
+- `swap`. For example, the check does not know that after `a.swap(b)`, `a`
+  holds a value if `b` held one before.
+- The monadic operations `and_then`, `or_else`, `transform` and
+  `transform_error`. The check does not relate the state of their result to the
+  state of the object they are called on, so accessing the result without a
+  check of its own is diagnosed, even when it is safe:
+
+```cpp
+int f(std::expected<int, Error> e) {
+  if (!e)
+    return 0;
+  auto r = e.transform([](int v) { return v + 1; });
+  return *r; // false positive: `r` holds a value because `e` does.
+}
+
+void g(std::expected<int, Error> e) {
+  if (!e)
+    report(e.transform_error(describe).error()); // false positive: the result
+                                                 // holds an error because `e`
+                                                 // does.
+}
+```
