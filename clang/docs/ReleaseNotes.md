@@ -621,6 +621,8 @@ features cannot lower the translation-unit ABI level;
   `-Wunsafe-buffer-usage` to control warnings on `main`'s `argv` parameter,
   allowing users to suppress them with `-Wno-unsafe-buffer-usage-main-argv`.
 
+- Clang now rejects initializing a constexpr struct/union variable with a compound literal that contains non-null pointers in C23. (#GH121694)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
