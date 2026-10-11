@@ -561,7 +561,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   assert(Ty->isPointerTy() && "Expect a pointer type");
   // Try to recover provenance from the tag.
   if (IsTagValid) {
-    APInt Tag(NumBitsToExtract, RawTagBits);
+    APInt Tag(NumBits, RawTagBits);
     if (auto Prov = TaggedProvenances.lookup(Tag))
       return Pointer(std::move(Prov), Bits);
   }
