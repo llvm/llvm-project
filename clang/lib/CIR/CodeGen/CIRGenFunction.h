@@ -2407,8 +2407,8 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
-  /// Emit a device-side printf call for NVPTX targets.
-  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+  /// Emit a device-side printf call for GPU targets.
+  mlir::Value emitDevicePrintfCallExpr(const CallExpr *expr);
 
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
