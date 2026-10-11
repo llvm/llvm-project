@@ -742,6 +742,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.unsetenv
 )
 
+add_entrypoint_object(
+  clearenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clearenv
+)
+
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
