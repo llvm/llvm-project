@@ -652,8 +652,9 @@ public:
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }
 
   /// Returns map of slow types for division or remainder with corresponding
-  /// fast types
-  const DenseMap<unsigned int, unsigned int> &getBypassSlowDivWidths() const {
+  /// fast types and whether to bypass a constant divisor.
+  const DenseMap<unsigned int, std::pair<unsigned int, bool>> &
+  getBypassSlowDivWidths() const {
     return BypassSlowDivWidths;
   }
 
@@ -2797,9 +2798,11 @@ protected:
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
 
-  /// Tells the code generator which bitwidths to bypass.
-  void addBypassSlowDiv(unsigned int SlowBitWidth, unsigned int FastBitWidth) {
-    BypassSlowDivWidths[SlowBitWidth] = FastBitWidth;
+  /// Tells the code generator which bitwidths to bypass and whether it
+  /// should bypass a constant divisor.
+  void addBypassSlowDiv(unsigned int SlowBitWidth, unsigned int FastBitWidth,
+                        bool BypassConstantDivisor = false) {
+    BypassSlowDivWidths[SlowBitWidth] = {FastBitWidth, BypassConstantDivisor};
   }
 
   /// Add the specified register class as an available regclass for the
@@ -3882,8 +3885,11 @@ private:
   /// Tells the code generator to bypass slow divide or remainder
   /// instructions. For example, BypassSlowDivWidths[32,8] tells the code
   /// generator to bypass 32-bit integer div/rem with an 8-bit unsigned integer
-  /// div/rem when the operands are positive and less than 256.
-  DenseMap <unsigned int, unsigned int> BypassSlowDivWidths;
+  /// div/rem when the operands are positive and less than 256. The bool
+  /// indicates whether to bypass a constant divisor, default is false.
+  /// BypassSlowDivWidths[64, 32, true] means bypass 64-bit integer div/rem with
+  /// a 32-bit div/rem, including divisions with a constant divisor.
+  DenseMap<unsigned int, std::pair<unsigned int, bool>> BypassSlowDivWidths;
 
   /// Tells the code generator that it shouldn't generate extra flow control
   /// instructions and should attempt to combine flow control instructions via
