@@ -14,6 +14,12 @@
 // REQUIRES: can-test-hardening-assertions-extensive
 // REQUIRES: std-at-least-c++26
 
+// The assertion is in dylib and the dylib cannot be compiled with
+// observe as the logging symbols only exist in experimental dylib.
+// As a result, even the test is compiled with observe semantics,
+// the assertions in the dylib still have quick-enforce semantics.
+// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
+
 #include <rcu>
 #include <thread>
 
