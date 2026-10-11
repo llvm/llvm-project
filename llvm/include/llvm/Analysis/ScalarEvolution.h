@@ -1197,6 +1197,11 @@ public:
   LLVM_ABI uint32_t getMinTrailingZeros(const SCEV *S,
                                         const Instruction *CtxI = nullptr);
 
+  /// Returns the largest alignment that S is guaranteed to have (at every loop
+  /// iteration). If \p CtxI is not nullptr, return an alignment valid at \p
+  /// CtxI.
+  LLVM_ABI Align getAlign(const SCEV *S, const Instruction *CtxI = nullptr);
+
   /// Returns the max constant multiple of S. If \p CtxI is not nullptr, return
   /// a constant multiple valid at \p CtxI.
   LLVM_ABI APInt getConstantMultiple(const SCEV *S,
