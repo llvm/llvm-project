@@ -406,7 +406,7 @@ void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
          "restore block should be inserted for restoring clobbered registers");
 
   MachineFunction *MF = MBB.getParent();
-  MachineFrameInfo &MFI = MF->getFrameInfo();
+  SparcMachineFunctionInfo *SMFI = MF->getInfo<SparcMachineFunctionInfo>();
 
   if (!isInt<32>(BrOffset))
     report_fatal_error(
@@ -422,7 +422,7 @@ void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // the processor's predictor machinery.
   bool IsO7Used = RS->isRegUsed(SP::O7);
   Register ScratchReg = RS->FindUnusedReg(&SP::IntRegsRegClass);
-  int FI = 0;
+  int FI = SMFI->getBranchRelaxationSpillFrameIndex();
   if (IsO7Used) {
     if (ScratchReg.isValid()) {
       BuildMI(&MBB, DL, get(SP::ORrr), ScratchReg)
@@ -431,12 +431,10 @@ void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       RS->setRegUsed(ScratchReg);
     } else {
       // In case we run out of usable registers we'll spill it into the stack.
+      if (FI == -1)
+        report_fatal_error("The function size is incorrectly estimated.");
       const MCRegisterClass &RC =
           Subtarget.is64Bit() ? SP::I64RegsRegClass : SP::IntRegsRegClass;
-      unsigned SpillSize = TRI.getSpillSize(RC);
-      Align SpillAlign = TRI.getSpillAlign(RC);
-
-      FI = MFI.CreateStackObject(SpillSize, SpillAlign, true);
 
       MachineBasicBlock::iterator I = MBB.end();
       storeRegToStackSlot(MBB, I, SP::O7, true, FI, &RC, Register());
