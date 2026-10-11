@@ -2095,9 +2095,9 @@ public:
 
       // Don't call `wcslen` if the base pointer isn't known to be aligned.
       const DataLayout &DL = LoopLoad->getDataLayout();
-      Align WcharAlign = DL.getABITypeAlign(OperandType);
-      if (LoopLoad->getAlign() < WcharAlign &&
-          SE->getMinTrailingZeros(LoadBaseEv) < Log2(WcharAlign))
+      Align OperandAlign = DL.getABITypeAlign(OperandType);
+      if (LoopLoad->getAlign() < OperandAlign &&
+          SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
         return false;
     }
 
