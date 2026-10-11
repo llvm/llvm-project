@@ -92,22 +92,22 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v12, v[0:1], off offset:11 nv
 ; GFX1250-NOUNALIGNED-NEXT:    global_load_u8 v13, v[0:1], off offset:10 nv
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0xa
-; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v0, v3, 8, v2
+; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v2, v3, 8, v2
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x8
-; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v2, 16, v4 :: v_dual_lshlrev_b32 v1, 24, v5
+; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v4, 16, v4 :: v_dual_lshlrev_b32 v3, 24, v5
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x6
-; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v3, v7, 8, v6
+; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v5, v7, 8, v6
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x4
-; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v5, 16, v8 :: v_dual_lshlrev_b32 v4, 24, v9
-; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v0, v1, v2, v0
+; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v7, 16, v8 :: v_dual_lshlrev_b32 v6, 24, v9
+; GFX1250-NOUNALIGNED-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v0, v3, v4, v2
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x2
-; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v6, v11, 8, v10
+; GFX1250-NOUNALIGNED-NEXT:    v_lshl_or_b32 v8, v11, 8, v10
 ; GFX1250-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v7, 24, v12 :: v_dual_lshlrev_b32 v8, 16, v13
-; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v1, v4, v5, v3
+; GFX1250-NOUNALIGNED-NEXT:    v_dual_lshlrev_b32 v9, 24, v12 :: v_dual_lshlrev_b32 v10, 16, v13
+; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v1, v6, v7, v5
 ; GFX1250-NOUNALIGNED-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v2, v7, v8, v6
+; GFX1250-NOUNALIGNED-NEXT:    v_or3_b32 v2, v9, v10, v8
 ; GFX1250-NOUNALIGNED-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX9-UNALIGNED-LABEL: v_load_constant_v3i32_align1:
