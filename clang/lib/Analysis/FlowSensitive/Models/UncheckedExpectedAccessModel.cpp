@@ -102,6 +102,52 @@ auto expectedUnexpectedEqualityCall() {
       hasArgument(0, hasExpectedType()), hasArgument(1, hasUnexpectedType()));
 }
 
+// Copy and move constructors are modeled by the framework, which copies the
+// "has_value" property of the source.
+auto expectedConstructor() {
+  return cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+      ofClass(expectedClass()),
+      unless(anyOf(isCopyConstructor(), isMoveConstructor())))));
+}
+
+// `expected(unexpect_t, ...)`, `expected(const unexpected<G> &)` and
+// `expected(unexpected<G> &&)`.
+auto expectedErrorConstructor() {
+  return cxxConstructExpr(
+      expectedConstructor(),
+      hasArgument(0, anyOf(hasType(namedDecl(hasName("std::unexpect_t"))),
+                           hasUnexpectedType())));
+}
+
+// Matches `template <class U, class G> expected(const expected<U, G> &)` and
+// `template <class U, class G> expected(expected<U, G> &&)`. The argument type
+// alone is not enough to recognize them: `expected(U &&)` also accepts an
+// `expected` when `T` is constructible from it, e.g. for nested `expected`s.
+AST_MATCHER(CXXConstructorDecl, expectedConvertingConstructorDecl) {
+  const FunctionTemplateDecl *Template = Node.getPrimaryTemplate();
+  if (Template == nullptr)
+    return false;
+  const FunctionDecl *Pattern = Template->getTemplatedDecl();
+  if (Pattern->getNumParams() != 1)
+    return false;
+  const auto *ParamType = Pattern->getParamDecl(0)
+                              ->getType()
+                              .getNonReferenceType()
+                              ->getAs<TemplateSpecializationType>();
+  if (ParamType == nullptr)
+    return false;
+  const auto *ParamTemplate = dyn_cast_or_null<ClassTemplateDecl>(
+      ParamType->getTemplateName().getAsTemplateDecl());
+  return ParamTemplate != nullptr &&
+         isExpectedClass(*ParamTemplate->getTemplatedDecl());
+}
+
+auto expectedConvertingConstructor() {
+  return cxxConstructExpr(
+      expectedConstructor(),
+      hasDeclaration(cxxConstructorDecl(expectedConvertingConstructorDecl())));
+}
+
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   auto *Value = Env.get<BoolValue>(E);
@@ -215,7 +261,33 @@ void transferExpectedUnexpectedEqualityCall(const CXXOperatorCallExpr *E,
                            A.makeNot(HasValueVal->formula())));
 }
 
-// FIXME: Model the constructors, assignments and `swap`.
+void constructExpected(const CXXConstructExpr &E, BoolValue &HasValueVal,
+                       Environment &Env) {
+  setHasValue(&Env.getResultObjectLocation(E), HasValueVal, Env);
+}
+
+void transferValueConstructor(const CXXConstructExpr *E,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  constructExpected(*E, State.Env.getBoolLiteralValue(true), State.Env);
+}
+
+void transferErrorConstructor(const CXXConstructExpr *E,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  constructExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
+}
+
+void transferConvertingConstructor(const CXXConstructExpr *E,
+                                   const MatchFinder::MatchResult &,
+                                   LatticeTransferState &State) {
+  // The new expected holds a value if and only if the source does.
+  if (BoolValue *HasValueVal = getHasValue(
+          State.Env, State.Env.get<RecordStorageLocation>(*E->getArg(0))))
+    constructExpected(*E, *HasValueVal, State.Env);
+}
+
+// FIXME: Model the assignments and `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
       // expected::has_value, expected::operator bool
@@ -235,6 +307,14 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           expectedUnexpectedEqualityCall(),
           transferExpectedUnexpectedEqualityCall)
+      // Constructors. The order matters: the last case matches every
+      // constructor that is not matched by the ones before it.
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedErrorConstructor(),
+                                       transferErrorConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedConvertingConstructor(),
+                                       transferConvertingConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedConstructor(),
+                                       transferValueConstructor)
       .Build();
 }
 

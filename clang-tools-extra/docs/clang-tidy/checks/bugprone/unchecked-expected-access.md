@@ -93,10 +93,15 @@ void m(std::expected<int, Error> e) {
     report(e.error()); // only an expected holding an error compares equal
                        // to an unexpected.
 }
+
+int n() {
+  std::expected<int, Error> e; // a default-constructed expected holds a value.
+  return *e;
+}
 ```
 
 ## Limitations
 
-The check does not yet model the constructors, assignment operators or
-`swap` of `std::expected`, so it does not know, for example, that a
-default-constructed `std::expected` holds a value.
+The check does not yet model the assignment operators (other than copy and
+move assignment) or `swap` of `std::expected`. For example, it does not know
+that `e = std::unexpected(err)` leaves `e` holding an error.
