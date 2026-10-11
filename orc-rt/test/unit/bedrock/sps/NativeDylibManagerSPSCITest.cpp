@@ -71,8 +71,7 @@ protected:
   void spsLookup(OnCompleteFn &&OnComplete, void *Handle,
                  SymbolLookupSet Symbols) {
     using SPSSig = SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
-        SPSExecutorAddr, SPSExecutorAddr,
-        SPSSequence<SPSTuple<SPSString, bool>>);
+        SPSExecutorAddr, SPSExecutorAddr, SPSSymbolLookupSet);
     SPSWrapperFunction<SPSSig>::call(
         caller(orc_rt_ci_sps_NativeDylibManager_lookup),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle,

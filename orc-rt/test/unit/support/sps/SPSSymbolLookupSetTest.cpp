@@ -51,10 +51,9 @@ TEST(SPSSymbolLookupSetTest, SymbolLookupFlagsWireFormat) {
 }
 
 TEST(SPSSymbolLookupSetTest, SymbolLookupSetSerialization) {
-  using SPSTag = SPSSequence<SPSTuple<SPSString, bool>>;
-  blobSerializationRoundTrip<SPSTag, SymbolLookupSet>(
+  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
       SymbolLookupSet(), seqEqual<SymbolLookupSet>);
-  blobSerializationRoundTrip<SPSTag, SymbolLookupSet>(
+  blobSerializationRoundTrip<SPSSymbolLookupSet, SymbolLookupSet>(
       SymbolLookupSet({{"foo", SymbolLookupFlags::RequiredSymbol},
                        {"bar", SymbolLookupFlags::WeaklyReferencedSymbol}}),
       seqEqual<SymbolLookupSet>);
