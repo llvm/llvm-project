@@ -100,6 +100,16 @@ def Vector_ContractionOp :
         are unrelated to each other and do not co-iterate, which
         should be expressed in their indexing maps.
 
+    Depending on its iterator type and on the operands it indexes, a dimension
+    is one of the following kinds:
+
+    | Iterator type | In output | In lhs and rhs | Kind                       |
+    | ------------- | --------- | -------------- | -------------------------- |
+    | "parallel"    | yes       | both           | batch                      |
+    | "parallel"    | yes       | one of them    | free                       |
+    | "reduction"   | no        | both           | contracting                |
+    | "reduction"   | no        | one of them    | reduction on one operand   |
+
     An indexing map attribute list must be specified with an entry for lhs, rhs
     and acc arguments. An indexing map attribute specifies a mapping from each
     iterator in the iterator type list, to each dimension of an N-D vector.
