@@ -58,12 +58,12 @@ defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 } // End OtherPredicates = [has32BankLDS, isNotGFX90APlus]
 
 let OtherPredicates = [has16BankLDS, isNotGFX90APlus],
-    Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
+    Constraints = "@earlyclobber $vdst", isCodeGenOnly=1 in {
 
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus],
-  //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
+} // End OtherPredicates = [has16BankLDS, isNotGFX90APlus],
+  //     Constraints = "@earlyclobber $vdst", isCodeGenOnly=1
 
 let OtherPredicates = [isNotGFX90APlus] in {
 let Constraints = "$src0 = $vdst" in {
