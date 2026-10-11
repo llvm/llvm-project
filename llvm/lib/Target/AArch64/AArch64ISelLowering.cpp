@@ -2848,6 +2848,10 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
   return optimizeLogicalImm(Op, Size, Imm, DemandedBits, TLO, NewOpc);
 }
 
+bool AArch64TargetLowering::isTargetAssertNode(SDValue Op) const {
+  return Op.getOpcode() == AArch64ISD::ASSERT_ZEXT_BOOL;
+}
+
 /// computeKnownBitsForTargetNode - Determine which of the bits specified in
 /// Mask are known to be either zero or one and return them Known.
 void AArch64TargetLowering::computeKnownBitsForTargetNode(

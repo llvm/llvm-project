@@ -1669,6 +1669,20 @@ void SelectionDAGBuilder::handleKillDebugValue(DILocalVariable *Var,
                    /*IsVariadic*/ false);
 }
 
+/// Return true if argument lowering knows that the low \p Bits bits of the
+/// register the argument \p ArgN is passed in hold its zero extension, as it
+/// does for a zeroext argument (AssertZext) or an AArch64 bool.
+static bool isZExtInArgReg(SDValue ArgN, unsigned Bits, SelectionDAG &DAG) {
+  unsigned ArgBits = ArgN.getValueSizeInBits();
+  SDValue Reg = ArgN;
+  while (Reg.getValueSizeInBits() < Bits && Reg.getOpcode() == ISD::TRUNCATE)
+    Reg = Reg.getOperand(0);
+
+  unsigned RegBits = Reg.getValueSizeInBits();
+  return RegBits >= Bits &&
+         DAG.MaskedValueIsZero(Reg, APInt::getBitsSet(RegBits, ArgBits, Bits));
+}
+
 bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
                                            DILocalVariable *Var,
                                            DIExpression *Expr, DebugLoc DbgLoc,
@@ -1717,6 +1731,24 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
         LocationOps.emplace_back(SDDbgOperand::fromFrameIdx(SI->second));
         continue;
       }
+    }
+
+    // A zext of an argument the caller has already zero-extended (e.g. the i8
+    // a bool parameter is stored as) is in the argument register at the
+    // function entry, so describe it by the argument. Skip complex
+    // expressions, as only the register bits up to the zext width are known.
+    const auto *ZExt = dyn_cast<ZExtInst>(V);
+    const auto *Arg = ZExt ? dyn_cast<Argument>(ZExt->getOperand(0)) : nullptr;
+    if (Arg && ZExt->getType()->isIntegerTy() && !IsVariadic &&
+        !Expr->isComplex()) {
+      SDValue ArgN = NodeMap[Arg];
+      if (!ArgN.getNode())
+        ArgN = UnusedArgNodeMap[Arg];
+      if (ArgN.getNode() &&
+          isZExtInArgReg(ArgN, ZExt->getType()->getIntegerBitWidth(), DAG) &&
+          EmitFuncArgumentDbgValue(Arg, Var, Expr, DbgLoc,
+                                   FuncArgumentDbgValueKind::Value, ArgN))
+        return true;
     }
 
     // Do not use getValue() in here; we don't want to generate code at
@@ -6413,7 +6445,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
 getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+                     const SDValue &N, const TargetLowering &TLI) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -6425,15 +6457,17 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
+    getUnderlyingArgRegs(Regs, N.getOperand(0), TLI);
     return;
   case ISD::BUILD_PAIR:
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
     for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
+      getUnderlyingArgRegs(Regs, Op, TLI);
     return;
   default:
+    if (TLI.isTargetAssertNode(N))
+      getUnderlyingArgRegs(Regs, N.getOperand(0), TLI);
     return;
   }
 }
@@ -6559,7 +6593,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    getUnderlyingArgRegs(ArgRegsAndSizes, N, DAG.getTargetLoweringInfo());
     Register Reg;
     if (ArgRegsAndSizes.size() == 1)
       Reg = ArgRegsAndSizes.front().first;

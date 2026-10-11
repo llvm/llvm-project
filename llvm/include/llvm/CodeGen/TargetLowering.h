@@ -4544,6 +4544,11 @@ public:
     return 0;
   }
 
+  /// Return true if \p Op is a target-specific node which, like
+  /// ISD::AssertZext, only asserts a property of its first operand and has the
+  /// same value.
+  virtual bool isTargetAssertNode(SDValue Op) const { return false; }
+
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
