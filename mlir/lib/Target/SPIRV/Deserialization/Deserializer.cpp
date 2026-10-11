@@ -492,39 +492,19 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
 
   spirv::DecorationAttr foundDecorationAttr;
   for (NamedAttribute decAttr : decorations[argID]) {
-    for (auto decoration :
-         {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
-          spirv::Decoration::AliasedPointer,
-          spirv::Decoration::RestrictPointer}) {
+    if (!isa<UnitAttr>(decAttr.getValue()))
+      continue;
 
-      if (decAttr.getName() !=
-          getSymbolDecoration(stringifyDecoration(decoration)))
-        continue;
+    // TODO: Support multiple decorations per function parameter.
+    if (foundDecorationAttr)
+      return emitError(unknownLoc, "already found a decoration for function "
+                                   "argument with result <id> ")
+             << argID;
 
-      if (foundDecorationAttr)
-        return emitError(unknownLoc,
-                         "more than one Aliased/Restrict decorations for "
-                         "function argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
-      break;
-    }
-
-    if (decAttr.getName() == getSymbolDecoration(stringifyDecoration(
-                                 spirv::Decoration::RelaxedPrecision))) {
-      // TODO: Current implementation supports only one decoration per function
-      // parameter so RelaxedPrecision cannot be applied at the same time as,
-      // for example, Aliased/Restrict/etc. This should be relaxed to allow any
-      // combination of decoration allowed by the spec to be supported.
-      if (foundDecorationAttr)
-        return emitError(unknownLoc, "already found a decoration for function "
-                                     "argument with result <id> ")
-               << argID;
-
-      foundDecorationAttr = spirv::DecorationAttr::get(
-          context, spirv::Decoration::RelaxedPrecision);
-    }
+    std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+        llvm::convertToCamelFromSnakeCase(decAttr.getName(), true));
+    assert(decoration.has_value());
+    foundDecorationAttr = spirv::DecorationAttr::get(context, *decoration);
   }
 
   if (!foundDecorationAttr)
