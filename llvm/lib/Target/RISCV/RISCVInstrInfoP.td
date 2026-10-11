@@ -2144,8 +2144,9 @@ def riscv_pmqracc_h11 : RVSDNode<"PMQRACC_W_H11", SDT_RISCVQFormatAccP>;
 def riscv_mqwacc  : RVSDNode<"MQWACC",  SDT_RISCVWideningAddSubAccumulate>;
 def riscv_mqrwacc : RVSDNode<"MQRWACC", SDT_RISCVWideningAddSubAccumulate>;
 
-// The immediate for these is the number of trailing ones in the max value. The
-// saturated operand is a scalar (sati/usati) or a packed vector (psati/pusati).
+// The immediate for these is the width field of the instruction: the saturated
+// bit width, which for the signed form includes the sign bit. The saturated
+// operand is a scalar (sati/usati) or a packed vector (psati/pusati).
 def SDT_RISCVSaturate : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
                                              SDTCisVT<2, XLenVT>]>;
 def riscv_sati : RVSDNode<"SATI", SDT_RISCVSaturate>;
@@ -2181,21 +2182,18 @@ def SDT_RISCVPUnzip : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def riscv_punzipe : RVSDNode<"PUNZIPE", SDT_RISCVPUnzip>;
 def riscv_punzipo : RVSDNode<"PUNZIPO", SDT_RISCVPUnzip>;
 
-// Add one to the immediate. Used by RISCVISD::SATI.
-def IncImm : SDNodeXForm<imm, [{
-    return CurDAG->getTargetConstant(N->getZExtValue() + 1, SDLoc(N),
-                                     N->getValueType(0));
-}]>;
+// Matches the immediate of RISCVISD::USATI.
+class RISCVUSatWidthLeaf<int bitsNum>
+    : TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);">;
 
-// Matches the immediate of RISCVISD::SATI/USATI. The signed instructions count
-// the sign bit in their width field, which IncImm adds back.
-class RISCVSatWidthLeaf<int bitsNum, SDNodeXForm xform = NOOP_SDNodeXForm>
-    : TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);", xform>;
+// Matches the immediate of RISCVISD::SATI, which is encoded minus one.
+class RISCVSatWidthLeaf<int bitsNum>
+    : TImmLeaf<XLenVT, "return Imm > 0 && isUInt<" # bitsNum # ">(Imm - 1);">;
 
-def sati_width4  : RISCVSatWidthLeaf<4, IncImm>;
-def sati_width5  : RISCVSatWidthLeaf<5, IncImm>;
-def usati_width4 : RISCVSatWidthLeaf<4>;
-def usati_width5 : RISCVSatWidthLeaf<5>;
+def sati_width4  : RISCVSatWidthLeaf<4>;
+def sati_width5  : RISCVSatWidthLeaf<5>;
+def usati_width4 : RISCVUSatWidthLeaf<4>;
+def usati_width5 : RISCVUSatWidthLeaf<5>;
 
 def SDT_RISCVBuildPairGPRVec : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                     SDTCisVT<1, i32>,
@@ -2563,7 +2561,7 @@ let append Predicates = [IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
-            (SATI_RV32 GPR:$rs1, (IncImm timm:$imm))>;
+            (SATI_RV32 GPR:$rs1, timm:$imm)>;
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
             (USATI_RV32 GPR:$rs1, timm:$imm)>;
 
@@ -3258,7 +3256,7 @@ let append Predicates = [IsRV64] in {
             (MQRACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(XLenVT (riscv_sati GPR:$rs1, timm:$imm)),
-            (SATI_RV64 GPR:$rs1, (IncImm timm:$imm))>;
+            (SATI_RV64 GPR:$rs1, timm:$imm)>;
   def : Pat<(XLenVT (riscv_usati GPR:$rs1, timm:$imm)),
             (USATI_RV64 GPR:$rs1, timm:$imm)>;
 
