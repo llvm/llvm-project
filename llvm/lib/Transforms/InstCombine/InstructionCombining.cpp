@@ -2935,9 +2935,15 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   Value *Sum =
       simplifyAddInst(GO1, SO1, false, false, SQ.getWithInstruction(&GEP));
   // Only do the combine when we are sure the cost after the
-  // merge is never more than that before the merge.
-  if (Sum == nullptr)
-    return nullptr;
+  // merge is never more than that before the merge. If both indices are the
+  // same value, the merge still replaces two GEPs with a GEP and a shift as
+  // long as the source GEP has no other users. Emit the shift explicitly, as
+  // (gep p, (x + y)) may be split back into two GEPs by other folds.
+  if (Sum == nullptr) {
+    if (GO1 != SO1 || !Src->hasOneUse())
+      return nullptr;
+    Sum = Builder.CreateShl(GO1, ConstantInt::get(GO1->getType(), 1));
+  }
 
   SmallVector<Value *, 8> Indices;
   Indices.append(Src->op_begin() + 1, Src->op_end() - 1);
