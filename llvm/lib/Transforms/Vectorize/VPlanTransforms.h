@@ -367,8 +367,7 @@ struct VPlanTransforms {
   static void convertToStridedAccesses(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
       VFRange &Range,
-      const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
-          &InterleaveGroups);
+      SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
