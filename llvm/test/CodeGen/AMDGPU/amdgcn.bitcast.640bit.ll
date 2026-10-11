@@ -7172,26 +7172,26 @@ define <20 x i32> @bitcast_v40f16_to_v20i32(<40 x half> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:  .LBB18_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -7246,26 +7246,26 @@ define <20 x i32> @bitcast_v40f16_to_v20i32(<40 x half> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:  .LBB18_2: ; %end
 ; GFX11-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -8080,44 +8080,44 @@ define inreg <20 x i32> @bitcast_v40f16_to_v20i32_scalar(<40 x half> inreg %a, i
 ; GFX11-NEXT:    v_dual_mov_b32 v30, s30 :: v_dual_mov_b32 v31, s31
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB19_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s2, s47
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s3, s46
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v2, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s16, s4
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s17, s5
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v4, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v5, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s18, s6
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s19, s7
-; GFX11-NEXT:    v_pk_add_f16 v6, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v7, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v6, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v7, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s20, s8
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s21, s9
-; GFX11-NEXT:    v_pk_add_f16 v8, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v9, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v8, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v9, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s22, s10
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s23, s11
-; GFX11-NEXT:    v_pk_add_f16 v10, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v11, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v10, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v11, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s24, s12
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s25, s13
-; GFX11-NEXT:    v_pk_add_f16 v12, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v13, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v12, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v13, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s26, s14
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s27, s15
-; GFX11-NEXT:    v_pk_add_f16 v14, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v15, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v14, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v15, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s28, s41
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s29, s40
-; GFX11-NEXT:    v_pk_add_f16 v16, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v17, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v16, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v17, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s43, s45
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s42, s44
-; GFX11-NEXT:    v_pk_add_f16 v18, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v19, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v18, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v19, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -15278,26 +15278,26 @@ define <20 x float> @bitcast_v40f16_to_v20f32(<40 x half> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB34_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:  .LBB34_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -15352,26 +15352,26 @@ define <20 x float> @bitcast_v40f16_to_v20f32(<40 x half> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_execz .LBB34_2
 ; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:  .LBB34_2: ; %end
 ; GFX11-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -16186,44 +16186,44 @@ define inreg <20 x float> @bitcast_v40f16_to_v20f32_scalar(<40 x half> inreg %a,
 ; GFX11-NEXT:    v_dual_mov_b32 v30, s30 :: v_dual_mov_b32 v31, s31
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB35_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s2, s47
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s3, s46
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v2, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s16, s4
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s17, s5
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v4, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v5, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s18, s6
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s19, s7
-; GFX11-NEXT:    v_pk_add_f16 v6, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v7, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v6, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v7, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s20, s8
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s21, s9
-; GFX11-NEXT:    v_pk_add_f16 v8, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v9, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v8, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v9, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s22, s10
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s23, s11
-; GFX11-NEXT:    v_pk_add_f16 v10, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v11, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v10, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v11, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s24, s12
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s25, s13
-; GFX11-NEXT:    v_pk_add_f16 v12, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v13, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v12, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v13, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s26, s14
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s27, s15
-; GFX11-NEXT:    v_pk_add_f16 v14, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v15, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v14, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v15, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s28, s41
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s29, s40
-; GFX11-NEXT:    v_pk_add_f16 v16, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v17, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v16, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v17, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s43, s45
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s42, s44
-; GFX11-NEXT:    v_pk_add_f16 v18, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v19, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v18, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v19, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -21653,26 +21653,26 @@ define <10 x i64> @bitcast_v40f16_to_v10i64(<40 x half> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB46_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:  .LBB46_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -21727,26 +21727,26 @@ define <10 x i64> @bitcast_v40f16_to_v10i64(<40 x half> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_execz .LBB46_2
 ; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:  .LBB46_2: ; %end
 ; GFX11-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -22561,44 +22561,44 @@ define inreg <10 x i64> @bitcast_v40f16_to_v10i64_scalar(<40 x half> inreg %a, i
 ; GFX11-NEXT:    v_dual_mov_b32 v30, s30 :: v_dual_mov_b32 v31, s31
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB47_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s2, s47
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s3, s46
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v2, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s16, s4
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s17, s5
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v4, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v5, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s18, s6
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s19, s7
-; GFX11-NEXT:    v_pk_add_f16 v6, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v7, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v6, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v7, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s20, s8
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s21, s9
-; GFX11-NEXT:    v_pk_add_f16 v8, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v9, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v8, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v9, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s22, s10
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s23, s11
-; GFX11-NEXT:    v_pk_add_f16 v10, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v11, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v10, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v11, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s24, s12
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s25, s13
-; GFX11-NEXT:    v_pk_add_f16 v12, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v13, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v12, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v13, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s26, s14
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s27, s15
-; GFX11-NEXT:    v_pk_add_f16 v14, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v15, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v14, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v15, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s28, s41
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s29, s40
-; GFX11-NEXT:    v_pk_add_f16 v16, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v17, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v16, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v17, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s43, s45
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s42, s44
-; GFX11-NEXT:    v_pk_add_f16 v18, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v19, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v18, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v19, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -27480,26 +27480,26 @@ define <10 x double> @bitcast_v40f16_to_v10f64(<40 x half> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB54_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:  .LBB54_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -27554,26 +27554,26 @@ define <10 x double> @bitcast_v40f16_to_v10f64(<40 x half> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-FAKE16-NEXT:    s_cbranch_execz .LBB54_2
 ; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:  .LBB54_2: ; %end
 ; GFX11-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
@@ -28388,44 +28388,44 @@ define inreg <10 x double> @bitcast_v40f16_to_v10f64_scalar(<40 x half> inreg %a
 ; GFX11-NEXT:    v_dual_mov_b32 v30, s30 :: v_dual_mov_b32 v31, s31
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-NEXT:  .LBB55_2: ; %cmp.true
-; GFX11-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s2, s47
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s3, s46
-; GFX11-NEXT:    v_pk_add_f16 v2, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v3, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v2, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v3, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s16, s4
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s17, s5
-; GFX11-NEXT:    v_pk_add_f16 v4, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v5, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v4, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v5, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s18, s6
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s19, s7
-; GFX11-NEXT:    v_pk_add_f16 v6, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v7, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v6, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v7, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s20, s8
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s21, s9
-; GFX11-NEXT:    v_pk_add_f16 v8, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v9, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v8, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v9, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s22, s10
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s23, s11
-; GFX11-NEXT:    v_pk_add_f16 v10, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v11, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v10, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v11, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s24, s12
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s25, s13
-; GFX11-NEXT:    v_pk_add_f16 v12, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v13, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v12, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v13, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s26, s14
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s27, s15
-; GFX11-NEXT:    v_pk_add_f16 v14, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v15, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v14, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v15, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s28, s41
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s29, s40
-; GFX11-NEXT:    v_pk_add_f16 v16, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v17, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v16, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v17, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s43, s45
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s42, s44
-; GFX11-NEXT:    v_pk_add_f16 v18, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-NEXT:    v_pk_add_f16 v19, 0x200, s1 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_add_f16 v18, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_add_f16 v19, s1, 0x200 op_sel_hi:[1,0]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
@@ -30772,26 +30772,26 @@ define <40 x i16> @bitcast_v40f16_to_v40i16(<40 x half> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB58_2
 ; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.true
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:  .LBB58_2: ; %end
 ; GFX11-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -30846,26 +30846,26 @@ define <40 x i16> @bitcast_v40f16_to_v40i16(<40 x half> %a, i32 %b) #0 {
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v2, v23, v2, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v3, v24, v3, 0x5040100
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v4, v25, v4, 0x5040100
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, v19 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, v18 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, v17 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, v16 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, v15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, v14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, v13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, v12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, v11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, v10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, v9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, v8 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, v7 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, v6 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, v5 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, v0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, v1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, v4 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, v19, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, v18, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, v17, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, v16, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, v15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, v14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, v13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, v12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, v11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, v10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, v9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, v8, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, v7, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, v6, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, v5, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, v0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, v1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, v2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, v3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, v4, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v21, 16, v0
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v22, 16, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v23, 16, v2
@@ -31673,26 +31673,26 @@ define inreg <40 x i16> @bitcast_v40f16_to_v40i16_scalar(<40 x half> inreg %a, i
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s2, s2, s4
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s7
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s6
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, 0x200, s47 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, 0x200, s46 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, 0x200, s29 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, 0x200, s28 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, 0x200, s27 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, 0x200, s26 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, 0x200, s25 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, 0x200, s24 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, 0x200, s15 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, 0x200, s14 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, 0x200, s13 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, 0x200, s12 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, 0x200, s11 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, 0x200, s10 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, 0x200, s9 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, 0x200, s8 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v19, s47, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v18, s46, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v17, s29, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v16, s28, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v15, s27, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v14, s26, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v13, s25, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v12, s24, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v11, s15, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v10, s14, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v9, s13, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v8, s12, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v7, s11, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v6, s10, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v5, s9, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v0, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v1, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v3, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-TRUE16-NEXT:    v_pk_add_f16 v4, s8, 0x200 op_sel_hi:[1,0]
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v39, 16, v0
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v38, 16, v1
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v37, 16, v2
@@ -31808,26 +31808,26 @@ define inreg <40 x i16> @bitcast_v40f16_to_v40i16_scalar(<40 x half> inreg %a, i
 ; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s2, s2, s4
 ; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s0, s0, s7
 ; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s6
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, 0x200, s47 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, 0x200, s46 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, 0x200, s29 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, 0x200, s28 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, 0x200, s27 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, 0x200, s26 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, 0x200, s25 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, 0x200, s24 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, 0x200, s15 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, 0x200, s14 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, 0x200, s13 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, 0x200, s12 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, 0x200, s11 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, 0x200, s10 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, 0x200, s9 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, 0x200, s0 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, 0x200, s1 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, 0x200, s2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, 0x200, s3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, 0x200, s8 op_sel_hi:[0,1]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v15, s47, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v16, s46, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v17, s29, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v18, s28, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v19, s27, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v10, s26, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v11, s25, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v12, s24, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v13, s15, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v14, s14, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v5, s13, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v6, s12, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v7, s11, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v8, s10, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v9, s9, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v4, s0, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v3, s1, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v2, s2, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v1, s3, 0x200 op_sel_hi:[1,0]
+; GFX11-FAKE16-NEXT:    v_pk_add_f16 v0, s8, 0x200 op_sel_hi:[1,0]
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v39, 16, v4
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v38, 16, v3
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v37, 16, v2
