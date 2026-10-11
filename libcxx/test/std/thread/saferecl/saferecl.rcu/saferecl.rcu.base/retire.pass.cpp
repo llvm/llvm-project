@@ -9,6 +9,7 @@
 // UNSUPPORTED: no-threads
 // XFAIL: libcpp-has-no-experimental-rcu
 // XFAIL: availability-rcu-missing
+// XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
 // void retire(D d = D(), rcu_domain& dom = rcu_default_domain()) noexcept;
