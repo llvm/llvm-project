@@ -40,6 +40,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
 #include <iterator>
+#include <memory>
 #include <vector>
 
 using namespace llvm;
@@ -218,81 +219,108 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
   return NewLeaf;
 }
 
-/// Convert the switch statement into a binary lookup of the case values.
-/// The function recursively builds this tree. LowerBound and UpperBound are
-/// used to keep track of the bounds for Val that have already been checked by
-/// a block emitted by one of the previous calls to switchConvert in the call
-/// stack.
-BasicBlock *SwitchConvert(CaseItr Begin, CaseItr End, ConstantInt *LowerBound,
-                          ConstantInt *UpperBound, Value *Val,
-                          BasicBlock *Predecessor, BasicBlock *OrigBlock,
-                          BasicBlock *Default,
-                          const std::vector<IntRange> &UnreachableRanges) {
-  assert(LowerBound && UpperBound && "Bounds must be initialized");
-  unsigned Size = End - Begin;
+/// Upper bound of the values that fall left of \p PivotLow.
+static ConstantInt *upperBeforePivot(ConstantInt *PivotLow,
+                                     const CaseRange &PrevCase,
+                                     const std::vector<IntRange> &Unreachable) {
+  ConstantInt *LeftHigh =
+      ConstantInt::get(PivotLow->getContext(), PivotLow->getValue() - 1);
+  if (!Unreachable.empty()) {
+    APInt GapLow = PrevCase.High->getValue() + 1;
+    APInt GapHigh = PivotLow->getValue() - 1;
+    IntRange Gap = {GapLow, GapHigh};
+    if (GapHigh.sge(GapLow) && IsInRanges(Gap, Unreachable))
+      LeftHigh = PrevCase.High;
+  }
+  return LeftHigh;
+}
 
+/// One node of the balanced case tree. The split is recorded here, and
+/// SwitchConvert walks this tree to emit the branches.
+struct SwitchTree {
+  CaseItr Begin;
+  CaseItr End;
+  ConstantInt *Lower = nullptr;
+  ConstantInt *Upper = nullptr;
+  // Parent bounds already cover this case, so the leaf needs no compare.
+  bool Covered = false;
+  ConstantInt *Pivot = nullptr;
+  ConstantInt *LeftHigh = nullptr;
+  // Both null on a leaf. An internal node has both.
+  std::unique_ptr<SwitchTree> Left;
+  std::unique_ptr<SwitchTree> Right;
+};
+
+/// Record the balanced compare splits for [Begin, End).
+static std::unique_ptr<SwitchTree>
+buildSwitchTree(CaseItr Begin, CaseItr End, ConstantInt *Lower,
+                ConstantInt *Upper, const std::vector<IntRange> &Unreachable) {
+  auto Node = std::make_unique<SwitchTree>();
+  Node->Begin = Begin;
+  Node->End = End;
+  Node->Lower = Lower;
+  Node->Upper = Upper;
+  unsigned Size = End - Begin;
   if (Size == 1) {
-    // Check if the Case Range is perfectly squeezed in between
-    // already checked Upper and Lower bounds. If it is then we can avoid
-    // emitting the code that checks if the value actually falls in the range
-    // because the bounds already tell us so.
-    if (Begin->Low == LowerBound && Begin->High == UpperBound) {
-      APInt NumMergedCases = UpperBound->getValue() - LowerBound->getValue();
-      FixPhis(Begin->BB, OrigBlock, Predecessor, NumMergedCases);
-      return Begin->BB;
-    }
-    return NewLeafBlock(*Begin, Val, LowerBound, UpperBound, OrigBlock,
-                        Default);
+    Node->Covered = Begin->Low == Lower && Begin->High == Upper;
+    return Node;
   }
 
   unsigned Mid = Size / 2;
-  std::vector<CaseRange> LHS(Begin, Begin + Mid);
-  LLVM_DEBUG(dbgs() << "LHS: " << LHS << "\n");
-  std::vector<CaseRange> RHS(Begin + Mid, End);
-  LLVM_DEBUG(dbgs() << "RHS: " << RHS << "\n");
+  // The pivot case is never the lowest, so subtracting one below is safe.
+  Node->Pivot = (Begin + Mid)->Low;
+  Node->LeftHigh =
+      upperBeforePivot(Node->Pivot, *(Begin + Mid - 1), Unreachable);
+  LLVM_DEBUG({
+    std::vector<CaseRange> LHS(Begin, Begin + Mid);
+    std::vector<CaseRange> RHS(Begin + Mid, End);
+    dbgs() << "LHS: " << LHS << "\n"
+           << "RHS: " << RHS << "\n"
+           << "Pivot ==> [" << Node->Pivot->getValue() << ", "
+           << (Begin + Mid)->High->getValue() << "]\n"
+           << "LHS Bounds ==> [" << Lower->getValue() << ", "
+           << Node->LeftHigh->getValue() << "]\n"
+           << "RHS Bounds ==> [" << Node->Pivot->getValue() << ", "
+           << Upper->getValue() << "]\n";
+  });
+  Node->Left =
+      buildSwitchTree(Begin, Begin + Mid, Lower, Node->LeftHigh, Unreachable);
+  Node->Right =
+      buildSwitchTree(Begin + Mid, End, Node->Pivot, Upper, Unreachable);
+  assert(Node->Left && Node->Right && "internal node missing a child");
+  return Node;
+}
 
-  CaseRange &Pivot = *(Begin + Mid);
-  LLVM_DEBUG(dbgs() << "Pivot ==> [" << Pivot.Low->getValue() << ", "
-                    << Pivot.High->getValue() << "]\n");
+/// Convert the switch statement into a binary lookup of the case values.
+/// \p Node is the tree from buildSwitchTree. Its bounds are the values already
+/// checked by a block emitted higher in the call stack.
+BasicBlock *SwitchConvert(const SwitchTree &Node, Value *Val,
+                          BasicBlock *Predecessor, BasicBlock *OrigBlock,
+                          BasicBlock *Default) {
+  assert(Node.Lower && Node.Upper && "Bounds must be initialized");
 
-  // NewLowerBound here should never be the integer minimal value.
-  // This is because it is computed from a case range that is never
-  // the smallest, so there is always a case range that has at least
-  // a smaller value.
-  ConstantInt *NewLowerBound = Pivot.Low;
-
-  // Because NewLowerBound is never the smallest representable integer
-  // it is safe here to subtract one.
-  ConstantInt *NewUpperBound = ConstantInt::get(NewLowerBound->getContext(),
-                                                NewLowerBound->getValue() - 1);
-
-  if (!UnreachableRanges.empty()) {
-    // Check if the gap between LHS's highest and NewLowerBound is unreachable.
-    APInt GapLow = LHS.back().High->getValue() + 1;
-    APInt GapHigh = NewLowerBound->getValue() - 1;
-    IntRange Gap = {GapLow, GapHigh};
-    if (GapHigh.sge(GapLow) && IsInRanges(Gap, UnreachableRanges))
-      NewUpperBound = LHS.back().High;
+  if (!Node.Left) {
+    // A covered range is already checked by the parent bounds, so the case
+    // block is reached directly.
+    if (Node.Covered) {
+      APInt NumMergedCases = Node.Upper->getValue() - Node.Lower->getValue();
+      FixPhis(Node.Begin->BB, OrigBlock, Predecessor, NumMergedCases);
+      return Node.Begin->BB;
+    }
+    return NewLeafBlock(*Node.Begin, Val, Node.Lower, Node.Upper, OrigBlock,
+                        Default);
   }
-
-  LLVM_DEBUG(dbgs() << "LHS Bounds ==> [" << LowerBound->getValue() << ", "
-                    << NewUpperBound->getValue() << "]\n"
-                    << "RHS Bounds ==> [" << NewLowerBound->getValue() << ", "
-                    << UpperBound->getValue() << "]\n");
 
   // Create a new node that checks if the value is < pivot. Go to the
   // left branch if it is and right branch if not.
   Function *F = OrigBlock->getParent();
   BasicBlock *NewNode = BasicBlock::Create(Val->getContext(), "NodeBlock");
-
-  ICmpInst *Comp = new ICmpInst(ICmpInst::ICMP_SLT, Val, Pivot.Low, "Pivot");
+  ICmpInst *Comp = new ICmpInst(ICmpInst::ICMP_SLT, Val, Node.Pivot, "Pivot");
 
   BasicBlock *LBranch =
-      SwitchConvert(LHS.begin(), LHS.end(), LowerBound, NewUpperBound, Val,
-                    NewNode, OrigBlock, Default, UnreachableRanges);
+      SwitchConvert(*Node.Left, Val, NewNode, OrigBlock, Default);
   BasicBlock *RBranch =
-      SwitchConvert(RHS.begin(), RHS.end(), NewLowerBound, UpperBound, Val,
-                    NewNode, OrigBlock, Default, UnreachableRanges);
+      SwitchConvert(*Node.Right, Val, NewNode, OrigBlock, Default);
 
   F->insert(++OrigBlock->getIterator(), NewNode);
   Comp->insertInto(NewNode, NewNode->end());
@@ -508,9 +536,10 @@ void ProcessSwitchInst(SwitchInst *SI,
     Val = SI->getCondition();
   }
 
+  std::unique_ptr<SwitchTree> Tree = buildSwitchTree(
+      Cases.begin(), Cases.end(), LowerBound, UpperBound, UnreachableRanges);
   BasicBlock *SwitchBlock =
-      SwitchConvert(Cases.begin(), Cases.end(), LowerBound, UpperBound, Val,
-                    OrigBlock, OrigBlock, Default, UnreachableRanges);
+      SwitchConvert(*Tree, Val, OrigBlock, OrigBlock, Default);
 
   // We have added incoming values for newly-created predecessors in
   // NewLeafBlock(). The only meaningful work we offload to FixPhis() is to
