@@ -539,8 +539,6 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   AddrLabelSymbols = nullptr;
 
-  TM.getObjFileLowering()->getModuleMetadata(M);
-
   // On AIX, we delay emitting any section information until
   // after emitting the .file pseudo-op. This allows additional
   // information (such as the embedded command line) to be associated
