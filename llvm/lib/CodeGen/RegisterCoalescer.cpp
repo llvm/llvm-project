@@ -964,9 +964,12 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
       continue;
     MachineInstr *UseMI = UseMO.getParent();
     if (UseMI->isDebugInstr()) {
-      // FIXME These don't have an instruction index.  Not clear we have enough
-      // info to decide whether to do this replacement or not.  For now do it.
-      UseMO.setReg(NewReg);
+      // Debug instructions have no index; use the slot LiveDebugVariables
+      // gives them. Values of IntA other than AValNo stay in IntA.
+      SlotIndex DbgIdx =
+          LIS->getSlotIndexes()->getIndexBefore(*UseMI).getRegSlot();
+      if (IntA.getVNInfoAt(DbgIdx) == AValNo)
+        UseMO.setReg(NewReg);
       continue;
     }
     SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(true);
