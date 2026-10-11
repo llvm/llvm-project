@@ -103,6 +103,13 @@ void o(std::expected<int, Error> e) {
   e = std::unexpected(Error::NotFound);
   report(e.error());
 }
+
+int p(std::expected<int, Error> e) {
+  if (!e)
+    return 0;
+  // `transform` and `transform_error` hold a value if and only if `e` does.
+  return *e.transform([](int v) { return v + 1; });
+}
 ```
 
 ## Limitations
@@ -112,23 +119,21 @@ are known, temporary limitations:
 
 - `swap`. For example, the check does not know that after `a.swap(b)`, `a`
   holds a value if `b` held one before.
-- The monadic operations `and_then`, `or_else`, `transform` and
-  `transform_error`. The check does not relate the state of their result to the
-  state of the object they are called on, so accessing the result without a
-  check of its own is diagnosed, even when it is safe:
+- The monadic operations `and_then` and `or_else`. The check does not use the
+  fact that `and_then` keeps an error and `or_else` keeps a value, so accessing
+  their result without a check of its own is diagnosed, even when it is safe:
 
 ```cpp
-int f(std::expected<int, Error> e) {
+void f(std::expected<int, Error> e) {
   if (!e)
-    return 0;
-  auto r = e.transform([](int v) { return v + 1; });
-  return *r; // false positive: `r` holds a value because `e` does.
+    report(e.and_then(validate).error()); // false positive: the result holds
+                                          // an error because `e` does.
 }
 
-void g(std::expected<int, Error> e) {
+int g(std::expected<int, Error> e) {
   if (!e)
-    report(e.transform_error(describe).error()); // false positive: the result
-                                                 // holds an error because `e`
-                                                 // does.
+    return 0;
+  return *e.or_else(recover); // false positive: the result holds a value
+                              // because `e` does.
 }
 ```

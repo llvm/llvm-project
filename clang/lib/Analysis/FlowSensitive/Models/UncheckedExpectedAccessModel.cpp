@@ -221,6 +221,17 @@ void transferEmplaceCall(const CXXMemberCallExpr *E,
               State.Env.getBoolLiteralValue(true), State.Env);
 }
 
+void transferTransformCall(const CXXMemberCallExpr *E,
+                           const MatchFinder::MatchResult &,
+                           LatticeTransferState &State) {
+  // `transform` maps the value and `transform_error` maps the error, so the
+  // result holds a value if and only if the source does.
+  if (BoolValue *HasValueVal =
+          getHasValue(State.Env, getImplicitObjectLocation(*E, State.Env)))
+    setHasValue(&State.Env.getResultObjectLocation(*E), *HasValueVal,
+                State.Env);
+}
+
 // `x != y` is rewritten to `!(x == y)`, so it needs no separate handling.
 void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
                                   const MatchFinder::MatchResult &,
@@ -335,6 +346,10 @@ auto buildTransferMatchSwitch() {
       // expected::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(expectedMemberCall(hasName("emplace")),
                                         transferEmplaceCall)
+      // expected::transform, expected::transform_error
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          expectedMemberCall(hasAnyName("transform", "transform_error")),
+          transferTransformCall)
       // operator== between two expecteds
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedEqualityCall(),
                                           transferExpectedEqualityCall)
