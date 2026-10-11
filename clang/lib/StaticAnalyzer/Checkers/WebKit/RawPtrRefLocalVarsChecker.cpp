@@ -96,14 +96,22 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       if (isGetterOfSafePtr(Method).value_or(false))
         return true;
     }
+    // For a member operator call, the first argument is the implicit object.
+    auto *OperatorMethod = dyn_cast<CXXMethodDecl>(Callee);
+    if (!isa<CXXOperatorCallExpr>(CE) || !OperatorMethod ||
+        !OperatorMethod->isImplicitObjectMemberFunction())
+      OperatorMethod = nullptr;
     unsigned ArgIndex = 0;
-    unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
+    unsigned ArgOffset = OperatorMethod ? 1 : 0;
     for (auto *Arg : CE->arguments()) {
       ParmVarDecl *Parm = nullptr;
       if (ArgIndex >= ArgOffset) {
         unsigned ParmIndex = ArgIndex - ArgOffset;
         if (ParmIndex < Callee->getNumParams())
           Parm = Callee->getParamDecl(ParmIndex);
+      } else if (OperatorMethod->isConst()) {
+        ArgIndex++;
+        continue;
       }
       if (mutatesGuardian(Arg, Parm))
         return false;
@@ -152,7 +160,7 @@ private:
         return false;
       return !ArgType.getNonReferenceType().isConstQualified();
     }
-    return !ArgType.isConstQualified();
+    return !ArgType.getNonReferenceType().isConstQualified();
   }
 };
 
