@@ -194,7 +194,9 @@ define void @hang_when_merging_stores_after_legalisation_intrinsic(ptr %a, <2 x 
 ; CHECK-LABEL: hang_when_merging_stores_after_legalisation_intrinsic:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, s0
-; CHECK-NEXT:    stp q0, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: hang_when_merging_stores_after_legalisation_intrinsic:
@@ -219,15 +221,8 @@ define void @hang_when_merging_stores_after_legalisation_intrinsic(ptr %a, <2 x 
 define void @interleave_store_without_splat_intrinsic(ptr %a, <4 x i32> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: interleave_store_without_splat_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, z1.s[3]
-; CHECK-NEXT:    mov z3.s, z0.s[3]
-; CHECK-NEXT:    mov z4.s, z1.s[2]
-; CHECK-NEXT:    mov z5.s, z0.s[2]
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z2.s, z3.s, z2.s
-; CHECK-NEXT:    zip1 z3.s, z5.s, z4.s
-; CHECK-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_without_splat_intrinsic:
@@ -261,24 +256,13 @@ define void @interleave_store_without_splat_intrinsic(ptr %a, <4 x i32> %v1, <4 
 define void @interleave_store_legalization_intrinsic(ptr %a, <8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK-LABEL: interleave_store_legalization_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z4.s, z3.s[3]
-; CHECK-NEXT:    mov z5.s, z1.s[3]
-; CHECK-NEXT:    mov z6.s, z3.s[2]
-; CHECK-NEXT:    mov z7.s, z1.s[2]
-; CHECK-NEXT:    mov z16.s, z2.s[3]
-; CHECK-NEXT:    mov z17.s, z0.s[3]
-; CHECK-NEXT:    mov z18.s, z2.s[2]
-; CHECK-NEXT:    mov z19.s, z0.s[2]
-; CHECK-NEXT:    zip1 z1.s, z1.s, z3.s
-; CHECK-NEXT:    zip1 z4.s, z5.s, z4.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z2.s
-; CHECK-NEXT:    zip1 z5.s, z7.s, z6.s
-; CHECK-NEXT:    zip1 z3.s, z17.s, z16.s
-; CHECK-NEXT:    zip1 z6.s, z19.s, z18.s
-; CHECK-NEXT:    zip1 z4.d, z5.d, z4.d
-; CHECK-NEXT:    zip1 z2.d, z6.d, z3.d
-; CHECK-NEXT:    stp q1, q4, [x0, #32]
-; CHECK-NEXT:    stp q0, q2, [x0]
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z2.d, z1.d
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    mov z4.d, z0.d
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st2w { z2.s, z3.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st2w { z4.s, z5.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_legalization_intrinsic:

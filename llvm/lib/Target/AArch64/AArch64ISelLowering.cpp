@@ -2345,8 +2345,6 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
-  setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                            {2, 3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -26758,6 +26756,7 @@ static SDValue isNVCastToHalfWidthElements(SDValue V,
 static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
                                  const AArch64Subtarget *Subtarget) {
   SDLoc DL(N);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT ResVT = N->getValueType(0);
@@ -26777,8 +26776,11 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     uint64_t ExtIdx0 = Op0.getConstantOperandVal(1);
     uint64_t ExtIdx1 = Op1.getConstantOperandVal(1);
     uint64_t NumElements = SourceVec.getValueType().getVectorMinNumElements();
-    if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2) {
-      EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2 &&
+        TLI.isTypeLegal(WidenedResVT) &&
+        (WidenedResVT.isScalableVector() ||
+         WidenedResVT.getFixedSizeInBits() <= 128)) {
       SDValue Uzp = DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec,
                                 DAG.getPOISON(WidenedResVT));
       return DAG.getExtractSubvector(DL, ResVT, Uzp, 0);
