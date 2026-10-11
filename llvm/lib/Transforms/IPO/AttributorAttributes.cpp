@@ -5270,7 +5270,7 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
         unsigned ShiftValue = std::min(ConstVals->getAssumedMinTrailingZeros(),
                                        Value::MaxAlignmentExponent);
-        Align ConstAlign(UINT64_C(1) << ShiftValue);
+        Align ConstAlign = Align::fromLog2(ShiftValue);
         if (ConstAlign >= AlignAA->getKnownAlign())
           return Align(1).value();
       }
@@ -5601,7 +5601,7 @@ struct AAAlignCallSiteReturned final
           unsigned ShiftValue =
               std::min(ConstVals->getAssumedMinTrailingZeros(),
                        Value::MaxAlignmentExponent);
-          Alignment = Align(UINT64_C(1) << ShiftValue);
+          Alignment = Align::fromLog2(ShiftValue);
           Valid = true;
         }
 
