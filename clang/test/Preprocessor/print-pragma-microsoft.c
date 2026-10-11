@@ -18,3 +18,15 @@
 #pragma pack(push, _CRT_PACKING)
 // CHECK: #pragma pack(push, 8)
 #pragma pack(pop)
+
+// Printing an unknown pragma replays its first token for macro expansion. In
+// the empty case that token is the outer pragma's eod, which must be preserved.
+__pragma()
+// CHECK: #pragma{{$}}
+int after_empty;
+// CHECK: int after_empty;
+
+__pragma(unknown argument)
+// CHECK: #pragma unknown argument
+int after_unknown;
+// CHECK: int after_unknown;

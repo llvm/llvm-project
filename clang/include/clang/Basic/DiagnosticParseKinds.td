@@ -1088,8 +1088,10 @@ def warn_pragma_expected_string : Warning<
   "expected string literal in '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_missing_argument : Warning<
   "missing argument to '#pragma %0'%select{|; expected %2}1">, InGroup<IgnoredPragmas>;
+// Annotation tokens have no source spelling; allow omitting it.
 def warn_pragma_invalid_argument : Warning<
-  "unexpected argument '%0' to '#pragma %1'%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
+  "unexpected argument%select{ '%0'|}4 to '#pragma %1'"
+  "%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
 
 def err_pragma_misplaced_in_decl : Error<"this pragma cannot appear in %0 declaration">;
 
@@ -1217,10 +1219,10 @@ def err_pragma_pointers_to_members_unknown_kind : Error<
   "'single_inheritance', 'multiple_inheritance', or 'virtual_inheritance'">;
 // - #pragma clang optimize on/off
 def err_pragma_optimize_invalid_argument : Error<
-  "unexpected argument '%0' to '#pragma clang optimize'; "
+  "unexpected argument%select{ '%0'|}1 to '#pragma clang optimize'; "
   "expected 'on' or 'off'">;
 def err_pragma_optimize_extra_argument : Error<
-  "unexpected extra argument '%0' to '#pragma clang optimize'">;
+  "unexpected extra argument%select{ '%0'|}1 to '#pragma clang optimize'">;
 // - #pragma clang attribute
 def err_pragma_attribute_expected_push_pop_paren : Error<
   "expected 'push', 'pop', or '(' after '#pragma clang attribute'">;
@@ -1597,7 +1599,7 @@ def note_pragma_loop_invalid_vectorize_option : Note<
 def err_pragma_fp_invalid_option : Error<
   "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract', 'reassociate', 'reciprocal', or 'exceptions'">;
 def err_pragma_fp_invalid_argument : Error<
-  "unexpected argument '%0' to '#pragma clang fp %1'; expected "
+  "unexpected argument%select{ '%0'|}3 to '#pragma clang fp %1'; expected "
   "%select{"
   "'fast' or 'on' or 'off'|"
   "'on' or 'off'|"

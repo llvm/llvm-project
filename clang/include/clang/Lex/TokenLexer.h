@@ -104,6 +104,9 @@ class TokenLexer {
   /// directive.
   bool LexingCXXModuleDirective : 1;
 
+  /// This lexer contains the captured tokens of a __pragma directive.
+  bool IsPragmaLexer : 1;
+
 public:
   /// Create a TokenLexer for the specified macro with the specified actual
   /// arguments.  Note that this ctor takes ownership of the ActualArgs pointer.
@@ -154,6 +157,10 @@ public:
   /// isParsingPreprocessorDirective - Return true if we are in the middle of a
   /// preprocessor directive.
   bool isParsingPreprocessorDirective() const;
+
+  /// Return true if this lexer contains the captured tokens of a __pragma
+  /// directive.
+  bool isPragmaLexer() const { return IsPragmaLexer; }
 
   /// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
   /// created when handling a C++ module directive.
