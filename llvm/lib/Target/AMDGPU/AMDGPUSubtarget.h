@@ -59,6 +59,7 @@ protected:
   unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+  unsigned LocalMemorySizeLimit = 0;
   unsigned LDSAllocationGranularity = 0;
   unsigned LDSEncodingGranularity = 0;
   char WavefrontSizeLog2 = 0;

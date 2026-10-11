@@ -227,15 +227,21 @@ getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
 
 /// \returns Total LDS in bytes available to work-groups sharing a physical
 /// block. \p FullSIMDMode selects full-SIMD mode (four SIMDs) when true and
-/// half-SIMD mode (two SIMDs) otherwise.
-LLVM_ABI unsigned getLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+/// half-SIMD mode (two SIMDs) otherwise. \p LimitBytes imposes an artificial
+/// limit on the addressable LDS below the HW cap (0 means no artificial limit).
+LLVM_ABI unsigned getLocalMemorySize(GPUKind AK, bool FullSIMDMode,
+                                     unsigned LimitBytes = 0);
 LLVM_ABI unsigned getLocalMemorySize(Triple::SubArchType SubArch,
-                                     bool FullSIMDMode);
+                                     bool FullSIMDMode,
+                                     unsigned LimitBytes = 0);
 
-/// \returns LDS in bytes a single work-group can allocate.
-LLVM_ABI unsigned getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+/// \returns LDS in bytes a single work-group can allocate. \p LimitBytes
+/// imposes an artificial limit below the HW cap (0 means no artificial limit).
+LLVM_ABI unsigned getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode,
+                                                unsigned LimitBytes = 0);
 LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
-                                                bool FullSIMDMode);
+                                                bool FullSIMDMode,
+                                                unsigned LimitBytes = 0);
 
 /// \returns Number of LDS banks per compute unit.
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);

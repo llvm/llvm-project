@@ -303,6 +303,13 @@ defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressab
   /*GenPredicate=*/0
 >;
 
+// Target can use the LDS/VC (vector cache) split, so the LDS size can be
+// limited with local-memory-size-limit-*.
+defm SupportsLocalMemorySizeLimit : AMDGPUSubtargetFeature<"supports-local-memory-size-limit",
+  "Hardware supports limiting the LDS size",
+  /*GenPredicate=*/0
+>;
+
 defm MFMAInlineLiteralBug : AMDGPUSubtargetFeature<"mfma-inline-literal-bug",
   "MFMA cannot use inline literal as SrcC",
   /*GenPredicate=*/0
@@ -2717,6 +2724,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureWaveMatchInsts,
    FeatureExclusiveScanInsts,
    FeatureAddressableLocalMemorySize196608,
+   FeatureSupportsLocalMemorySizeLimit,
    FeatureLDSAllocGranularity1024,
    FeatureLDSEncodingGranularity1024,
    Feature64BitLiterals,
