@@ -1267,8 +1267,13 @@ OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
   /// negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
-  return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
-                                     [](const APFloat &a) { return -a; });
+  return constFoldUnaryOpConditional<FloatAttr>(
+      adaptor.getOperands(), [](const APFloat &a) -> std::optional<APFloat> {
+        // Types such as f8E8M0FNU cannot represent a negated value.
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()))
+          return std::nullopt;
+        return -a;
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1332,8 +1337,14 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   auto rm = getRoundingmode();
-  return constFoldBinaryOp<FloatAttr>(
-      adaptor.getOperands(), [rm](const APFloat &a, const APFloat &b) {
+  return constFoldBinaryOpConditional<FloatAttr>(
+      adaptor.getOperands(),
+      [rm](const APFloat &a, const APFloat &b) -> std::optional<APFloat> {
+        // A negative difference is not representable in types such as
+        // f8E8M0FNU, and APFloat::subtract does not support computing it.
+        if (!APFloat::semanticsHasSignedRepr(a.getSemantics()) &&
+            a.compare(b) == APFloat::cmpLessThan)
+          return std::nullopt;
         APFloat result(a);
         result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
@@ -2293,6 +2304,12 @@ OpFoldResult arith::SIToFPOp::fold(FoldAdaptor adaptor) {
         FloatType floatTy = llvm::cast<FloatType>(resEleType);
         APFloat apf(floatTy.getFloatSemantics(),
                     APInt::getZero(floatTy.getWidth()));
+        // Types such as f8E8M0FNU cannot represent a negative value.
+        if (a.isNegative() &&
+            !APFloat::semanticsHasSignedRepr(floatTy.getFloatSemantics())) {
+          castStatus = false;
+          return apf;
+        }
         apf.convertFromAPInt(a, /*IsSigned=*/true,
                              APFloat::rmNearestTiesToEven);
         return apf;
