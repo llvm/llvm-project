@@ -133,7 +133,7 @@ infrastructure are described first, followed by tool-specific sections.
 - A project's own declarations of standard library names, such as `strcmp` in
   a freestanding project's string header, now count as providers. Such headers
   are no longer reported as unused, and uses of those names are no longer
-  reported as missing an include. This applies to clangd and the
+  reported as missing an include. This applies to {program}`clangd` and the
   {doc}`misc-include-cleaner <clang-tidy/checks/misc/include-cleaner>` check.
 
 ### Improvements to clang-tidy
