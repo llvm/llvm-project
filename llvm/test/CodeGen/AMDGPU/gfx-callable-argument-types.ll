@@ -4511,7 +4511,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i8_ret() #0 {
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)

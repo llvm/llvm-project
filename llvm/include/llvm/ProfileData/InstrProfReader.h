@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -205,16 +206,14 @@ public:
       const Twine &Path, vfs::FileSystem &FS,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
-          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt,
       std::function<void(Error)> Warn = nullptr);
 
   LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       std::unique_ptr<MemoryBuffer> Buffer,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
-          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt,
       std::function<void(Error)> Warn = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
@@ -336,7 +335,7 @@ private:
   std::unique_ptr<InstrProfCorrelator> BIDFetcherCorrelator;
   /// Indicates if should use debuginfo or binary to correlate with build id
   /// fetcher.
-  InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind;
+  std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind;
   /// A list of timestamps paired with a function name reference.
   std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
@@ -375,17 +374,19 @@ private:
   static const uint64_t MaxCounterValue = (1ULL << 56);
 
 public:
-  RawInstrProfReader(
-      std::unique_ptr<MemoryBuffer> DataBuffer,
-      const InstrProfCorrelator *Correlator,
-      const object::BuildIDFetcher *BIDFetcher,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-      std::function<void(Error)> Warn)
+  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
+                     const InstrProfCorrelator *Correlator,
+                     const object::BuildIDFetcher *BIDFetcher,
+                     std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
+                     std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
         BIDFetcher(BIDFetcher),
-        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {}
+        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {
+    assert((!BIDFetcher || BIDFetcherCorrelatorKind) &&
+           "a build ID fetcher needs a correlation kind");
+  }
 
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
