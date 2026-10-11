@@ -399,13 +399,13 @@ bool ARMBaseInstrInfo::isPredicated(const MachineInstr &MI) const {
   return PIdx != -1 && MI.getOperand(PIdx).getImm() != ARMCC::AL;
 }
 
-std::string ARMBaseInstrInfo::createMIROperandComment(
-    const MachineInstr &MI, const MachineOperand &Op, unsigned OpIdx,
-    const TargetRegisterInfo *TRI) const {
+std::string ARMBaseInstrInfo::createMIROperandComment(const MachineInstr &MI,
+                                                      const MachineOperand &Op,
+                                                      unsigned OpIdx) const {
 
   // First, let's see if there is a generic comment for this operand
   std::string GenericComment =
-      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx, TRI);
+      TargetInstrInfo::createMIROperandComment(MI, Op, OpIdx);
   if (!GenericComment.empty())
     return GenericComment;
 
@@ -450,7 +450,7 @@ bool ARMBaseInstrInfo::PredicateInstruction(
       assert((MI.getOperand(1).isDead() ||
               MI.getOperand(1).getReg() != ARM::CPSR) &&
              "if conversion tried to stop defining used CPSR");
-      MI.getOperand(1).setReg(ARM::NoRegister);
+      MI.getOperand(1).setReg(Register());
     }
 
     return true;
@@ -646,6 +646,10 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::Int_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 16 : 20;
+  case ARM::tInt_eh_sjlj_longjmp:
+    return Subtarget.isTargetDarwin() || Subtarget.isTargetWindows() ? 10 : 12;
   }
 }
 
@@ -925,6 +929,22 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
       return std::nullopt;
   }
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
+}
+
+const MachineOperand &
+ARMBaseInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
+  assert(MI.isCall());
+
+  switch (MI.getOpcode()) {
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+    return MI.getOperand(2);
+  default:
+    return TargetInstrInfo::getCalleeOperand(MI);
+  }
 }
 
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
@@ -5164,15 +5184,13 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
 // VLD1DUPd32 - Writes all D-regs, no partial reg update, 2 uops.
 //
 // FCONSTD can be used as a dependency-breaking instruction.
-unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
-    const MachineInstr &MI, unsigned OpNum,
-    const TargetRegisterInfo *TRI) const {
+unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(const MachineInstr &MI,
+                                                        unsigned OpNum) const {
   auto PartialUpdateClearance = Subtarget.getPartialUpdateClearance();
   if (!PartialUpdateClearance)
     return 0;
 
-  assert(TRI && "Need TRI instance");
-
+  const ARMBaseRegisterInfo &TRI = getRegisterInfo();
   const MachineOperand &MO = MI.getOperand(OpNum);
   if (MO.readsReg())
     return 0;
@@ -5189,7 +5207,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
   case ARM::VMOVv2i32:
   case ARM::VMOVv2f32:
   case ARM::VMOVv1i64:
-    UseOp = MI.findRegisterUseOperandIdx(Reg, TRI, false);
+    UseOp = MI.findRegisterUseOperandIdx(Reg, &TRI, false);
     break;
 
     // Explicitly reads the dependency.
@@ -5213,8 +5231,8 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
   } else if (ARM::SPRRegClass.contains(Reg)) {
     // Physical register: MI must define the full D-reg.
     MCRegister DReg =
-        TRI->getMatchingSuperReg(Reg, ARM::ssub_0, &ARM::DPRRegClass);
-    if (!DReg || !MI.definesRegister(DReg, TRI))
+        TRI.getMatchingSuperReg(Reg, ARM::ssub_0, &ARM::DPRRegClass);
+    if (!DReg || !MI.definesRegister(DReg, &TRI))
       return 0;
   }
 
@@ -5225,11 +5243,11 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
 
 // Break a partial register dependency after getPartialRegUpdateClearance
 // returned non-zero.
-void ARMBaseInstrInfo::breakPartialRegDependency(
-    MachineInstr &MI, unsigned OpNum, const TargetRegisterInfo *TRI) const {
+void ARMBaseInstrInfo::breakPartialRegDependency(MachineInstr &MI,
+                                                 unsigned OpNum) const {
   assert(OpNum < MI.getDesc().getNumDefs() && "OpNum is not a def");
-  assert(TRI && "Need TRI instance");
 
+  const ARMBaseRegisterInfo &TRI = getRegisterInfo();
   const MachineOperand &MO = MI.getOperand(OpNum);
   Register Reg = MO.getReg();
   assert(Reg.isPhysical() && "Can't break virtual register dependencies.");
@@ -5238,11 +5256,11 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
   // If MI defines an S-reg, find the corresponding D super-register.
   if (ARM::SPRRegClass.contains(Reg)) {
     DReg = ARM::D0 + (Reg - ARM::S0) / 2;
-    assert(TRI->isSuperRegister(Reg, DReg) && "Register enums broken");
+    assert(TRI.isSuperRegister(Reg, DReg) && "Register enums broken");
   }
 
   assert(ARM::DPRRegClass.contains(DReg) && "Can only break D-reg deps");
-  assert(MI.definesRegister(DReg, TRI) && "MI doesn't clobber full D-reg");
+  assert(MI.definesRegister(DReg, &TRI) && "MI doesn't clobber full D-reg");
 
   // FIXME: In some cases, VLDRS can be changed to a VLD1DUPd32 which defines
   // the full D-register by loading the same value to both lanes.  The
@@ -5255,7 +5273,7 @@ void ARMBaseInstrInfo::breakPartialRegDependency(
   BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(ARM::FCONSTD), DReg)
       .addImm(96)
       .add(predOps(ARMCC::AL));
-  MI.addRegisterKilled(DReg, TRI, true);
+  MI.addRegisterKilled(DReg, &TRI, true);
 }
 
 bool ARMBaseInstrInfo::hasNOP() const {
@@ -6585,7 +6603,7 @@ public:
           .addReg(LoopDec->getOperand(0).getReg())
           .addImm(0)
           .addImm(ARMCC::AL)
-          .addReg(ARM::NoRegister);
+          .addReg(Register());
       Cond.push_back(MachineOperand::CreateImm(ARMCC::EQ));
       Cond.push_back(MachineOperand::CreateReg(ARM::CPSR, false));
       return {};

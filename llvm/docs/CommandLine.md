@@ -58,8 +58,7 @@ CommandLine library to have the following features:
 
 1. Capable: The CommandLine library can handle lots of different forms of
    options often found in real programs.  For example, {ref}`positional <positional>` arguments,
-   `ls` style {ref}`grouping <grouping>` options (to allow processing '`ls -lad`'
-   naturally), `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
+   `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
    -L/usr/lib`'), and interpreter style options.
 
 This document will hopefully let you jump in and start using CommandLine in your
@@ -226,8 +225,8 @@ specified, allowing any of the following inputs:
 ```
 compiler -f          # No value, 'Force' == true
 compiler -f=true     # Value specified, 'Force' == true
-compiler -f=TRUE     # Value specified, 'Force' == true
-compiler -f=FALSE    # Value specified, 'Force' == false
+compiler -f=1        # Value specified, 'Force' == true
+compiler -f=false    # Value specified, 'Force' == false
 ```
 
 ... you get the idea.  The {ref}`bool parser <bool parser>` just turns the string values into
@@ -517,53 +516,6 @@ the list is simple, just like above.  In this example, we used the
 {ref}`cl::OneOrMore <cl::OneOrMore>` modifier to inform the CommandLine library that it is an error
 if the user does not specify any `.o` files on our command line.  Again, this
 just reduces the amount of checking we have to do.
-
-### Collecting options as a set of flags
-
-Instead of collecting sets of options in a list, it is also possible to gather
-information for enum values in a **bit vector**.  The representation used by the
-{ref}`cl::bits <cl::bits>` class is an `unsigned` integer.  An enum value is represented by a
-0/1 in the enum's ordinal value bit position. 1 indicating that the enum was
-specified, 0 otherwise.  As each specified value is parsed, the resulting enum's
-bit is set in the option's bit vector:
-
-```cpp
-bits |= 1 << (unsigned)enum;
-```
-
-Options that are specified multiple times are redundant.  Any instances after
-the first are discarded.
-
-Reworking the above list example, we could replace {ref}`cl::list <cl::list>` with {ref}`cl::bits <cl::bits>`:
-
-```cpp
-cl::bits<Opts> OptimizationBits(cl::desc("Available Optimizations:"),
-  cl::values(
-    clEnumVal(dce               , "Dead Code Elimination"),
-    clEnumVal(instsimplify      , "Instruction Simplification"),
-   clEnumValN(inlining, "inline", "Procedure Integration"),
-    clEnumVal(strip             , "Strip Symbols")));
-```
-
-To test to see if `instsimplify` was specified, we can use the `cl:bits::isSet`
-function:
-
-```cpp
-if (OptimizationBits.isSet(instsimplify)) {
-  ...
-}
-```
-
-It's also possible to get the raw bit vector using the `cl::bits::getBits`
-function:
-
-```cpp
-unsigned bits = OptimizationBits.getBits();
-```
-
-Finally, if external storage is used, then the location specified must be of
-**type** `unsigned`. In all other ways a {ref}`cl::bits <cl::bits>` option is equivalent to a
-{ref}`cl::list <cl::list>` option.
 
 (additional extra text)=
 
@@ -961,16 +913,6 @@ error at runtime if you don't put them in the right order.)
   You will get a compile time error if you try to use cl::values with a parser
   that does not support it.
 
-(cl::multi_val)=
-
-* The **cl::multi_val** attribute specifies that this option takes has multiple
-  values (example: `-sectalign segname sectname sectvalue`). This attribute
-  takes one unsigned argument - the number of values for the option. This
-  attribute is valid only on `cl::list` options (and will fail with compile
-  error if you try to use it with other option types). It is allowed to use all
-  of the usual modifiers on multi-valued options (besides
-  `cl::ValueDisallowed`, obviously).
-
 (cl::cat)=
 
 * The **cl::cat** attribute specifies the option category that the option
@@ -1165,55 +1107,6 @@ As usual, you can only specify one of these arguments at most.
   **cl::Prefix** options must not have the **cl::ValueDisallowed** modifier
   specified.
 
-(grouping)=
-(cl::Grouping)=
-
-#### Controlling options grouping
-
-The **cl::Grouping** modifier can be combined with any formatting types except
-for {ref}`cl::Positional <cl::Positional>`.  It is used to implement Unix-style tools (like `ls`)
-that have lots of single letter arguments, but only require a single dash.
-For example, the '`ls -labF`' command actually enables four different options,
-all of which are single letters.
-
-Note that **cl::Grouping** options can have values only if they are used
-separately or at the end of the groups.  For {ref}`cl::ValueRequired <cl::ValueRequired>`, it is
-a runtime error if such an option is used elsewhere in the group.
-
-The CommandLine library does not restrict how you use the **cl::Prefix** or
-**cl::Grouping** modifiers, but it is possible to specify ambiguous argument
-settings.  Thus, it is possible to have multiple letter options that are prefix
-or grouping options, and they will still work as designed.
-
-To do this, the CommandLine library uses a greedy algorithm to parse the input
-option into (potentially multiple) prefix and grouping options.  The strategy
-basically looks like this:
-
-```
-parse(string OrigInput) {
-
-1. string Input = OrigInput;
-2. if (isOption(Input)) return getOption(Input).parse();  // Normal option
-3. while (!Input.empty() && !isOption(Input)) Input.pop_back();  // Remove the last letter
-4. while (!Input.empty()) {
-     string MaybeValue = OrigInput.substr(Input.length())
-     if (getOption(Input).isPrefix())
-       return getOption(Input).parse(MaybeValue)
-     if (!MaybeValue.empty() && MaybeValue[0] == '=')
-       return getOption(Input).parse(MaybeValue.substr(1))
-     if (!getOption(Input).isGrouping())
-       return error()
-     getOption(Input).parse()
-     Input = OrigInput = MaybeValue
-     while (!Input.empty() && !isOption(Input)) Input.pop_back();
-     if (!Input.empty() && !getOption(Input).isGrouping())
-       return error()
-   }
-5. if (!OrigInput.empty()) error();
-
-}
-```
-
 #### Miscellaneous option modifiers
 
 The miscellaneous option modifiers are the only flags where you can specify more
@@ -1230,14 +1123,6 @@ specify boolean properties that modify the option.
   option is allowed to accept one or more values (i.e. it is a {ref}`cl::list <cl::list>`
   option).
 
-(cl::DefaultOption)=
-
-* The **cl::DefaultOption** modifier is used to specify that the option is a
-  default that can be overridden by application-specific parsers. For example,
-  the `-help` alias, `-h`, is registered this way, so it can be overridden
-  by applications that need to use the `-h` option for another purpose,
-  either as a regular option or an alias for another option.
-
 (cl::PositionalEatsArgs)=
 
 * The **cl::PositionalEatsArgs** modifier (which only applies to positional
@@ -1248,14 +1133,6 @@ specify boolean properties that modify the option.
   -foo -bar baz -pos2 -bork`" would cause the "`-foo -bar -baz`" strings to
   be applied to the "`-pos1`" option and the "`-bork`" string to be applied
   to the "`-pos2`" option.
-
-(cl::Sink)=
-
-* The **cl::Sink** modifier is used to handle unknown options. If there is at
-  least one option with `cl::Sink` modifier specified, the parser passes
-  unrecognized option strings to it as values instead of signaling an error. As
-  with `cl::CommaSeparated`, this modifier only makes sense with a {ref}`cl::list <cl::list>`
-  option.
 
 (response files)=
 
@@ -1400,25 +1277,6 @@ argument is the **type** of the external storage, not a boolean value.  For this
 class, the marker type '`bool`' is used to indicate that internal storage
 should be used.
 
-(cl::bits)=
-
-#### The `cl::bits` class
-
-The `cl::bits` class is the class used to represent a list of command line
-options in the form of a bit vector.  It is also a templated class which can
-take up to three arguments:
-
-```cpp
-namespace cl {
-  template <class DataType, class Storage = bool,
-            class ParserClass = parser<DataType> >
-  class bits;
-}
-```
-
-This class works the exact same as the {ref}`cl::list <cl::list>` class, except that the second
-argument must be of **type** `unsigned` if external storage is used.
-
 (cl::alias)=
 
 #### The `cl::alias` class
@@ -1515,8 +1373,8 @@ work with new data types and new ways of interpreting the same data.  See the
 (bool parser)=
 
 * The **parser<bool> specialization** is used to convert boolean strings to a
-  boolean value.  Currently accepted strings are "`true`", "`TRUE`",
-  "`True`", "`1`", "`false`", "`FALSE`", "`False`", and "`0`".
+  boolean value.  Currently accepted strings are "`true`", "`1`",
+  "`false`", and "`0`".
 
 * The **parser<boolOrDefault> specialization** is used for cases where the value
   is boolean, but we also need to know whether the option was specified at all.
@@ -1706,3 +1564,43 @@ TODO: complete this section
 :::{todo}
 TODO: fill in this section
 :::
+
+## Declaring a Library's Options in TableGen
+
+A library can declare its options in a `.td` file instead of as `cl::opt` globals.
+`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+
+```text
+include "llvm/Option/LibraryOptions.td"
+
+def FooOptions : OptionsStruct;
+
+defm : BoolField<"enable-foo", "true", "Enable foo">;
+defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
+```
+
+The struct is in namespace `llvm` unless the def names another, as in `OptionsStruct<"mlir">`.
+A member is named after its option, `enable_foo` for `-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
+`OptionsStruct<prefix = "foo-">` drops that prefix from member names, so `-foo-path` sets `path`.
+
+The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
+A `ValueField`, of an integer type, `float`, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+A `ListField<"foo-ids", "unsigned", ...>` is an `ArrayRef<unsigned>`, replacing a `cl::list` with `cl::CommaSeparated`: each `-foo-ids=1,2` or `-foo-ids 1,2` appends its values.
+A reader applies a `cl::list_init` default to an empty list, since a given option never leaves it empty.
+An `OptionalBoolField` is a `BoolOrDefault` that stays `Default` unless the option is given, replacing `cl::boolOrDefault`; read it with `valueOr(X, Default)`.
+An `EnumField` maps each of its comma-separated values to an enumerator, replacing `cl::values`: `defm : EnumField<"foo-mode", "FooMode", "FooMode::Fast", "fast,safe", ["FooMode::Fast", "FooMode::Safe"], "The mode">;` accepts `-foo-mode=fast` and `-foo-mode=safe`.
+An `EnumListField` is a `ListField` whose values map to enumerators as in an `EnumField`.
+A `FlagOrEnumField` takes one more argument, the enumerator the bare option selects, replacing `cl::ValueOptional`: with `"FooMode::Fast"`, `-foo-mode` sets `FooMode::Fast`, and `-foo-mode safe` does not consume `safe`.
+A `DefaultOnOffField` is a `BoolOrDefault` set by `=Default`, `=Enable`, or `=Disable`.
+Both accept `--` for `-`.
+Only `-help-hidden` lists the options, like `cl::Hidden`.
+
+A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
+An `OptionalValueField` or `OptionalEnumField` takes no default; its `std::optional` member stays `std::nullopt` unless the option is given, replacing `getNumOccurrences()`.
+The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
+
+The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
+A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
+Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
+Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

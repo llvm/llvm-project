@@ -29,6 +29,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -686,6 +687,17 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (!loader) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), loader.takeError(), "{0}");
+    return;
+  }
+  if (llvm::Error error = loader->Load()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), std::move(error), "{0}");
+    return;
+  }
+
 #if LLDB_ENABLE_MTE
   // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
   // (MTE) and crashes.
@@ -1119,8 +1131,10 @@ bool ScriptInterpreterPythonImpl::RedirectTerminalHandleThroughLock(
   // terminal) promptly: the pipe descriptor is not a tty, so the default
   // buffering would hold output back until the buffer filled.
   PyObject *pipe_file = PyFile_FromFd(
-      redirect->GetWriteDescriptor(), nullptr, mode, /*buffering=*/1,
-      /*encoding=*/nullptr, /*errors=*/"ignore", /*newline=*/nullptr,
+      PythonFile::TranslateFdToPython(redirect->GetWriteDescriptor()), nullptr,
+      mode, /*buffering=*/1,
+      /*encoding=*/nullptr, /*errors=*/"ignore",
+      /*newline=*/nullptr,
       /*closefd=*/0);
   if (!pipe_file) {
     // Fall back to the raw descriptor. That reopens the statusline race, so

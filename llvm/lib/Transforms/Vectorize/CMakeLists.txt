@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMVectorize
   SLPVectorizer/SLPCompatibilityAnalysis.cpp
   SLPVectorizer/SLPCostAnalysis.cpp
   SLPVectorizer/SLPMemoryUtils.cpp
+  SLPVectorizer/SLPReductionUtils.cpp
   SLPVectorizer/SLPTypeUtils.cpp
   SLPVectorizer/SLPUtils.cpp
   SLPVectorizer.cpp

@@ -740,7 +740,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       return nullptr;
     }
 
-    ProhibitAttributes(PrefixAttrs);
+    ProhibitAttributes(PrefixAttrs, Tok.getLocation());
 
     Decl *DeclFromDeclSpec = nullptr;
     Scope *CurScope = getCurScope();
@@ -1225,8 +1225,13 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
 
   TemplateName Indexed = Actions.ActOnPackIndexingTemplateName(
       Template.get(), NameLoc, IndexExpr.get());
+
+  // If we are unable to index a template name, treat is as a non
+  // template and recover by eating the arguments and producing a
+  // TypeError annotation.
   if (Indexed.isNull())
-    return true;
+    TNK = TNK_Non_template;
+
   Template = TemplateTy::make(Indexed);
 
   // C++29 [temp.names]p7:
@@ -1247,11 +1252,14 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
   // C++29 [dcl.type.simple]p1:
   //   A type specifier is a placeholder for a deduced class type if [...] it
   //   is of the form typename pack-index-template-name.
-  if ((TNK == TNK_Type_template || TNK == TNK_Dependent_template_name) &&
-      getLangOpts().CPlusPlus17) {
+  if (Indexed.isNull() ||
+      ((TNK == TNK_Type_template || TNK == TNK_Dependent_template_name) &&
+       getLangOpts().CPlusPlus17)) {
     TypeResult Type =
-        Actions.ActOnPackIndexingDeducedTemplateSpecializationType(Indexed,
-                                                                   NameLoc);
+        Indexed.isNull()
+            ? TypeError()
+            : Actions.ActOnPackIndexingDeducedTemplateSpecializationType(
+                  Indexed, NameLoc);
     Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Type);
   } else {
@@ -1266,7 +1274,7 @@ bool Parser::AnnotatePackIndexingTemplateName(CXXScopeSpec &SS,
   Tok.setLocation(NameLoc);
   Tok.setAnnotationEndLoc(T.getCloseLocation());
   PP.AnnotateCachedTokens(Tok);
-  return false;
+  return Indexed.isNull();
 }
 
 void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
@@ -1535,7 +1543,8 @@ bool Parser::isValidAfterTypeSpecifier(bool CouldBeBitfield) {
     return true;
   case tok::colon:
     return CouldBeBitfield || // enum E { ... }   :         2;
-           ColonIsSacred;     // _Generic(..., enum E :     2);
+           ColonIsSacred ||
+           ParsingGenericAssociationType; // _Generic(..., enum E :     2);
   // Microsoft compatibility
   case tok::kw___cdecl:      // struct foo {...} __cdecl      x;
   case tok::kw___fastcall:   // struct foo {...} __fastcall   x;
@@ -3806,9 +3815,7 @@ void Parser::DiagnoseUnexpectedNamespace(NamedDecl *D) {
   // Push '};' onto the token stream to recover.
   PP.EnterToken(Tok, /*IsReinject*/ true);
 
-  Tok.startToken();
-  Tok.setLocation(PP.getLocForEndOfToken(PrevTokLocation));
-  Tok.setKind(tok::semi);
+  Tok = Token::create(tok::semi, PP.getLocForEndOfToken(PrevTokLocation));
   PP.EnterToken(Tok, /*IsReinject*/ true);
 
   Tok.setKind(tok::r_brace);
@@ -4374,18 +4381,14 @@ void Parser::ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
     // If the attribute is named `directive`, we can consume its argument list
     // and push the tokens from it into the cached token stream for a new OpenMP
     // pragma directive.
-    Token OMPBeginTok;
-    OMPBeginTok.startToken();
-    OMPBeginTok.setKind(tok::annot_attr_openmp);
-    OMPBeginTok.setLocation(Tok.getLocation());
+    Token OMPBeginTok =
+        Token::createAnnotation(tok::annot_attr_openmp, Tok.getLocation());
     OpenMPTokens.push_back(OMPBeginTok);
 
     ConsumeAndStoreUntil(tok::r_paren, OpenMPTokens, /*StopAtSemi=*/false,
                          /*ConsumeFinalToken*/ false);
-    Token OMPEndTok;
-    OMPEndTok.startToken();
-    OMPEndTok.setKind(tok::annot_pragma_openmp_end);
-    OMPEndTok.setLocation(Tok.getLocation());
+    Token OMPEndTok = Token::createAnnotation(tok::annot_pragma_openmp_end,
+                                              Tok.getLocation());
     OpenMPTokens.push_back(OMPEndTok);
   } else {
     assert(AttrName->isStr("sequence") &&
@@ -4886,11 +4889,8 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
     // ActOnStringLiteral() copies the string data into the literal, so it's
     // ok that the Token points to StrBuffer.
     Token Toks[1];
-    Toks[0].startToken();
-    Toks[0].setKind(tok::string_literal);
-    Toks[0].setLocation(StartLoc);
+    Toks[0] = Token::create(tok::string_literal, StartLoc, StrBuffer.size());
     Toks[0].setLiteralData(StrBuffer.data());
-    Toks[0].setLength(StrBuffer.size());
     StringLiteral *UuidString =
         cast<StringLiteral>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());
     ArgExprs.push_back(UuidString);

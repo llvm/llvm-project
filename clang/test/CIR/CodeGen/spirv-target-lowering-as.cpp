@@ -71,3 +71,11 @@ generic_int *cast_and_global(global_int *ptr) {
 // POST: cir.cast address_space
 // POST-SAME: !cir.ptr<!s32i, target_address_space(1)>
 // POST-SAME: !cir.ptr<!s32i, target_address_space(4)>
+
+generic_int *null_generic() { return nullptr; }
+
+// PRE-LABEL: cir.func {{.*}} @_Z12null_genericv
+// PRE: cir.const #cir.ptr<null> : !cir.ptr<!s32i, lang_address_space(offload_generic)>
+
+// POST-LABEL: cir.func {{.*}} @_Z12null_genericv
+// POST: cir.const #cir.ptr<null> : !cir.ptr<!s32i, target_address_space(4)>

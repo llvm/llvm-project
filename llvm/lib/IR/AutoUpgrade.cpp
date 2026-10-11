@@ -49,6 +49,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/NVVMAttributes.h"
@@ -60,6 +61,8 @@
 #include <numeric>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "auto-upgrade"
 
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
@@ -212,6 +215,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("pmin") ||       // Added in 3.9
             Name.starts_with("pmovsx") ||     // Added in 3.9
             Name.starts_with("pmovzx") ||     // Added in 3.9
+            Name.starts_with("pmulh.w") ||    // Added in 24.0
+            Name.starts_with("pmulhu.w") ||   // Added in 24.0
             Name == "pmul.dq" ||              // Added in 7.0
             Name == "pmulu.dq" ||             // Added in 7.0
             Name.starts_with("psll.dq") ||    // Added in 3.7
@@ -438,6 +443,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "kxor.w" ||                 // Added in 7.0
             Name.starts_with("padds.") ||       // Added in 8.0
             Name.starts_with("pbroadcast") ||   // Added in 3.9
+            Name.starts_with("pmulh.w") ||      // Added in 24.0
+            Name.starts_with("pmulhu.w") ||     // Added in 24.0
             Name.starts_with("prol") ||         // Added in 8.0
             Name.starts_with("pror") ||         // Added in 8.0
             Name.starts_with("psll.dq") ||      // Added in 3.9
@@ -490,6 +497,8 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name == "pmaxu.b" ||           // Added in 3.9
             Name == "pmins.w" ||           // Added in 3.9
             Name == "pminu.b" ||           // Added in 3.9
+            Name == "pmulh.w" ||           // Added in 24.0
+            Name == "pmulhu.w" ||          // Added in 24.0
             Name == "pmulu.dq" ||          // Added in 7.0
             Name.starts_with("pshuf") ||   // Added in 3.9
             Name.starts_with("psll.dq") || // Added in 3.7
@@ -988,6 +997,21 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      Intrinsic::ID MinMaxID =
+          StringSwitch<Intrinsic::ID>(Name.split('.').first)
+              .Case("smax", Intrinsic::smax)
+              .Case("smin", Intrinsic::smin)
+              .Case("umax", Intrinsic::umax)
+              .Case("umin", Intrinsic::umin)
+              .Default(Intrinsic::not_intrinsic);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        if (F->arg_size() != 2 || !F->getReturnType()->isIntOrIntVectorTy())
+          return false; // Invalid IR.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), MinMaxID,
+                                                  F->getReturnType());
+        return true;
+      }
+
       if (Name.starts_with("addp")) {
         // 'aarch64.neon.addp*'.
         if (F->arg_size() != 2)
@@ -1193,7 +1217,7 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 //   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch
 //   arg1, arg2, .. i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group
 //
-// The current tail appends a trailing i32 %validate_pattern, so both
+// The current tail appends a trailing i32 %flag_valid_pattern, so both
 // legacy tails are recognized by an i1 at parameter N-2.
 static Intrinsic::ID
 shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F, StringRef Name,
@@ -1215,7 +1239,7 @@ shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F, StringRef Name,
   size_t NumParams = F->getFunctionType()->getNumParams();
 
   // Parameter N-2 is i1 for both legacy tails; the current tail ends
-  // with i32 %cta_group, i32 %validate_pattern, for which N-2 is i32.
+  // with i32 %cta_group, i32 %flag_valid_pattern, for which N-2 is i32.
   if (!F->getFunctionType()->getParamType(NumParams - 2)->isIntegerTy(1))
     return Intrinsic::not_intrinsic;
 
@@ -1237,7 +1261,7 @@ shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F, StringRef Name,
 //
 //   arg1, arg2, .. i64 %ch, i1 %flag_ch
 //
-// The current tail appends a trailing i32 %validate_pattern, so the
+// The current tail appends a trailing i32 %flag_valid_pattern, so the
 // legacy tail is recognized by an i1 at parameter N-1.
 static Intrinsic::ID shouldUpgradeNVPTXTMAG2SCTAIntrinsics(Function *F,
                                                            StringRef Name) {
@@ -1256,7 +1280,7 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAG2SCTAIntrinsics(Function *F,
     return ID;
 
   // Parameter N-1 is i1 for the legacy tail; the current tail ends
-  // with i32 %validate_pattern, for which N-1 is i32.
+  // with i32 %flag_valid_pattern, for which N-1 is i32.
   if (!F->getFunctionType()
            ->getParamType(F->getFunctionType()->getNumParams() - 1)
            ->isIntegerTy(1))
@@ -1264,6 +1288,55 @@ static Intrinsic::ID shouldUpgradeNVPTXTMAG2SCTAIntrinsics(Function *F,
 
   return ID;
 }
+// The legacy tail of llvm.nvvm.cp.async.bulk.global.to.shared.cluster is:
+//
+//   ..., i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch
+//
+// The current intrinsic is overloaded on the multicast-mask type and takes a
+// trailing i32 %flag_valid_pattern; the legacy tail is recognized by an i1 at
+// parameter N-1.
+static Intrinsic::ID
+shouldUpgradeNVPTXBulkG2SClusterIntrinsic(Function *F, StringRef Name,
+                                          SmallVectorImpl<Type *> &OvlTys) {
+  if (!Name.consume_front("cp.async.bulk.global.to.shared.cluster"))
+    return Intrinsic::not_intrinsic;
+
+  // Parameter N-1 is i1 for the legacy tail; the current tail ends with
+  // i32 %flag_valid_pattern, for which N-1 is i32.
+  size_t NumParams = F->getFunctionType()->getNumParams();
+  if (!F->getFunctionType()->getParamType(NumParams - 1)->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  // The multicast mask is parameter 4; legacy IR only uses i16.
+  Type *MaskTy = F->getFunctionType()->getParamType(NumParams - 4);
+  if (!MaskTy->isIntegerTy(16))
+    return Intrinsic::not_intrinsic;
+  OvlTys.push_back(MaskTy);
+
+  return Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
+}
+
+// The legacy tail of llvm.nvvm.cp.async.bulk.global.to.shared.cta is:
+//
+//   ..., i64 %ch, i1 %flag_ch
+//
+// The current intrinsic adds %ignore_bytes_left/%ignore_bytes_right before
+// %ch and trailing %flag_oob/%flag_valid_pattern; the legacy tail is
+// recognized by an i1 at parameter N-1, whereas the current tail ends
+// with an i32.
+static Intrinsic::ID shouldUpgradeNVPTXBulkG2SCTAIntrinsic(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("cp.async.bulk.global.to.shared.cta"))
+    return Intrinsic::not_intrinsic;
+
+  // Parameter N-1 is i1 for the legacy tail; the current tail ends with
+  // i32 %flag_valid_pattern, for which N-1 is i32.
+  if (!F->getFunctionType()->getParamType(5)->isIntegerTy(1))
+    return Intrinsic::not_intrinsic;
+
+  return Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta;
+}
+
 // The legacy TMA reduction intrinsics encode the reduction operator in their
 // name, while the current ones take it as an immediate argument. Map the
 // operator part of a legacy name to the corresponding immediate value.
@@ -1310,8 +1383,6 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
   if (Name.consume_front("cp.async.bulk.")) {
     Intrinsic::ID ID =
         StringSwitch<Intrinsic::ID>(Name)
-            .Case("global.to.shared.cluster",
-                  Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster)
             .Case("shared.cta.to.cluster",
                   Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster)
             .Default(Intrinsic::not_intrinsic);
@@ -1458,20 +1529,16 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
-                                                           StringRef Name) {
-  if (!Name.consume_front("tcgen05.mma."))
-    return Intrinsic::not_intrinsic;
-
-  // tcgen05.mma.ws.* variants do not need collector-b appended.
-  if (Name.starts_with("ws"))
-    return Intrinsic::not_intrinsic;
-
-  return F->getIntrinsicID();
-}
+// Overloaded fadd/fmul intrinsic IDs, indexed by [`.ftz`][`.sat`].
+static constexpr Intrinsic::ID NVVMFAddIIDs[2][2] = {
+    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat},
+    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat}};
+static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
+    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat},
+    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
 
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFAddUpgrade(StringRef Name) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][2]) {
   auto [Modifiers, Type] = Name.rsplit('.');
   if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
     return std::nullopt;
@@ -1486,16 +1553,20 @@ getNVVMFAddUpgrade(StringRef Name) {
   if (!RoundingMode)
     return std::nullopt;
 
-  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
-                          .Case("", Intrinsic::nvvm_fadd)
-                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
-                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
-                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
-                          .Default(Intrinsic::not_intrinsic);
-  if (IID == Intrinsic::not_intrinsic)
+  StringRef Rest = Modifiers.drop_front(2);
+  const bool IsFTZ = Rest.consume_front(".ftz");
+  const bool IsSat = Rest.consume_front(".sat");
+  if (!Rest.empty())
     return std::nullopt;
 
-  return std::make_pair(IID, *RoundingMode);
+  return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
+  if (Name != "mbarrier.init" && Name != "mbarrier.init.shared")
+    return Intrinsic::not_intrinsic;
+
+  return Intrinsic::nvvm_mbarrier_init;
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -1608,33 +1679,40 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
-static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
-  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
+static unsigned
+getFullArgCountForDefaultArgUpgrade(Function *F, Intrinsic::ID IID,
+                                    SmallVectorImpl<Type *> &OverloadTys) {
   auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
   if (Defaults.empty())
+    return 0;
+
+  unsigned FullArgCount = FirstDefault + Defaults.size();
+
+  // Only trailing default arguments can be missing.
+  if (F->arg_size() < FirstDefault || F->arg_size() >= FullArgCount)
+    return 0;
+
+  unsigned NumMissingTrailingParams = FullArgCount - F->arg_size();
+  if (!Intrinsic::isSignatureValid(IID, F->getFunctionType(), OverloadTys,
+                                   NumMissingTrailingParams))
+    return 0;
+
+  return FullArgCount;
+}
+
+static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = F->getIntrinsicID();
+  SmallVector<Type *, 4> OverloadTys;
+
+  unsigned FullArgCount =
+      getFullArgCountForDefaultArgUpgrade(F, IID, OverloadTys);
+  if (FullArgCount == 0)
     return false;
 
-  // Overloaded intrinsics are out of scope for the default-arg feature
-  // and will be supported in a follow-up.
-  if (Intrinsic::isOverloaded(IID))
-    return false;
-
-  // Get the canonical full declaration for this intrinsic.
-  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-
-  // If the existing declaration already has all args, nothing to upgrade
-  if (F->arg_size() >= FullDecl->arg_size())
-    return false;
-
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
-  if (F->arg_size() < FirstDefault)
-    return false;
-
-  NewFn = FullDecl;
+  rename(F);
+  NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID, OverloadTys);
+  assert(NewFn->arg_size() == FullArgCount &&
+         "total number of default args does not match intrinsic signature");
   return true;
 }
 
@@ -2004,6 +2082,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                 .Cases({"min.s", "min.i", "min.ll"}, Intrinsic::smin)
                 .Cases({"max.us", "max.ui", "max.ull"}, Intrinsic::umax)
                 .Cases({"min.us", "min.ui", "min.ull"}, Intrinsic::umin)
+                .Cases({"mulhi.s", "mulhi.i", "mulhi.ll"}, Intrinsic::smulh)
+                .Cases({"mulhi.us", "mulhi.ui", "mulhi.ull"}, Intrinsic::umulh)
                 .Default(Intrinsic::not_intrinsic);
         if (IID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
@@ -2079,11 +2159,33 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
-      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
+      // Upgrade the legacy cp.async.bulk.global.to.shared.cluster signature
+      // (multicast-mask overloading + trailing flag_valid_pattern).
+      SmallVector<Type *, 1> BulkG2SOvlTys;
+      IID = shouldUpgradeNVPTXBulkG2SClusterIntrinsic(F, Name, BulkG2SOvlTys);
       if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  BulkG2SOvlTys);
+        return true;
+      }
+
+      // Upgrade the legacy cp.async.bulk.global.to.shared.cta signature
+      // (no ignore_bytes_left/right + trailing flag_valid_pattern).
+      IID = shouldUpgradeNVPTXBulkG2SCTAIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-        return NewFn != F;
+        return true;
+      }
+
+      // Upgrade mbarrier.init intrinsics missing the layout operand.
+      IID = shouldUpgradeNVPTXMBarrierInitIntrinsic(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(0)->getType());
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -2100,7 +2202,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
       else if (Name.consume_front("add."))
         // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-        Expand = getNVVMFAddUpgrade(Name).has_value();
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFAddIIDs).has_value();
+      else if (Name.consume_front("mul."))
+        // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFMulIIDs).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -2259,6 +2364,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       NewFn = nullptr;
       return true;
     }
+    if (Name.starts_with("strip.invariant.group")) {
+      // For clang's usage it would be safe to just drop the
+      // strip.invariant.group, but to be conservative replace with the
+      // stronger launder.invariant.group instead.
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), Intrinsic::launder_invariant_group,
+          F->getReturnType());
+      return true;
+    }
     break;
 
   case 't':
@@ -2354,12 +2468,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     return true;
   }
 
+  if (upgradeIntrinsicWithDefaultArgs(F, NewFn))
+    return true;
+
   //  This may not belong here. This function is effectively being overloaded
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
-  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
-    return true;
 
   return false;
 }
@@ -2395,8 +2510,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   if (!STy || STy->getNumElements() != 2)
     return nullptr;
 
-  LLVMContext &C = GV->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*GV->getParent());
   auto EltTy = StructType::get(STy->getElementType(0), STy->getElementType(1),
                                IRB.getPtrTy());
   Constant *Init = GV->getInitializer();
@@ -2959,24 +3073,16 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_pmul_hr_sw_512;
     else
       llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulh.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulh_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulh_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulh_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
-  } else if (Name.starts_with("pmulhu.w.")) {
-    if (VecWidth == 128)
-      IID = Intrinsic::x86_sse2_pmulhu_w;
-    else if (VecWidth == 256)
-      IID = Intrinsic::x86_avx2_pmulhu_w;
-    else if (VecWidth == 512)
-      IID = Intrinsic::x86_avx512_pmulhu_w_512;
-    else
-      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.starts_with("pmulh.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::smulh);
+    return true;
+  } else if (Name.starts_with("pmulhu.w")) {
+    assert((VecWidth == 128 || VecWidth == 256 || VecWidth == 512) &&
+           "Unexpected intrinsic");
+    Rep = upgradeX86BinaryIntrinsics(Builder, CI, Intrinsic::umulh);
+    return true;
   } else if (Name.starts_with("pmaddw.d.")) {
     if (VecWidth == 128)
       IID = Intrinsic::x86_sse2_pmadd_wd;
@@ -3160,6 +3266,19 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
+static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
+                                     StringRef Name,
+                                     const Intrinsic::ID (&IIDs)[2][2]) {
+  auto Result = getNVVMFPArithUpgrade(Name, IIDs);
+  assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  auto [IID, RoundingMode] = *Result;
+  Value *A = CI->getArgOperand(0);
+  return Builder.CreateIntrinsic(
+      A->getType(), IID,
+      {A, CI->getArgOperand(1),
+       Builder.getInt32(static_cast<int>(RoundingMode))});
+}
+
 static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                                        Function *F, IRBuilder<> &Builder) {
   Value *Rep = nullptr;
@@ -3182,14 +3301,10 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.consume_front("add.")) {
     // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-    auto FAdd = getNVVMFAddUpgrade(Name);
-    assert(FAdd && "unsupported nvvm.add.* intrinsic");
-    auto [IID, RoundingMode] = *FAdd;
-    Value *A = CI->getArgOperand(0);
-    Rep = Builder.CreateIntrinsic(
-        A->getType(), IID,
-        {A, CI->getArgOperand(1),
-         Builder.getInt32(static_cast<int>(RoundingMode))});
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFAddIIDs);
+  } else if (Name.consume_front("mul.")) {
+    // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFMulIIDs);
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
@@ -3675,6 +3790,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name == "sse41.pminud" || Name.starts_with("avx2.pminu") ||
              Name.starts_with("avx512.mask.pminu")) {
     Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umin);
+  } else if (Name == "sse2.pmulh.w" || Name.starts_with("avx2.pmulh.w") ||
+             Name.starts_with("avx512.pmulh.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::smulh);
+  } else if (Name == "sse2.pmulhu.w" || Name.starts_with("avx2.pmulhu.w") ||
+             Name.starts_with("avx512.pmulhu.w")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::umulh);
   } else if (Name == "sse2.pmulu.dq" || Name == "avx2.pmulu.dq" ||
              Name == "avx512.pmulu.dq.512" ||
              Name.starts_with("avx512.mask.pmulu.dq.")) {
@@ -5403,7 +5524,7 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *EmptyMD = MDNode::get(F->getContext(), {});
     RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
     if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
-      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+      RMW->setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, EmptyMD);
   }
 
   if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
@@ -5605,20 +5726,26 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
   unsigned OldArgCount = CI->arg_size();
   unsigned NewArgCount = NewFn->arg_size();
 
-  // If the caller already supplied all arguments (or more), nothing to do.
-  // This mirrors C++ semantics: an explicitly-passed value is never overridden.
-  if (OldArgCount >= NewArgCount)
-    return false;
-
-  // Start with the existing arguments from the old call.
-  SmallVector<Value *, 8> NewArgs(CI->args());
-
-  // Defaults are a contiguous trailing block, so checking the first missing
-  // argument is enough.
   if (OldArgCount < FirstDefault)
     return false;
 
-  // Fill in each missing trailing argument from the table.
+  // More arguments than the new intrinsic accepts, cannot upgrade.
+  if (OldArgCount > NewArgCount)
+    return false;
+
+  // The call already passes the defaulted arguments explicitly; only the
+  // callee is still the old, shorter declaration, so retarget it.
+  if (OldArgCount == NewArgCount) {
+    if (CI->getFunctionType() != NewFn->getFunctionType())
+      return false;
+    CI->setCalledFunction(NewFn);
+    return true;
+  }
+
+  // OldArgCount < NewArgCount: Fill in each missing trailing default
+  // argument from the table.
+  SmallVector<Value *, 8> NewArgs(CI->args());
+
   FunctionType *NewFT = NewFn->getFunctionType();
   for (unsigned Idx = OldArgCount; Idx < NewArgCount; ++Idx) {
     assert(Idx >= FirstDefault && Idx - FirstDefault < Defaults.size() &&
@@ -5658,10 +5785,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
 
   LLVMContext &C = CI->getContext();
-  IRBuilder<> Builder(C);
+  IRBuilder<> Builder(CI->getIterator());
   if (isa<FPMathOperator>(CI))
     Builder.setFastMathFlags(CI->getFastMathFlags());
-  Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
     // Get the Function's name.
@@ -5757,9 +5883,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   CallInst *NewCall = nullptr;
   switch (NewFn->getIntrinsicID()) {
   default: {
-    // Last resort: try the data-driven default-arg upgrade.
-    // Handles any intrinsic annotated with ImmArg<..., DefaultValue<...>>
-    // in its .td definition, without needing a dedicated case.
     if (upgradeIntrinsicCallWithDefaultArgs(CI, NewFn, Builder))
       return;
     DefaultCase();
@@ -5845,7 +5968,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
     auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements();
-    unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    uint64_t I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     Value *NewIdx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), NewIdx});
     break;
@@ -5859,7 +5982,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     if (Name.starts_with("aarch64.sve.tuple.set")) {
-      unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      uint64_t I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       auto *Ty = cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
       Value *NewIdx =
           ConstantInt::get(Type::getInt64Ty(C), I * Ty->getMinNumElements());
@@ -6043,7 +6166,42 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->eraseFromParent();
     return;
   }
-  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster: {
+    SmallVector<Value *, 4> Args(CI->args());
+    unsigned AS = Args[0]->getType()->getPointerAddressSpace();
+    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED)
+      Args[0] = Builder.CreateAddrSpaceCast(
+          Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+
+    // Append the missing trailing flag_valid_pattern (0 = disabled).
+    Args.push_back(Builder.getInt32(0));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta: {
+    // (dst, mbar, src, size, ch, flag_ch)
+    //   -> (dst, mbar, src, size, i32 0, i32 0, ch, flag_ch, i1 false,
+    //       i32 0 /* flag_valid_pattern=disabled */)
+    SmallVector<Value *, 10> Args;
+    for (unsigned I = 0; I < 4; ++I)
+      Args.push_back(CI->getArgOperand(I));
+    Args.push_back(Builder.getInt32(0));    // ignore_bytes_left
+    Args.push_back(Builder.getInt32(0));    // ignore_bytes_right
+    Args.push_back(CI->getArgOperand(4));   // cache_hint
+    Args.push_back(CI->getArgOperand(5));   // flag_ch
+    Args.push_back(Builder.getInt1(false)); // flag_oob
+    Args.push_back(Builder.getInt32(0));    // flag_valid_pattern
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
   case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster: {
     // Create a new call with the correct address space.
     SmallVector<Value *, 4> Args(CI->args());
@@ -6069,7 +6227,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
           Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
 
     // Append the missing trailing arguments with default values (cta_group,
-    // validate_pattern).
+    // flag_valid_pattern).
     while (Args.size() < NewFn->getFunctionType()->getNumParams())
       Args.push_back(Builder.getInt32(0));
 
@@ -6086,10 +6244,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 #undef G2S_CTA_CASE
   {
     SmallVector<Value *, 16> Args(CI->args());
-    // Append the missing trailing validate_pattern argument with default
+    // Append the missing trailing flag_valid_pattern argument with default
     // value 0.
     assert(Args.size() + 1 == NewFn->getFunctionType()->getNumParams() &&
-            "expected only the trailing validate_pattern to be missing");
+            "expected only the trailing flag_valid_pattern to be missing");
     Args.push_back(Builder.getInt32(0));
 
     NewCall = Builder.CreateCall(NewFn, Args);
@@ -6118,75 +6276,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
-  case Intrinsic::nvvm_tcgen05_mma_shared:
-  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::
-      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::
-      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::
-      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::
-      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
-    SmallVector<Value *, 12> Args(CI->args());
-    Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
-    NewCall = Builder.CreateCall(NewFn, Args);
-    break;
-  }
   case Intrinsic::nvvm_tcgen05_alloc_cg1:
   case Intrinsic::nvvm_tcgen05_alloc_cg2:
   case Intrinsic::nvvm_tcgen05_dealloc_cg1:
@@ -6195,6 +6284,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
                                    Builder.getFalse()});
     break;
+  case Intrinsic::nvvm_mbarrier_init: {
+    SmallVector<Value *, 3> Args(CI->args());
+    // The .shared variant folded into the overloaded form without gaining an
+    // operand, so only the pre-layout two-argument form needs one appended.
+    if (Args.size() == 2)
+      Args.push_back(Builder.getInt32(0)); // layout = default(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
@@ -6596,6 +6694,28 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
   return MDNode::get(Context, Elts);
 }
 
+MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
+  // !tbaa.struct is a list of (offset, size, tag) triples. Upgrade any
+  // old-style scalar field tag to struct-path form via UpgradeTBAANode.
+  unsigned NumOperands = MD.getNumOperands();
+  if (NumOperands == 0 || NumOperands % 3 != 0)
+    return &MD; // Malformed; leave it for the verifier to reject.
+
+  SmallVector<Metadata *, 12> Elts(MD.op_begin(), MD.op_end());
+  bool Changed = false;
+  for (unsigned I = 2; I < NumOperands; I += 3) {
+    auto *Tag = dyn_cast_or_null<MDNode>(Elts[I]);
+    if (!Tag)
+      continue;
+    MDNode *Upgraded = UpgradeTBAANode(*Tag);
+    if (Upgraded == Tag)
+      continue;
+    Elts[I] = Upgraded;
+    Changed = true;
+  }
+  return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
+}
+
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
                                       Instruction *&Temp) {
   if (Opc != Instruction::BitCast)
@@ -6873,7 +6993,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 
-      IRBuilder<> Builder(CI->getParent(), CI->getIterator());
+      IRBuilder<> Builder(CI->getIterator());
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 
@@ -7138,8 +7258,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        (ID->getString().starts_with("sign-return-address") &&
+         ID->getString() != "sign-return-address-harden")) {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {
@@ -7369,7 +7491,7 @@ struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
     MDNode *Empty = MDNode::get(RMW.getContext(), {});
     RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
     RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
-    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+    RMW.setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
   }
 };
 } // namespace
@@ -7478,8 +7600,11 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 // Check if the function attribute is not present and set it.
 static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
                                     StringRef Value) {
-  if (!F.hasFnAttribute(FnAttrName))
+  if (!F.hasFnAttribute(FnAttrName)) {
     F.addFnAttr(FnAttrName, Value);
+    LLVM_DEBUG(dbgs() << "Set attribute: " << FnAttrName << "=\"" << Value
+                      << "\", function: " << F.getName() << "\n");
+  }
 }
 
 // Check if the function attribute is not present and set it if needed.
@@ -7487,17 +7612,31 @@ static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
 // If the attribute is "true" resets it to a valueless attribute.
 static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
   if (!F.hasFnAttribute(FnAttrName)) {
-    if (Set)
+    if (Set) {
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Added attribute: " << FnAttrName
+                        << ", function: " << F.getName() << "\n");
+    }
   } else {
     auto A = F.getFnAttribute(FnAttrName);
-    if ("false" == A.getValueAsString())
+    if ("false" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
-    else if ("true" == A.getValueAsString()) {
+      LLVM_DEBUG(dbgs() << "Removed attribute: " << FnAttrName
+                        << "=\"false\", function: " << F.getName() << "\n");
+    } else if ("true" == A.getValueAsString()) {
       F.removeFnAttr(FnAttrName);
       F.addFnAttr(FnAttrName);
+      LLVM_DEBUG(dbgs() << "Converted attribute: " << FnAttrName
+                        << "=\"true\", function: " << F.getName() << "\n");
     }
   }
+}
+
+static void ConvertModuleFlag(Module &M, Module::ModFlagBehavior Behavior,
+                              StringRef Key, uint32_t Val) {
+  M.setModuleFlag(Behavior, Key, Val);
+  LLVM_DEBUG(dbgs() << "Converted module flag: " << "{" << Behavior << ", "
+                    << Key << ", " << Val << "}\n");
 }
 
 void llvm::copyModuleAttrToFunctions(Module &M) {
@@ -7539,6 +7678,9 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
       *ValPtr = CI->getZExtValue();
       if (*ValPtr == 2)
         return;
+
+      LLVM_DEBUG(dbgs() << "Found module flag: " << IDStr << "(" << *ValPtr
+                        << ")\n");
     }
   }
 
@@ -7575,17 +7717,19 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 
   if (BTE)
-    M.setModuleFlag(llvm::Module::Min, "branch-target-enforcement", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-target-enforcement", 2);
   if (BPPLR)
-    M.setModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "branch-protection-pauth-lr", 2);
   if (GCS)
-    M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "guarded-control-stack", 2);
   if (SRA) {
-    M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
+    ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address", 2);
     if (SRAALLValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
-    if (SRABKeyValue == 1)
-      M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-all", 2);
+    if (SRABKeyValue == 1) {
+      ConvertModuleFlag(M, llvm::Module::Min, "sign-return-address-with-bkey",
+                        2);
+    }
   }
 }
 
@@ -7751,6 +7895,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+
+      // Add sizing for address space 10 through 15.
+      // AS 10-14 are reserved and defaulted to 32:32
+      // AS 15 is in use and is 32:32.
+      for (StringRef AS : {"p10", "p11", "p12", "p13", "p14", "p15"}) {
+        if (!DL.contains(("-" + AS).str()) && !DL.starts_with(AS))
+          Res.append(("-" + AS + ":32:32").str());
+      }
     }
 
     // Upgrade the ELF mangling mode.
@@ -7806,6 +7958,15 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (Pos == StringRef::npos)
       Pos = Res.size();
     Res.insert(Pos, "-f64:32:64");
+  }
+
+  // ARM data layout upgrades.
+  // Add -Fi8 if a -F has not already been specified.
+  if (T.isARM() && !DL.empty() && !DL.contains("Fi") && !DL.contains("Fn")) {
+    const StringRef p3232 = "p:32:32";
+    size_t Pos = Res.find(p3232);
+    if (Pos != StringRef::npos)
+      Res.insert(Pos + p3232.size(), "-Fi8");
   }
 
   if (!T.isX86())
