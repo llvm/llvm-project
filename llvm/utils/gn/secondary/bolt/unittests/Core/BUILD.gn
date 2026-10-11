@@ -20,6 +20,7 @@ unittest("CoreTests") {
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
     "MemoryMaps.cpp",
+    "Relocation.cpp",
   ]
 
   defines = []
