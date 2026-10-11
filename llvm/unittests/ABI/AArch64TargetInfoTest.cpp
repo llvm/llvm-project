@@ -1691,4 +1691,294 @@ TEST_F(AArch64TargetInfoTest, ClassifySVETupleAAPCS) {
   }
 }
 
+static void expectDirectIntSlot(const ArgInfo &Info, uint64_t BitWidth) {
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
+  EXPECT_EQ(Info.getDirectAlign(), std::nullopt);
+  const auto *IT =
+      llvm::dyn_cast<llvm::abi::IntegerType>(Info.getCoerceToType());
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), BitWidth);
+  EXPECT_EQ(IT->getAlignment(), llvm::Align(BitWidth / 8));
+}
+
+static void expectDirectPointerSlot(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
+  EXPECT_EQ(Info.getDirectAlign(), std::nullopt);
+  const auto *PT =
+      llvm::dyn_cast<llvm::abi::PointerType>(Info.getCoerceToType());
+  ASSERT_NE(PT, nullptr);
+  EXPECT_EQ(PT->getSizeInBits().getFixedValue(), 64u);
+  EXPECT_EQ(PT->getAddrSpace(), 0u);
+  EXPECT_EQ(PT->getAlignment(), llvm::Align(8));
+}
+
+static void expectDirectArraySlot(const ArgInfo &Info, uint64_t NumElts,
+                                  bool PointerElts, uint64_t IntBits) {
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
+  EXPECT_EQ(Info.getDirectAlign(), std::nullopt);
+  const auto *AT = llvm::dyn_cast<llvm::abi::ArrayType>(Info.getCoerceToType());
+  ASSERT_NE(AT, nullptr);
+  EXPECT_FALSE(AT->isMatrixType());
+  EXPECT_EQ(AT->getNumElements(), NumElts);
+  if (PointerElts) {
+    const auto *PT =
+        llvm::dyn_cast<llvm::abi::PointerType>(AT->getElementType());
+    ASSERT_NE(PT, nullptr);
+    EXPECT_EQ(PT->getSizeInBits().getFixedValue(), 64u);
+    EXPECT_EQ(PT->getAddrSpace(), 0u);
+    return;
+  }
+  const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(AT->getElementType());
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), IntBits);
+}
+
+// Aggregates of at most 16 bytes are passed directly. The coerced type is an
+// integer slot, an array of those slots, or a pointer when every member is a
+// 64-bit pointer. Larger aggregates are passed indirectly.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentSmallAggregate) {
+  const ABIType *TwoInts =
+      makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *Char = makeRecord({FieldInfo(I8, 0)}, 8, llvm::Align(1),
+                                   /*UnadjustedAlign=*/llvm::Align(1));
+  const ABIType *ThreeInts =
+      makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32), FieldInfo(I32, 64)},
+                 96, llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *FourInts =
+      makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32), FieldInfo(I32, 64),
+                  FieldInfo(I32, 96)},
+                 128, llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *I128Record =
+      makeRecord({FieldInfo(I128, 0)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(16));
+  // alignas(16) pads a single int out to 16 bytes. The unadjusted alignment
+  // stays 4.
+  const ABIType *OveralignedInt =
+      makeRecord({FieldInfo(I32, 0)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *OnePtr = makeRecord({FieldInfo(Ptr, 0)}, 64, llvm::Align(8),
+                                     /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *TwoPtrs =
+      makeRecord({FieldInfo(Ptr, 0), FieldInfo(Ptr, 64)}, 128, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *PtrAndInt =
+      makeRecord({FieldInfo(Ptr, 0), FieldInfo(I32, 64)}, 128, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *PtrArrayField =
+      makeRecord({FieldInfo(TB.getArrayType(Ptr, 2, /*SizeInBits=*/128), 0)},
+                 128, llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *NestedPtr =
+      makeRecord({FieldInfo(OnePtr, 0)}, 64, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *PtrArray = TB.getArrayType(OnePtr, 2, /*SizeInBits=*/128);
+  const ABIType *IntArray3 = TB.getArrayType(I32, 3, /*SizeInBits=*/96);
+  RecordFlags CXX = passableRecordFlags(/*IsCXX=*/true);
+  const ABIType *PtrBase = makeRecord({FieldInfo(Ptr, 0)}, 64, llvm::Align(8),
+                                      /*UnadjustedAlign=*/llvm::Align(8), CXX);
+  const ABIType *DerivedPtr = makeRecord(
+      {FieldInfo(Ptr, 64)}, 128, llvm::Align(8),
+      /*UnadjustedAlign=*/llvm::Align(8), CXX, {FieldInfo(PtrBase, 0)});
+  const ABIType *EmptyBase = makeRecord(
+      {}, 0, llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1), CXX);
+  const ABIType *PtrWithEmptyBase = makeRecord(
+      {FieldInfo(Ptr, 0)}, 64, llvm::Align(8),
+      /*UnadjustedAlign=*/llvm::Align(8), CXX, {FieldInfo(EmptyBase, 0)});
+  const ABIType *ASPtr = TB.getPointerType(64, llvm::Align(8), /*Addrspace=*/1);
+  const ABIType *ASPtrRecord =
+      makeRecord({FieldInfo(ASPtr, 0)}, 64, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *OveralignedPtr =
+      makeRecord({FieldInfo(Ptr, 0)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *ThreeLongs =
+      makeRecord({FieldInfo(I64, 0), FieldInfo(I64, 64), FieldInfo(I64, 128)},
+                 192, llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *FiveInts = TB.getArrayType(I32, 5, /*SizeInBits=*/160);
+  const ABIType *TwoFloats =
+      makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *EmptyCXX = makeRecord({}, 8, llvm::Align(1),
+                                       /*UnadjustedAlign=*/llvm::Align(1), CXX);
+  const ABIType *NarrowPtr = TB.getPointerType(32, llvm::Align(4));
+  const ABIType *NarrowPtrRecord =
+      makeRecord({FieldInfo(NarrowPtr, 0)}, 32, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *PtrUnion = TB.getUnionType(
+      {FieldInfo(Ptr, 0), FieldInfo(Ptr, 0)}, llvm::TypeSize::getFixed(64),
+      llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8),
+      StructPacking::Default, RecordFlags::CanPassInRegisters);
+  const ABIType *MixedUnion = TB.getUnionType(
+      {FieldInfo(Ptr, 0), FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(64),
+      llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8),
+      StructPacking::Default, RecordFlags::CanPassInRegisters);
+
+  auto Classify = [&](AArch64ABIKind Kind, const ABIType *Ty,
+                      bool ILP32 = false, bool IsCXX = false) {
+    AArch64ABIOptions Opts(Kind);
+    Opts.IsILP32 = ILP32;
+    Opts.IsCXX = IsCXX;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Ty});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+
+  for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS,
+                              AArch64ABIKind::Win64}) {
+    expectDirectIntSlot(Classify(Kind, TwoInts), 64);
+    expectDirectIntSlot(Classify(Kind, Char), 64);
+    expectDirectArraySlot(Classify(Kind, ThreeInts), 2, /*PointerElts=*/false,
+                          64);
+    expectDirectArraySlot(Classify(Kind, FourInts), 2, /*PointerElts=*/false,
+                          64);
+    expectDirectIntSlot(Classify(Kind, I128Record), 128);
+    expectDirectPointerSlot(Classify(Kind, OnePtr));
+    expectDirectArraySlot(Classify(Kind, TwoPtrs), 2, /*PointerElts=*/true, 0);
+    expectDirectArraySlot(Classify(Kind, PtrAndInt), 2, /*PointerElts=*/false,
+                          64);
+    expectDirectArraySlot(Classify(Kind, PtrArrayField), 2,
+                          /*PointerElts=*/true, 0);
+    expectDirectPointerSlot(Classify(Kind, NestedPtr));
+    expectDirectArraySlot(Classify(Kind, PtrArray), 2, /*PointerElts=*/false,
+                          64);
+    expectDirectArraySlot(Classify(Kind, IntArray3), 2, /*PointerElts=*/false,
+                          64);
+    expectDirectArraySlot(Classify(Kind, DerivedPtr), 2, /*PointerElts=*/true,
+                          0);
+    expectDirectIntSlot(Classify(Kind, PtrWithEmptyBase), 64);
+    expectDirectIntSlot(Classify(Kind, ASPtrRecord), 64);
+    expectDirectIntSlot(Classify(Kind, NarrowPtrRecord), 64);
+    expectDirectPointerSlot(Classify(Kind, PtrUnion));
+    expectDirectIntSlot(Classify(Kind, MixedUnion), 64);
+    expectNaturalAlignIndirect(Classify(Kind, ThreeLongs), llvm::Align(8),
+                               /*ByVal=*/false);
+    expectNaturalAlignIndirect(Classify(Kind, FiveInts), llvm::Align(4),
+                               /*ByVal=*/false);
+  }
+
+  // AAPCS uses the unadjusted alignment, so alignas(16) still selects an
+  // 8-byte slot. A pointer record in that slot stays a pointer.
+  expectDirectArraySlot(Classify(AArch64ABIKind::AAPCS, OveralignedInt), 2,
+                        /*PointerElts=*/false, 64);
+  expectDirectArraySlot(Classify(AArch64ABIKind::AAPCS, OveralignedPtr), 2,
+                        /*PointerElts=*/true, 0);
+
+  // DarwinPCS and Win64 use the ABI alignment. A 16-byte slot is i128, and
+  // the pointer coercion applies only to an 8-byte slot.
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64}) {
+    expectDirectIntSlot(Classify(Kind, OveralignedInt), 128);
+    expectDirectIntSlot(Classify(Kind, OveralignedPtr), 128);
+  }
+
+  // ILP32 Darwin rounds the slot up to the 32-bit pointer width. AAPCS ILP32
+  // still uses the 8-byte AAPCS slot.
+  expectDirectIntSlot(Classify(AArch64ABIKind::DarwinPCS, Char, /*ILP32=*/true),
+                      32);
+  expectDirectIntSlot(Classify(AArch64ABIKind::AAPCS, Char, /*ILP32=*/true),
+                      64);
+  expectDirectIntSlot(Classify(AArch64ABIKind::DarwinPCS, NarrowPtrRecord,
+                               /*ILP32=*/true),
+                      32);
+
+  // Soft-float does not treat a float pair as an HFA, so it takes this path.
+  expectDirectIntSlot(Classify(AArch64ABIKind::AAPCSSoft, TwoFloats), 64);
+
+  // A non-zero-size empty C++ record is a one-byte aggregate on AAPCS.
+  expectDirectIntSlot(Classify(AArch64ABIKind::AAPCS, EmptyCXX,
+                               /*ILP32=*/false, /*IsCXX=*/true),
+                      64);
+
+  // On Win64, a variadic argument is not an HFA.
+  {
+    AArch64ABIOptions Opts(AArch64ABIKind::Win64);
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI = FunctionInfo::create(
+        llvm::CallingConv::Win64, Void, {TwoFloats}, RequiredArgs(1));
+    TI->computeInfo(*FI);
+    expectDirectIntSlot(FI->getArgInfo(0).Info, 64);
+  }
+}
+
+static void expectDirectI64Pair(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
+  EXPECT_EQ(Info.getDirectAlign(), std::nullopt);
+  const auto *AT = llvm::dyn_cast<llvm::abi::ArrayType>(Info.getCoerceToType());
+  ASSERT_NE(AT, nullptr);
+  EXPECT_EQ(AT->getNumElements(), 2u);
+  const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(AT->getElementType());
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), 64u);
+}
+
+// Aggregates of at most 16 bytes are returned in registers. Little-endian
+// values of at most 8 bytes keep their exact width. Big-endian values are
+// widened to 8 bytes. A 16-byte result is a pair of i64 unless its ABI
+// alignment is 16 bytes, in which case it is an i128.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnSmallAggregate) {
+  const ABIType *OneChar =
+      makeRecord({FieldInfo(I8, 0)}, 8, llvm::Align(1), llvm::Align(1));
+  const ABIType *ThreeChars =
+      makeRecord({FieldInfo(I8, 0), FieldInfo(I8, 8), FieldInfo(I8, 16)}, 24,
+                 llvm::Align(1), llvm::Align(1));
+  const ABIType *OneInt =
+      makeRecord({FieldInfo(I32, 0)}, 32, llvm::Align(4), llvm::Align(4));
+  const ABIType *TwoInts = makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32)},
+                                      64, llvm::Align(4), llvm::Align(4));
+  const ABIType *ThreeInts =
+      makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32), FieldInfo(I32, 64)},
+                 96, llvm::Align(4), llvm::Align(4));
+  const ABIType *FourInts = makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32),
+                                        FieldInfo(I32, 64), FieldInfo(I32, 96)},
+                                       128, llvm::Align(4), llvm::Align(4));
+  const ABIType *AlignedI128 =
+      makeRecord({FieldInfo(I128, 0)}, 128, llvm::Align(16), llvm::Align(16));
+  const ABIType *OveralignedInt =
+      makeRecord({FieldInfo(I32, 0)}, 128, llvm::Align(16), llvm::Align(4));
+  const ABIType *FiveInts =
+      makeRecord({FieldInfo(I32, 0), FieldInfo(I32, 32), FieldInfo(I32, 64),
+                  FieldInfo(I32, 96), FieldInfo(I32, 128)},
+                 160, llvm::Align(4), llvm::Align(4));
+
+  auto Classify = [&](const ABIType *Ty, bool BigEndian) {
+    AArch64ABIOptions Opts(AArch64ABIKind::AAPCS);
+    Opts.IsBigEndian = BigEndian;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Ty, {});
+    TI->computeInfo(*FI);
+    return FI->getReturnInfo();
+  };
+
+  expectDirectCoercedInteger(Classify(OneChar, /*BigEndian=*/false), 8);
+  expectDirectCoercedInteger(Classify(OneChar, /*BigEndian=*/true), 64);
+  expectDirectCoercedInteger(Classify(ThreeChars, /*BigEndian=*/false), 24);
+  expectDirectCoercedInteger(Classify(ThreeChars, /*BigEndian=*/true), 64);
+  expectDirectCoercedInteger(Classify(OneInt, /*BigEndian=*/false), 32);
+  expectDirectCoercedInteger(Classify(OneInt, /*BigEndian=*/true), 64);
+  expectDirectCoercedInteger(Classify(TwoInts, /*BigEndian=*/false), 64);
+  expectDirectCoercedInteger(Classify(TwoInts, /*BigEndian=*/true), 64);
+  expectDirectI64Pair(Classify(ThreeInts, /*BigEndian=*/false));
+  expectDirectI64Pair(Classify(ThreeInts, /*BigEndian=*/true));
+  expectDirectI64Pair(Classify(FourInts, /*BigEndian=*/false));
+  expectDirectCoercedInteger(Classify(AlignedI128, /*BigEndian=*/false), 128);
+  expectDirectCoercedInteger(Classify(OveralignedInt, /*BigEndian=*/false),
+                             128);
+  expectNaturalAlignIndirect(Classify(FiveInts, /*BigEndian=*/false),
+                             llvm::Align(4), /*ByVal=*/true);
+
+  AArch64ABIOptions Darwin(AArch64ABIKind::DarwinPCS);
+  std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Darwin);
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, OneChar, {});
+  TI->computeInfo(*FI);
+  expectDirectCoercedInteger(FI->getReturnInfo(), 8);
+}
+
 } // namespace
