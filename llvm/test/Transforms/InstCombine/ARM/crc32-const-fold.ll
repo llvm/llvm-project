@@ -391,10 +391,3 @@ define i32 @crc32_i32_5() {
   %crc = call i32 @llvm.arm.crc32w(i32 1009627414, i32 -745242819)
   ret i32 %crc
 }
-
-declare i32 @llvm.arm.crc32cb(i32, i32)
-declare i32 @llvm.arm.crc32ch(i32, i32)
-declare i32 @llvm.arm.crc32cw(i32, i32)
-declare i32 @llvm.arm.crc32b(i32, i32)
-declare i32 @llvm.arm.crc32h(i32, i32)
-declare i32 @llvm.arm.crc32w(i32, i32)
