@@ -477,7 +477,7 @@ exit:
   ret void
 }
 
-; An existing spill slot must be reused when a later demotion adds another use.
+; A PHI with both ordinary and EH PHI uses needs only one spill slot.
 ; CHECK-LABEL: @rethrow_phi_used(
 define void @rethrow_phi_used() personality ptr @__CxxFrameHandler3 {
 entry:
@@ -505,8 +505,8 @@ dispatch.inner:
 catch.inner:
   ; CHECK: catch.inner:
   ; CHECK-NEXT: %cp.inner = catchpad
-  ; CHECK-NEXT: [[StoreReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
   ; CHECK-NEXT: [[InnerReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
+  ; CHECK-NEXT: [[StoreReload:%[^ ]+]] = load i32, ptr [[InnerSlot]]
   ; CHECK-NEXT: call void @h(i32 [[InnerReload]])
   ; CHECK-NEXT: store i32 [[StoreReload]], ptr [[OuterSlot]]
   ; CHECK-NEXT: invoke void @f()
