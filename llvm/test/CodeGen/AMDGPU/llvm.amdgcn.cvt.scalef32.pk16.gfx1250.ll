@@ -10,7 +10,6 @@ declare <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.bf16(<16 x bfloat> %src, fl
 declare <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f16(<16 x half> %src, float %scale)
 
 define amdgpu_ps void @test_scalef32_pk16_bf6_f32_vv(<16 x float> %src, float %scale, ptr addrspace(1) %out) {
-; GFX1210-SDAG-LABEL: test_scalef32_pk16_bf6_f32_vv:
 ; GFX1250-SDAG-LABEL: test_scalef32_pk16_bf6_f32_vv:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
