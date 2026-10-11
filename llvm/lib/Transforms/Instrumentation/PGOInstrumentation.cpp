@@ -293,7 +293,7 @@ createIRLevelProfileFlagVar(const InstrumentationOptions &Opts, Module &M,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (valueOr(Opts.pgo_instrument_loop_entries, false))
     ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
-  if (Opts.profile_correlate == InstrProfCorrelator::DEBUG_INFO)
+  if (Opts.profile_correlate == ProfCorrelatorKind::DebugInfo)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (Opts.pgo_function_entry_coverage)
     ProfileVersion |=

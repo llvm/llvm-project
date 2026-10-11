@@ -10,7 +10,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTRUMENTATION_INSTRUMENTATIONOPTIONS_H
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
+#include "llvm/ProfileData/ProfCorrelatorKind.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <optional>
 
