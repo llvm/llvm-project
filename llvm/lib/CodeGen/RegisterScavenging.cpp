@@ -154,8 +154,10 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
 
   for (MachineBasicBlock::iterator I = From;; --I) {
     const MachineInstr &MI = *I;
+    const bool IsDebugInstr = MI.isDebugInstr();
 
-    Used.accumulate(MI);
+    if (!IsDebugInstr)
+      Used.accumulate(MI);
 
     if (I == To) {
       // See if one of the registers in RC wasn't used so far.
@@ -194,16 +196,18 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
           break;
         Survivor = AvilableReg;
       }
-      if (--InstrCountDown == 0)
+      if (!IsDebugInstr && --InstrCountDown == 0)
         break;
 
       // Keep searching when we find a vreg since the spilled register will
       // be usefull for this other vreg as well later.
       bool FoundVReg = false;
-      for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isReg() && MO.getReg().isVirtual()) {
-          FoundVReg = true;
-          break;
+      if (!IsDebugInstr) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (MO.isReg() && MO.getReg().isVirtual()) {
+            FoundVReg = true;
+            break;
+          }
         }
       }
       if (FoundVReg) {
