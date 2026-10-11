@@ -6423,8 +6423,8 @@ uint32_t ScalarEvolution::getMinTrailingZeros(const SCEV *S,
 }
 
 Align ScalarEvolution::getAlign(const SCEV *S, const Instruction *CtxI) {
-  return Align(1ULL << std::min(getMinTrailingZeros(S, CtxI),
-                                Value::MaxAlignmentExponent));
+  return Align::fromLog2(
+      std::min(getMinTrailingZeros(S, CtxI), Value::MaxAlignmentExponent));
 }
 
 /// Helper method to assign a range to V from metadata present in the IR.
