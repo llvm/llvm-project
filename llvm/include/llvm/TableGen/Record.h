@@ -2288,7 +2288,33 @@ public:
   // should only happen when this is true.
   bool isFinal() const { return IsFinal; }
 
-  void setFinal(bool Final) { IsFinal = Final; }
+  void setFinal(bool Final) {
+    IsFinal = Final;
+    clearCachedResults();
+  }
+
+  /// Return the cached result of resolving \p I, or nullptr.
+  virtual const Init *getCachedResult(const Init *I) { return nullptr; }
+
+  /// Cache the result of resolving \p I.
+  virtual void cacheResult(const Init *I, const Init *Result,
+                           bool FoundUnresolved) {}
+
+  /// Cache lookup for TrackUnresolvedResolvers wrapping this resolver.
+  virtual const Init *getCachedTrackedResult(const Init *I,
+                                             bool &FoundUnresolved) const {
+    return nullptr;
+  }
+
+  /// Cache insertion for TrackUnresolvedResolvers wrapping this resolver.
+  virtual void cacheTrackedResult(const Init *I, const Init *Result,
+                                  bool FoundUnresolved) {}
+
+  /// Called when a cached result has unresolved references.
+  virtual void noteUnresolved() {}
+
+protected:
+  virtual void clearCachedResults() {}
 };
 
 /// Resolve arbitrary mappings.
@@ -2302,11 +2328,20 @@ class MapResolver final : public Resolver {
   };
 
   DenseMap<const Init *, MappedValue> Map;
+  DenseMap<const Init *, const Init *> ResultCache;
+  DenseMap<const Init *, std::pair<const Init *, bool>> TrackedResultCache;
+  // Number of mapped values being resolved. Each is removed from Map while it
+  // is resolved to prevent infinite recursion, so results computed meanwhile
+  // may be incomplete and are not cached.
+  unsigned NumInProgress = 0;
 
 public:
   explicit MapResolver(const Record *CurRec = nullptr) : Resolver(CurRec) {}
 
-  void set(const Init *Key, const Init *Value) { Map[Key] = {Value, false}; }
+  void set(const Init *Key, const Init *Value) {
+    Map[Key] = {Value, false};
+    clearCachedResults();
+  }
 
   bool isComplete(Init *VarName) const {
     auto It = Map.find(VarName);
@@ -2315,22 +2350,91 @@ public:
   }
 
   const Init *resolve(const Init *VarName) override;
+
+  const Init *getCachedResult(const Init *I) override {
+    return NumInProgress ? nullptr : ResultCache.lookup(I);
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool FoundUnresolved) override {
+    if (!NumInProgress)
+      ResultCache[I] = Result;
+  }
+
+  const Init *getCachedTrackedResult(const Init *I,
+                                     bool &FoundUnresolved) const override {
+    if (NumInProgress)
+      return nullptr;
+    auto [Result, Unresolved] = TrackedResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
+  }
+
+  void cacheTrackedResult(const Init *I, const Init *Result,
+                          bool FoundUnresolved) override {
+    if (!NumInProgress)
+      TrackedResultCache[I] = {Result, FoundUnresolved};
+  }
+
+protected:
+  void clearCachedResults() override {
+    ResultCache.clear();
+    TrackedResultCache.clear();
+  }
 };
 
 /// Resolve all variables from a record except for unset variables.
 class RecordResolver final : public Resolver {
   DenseMap<const Init *, const Init *> Cache;
+  DenseMap<const Init *, const Init *> ResultCache;
+  DenseMap<const Init *, std::pair<const Init *, bool>> TrackedResultCache;
   SmallVector<const Init *, 4> Stack;
   const Init *Name = nullptr;
 
 public:
   explicit RecordResolver(const Record &R) : Resolver(&R) {}
 
-  void setName(const Init *NewName) { Name = NewName; }
+  void setName(const Init *NewName) {
+    Name = NewName;
+    clearCachedResults();
+  }
 
   const Init *resolve(const Init *VarName) override;
 
   bool keepUnsetBits() const override { return true; }
+
+  // Variables on the stack resolve to nullptr to prevent infinite recursion,
+  // so results computed meanwhile may be incomplete and are not cached.
+  const Init *getCachedResult(const Init *I) override {
+    return Stack.empty() ? ResultCache.lookup(I) : nullptr;
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool FoundUnresolved) override {
+    if (Stack.empty())
+      ResultCache[I] = Result;
+  }
+
+  const Init *getCachedTrackedResult(const Init *I,
+                                     bool &FoundUnresolved) const override {
+    if (!Stack.empty())
+      return nullptr;
+    auto [Result, Unresolved] = TrackedResultCache.lookup(I);
+    FoundUnresolved = Unresolved;
+    return Result;
+  }
+
+  void cacheTrackedResult(const Init *I, const Init *Result,
+                          bool FoundUnresolved) override {
+    if (Stack.empty())
+      TrackedResultCache[I] = {Result, FoundUnresolved};
+  }
+
+protected:
+  void clearCachedResults() override {
+    ResultCache.clear();
+    TrackedResultCache.clear();
+  }
 };
 
 /// Delegate resolving to a sub-resolver, but shadow some variable names.
@@ -2366,6 +2470,37 @@ public:
   bool foundUnresolved() const { return FoundUnresolved; }
 
   const Init *resolve(const Init *VarName) override;
+
+  // Tracking doesn't change results, so share the underlying resolver's cache.
+  const Init *getCachedResult(const Init *I) override {
+    bool Unresolved = false;
+    const Init *Result = getCachedTrackedResult(I, Unresolved);
+    if (Result && Unresolved)
+      noteUnresolved();
+    return Result;
+  }
+
+  void cacheResult(const Init *I, const Init *Result,
+                   bool FoundUnresolved) override {
+    cacheTrackedResult(I, Result, FoundUnresolved);
+  }
+
+  const Init *getCachedTrackedResult(const Init *I,
+                                     bool &FoundUnresolved) const override {
+    return R ? R->getCachedTrackedResult(I, FoundUnresolved) : nullptr;
+  }
+
+  void cacheTrackedResult(const Init *I, const Init *Result,
+                          bool FoundUnresolved) override {
+    if (R)
+      R->cacheTrackedResult(I, Result, FoundUnresolved);
+  }
+
+  void noteUnresolved() override {
+    FoundUnresolved = true;
+    if (R)
+      R->noteUnresolved();
+  }
 };
 
 /// Do not resolve anything, but keep track of whether a given variable was
