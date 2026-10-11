@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DataAccessProfGenerator.h"
 #include "ErrorHandling.h"
 #include "Options.h"
 #include "PerfReader.h"
@@ -88,6 +89,12 @@ static cl::opt<std::string> DataAccessProfileFilename(
              "-D`) consisting of memory access events."),
     cl::cat(ProfGenCategory));
 
+static cl::opt<bool> EmitMemProfDAP(
+    "memprof-dap",
+    cl::desc("Generate an indexed MemProf v4 data-access profile from "
+             "--data-access-perftrace and --binary."),
+    cl::cat(ProfGenCategory));
+
 static cl::opt<std::string> ETMPath("etm", cl::value_desc("etm"),
                                     cl::desc("Path of raw ETM trace file"),
                                     cl::cat(ProfGenCategory));
@@ -104,8 +111,14 @@ static cl::opt<std::string>
 
 // Validate the command line input.
 static void validateCommandLine() {
+  // --memprof-dap reads only --binary and --data-access-perftrace, so it skips
+  // the sample input checks below. A missing dump is reported when opened.
+  if (EmitMemProfDAP && DataAccessProfileFilename.empty())
+    exitWithError("--memprof-dap requires --data-access-perftrace=<perf "
+                  "report -D dump>");
+
   // Allow the missing perfscript if we only use to show binary disassembly.
-  if (!ShowDisassemblyOnly) {
+  if (!ShowDisassemblyOnly && !EmitMemProfDAP) {
     // Validate input profile is provided only once
     bool HasPerfData = PerfDataFilename.getNumOccurrences() > 0;
     bool HasPerfScript = PerfScriptFilename.getNumOccurrences() > 0;
@@ -192,6 +205,23 @@ int main(int argc, const char *argv[]) {
       std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
   Binary->load(TargetTriple);
 
+  std::optional<uint32_t> PIDFilter;
+  if (ProcessId.getNumOccurrences())
+    PIDFilter = ProcessId;
+
+  // A data-access profile needs only the binary and the perf dump. It does
+  // not go through the sample profile readers and generators below.
+  if (EmitMemProfDAP) {
+    std::error_code EC;
+    raw_fd_ostream OS(OutputFilename, EC, sys::fs::OF_None);
+    if (EC)
+      exitWithError(EC, OutputFilename);
+    if (Error E = generateDataAccessProf(*Binary, DataAccessProfileFilename, OS,
+                                         PIDFilter))
+      exitWithError(toString(std::move(E)));
+    return EXIT_SUCCESS;
+  }
+
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 
@@ -211,9 +241,6 @@ int main(int argc, const char *argv[]) {
     Generator->generateProfile();
     Generator->write();
   } else {
-    std::optional<uint32_t> PIDFilter;
-    if (ProcessId.getNumOccurrences())
-      PIDFilter = ProcessId;
     InputFile File = getInputFile();
     const ContextSampleCounterMap *Counters = nullptr;
     bool ProfileIsCS = false;
