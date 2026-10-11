@@ -108,6 +108,11 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+static cl::opt<bool> CompactSlotIndexes(
+    "greedy-compact-slot-indexes", cl::Hidden, cl::init(false),
+    cl::desc("Drop SlotIndexes entries for erased instructions before "
+             "allocating, so live range sizes reflect real code distance"));
+
 // This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
@@ -2968,7 +2973,13 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
-  Indexes->packIndexes();
+  if (CompactSlotIndexes) {
+    SmallVector<SlotIndex, 0> Referenced;
+    LIS->appendReferencedIndexes(Referenced);
+    Indexes->compactIndexes(Referenced);
+  } else {
+    Indexes->packIndexes();
+  }
 
   initializeCSRCost();
 
