@@ -160,7 +160,7 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
     case 64:
       return PMI_GPR64;
     case 128:
-      return PMI_VEC128;
+      return PMI_VECR128;
       break;
     default:
       llvm_unreachable("Unsupported register size.");
@@ -168,11 +168,11 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
   } else if (Ty.isScalar()) {
     switch (Ty.getSizeInBits()) {
     case 32:
-      return HasSSE1 ? PMI_FP32 : PMI_PSR32;
+      return HasSSE1 ? PMI_VECR32 : PMI_PSR32;
     case 64:
-      return HasSSE2 ? PMI_FP64 : PMI_PSR64;
+      return HasSSE2 ? PMI_VECR64 : PMI_PSR64;
     case 128:
-      return PMI_VEC128;
+      return PMI_VECR128;
     case 80:
       return PMI_PSR80;
     default:
@@ -181,11 +181,11 @@ X86GenRegisterBankInfo::getPartialMappingIdx(const MachineInstr &MI,
   } else {
     switch (Ty.getSizeInBits()) {
     case 128:
-      return PMI_VEC128;
+      return PMI_VECR128;
     case 256:
-      return PMI_VEC256;
+      return PMI_VECR256;
     case 512:
-      return PMI_VEC512;
+      return PMI_VECR512;
     default:
       llvm_unreachable("Unsupported register size.");
     }
@@ -428,7 +428,7 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_IMPLICIT_DEF: {
-    // we going to try to map 32/64/80 bit to PMI_FP32/PMI_FP64/PMI_FP80
+    // we going to try to map 32/64/80 bit to PMI_VECR32/PMI_VECR64/PMI_FP80
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
     if (Size != 32 && Size != 64 && Size != 80)
       break;
