@@ -372,6 +372,9 @@ def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;
 def z_sdivrem           : SDNode<"SystemZISD::SDIVREM", SDT_ZGR128Binary>;
 def z_udivrem           : SDNode<"SystemZISD::UDIVREM", SDT_ZGR128Binary>;
 
+// Create a GR128 from two i64 GPRs. The first operand is the high part.
+def z_pair128           : SDNode<"SystemZISD::PAIR128", SDT_ZJoinDwords>;
+
 // Add/subtract with overflow/carry.  These have the same operands as
 // the corresponding standard operations, except with the carry flag
 // replaced by a condition code value.

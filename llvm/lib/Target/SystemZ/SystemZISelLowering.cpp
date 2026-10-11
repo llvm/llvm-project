@@ -2034,8 +2034,7 @@ static SDValue lowerI128ToGR128(SelectionDAG &DAG, SDValue In) {
     std::tie(Lo, Hi) = DAG.SplitScalar(In, DL, MVT::i64, MVT::i64);
   }
 
-  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, DL, MVT::v2i64, Hi, Lo);
-  return SDValue(Pair, 0);
+  return DAG.getNode(SystemZISD::PAIR128, DL, MVT::v2i64, Hi, Lo);
 }
 
 static SDValue lowerGR128ToI128(SelectionDAG &DAG, SDValue In) {
@@ -10580,56 +10579,6 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   return DoneMBB;
 }
 
-// Emit a move from two GR64s to a GR128.
-MachineBasicBlock *
-SystemZTargetLowering::emitPair128(MachineInstr &MI,
-                                   MachineBasicBlock *MBB) const {
-  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-  const DebugLoc &DL = MI.getDebugLoc();
-
-  Register Dest = MI.getOperand(0).getReg();
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest)
-      .add(MI.getOperand(1))
-      .addImm(SystemZ::subreg_h64)
-      .add(MI.getOperand(2))
-      .addImm(SystemZ::subreg_l64);
-  MI.eraseFromParent();
-  return MBB;
-}
-
-// Emit an extension from a GR64 to a GR128.  ClearEven is true
-// if the high register of the GR128 value must be cleared or false if
-// it's "don't care".
-MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
-                                                     MachineBasicBlock *MBB,
-                                                     bool ClearEven) const {
-  MachineFunction &MF = *MBB->getParent();
-  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  DebugLoc DL = MI.getDebugLoc();
-
-  Register Dest = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  Register In128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
-
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), In128);
-  if (ClearEven) {
-    Register NewIn128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
-    Register Zero64 = MRI.createVirtualRegister(&SystemZ::GR64BitRegClass);
-
-    BuildMI(*MBB, MI, DL, TII->get(SystemZ::LLILL), Zero64)
-      .addImm(0);
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), NewIn128)
-      .addReg(In128).addReg(Zero64).addImm(SystemZ::subreg_h64);
-    In128 = NewIn128;
-  }
-  BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Dest)
-    .addReg(In128).addReg(Src).addImm(SystemZ::subreg_l64);
-
-  MI.eraseFromParent();
-  return MBB;
-}
-
 MachineBasicBlock *
 SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
@@ -11345,12 +11294,6 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::UCmp128Hi:
     return emitICmp128Hi(MI, MBB, true);
 
-  case SystemZ::PAIR128:
-    return emitPair128(MI, MBB);
-  case SystemZ::AEXT128:
-    return emitExt128(MI, MBB, false);
-  case SystemZ::ZEXT128:
-    return emitExt128(MI, MBB, true);
 
   case SystemZ::ATOMIC_SWAPW:
     return emitAtomicLoadBinary(MI, MBB, 0);
