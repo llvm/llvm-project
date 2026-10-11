@@ -19,6 +19,7 @@
 #include <cerrno>
 #include <charconv>
 #include <sys/socket.h>
+#include <system_error>
 
 using namespace orc_rt;
 
