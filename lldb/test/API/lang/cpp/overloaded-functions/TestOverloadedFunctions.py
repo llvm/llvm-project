@@ -8,8 +8,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class OverloadedFunctionsTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def test_with_run_command(self):
         """Test that functions with the same name are resolved correctly"""
         self.build()

@@ -100,7 +100,7 @@ define amdgpu_kernel void @test1_fma_v2f16(ptr addrspace(3) %a, ptr addrspace(3)
 define amdgpu_kernel void @mul_scalar_v2f16(ptr addrspace(3) %a, half %scalar, ptr addrspace(3) %c) {
 ; GCN-LABEL: @mul_scalar_v2f16(
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
-; GCN-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i32 0
+; GCN-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i64 0
 ; GCN-NEXT:    [[TMP3:%.*]] = shufflevector <2 x half> [[TMP2]], <2 x half> poison, <2 x i32> zeroinitializer
 ; GCN-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP1]], [[TMP3]]
 ; GCN-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(3) [[C:%.*]], align 2
@@ -174,8 +174,8 @@ define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(ptr addrspace(3) %a, ptr 
 ; GCN-NEXT:    [[I4:%.*]] = load half, ptr addrspace(3) [[ARRAYIDX4]], align 2
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[A:%.*]], align 2
 ; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(3) [[C:%.*]], align 2
-; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i32 0
-; GCN-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> [[TMP3]], half [[I4]], i32 1
+; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[I1_FABS]], i64 0
+; GCN-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> [[TMP3]], half [[I4]], i64 1
 ; GCN-NEXT:    [[TMP5:%.*]] = call <2 x half> @llvm.fma.v2f16(<2 x half> [[TMP1]], <2 x half> [[TMP4]], <2 x half> [[TMP2]])
 ; GCN-NEXT:    store <2 x half> [[TMP5]], ptr addrspace(3) [[D:%.*]], align 2
 ; GCN-NEXT:    ret void

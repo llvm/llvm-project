@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx802 <%s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal <%s | FileCheck %s
 
 ; Test that the mnemonic names for PAL metadata user data registers work in a
 ; full tessellation-and-geometry pipeline, compiled on gfx8 so it uses all six

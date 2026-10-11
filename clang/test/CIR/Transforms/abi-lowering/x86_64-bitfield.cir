@@ -1,0 +1,93 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
+!rec_BitPad = !cir.struct<"BitPad" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>, pad !cir.array<!u8i x 15>}>
+!rec_InnerBits = !cir.struct<"InnerBits" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 32>]>}>
+!rec_OuterBitPad = !cir.struct<"OuterBitPad" {data !rec_InnerBits, pad !cir.array<!u8i x 12>}>
+!rec_ArrBitPad = !cir.struct<"ArrBitPad" {data !cir.array<!rec_InnerBits x 2>, pad !cir.array<!u8i x 8>}>
+!rec_BFPad = !cir.struct<"BFPad" packed {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>, data !s32i, pad !cir.array<!u8i x 3>}>
+!rec_NamedPlusZeroWidth = !cir.struct<"NamedPlusZeroWidth" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>, pad !cir.array<!u8i x 3>, empty !cir.bitfield<[#cir.bitfield_decl<!s32i, 0, unnamed>]>, data !s32i, pad !cir.array<!u8i x 8>}>
+!rec_Run = !cir.struct<"Run" {bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s64i, 27>, #cir.bitfield_decl<!s32i, 3, unnamed>]>}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {
+    ArrBitPad = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                   has_trivial_dtor = true, record_align = 16>,
+    BFPad = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                               has_trivial_dtor = true, record_align = 8>,
+    BitPad = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                has_trivial_dtor = true, record_align = 16>,
+    InnerBits = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                   has_trivial_dtor = true, record_align = 4>,
+    NamedPlusZeroWidth = #cir.record_layout<
+        arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+        record_align = 16>,
+    OuterBitPad = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                     has_trivial_dtor = true,
+                                     record_align = 16>,
+    Run = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  },
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // `struct BitPad { int a : 8; } __attribute__((aligned(16)));`  The unit is
+  // one byte, but the declaration reaches three bytes past it, so the coercion
+  // cannot narrow to the unit and takes the whole eightbyte.
+  cir.func @take_bit_pad(%arg0: !rec_BitPad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_pad(%arg0: !u64i)
+
+  // The same record with a unit as wide as the declaration does narrow, and
+  // the answer holds through a member record.
+  cir.func @take_outer_bit_pad(%arg0: !rec_OuterBitPad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_outer_bit_pad(%arg0: !u32i)
+
+  // Two of those units fill the eightbyte, so there is nothing to narrow to.
+  cir.func @take_arr_bit_pad(%arg0: !rec_ArrBitPad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_arr_bit_pad(%arg0: !u64i)
+
+  // Packing puts the int at offset 1, off its own alignment, which sends the
+  // record to memory before any coercion is chosen.
+  cir.func @take_bf_pad(%arg0: !rec_BFPad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bf_pad(%arg0: !cir.ptr<!rec_BFPad> {llvm.align = 8 : i64, llvm.byval = !rec_BFPad, llvm.noundef})
+
+  // A zero-width bit-field takes no part in assigning eightbyte classes, but
+  // the type it was declared with still marks the bits it sits in as read, so
+  // the coercion does not narrow to the int ahead of it.
+  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_named_plus_zero_width(%arg0: !u64i)
+
+  // `struct Run { int a : 4; long long b : 27; int : 3; };`  One unit holds
+  // all three fields, and each is classified from its own width and declared
+  // type rather than from the unit they share.
+  cir.func @take_run(%arg0: !rec_Run) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_run(%arg0: !u64i)
+}

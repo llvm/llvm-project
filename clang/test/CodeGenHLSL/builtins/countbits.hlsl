@@ -71,6 +71,12 @@ uint4 test_countbits_uint4(uint4 p0)
 	return countbits(p0);
 }
 
+// CHECK-LABEL: test_countbits_uint5
+// CHECK: call <5 x i32> @llvm.ctpop.v5i32
+vector<uint, 5> test_countbits_uint5(vector<uint, 5> p0) {
+	return countbits(p0);
+}
+
 // CHECK-LABEL: test_countbits_long
 // CHECK: [[A:%.*]] = call i64 @llvm.ctpop.i64
 // CHECK-NEXT: trunc i64 [[A]] to i32

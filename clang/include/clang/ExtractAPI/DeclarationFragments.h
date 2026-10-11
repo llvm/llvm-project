@@ -204,6 +204,10 @@ public:
     return *this;
   }
 
+  bool endsWithKeyword() const {
+    return !Fragments.empty() && Fragments.back().Kind == FragmentKind::Keyword;
+  }
+
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after

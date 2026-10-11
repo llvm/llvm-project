@@ -21,8 +21,8 @@ define i1 @or_reduction_nonzero(ptr %p) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i8> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i8> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i8> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -98,8 +98,8 @@ define i1 @or_reduction_zero(ptr %p) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i8> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i8> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i8> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -175,8 +175,8 @@ define i1 @or_reduction_nonzero_multiuse(ptr %p, ptr %out) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <2 x i8> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <2 x i8> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <2 x i8> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i8> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[O:%.*]] = or i8 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    store i8 [[O]], ptr [[OUT]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[O]], 0

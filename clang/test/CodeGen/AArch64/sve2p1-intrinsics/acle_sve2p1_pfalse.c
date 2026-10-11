@@ -17,13 +17,11 @@
 
 // CHECK-LABEL: @test_svpfalse_c(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> zeroinitializer)
-// CHECK-NEXT:    ret target("aarch64.svcount") [[TMP0]]
+// CHECK-NEXT:    ret target("aarch64.svcount") zeroinitializer
 //
 // CPP-CHECK-LABEL: @_Z15test_svpfalse_cv(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call target("aarch64.svcount") @llvm.aarch64.sve.convert.from.svbool.taarch64.svcountt(<vscale x 16 x i1> zeroinitializer)
-// CPP-CHECK-NEXT:    ret target("aarch64.svcount") [[TMP0]]
+// CPP-CHECK-NEXT:    ret target("aarch64.svcount") zeroinitializer
 //
 svcount_t test_svpfalse_c(void) ATTR
 {

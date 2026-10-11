@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=livedebugvars -o %t
+; RUN: llc %s -stop-before=msp430-asm-printer -o %t
 ; RUN: cat %t | FileCheck %s
 ;
 ; Test that we can emit debug info for large values that are split

@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 struct Input {
   std::size_t align;
@@ -20,7 +21,7 @@ struct Input {
   std::size_t buffer_size;
 };
 
-static void BM_align(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_align(benchmark::State& state) {
   char buffer[1024];
   Input input{};
   void* ptr               = buffer + 123;

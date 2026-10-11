@@ -148,11 +148,12 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   return Result;
 }
 
-AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI) {
   AliasResult Result = AliasResult::MayAlias;
 
   for (const auto &AA : AAs) {
-    Result = AA->aliasErrno(Loc, M);
+    Result = AA->aliasErrno(Loc, CtxI);
     if (Result != AliasResult::MayAlias)
       break;
   }
@@ -610,7 +611,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
     // it.
     if (AR == AliasResult::NoAlias) {
       // Synchronization effects may affect locations that do not alias.
-      if (isStrongerThanMonotonic(CX->getSuccessOrdering()))
+      if (isStrongerThanMonotonic(CX->getMergedOrdering()))
         return getSyncEffects(this, Loc, AAQI);
       return ModRefInfo::NoModRef;
     }
@@ -786,8 +787,9 @@ INITIALIZE_PASS(ExternalAAWrapperPass, "external-aa", "External Alias Analysis",
                 false, true)
 
 ImmutablePass *
-llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
-  return new ExternalAAWrapperPass(std::move(Callback));
+llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback,
+                                  bool RunEarly) {
+  return new ExternalAAWrapperPass(std::move(Callback), RunEarly);
 }
 
 AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}

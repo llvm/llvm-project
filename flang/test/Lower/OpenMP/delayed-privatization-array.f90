@@ -102,17 +102,8 @@ program main
 !$omp end parallel
 end program
 
+! A constant-size, default-lower-bound, trivial-element private array is
+! privatized unboxed as a plain fir.array with no init region. The trailing
+! end-of-line anchor confirms there is no `init {` region:
 ! ONE_DIM_DEFAULT_LB-LABEL: omp.private {type = private}
-! ONE_DIM_DEFAULT_LB-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.array<10xi32>>]] init {
-
-! ONE_DIM_DEFAULT_LB-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.array<10xi32>>>]], %[[PRIV_BOX_ALLOC:.*]]: [[TYPE]]):
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[C10:.*]] = arith.constant 10 : index
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE:.*]] = fir.shape %[[C10]]
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[ARRAY_ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[DECL:.*]]:2 = hlfir.declare %[[ARRAY_ALLOC]](%[[SHAPE]])
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[ONE:.*]] = arith.constant 1 : index
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[TEN:.*]] = arith.constant 10 : index
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[ONE]], %[[TEN]]
-! ONE_DIM_DEFAULT_LB-NEXT:   %[[EMBOX:.*]] = fir.embox %[[DECL]]#0(%[[SHAPE_SHIFT]])
-! ONE_DIM_DEFAULT_LB-NEXT:   fir.store %[[EMBOX]] to %[[PRIV_BOX_ALLOC]]
-! ONE_DIM_DEFAULT_LB-NEXT:   omp.yield(%[[PRIV_BOX_ALLOC]] : [[TYPE]])
+! ONE_DIM_DEFAULT_LB-SAME: @{{.*}} : !fir.array<10xi32>{{$}}

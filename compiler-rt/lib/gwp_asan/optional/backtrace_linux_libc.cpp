@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <assert.h>
-#include <execinfo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,6 +16,9 @@
 #include "gwp_asan/optional/backtrace.h"
 #include "gwp_asan/optional/printf.h"
 #include "gwp_asan/options.h"
+
+#if __has_include(<execinfo.h>)
+#include <execinfo.h>
 
 namespace {
 size_t Backtrace(uintptr_t *TraceBuffer, size_t Size) {
@@ -65,3 +67,19 @@ SegvBacktrace_t getSegvBacktraceFunction() { return SegvBacktrace; }
 
 } // namespace backtrace
 } // namespace gwp_asan
+
+#else // !__has_include(<execinfo.h>)
+
+// No execinfo.h (e.g. musl libc) -- provide null stubs so GWP-ASan still
+// functions as a guard allocator without stack-trace capture.
+namespace gwp_asan {
+namespace backtrace {
+
+options::Backtrace_t getBacktraceFunction() { return nullptr; }
+PrintBacktrace_t getPrintBacktraceFunction() { return nullptr; }
+SegvBacktrace_t getSegvBacktraceFunction() { return nullptr; }
+
+} // namespace backtrace
+} // namespace gwp_asan
+
+#endif // __has_include(<execinfo.h>)

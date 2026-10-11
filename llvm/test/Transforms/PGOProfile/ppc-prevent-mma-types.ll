@@ -1,4 +1,4 @@
-; RUN: opt --vec-extabi=true -passes='default<O3>' -mcpu=pwr10 \
+; RUN: opt -target-abi=vec-extabi -passes='default<O3>' -mcpu=pwr10 \
 ; RUN:   -pgo-kind=pgo-instr-gen-pipeline -mtriple=powerpc-ibm-aix -S < %s | \
 ; RUN: FileCheck %s
 ; RUN: opt -passes='default<O3>' -mcpu=pwr10 -pgo-kind=pgo-instr-gen-pipeline \

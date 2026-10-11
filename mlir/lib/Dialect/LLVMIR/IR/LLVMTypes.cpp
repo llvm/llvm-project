@@ -560,10 +560,11 @@ LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
   for (Type element : getBody()) {
     uint64_t elementAlignment =
         isPacked() ? 1 : dataLayout.getTypeABIAlignment(element);
-    // Add padding to the struct size to align it to the abi alignment of the
-    // element type before than adding the size of the element.
+    // Add padding to align the element unless the struct is packed.
     structSize = llvm::alignTo(structSize, elementAlignment);
-    structSize += dataLayout.getTypeSize(element);
+    // Elements occupy their allocation size, even in packed structs.
+    structSize += llvm::alignTo(dataLayout.getTypeSize(element),
+                                dataLayout.getTypeABIAlignment(element));
 
     // The alignment requirement of a struct is equal to the strictest alignment
     // requirement of its elements.

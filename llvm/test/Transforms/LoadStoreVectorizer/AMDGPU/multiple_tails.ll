@@ -41,17 +41,17 @@ define amdgpu_kernel void @interleave_get_longest(i32 %arg) {
 ; GCN-NEXT:    [[TEMP2:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[A1]]
 ; GCN-NEXT:    [[TEMP4:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[A3]]
 ; GCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP1]], align 4
-; GCN-NEXT:    [[L21:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; GCN-NEXT:    [[L12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; GCN-NEXT:    [[L21:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; GCN-NEXT:    [[L12:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; GCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) [[TEMP1]], align 4
 ; GCN-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP2]], align 4
-; GCN-NEXT:    [[L33:%.*]] = extractelement <2 x i32> [[TMP2]], i32 0
-; GCN-NEXT:    [[L44:%.*]] = extractelement <2 x i32> [[TMP2]], i32 1
+; GCN-NEXT:    [[L33:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
+; GCN-NEXT:    [[L44:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
 ; GCN-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr addrspace(3) [[TEMP4]], align 4
-; GCN-NEXT:    [[L55:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-; GCN-NEXT:    [[L66:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-; GCN-NEXT:    [[L77:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
-; GCN-NEXT:    [[L88:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
+; GCN-NEXT:    [[L55:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
+; GCN-NEXT:    [[L66:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
+; GCN-NEXT:    [[L77:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
+; GCN-NEXT:    [[L88:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
 ; GCN-NEXT:    ret void
 ;
   %a1 = add i32 %arg, 1

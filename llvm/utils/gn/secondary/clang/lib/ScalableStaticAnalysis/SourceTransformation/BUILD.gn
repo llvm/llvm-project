@@ -11,6 +11,7 @@ static_library("SourceTransformation") {
   sources = [
     "SARIFTransformationReportFormat.cpp",
     "TransformationRegistry.cpp",
+    "Transformations/CppBoundedBuffers.cpp",
     "YAMLSourceEditFormat.cpp",
   ]
 }

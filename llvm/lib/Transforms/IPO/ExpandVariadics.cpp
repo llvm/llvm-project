@@ -364,9 +364,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
   if (!ABI->enableForTarget())
     return Changed;
 
-  auto &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
 
   // Lowering needs to run on all functions exactly once.
   // Optimize could run on functions containing va_start exactly once.
@@ -703,7 +702,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       // The va_arg lowering loads through a pointer. Set up an alloca to aim
       // that pointer at.
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       Value *CallerCopy =
           Builder.CreateAlloca(UnderlyingType, nullptr, "IndirectAlloca");
 
@@ -769,7 +768,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   Builder.SetInsertPointPastAllocas(CBF);
 
   // SetCurrentDebugLocation when the builder SetInsertPoint method does not
-  Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+  Builder.SetCurrentDebugLocation(CB->getDebugLoc());
 
   // The awkward construction here is to set the alignment on the instance
   AllocaInst *Alloced = Builder.Insert(
@@ -793,7 +792,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
     if (!ABI->vaListPassedInSSARegister()) {
       Type *VaListTy = ABI->vaListType(Ctx);
       Builder.SetInsertPointPastAllocas(CBF);
-      Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
+      Builder.SetCurrentDebugLocation(CB->getDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
       Builder.CreateLifetimeStart(VaList);
@@ -849,7 +848,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   NewCB->setDebugLoc(DebugLoc());
 
   // DeadArgElim and ArgPromotion copy exactly this metadata
-  NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+  NewCB->copyProfileAndDebugMetadata(*CB);
 
   CB->replaceAllUsesWith(NewCB);
   CB->eraseFromParent();
@@ -1067,8 +1066,13 @@ struct SPIRV final : public VariadicABIInfo {
     StringRef DemangledName(Demangled);
 
     // Skip any SPIR-V builtins.
+    // Note: an unmangled C `printf` declaration demangles to "printf" with no
+    // argument list, so the "printf(" prefix check below misses it. Match the
+    // bare name as well so OpenCL/HIP printf (emitted unmangled) is left as a
+    // variadic call for the backend's OpenCL.std printf lowering to expand
+    // inline, rather than being packed into a vararg buffer here.
     if (DemangledName.starts_with("__spirv_") ||
-        DemangledName.starts_with("printf("))
+        DemangledName.starts_with("printf(") || F->getName() == "printf")
       return true;
 
     return false;

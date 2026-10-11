@@ -1,6 +1,6 @@
 ;  RUN: sed -e "s,SRC_COMPDIR,%p/Inputs,g" %s > %t.ll
 ;  RUN: llc  -o %t.o -filetype=obj -mtriple=hexagon-unknown-elf  %t.ll
-;  RUN: llvm-objdump  -d -l %t.o | FileCheck --check-prefix="LINES" %t.ll
+;  RUN: llvm-objdump  -d -l %t.o | FileCheck --check-prefix="LINES" -DSEP=%{fs-sep} %t.ll
 ;  RUN: llvm-objdump  -d -S %t.o | FileCheck --check-prefix="SOURCE" %t.ll
 ; ModuleID = 'source-interleave-hexagon.bc'
 source_filename = "source-interleave-hexagon.c"
@@ -67,7 +67,8 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocation(line: 8, column: 3, scope: !14)
 ; LINES: <main>:
 ; LINES-NEXT: main():
-; LINES-NEXT: SRC_COMPDIR/source-interleave-hexagon.c:6
+;; Show that directory separators are normalized to the preferred character.
+; LINES-NEXT: Inputs[[SEP]]source-interleave-hexagon.c:6
 
 ; SOURCE: <main>:
 ; SOURCE-NEXT: int main() {

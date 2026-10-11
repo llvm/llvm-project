@@ -1,0 +1,18 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @lang_addrspace_ptr(
+      %arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+    cir.return
+  }
+
+}
+
+// CHECK: op x86_64 calling-convention lowering not yet implemented for type

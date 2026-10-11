@@ -66,15 +66,3 @@ entry:
   %0 = tail call i64 @llvm.llrint.i64.f64(double %x)
   ret i64 %0
 }
-
-define i64 @testmsxq_builtin(fp128 %x) {
-; CHECK-LABEL: testmsxq_builtin:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl llrintl
-; CHECK-NEXT:    pop {r11, pc}
-entry:
-  %0 = tail call i64 @llvm.llrint.i64.f128(fp128 %x)
-  ret i64 %0
-}

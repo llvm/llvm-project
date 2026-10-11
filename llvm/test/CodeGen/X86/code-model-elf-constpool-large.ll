@@ -1,20 +1,39 @@
 ; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=0 -o %t2
+; RUN: llvm-readelf -S %t2 | FileCheck %s --check-prefix=MED
+
+; RUN: llc < %s -relocation-model=pic -code-model=medium -large-data-threshold=0 | FileCheck %s --check-prefix=ASM-MED
+; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=ASM-LARGE
 
 ; Verify that anonymous constant pool entries get SHF_X86_64_LARGE
-; and are placed in .lrodata.cst* sections under the large code model.
+; and are placed in .lrodata.cst* sections under the large code model,
+; but stay in .rodata.cst* under the medium code model.
 
 ; CHECK: .lrodata.cst16 {{.*}} AMl
 ; CHECK: .lrodata.cst4  {{.*}} AMl
+; CHECK: .lrodata       {{.*}} Al
+
+; MED: .rodata.cst16 {{.*}} AM
+; MED: .rodata.cst4  {{.*}} AM
+; MED: .rodata       {{.*}} A {{.*}}
+
+; ASM-MED: movaps .LCPI0_0(%rip),
+; ASM-LARGE: movabsq $.LCPI0_0@GOTOFF,
 
 ; Also verify the suffixed path (via -partition-static-data-sections).
 ; The .hot suffix requires profile information (see !prof metadata below)
 ; so that the partitioner can distinguish hot from cold constant pool entries.
 ; RUN: llc < %s -relocation-model=pic -code-model=large \
 ; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX
+; RUN: llc < %s -relocation-model=pic -code-model=medium -large-data-threshold=0 \
+; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX-MED
 
 ; SUFFIX: .section .lrodata.cst16.hot.,"aMl",@progbits,16
 ; SUFFIX: .section .lrodata.cst4,"aMl",@progbits,4
+
+; SUFFIX-MED: .section .rodata.cst16.hot.,"aM",@progbits,16
+; SUFFIX-MED: .section .rodata.cst4,"aM",@progbits,4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
@@ -48,6 +67,14 @@ exit:
 define float @scalar_const(float %x) {
   %r = fadd float %x, 1.0
   ret float %r
+}
+
+; A 64-byte vector constant is not mergeable and goes to .lrodata.
+define <16 x float> @wide() "target-features"="+avx512f" {
+  ret <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0,
+                    float 5.0, float 6.0, float 7.0, float 8.0,
+                    float 9.0, float 10.0, float 11.0, float 12.0,
+                    float 13.0, float 14.0, float 15.0, float 16.0>
 }
 
 !llvm.module.flags = !{!1}

@@ -869,19 +869,9 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
                callee, ReturnValueSlot(), args);
 }
 
-/// Determine whether the given architecture supports unaligned atomic
-/// accesses.  They don't have to be fast, just faster than a function
-/// call and a mutex.
-static bool hasUnalignedAtomics(llvm::Triple::ArchType arch) {
-  // FIXME: Allow unaligned atomic load/store on x86.  (It is not
-  // currently supported by the backend.)
-  return false;
-}
-
 /// Return the maximum size that permits atomic accesses for the given
 /// architecture.
-static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM,
-                                        llvm::Triple::ArchType arch) {
+static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM) {
   // ARM has 8-byte atomic accesses, but it's not clear whether we
   // want to rely on them here.
 
@@ -1042,25 +1032,22 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // If the size of the ivar is not a power of two, give up.  We don't
   // want to get into the business of doing compare-and-swaps.
-  if (!IvarSize.isPowerOfTwo()) {
+  if (!IvarSize.isZero() && !IvarSize.isPowerOfTwo()) {
     Kind = CopyStruct;
     return;
   }
 
-  llvm::Triple::ArchType arch =
-    CGM.getTarget().getTriple().getArch();
-
   // Most architectures require memory to fit within a single cache
   // line, so the alignment has to be at least the size of the access.
   // Otherwise we have to grab a lock.
-  if (IvarAlignment < IvarSize && !hasUnalignedAtomics(arch)) {
+  if (IvarAlignment < IvarSize) {
     Kind = CopyStruct;
     return;
   }
 
   // If the ivar's size exceeds the architecture's maximum atomic
   // access size, we have to use CopyStruct.
-  if (IvarSize > getMaxAtomicAccessSize(CGM, arch)) {
+  if (IvarSize > getMaxAtomicAccessSize(CGM)) {
     Kind = CopyStruct;
     return;
   }
@@ -3048,13 +3035,12 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
     value = doFallback(CGF, value);
   } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
-    CGF.Builder.SetInsertPoint(call->getParent(),
-                               ++llvm::BasicBlock::iterator(call));
+    CGF.Builder.SetInsertPoint(++llvm::BasicBlock::iterator(call));
     value = doAfterCall(CGF, value);
   } else if (llvm::InvokeInst *invoke = dyn_cast<llvm::InvokeInst>(value)) {
     // Place the retain at the beginning of the normal destination block.
     llvm::BasicBlock *BB = invoke->getNormalDest();
-    CGF.Builder.SetInsertPoint(BB, BB->begin());
+    CGF.Builder.SetInsertPoint(BB->begin());
     value = doAfterCall(CGF, value);
 
   // Bitcasts can arise because of related-result returns.  Rewrite
@@ -3062,7 +3048,7 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
   } else if (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(value)) {
     // Change the insert point to avoid emitting the fall-back call after the
     // bitcast.
-    CGF.Builder.SetInsertPoint(bitcast->getParent(), bitcast->getIterator());
+    CGF.Builder.SetInsertPoint(bitcast->getIterator());
     llvm::Value *operand = bitcast->getOperand(0);
     operand = emitARCOperationAfterCall(CGF, operand, doAfterCall, doFallback);
     bitcast->setOperand(0, operand);

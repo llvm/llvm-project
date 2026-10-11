@@ -5,11 +5,11 @@ define i32 @test(i32 %v7.0.v7.0.2979.fr.1) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[V7_0_V7_0_2979_FR_1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[V7_0_V7_0_2979_FR_1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[V7_0_V7_0_2979_FR_1]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <4 x i32> [[TMP0]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP3]], i64 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = urem <4 x i32> [[TMP3]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <4 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer

@@ -1,7 +1,7 @@
 ; RUN: not llvm-as -disable-output <%s 2>&1 | FileCheck %s
 ; CHECK:      assembly parsed, but does not verify
 ; CHECK-NEXT: DICompileUnit not listed in llvm.dbg.cu
-; CHECK-NEXT: !0 = distinct !DICompileUnit(language: DW_LANG_Fortran77, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
+; CHECK-NEXT: !{{[0-9]+}} = distinct !DICompileUnit(language: DW_LANG_Fortran77, file: !{{[0-9]+}}, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 
 !named = !{!1}
 !llvm.module.flags = !{!0}

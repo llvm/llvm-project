@@ -31,6 +31,10 @@ public:
   NativeRegisterContextLinux_x86(const ArchSpec &target_arch,
                                     NativeThreadProtocol &native_thread);
 
+  uint32_t GetRegisterCount() const override;
+
+  const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg) const override;
+
   uint32_t GetRegisterSetCount() const override;
 
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;
@@ -106,6 +110,7 @@ private:
   YMM m_ymm_set;
   MPX m_mpx_set;
   RegInfo m_reg_info;
+  RegisterInfo m_i386_thread_pointer_info = {};
   uint64_t m_gpr_x86_64[x86_64_with_base::k_num_gpr_registers];
   uint32_t m_fctrl_offset_in_userarea;
 
@@ -131,6 +136,12 @@ private:
   bool CopyMPXtoXSTATE(uint32_t reg);
 
   bool IsMPX(uint32_t reg_index) const;
+
+  bool IsThreadPointer(const RegisterInfo &reg_info) const;
+
+  Status ReadThreadPointer(RegisterValue &reg_value);
+
+  uint32_t GetRegisterInfoIndex(uint32_t lldb_reg) const;
 
   void UpdateXSTATEforWrite(uint32_t reg_index);
 

@@ -263,8 +263,8 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    addq %rdx, %rax
 ; SSE2-NEXT:    shrq $4, %rax
 ; SSE2-NEXT:    leaq (%rax,%rax,2), %rdx
-; SSE2-NEXT:    shlq $3, %rdx
-; SSE2-NEXT:    subq %rdx, %rax
+; SSE2-NEXT:    negq %rdx
+; SSE2-NEXT:    leaq (%rax,%rdx,8), %rax
 ; SSE2-NEXT:    addq %rcx, %rax
 ; SSE2-NEXT:    movq %rax, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
@@ -302,8 +302,8 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    addq %rdx, %rax
 ; SSE4-NEXT:    shrq $4, %rax
 ; SSE4-NEXT:    leaq (%rax,%rax,2), %rdx
-; SSE4-NEXT:    shlq $3, %rdx
-; SSE4-NEXT:    subq %rdx, %rax
+; SSE4-NEXT:    negq %rdx
+; SSE4-NEXT:    leaq (%rax,%rdx,8), %rax
 ; SSE4-NEXT:    addq %rcx, %rax
 ; SSE4-NEXT:    movq %rax, %xmm2
 ; SSE4-NEXT:    pextrq $1, %xmm1, %rcx
@@ -341,8 +341,8 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    shrq $4, %rax
 ; AVX1-NEXT:    leaq (%rax,%rax,2), %rdx
-; AVX1-NEXT:    shlq $3, %rdx
-; AVX1-NEXT:    subq %rdx, %rax
+; AVX1-NEXT:    negq %rdx
+; AVX1-NEXT:    leaq (%rax,%rdx,8), %rax
 ; AVX1-NEXT:    addq %rcx, %rax
 ; AVX1-NEXT:    vmovq %rax, %xmm2
 ; AVX1-NEXT:    vpextrq $1, %xmm1, %rcx

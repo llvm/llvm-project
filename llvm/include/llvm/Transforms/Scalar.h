@@ -75,9 +75,9 @@ LLVM_ABI Pass *createLoopTermFoldPass();
 LLVM_ABI Pass *createLoopUnrollPass(int OptLevel = 2,
                                     bool OnlyWhenForced = false,
                                     bool ForgetAllSCEV = false,
-                                    int Threshold = -1, int Count = -1,
-                                    int AllowPartial = -1, int Runtime = -1,
-                                    int UpperBound = -1, int AllowPeeling = -1);
+                                    int Threshold = -1, int AllowPartial = -1,
+                                    int Runtime = -1, int UpperBound = -1,
+                                    int AllowPeeling = -1);
 
 //===----------------------------------------------------------------------===//
 //

@@ -13,6 +13,8 @@
 // RUN: %clang -S -### -cl-kernel-arg-info %s 2>&1 | FileCheck --check-prefix=CHECK-KERNEL-ARG-INFO %s
 // RUN: %clang -S -### -cl-unsafe-math-optimizations %s 2>&1 | FileCheck --check-prefix=CHECK-UNSAFE-MATH-OPT %s
 // RUN: %clang -S -### -cl-fast-relaxed-math %s 2>&1 | FileCheck --check-prefix=CHECK-FAST-RELAXED-MATH %s
+// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-nans %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NNAN %s
+// RUN: %clang -S -### -cl-fast-relaxed-math -fhonor-infinities %s 2>&1 | FileCheck --check-prefixes=CHECK-FAST-RELAXED-MATH,NO-NINF %s
 // RUN: %clang -S -### -cl-mad-enable %s 2>&1 | FileCheck --check-prefix=CHECK-MAD-ENABLE %s
 // RUN: %clang -S -### -cl-no-signed-zeros %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang -S -### -cl-denorms-are-zero %s 2>&1 | FileCheck --check-prefix=CHECK-DENORMS-ARE-ZERO %s
@@ -43,6 +45,8 @@
 // CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"
 // CHECK-MAD-ENABLE: "-cc1" {{.*}} "-cl-mad-enable"
 // CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
+// NO-NNAN-NOT: "menable-no-nans"
+// NO-NINF-NOT: "menable-no-infs"
 
 // This is not forwarded
 // CHECK-DENORMS-ARE-ZERO-NOT: "-cl-denorms-are-zero"

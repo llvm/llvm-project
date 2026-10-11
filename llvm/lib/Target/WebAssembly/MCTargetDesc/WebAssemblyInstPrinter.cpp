@@ -60,19 +60,20 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   case WebAssembly::RET_CALL_INDIRECT:
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
-    // A special case for call_indirect (and ret_call_indirect), if the table
-    // operand is a symbol: the order of the type and table operands is inverted
-    // in the text format relative to the binary format.  Otherwise if table the
-    // operand isn't a symbol, then we have an MVP compilation unit, and the
-    // table shouldn't appear in the output.
+    // A special case for call_indirect (and ret_call_indirect): the order of
+    // the type and table operands is inverted in the text format relative to
+    // the binary format. The table operand is omitted when it refers to the
+    // default table 0 of an MVP compilation unit. Otherwise (a table symbol,
+    // or a non-zero table index from a multi-table module) it is printed
+    // first. A disassembler can also hand us an arbitrary immediate here when
+    // decoding misaligned bytes, so print it rather than asserting.
     OS << "\t";
     OS << getMnemonic(*MI).first;
     OS << " ";
-    if (MI->getOperand(TableOperand).isExpr()) {
+    const MCOperand &TableOp = MI->getOperand(TableOperand);
+    if (TableOp.isExpr() || (TableOp.isImm() && TableOp.getImm() != 0)) {
       printOperand(MI, TableOperand, STI, OS);
       OS << ", ";
-    } else {
-      assert(MI->getOperand(TableOperand).getImm() == 0);
     }
     printOperand(MI, TypeOperand, STI, OS);
     if (MI->getOpcode() == WebAssembly::CALL_INDIRECT)

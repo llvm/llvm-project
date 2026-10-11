@@ -49,13 +49,6 @@ public:
     return "Add FS discriminators in MIR";
   }
 
-  /// getNumFSBBs() - Return the number of machine BBs that have FS samples.
-  unsigned getNumFSBBs();
-
-  /// getNumFSSamples() - Return the number of samples that have flow sensitive
-  /// values.
-  uint64_t getNumFSSamples();
-
   /// getMachineFunction - Return the current machine function.
   const MachineFunction *getMachineFunction() const { return MF; }
 

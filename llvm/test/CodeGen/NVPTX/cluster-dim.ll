@@ -7,7 +7,6 @@ define ptx_kernel void @kernel_func_clusterxyz() "nvvm.cluster_dim"="3,5,7" {
 ; CHECK80-LABEL: kernel_func_clusterxyz(
 ; CHECK80:       {
 ; CHECK80-EMPTY:
-; CHECK80-EMPTY:
 ; CHECK80-NEXT:  // %bb.0:
 ; CHECK80-NEXT:    ret;
 ;
@@ -15,7 +14,6 @@ define ptx_kernel void @kernel_func_clusterxyz() "nvvm.cluster_dim"="3,5,7" {
 ; CHECK90:       .explicitcluster
 ; CHECK90-NEXT:  .reqnctapercluster 3, 5, 7
 ; CHECK90-NEXT:  {
-; CHECK90-EMPTY:
 ; CHECK90-EMPTY:
 ; CHECK90-NEXT:  // %bb.0:
 ; CHECK90-NEXT:    ret;

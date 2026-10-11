@@ -503,3 +503,6 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {
   return new BPFDAGToDAGISelLegacy(TM);
 }
+
+BPFISelDAGToDAGPass::BPFISelDAGToDAGPass(BPFTargetMachine &TM)
+    : SelectionDAGISelPass(std::make_unique<BPFDAGToDAGISel>(TM)) {}

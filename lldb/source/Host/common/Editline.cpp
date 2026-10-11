@@ -1553,13 +1553,13 @@ void Editline::SetContinuationPrompt(const char *continuation_prompt) {
       continuation_prompt == nullptr ? "" : continuation_prompt;
 }
 
-void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = 1; }
+void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = true; }
 
 void Editline::ApplyTerminalSizeChange() {
   if (!m_editline)
     return;
 
-  m_terminal_size_has_changed = 0;
+  m_terminal_size_has_changed = false;
   el_resize(m_editline);
   int columns;
   // This function is documenting as taking (const char *, void *) for the

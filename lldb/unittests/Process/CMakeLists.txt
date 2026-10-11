@@ -4,6 +4,9 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   add_subdirectory(Linux)
   add_subdirectory(POSIX)
 endif()
+if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_subdirectory(Windows)
+endif()
 add_subdirectory(Utility)
 add_subdirectory(minidump)
 
@@ -11,6 +14,8 @@ add_lldb_unittest(ProcessTests
   ProcessEventDataTest.cpp
   ProcessTraceTest.cpp
 
+  LINK_COMPONENTS
+      Option
   LINK_LIBS
       lldbCore
       lldbHost

@@ -216,8 +216,8 @@ int sw4(int a) {
 // CIR-NEXT:  }
 
 // LLVM: define{{.*}} i32 @_Z3sw4i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -272,7 +272,7 @@ void sw5(int a) {
 // CIR-NEXT:   }
 
 // LLVM-LABEL: define{{.*}} void @_Z3sw5i
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -1082,9 +1082,9 @@ int nested_switch(int a) {
 // CIR:           cir.return
 
 // LLVM: define{{.*}} i32 @_Z13nested_switchi
-// LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[RES_ADDR:.*]] = alloca i32, align 4
 // LLVM:   store i32 %[[ARG:.*]], ptr %[[A_ADDR]], align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
@@ -1291,3 +1291,64 @@ void testSwitchNotCoverAllCase(M m) {
   }
 }
 // CIR: cir.switch(%[[ARG:.*]] : !s32i) {
+
+enum class IsBoolClass : bool { F, T };
+
+void switch_enum_class(IsBoolClass b) {
+// CIR-LABEL: cir.func {{.*}}@_Z17switch_enum_class11IsBoolClass
+// CIR: %[[ARG:.*]] = cir.alloca "b" align(1) init : !cir.ptr<!cir.bool>
+// CIR: %[[ARG_LOAD:.*]] = cir.load align(1) %[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[CAST:.*]] = cir.cast bool_to_int %[[ARG_LOAD]] : !cir.bool -> !cir.int<u, 1>
+// CIR: cir.switch(%[[CAST]] : !cir.int<u, 1>) all_enum_cases_covered {
+// CIR: cir.case(equal, [#cir.int<1> : !cir.int<u, 1>]) {
+// CIR: cir.case(equal, [#cir.int<0> : !cir.int<u, 1>]) {
+
+// CIR: %[[ARG_LOAD:.*]] = cir.load align(1) %[[ARG]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[CAST:.*]] = cir.cast bool_to_int %[[ARG_LOAD]] : !cir.bool -> !cir.int<u, 1>
+// CIR: cir.switch(%[[CAST]] : !cir.int<u, 1>) all_enum_cases_covered {
+// CIR: cir.case(range, [#cir.int<0> : !cir.int<u, 1>, #cir.int<1> : !cir.int<u, 1>]) {
+
+// LLVM-LABEL: define {{.*}}@_Z17switch_enum_class11IsBoolClass
+// LLVM: %[[ARG:.*]] = alloca i8
+// LLVM: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// LLVM: %[[CAST:.*]] = trunc i8 %[[ARG_LOAD]] to i1
+// LLVM: switch i1 %[[CAST]], label %{{.*}} [
+// LLVM:   i1 true, label %
+// LLVM:   i1 false, label %
+// LLVM: ]
+//
+// LLVM: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// LLVM: %[[CAST:.*]] = trunc i8 %[[ARG_LOAD]] to i1
+// LLVM: switch i1 %[[CAST]], label %{{.*}} [
+// LLVM:   i1 false, label %
+// LLVM:   i1 true, label %
+// LLVM: ]
+//
+//
+// OGCG-LABEL: define {{.*}}@_Z17switch_enum_class11IsBoolClass
+// OGCG: %[[ARG:.*]] = alloca i8
+// OGCG: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// OGCG: %[[CAST:.*]] = icmp ne i8 %[[ARG_LOAD]], 0
+// OGCG: switch i1 %[[CAST]], label %{{.*}} [
+// OGCG:   i1 true, label %
+// OGCG:   i1 false, label %
+// OGCG: ]
+//
+// OGCG: %[[ARG_LOAD:.*]] = load i8, ptr %[[ARG]]
+// OGCG: %[[CAST:.*]] = icmp ne i8 %[[ARG_LOAD]], 0
+// OGCG: switch i1 %[[CAST]], label %{{.*}} [
+// OGCG:   i1 false, label %
+// OGCG:   i1 true, label %
+// OGCG: ]
+
+  switch(b) {
+    case IsBoolClass::T:
+    break;
+    case IsBoolClass::F:
+    break;
+  }
+  switch(b) {
+    case IsBoolClass::F ... IsBoolClass::T:
+    break;
+  }
+}

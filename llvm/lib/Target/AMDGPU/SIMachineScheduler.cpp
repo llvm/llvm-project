@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineScheduler.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -181,7 +180,7 @@ void SIScheduleBlock::addUnit(SUnit *SU) {
 #ifndef NDEBUG
 void SIScheduleBlock::traceCandidate(const SISchedCandidate &Cand) {
 
-  dbgs() << "  SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
+  dbgs() << "  " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   dbgs() << '\n';
 }
 #endif
@@ -985,27 +984,6 @@ void SIScheduleBlockCreator::colorMergeConstantLoadsNextGroup() {
   }
 }
 
-void SIScheduleBlockCreator::colorMergeIfPossibleNextGroup() {
-  unsigned DAGSize = DAG->SUnits.size();
-
-  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
-    SUnit *SU = &DAG->SUnits[SUNum];
-    std::set<unsigned> SUColors;
-
-    if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
-      continue;
-
-    for (SDep& SuccDep : SU->Succs) {
-       SUnit *Succ = SuccDep.getSUnit();
-      if (SuccDep.isWeak() || Succ->NodeNum >= DAGSize)
-        continue;
-      SUColors.insert(CurrentColoring[Succ->NodeNum]);
-    }
-    if (SUColors.size() == 1)
-      CurrentColoring[SU->NodeNum] = *SUColors.begin();
-  }
-}
-
 void SIScheduleBlockCreator::colorMergeIfPossibleNextGroupOnlyForReserved() {
   unsigned DAGSize = DAG->SUnits.size();
 
@@ -1025,45 +1003,6 @@ void SIScheduleBlockCreator::colorMergeIfPossibleNextGroupOnlyForReserved() {
     if (SUColors.size() == 1 && *SUColors.begin() <= DAGSize)
       CurrentColoring[SU->NodeNum] = *SUColors.begin();
   }
-}
-
-void SIScheduleBlockCreator::colorMergeIfPossibleSmallGroupsToNextGroup() {
-  unsigned DAGSize = DAG->SUnits.size();
-  std::map<unsigned, unsigned> ColorCount;
-
-  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
-    SUnit *SU = &DAG->SUnits[SUNum];
-    unsigned color = CurrentColoring[SU->NodeNum];
-     ++ColorCount[color];
-  }
-
-  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
-    SUnit *SU = &DAG->SUnits[SUNum];
-    unsigned color = CurrentColoring[SU->NodeNum];
-    std::set<unsigned> SUColors;
-
-    if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
-      continue;
-
-    if (ColorCount[color] > 1)
-      continue;
-
-    for (SDep& SuccDep : SU->Succs) {
-       SUnit *Succ = SuccDep.getSUnit();
-      if (SuccDep.isWeak() || Succ->NodeNum >= DAGSize)
-        continue;
-      SUColors.insert(CurrentColoring[Succ->NodeNum]);
-    }
-    if (SUColors.size() == 1 && *SUColors.begin() != color) {
-      --ColorCount[color];
-      CurrentColoring[SU->NodeNum] = *SUColors.begin();
-      ++ColorCount[*SUColors.begin()];
-    }
-  }
-}
-
-void SIScheduleBlockCreator::cutHugeBlocks() {
-  // TODO
 }
 
 void SIScheduleBlockCreator::regroupNoUserInstructions() {
@@ -1904,7 +1843,7 @@ void SIScheduleDAGMI::schedule()
       IsLowLatencySU[i] = 1;
       bool OffsetIsScalable;
       if (SITII->getMemOperandWithOffset(*SU->getInstr(), BaseLatOp, OffLatReg,
-                                         OffsetIsScalable, TRI))
+                                         OffsetIsScalable))
         LowLatencyOffset[i] = OffLatReg;
     } else if (SITII->isHighLatencyDef(SU->getInstr()->getOpcode()))
       IsHighLatencySU[i] = 1;
@@ -1976,8 +1915,7 @@ void SIScheduleDAGMI::schedule()
 
     scheduleMI(SU, true);
 
-    LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                      << *SU->getInstr());
+    LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
   }
 
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");

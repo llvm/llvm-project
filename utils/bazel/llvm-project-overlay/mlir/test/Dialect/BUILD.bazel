@@ -13,6 +13,7 @@ package(default_visibility = ["//visibility:public"])
             "Vector/vector-sink-transform.mlir",
             "//llvm:llc",
             "//llvm:llvm-symbolizer",
+            "//llvm:split-file",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
             "//mlir:mlir-reduce",

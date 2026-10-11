@@ -24,7 +24,7 @@ entry:
 define void @bar(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture readonly %c, ptr noalias nocapture readonly %d, ptr noalias nocapture %e, i32 %w) local_unnamed_addr #1 {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[W:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[W:%.*]], i64 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

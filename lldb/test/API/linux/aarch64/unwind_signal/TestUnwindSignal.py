@@ -12,7 +12,7 @@ class UnwindSignalTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_unwind_signal(self):
         """Inferior calls sigill() and handles the resultant SIGILL.
         Stopped at a breakpoint in the handler, check that we can unwind

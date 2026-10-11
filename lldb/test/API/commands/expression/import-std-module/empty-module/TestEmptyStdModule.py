@@ -14,7 +14,7 @@ class ImportStdModule(TestBase):
     # test configurations where libc++ is actually supposed to be tested.
     @add_test_categories(["libc++"])
     @skipIfRemote
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()

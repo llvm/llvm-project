@@ -8,11 +8,6 @@
 
 # Getting Started
 
-```{contents}
----
-local:
----
-```
 
 ## Building flang
 There are two ways to build flang. The first method is to build it at the same
@@ -86,14 +81,14 @@ cmake \
 ninja
 ```
 
-```{note}
+:::{note}
   Contributions to Flang are expected not to produce any new compiler warnings.
   This is enforced by post-commit buildbots. To do the same locally, add
   `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
 
   Only Clang builds are checked for this, so we do not recommend using this
   option with GCC as there will be preexisting warnings.
-```
+:::
 
 On Darwin, to make flang able to link binaries with the default sysroot without
 having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
@@ -163,14 +158,14 @@ cmake \
 ninja
 ```
 
-```{note}
+:::{note}
   Contributions to Flang are expected not to produce any new compiler warnings.
   This is enforced by post-commit buildbots. To do the same locally, add
   `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
 
   Only Clang builds are checked for this, so we do not recommend using this
   option with GCC as there will be preexisting warnings.
-```
+:::
 
 To run the flang tests on this build, execute the command in the `flang/build`
 directory:
@@ -466,7 +461,7 @@ It will generate html in
     <build-dir>/tools/flang/docs/doxygen/html # for flang docs
 ```
 ### Generate Sphinx-based Documentation
-[Flang documentation](https://flang.llvm.org/docs/) should preferably be written in `markdown(.md)` syntax (they can be in `reStructuredText(.rst)` format as well but markdown is recommended in first place), it
+[Flang documentation](index.md) should preferably be written in `markdown(.md)` syntax (they can be in `reStructuredText(.rst)` format as well but markdown is recommended in first place), it
 is mostly meant to be processed by the Sphinx documentation generation
 system to create HTML pages which would be hosted on the webpage of flang and
 updated periodically.

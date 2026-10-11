@@ -18,8 +18,11 @@
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
@@ -28,7 +31,7 @@ using namespace llvm;
 
 namespace {
 
-class WebAssemblyFixBrTableDefaults final : public MachineFunctionPass {
+class WebAssemblyFixBrTableDefaultsLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Fix br_table Defaults";
   }
@@ -37,10 +40,10 @@ class WebAssemblyFixBrTableDefaults final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyFixBrTableDefaults() : MachineFunctionPass(ID) {}
+  WebAssemblyFixBrTableDefaultsLegacy() : MachineFunctionPass(ID) {}
 };
 
-char WebAssemblyFixBrTableDefaults::ID = 0;
+char WebAssemblyFixBrTableDefaultsLegacy::ID = 0;
 
 // Target independent selection dag assumes that it is ok to use PointerTy
 // as the index for a "switch", whereas Wasm so far only has a 32-bit br_table.
@@ -153,7 +156,7 @@ MachineBasicBlock *fixBrTableDefault(MachineInstr &MI, MachineBasicBlock *MBB,
   return HeaderMBB;
 }
 
-bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
+bool fixBrTableDefaults(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Fixing br_table Default Targets **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -192,10 +195,22 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(WebAssemblyFixBrTableDefaults, DEBUG_TYPE,
+INITIALIZE_PASS(WebAssemblyFixBrTableDefaultsLegacy, DEBUG_TYPE,
                 "Removes range checks and sets br_table default targets", false,
                 false)
 
-FunctionPass *llvm::createWebAssemblyFixBrTableDefaults() {
-  return new WebAssemblyFixBrTableDefaults();
+FunctionPass *llvm::createWebAssemblyFixBrTableDefaultsLegacyPass() {
+  return new WebAssemblyFixBrTableDefaultsLegacy();
+}
+
+bool WebAssemblyFixBrTableDefaultsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return fixBrTableDefaults(MF);
+}
+
+PreservedAnalyses
+WebAssemblyFixBrTableDefaultsPass::run(MachineFunction &MF,
+                                       MachineFunctionAnalysisManager &MFAM) {
+  return fixBrTableDefaults(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                : PreservedAnalyses::all();
 }

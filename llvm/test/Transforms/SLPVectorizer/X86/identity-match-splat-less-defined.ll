@@ -3,7 +3,7 @@
 
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> poison, i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> poison, i32 0, i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <3 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <3 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>

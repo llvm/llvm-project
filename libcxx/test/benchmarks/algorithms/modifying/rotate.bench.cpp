@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto rotate, double fraction) {
       benchmark::RegisterBenchmark(
           name,
-          [=](auto& st) {
+          [=](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto rotate) {
       benchmark::RegisterBenchmark(
           name,
-          [rotate](auto& st) {
+          [rotate](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto rotate) {
       benchmark::RegisterBenchmark(
           name,
-          [rotate](auto& st) {
+          [rotate](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;

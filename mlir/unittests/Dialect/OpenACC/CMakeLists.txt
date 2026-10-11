@@ -2,9 +2,11 @@ add_mlir_unittest(MLIROpenACCTests
   OpenACCCGOpsTest.cpp
   OpenACCOpsTest.cpp
   OpenACCOpsInterfacesTest.cpp
+  OpenACCRuntimeUtilsTest.cpp
   OpenACCTypeInterfacesTest.cpp
   OpenACCUtilsCGTest.cpp
   OpenACCUtilsGPUTest.cpp
+  OpenACCUtilsReductionTest.cpp
   OpenACCUtilsTest.cpp
   OpenACCUtilsTypeTest.cpp
   OpenACCUtilsTilingTest.cpp
@@ -14,12 +16,15 @@ mlir_target_link_libraries(MLIROpenACCTests
   PRIVATE
   MLIRIR
   MLIRAffineDialect
+  MLIRComplexDialect
   MLIRDLTIDialect
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRArithDialect
+  MLIRArithValueBoundsOpInterfaceImpl
+  MLIROpenACCAnalysis
   MLIROpenACCDialect
   MLIROpenACCUtils
   MLIRSCFDialect

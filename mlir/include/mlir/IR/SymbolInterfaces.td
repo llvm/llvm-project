@@ -31,68 +31,21 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
-      "::mlir::StringAttr", "getNameAttr", (ins), [{
-        // Don't rely on the trait implementation as optional symbol operations
-        // may override this.
-        return mlir::SymbolTable::getSymbolName($_op);
-      }], /*defaultImplementation=*/[{
-        return mlir::SymbolTable::getSymbolName(this->getOperation());
-      }]
+      "::mlir::StringAttr", "getNameAttr", (ins)
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "::mlir::StringAttr":$name), [{}],
+      "void", "setSymbolName", (ins "::mlir::StringAttr":$name), [{}],
       /*defaultImplementation=*/[{
-        this->getOperation()->setAttr(
-            mlir::SymbolTable::getSymbolAttrName(), name);
+        auto *op = this->getOperation();
+        op->setInherentAttr(::mlir::StringAttr::get(
+            op->getContext(), mlir::SymbolTable::getSymbolAttrName()), name);
       }]
     >,
     InterfaceMethod<"Gets the visibility of this symbol.",
-      "mlir::SymbolTable::Visibility", "getVisibility", (ins), [{}],
-      /*defaultImplementation=*/[{
-        return mlir::SymbolTable::getSymbolVisibility(this->getOperation());
-      }]
-    >,
-    InterfaceMethod<"Returns true if this symbol has nested visibility.",
-      "bool", "isNested", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        return $_op.getVisibility() == mlir::SymbolTable::Visibility::Nested;
-      }]
-    >,
-    InterfaceMethod<"Returns true if this symbol has private visibility.",
-      "bool", "isPrivate", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        return $_op.getVisibility() == mlir::SymbolTable::Visibility::Private;
-      }]
-    >,
-    InterfaceMethod<"Returns true if this symbol has public visibility.",
-      "bool", "isPublic", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        return $_op.getVisibility() == mlir::SymbolTable::Visibility::Public;
-      }]
+      "mlir::SymbolTable::Visibility", "getVisibility", (ins)
     >,
     InterfaceMethod<"Sets the visibility of this symbol.",
-      "void", "setVisibility", (ins "mlir::SymbolTable::Visibility":$vis), [{}],
-      /*defaultImplementation=*/[{
-        mlir::SymbolTable::setSymbolVisibility(this->getOperation(), vis);
-      }]
-    >,
-    InterfaceMethod<"Sets the visibility of this symbol to be nested.",
-      "void", "setNested", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        $_op.setVisibility(mlir::SymbolTable::Visibility::Nested);
-      }]
-    >,
-    InterfaceMethod<"Sets the visibility of this symbol to be private.",
-      "void", "setPrivate", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        $_op.setVisibility(mlir::SymbolTable::Visibility::Private);
-      }]
-    >,
-    InterfaceMethod<"Sets the visibility of this symbol to be public.",
-      "void", "setPublic", (ins),  [{}],
-      /*defaultImplementation=*/[{
-        $_op.setVisibility(mlir::SymbolTable::Visibility::Public);
-      }]
+      "void", "setVisibility", (ins "mlir::SymbolTable::Visibility":$vis)
     >,
     InterfaceMethod<[{
         Get all of the uses of the current symbol that are nested within the
@@ -163,7 +116,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     // If this is an optional symbol, bail out early if possible.
     auto concreteOp = cast<ConcreteOp>($_op);
     if (concreteOp.isOptionalSymbol()) {
-      if(!concreteOp->getInherentAttr(::mlir::SymbolTable::getSymbolAttrName()).value_or(Attribute{}))
+      if (!concreteOp.getNameAttr())
         return success();
     }
     if (::mlir::failed(::mlir::detail::verifySymbol($_op)))
@@ -181,23 +134,71 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     return success();
   }];
 
-  let extraSharedClassDeclaration = [{
-    using Visibility = mlir::SymbolTable::Visibility;
-
+  let extraClassDeclaration = [{
     /// Convenience version of `getNameAttr` that returns a StringRef.
     ::mlir::StringRef getName() {
       return getNameAttr().getValue();
     }
 
-    /// Convenience version of `setName` that take a StringRef.
+    /// Convenience version of `setSymbolName` that takes a StringRef.
+    void setSymbolName(::mlir::StringRef name) {
+      setSymbolName(::mlir::StringAttr::get(getOperation()->getContext(), name));
+    }
+
+    [[deprecated("use setSymbolName instead")]]
+    void setName(::mlir::StringAttr name) {
+      setSymbolName(name);
+    }
+
+    [[deprecated("use setSymbolName instead")]]
     void setName(::mlir::StringRef name) {
-      setName(::mlir::StringAttr::get($_op->getContext(), name));
+      setSymbolName(name);
+    }
+
+    /// Return the conventional symbol visibility attribute name.
+    static ::mlir::StringRef getDefaultVisibilityAttrName() {
+      return "sym_visibility";
+    }
+
+  }];
+
+  let extraSharedClassDeclaration = [{
+    using Visibility = mlir::SymbolTable::Visibility;
+
+    /// Returns true if this symbol has nested visibility.
+    bool isNested() {
+      return $_op.getVisibility() == mlir::SymbolTable::Visibility::Nested;
+    }
+
+    /// Returns true if this symbol has private visibility.
+    bool isPrivate() {
+      return $_op.getVisibility() == mlir::SymbolTable::Visibility::Private;
+    }
+
+    /// Returns true if this symbol has public visibility.
+    bool isPublic() {
+      return $_op.getVisibility() == mlir::SymbolTable::Visibility::Public;
+    }
+
+    /// Sets the visibility of this symbol to be nested.
+    void setNested() {
+      $_op.setVisibility(mlir::SymbolTable::Visibility::Nested);
+    }
+
+    /// Sets the visibility of this symbol to be private.
+    void setPrivate() {
+      $_op.setVisibility(mlir::SymbolTable::Visibility::Private);
+    }
+
+    /// Sets the visibility of this symbol to be public.
+    void setPublic() {
+      $_op.setVisibility(mlir::SymbolTable::Visibility::Public);
     }
   }];
 
   // Add additional classof checks to properly handle "optional" symbols.
   let extraClassOf = [{
-    return $_op->hasAttr(::mlir::SymbolTable::getSymbolAttrName());
+    return static_cast<bool>($_op.getNameAttr());
   }];
 }
 
@@ -244,6 +245,12 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
 //===----------------------------------------------------------------------===//
 // Symbol Traits
 //===----------------------------------------------------------------------===//
+
+// Op stores its symbol name in a `sym_name` inherent attribute.
+def SymbolName : NativeOpTrait<"SymbolName">;
+
+// Op stores its symbol visibility in a `sym_visibility` inherent attribute.
+def SymbolVisibility : NativeOpTrait<"SymbolVisibility">;
 
 // Op defines a symbol table.
 def SymbolTable : NativeOpTrait<"SymbolTable">;

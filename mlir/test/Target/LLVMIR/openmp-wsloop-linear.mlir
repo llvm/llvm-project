@@ -19,13 +19,13 @@
 
 llvm.func @wsloop_linear_post_use(%lb : i32, %ub : i32, %step : i32,
                                   %x : !llvm.ptr, %out : !llvm.ptr) {
-  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       %cur = llvm.load %x : !llvm.ptr -> i32
       llvm.store %cur, %out : i32, !llvm.ptr
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   %after = llvm.load %x : !llvm.ptr -> i32
   llvm.store %after, %out : i32, !llvm.ptr
   llvm.return

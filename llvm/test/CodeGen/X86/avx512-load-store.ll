@@ -376,32 +376,32 @@ define <80 x i32> @test_maskz_load_v80i32(ptr %p, <80 x i1> %mask) nounwind {
 ; CHECK64-NEXT:    movq %rdi, %rax
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; CHECK64-NEXT:    vpmovqb %zmm1, %xmm1
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK64-NEXT:    vpmovqw %zmm0, %xmm0
+; CHECK64-NEXT:    vpmovqw %zmm1, %xmm1
+; CHECK64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK64-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k1
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK64-NEXT:    vpmovqw %zmm0, %xmm0
+; CHECK64-NEXT:    vpmovqw %zmm2, %xmm2
+; CHECK64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK64-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k2
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK64-NEXT:    vpmovqw %zmm0, %xmm0
+; CHECK64-NEXT:    vpmovqw %zmm2, %xmm2
+; CHECK64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK64-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k3
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
 ; CHECK64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; CHECK64-NEXT:    vpmovqb %zmm2, %xmm2
-; CHECK64-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; CHECK64-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK64-NEXT:    vpmovqw %zmm0, %xmm0
+; CHECK64-NEXT:    vpmovqw %zmm2, %xmm2
+; CHECK64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; CHECK64-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK64-NEXT:    vptestmd %zmm1, %zmm0, %k4
 ; CHECK64-NEXT:    vmovd %edx, %xmm0
 ; CHECK64-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0

@@ -644,7 +644,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vinserti32x4 $1, 160(%rdi), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
@@ -652,7 +652,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
-; AVX512-NEXT:    vmovdqa 128(%rdi), %xmm6
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %xmm6
 ; AVX512-NEXT:    vpbroadcastq %xmm6, %ymm2
 ; AVX512-NEXT:    vpunpckhqdq {{.*#+}} ymm2 = ymm2[1],mem[1],ymm2[3],mem[3]
 ; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -660,16 +660,16 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm7[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512-NEXT:    vmovdqa 64(%rdi), %ymm7
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
-; AVX512-NEXT:    vmovdqa 192(%rdi), %xmm8
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %xmm8
 ; AVX512-NEXT:    vpalignr {{.*#+}} xmm6 = xmm6[8,9,10,11,12,13,14,15],xmm8[0,1,2,3,4,5,6,7]
 ; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm7[2,3],ymm6[0,1]
 ; AVX512-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm7
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm8
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm8
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3,4,5],ymm7[6,7]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm7 = ymm9[0,1,2,3],ymm7[4,5,6,7]
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm8 = ymm8[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -696,7 +696,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512-FCP-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512-FCP-NEXT:    vmovdqa 160(%rdi), %xmm0
+; AVX512-FCP-NEXT:    vmovdqa64 160(%rdi), %xmm0
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm6 = [0,1,2,5]
@@ -712,17 +712,17 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512-FCP-NEXT:    vmovdqa 64(%rdi), %ymm2
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %xmm7
-; AVX512-FCP-NEXT:    vpalignr {{.*#+}} xmm8 = mem[8,9,10,11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7]
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm7
+; AVX512-FCP-NEXT:    valignq {{.*#+}} xmm8 = mem[1],xmm7[0]
 ; AVX512-FCP-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[2,3],ymm8[0,1]
 ; AVX512-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [2,5,2,5]
 ; AVX512-FCP-NEXT:    # ymm8 = mem[0,1,0,1]
-; AVX512-FCP-NEXT:    vmovdqa 128(%rdi), %ymm9
+; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm9
 ; AVX512-FCP-NEXT:    vpermi2q %ymm7, %ymm9, %ymm8
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm7 = [4,11]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm7
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %ymm8
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm8
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm9[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm9[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -749,7 +749,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512DQ-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512DQ-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512DQ-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vinserti32x4 $1, 160(%rdi), %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512DQ-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
@@ -757,7 +757,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512DQ-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %xmm6
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %xmm6
 ; AVX512DQ-NEXT:    vpbroadcastq %xmm6, %ymm2
 ; AVX512DQ-NEXT:    vpunpckhqdq {{.*#+}} ymm2 = ymm2[1],mem[1],ymm2[3],mem[3]
 ; AVX512DQ-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -765,16 +765,16 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm2 = ymm7[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-NEXT:    vmovdqa 64(%rdi), %ymm7
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %xmm8
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %xmm8
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} xmm6 = xmm6[8,9,10,11,12,13,14,15],xmm8[0,1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm7[2,3],ymm6[0,1]
 ; AVX512DQ-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm7
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm8
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm8
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3,4,5],ymm7[6,7]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512DQ-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm7 = ymm9[0,1,2,3],ymm7[4,5,6,7]
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm8 = ymm8[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512DQ-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -801,7 +801,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512DQ-FCP-NEXT:    vmovdqa 160(%rdi), %xmm0
+; AVX512DQ-FCP-NEXT:    vmovdqa64 160(%rdi), %xmm0
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm6 = [0,1,2,5]
@@ -817,17 +817,17 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vmovdqa 64(%rdi), %ymm2
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %xmm7
-; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} xmm8 = mem[8,9,10,11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7]
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm7
+; AVX512DQ-FCP-NEXT:    valignq {{.*#+}} xmm8 = mem[1],xmm7[0]
 ; AVX512DQ-FCP-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[2,3],ymm8[0,1]
 ; AVX512DQ-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [2,5,2,5]
 ; AVX512DQ-FCP-NEXT:    # ymm8 = mem[0,1,0,1]
-; AVX512DQ-FCP-NEXT:    vmovdqa 128(%rdi), %ymm9
+; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm9
 ; AVX512DQ-FCP-NEXT:    vpermi2q %ymm7, %ymm9, %ymm8
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm7 = [4,11]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm7
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %ymm8
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm8
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm9[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm9[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -854,7 +854,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512BW-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512BW-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti32x4 $1, 160(%rdi), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
@@ -862,7 +862,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %xmm6
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %xmm6
 ; AVX512BW-NEXT:    vpbroadcastq %xmm6, %ymm2
 ; AVX512BW-NEXT:    vpunpckhqdq {{.*#+}} ymm2 = ymm2[1],mem[1],ymm2[3],mem[3]
 ; AVX512BW-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -870,16 +870,16 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm7[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512BW-NEXT:    vmovdqa 64(%rdi), %ymm7
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %xmm8
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %xmm8
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} xmm6 = xmm6[8,9,10,11,12,13,14,15],xmm8[0,1,2,3,4,5,6,7]
 ; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm7[2,3],ymm6[0,1]
 ; AVX512BW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm7
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm8
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm8
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3,4,5],ymm7[6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm9[0,1,2,3],ymm7[4,5,6,7]
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm8 = ymm8[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -906,7 +906,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512BW-FCP-NEXT:    vmovdqa 160(%rdi), %xmm0
+; AVX512BW-FCP-NEXT:    vmovdqa64 160(%rdi), %xmm0
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm6 = [0,1,2,5]
@@ -922,17 +922,17 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vmovdqa 64(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm7
-; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} xmm8 = mem[8,9,10,11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7]
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm7
+; AVX512BW-FCP-NEXT:    valignq {{.*#+}} xmm8 = mem[1],xmm7[0]
 ; AVX512BW-FCP-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[2,3],ymm8[0,1]
 ; AVX512BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [2,5,2,5]
 ; AVX512BW-FCP-NEXT:    # ymm8 = mem[0,1,0,1]
-; AVX512BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm9
+; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm9
 ; AVX512BW-FCP-NEXT:    vpermi2q %ymm7, %ymm9, %ymm8
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm7 = [4,11]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm7
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm8
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm8
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm9[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm9[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -959,7 +959,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 160(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 160(%rdi), %ymm0, %ymm0
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
@@ -967,7 +967,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm5, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vpbroadcastq 176(%rdi), %ymm2
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %xmm6
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %xmm6
 ; AVX512DQ-BW-NEXT:    vpbroadcastq %xmm6, %ymm2
 ; AVX512DQ-BW-NEXT:    vpunpckhqdq {{.*#+}} ymm2 = ymm2[1],mem[1],ymm2[3],mem[3]
 ; AVX512DQ-BW-NEXT:    vmovdqa 16(%rdi), %xmm7
@@ -975,16 +975,16 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm7[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa 64(%rdi), %ymm7
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %xmm8
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %xmm8
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} xmm6 = xmm6[8,9,10,11,12,13,14,15],xmm8[0,1,2,3,4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm7[2,3],ymm6[0,1]
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm7
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm8
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm8
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0,1,2,3,4,5],ymm7[6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm7 = ymm9[0,1,2,3],ymm7[4,5,6,7]
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm8 = ymm8[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -1011,7 +1011,7 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rdi), %zmm5
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 160(%rdi), %xmm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 160(%rdi), %xmm0
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,7,14,0]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm6 = [0,1,2,5]
@@ -1027,17 +1027,17 @@ define void @load_i64_stride7_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 64(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm7
-; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} xmm8 = mem[8,9,10,11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7]
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm7
+; AVX512DQ-BW-FCP-NEXT:    valignq {{.*#+}} xmm8 = mem[1],xmm7[0]
 ; AVX512DQ-BW-FCP-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[2,3],ymm8[0,1]
 ; AVX512DQ-BW-FCP-NEXT:    vbroadcasti128 {{.*#+}} ymm8 = [2,5,2,5]
 ; AVX512DQ-BW-FCP-NEXT:    # ymm8 = mem[0,1,0,1]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm9
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm9
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %ymm7, %ymm9, %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm7 = [4,11]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm7
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm7 = ymm7[0,1,2,3],ymm8[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm8
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm9[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm9[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [5,12]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm4, %zmm5, %zmm9
@@ -1628,8 +1628,8 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vmovdqa 64(%rdi), %ymm11
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm11, %xmm11
-; AVX512-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm12
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm12
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm12 = ymm13[0,1,2,3,4,5],ymm12[6,7]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm14 = [4,11]
 ; AVX512-NEXT:    vpermi2q %zmm9, %zmm10, %zmm14
@@ -1644,7 +1644,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpermi2q %zmm0, %zmm8, %zmm9
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm15, %zmm9, %zmm8
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
@@ -1737,9 +1737,9 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-NEXT:    vmovdqa 64(%rdi), %ymm11
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm11, %xmm11
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %xmm12
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm12
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm14 = [0,0,2,5]
-; AVX512-FCP-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512-FCP-NEXT:    vpermi2q %ymm12, %ymm13, %ymm14
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [4,11]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm9, %zmm10, %zmm12
@@ -1754,7 +1754,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm0, %zmm8, %zmm9
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm15, %zmm9, %zmm8
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
@@ -1847,8 +1847,8 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    vmovdqa 64(%rdi), %ymm11
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm11, %xmm11
-; AVX512DQ-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm12
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512DQ-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm12
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm12 = ymm13[0,1,2,3,4,5],ymm12[6,7]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm14 = [4,11]
 ; AVX512DQ-NEXT:    vpermi2q %zmm9, %zmm10, %zmm14
@@ -1863,7 +1863,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-NEXT:    vpermi2q %zmm0, %zmm8, %zmm9
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm15, %zmm9, %zmm8
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512DQ-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
@@ -1956,9 +1956,9 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-NEXT:    vmovdqa 64(%rdi), %ymm11
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm11, %xmm11
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %xmm12
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm12
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm14 = [0,0,2,5]
-; AVX512DQ-FCP-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512DQ-FCP-NEXT:    vpermi2q %ymm12, %ymm13, %ymm14
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [4,11]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm9, %zmm10, %zmm12
@@ -1973,7 +1973,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm0, %zmm8, %zmm9
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm15, %zmm9, %zmm8
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512DQ-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
@@ -2063,8 +2063,8 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vmovdqa 16(%rdi), %xmm11
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm11, %zmm7, %zmm7
-; AVX512BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm12
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm11
+; AVX512BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm12
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm11
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm12 = ymm11[0,1,2,3,4,5],ymm12[6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm13 = [4,11]
 ; AVX512BW-NEXT:    vpermi2q %zmm9, %zmm10, %zmm13
@@ -2098,7 +2098,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm14 = [7,0,9,0,7,0,9,0]
 ; AVX512BW-NEXT:    # zmm14 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpermi2q %zmm5, %zmm4, %zmm14
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %ymm15
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm15
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm11 = ymm11[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm11 = ymm13[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} ymm13 = [0,0,4,11]
@@ -2172,9 +2172,9 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-NEXT:    vmovdqa 16(%rdi), %xmm11
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm11, %zmm6, %zmm6
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm11
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm11
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm12 = [0,0,2,5]
-; AVX512BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512BW-FCP-NEXT:    vpermi2q %ymm11, %ymm13, %ymm12
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm11 = [4,11]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm9, %zmm10, %zmm11
@@ -2189,7 +2189,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm0, %zmm7, %zmm9
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm12, %zmm9, %zmm7
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm9 = ymm14[0,1,2,3],ymm9[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -2282,8 +2282,8 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vmovdqa 16(%rdi), %xmm11
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm11, %zmm7, %zmm7
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm12
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm11
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm12
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm11
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm12 = ymm11[0,1,2,3,4,5],ymm12[6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm13 = [4,11]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm9, %zmm10, %zmm13
@@ -2317,7 +2317,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm14 = [7,0,9,0,7,0,9,0]
 ; AVX512DQ-BW-NEXT:    # zmm14 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm5, %zmm4, %zmm14
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %ymm15
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm15
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm11 = ymm11[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm11 = ymm13[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} ymm13 = [0,0,4,11]
@@ -2391,9 +2391,9 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 16(%rdi), %xmm11
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm11, %zmm6, %zmm6
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm11
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm11
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm12 = [0,0,2,5]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm13
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm13
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %ymm11, %ymm13, %ymm12
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm11 = [4,11]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm9, %zmm10, %zmm11
@@ -2408,7 +2408,7 @@ define void @load_i64_stride7_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-NEXT:    # zmm9 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm0, %zmm7, %zmm9
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm12, %zmm9, %zmm7
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = ymm13[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],ymm13[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm9 = ymm14[0,1,2,3],ymm9[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -3762,7 +3762,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm30, %zmm23, %zmm22
 ; AVX512-NEXT:    vpermi2q %zmm26, %zmm3, %zmm25
 ; AVX512-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm21
 ; AVX512-NEXT:    vmovdqa64 %zmm22, %zmm21 {%k1}
@@ -3783,7 +3783,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512-NEXT:    vpermt2q %zmm30, %zmm23, %zmm24
 ; AVX512-NEXT:    vpermi2q %zmm3, %zmm26, %zmm25
-; AVX512-NEXT:    vmovdqa 512(%rdi), %ymm4
+; AVX512-NEXT:    vmovdqa64 512(%rdi), %ymm4
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm4, %zmm25, %zmm23
@@ -3793,8 +3793,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [4,5,6,13,4,5,6,13]
 ; AVX512-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpermt2q %zmm13, %zmm5, %zmm4
-; AVX512-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm11
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm12
+; AVX512-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm11
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm12
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm12[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm10
@@ -3803,8 +3803,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm10, %zmm4, %zmm24
 ; AVX512-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512-NEXT:    vpermt2q %zmm30, %zmm5, %zmm18
-; AVX512-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm4
-; AVX512-NEXT:    vmovdqa 576(%rdi), %ymm5
+; AVX512-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm4
+; AVX512-NEXT:    vmovdqa64 576(%rdi), %ymm5
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512-NEXT:    vpermi2q %zmm27, %zmm2, %zmm3
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm4[4,5,6,7]
@@ -3814,7 +3814,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm10 = [4,5,6,14,4,5,6,14]
 ; AVX512-NEXT:    # zmm10 = mem[0,1,2,3,0,1,2,3]
 ; AVX512-NEXT:    vpermt2q %zmm13, %zmm10, %zmm4
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm11
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm11
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm11 = ymm12[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [5,12]
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm7
@@ -3823,7 +3823,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm7, %zmm4, %zmm4
 ; AVX512-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512-NEXT:    vpermt2q %zmm30, %zmm10, %zmm20
-; AVX512-NEXT:    vmovdqa 640(%rdi), %ymm7
+; AVX512-NEXT:    vmovdqa64 640(%rdi), %ymm7
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm5 = ymm5[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],ymm5[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpermi2q %zmm27, %zmm2, %zmm12
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm5 = ymm12[0,1,2,3],ymm5[4,5,6,7]
@@ -3949,7 +3949,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm29, %zmm22, %zmm5
 ; AVX512-FCP-NEXT:    vpermi2q %zmm25, %zmm1, %zmm23
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 464(%rdi), %xmm4
+; AVX512-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm4
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm4 = xmm4[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm23, %zmm21
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm5, %zmm21 {%k1}
@@ -3970,7 +3970,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512-FCP-NEXT:    vpermt2q %zmm29, %zmm5, %zmm24
 ; AVX512-FCP-NEXT:    vpermi2q %zmm1, %zmm25, %zmm23
-; AVX512-FCP-NEXT:    vmovdqa 512(%rdi), %ymm4
+; AVX512-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm4
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm23, %zmm23
@@ -3982,8 +3982,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm13, %zmm11, %zmm4
 ; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm24
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [0,1,2,5]
-; AVX512-FCP-NEXT:    vmovdqa 128(%rdi), %ymm12
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm12
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm1 = ymm12[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vpermt2q %ymm24, %ymm5, %ymm12
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
@@ -3993,8 +3993,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm10, %zmm4, %zmm24
 ; AVX512-FCP-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512-FCP-NEXT:    vpermt2q %zmm29, %zmm11, %zmm18
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %xmm4
-; AVX512-FCP-NEXT:    vmovdqa 576(%rdi), %ymm10
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm4
+; AVX512-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm10
 ; AVX512-FCP-NEXT:    vpermi2q %ymm4, %ymm10, %ymm5
 ; AVX512-FCP-NEXT:    vpermi2q %zmm26, %zmm2, %zmm3
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm5[4,5,6,7]
@@ -4011,7 +4011,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
 ; AVX512-FCP-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512-FCP-NEXT:    vpermt2q %zmm29, %zmm5, %zmm20
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %ymm4
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm4
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = ymm10[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],ymm10[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vpermi2q %zmm26, %zmm2, %zmm11
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3],ymm4[4,5,6,7]
@@ -4137,7 +4137,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm30, %zmm23, %zmm22
 ; AVX512DQ-NEXT:    vpermi2q %zmm26, %zmm3, %zmm25
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512DQ-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm21
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm22, %zmm21 {%k1}
@@ -4158,7 +4158,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512DQ-NEXT:    vpermt2q %zmm30, %zmm23, %zmm24
 ; AVX512DQ-NEXT:    vpermi2q %zmm3, %zmm26, %zmm25
-; AVX512DQ-NEXT:    vmovdqa 512(%rdi), %ymm4
+; AVX512DQ-NEXT:    vmovdqa64 512(%rdi), %ymm4
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm4, %zmm25, %zmm23
@@ -4168,8 +4168,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [4,5,6,13,4,5,6,13]
 ; AVX512DQ-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-NEXT:    vpermt2q %zmm13, %zmm5, %zmm4
-; AVX512DQ-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm11
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm12
+; AVX512DQ-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm11
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm12
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm12[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm10
@@ -4178,8 +4178,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm10, %zmm4, %zmm24
 ; AVX512DQ-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512DQ-NEXT:    vpermt2q %zmm30, %zmm5, %zmm18
-; AVX512DQ-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm4
-; AVX512DQ-NEXT:    vmovdqa 576(%rdi), %ymm5
+; AVX512DQ-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm4
+; AVX512DQ-NEXT:    vmovdqa64 576(%rdi), %ymm5
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512DQ-NEXT:    vpermi2q %zmm27, %zmm2, %zmm3
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm4[4,5,6,7]
@@ -4189,7 +4189,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vbroadcasti64x4 {{.*#+}} zmm10 = [4,5,6,14,4,5,6,14]
 ; AVX512DQ-NEXT:    # zmm10 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-NEXT:    vpermt2q %zmm13, %zmm10, %zmm4
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm11
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm11
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm11 = ymm12[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [5,12]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm7
@@ -4198,7 +4198,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm7, %zmm4, %zmm4
 ; AVX512DQ-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512DQ-NEXT:    vpermt2q %zmm30, %zmm10, %zmm20
-; AVX512DQ-NEXT:    vmovdqa 640(%rdi), %ymm7
+; AVX512DQ-NEXT:    vmovdqa64 640(%rdi), %ymm7
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm5 = ymm5[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],ymm5[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpermi2q %zmm27, %zmm2, %zmm12
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm5 = ymm12[0,1,2,3],ymm5[4,5,6,7]
@@ -4324,7 +4324,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm29, %zmm22, %zmm5
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm25, %zmm1, %zmm23
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 464(%rdi), %xmm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm4
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm4 = xmm4[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm23, %zmm21
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm5, %zmm21 {%k1}
@@ -4345,7 +4345,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm29, %zmm5, %zmm24
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm1, %zmm25, %zmm23
-; AVX512DQ-FCP-NEXT:    vmovdqa 512(%rdi), %ymm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm4
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm23, %zmm23
@@ -4357,8 +4357,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm13, %zmm11, %zmm4
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm24
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm5 = [0,1,2,5]
-; AVX512DQ-FCP-NEXT:    vmovdqa 128(%rdi), %ymm12
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm12
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm1 = ymm12[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm24, %ymm5, %ymm12
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
@@ -4368,8 +4368,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm10, %zmm4, %zmm24
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm29, %zmm11, %zmm18
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %xmm4
-; AVX512DQ-FCP-NEXT:    vmovdqa 576(%rdi), %ymm10
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm10
 ; AVX512DQ-FCP-NEXT:    vpermi2q %ymm4, %ymm10, %ymm5
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm26, %zmm2, %zmm3
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm5[4,5,6,7]
@@ -4386,7 +4386,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm29, %zmm5, %zmm20
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %ymm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm4
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = ymm10[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],ymm10[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vpermi2q %zmm26, %zmm2, %zmm11
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3],ymm4[4,5,6,7]
@@ -4512,7 +4512,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm3, %zmm23, %zmm22
 ; AVX512BW-NEXT:    vpermi2q %zmm26, %zmm4, %zmm25
 ; AVX512BW-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512BW-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm21
 ; AVX512BW-NEXT:    vmovdqa64 %zmm22, %zmm21 {%k1}
@@ -4533,7 +4533,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512BW-NEXT:    vpermt2q %zmm3, %zmm23, %zmm24
 ; AVX512BW-NEXT:    vpermi2q %zmm4, %zmm26, %zmm25
-; AVX512BW-NEXT:    vmovdqa 512(%rdi), %ymm5
+; AVX512BW-NEXT:    vmovdqa64 512(%rdi), %ymm5
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm23
@@ -4543,8 +4543,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm25 = [4,5,6,13,4,5,6,13]
 ; AVX512BW-NEXT:    # zmm25 = mem[0,1,2,3,0,1,2,3]
 ; AVX512BW-NEXT:    vpermt2q %zmm13, %zmm25, %zmm5
-; AVX512BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm4
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm11
+; AVX512BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm4
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm11
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [4,11]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, %zmm10
@@ -4553,8 +4553,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm4, %zmm5, %zmm24
 ; AVX512BW-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512BW-NEXT:    vpermt2q %zmm3, %zmm25, %zmm18
-; AVX512BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm4
-; AVX512BW-NEXT:    vmovdqa 576(%rdi), %ymm5
+; AVX512BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm4
+; AVX512BW-NEXT:    vmovdqa64 576(%rdi), %ymm5
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512BW-NEXT:    vpermi2q %zmm28, %zmm2, %zmm12
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm12[0,1,2,3],ymm4[4,5,6,7]
@@ -4573,7 +4573,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm7, %zmm10, %zmm7
 ; AVX512BW-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512BW-NEXT:    vpermt2q %zmm3, %zmm12, %zmm20
-; AVX512BW-NEXT:    vmovdqa 640(%rdi), %ymm10
+; AVX512BW-NEXT:    vmovdqa64 640(%rdi), %ymm10
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm5 = ymm5[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],ymm5[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpermi2q %zmm28, %zmm2, %zmm4
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm5[4,5,6,7]
@@ -4636,13 +4636,13 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm12 = xmm12[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm12, %zmm11, %zmm4
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm30, %zmm1, %zmm10
-; AVX512BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm11
+; AVX512BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm11
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm11, %zmm10, %zmm25
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm10
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm10
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm14 = [0,1,2,5]
-; AVX512BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm11
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm12
+; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm11
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm12
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm11[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm10, %ymm14, %ymm11
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm10 = [4,11]
@@ -4761,7 +4761,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm7, %zmm14, %zmm7
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm0, %zmm5, %zmm24
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm2, %zmm23, %zmm24
-; AVX512BW-FCP-NEXT:    vmovdqa 640(%rdi), %ymm14
+; AVX512BW-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm14
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm14 = ymm28[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm28[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm31, %zmm12, %zmm4
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm14[4,5,6,7]
@@ -4887,7 +4887,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm3, %zmm23, %zmm22
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm26, %zmm4, %zmm25
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512DQ-BW-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm21
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm22, %zmm21 {%k1}
@@ -4908,7 +4908,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm6, %zmm0, %zmm24
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm3, %zmm23, %zmm24
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm4, %zmm26, %zmm25
-; AVX512DQ-BW-NEXT:    vmovdqa 512(%rdi), %ymm5
+; AVX512DQ-BW-NEXT:    vmovdqa64 512(%rdi), %ymm5
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm25, %zmm23
@@ -4918,8 +4918,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vbroadcasti64x4 {{.*#+}} zmm25 = [4,5,6,13,4,5,6,13]
 ; AVX512DQ-BW-NEXT:    # zmm25 = mem[0,1,2,3,0,1,2,3]
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm13, %zmm25, %zmm5
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm4
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm11
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm4
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm11
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm12 = [4,11]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm1, %zmm10
@@ -4928,8 +4928,8 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm4, %zmm5, %zmm24
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm6, %zmm0, %zmm18
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm3, %zmm25, %zmm18
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm4
-; AVX512DQ-BW-NEXT:    vmovdqa 576(%rdi), %ymm5
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm4
+; AVX512DQ-BW-NEXT:    vmovdqa64 576(%rdi), %ymm5
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm28, %zmm2, %zmm12
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm12[0,1,2,3],ymm4[4,5,6,7]
@@ -4948,7 +4948,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm7, %zmm10, %zmm7
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm0, %zmm6, %zmm20
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm3, %zmm12, %zmm20
-; AVX512DQ-BW-NEXT:    vmovdqa 640(%rdi), %ymm10
+; AVX512DQ-BW-NEXT:    vmovdqa64 640(%rdi), %ymm10
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm5 = ymm5[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],ymm5[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpermi2q %zmm28, %zmm2, %zmm4
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm5[4,5,6,7]
@@ -5011,13 +5011,13 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm12 = xmm12[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm12, %zmm11, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm30, %zmm1, %zmm10
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm11
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm11
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm11, %zmm10, %zmm25
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm10
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm10
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm14 = [0,1,2,5]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm11
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm12
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm11
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm12
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = ymm11[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm10, %ymm14, %ymm11
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm10 = [4,11]
@@ -5136,7 +5136,7 @@ define void @load_i64_stride7_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm7, %zmm14, %zmm7
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm0, %zmm5, %zmm24
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm2, %zmm23, %zmm24
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 640(%rdi), %ymm14
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm14
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm14 = ymm28[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm28[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm31, %zmm12, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0,1,2,3],ymm14[4,5,6,7]
@@ -7986,22 +7986,22 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm9 {%k1} = zmm1[4,5,4,5],zmm18[4,5,4,5]
 ; AVX512-NEXT:    vpermt2q %zmm18, %zmm21, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 912(%rdi), %xmm11
+; AVX512-NEXT:    vmovdqa64 912(%rdi), %xmm11
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm11, %zmm16, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 464(%rdi), %xmm11
+; AVX512-NEXT:    vmovdqa64 464(%rdi), %xmm11
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm11, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm15, %zmm21
-; AVX512-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm16
-; AVX512-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa 1024(%rdi), %ymm7
+; AVX512-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vmovdqa64 1024(%rdi), %ymm7
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm7[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [4,11]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
@@ -8011,8 +8011,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm12[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm11, %zmm25, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm11
-; AVX512-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm11
+; AVX512-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm1[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512-NEXT:    vmovdqa64 %ymm1, %ymm25
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -8022,8 +8022,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm15[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm11, %zmm8, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm11
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm11
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm11 = ymm1[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -8033,15 +8033,15 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm14, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm1
-; AVX512-NEXT:    vmovdqa 1472(%rdi), %ymm11
+; AVX512-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm1
+; AVX512-NEXT:    vmovdqa64 1472(%rdi), %ymm11
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm11[0,1,2,3,4,5],ymm1[6,7]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512-NEXT:    vpermi2q %zmm28, %zmm8, %zmm0
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm0, %zmm30, %zmm0
 ; AVX512-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 1088(%rdi), %ymm0
+; AVX512-NEXT:    vmovdqa64 1088(%rdi), %ymm0
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm14 = ymm7[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm7[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [5,12]
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm1
@@ -8054,10 +8054,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm15, %zmm0, %zmm6
 ; AVX512-NEXT:    vpermt2q %zmm15, %zmm30, %zmm3
 ; AVX512-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 960(%rdi), %ymm15
+; AVX512-NEXT:    vmovdqa64 960(%rdi), %ymm15
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm15 = mem[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm15, %xmm15
-; AVX512-NEXT:    vmovdqa 512(%rdi), %ymm12
+; AVX512-NEXT:    vmovdqa64 512(%rdi), %ymm12
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512-NEXT:    vmovdqa64 %zmm5, %zmm2
@@ -8120,10 +8120,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm9 {%k2}
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm24, %zmm1
-; AVX512-NEXT:    vmovdqa 640(%rdi), %ymm14
+; AVX512-NEXT:    vmovdqa64 640(%rdi), %ymm14
 ; AVX512-NEXT:    vmovdqa64 %ymm25, %ymm2
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm14 = ymm2[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm2[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
-; AVX512-NEXT:    vmovdqa 1408(%rdi), %ymm15
+; AVX512-NEXT:    vmovdqa64 1408(%rdi), %ymm15
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm15 = mem[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm15, %xmm15
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm15, %zmm4, %zmm4
@@ -8132,13 +8132,13 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm3 = ymm7[0,1,2,3],ymm14[4,5,6,7]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm3, %zmm2, %zmm3
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm14
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm14
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm14, %ymm14 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm14 = mem[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm14[4,5,6,7]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm2, %zmm6, %zmm2
-; AVX512-NEXT:    vmovdqa 1536(%rdi), %ymm14
+; AVX512-NEXT:    vmovdqa64 1536(%rdi), %ymm14
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm11 = ymm11[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
@@ -8465,24 +8465,24 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm28 {%k1} = zmm3[4,5,4,5],zmm24[4,5,4,5]
 ; AVX512-FCP-NEXT:    vpermt2q %zmm24, %zmm5, %zmm3
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 912(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm14, %zmm3
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm2, %zmm30
 ; AVX512-FCP-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm8, %zmm24
-; AVX512-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm23
-; AVX512-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm2
+; AVX512-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm2
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = ymm1[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm8 = [0,1,2,5]
 ; AVX512-FCP-NEXT:    vpermt2q %ymm2, %ymm8, %ymm1
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,11]
@@ -8493,11 +8493,11 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm25, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm8, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm3, %zmm5
@@ -8506,11 +8506,11 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm0, %zmm0
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vmovdqu %ymm0, (%rsp) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm8, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm14 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm14, %zmm5
@@ -8519,7 +8519,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm16, %zmm0
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm1
+; AVX512-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm1
 ; AVX512-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm25
 ; AVX512-FCP-NEXT:    vpermi2q %ymm1, %ymm25, %ymm8
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -8541,10 +8541,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm13, %zmm4, %zmm5
 ; AVX512-FCP-NEXT:    vpermt2q %zmm13, %zmm8, %zmm2
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 960(%rdi), %ymm14
+; AVX512-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm14
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm14 = mem[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm14, %xmm14
-; AVX512-FCP-NEXT:    vmovdqa 512(%rdi), %ymm13
+; AVX512-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm13
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512-FCP-NEXT:    vmovdqa 64(%rdi), %ymm12
@@ -8603,7 +8603,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm1, %zmm12 {%k2}
 ; AVX512-FCP-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm3, %ymm1 # 32-byte Folded Reload
 ; AVX512-FCP-NEXT:    # ymm1 = ymm3[0,1,2,3],mem[4,5,6,7]
-; AVX512-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm13
+; AVX512-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm13
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm13, %zmm10, %zmm14
@@ -8619,7 +8619,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    # ymm2 = ymm5[0,1,2,3],mem[4,5,6,7]
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm0, %zmm2
-; AVX512-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm13
+; AVX512-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm13
 ; AVX512-FCP-NEXT:    vmovdqa64 %ymm25, %ymm0
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm0[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],ymm0[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm4[0,1,2,3],ymm5[4,5,6,7]
@@ -8949,22 +8949,22 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vshufi64x2 {{.*#+}} zmm9 {%k1} = zmm1[4,5,4,5],zmm18[4,5,4,5]
 ; AVX512DQ-NEXT:    vpermt2q %zmm18, %zmm21, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 912(%rdi), %xmm11
+; AVX512DQ-NEXT:    vmovdqa64 912(%rdi), %xmm11
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm11, %zmm16, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 464(%rdi), %xmm11
+; AVX512DQ-NEXT:    vmovdqa64 464(%rdi), %xmm11
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm11 = xmm11[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm11, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm15, %zmm21
-; AVX512DQ-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm0, %zmm16
-; AVX512DQ-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vmovdqa 1024(%rdi), %ymm7
+; AVX512DQ-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vmovdqa64 1024(%rdi), %ymm7
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm7[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [4,11]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
@@ -8974,8 +8974,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm12[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm11, %zmm25, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm11
-; AVX512DQ-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512DQ-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm11
+; AVX512DQ-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm1[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 %ymm1, %ymm25
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -8985,8 +8985,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm15[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm11, %zmm8, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm11
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm1
+; AVX512DQ-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm11
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm11 = ymm1[0,1,2,3,4,5],ymm11[6,7]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -8996,15 +8996,15 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm14, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vmovdqa 1472(%rdi), %ymm11
+; AVX512DQ-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 1472(%rdi), %ymm11
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm11[0,1,2,3,4,5],ymm1[6,7]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512DQ-NEXT:    vpermi2q %zmm28, %zmm8, %zmm0
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm0, %zmm30, %zmm0
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 1088(%rdi), %ymm0
+; AVX512DQ-NEXT:    vmovdqa64 1088(%rdi), %ymm0
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm14 = ymm7[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm7[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [5,12]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm2, %zmm1
@@ -9017,10 +9017,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm15, %zmm0, %zmm6
 ; AVX512DQ-NEXT:    vpermt2q %zmm15, %zmm30, %zmm3
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 960(%rdi), %ymm15
+; AVX512DQ-NEXT:    vmovdqa64 960(%rdi), %ymm15
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm15 = mem[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm15, %xmm15
-; AVX512DQ-NEXT:    vmovdqa 512(%rdi), %ymm12
+; AVX512DQ-NEXT:    vmovdqa64 512(%rdi), %ymm12
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm5, %zmm2
@@ -9083,10 +9083,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm2, %zmm9 {%k2}
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm24, %zmm1
-; AVX512DQ-NEXT:    vmovdqa 640(%rdi), %ymm14
+; AVX512DQ-NEXT:    vmovdqa64 640(%rdi), %ymm14
 ; AVX512DQ-NEXT:    vmovdqa64 %ymm25, %ymm2
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm14 = ymm2[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm2[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
-; AVX512DQ-NEXT:    vmovdqa 1408(%rdi), %ymm15
+; AVX512DQ-NEXT:    vmovdqa64 1408(%rdi), %ymm15
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm15 = mem[8,9,10,11,12,13,14,15],ymm15[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm15[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm15, %xmm15
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm15, %zmm4, %zmm4
@@ -9095,13 +9095,13 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm3 = ymm7[0,1,2,3],ymm14[4,5,6,7]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm3, %zmm2, %zmm3
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm14
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm14
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm14, %ymm14 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm14 = mem[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm2 = ymm6[0,1,2,3],ymm14[4,5,6,7]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm2, %zmm6, %zmm2
-; AVX512DQ-NEXT:    vmovdqa 1536(%rdi), %ymm14
+; AVX512DQ-NEXT:    vmovdqa64 1536(%rdi), %ymm14
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm11 = ymm11[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],ymm11[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm11[4,5,6,7]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
@@ -9428,24 +9428,24 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm28 {%k1} = zmm3[4,5,4,5],zmm24[4,5,4,5]
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm24, %zmm5, %zmm3
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 912(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm14, %zmm3
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm2, %zmm30
 ; AVX512DQ-FCP-NEXT:    vmovdqa 16(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm8, %zmm24
-; AVX512DQ-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm23
-; AVX512DQ-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm2
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = ymm1[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm8 = [0,1,2,5]
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm2, %ymm8, %ymm1
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,11]
@@ -9456,11 +9456,11 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm25, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm8, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm3, %zmm5
@@ -9469,11 +9469,11 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm0, %zmm0
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vmovdqu %ymm0, (%rsp) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm8, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm14 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm14, %zmm5
@@ -9482,7 +9482,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm5[0,1,2,3],ymm1[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm16, %zmm0
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm25
 ; AVX512DQ-FCP-NEXT:    vpermi2q %ymm1, %ymm25, %ymm8
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
@@ -9504,10 +9504,10 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm13, %zmm4, %zmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm13, %zmm8, %zmm2
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 960(%rdi), %ymm14
+; AVX512DQ-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm14
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm14 = mem[8,9,10,11,12,13,14,15],ymm14[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm14[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm14, %xmm14
-; AVX512DQ-FCP-NEXT:    vmovdqa 512(%rdi), %ymm13
+; AVX512DQ-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm13
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512DQ-FCP-NEXT:    vmovdqa 64(%rdi), %ymm12
@@ -9566,7 +9566,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm1, %zmm12 {%k2}
 ; AVX512DQ-FCP-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm3, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # ymm1 = ymm3[0,1,2,3],mem[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm13
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm13
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm13, %zmm10, %zmm14
@@ -9582,7 +9582,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    # ymm2 = ymm5[0,1,2,3],mem[4,5,6,7]
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm0, %zmm2
-; AVX512DQ-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm13
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm13
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %ymm25, %ymm0
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm0[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],ymm0[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm4[0,1,2,3],ymm5[4,5,6,7]
@@ -9902,22 +9902,22 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm1[4,5,4,5],zmm13[4,5,4,5]
 ; AVX512BW-NEXT:    vpermt2q %zmm13, %zmm5, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 912(%rdi), %xmm5
+; AVX512BW-NEXT:    vmovdqa64 912(%rdi), %xmm5
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm19, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512BW-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm3, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vmovdqa 16(%rdi), %xmm3
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm18, %zmm19
-; AVX512BW-NEXT:    vmovdqa 1360(%rdi), %xmm3
+; AVX512BW-NEXT:    vmovdqa64 1360(%rdi), %xmm3
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm0, %zmm18
-; AVX512BW-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 1024(%rdi), %ymm13
+; AVX512BW-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 1024(%rdi), %ymm13
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm13[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -9927,8 +9927,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm12[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm15, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
@@ -9938,8 +9938,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm11[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm2, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm12
+; AVX512BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm12
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm12[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm5, %zmm11
@@ -9948,8 +9948,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm11[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm7, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 1472(%rdi), %ymm2
+; AVX512BW-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 1472(%rdi), %ymm2
 ; AVX512BW-NEXT:    vmovdqu %ymm2, (%rsp) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -10021,12 +10021,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm19 {%k2}
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm18 {%k2}
-; AVX512BW-NEXT:    vmovdqa 960(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqa64 960(%rdi), %ymm1
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm1, %zmm20, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm31, %zmm1 {%k2}
-; AVX512BW-NEXT:    vmovdqa 512(%rdi), %ymm6
+; AVX512BW-NEXT:    vmovdqa64 512(%rdi), %ymm6
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm6, %zmm27, %zmm6
@@ -10050,12 +10050,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3],ymm13[4,5,6,7]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm4, %zmm0, %zmm4
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %ymm13
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm13
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm12 = ymm12[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm12[4,5,6,7]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm3, %zmm0, %zmm3
-; AVX512BW-NEXT:    vmovdqa 1536(%rdi), %ymm12
+; AVX512BW-NEXT:    vmovdqa64 1536(%rdi), %ymm12
 ; AVX512BW-NEXT:    vpalignr $8, (%rsp), %ymm12, %ymm11 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm11 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm7[0,1,2,3],ymm11[4,5,6,7]
@@ -10381,23 +10381,23 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm30 {%k1} = zmm4[4,5,4,5],zmm15[4,5,4,5]
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm15, %zmm2, %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm6, %zmm2
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm15
-; AVX512BW-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm1
+; AVX512BW-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm1
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm17
-; AVX512BW-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm0
+; AVX512BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm0
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,1,2,5]
-; AVX512BW-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm7
+; AVX512BW-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm7
 ; AVX512BW-FCP-NEXT:    vmovdqa %ymm7, %ymm2
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm0, %ymm4, %ymm2
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [4,11]
@@ -10408,7 +10408,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm14, %zmm0
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 640(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm23
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %ymm23, %ymm3
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm2, %ymm4, %ymm3
@@ -10444,23 +10444,23 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm10, %zmm0, %zmm0
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm6
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm6
 ; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm21
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %ymm21, %ymm8
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm6, %ymm4, %ymm8
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm8[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm6
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = ymm7[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],ymm7[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm0, %zmm0
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 640(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = ymm23[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],ymm23[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512BW-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm7
-; AVX512BW-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm8
+; AVX512BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm7
+; AVX512BW-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm8
 ; AVX512BW-FCP-NEXT:    vpermi2q %ymm7, %ymm8, %ymm4
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm4[4,5,6,7]
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm0
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm0
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm21[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm21[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm23
@@ -10504,12 +10504,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm15 {%k2}
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm17 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 960(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm2, %xmm2
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm18, %zmm2
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm29, %zmm2 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 512(%rdi), %ymm3
+; AVX512BW-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm3
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm26, %zmm3
@@ -10521,7 +10521,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm24, %zmm5
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm5 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm6
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm6, %zmm11, %zmm6
@@ -10532,7 +10532,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm13[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm4, %zmm0
-; AVX512BW-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm7
+; AVX512BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm7
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm7 = ymm8[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm9[0,1,2,3],ymm7[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
@@ -10850,22 +10850,22 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vshufi64x2 {{.*#+}} zmm14 {%k1} = zmm1[4,5,4,5],zmm13[4,5,4,5]
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm13, %zmm5, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 912(%rdi), %xmm5
+; AVX512DQ-BW-NEXT:    vmovdqa64 912(%rdi), %xmm5
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm19, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 464(%rdi), %xmm5
+; AVX512DQ-BW-NEXT:    vmovdqa64 464(%rdi), %xmm5
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm5 = xmm5[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm3, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vmovdqa 16(%rdi), %xmm3
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm18, %zmm19
-; AVX512DQ-BW-NEXT:    vmovdqa 1360(%rdi), %xmm3
+; AVX512DQ-BW-NEXT:    vmovdqa64 1360(%rdi), %xmm3
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm3 = xmm3[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm0, %zmm18
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 1024(%rdi), %ymm13
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 1024(%rdi), %ymm13
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm13[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [4,11]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -10875,8 +10875,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm12[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm15, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
@@ -10886,8 +10886,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm11[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm2, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm12
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm12
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm12[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm5, %zmm11
@@ -10896,8 +10896,8 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm11[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm7, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 1472(%rdi), %ymm2
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 1472(%rdi), %ymm2
 ; AVX512DQ-BW-NEXT:    vmovdqu %ymm2, (%rsp) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -10969,12 +10969,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm0, %zmm19 {%k2}
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm0, %zmm18 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 960(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqa64 960(%rdi), %ymm1
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm1, %zmm20, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm31, %zmm1 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 512(%rdi), %ymm6
+; AVX512DQ-BW-NEXT:    vmovdqa64 512(%rdi), %ymm6
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm6, %zmm27, %zmm6
@@ -10998,12 +10998,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm4 = ymm11[0,1,2,3],ymm13[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm4, %zmm0, %zmm4
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %ymm13
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm13
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm12 = ymm12[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],ymm12[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm12[4,5,6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm3, %zmm0, %zmm3
-; AVX512DQ-BW-NEXT:    vmovdqa 1536(%rdi), %ymm12
+; AVX512DQ-BW-NEXT:    vmovdqa64 1536(%rdi), %ymm12
 ; AVX512DQ-BW-NEXT:    vpalignr $8, (%rsp), %ymm12, %ymm11 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm11 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm7[0,1,2,3],ymm11[4,5,6,7]
@@ -11329,23 +11329,23 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm30 {%k1} = zmm4[4,5,4,5],zmm15[4,5,4,5]
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm15, %zmm2, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm6, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm15
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm1
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm17
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm0
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,1,2,5]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm7
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm7
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm7, %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm0, %ymm4, %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [4,11]
@@ -11356,7 +11356,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm14, %zmm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 640(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm23
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %ymm23, %ymm3
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm2, %ymm4, %ymm3
@@ -11392,23 +11392,23 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm10, %zmm0, %zmm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm21
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %ymm21, %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm6, %ymm4, %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm8[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = ymm7[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],ymm7[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm0, %zmm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 640(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = ymm23[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],ymm23[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm7
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm8
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm7
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %ymm7, %ymm8, %ymm4
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm4[4,5,6,7]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm21[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm21[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm23
@@ -11452,12 +11452,12 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm15 {%k2}
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm17 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 960(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm2, %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm18, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm29, %zmm2 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 512(%rdi), %ymm3
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm3
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm26, %zmm3
@@ -11469,7 +11469,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm24, %zmm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm5 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm6, %zmm11, %zmm6
@@ -11480,7 +11480,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm13[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm4, %zmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm7
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm7
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm7 = ymm8[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],ymm8[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm9[0,1,2,3],ymm7[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
@@ -17185,7 +17185,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vpermt2q %zmm10, %zmm0, %zmm6
-; AVX512-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm6, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -17197,13 +17197,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vmovdqa64 %zmm13, %zmm1
 ; AVX512-NEXT:    vpermt2q %zmm12, %zmm0, %zmm1
-; AVX512-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512-NEXT:    vpermt2q %zmm14, %zmm0, %zmm1
-; AVX512-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -17215,7 +17215,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -17225,8 +17225,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vinserti128 $1, 2880(%rdi), %ymm0, %ymm1
-; AVX512-NEXT:    vmovdqa 2816(%rdi), %ymm0
-; AVX512-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vmovdqa64 2816(%rdi), %ymm0
+; AVX512-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512-NEXT:    vpermt2q %zmm18, %zmm9, %zmm7
@@ -17244,9 +17244,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm3, %zmm4, %zmm2
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm2
-; AVX512-NEXT:    vmovdqa 576(%rdi), %ymm0
-; AVX512-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm2
+; AVX512-NEXT:    vmovdqa64 576(%rdi), %ymm0
+; AVX512-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm0[0,1,2,3,4,5],ymm2[6,7]
 ; AVX512-NEXT:    vmovdqa64 512(%rdi), %zmm16
 ; AVX512-NEXT:    vmovdqa64 448(%rdi), %zmm3
@@ -17262,9 +17262,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm5, %zmm4, %zmm3
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm3
-; AVX512-NEXT:    vmovdqa 128(%rdi), %ymm2
-; AVX512-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm3
+; AVX512-NEXT:    vmovdqa64 128(%rdi), %ymm2
+; AVX512-NEXT:    vmovdqu64 %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm3 = ymm2[0,1,2,3,4,5],ymm3[6,7]
 ; AVX512-NEXT:    vmovdqa64 64(%rdi), %zmm23
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm2
@@ -17282,9 +17282,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm6, %zmm4, %zmm5
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm3, %zmm5, %zmm3
 ; AVX512-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm5
-; AVX512-NEXT:    vmovdqa 1472(%rdi), %ymm3
-; AVX512-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm5
+; AVX512-NEXT:    vmovdqa64 1472(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm5 = ymm3[0,1,2,3,4,5],ymm5[6,7]
 ; AVX512-NEXT:    vmovdqa64 1408(%rdi), %zmm19
 ; AVX512-NEXT:    vmovdqa64 1344(%rdi), %zmm7
@@ -17300,9 +17300,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm3, %zmm4, %zmm8
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm6, %zmm8, %zmm5
 ; AVX512-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm6
-; AVX512-NEXT:    vmovdqa 1024(%rdi), %ymm3
-; AVX512-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm6
+; AVX512-NEXT:    vmovdqa64 1024(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm6 = ymm3[0,1,2,3,4,5],ymm6[6,7]
 ; AVX512-NEXT:    vmovdqa64 960(%rdi), %zmm30
 ; AVX512-NEXT:    vmovdqa64 896(%rdi), %zmm1
@@ -17320,8 +17320,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm8, %zmm10, %zmm5
 ; AVX512-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vinserti128 $1, 2432(%rdi), %ymm0, %ymm8
-; AVX512-NEXT:    vmovdqa 2368(%rdi), %ymm3
-; AVX512-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vmovdqa64 2368(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm8 = ymm3[0,1,2,3,4,5],ymm8[6,7]
 ; AVX512-NEXT:    vmovdqa64 2304(%rdi), %zmm18
 ; AVX512-NEXT:    vmovdqa64 2240(%rdi), %zmm0
@@ -17338,9 +17338,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqu64 %zmm21, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm10, %zmm14, %zmm5
 ; AVX512-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vinserti128 $1, 1984(%rdi), %ymm0, %ymm10
-; AVX512-NEXT:    vmovdqa 1920(%rdi), %ymm3
-; AVX512-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vinserti32x4 $1, 1984(%rdi), %ymm0, %ymm10
+; AVX512-NEXT:    vmovdqa64 1920(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm10 = ymm3[0,1,2,3,4,5],ymm10[6,7]
 ; AVX512-NEXT:    vmovdqa64 1856(%rdi), %zmm22
 ; AVX512-NEXT:    vmovdqa64 1792(%rdi), %zmm5
@@ -17359,8 +17359,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm10, %zmm15, %zmm5
 ; AVX512-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    vinserti128 $1, 3328(%rdi), %ymm0, %ymm10
-; AVX512-NEXT:    vmovdqa 3264(%rdi), %ymm3
-; AVX512-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-NEXT:    vmovdqa64 3264(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm10 = ymm3[0,1,2,3,4,5],ymm10[6,7]
 ; AVX512-NEXT:    vmovdqa64 3200(%rdi), %zmm25
 ; AVX512-NEXT:    vmovdqa64 3136(%rdi), %zmm14
@@ -17402,7 +17402,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm6, %zmm4, %zmm11
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm10, %zmm11, %zmm4
 ; AVX512-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 2880(%rdi), %ymm4
+; AVX512-NEXT:    vmovdqa64 2880(%rdi), %ymm4
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm0 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm0 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm11 = [5,12]
@@ -17418,7 +17418,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm16 # 64-byte Folded Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm10, %zmm16, %zmm5
 ; AVX512-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 640(%rdi), %ymm10
+; AVX512-NEXT:    vmovdqa64 640(%rdi), %ymm10
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqa64 %zmm8, %zmm10
@@ -17432,7 +17432,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm10 # 64-byte Folded Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm10, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm5
@@ -17445,7 +17445,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 1536(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 1536(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqa64 %zmm3, %zmm8
@@ -17459,7 +17459,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 1088(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 1088(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
@@ -17472,7 +17472,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 2432(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 2432(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -17485,7 +17485,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm21, %zmm4, %zmm2
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 1984(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 1984(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -17498,7 +17498,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vpermt2q %zmm28, %zmm4, %zmm2
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vmovdqa 3328(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 3328(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vmovdqu64 %zmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -17971,7 +17971,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqa64 %zmm0, %zmm25 {%k1}
 ; AVX512-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm11, %ymm0 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm0 = ymm11[0,1,2,3],mem[4,5,6,7]
-; AVX512-NEXT:    vmovdqa 2752(%rdi), %ymm3
+; AVX512-NEXT:    vmovdqa64 2752(%rdi), %ymm3
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm3, %zmm26, %zmm3
@@ -17979,7 +17979,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm3 {%k1}
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa 512(%rdi), %ymm1
+; AVX512-NEXT:    vmovdqa64 512(%rdi), %ymm1
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm1, %zmm20, %zmm6
@@ -17995,7 +17995,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqa64 %zmm4, %zmm14 {%k1}
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
-; AVX512-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm4, %zmm17, %zmm5
@@ -18004,7 +18004,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm4 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm4 = mem[0,1,2,3],ymm4[4,5,6,7]
-; AVX512-NEXT:    vmovdqa 960(%rdi), %ymm8
+; AVX512-NEXT:    vmovdqa64 960(%rdi), %ymm8
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -18013,7 +18013,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqa64 %zmm9, %zmm8 {%k1}
 ; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512-NEXT:    vinsertf64x4 $0, %ymm4, %zmm9, %zmm4
-; AVX512-NEXT:    vmovdqa 2304(%rdi), %ymm10
+; AVX512-NEXT:    vmovdqa64 2304(%rdi), %ymm10
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm10 = mem[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm10, %xmm10
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -18023,7 +18023,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm11 # 32-byte Folded Reload
 ; AVX512-NEXT:    # ymm11 = mem[0,1,2,3],ymm9[4,5,6,7]
-; AVX512-NEXT:    vmovdqa 1856(%rdi), %ymm12
+; AVX512-NEXT:    vmovdqa64 1856(%rdi), %ymm12
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -18032,7 +18032,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-NEXT:    vmovdqa64 %zmm9, %zmm12 {%k1}
 ; AVX512-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512-NEXT:    vinsertf64x4 $0, %ymm11, %zmm9, %zmm11
-; AVX512-NEXT:    vmovdqa 3200(%rdi), %ymm13
+; AVX512-NEXT:    vmovdqa64 3200(%rdi), %ymm13
 ; AVX512-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512-NEXT:    vinserti32x4 $0, %xmm13, %zmm15, %zmm9
@@ -18176,7 +18176,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vpermt2q %zmm13, %zmm0, %zmm8
-; AVX512-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm8, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -18187,13 +18187,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512-FCP-NEXT:    vpermt2q %zmm6, %zmm0, %zmm1
-; AVX512-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vpermt2q %zmm7, %zmm0, %zmm1
-; AVX512-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -18205,7 +18205,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512-FCP-NEXT:    vpermt2q %zmm16, %zmm0, %zmm1
-; AVX512-FCP-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512-FCP-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -18216,10 +18216,10 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa 2880(%rdi), %xmm2
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm10 = [0,1,2,5]
-; AVX512-FCP-NEXT:    vmovdqa 2816(%rdi), %ymm3
-; AVX512-FCP-NEXT:    vmovdqa 2880(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 2816(%rdi), %ymm3
+; AVX512-FCP-NEXT:    vmovdqa64 2880(%rdi), %ymm1
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm3[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],ymm3[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-FCP-NEXT:    vpermt2q %ymm2, %ymm10, %ymm3
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm6 = [4,11]
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm15, %zmm1
@@ -18237,11 +18237,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm5, %zmm3, %zmm4
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %ymm4
+; AVX512-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm4
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = ymm1[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vmovdqa64 %ymm4, %ymm31
-; AVX512-FCP-NEXT:    vmovdqa 640(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 512(%rdi), %zmm22
 ; AVX512-FCP-NEXT:    vmovdqa64 448(%rdi), %zmm7
@@ -18257,11 +18257,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 192(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm28
 ; AVX512-FCP-NEXT:    vmovdqa64 (%rdi), %zmm4
@@ -18277,11 +18277,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 1408(%rdi), %zmm24
 ; AVX512-FCP-NEXT:    vmovdqa64 1344(%rdi), %zmm11
@@ -18297,11 +18297,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm5
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 960(%rdi), %zmm17
 ; AVX512-FCP-NEXT:    vmovdqa64 896(%rdi), %zmm13
@@ -18317,10 +18317,10 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 2368(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 2432(%rdi), %ymm5
+; AVX512-FCP-NEXT:    vmovdqa64 2368(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 2432(%rdi), %ymm5
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa 2432(%rdi), %xmm5
 ; AVX512-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 2304(%rdi), %zmm18
@@ -18338,11 +18338,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm5, %zmm3, %zmm8
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm8, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1920(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqa 1984(%rdi), %ymm8
+; AVX512-FCP-NEXT:    vmovdqa64 1920(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqa64 1984(%rdi), %ymm8
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
-; AVX512-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 1984(%rdi), %xmm8
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqa64 1984(%rdi), %xmm8
 ; AVX512-FCP-NEXT:    vpermt2q %ymm8, %ymm10, %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa64 1856(%rdi), %zmm16
 ; AVX512-FCP-NEXT:    vmovdqa64 1792(%rdi), %zmm9
@@ -18359,8 +18359,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm8, %zmm1
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-FCP-NEXT:    vmovdqa 3328(%rdi), %xmm8
-; AVX512-FCP-NEXT:    vmovdqa 3264(%rdi), %ymm1
-; AVX512-FCP-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-FCP-NEXT:    vmovdqa64 3264(%rdi), %ymm1
+; AVX512-FCP-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-FCP-NEXT:    vpermi2q %ymm8, %ymm1, %ymm10
 ; AVX512-FCP-NEXT:    vmovdqa64 3200(%rdi), %zmm19
 ; AVX512-FCP-NEXT:    vmovdqa64 3136(%rdi), %zmm0
@@ -18491,7 +18491,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vpermt2q %zmm12, %zmm2, %zmm6
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm4
 ; AVX512-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-FCP-NEXT:    vmovdqa 3328(%rdi), %ymm4
+; AVX512-FCP-NEXT:    vmovdqa64 3328(%rdi), %ymm4
 ; AVX512-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm1 # 32-byte Folded Reload
 ; AVX512-FCP-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -18961,7 +18961,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm31, %zmm28 {%k1}
 ; AVX512-FCP-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm0 # 32-byte Folded Reload
 ; AVX512-FCP-NEXT:    # ymm0 = ymm10[0,1,2,3],mem[4,5,6,7]
-; AVX512-FCP-NEXT:    vmovdqa 2752(%rdi), %ymm3
+; AVX512-FCP-NEXT:    vmovdqa64 2752(%rdi), %ymm3
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm16, %zmm3
@@ -18969,7 +18969,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm1, %zmm3 {%k1}
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm16
-; AVX512-FCP-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm18, %zmm5
@@ -18985,7 +18985,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm1, %zmm15 {%k1}
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm1
-; AVX512-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm0
+; AVX512-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm0
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
@@ -18995,7 +18995,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm4 # 32-byte Folded Reload
 ; AVX512-FCP-NEXT:    # ymm4 = mem[0,1,2,3],ymm4[4,5,6,7]
-; AVX512-FCP-NEXT:    vmovdqa 960(%rdi), %ymm8
+; AVX512-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm8
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -19004,7 +19004,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm9, %zmm8 {%k1}
 ; AVX512-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vinsertf64x4 $0, %ymm4, %zmm9, %zmm4
-; AVX512-FCP-NEXT:    vmovdqa 2304(%rdi), %ymm9
+; AVX512-FCP-NEXT:    vmovdqa64 2304(%rdi), %ymm9
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm9, %xmm9
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
@@ -19014,7 +19014,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm10 # 32-byte Folded Reload
 ; AVX512-FCP-NEXT:    # ymm10 = mem[0,1,2,3],ymm10[4,5,6,7]
-; AVX512-FCP-NEXT:    vmovdqa 1856(%rdi), %ymm11
+; AVX512-FCP-NEXT:    vmovdqa64 1856(%rdi), %ymm11
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm11, %xmm11
 ; AVX512-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -19023,7 +19023,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm12, %zmm11 {%k1}
 ; AVX512-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
 ; AVX512-FCP-NEXT:    vinsertf64x4 $0, %ymm10, %zmm12, %zmm10
-; AVX512-FCP-NEXT:    vmovdqa 3200(%rdi), %ymm12
+; AVX512-FCP-NEXT:    vmovdqa64 3200(%rdi), %ymm12
 ; AVX512-FCP-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512-FCP-NEXT:    vinserti32x4 $0, %xmm12, %zmm22, %zmm12
@@ -19170,7 +19170,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vpermt2q %zmm10, %zmm0, %zmm6
-; AVX512DQ-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512DQ-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm6, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -19182,13 +19182,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm13, %zmm1
 ; AVX512DQ-NEXT:    vpermt2q %zmm12, %zmm0, %zmm1
-; AVX512DQ-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512DQ-NEXT:    vpermt2q %zmm14, %zmm0, %zmm1
-; AVX512DQ-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512DQ-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -19200,7 +19200,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512DQ-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512DQ-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512DQ-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -19210,8 +19210,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vinserti128 $1, 2880(%rdi), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vmovdqa 2816(%rdi), %ymm0
-; AVX512DQ-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vmovdqa64 2816(%rdi), %ymm0
+; AVX512DQ-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512DQ-NEXT:    vpermt2q %zmm18, %zmm9, %zmm7
@@ -19229,9 +19229,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm3, %zmm4, %zmm2
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm2
-; AVX512DQ-NEXT:    vmovdqa 576(%rdi), %ymm0
-; AVX512DQ-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm2
+; AVX512DQ-NEXT:    vmovdqa64 576(%rdi), %ymm0
+; AVX512DQ-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm2 = ymm0[0,1,2,3,4,5],ymm2[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 512(%rdi), %zmm16
 ; AVX512DQ-NEXT:    vmovdqa64 448(%rdi), %zmm3
@@ -19247,9 +19247,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm5, %zmm4, %zmm3
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm3
-; AVX512DQ-NEXT:    vmovdqa 128(%rdi), %ymm2
-; AVX512DQ-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm3
+; AVX512DQ-NEXT:    vmovdqa64 128(%rdi), %ymm2
+; AVX512DQ-NEXT:    vmovdqu64 %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm3 = ymm2[0,1,2,3,4,5],ymm3[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 64(%rdi), %zmm23
 ; AVX512DQ-NEXT:    vmovdqa64 (%rdi), %zmm2
@@ -19267,9 +19267,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm6, %zmm4, %zmm5
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm3, %zmm5, %zmm3
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm5
-; AVX512DQ-NEXT:    vmovdqa 1472(%rdi), %ymm3
-; AVX512DQ-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm5
+; AVX512DQ-NEXT:    vmovdqa64 1472(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm5 = ymm3[0,1,2,3,4,5],ymm5[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 1408(%rdi), %zmm19
 ; AVX512DQ-NEXT:    vmovdqa64 1344(%rdi), %zmm7
@@ -19285,9 +19285,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm3, %zmm4, %zmm8
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm6, %zmm8, %zmm5
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm6
-; AVX512DQ-NEXT:    vmovdqa 1024(%rdi), %ymm3
-; AVX512DQ-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm6
+; AVX512DQ-NEXT:    vmovdqa64 1024(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm6 = ymm3[0,1,2,3,4,5],ymm6[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 960(%rdi), %zmm30
 ; AVX512DQ-NEXT:    vmovdqa64 896(%rdi), %zmm1
@@ -19305,8 +19305,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm8, %zmm10, %zmm5
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vinserti128 $1, 2432(%rdi), %ymm0, %ymm8
-; AVX512DQ-NEXT:    vmovdqa 2368(%rdi), %ymm3
-; AVX512DQ-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vmovdqa64 2368(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm8 = ymm3[0,1,2,3,4,5],ymm8[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 2304(%rdi), %zmm18
 ; AVX512DQ-NEXT:    vmovdqa64 2240(%rdi), %zmm0
@@ -19323,9 +19323,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm21, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm10, %zmm14, %zmm5
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vinserti128 $1, 1984(%rdi), %ymm0, %ymm10
-; AVX512DQ-NEXT:    vmovdqa 1920(%rdi), %ymm3
-; AVX512DQ-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vinserti32x4 $1, 1984(%rdi), %ymm0, %ymm10
+; AVX512DQ-NEXT:    vmovdqa64 1920(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm10 = ymm3[0,1,2,3,4,5],ymm10[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 1856(%rdi), %zmm22
 ; AVX512DQ-NEXT:    vmovdqa64 1792(%rdi), %zmm5
@@ -19344,8 +19344,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm10, %zmm15, %zmm5
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-NEXT:    vinserti128 $1, 3328(%rdi), %ymm0, %ymm10
-; AVX512DQ-NEXT:    vmovdqa 3264(%rdi), %ymm3
-; AVX512DQ-NEXT:    vmovdqu %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-NEXT:    vmovdqa64 3264(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqu64 %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm10 = ymm3[0,1,2,3,4,5],ymm10[6,7]
 ; AVX512DQ-NEXT:    vmovdqa64 3200(%rdi), %zmm25
 ; AVX512DQ-NEXT:    vmovdqa64 3136(%rdi), %zmm14
@@ -19387,7 +19387,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm6, %zmm4, %zmm11
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm10, %zmm11, %zmm4
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 2880(%rdi), %ymm4
+; AVX512DQ-NEXT:    vmovdqa64 2880(%rdi), %ymm4
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm0 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm0 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} xmm11 = [5,12]
@@ -19403,7 +19403,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm16 # 64-byte Folded Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm10, %zmm16, %zmm5
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 640(%rdi), %ymm10
+; AVX512DQ-NEXT:    vmovdqa64 640(%rdi), %ymm10
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm8, %zmm10
@@ -19417,7 +19417,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm10 # 64-byte Folded Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm10, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 192(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm2, %zmm5
@@ -19430,7 +19430,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 1536(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 1536(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm3, %zmm8
@@ -19444,7 +19444,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 1088(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 1088(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
@@ -19457,7 +19457,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm4, %zmm2 # 64-byte Folded Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 2432(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 2432(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -19470,7 +19470,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm21, %zmm4, %zmm2
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 1984(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 1984(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -19483,7 +19483,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vpermt2q %zmm28, %zmm4, %zmm2
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-NEXT:    vmovdqa 3328(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 3328(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vmovdqu64 %zmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -19956,7 +19956,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm0, %zmm25 {%k1}
 ; AVX512DQ-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm11, %ymm0 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm0 = ymm11[0,1,2,3],mem[4,5,6,7]
-; AVX512DQ-NEXT:    vmovdqa 2752(%rdi), %ymm3
+; AVX512DQ-NEXT:    vmovdqa64 2752(%rdi), %ymm3
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm3, %zmm26, %zmm3
@@ -19964,7 +19964,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm1, %zmm3 {%k1}
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
-; AVX512DQ-NEXT:    vmovdqa 512(%rdi), %ymm1
+; AVX512DQ-NEXT:    vmovdqa64 512(%rdi), %ymm1
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm1, %zmm20, %zmm6
@@ -19980,7 +19980,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm4, %zmm14 {%k1}
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
-; AVX512DQ-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512DQ-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm4, %zmm17, %zmm5
@@ -19989,7 +19989,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm4 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm4 = mem[0,1,2,3],ymm4[4,5,6,7]
-; AVX512DQ-NEXT:    vmovdqa 960(%rdi), %ymm8
+; AVX512DQ-NEXT:    vmovdqa64 960(%rdi), %ymm8
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -19998,7 +19998,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm9, %zmm8 {%k1}
 ; AVX512DQ-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinsertf64x4 $0, %ymm4, %zmm9, %zmm4
-; AVX512DQ-NEXT:    vmovdqa 2304(%rdi), %ymm10
+; AVX512DQ-NEXT:    vmovdqa64 2304(%rdi), %ymm10
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm10 = mem[8,9,10,11,12,13,14,15],ymm10[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm10[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm10, %xmm10
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -20008,7 +20008,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512DQ-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm11 # 32-byte Folded Reload
 ; AVX512DQ-NEXT:    # ymm11 = mem[0,1,2,3],ymm9[4,5,6,7]
-; AVX512DQ-NEXT:    vmovdqa 1856(%rdi), %ymm12
+; AVX512DQ-NEXT:    vmovdqa64 1856(%rdi), %ymm12
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512DQ-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -20017,7 +20017,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm9, %zmm12 {%k1}
 ; AVX512DQ-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512DQ-NEXT:    vinsertf64x4 $0, %ymm11, %zmm9, %zmm11
-; AVX512DQ-NEXT:    vmovdqa 3200(%rdi), %ymm13
+; AVX512DQ-NEXT:    vmovdqa64 3200(%rdi), %ymm13
 ; AVX512DQ-NEXT:    vpalignr {{.*#+}} ymm13 = mem[8,9,10,11,12,13,14,15],ymm13[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm13[16,17,18,19,20,21,22,23]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm13, %xmm13
 ; AVX512DQ-NEXT:    vinserti32x4 $0, %xmm13, %zmm15, %zmm9
@@ -20161,7 +20161,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm13, %zmm0, %zmm8
-; AVX512DQ-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm8, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -20172,13 +20172,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm6, %zmm0, %zmm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm7, %zmm0, %zmm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -20190,7 +20190,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm16, %zmm0, %zmm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -20201,10 +20201,10 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa 2880(%rdi), %xmm2
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm10 = [0,1,2,5]
-; AVX512DQ-FCP-NEXT:    vmovdqa 2816(%rdi), %ymm3
-; AVX512DQ-FCP-NEXT:    vmovdqa 2880(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2816(%rdi), %ymm3
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2880(%rdi), %ymm1
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm3[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],ymm3[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm2, %ymm10, %ymm3
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} xmm6 = [4,11]
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm15, %zmm1
@@ -20222,11 +20222,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm5, %zmm3, %zmm4
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm4, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %ymm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %ymm4
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = ymm1[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %ymm4, %ymm31
-; AVX512DQ-FCP-NEXT:    vmovdqa 640(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 512(%rdi), %zmm22
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 448(%rdi), %zmm7
@@ -20242,11 +20242,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 192(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm28
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rdi), %zmm4
@@ -20262,11 +20262,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 1408(%rdi), %zmm24
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 1344(%rdi), %zmm11
@@ -20282,11 +20282,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm5
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 960(%rdi), %zmm17
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 896(%rdi), %zmm13
@@ -20302,10 +20302,10 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm8, %zmm3, %zmm5
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm5, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 2368(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 2432(%rdi), %ymm5
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2368(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2432(%rdi), %ymm5
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa 2432(%rdi), %xmm5
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm5, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 2304(%rdi), %zmm18
@@ -20323,11 +20323,11 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm5, %zmm3, %zmm8
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm8, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1920(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1984(%rdi), %ymm8
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1920(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1984(%rdi), %ymm8
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = ymm1[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],ymm1[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 1984(%rdi), %xmm8
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1984(%rdi), %xmm8
 ; AVX512DQ-FCP-NEXT:    vpermt2q %ymm8, %ymm10, %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 1856(%rdi), %zmm16
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 1792(%rdi), %zmm9
@@ -20344,8 +20344,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm8, %zmm1
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-FCP-NEXT:    vmovdqa 3328(%rdi), %xmm8
-; AVX512DQ-FCP-NEXT:    vmovdqa 3264(%rdi), %ymm1
-; AVX512DQ-FCP-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-FCP-NEXT:    vmovdqa64 3264(%rdi), %ymm1
+; AVX512DQ-FCP-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-FCP-NEXT:    vpermi2q %ymm8, %ymm1, %ymm10
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 3200(%rdi), %zmm19
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 3136(%rdi), %zmm0
@@ -20476,7 +20476,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vpermt2q %zmm12, %zmm2, %zmm6
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm4
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-FCP-NEXT:    vmovdqa 3328(%rdi), %ymm4
+; AVX512DQ-FCP-NEXT:    vmovdqa64 3328(%rdi), %ymm4
 ; AVX512DQ-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -20946,7 +20946,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm31, %zmm28 {%k1}
 ; AVX512DQ-FCP-NEXT:    vpblendd $240, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm0 # 32-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # ymm0 = ymm10[0,1,2,3],mem[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vmovdqa 2752(%rdi), %ymm3
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2752(%rdi), %ymm3
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm3 = mem[8,9,10,11,12,13,14,15],ymm3[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm3[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm16, %zmm3
@@ -20954,7 +20954,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm1, %zmm3 {%k1}
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm16
-; AVX512DQ-FCP-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512DQ-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm18, %zmm5
@@ -20970,7 +20970,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm1, %zmm15 {%k1}
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm1 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm1
-; AVX512DQ-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm0
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm0
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
@@ -20980,7 +20980,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm4 # 32-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # ymm4 = mem[0,1,2,3],ymm4[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vmovdqa 960(%rdi), %ymm8
+; AVX512DQ-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm8
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -20989,7 +20989,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm9, %zmm8 {%k1}
 ; AVX512DQ-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vinsertf64x4 $0, %ymm4, %zmm9, %zmm4
-; AVX512DQ-FCP-NEXT:    vmovdqa 2304(%rdi), %ymm9
+; AVX512DQ-FCP-NEXT:    vmovdqa64 2304(%rdi), %ymm9
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm9, %xmm9
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
@@ -20999,7 +20999,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm10 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vblendps $15, {{[-0-9]+}}(%r{{[sb]}}p), %ymm10, %ymm10 # 32-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # ymm10 = mem[0,1,2,3],ymm10[4,5,6,7]
-; AVX512DQ-FCP-NEXT:    vmovdqa 1856(%rdi), %ymm11
+; AVX512DQ-FCP-NEXT:    vmovdqa64 1856(%rdi), %ymm11
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm11 = mem[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm11, %xmm11
 ; AVX512DQ-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
@@ -21008,7 +21008,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm12, %zmm11 {%k1}
 ; AVX512DQ-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm12 # 64-byte Reload
 ; AVX512DQ-FCP-NEXT:    vinsertf64x4 $0, %ymm10, %zmm12, %zmm10
-; AVX512DQ-FCP-NEXT:    vmovdqa 3200(%rdi), %ymm12
+; AVX512DQ-FCP-NEXT:    vmovdqa64 3200(%rdi), %ymm12
 ; AVX512DQ-FCP-NEXT:    vpalignr {{.*#+}} ymm12 = mem[8,9,10,11,12,13,14,15],ymm12[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm12[16,17,18,19,20,21,22,23]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm12, %xmm12
 ; AVX512DQ-FCP-NEXT:    vinserti32x4 $0, %xmm12, %zmm22, %zmm12
@@ -21154,7 +21154,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512BW-NEXT:    vpermt2q %zmm16, %zmm0, %zmm1
-; AVX512BW-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512BW-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -21166,13 +21166,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vmovdqa64 %zmm12, %zmm1
 ; AVX512BW-NEXT:    vpermt2q %zmm10, %zmm0, %zmm1
-; AVX512BW-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512BW-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vmovdqa64 %zmm13, %zmm1
 ; AVX512BW-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512BW-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512BW-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -21184,7 +21184,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512BW-NEXT:    vpermt2q %zmm9, %zmm0, %zmm1
-; AVX512BW-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512BW-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -21194,8 +21194,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vinserti128 $1, 2880(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 2816(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vmovdqa64 2816(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm5, %zmm1
@@ -21215,9 +21215,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 512(%rdi), %zmm27
 ; AVX512BW-NEXT:    vmovdqa64 448(%rdi), %zmm2
@@ -21234,9 +21234,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 64(%rdi), %zmm31
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm8
@@ -21253,9 +21253,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 1472(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 1472(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 1408(%rdi), %zmm26
 ; AVX512BW-NEXT:    vmovdqa64 1344(%rdi), %zmm7
@@ -21271,9 +21271,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 960(%rdi), %zmm19
 ; AVX512BW-NEXT:    vmovdqa64 896(%rdi), %zmm6
@@ -21291,8 +21291,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vinserti128 $1, 2432(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 2368(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vmovdqa64 2368(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 2304(%rdi), %zmm20
 ; AVX512BW-NEXT:    vmovdqa64 2240(%rdi), %zmm5
@@ -21309,9 +21309,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm3, %zmm4, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vinserti128 $1, 1984(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 1920(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vinserti32x4 $1, 1984(%rdi), %ymm0, %ymm0
+; AVX512BW-NEXT:    vmovdqa64 1920(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 1856(%rdi), %zmm21
 ; AVX512BW-NEXT:    vmovdqa64 1792(%rdi), %zmm2
@@ -21329,8 +21329,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vinserti128 $1, 3328(%rdi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vmovdqa 3264(%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-NEXT:    vmovdqa64 3264(%rdi), %ymm1
+; AVX512BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512BW-NEXT:    vmovdqa64 3200(%rdi), %zmm17
 ; AVX512BW-NEXT:    vmovdqa64 3136(%rdi), %zmm11
@@ -21369,7 +21369,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm30, %zmm4, %zmm10
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm10, %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 2880(%rdi), %ymm0
+; AVX512BW-NEXT:    vmovdqa64 2880(%rdi), %ymm0
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm4 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm4 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [5,12]
@@ -21386,7 +21386,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 640(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 640(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vpermt2q %zmm27, %zmm0, %zmm1
@@ -21398,7 +21398,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqu64 %zmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -21411,7 +21411,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 1536(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 1536(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqa64 %zmm7, %zmm5
@@ -21427,7 +21427,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm7
 ; AVX512BW-NEXT:    vmovdqu64 %zmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 1088(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 1088(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
@@ -21441,7 +21441,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm9
 ; AVX512BW-NEXT:    vmovdqu64 %zmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 2432(%rdi), %ymm9
+; AVX512BW-NEXT:    vmovdqa64 2432(%rdi), %ymm9
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm11 # 64-byte Reload
@@ -21454,7 +21454,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm9 # 64-byte Folded Reload
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm9, %zmm2
 ; AVX512BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 1984(%rdi), %ymm2
+; AVX512BW-NEXT:    vmovdqa64 1984(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -21467,7 +21467,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vpermt2q %zmm23, %zmm10, %zmm3
 ; AVX512BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-NEXT:    vmovdqa 3328(%rdi), %ymm2
+; AVX512BW-NEXT:    vmovdqa64 3328(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm1 # 32-byte Folded Reload
 ; AVX512BW-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -21941,13 +21941,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm26 {%k2}
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm31, %zmm27 {%k2}
-; AVX512BW-NEXT:    vmovdqa 2752(%rdi), %ymm0
+; AVX512BW-NEXT:    vmovdqa64 2752(%rdi), %ymm0
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm0, %zmm28, %zmm1
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; AVX512BW-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512BW-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -21961,35 +21961,35 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm4, %zmm3
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm4, %zmm3 {%k2}
-; AVX512BW-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512BW-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm4, %zmm5, %zmm4
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm5, %zmm4 {%k2}
-; AVX512BW-NEXT:    vmovdqa 960(%rdi), %ymm5
+; AVX512BW-NEXT:    vmovdqa64 960(%rdi), %ymm5
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm6, %zmm5
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm6, %zmm5 {%k2}
-; AVX512BW-NEXT:    vmovdqa 2304(%rdi), %ymm6
+; AVX512BW-NEXT:    vmovdqa64 2304(%rdi), %ymm6
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm6, %zmm7, %zmm6
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm7, %zmm6 {%k2}
-; AVX512BW-NEXT:    vmovdqa 1856(%rdi), %ymm7
+; AVX512BW-NEXT:    vmovdqa64 1856(%rdi), %ymm7
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm7, %xmm7
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm7, %zmm8, %zmm7
 ; AVX512BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512BW-NEXT:    vmovdqa64 %zmm8, %zmm7 {%k2}
-; AVX512BW-NEXT:    vmovdqa 3200(%rdi), %ymm8
+; AVX512BW-NEXT:    vmovdqa64 3200(%rdi), %ymm8
 ; AVX512BW-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512BW-NEXT:    vinserti32x4 $0, %xmm8, %zmm30, %zmm8
@@ -22132,7 +22132,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm10, %zmm0, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -22143,13 +22143,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm12, %zmm1
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm13, %zmm0, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -22161,7 +22161,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm17, %zmm0, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -22192,8 +22192,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm2
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 640(%rdi), %xmm2
-; AVX512BW-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512BW-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512BW-FCP-NEXT:    vmovdqa %ymm1, %ymm3
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm2, %ymm9, %ymm3
 ; AVX512BW-FCP-NEXT:    vmovdqa64 512(%rdi), %zmm19
@@ -22210,9 +22210,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm4, %zmm13, %zmm3
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm3
-; AVX512BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm4
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm3
+; AVX512BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm4
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm3, %ymm9, %ymm4
 ; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm31
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%rdi), %zmm2
@@ -22229,9 +22229,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm5, %zmm13, %zmm4
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm3, %zmm4, %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm4
-; AVX512BW-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm5
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm5
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm5
 ; AVX512BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %zmm10
 ; AVX512BW-FCP-NEXT:    vmovdqa64 1344(%rdi), %zmm8
@@ -22247,9 +22247,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm6
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm4
-; AVX512BW-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm6
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512BW-FCP-NEXT:    vmovdqa64 960(%rdi), %zmm17
 ; AVX512BW-FCP-NEXT:    vmovdqa64 896(%rdi), %zmm15
@@ -22266,8 +22266,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa 2432(%rdi), %xmm4
-; AVX512BW-FCP-NEXT:    vmovdqa 2368(%rdi), %ymm6
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 2368(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512BW-FCP-NEXT:    vmovdqa64 2304(%rdi), %zmm16
 ; AVX512BW-FCP-NEXT:    vmovdqa64 2240(%rdi), %zmm0
@@ -22284,9 +22284,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm6
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 1984(%rdi), %xmm4
-; AVX512BW-FCP-NEXT:    vmovdqa 1920(%rdi), %ymm6
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 1984(%rdi), %xmm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 1920(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512BW-FCP-NEXT:    vmovdqa64 1856(%rdi), %zmm23
 ; AVX512BW-FCP-NEXT:    vmovdqa64 1792(%rdi), %zmm3
@@ -22304,8 +22304,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm18, %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqa64 3328(%rdi), %xmm18
-; AVX512BW-FCP-NEXT:    vmovdqa 3264(%rdi), %ymm4
-; AVX512BW-FCP-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512BW-FCP-NEXT:    vmovdqa64 3264(%rdi), %ymm4
+; AVX512BW-FCP-NEXT:    vmovdqu64 %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermi2q %ymm18, %ymm4, %ymm9
 ; AVX512BW-FCP-NEXT:    vmovdqa64 3200(%rdi), %zmm18
 ; AVX512BW-FCP-NEXT:    vmovdqa64 3136(%rdi), %zmm4
@@ -22350,7 +22350,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm19, %zmm13, %zmm9
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm19, %zmm20
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm19, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 2880(%rdi), %ymm11
+; AVX512BW-FCP-NEXT:    vmovdqa64 2880(%rdi), %ymm11
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm26[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],ymm26[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-FCP-NEXT:    vbroadcasti64x4 {{.*#+}} zmm0 = [9,0,7,0,9,0,7,0]
@@ -22380,7 +22380,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm1
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm31, %zmm13, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -22393,7 +22393,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm8, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm10, %zmm13, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -22407,7 +22407,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm15, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm17, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm17, %zmm13, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -22421,7 +22421,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm6, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm16, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm16, %zmm13, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 2432(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 2432(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -22434,7 +22434,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm7, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm23, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermt2q %zmm23, %zmm13, %zmm1
-; AVX512BW-FCP-NEXT:    vmovdqa 1984(%rdi), %ymm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 1984(%rdi), %ymm2
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -22446,7 +22446,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm18, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpermi2q %zmm18, %zmm4, %zmm13
-; AVX512BW-FCP-NEXT:    vmovdqa 3328(%rdi), %ymm1
+; AVX512BW-FCP-NEXT:    vmovdqa64 3328(%rdi), %ymm1
 ; AVX512BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512BW-FCP-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm13[0,1,2,3],ymm1[4,5,6,7]
@@ -22915,13 +22915,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm0, %zmm27 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 2752(%rdi), %ymm0
+; AVX512BW-FCP-NEXT:    vmovdqa64 2752(%rdi), %ymm0
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm24, %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512BW-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm29, %zmm0
@@ -22934,35 +22934,35 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm4, %zmm3
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm3 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm5, %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm5, %zmm4 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 960(%rdi), %ymm5
+; AVX512BW-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm5
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm6, %zmm5
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm6, %zmm5 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 2304(%rdi), %ymm6
+; AVX512BW-FCP-NEXT:    vmovdqa64 2304(%rdi), %ymm6
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm6, %zmm7, %zmm6
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm7, %zmm6 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 1856(%rdi), %ymm7
+; AVX512BW-FCP-NEXT:    vmovdqa64 1856(%rdi), %ymm7
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm7, %xmm7
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm7, %zmm8, %zmm7
 ; AVX512BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm8, %zmm7 {%k2}
-; AVX512BW-FCP-NEXT:    vmovdqa 3200(%rdi), %ymm8
+; AVX512BW-FCP-NEXT:    vmovdqa64 3200(%rdi), %ymm8
 ; AVX512BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512BW-FCP-NEXT:    vinserti32x4 $0, %xmm8, %zmm16, %zmm8
@@ -23107,7 +23107,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm16, %zmm0, %zmm1
-; AVX512DQ-BW-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -23119,13 +23119,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm12, %zmm1
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm10, %zmm0, %zmm1
-; AVX512DQ-BW-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm13, %zmm1
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512DQ-BW-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -23137,7 +23137,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm9, %zmm0, %zmm1
-; AVX512DQ-BW-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -23147,8 +23147,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, 2880(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 2816(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vmovdqa64 2816(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm9 = [4,11]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm5, %zmm1
@@ -23168,9 +23168,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 640(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 576(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 640(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 576(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 512(%rdi), %zmm27
 ; AVX512DQ-BW-NEXT:    vmovdqa64 448(%rdi), %zmm2
@@ -23187,9 +23187,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 192(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 128(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 192(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 128(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rdi), %zmm31
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%rdi), %zmm8
@@ -23206,9 +23206,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 1536(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 1472(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 1536(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 1472(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 1408(%rdi), %zmm26
 ; AVX512DQ-BW-NEXT:    vmovdqa64 1344(%rdi), %zmm7
@@ -23224,9 +23224,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm2, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 1088(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 1024(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 1088(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 1024(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 960(%rdi), %zmm19
 ; AVX512DQ-BW-NEXT:    vmovdqa64 896(%rdi), %zmm6
@@ -23244,8 +23244,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, 2432(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 2368(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vmovdqa64 2368(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 2304(%rdi), %zmm20
 ; AVX512DQ-BW-NEXT:    vmovdqa64 2240(%rdi), %zmm5
@@ -23262,9 +23262,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm3, %zmm4, %zmm1
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vinserti128 $1, 1984(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 1920(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vinserti32x4 $1, 1984(%rdi), %ymm0, %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 1920(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 1856(%rdi), %zmm21
 ; AVX512DQ-BW-NEXT:    vmovdqa64 1792(%rdi), %zmm2
@@ -23282,8 +23282,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vinserti128 $1, 3328(%rdi), %ymm0, %ymm0
-; AVX512DQ-BW-NEXT:    vmovdqa 3264(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vmovdqu %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-NEXT:    vmovdqa64 3264(%rdi), %ymm1
+; AVX512DQ-BW-NEXT:    vmovdqu64 %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 3200(%rdi), %zmm17
 ; AVX512DQ-BW-NEXT:    vmovdqa64 3136(%rdi), %zmm11
@@ -23322,7 +23322,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm30, %zmm4, %zmm10
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm0, %zmm10, %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 2880(%rdi), %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 2880(%rdi), %ymm0
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm4 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm4 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [5,12]
@@ -23339,7 +23339,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 640(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 640(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm27, %zmm0, %zmm1
@@ -23351,7 +23351,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -23364,7 +23364,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 1536(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 1536(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm7, %zmm5
@@ -23380,7 +23380,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm7
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 1088(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 1088(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm9 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm9 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
@@ -23394,7 +23394,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm12 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm9, %zmm12, %zmm9
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 2432(%rdi), %ymm9
+; AVX512DQ-BW-NEXT:    vmovdqa64 2432(%rdi), %ymm9
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm11 # 64-byte Reload
@@ -23407,7 +23407,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q {{[-0-9]+}}(%r{{[sb]}}p), %zmm10, %zmm9 # 64-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm9, %zmm2
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 1984(%rdi), %ymm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 1984(%rdi), %ymm2
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm9 # 64-byte Reload
@@ -23420,7 +23420,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vpermt2q %zmm23, %zmm10, %zmm3
 ; AVX512DQ-BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-NEXT:    vmovdqa 3328(%rdi), %ymm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 3328(%rdi), %ymm2
 ; AVX512DQ-BW-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-BW-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
@@ -23894,13 +23894,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm0, %zmm26 {%k2}
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm31, %zmm27 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 2752(%rdi), %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 2752(%rdi), %ymm0
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm0, %zmm28, %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512DQ-BW-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm3 # 64-byte Reload
@@ -23914,35 +23914,35 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm3, %zmm4, %zmm3
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm4, %zmm3 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512DQ-BW-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm4, %zmm5, %zmm4
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm5, %zmm4 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 960(%rdi), %ymm5
+; AVX512DQ-BW-NEXT:    vmovdqa64 960(%rdi), %ymm5
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm5, %zmm6, %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm6, %zmm5 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 2304(%rdi), %ymm6
+; AVX512DQ-BW-NEXT:    vmovdqa64 2304(%rdi), %ymm6
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm6, %zmm7, %zmm6
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm7, %zmm6 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 1856(%rdi), %ymm7
+; AVX512DQ-BW-NEXT:    vmovdqa64 1856(%rdi), %ymm7
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm7, %xmm7
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm7, %zmm8, %zmm7
 ; AVX512DQ-BW-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm8, %zmm7 {%k2}
-; AVX512DQ-BW-NEXT:    vmovdqa 3200(%rdi), %ymm8
+; AVX512DQ-BW-NEXT:    vmovdqa64 3200(%rdi), %ymm8
 ; AVX512DQ-BW-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512DQ-BW-NEXT:    vinserti32x4 $0, %xmm8, %zmm30, %zmm8
@@ -24085,7 +24085,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm14, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm10, %zmm0, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 464(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 464(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -24096,13 +24096,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm12, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm11, %zmm0, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1360(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1360(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm13, %zmm0, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 912(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 912(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -24114,7 +24114,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm3, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm17, %zmm0, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1808(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1808(%rdi), %xmm2
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -24145,8 +24145,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm1, %zmm2, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 640(%rdi), %xmm2
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 576(%rdi), %ymm1
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 640(%rdi), %xmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 576(%rdi), %ymm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa %ymm1, %ymm3
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm2, %ymm9, %ymm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 512(%rdi), %zmm19
@@ -24163,9 +24163,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm4, %zmm13, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm2, %zmm3, %zmm2
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %xmm3
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 128(%rdi), %ymm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %xmm3
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 128(%rdi), %ymm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm3, %ymm9, %ymm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rdi), %zmm31
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rdi), %zmm2
@@ -24182,9 +24182,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm5, %zmm13, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm3, %zmm4, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1536(%rdi), %xmm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1472(%rdi), %ymm5
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %xmm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1472(%rdi), %ymm5
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm5, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %zmm10
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1344(%rdi), %zmm8
@@ -24200,9 +24200,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm6
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1088(%rdi), %xmm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1024(%rdi), %ymm6
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %xmm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1024(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 960(%rdi), %zmm17
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 896(%rdi), %zmm15
@@ -24219,8 +24219,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2432(%rdi), %xmm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2368(%rdi), %ymm6
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2368(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2304(%rdi), %zmm16
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2240(%rdi), %zmm0
@@ -24237,9 +24237,9 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm3, %zmm13, %zmm6
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm6, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1984(%rdi), %xmm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1920(%rdi), %ymm6
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1984(%rdi), %xmm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1920(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm6, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %ymm4, %ymm9, %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1856(%rdi), %zmm23
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1792(%rdi), %zmm3
@@ -24257,8 +24257,8 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vinserti64x4 $0, %ymm4, %zmm18, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3328(%rdi), %xmm18
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 3264(%rdi), %ymm4
-; AVX512DQ-BW-FCP-NEXT:    vmovdqu %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3264(%rdi), %ymm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %ymm4, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %ymm18, %ymm4, %ymm9
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3200(%rdi), %zmm18
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3136(%rdi), %zmm4
@@ -24303,7 +24303,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm19, %zmm13, %zmm9
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm19, %zmm20
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm19, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2880(%rdi), %ymm11
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2880(%rdi), %ymm11
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = ymm26[8,9,10,11,12,13,14,15],ymm11[0,1,2,3,4,5,6,7],ymm26[24,25,26,27,28,29,30,31],ymm11[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm9 = ymm9[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512DQ-BW-FCP-NEXT:    vbroadcasti64x4 {{.*#+}} zmm0 = [9,0,7,0,9,0,7,0]
@@ -24333,7 +24333,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm31, %zmm13, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 192(%rdi), %ymm9
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm9
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm9, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm9[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm9[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -24346,7 +24346,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm8, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm10, %zmm13, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1536(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1536(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -24360,7 +24360,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm15, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm17, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm17, %zmm13, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1088(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1088(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -24374,7 +24374,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm6, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm16, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm16, %zmm13, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2432(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2432(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -24387,7 +24387,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm7, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm23, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2q %zmm23, %zmm13, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1984(%rdi), %ymm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1984(%rdi), %ymm2
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm2, %ymm2 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm2 = mem[8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
@@ -24399,7 +24399,7 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm18, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpermi2q %zmm18, %zmm4, %zmm13
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 3328(%rdi), %ymm1
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3328(%rdi), %ymm1
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr $8, {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm1 # 32-byte Folded Reload
 ; AVX512DQ-BW-FCP-NEXT:    # ymm1 = mem[8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm13[0,1,2,3],ymm1[4,5,6,7]
@@ -24868,13 +24868,13 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm27 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm0, %zmm27 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2752(%rdi), %ymm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2752(%rdi), %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm24, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 512(%rdi), %ymm0
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 512(%rdi), %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm0 = mem[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm0, %zmm29, %zmm0
@@ -24887,35 +24887,35 @@ define void @load_i64_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm3, %zmm4, %zmm3
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm4 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm3 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1408(%rdi), %ymm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1408(%rdi), %ymm4
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm4 = mem[8,9,10,11,12,13,14,15],ymm4[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm4[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm4, %xmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm4, %zmm5, %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm5 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm5, %zmm4 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 960(%rdi), %ymm5
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 960(%rdi), %ymm5
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm5 = mem[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm5, %xmm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm5, %zmm6, %zmm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm6 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm6, %zmm5 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 2304(%rdi), %ymm6
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 2304(%rdi), %ymm6
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm6 = mem[8,9,10,11,12,13,14,15],ymm6[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm6[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm6, %xmm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm6, %zmm7, %zmm6
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm7 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm7, %zmm6 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 1856(%rdi), %ymm7
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 1856(%rdi), %ymm7
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm7 = mem[8,9,10,11,12,13,14,15],ymm7[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm7[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm7, %xmm7
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm7, %zmm8, %zmm7
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm8 # 64-byte Reload
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm8, %zmm7 {%k2}
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa 3200(%rdi), %ymm8
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 3200(%rdi), %ymm8
 ; AVX512DQ-BW-FCP-NEXT:    vpalignr {{.*#+}} ymm8 = mem[8,9,10,11,12,13,14,15],ymm8[0,1,2,3,4,5,6,7],mem[24,25,26,27,28,29,30,31],ymm8[16,17,18,19,20,21,22,23]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm8, %xmm8
 ; AVX512DQ-BW-FCP-NEXT:    vinserti32x4 $0, %xmm8, %zmm16, %zmm8

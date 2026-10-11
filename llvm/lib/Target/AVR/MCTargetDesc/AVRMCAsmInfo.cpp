@@ -200,7 +200,7 @@ bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
     if (E.getSpecifier() == AVR::S_PM)
       Spec = AVR::S_PM;
 
-    // TODO: don't attach specifier to MCSymbolRefExpr.
+    // TODO: Don't attach specifier to MCSymbolRefExpr.
     Result =
         MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
   }

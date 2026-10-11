@@ -62,11 +62,32 @@ void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 /// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
 void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand Arith f8e5m2 patterns to lower level bitcasts/shifts.
+void populateExpandF8E5M2Patterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand Arith f8e4m3fn patterns to lower level
+/// bitcasts/shifts.
+void populateExpandF8E4M3FNPatterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith f8e8m0 patterns to lower level bitcasts/shifts.
 void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
 void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the floating-point min/max ops (`arith.maximumf`/
+/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences.
+void populateExpandMinMaxFPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand the signed/unsigned integer min/max ops
+/// (`arith.maxsi`/`maxui`/`minsi`/`minui`) into `cmpi` + `select` sequences.
+void populateExpandMinMaxIPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand both the floating-point and integer min/max ops into
+/// `cmpf`/`cmpi` + `select` sequences. These ops also have a direct
+/// arith-to-llvm lowering, so pipelines that run arith-to-llvm may prefer to
+/// skip this expansion.
+void populateExpandMinMaxPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand `arith.flush_denormals` into integer arithmetic
 /// (bitcast + bit masks + compare + select). Only matches IEEE-like

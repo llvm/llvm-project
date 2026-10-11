@@ -130,17 +130,14 @@ public:
 
   virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
 
-  static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
   const std::optional<AMDGPU::TargetID> &getTargetID() const {
     return TargetID;
   }
   std::optional<AMDGPU::TargetID> &getTargetID() { return TargetID; }
-  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    assert(TargetID == std::nullopt && "TargetID can only be initialized once");
-    TargetID = AMDGPU::createAMDGPUTargetID(STI, FeatureString);
-  }
+  void initializeTargetID(const MCSubtargetInfo &STI,
+                          bool ApplyFeatureString = false);
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {

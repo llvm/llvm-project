@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-extensive
 // REQUIRES: std-at-least-c++26
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
 
 // <text_encoding>
 

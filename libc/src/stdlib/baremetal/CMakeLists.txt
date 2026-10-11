@@ -53,3 +53,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.freelist_heap
 )
+
+add_entrypoint_object(
+  malloc_usable_size
+  SRCS
+    malloc_usable_size.cpp
+  HDRS
+    ../malloc_usable_size.h
+  DEPENDS
+    libc.src.__support.freelist_heap
+)

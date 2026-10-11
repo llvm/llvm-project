@@ -116,7 +116,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
         self.build()
         self.get_qHostInfo_response()
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_qHostInfo_contains_darwin_required_keys(self):
         self.build()
         host_info_dict = self.get_qHostInfo_response()

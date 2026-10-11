@@ -297,7 +297,7 @@ std::string TypeCategoryImpl::GetDescription() {
   StreamString stream;
   stream.Printf("%s (%s", GetName(), (IsEnabled() ? "enabled" : "disabled"));
   StreamString lang_stream;
-  lang_stream.Printf(", applicable for language(s): ");
+  lang_stream.PutCString(", applicable for language(s): ");
   bool print_lang = false;
   for (size_t idx = 0; idx < GetNumLanguages(); idx++) {
     const lldb::LanguageType lang = GetLanguageAtIndex(idx);

@@ -10,8 +10,8 @@ define amdgpu_kernel void @load_keep_base_alignment_missing_align(ptr addrspace(
 ; CHECK-LABEL: @load_keep_base_alignment_missing_align(
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 11
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr addrspace(3) [[PTR0]], align 4
-; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[VAL01:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    [[VAL12:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[VAL01]], [[VAL12]]
 ; CHECK-NEXT:    store float [[ADD]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void

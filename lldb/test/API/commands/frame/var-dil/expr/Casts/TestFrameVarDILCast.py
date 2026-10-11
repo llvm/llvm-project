@@ -1,5 +1,5 @@
 """
-Make sure 'frame var' using DIL parser/evaultor works for C-Style casts.
+Make sure 'frame var' using DIL parser/evaluator works for C-Style casts.
 """
 
 import lldb
@@ -303,8 +303,8 @@ class TestFrameVarDILCast(TestBase):
 
         # Check that casts are not allowed in both simple and legacy modes
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("(char)a", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
 
@@ -321,4 +321,42 @@ class TestFrameVarDILCast(TestBase):
             "frame variable '(UnscopedEnum) ifoo'",
             error=True,
             substrs=["Cast from 'InnerFoo' to 'UnscopedEnum' is not allowed"],
+        )
+
+        # Check that failed casts output errors with diagnostics
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(bool) *((float *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APFloat"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(int) *((int *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APSInt"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(int) finf')",
+            substrs=["<user expression>:1:2: invalid cast from float to integer"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(int) *((float *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APFloat"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(float) *((int *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APSInt"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(float) *((float *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APFloat"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(UnscopedEnum) finf')",
+            substrs=["<user expression>:1:2: invalid cast from float to integer"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(UnscopedEnum) *((float *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APFloat"],
+        )
+        self.expect(
+            "script lldb.frame.GetValueForVariablePath('+(UnscopedEnum) *((int *) 0)')",
+            substrs=["<user expression>:1:2: cannot get value as APSInt"],
         )

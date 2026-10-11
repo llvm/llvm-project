@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 -run-pass=liveintervals,dead-mi-elimination,register-coalescer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu6.00-- -run-pass=liveintervals,dead-mi-elimination,register-coalescer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # This is used to fail verififcation if MachineDCE tracks LIS.
 

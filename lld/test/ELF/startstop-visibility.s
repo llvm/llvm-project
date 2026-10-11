@@ -33,7 +33,7 @@
 # CHECK-PROTECTED: 0 NOTYPE GLOBAL PROTECTED 2 __stop_aaa
 
 # RUN: not ld.lld -z start-stop-visibility=aaa %t.o -o /dev/null
-# CHECK-ERROR: error: unknown -z start-stop-visibility= value: aaa
+# CHECK-ERROR: error: unknown -z start-stop-visibility= value 'aaa'
 
 .quad __start_aaa
 .quad __stop_aaa

@@ -7,18 +7,18 @@ define i32 @test(ptr %b, ptr %c, i32 %0, ptr %a, i1 %tobool3.not) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[TOBOOL3_NOT]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[TMP2]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i32> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i1> [[TMP8]] to <4 x i32>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL3_NOT]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL3_NOT]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP7]], <4 x i32> [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl <4 x i32> [[TMP12]], splat (i32 16)
@@ -27,16 +27,16 @@ define i32 @test(ptr %b, ptr %c, i32 %0, ptr %a, i1 %tobool3.not) {
 ; CHECK-NEXT:    br i1 true, label [[BB3]], label [[BB2]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i16> [ [[TMP5]], [[BB1]] ], [ [[TMP15]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[TMP16]], i64 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = sext i16 [[TMP17]] to i32
 ; CHECK-NEXT:    store i32 [[TMP18]], ptr [[B]], align 16
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i16> [[TMP16]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i16> [[TMP16]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = sext i16 [[TMP19]] to i32
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i16> [[TMP16]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i16> [[TMP16]], i64 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = sext i16 [[TMP21]] to i32
 ; CHECK-NEXT:    store i32 [[TMP22]], ptr [[C]], align 16
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = sext i16 [[TMP23]] to i32
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[B]], align 8
 ; CHECK-NEXT:    ret i32 0

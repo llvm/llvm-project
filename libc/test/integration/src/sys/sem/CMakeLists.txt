@@ -13,6 +13,7 @@ add_integration_test(
     libc.hdr.sys_sem_macros
     libc.hdr.types.struct_sembuf
     libc.src.__support.threads.sleep
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.signal.kill
     libc.src.stdlib.exit

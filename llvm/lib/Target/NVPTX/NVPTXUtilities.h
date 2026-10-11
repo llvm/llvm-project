@@ -14,11 +14,10 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -28,50 +27,46 @@
 namespace llvm {
 
 class DataLayout;
-class TargetMachine;
+class MemSDNode;
 
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
-/// Since function arguments are passed via .param space, we may want to
-/// increase their alignment in a way that ensures that we can effectively
-/// vectorize their loads & stores. We can increase alignment only if the
-/// function has internal or private linkage as for other linkage types callers
-/// may already rely on default alignment. To allow using 128-bit vectorized
-/// loads/stores, this function ensures that alignment is 16 or greater.
-Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
-                                   const DataLayout &DL);
+/// The bit-width of a single element loaded by \p Mem, i.e. the width used for
+/// the ".fromtype" part of the emitted PTX load.
+unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 
-Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
-                               Align InitialAlign, const DataLayout &DL);
+/// ABI alignment of \p ArgTy in .param space, capped at the PTX maximum of 128.
+Align getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL);
 
-/// Get the alignment for a function parameter or return value.
-/// \p AttrIdx is the AttributeList index (e.g. FirstArgIndex + argNo, or
-/// ReturnIndex for return values). Checks for an explicit alignment attribute,
-/// then falls back to getPromotedParamTypeAlign, incorporating byval param
-/// alignment when applicable.
+/// The .param-space alignment for a byval parameter or call argument: the
+/// (possibly promoted) parameter alignment, raised to the ptxas byval minimum.
+Align getDeviceByValParamAlign(const Function *F, Type *ArgTy, unsigned AttrIdx,
+                               const DataLayout &DL);
+Align getDeviceByValParamAlign(const CallBase *CB, Type *ArgTy,
+                               unsigned AttrIdx, const DataLayout &DL);
+
+/// Alignment for a function parameter or return value at AttributeList index
+/// \p AttrIdx (FirstArgIndex + argNo, or ReturnIndex). Prefers an explicit
+/// stackalign, else the ABI type alignment, folding in the byval `align`.
 Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
                        const DataLayout &DL);
 
-/// Get the alignment for a call-site argument or return value. Resolves the
-/// callee and delegates to the Function overload of getParamAlign. For
-/// indirect calls with no resolvable callee, falls back to
-/// getPromotedParamTypeAlign.
+/// Alignment for a call-site argument or return value. Prefers an explicit
+/// stackalign on the call, else resolves the direct callee.
 Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned AttrIdx,
                        const DataLayout &DL);
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.
-inline unsigned promoteScalarArgumentSize(unsigned size) {
-  if (size <= 32)
-    return 32;
-  if (size <= 64)
-    return 64;
-  if (size <= 128)
-    return 128;
-  return size;
+inline unsigned promoteScalarArgumentSize(unsigned Size) {
+  assert(Size < 128 && "Size should be less than 128 (shouldPassAsArray)");
+  return PowerOf2Ceil(std::max(Size, 32U));
 }
 
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
+inline unsigned promoteScalarKernelArgumentSize(unsigned Size) {
+  assert(Size < 128 && "Size should be less than 128 (shouldPassAsArray)");
+  return PowerOf2Ceil(std::max(Size, 8U));
+}
 
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||

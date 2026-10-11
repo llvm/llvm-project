@@ -48,9 +48,9 @@ public:
   }
 };
 
-#define LIST_ISNAN_TESTS(T, func)                                              \
-  using LlvmLibcIsNanTest = IsNanTest<T>;                                      \
-  TEST_F(LlvmLibcIsNanTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcIsNanTest, RoundedNumbers) { testRoundedNumbers(&func); }
+#define LIST_ISNAN_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = IsNanTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ISNANTEST_H

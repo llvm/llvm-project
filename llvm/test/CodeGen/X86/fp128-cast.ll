@@ -1692,7 +1692,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %conv = fptrunc fp128 %x to double
-  %call = tail call double @copysign(double 0x7FF0000000000000, double %conv) #2
+  %call = tail call double @copysign(double +inf, double %conv) #2
   %conv1 = fpext double %call to fp128
   br label %cleanup
 

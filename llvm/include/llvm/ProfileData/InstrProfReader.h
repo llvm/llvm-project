@@ -32,22 +32,20 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 
 class InstrProfReader;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,
@@ -208,16 +206,14 @@ public:
       const Twine &Path, vfs::FileSystem &FS,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
-          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt,
       std::function<void(Error)> Warn = nullptr);
 
   LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       std::unique_ptr<MemoryBuffer> Buffer,
       const InstrProfCorrelator *Correlator = nullptr,
       const object::BuildIDFetcher *BIDFetcher = nullptr,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
-          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt,
       std::function<void(Error)> Warn = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
@@ -339,7 +335,7 @@ private:
   std::unique_ptr<InstrProfCorrelator> BIDFetcherCorrelator;
   /// Indicates if should use debuginfo or binary to correlate with build id
   /// fetcher.
-  InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind;
+  std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind;
   /// A list of timestamps paired with a function name reference.
   std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
@@ -378,17 +374,19 @@ private:
   static const uint64_t MaxCounterValue = (1ULL << 56);
 
 public:
-  RawInstrProfReader(
-      std::unique_ptr<MemoryBuffer> DataBuffer,
-      const InstrProfCorrelator *Correlator,
-      const object::BuildIDFetcher *BIDFetcher,
-      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-      std::function<void(Error)> Warn)
+  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
+                     const InstrProfCorrelator *Correlator,
+                     const object::BuildIDFetcher *BIDFetcher,
+                     std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind,
+                     std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
         BIDFetcher(BIDFetcher),
-        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {}
+        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {
+    assert((!BIDFetcher || BIDFetcherCorrelatorKind) &&
+           "a build ID fetcher needs a correlation kind");
+  }
 
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
@@ -601,10 +599,6 @@ using OnDiskHashTableImplV3 =
 
 using MemProfRecordHashTable =
     OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
-using MemProfFrameHashTable =
-    OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
-using MemProfCallStackHashTable =
-    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -705,10 +699,6 @@ private:
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
   std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
-  /// MemProf frame profile data on-disk indexed via frame id.
-  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
-  /// MemProf call stack data on-disk indexed via call stack id.
-  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
   /// The starting address of the frame array.
   const unsigned char *FrameBase = nullptr;
   /// The starting address of the call stack array.
@@ -718,7 +708,6 @@ private:
   /// The data access profiles, deserialized from binary data.
   std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
 
-  Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
   Error deserializeRadixTreeBased(const unsigned char *Start,
                                   const unsigned char *Ptr,
                                   memprof::IndexedVersion Version);

@@ -29,7 +29,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = Op::create(builder, start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands,
+                       cir::getDefaultProperties<Op>(builder.getContext()));
 
   emitOpenACCClauses(op, dirKind, clauses);
 
@@ -39,7 +40,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
+    if (associatedStmt)
+      res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
     TermOp::create(builder, end);
   }
@@ -71,7 +73,9 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
 
-  auto computeOp = Op::create(builder, start, retTy, operands);
+  auto computeOp =
+      Op::create(builder, start, retTy, operands,
+                 cir::getDefaultProperties<Op>(builder.getContext()));
   computeOp.setCombinedAttr(builder.getUnitAttr());
   mlir::acc::LoopOp loopOp;
 
@@ -83,7 +87,9 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    auto loopOp = LoopOp::create(builder, start, retTy, operands);
+    auto loopOp =
+        LoopOp::create(builder, start, retTy, operands,
+                       cir::getDefaultProperties<LoopOp>(builder.getContext()));
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), CombinedType<Op>::value));
 
@@ -95,7 +101,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       LexicalScope ls{*this, start, builder.getInsertionBlock()};
       ActiveOpenACCLoopRAII activeLoop{*this, &loopOp};
 
-      res = emitStmt(loopStmt, /*useCurrentScope=*/true);
+      if (loopStmt)
+        res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
       mlir::acc::YieldOp::create(builder, end);
     }
@@ -116,7 +123,8 @@ Op CIRGenFunction::emitOpenACCOp(
     llvm::ArrayRef<const OpenACCClause *> clauses) {
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = Op::create(builder, start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands,
+                       cir::getDefaultProperties<Op>(builder.getContext()));
 
   emitOpenACCClauses(op, dirKind, clauses);
   return op;
@@ -358,9 +366,10 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     cgf.replaceAddrOfLocalVar(
         xval, Address{alloca, argTy, cgf.getContext().getDeclAlign(xval)});
 
-    res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
+    if (inf.WholeExpr)
+      res = cgf.emitStmt(inf.WholeExpr, /*useCurrentScope=*/true);
 
-    auto load = cir::LoadOp::create(builder, start, {alloca});
+    auto load = cir::LoadOp::create(builder, start, alloca.getResult());
     mlir::acc::YieldOp::create(builder, end, {load});
   }
 

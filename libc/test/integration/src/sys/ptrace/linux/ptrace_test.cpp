@@ -21,6 +21,7 @@
 #include "test/IntegrationTest/test.h"
 #include <errno.h>
 #include <sys/ptrace.h>
+#include <sys/wait.h>
 
 void basic_ptrace_test() {
   // This variable will be read and written to via ptrace.

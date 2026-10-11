@@ -1626,6 +1626,7 @@ let Predicates = [FeatureVector] in {
     def : FPMinMax<insn, any_fmaxnum, tr, 4>;
     def : FPMinMax<insn, fmaximumnum, tr, 4>;
     def : FPMinMax<insn, any_fmaximum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmax, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
@@ -1653,6 +1654,7 @@ let Predicates = [FeatureVector] in {
     def : FPMinMax<insn, any_fminnum, tr, 4>;
     def : FPMinMax<insn, fminimumnum, tr, 4>;
     def : FPMinMax<insn, any_fminimum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmin, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
@@ -2424,27 +2426,27 @@ let Predicates = [FeatureVector, FeatureNNPAssist] in {
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCFN : UnaryVRRaFloatGeneric<"vcfn", 0xE65D>;
   def : Pat<(int_s390_vcfn VR128:$x, imm32zx4_timm:$m),
-            (VCFN VR128:$x, 1, imm32zx4:$m)>;
+            (VCFN VR128:$x, 1, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCLFNL : UnaryVRRaFloatGeneric<"vclfnl", 0xE65E>;
   def : Pat<(int_s390_vclfnls VR128:$x, imm32zx4_timm:$m),
-            (VCLFNL VR128:$x, 2, imm32zx4:$m)>;
+            (VCLFNL VR128:$x, 2, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCLFNH : UnaryVRRaFloatGeneric<"vclfnh", 0xE656>;
   def : Pat<(int_s390_vclfnhs VR128:$x, imm32zx4_timm:$m),
-            (VCLFNH VR128:$x, 2, imm32zx4:$m)>;
+            (VCLFNH VR128:$x, 2, imm32zx4_timm:$m)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCNF : UnaryVRRaFloatGeneric<"vcnf", 0xE655>;
   def : Pat<(int_s390_vcnf VR128:$x, imm32zx4_timm:$m),
-            (VCNF VR128:$x, imm32zx4:$m, 1)>;
+            (VCNF VR128:$x, imm32zx4_timm:$m, 1)>;
 
   let Uses = [FPC], mayRaiseFPException = 1 in
     def VCRNF : BinaryVRRcFloatGeneric<"vcrnf", 0xE675>;
   def : Pat<(int_s390_vcrnfs VR128:$x, VR128:$y, imm32zx4_timm:$m),
-            (VCRNF VR128:$x, VR128:$y, imm32zx4:$m, 2)>;
+            (VCRNF VR128:$x, VR128:$y, imm32zx4_timm:$m, 2)>;
 }
 
 //===----------------------------------------------------------------------===//

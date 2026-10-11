@@ -241,7 +241,7 @@ Retry:
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
       if (NextToken().is(tok::less)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
@@ -611,8 +611,7 @@ StmtResult Parser::ParseSEHTryBlock() {
     return TryBlock;
 
   StmtResult Handler;
-  if (Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+  if (isTokenSEHExcept()) {
     SourceLocation Loc = ConsumeToken();
     Handler = ParseSEHExceptBlock(Loc);
   } else if (Tok.is(tok::kw___finally)) {
@@ -713,10 +712,8 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   // label that is followed by a declaration rather than a statement.
   if (!P.getLangOpts().CPlusPlus && !P.getLangOpts().MicrosoftExt &&
       isa<DeclStmt>(SubStmt)) {
-    P.Diag(SubStmt->getBeginLoc(),
-           P.getLangOpts().C23
-               ? diag::warn_c23_compat_label_followed_by_declaration
-               : diag::ext_c_label_followed_by_declaration);
+    P.DiagCompat(SubStmt->getBeginLoc(),
+                 diag_compat::label_followed_by_declaration);
   }
 }
 
@@ -1086,15 +1083,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
 }
 
 void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
-  if (getLangOpts().CPlusPlus) {
-    Diag(Tok, getLangOpts().CPlusPlus23
-                  ? diag::warn_cxx20_compat_label_end_of_compound_statement
-                  : diag::ext_cxx_label_end_of_compound_statement);
-  } else {
-    Diag(Tok, getLangOpts().C23
-                  ? diag::warn_c23_compat_label_end_of_compound_statement
-                  : diag::ext_c_label_end_of_compound_statement);
-  }
+  DiagCompat(Tok, getLangOpts().CPlusPlus
+                      ? diag_compat::cxx_label_at_end_of_compound_statement
+                      : diag_compat::c_label_at_end_of_compound_statement);
 }
 
 bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
@@ -1301,18 +1292,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
   T.consumeOpen();
   SourceLocation Start = Tok.getLocation();
 
-  if (getLangOpts().CPlusPlus) {
-    Cond = ParseCXXCondition(InitStmt, Loc, CK, false);
-  } else {
-    ExprResult CondExpr = ParseExpression();
-
-    // If required, convert to a boolean value.
-    if (CondExpr.isInvalid())
-      Cond = Sema::ConditionError();
-    else
-      Cond = Actions.ActOnCondition(getCurScope(), Loc, CondExpr.get(), CK,
-                                    /*MissingOK=*/false);
-  }
+  Cond = ParseCondition(InitStmt, Loc, CK, false);
 
   // If the parser was confused by the condition and we don't have a ')', try to
   // recover by skipping ahead to a semi and bailing out.  If condexp is
@@ -1334,6 +1314,33 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
                                     /*MissingOK=*/false);
   }
 
+  if (!getLangOpts().CPlusPlus) {
+    if (InitStmt != nullptr && InitStmt->isUsable()) {
+      // Handle the 2 clauses of declaration: (clause1; clause2). We need to
+      // allow NullStmt because that’s what we end up with if we have an empty
+      // attribute-specifier-sequence, which is valid: if ([[]]; true).
+      if (!isa<DeclStmt, AttributedStmt, NullStmt>(InitStmt->get()))
+        // C2y only permits declaration in the first clause of an if condition.
+        Diag(InitStmt->get()->getBeginLoc(),
+             diag::err_c2y_first_condition_clause_is_not_declaration)
+            << InitStmt->get()->getSourceRange();
+
+      if (Cond.get().first != nullptr)
+        // C2y only permits expression in the second clause of an if condition.
+        Diag(Cond.get().first->getBeginLoc(), diag::err_expected_expression)
+            << Cond.get().first->getSourceRange();
+    } else if (Cond.get().first != nullptr)
+      // Handle: if (int decl = 0) {}.
+      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
+          << (CK == Sema::ConditionKind::Switch);
+  }
+
+  if (Tok.is(tok::comma)) {
+    Diag(Tok, diag::err_c2y_multiple_declarations);
+    // Skip until the next token is ')' (stop when current token is r_paren)
+    while (Tok.isNot(tok::r_paren) && !Tok.is(tok::eof))
+      ConsumeAnyToken();
+  }
   // Either the condition is valid or the rparen is present.
   T.consumeClose();
   LParenLoc = T.getOpenLocation();
@@ -1457,8 +1464,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   if (Tok.is(tok::kw_constexpr)) {
     // C23 supports constexpr keyword, but only for object definitions.
     if (getLangOpts().CPlusPlus) {
-      Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
-                                          : diag::ext_constexpr_if);
+      DiagCompat(Tok, diag_compat::constexpr_if);
       IsConstexpr = true;
       ConsumeToken();
     }
@@ -1468,8 +1474,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     if (Tok.is(tok::kw_consteval)) {
-      Diag(Tok, getLangOpts().CPlusPlus23 ? diag::warn_cxx20_compat_consteval_if
-                                          : diag::ext_consteval_if);
+      DiagCompat(Tok, diag_compat::consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
     } else if (Tok.is(tok::code_completion)) {
@@ -2112,9 +2117,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
           MightBeForRangeStmt ? &ForRangeInfo : nullptr);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
       if (ForRangeInfo.ParsedForRangeDecl()) {
-        Diag(ForRangeInfo.ColonLoc, getLangOpts().CPlusPlus11
-                                        ? diag::warn_cxx98_compat_for_range
-                                        : diag::ext_for_range);
+        DiagCompat(ForRangeInfo.ColonLoc, diag_compat::for_range);
         ForRangeInfo.LoopVar = FirstPart;
         FirstPart = StmtResult();
       } else if (Tok.is(tok::semi)) { // for (int x = 4;
@@ -2207,17 +2210,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
         ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
         SourceLocation SecondPartStart = Tok.getLocation();
         Sema::ConditionKind CK = Sema::ConditionKind::Boolean;
-        SecondPart = ParseCXXCondition(
+        SecondPart = ParseCondition(
             /*InitStmt=*/nullptr, ForLoc, CK,
             // FIXME: recovery if we don't see another semi!
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
-          Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
-                               : ForRangeInfo.ColonLoc,
-               getLangOpts().CPlusPlus20
-                   ? diag::warn_cxx17_compat_for_range_init_stmt
-                   : diag::ext_for_range_init_stmt)
+          DiagCompat(FirstPart.get() ? FirstPart.get()->getBeginLoc()
+                                     : ForRangeInfo.ColonLoc,
+                     diag_compat::for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()
                                   : SourceRange());
           if (EmptyInitStmtSemiLoc.isValid()) {
@@ -2329,6 +2330,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
+  bool BodyStartsWithAttr = Tok.isOneOf(tok::l_square, tok::kw___attribute);
+  SourceLocation BodyBeginLoc = Tok.getLocation();
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2378,6 +2382,14 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       Diag(ForLoc, diag::err_expansion_stmt_requires_range);
       return StmtError();
     }
+
+    // attribute-specifier without attribute (`[[]]`) isn't in AST.
+    // `__declspec()` is only applied to declarations, so we can ignore it.
+    if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithAttr)
+      Diag(BodyBeginLoc,
+           isa<CompoundStmt>(Body.get()->stripLabelLikeStatements())
+               ? diag::ext_expansion_stmt_body_attr
+               : diag::ext_expansion_stmt_body_not_compound_stmt);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
   }
@@ -2470,11 +2482,8 @@ StmtResult Parser::ParseReturnStatement() {
     if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus) {
       R = ParseInitializer();
       if (R.isUsable())
-        Diag(R.get()->getBeginLoc(),
-             getLangOpts().CPlusPlus11
-                 ? diag::warn_cxx98_compat_generalized_initializer_lists
-                 : diag::ext_generalized_initializer_lists)
-            << R.get()->getSourceRange();
+        DiagCompat(R.get()->getBeginLoc(),
+                   diag_compat::generalized_initializer_lists);
     } else
       R = ParseExpression();
     if (R.isInvalid()) {
@@ -2670,16 +2679,13 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
 
   // Borland allows SEH-handlers with 'try'
 
-  if ((Tok.is(tok::identifier) &&
-       Tok.getIdentifierInfo() == getSEHExceptKeyword()) ||
-      Tok.is(tok::kw___finally)) {
+  if (isTokenSEHExcept() || Tok.is(tok::kw___finally)) {
     // TODO: Factor into common return ParseSEHHandlerCommon(...)
     StmtResult Handler;
-    if(Tok.getIdentifierInfo() == getSEHExceptKeyword()) {
+    if (isTokenSEHExcept()) {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHExceptBlock(Loc);
-    }
-    else {
+    } else {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHFinallyBlock(Loc);
     }
@@ -2690,8 +2696,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
                                     TryLoc,
                                     TryBlock.get(),
                                     Handler.get());
-  }
-  else {
+  } else {
     StmtVector Handlers;
 
     // C++11 attributes can't appear here, despite this context seeming

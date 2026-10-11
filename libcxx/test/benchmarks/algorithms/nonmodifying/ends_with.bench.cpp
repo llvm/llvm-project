@@ -19,6 +19,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto ranges_ends_with_pred = [](auto first1, auto last1, auto first2, auto last2) {
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto ends_with) {
       benchmark::RegisterBenchmark(
           name,
-          [ends_with](auto& st) {
+          [ends_with](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto ends_with) {
       benchmark::RegisterBenchmark(
           name,
-          [ends_with](auto& st) {
+          [ends_with](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

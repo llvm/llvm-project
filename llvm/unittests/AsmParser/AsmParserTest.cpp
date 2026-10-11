@@ -16,10 +16,12 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #define DEBUG_TYPE "unittest-asm-parser-tests"
@@ -71,6 +73,37 @@ TEST(AsmParserTest, SlotMappingTest) {
   EXPECT_EQ(Mapping.MetadataNodes.count(0), 1u);
   EXPECT_EQ(Mapping.MetadataNodes.count(42), 1u);
   EXPECT_EQ(Mapping.MetadataNodes.count(1), 0u);
+}
+
+TEST(AsmParserTest, ParsingPreservesMetadataIDsInOtherModules) {
+  StringRef Source = "!named = !{!0}\n!0 = distinct !{}\n";
+
+  for (bool WithIndex : {false, true}) {
+    SCOPED_TRACE(WithIndex ? "parseAssemblyWithIndex" : "parseAssembly");
+    LLVMContext Ctx;
+    SMDiagnostic Error;
+    auto Mod1 = parseAssemblyString(Source, Error, Ctx);
+    ASSERT_TRUE(Mod1) << Error.getMessage().str();
+    MDNode *Node = Mod1->getNamedMetadata("named")->getOperand(0);
+
+    auto PrintMetadataID = [&] {
+      std::string ID;
+      raw_string_ostream OS(ID);
+      Node->printAsOperand(OS, Mod1.get());
+      return ID;
+    };
+    std::string ID = PrintMetadataID();
+
+    std::unique_ptr<Module> Mod2;
+    if (WithIndex)
+      Mod2 = parseAssemblyWithIndex(MemoryBufferRef(Source, "<string>"), Error,
+                                    Ctx)
+                 .Mod;
+    else
+      Mod2 = parseAssemblyString(Source, Error, Ctx);
+    ASSERT_TRUE(Mod2) << Error.getMessage().str();
+    EXPECT_EQ(ID, PrintMetadataID());
+  }
 }
 
 TEST(AsmParserTest, TypeAndConstantValueParsing) {

@@ -2,6 +2,11 @@
 // REQUIRES: nvptx-registered-target, lld
 
 // RUN: rm -rf %t && mkdir -p %t
+// RUN: not %clang -x c++ --offload-jobs=1 -Werror -fsyntax-only %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=NOOFFLOAD %s
+// NOOFFLOAD: argument unused during compilation: '--offload-jobs=1'
+// RUN: %clang -x hip --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx900 --offload-jobs=1 -Werror -E %s -o %t/hip.i
 // RUN: %clang -x hip --target=x86_64-unknown-linux-gnu \
 // RUN:   -nostdinc -nogpuinc -nohipwrapperinc -nogpulib \
 // RUN:   --offload-arch=gfx900 --offload-arch=gfx906 --offload-jobs=2 \
@@ -18,5 +23,5 @@
 // RUN:   --cuda-device-only -S %s 2>&1 | FileCheck -check-prefix=INVJOBS %s
 // INVJOBS: clang: error: invalid integral value '0x4' in '--offload-jobs=0x4'
 
-// Empty source file. RUN lines are execution smoke tests for the driver
-// path that runs independent offload device cc1 jobs through --offload-jobs.
+// Empty source file. RUN lines test --offload-jobs with and without
+// independent offload device cc1 jobs.

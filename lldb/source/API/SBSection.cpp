@@ -58,7 +58,7 @@ const char *SBSection::GetName() {
 
   SectionSP section_sp(GetSP());
   if (section_sp)
-    return section_sp->GetName().GetCString();
+    return ConstString(section_sp->GetName()).GetCString();
   return nullptr;
 }
 

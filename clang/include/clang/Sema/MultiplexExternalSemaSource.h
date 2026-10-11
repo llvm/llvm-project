@@ -301,7 +301,7 @@ public:
   /// be invoked multiple times; the external source should take care not to
   /// introduce the same declarations repeatedly.
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   /// Read the set of referenced selectors known to the
   /// external Sema source.
@@ -391,9 +391,6 @@ public:
   /// \return true if a diagnostic was produced, false otherwise.
   bool MaybeDiagnoseMissingCompleteType(SourceLocation Loc,
                                         QualType T) override;
-
-  // Inform all attached sources that a mangling number was assigned.
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// LLVM-style RTTI.
   /// \{

@@ -14,3 +14,8 @@ ARCH_LDFLAGS += \
 # Unlike most native linkers, wasm-ld garbage-collects unreferenced sections by
 # default, which strips globals and functions that a test wants to inspect.
 LDFLAGS += -Wl,--no-gc-sections
+
+# A debugger tells one build of a module from another by its build id, and
+# wasm-ld emits one only when asked, so a module linked without this carries
+# nothing that identifies it.
+LDFLAGS += -Wl,--build-id

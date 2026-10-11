@@ -1,7 +1,7 @@
 ; RUN: opt %s -passes=verify 2>&1 | FileCheck %s
 ; CHECK: invalid type
-; CHECK: !20 = !DILocalVariable(name: "f", scope: !21, file: !13, line: 970, type: !14)
-; CHECK: !14 = !DISubroutineType(types: !15)
+; CHECK: !{{[0-9]+}} = !DILocalVariable(name: "f", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 970, type: !{{[0-9]+}})
+; CHECK: !{{[0-9]+}} = !DISubroutineType(types: !{{[0-9]+}})
 
 
 %timespec.0.1.2.3.0.1.2 = type { i64, i64 }

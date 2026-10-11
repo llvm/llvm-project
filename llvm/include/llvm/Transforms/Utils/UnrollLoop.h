@@ -139,9 +139,8 @@ LLVM_ABI TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
     llvm::OptimizationRemarkEmitter &ORE, int OptLevel,
-    std::optional<unsigned> UserThreshold, std::optional<unsigned> UserCount,
-    std::optional<bool> UserAllowPartial, std::optional<bool> UserRuntime,
-    std::optional<bool> UserUpperBound,
+    std::optional<unsigned> UserThreshold, std::optional<bool> UserAllowPartial,
+    std::optional<bool> UserRuntime, std::optional<bool> UserUpperBound,
     std::optional<unsigned> UserFullUnrollMaxCount);
 
 /// Produce an estimate of the unrolled cost of the specified loop.  This
@@ -157,12 +156,14 @@ public:
   ConvergenceKind Convergence;
   bool ConvergenceAllowsRuntime;
 
+  /// \param PrepareForLTO If true, consider calls as inline candidates and
+  /// defer unrolling so that LTO post-link inlining can consider them first.
   /// \param TripCountIsUniform If true, all threads in a convergent execution
   /// agree on the trip count, so runtime unrolling with a remainder is safe
   /// even for loops with uncontrolled convergent operations.
   LLVM_ABI UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                                const SmallPtrSetImpl<const Value *> &EphValues,
-                               unsigned BEInsns,
+                               unsigned BEInsns, bool PrepareForLTO = false,
                                bool TripCountIsUniform = false);
 
   /// Whether it is legal to unroll this loop. If \p ORE and \p L are provided,
@@ -172,14 +173,14 @@ public:
 
   uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 
-  /// Returns loop size estimation for unrolled loop, given the unrolling
-  /// configuration specified by UP.
+  /// Returns loop size estimation for an unrolled loop with the given unroll
+  /// count and the unrolling configuration specified by UP.
   LLVM_ABI uint64_t
   getUnrolledLoopSize(const TargetTransformInfo::UnrollingPreferences &UP,
-                      unsigned CountOverwrite = 0) const;
+                      unsigned Count) const;
 };
 
-LLVM_ABI void
+LLVM_ABI unsigned
 computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
                    LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
                    const SmallPtrSetImpl<const Value *> &EphValues,

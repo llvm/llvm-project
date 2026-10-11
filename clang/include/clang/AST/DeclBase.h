@@ -2175,17 +2175,37 @@ public:
     }
   }
 
+  /// Returns true if this DeclContext is a function, Objective-C method,
+  /// or block, or a DeclContext that can only occur in or is conceptually
+  /// treated like a function.
   bool isFunctionOrMethod() const {
     switch (getDeclKind()) {
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
     case Decl::TopLevelStmt:
+    case Decl::CXXExpansionStmt:
       return true;
     default:
       return getDeclKind() >= Decl::firstFunction &&
              getDeclKind() <= Decl::lastFunction;
     }
+  }
+
+  /// Cast this to a FunctionDecl if it is one, ignoring any intervening
+  /// expansion statements. Returns nullptr if this is not a function.
+  ///
+  /// In particular, this will return nullptr if the *nearest* enclosing
+  /// DeclContext that is not an expansion statement is something other
+  /// than a function (e.g. a CXXRecordDecl, even if it is a local class).
+  FunctionDecl *getEnclosingFunction();
+  const FunctionDecl *getEnclosingFunction() const {
+    return const_cast<DeclContext *>(this)->getEnclosingFunction();
+  }
+
+  FunctionDecl *castEnclosingFunction();
+  const FunctionDecl *castEnclosingFunction() const {
+    return const_cast<DeclContext *>(this)->castEnclosingFunction();
   }
 
   /// Test whether the context supports looking up names.

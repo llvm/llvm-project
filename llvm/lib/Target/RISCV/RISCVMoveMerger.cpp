@@ -127,7 +127,7 @@ bool RISCVMoveMerge::isCandidateToMergeMVA01S(const DestSourcePair &RegPair) {
   // If destination is not a0 or a1.
   if ((ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) &&
       (Destination == RISCV::X10 || Destination == RISCV::X11) &&
-      RISCV::SR07RegClass.contains(Source))
+      RISCV::GPRS07RegClass.contains(Source))
     return true;
   return false;
 }
@@ -139,7 +139,7 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
   // If Source is s0 - s7.
   if ((ST->hasStdExtZcmp() || ST->hasVendorXqccmp()) &&
       (Source == RISCV::X10 || Source == RISCV::X11) &&
-      RISCV::SR07RegClass.contains(Destination))
+      RISCV::GPRS07RegClass.contains(Destination))
     return true;
   return false;
 }

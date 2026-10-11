@@ -108,12 +108,15 @@ static bool insertWaitInstruction(MachineFunction &MF) {
       // If the following instruction is an X87 instruction that performs the
       // wait operation itself, we can omit inserting wait. Skip
       // meta-instructions so the decision is independent of debug info, and
-      // keep the wait for non-waiting (FN-prefixed) successors.
+      // keep the wait for non-waiting (FN-prefixed) successors. A return may
+      // carry implicit ST uses but performs no exception sync, so it never
+      // makes the wait redundant.
       MachineBasicBlock::iterator AfterMI = std::next(MI);
       MachineBasicBlock::iterator NextMI = AfterMI;
       while (NextMI != MBB.end() && NextMI->isMetaInstruction())
         ++NextMI;
-      if (NextMI != MBB.end() && X86::isX87Instruction(*NextMI) &&
+      if (NextMI != MBB.end() && !NextMI->isReturn() &&
+          X86::isX87Instruction(*NextMI) &&
           classifyX87ControlInstruction(NextMI->getOpcode()) !=
               X87ControlKind::NonWaiting)
         continue;

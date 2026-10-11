@@ -25,14 +25,15 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <iterator>
 #include <set>
 #include <utility>
 #include <vector>
@@ -745,10 +746,14 @@ RegisterAggr DataFlowGraph::getLandingPadLiveIns() const {
   const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  if (RegisterId R = TLI.getExceptionPointerRegister(PF))
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = F.getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = TLI.getTargetMachine().getExceptionModel();
+  if (RegisterId R = TLI.getExceptionPointerRegister(EH, PF))
     LR.insert(RegisterRef(R));
   if (!isFuncletEHPersonality(classifyEHPersonality(PF))) {
-    if (RegisterId R = TLI.getExceptionSelectorRegister(PF))
+    if (RegisterId R = TLI.getExceptionSelectorRegister(EH, PF))
       LR.insert(RegisterRef(R));
   }
   return LR;

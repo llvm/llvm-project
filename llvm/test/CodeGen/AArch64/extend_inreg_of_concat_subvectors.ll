@@ -32,14 +32,13 @@ define void @zext_of_concat(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-LE-GI:       ; %bb.0:
 ; CHECK-LE-GI-NEXT:    ldr d0, [x0]
 ; CHECK-LE-GI-NEXT:    ldr d1, [x1]
-; CHECK-LE-GI-NEXT:    movi.2d v3, #0000000000000000
 ; CHECK-LE-GI-NEXT:  Lloh0:
 ; CHECK-LE-GI-NEXT:    adrp x8, lCPI0_0@PAGE
-; CHECK-LE-GI-NEXT:    add.2s v2, v0, v1
+; CHECK-LE-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-LE-GI-NEXT:  Lloh1:
-; CHECK-LE-GI-NEXT:    ldr q0, [x8, lCPI0_0@PAGEOFF]
+; CHECK-LE-GI-NEXT:    ldr q1, [x8, lCPI0_0@PAGEOFF]
+; CHECK-LE-GI-NEXT:    tbl.16b v0, { v0 }, v1
 ; CHECK-LE-GI-NEXT:    ldr q1, [x2]
-; CHECK-LE-GI-NEXT:    tbl.16b v0, { v2, v3 }, v0
 ; CHECK-LE-GI-NEXT:    add.4s v0, v0, v1
 ; CHECK-LE-GI-NEXT:    str q0, [x2]
 ; CHECK-LE-GI-NEXT:    ret
@@ -89,17 +88,16 @@ define void @zext_of_concat_extrause(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) nou
 ; CHECK-LE-GI:       ; %bb.0:
 ; CHECK-LE-GI-NEXT:    ldr d0, [x0]
 ; CHECK-LE-GI-NEXT:    ldr d1, [x1]
-; CHECK-LE-GI-NEXT:    movi.2d v3, #0000000000000000
 ; CHECK-LE-GI-NEXT:  Lloh2:
 ; CHECK-LE-GI-NEXT:    adrp x8, lCPI1_0@PAGE
-; CHECK-LE-GI-NEXT:    add.2s v2, v0, v1
+; CHECK-LE-GI-NEXT:    add.2s v0, v0, v1
 ; CHECK-LE-GI-NEXT:  Lloh3:
-; CHECK-LE-GI-NEXT:    ldr q0, [x8, lCPI1_0@PAGEOFF]
-; CHECK-LE-GI-NEXT:    mov.d v2[1], v2[0]
-; CHECK-LE-GI-NEXT:    tbl.16b v0, { v2, v3 }, v0
-; CHECK-LE-GI-NEXT:    str q2, [x4]
-; CHECK-LE-GI-NEXT:    ldr q1, [x2]
-; CHECK-LE-GI-NEXT:    add.4s v0, v0, v1
+; CHECK-LE-GI-NEXT:    ldr q1, [x8, lCPI1_0@PAGEOFF]
+; CHECK-LE-GI-NEXT:    mov.d v0[1], v0[0]
+; CHECK-LE-GI-NEXT:    tbl.16b v1, { v0 }, v1
+; CHECK-LE-GI-NEXT:    str q0, [x4]
+; CHECK-LE-GI-NEXT:    ldr q0, [x2]
+; CHECK-LE-GI-NEXT:    add.4s v0, v1, v0
 ; CHECK-LE-GI-NEXT:    str q0, [x2]
 ; CHECK-LE-GI-NEXT:    ret
 ; CHECK-LE-GI-NEXT:    .loh AdrpLdr Lloh2, Lloh3

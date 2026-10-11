@@ -89,8 +89,8 @@ void LiveIntervalCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
   // Step 2: Extend live segments to all uses, constructing SSA form as
   // necessary.
   if (LI.hasSubRanges()) {
+    LiveIntervalCalc SubLIC;
     for (LiveInterval::SubRange &S : LI.subranges()) {
-      LiveIntervalCalc SubLIC;
       SubLIC.reset(MF, Indexes, DomTree, Alloc);
       SubLIC.extendToUses(S, Reg, S.LaneMask, &LI);
     }

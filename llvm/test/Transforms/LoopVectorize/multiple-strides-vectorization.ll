@@ -42,8 +42,6 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 128
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 132
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ]], i64 0, i32 1, i64 [[I]]
@@ -54,12 +52,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND05:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP4]]
-; CHECK-NEXT:    [[BOUND16:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND16:%.*]] = icmp ult ptr [[TMP9]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT7:%.*]] = and i1 [[BOUND05]], [[BOUND16]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT7]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[Z]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP10]], i64 0
@@ -123,7 +121,7 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-HOIST-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP1]]
 ; CHECK-HOIST-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK-HOIST:       vector.ph:
-; CHECK-HOIST-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[Z]], 4
+; CHECK-HOIST-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[Z]], 3
 ; CHECK-HOIST-NEXT:    [[N_VEC:%.*]] = sub i64 [[Z]], [[N_MOD_VF]]
 ; CHECK-HOIST-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META0:![0-9]+]]
 ; CHECK-HOIST-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0

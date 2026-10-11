@@ -19,7 +19,7 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_1: ; %normal
@@ -56,7 +56,7 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_1: ; %normal

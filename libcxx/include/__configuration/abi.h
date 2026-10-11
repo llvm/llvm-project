@@ -50,12 +50,12 @@
 #endif
 
 #if _LIBCPP_ABI_VERSION >= 2
-// TODO: Move the description of the remaining ABI flags to ABIGuarantees.rst or remove them.
+// TODO: Move the description of the remaining ABI flags to ABIGuarantees.md or remove them.
 
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 
-// These flags are documented in ABIGuarantees.rst
+// These flags are documented in ABIGuarantees.md
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 #  define _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 #  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
@@ -78,7 +78,6 @@
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
 #  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 #  define _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE
-#  define _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
 
 #elif _LIBCPP_ABI_VERSION == 1
 // Feature macros for disabling pre ABI v1 features. All of these options

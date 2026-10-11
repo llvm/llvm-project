@@ -1201,9 +1201,9 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      strm.Printf("Dynamic:\n");
+      strm.PutCString("Dynamic:\n");
       m_dynamic_type.DumpTypeDescription(&strm);
-      strm.Printf("\nStatic:\n");
+      strm.PutCString("\nStatic:\n");
     }
     m_static_type.DumpTypeDescription(&strm);
   } else {

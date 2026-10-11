@@ -18,8 +18,8 @@ func.func @sparse_iterate(%sp : tensor<?x?xf64, #CSR>) {
                                                          -> !sparse_tensor.iter_space<#CSR, lvls = 0>
   sparse_tensor.iterate %it1 in %l1 at (%crd) : !sparse_tensor.iter_space<#CSR, lvls = 0> {
     %0 = sparse_tensor.values %sp : tensor<?x?xf64, #CSR> to memref<?xf64>
-    %1 = sparse_tensor.positions %sp { level = 1 : index } : tensor<?x?xf64, #CSR> to memref<?xindex>
-    %2 = sparse_tensor.coordinates  %sp { level = 1 : index } : tensor<?x?xf64, #CSR> to memref<?xindex>
+    %1 = sparse_tensor.positions %sp level = 1 : tensor<?x?xf64, #CSR> to memref<?xindex>
+    %2 = sparse_tensor.coordinates  %sp level = 1 : tensor<?x?xf64, #CSR> to memref<?xindex>
     "test.op"(%0, %1, %2) : (memref<?xf64>, memref<?xindex>, memref<?xindex>) -> ()
   }
 

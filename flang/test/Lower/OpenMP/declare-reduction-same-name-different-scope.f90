@@ -23,11 +23,11 @@ contains
   end subroutine test
 end module m
 
-! CHECK: omp.declare_reduction @[[TEST_RED:_QQMmFtesta]] : i32 init {
+! CHECK: omp.declare_reduction @[[TEST_RED:_QQMmFtesta_i32]] : i32 init {
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: omp.yield(%[[C0]] : i32)
 
-! CHECK: omp.declare_reduction @[[DUMMY_RED:_QQMmFdummya]] : i32 init {
+! CHECK: omp.declare_reduction @[[DUMMY_RED:_QQMmFdummya_i32]] : i32 init {
 ! CHECK: %[[C10000:.*]] = arith.constant 10000 : i32
 ! CHECK: omp.yield(%[[C10000]] : i32)
 

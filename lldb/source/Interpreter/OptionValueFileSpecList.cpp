@@ -17,14 +17,14 @@ using namespace lldb_private;
 
 void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
                                         Stream &strm, uint32_t dump_mask) {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_rmutex);
   if (dump_mask & eDumpOptionType)
     strm.Printf("(%s)", GetTypeAsCString());
   if (dump_mask & eDumpOptionValue) {
     const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_current_value.GetSize();
     if (dump_mask & (eDumpOptionType | eDumpOptionDefaultValue)) {
-      strm.Printf(" =");
+      strm.PutCString(" =");
       if (dump_mask & eDumpOptionDefaultValue && !m_current_value.IsEmpty()) {
         DefaultValueFormat label(strm);
         strm.PutCString("empty");
@@ -50,7 +50,7 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
 
 llvm::json::Value
 OptionValueFileSpecList::ToJSON(const ExecutionContext *exe_ctx) const {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_rmutex);
   llvm::json::Array array;
   for (const auto &file_spec : m_current_value)
     array.emplace_back(file_spec.ToJSON());
@@ -59,7 +59,7 @@ OptionValueFileSpecList::ToJSON(const ExecutionContext *exe_ctx) const {
 
 Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
                                                    VarSetOperationType op) {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_rmutex);
   Status error;
   Args args(value.str());
   const size_t argc = args.GetArgumentCount();
@@ -180,6 +180,6 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
 }
 
 OptionValueSP OptionValueFileSpecList::Clone() const {
-  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  std::lock_guard<std::recursive_mutex> lock(m_rmutex);
   return Cloneable::Clone();
 }

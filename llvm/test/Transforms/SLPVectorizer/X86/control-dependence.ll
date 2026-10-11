@@ -35,8 +35,8 @@ define void @test1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -61,8 +61,8 @@ define void @test2(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -88,8 +88,8 @@ define void @test3(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -114,8 +114,8 @@ define void @test4(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -140,8 +140,8 @@ define void @test5(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[C2:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[C1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[C2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -201,8 +201,8 @@ define void @test7(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A2]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -234,8 +234,8 @@ define void @test8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_throw() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A2]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -267,8 +267,8 @@ define void @test9(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_throw()
 ; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A2]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[V2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -302,8 +302,8 @@ define void @test10(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[U2:%.*]] = udiv i64 200, [[V2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[U2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[U2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    ret void
@@ -338,8 +338,8 @@ define void @test11(i64 %x, i64 %y, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
 ; CHECK-NEXT:    [[U2:%.*]] = udiv i64 200, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[U2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[U2]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[B]], align 8
 ; CHECK-NEXT:    ret void

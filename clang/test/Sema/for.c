@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=c11 -std=c11 -pedantic %s
-// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c23 -Wpre-c23-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify=c23 -std=c23 -Wpre-c23-compat-pedantic %s
 
 // Check C99 6.8.5p3
 void b1 (void) { for (void (*f) (void);;); }

@@ -123,7 +123,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Name of Function
 ; CHECK-NEXT:  DC XL4'93858186'
 ; CHECK-NEXT:  DC AD(L#EPM_leaf_0-L#PPA1_leaf_0)
-
+; CHECK-NEXT:  DS 0B
 ; CHECK-NEXT: * PPA1
 ; CHECK-NEXT: L#PPA1_nonleaf_0 DS 0H
 ; CHECK-NEXT: * Version
@@ -163,7 +163,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT: * Name of Function
 ; CHECK-NEXT:  DC XL7'95969593858186'
 ; CHECK-NEXT:  DC AD(L#EPM_nonleaf_0-L#PPA1_nonleaf_0)
-
+; CHECK-NEXT:  DS 0B
 ; CHECK-NEXT: * PPA1
 ; CHECK-NEXT: L#PPA1_withalloca_0 DS 0H
 ; CHECK-NEXT: * Version
@@ -207,7 +207,7 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL10'A689A388819393968381'
 ; CHECK-NEXT:  DC AD(L#EPM_withalloca_0-L#PPA1_withalloca_0)
 
-; Attribute "zos-ppa1-name"="none" removes the function name from PPA1.
+; Attribute "zos-ppa1-name"="" removes the function name from PPA1.
 ; CHECK: * PPA1
 ; CHECK-NEXT: L#PPA1_no_name_0 DS 0H
 ; CHECK:      * PPA1 Flags 4
@@ -227,4 +227,4 @@ define void @no_name() #0 {
 entry:
   ret void
 }
-attributes #0 = { "zos-ppa1-name"="none" }
+attributes #0 = { "zos-ppa1-name" }

@@ -116,7 +116,7 @@ define void @clobber_base() #0 {
 ; X32ABI-NEXT:    .cfi_def_cfa_register %rbp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-128, %esp
-; X32ABI-NEXT:    subl $128, %esp
+; X32ABI-NEXT:    addl $-128, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
 ; X32ABI-NEXT:    .cfi_offset %rbx, -24
 ; X32ABI-NEXT:    callq helper@PLT
@@ -359,7 +359,7 @@ define void @vmw_host_printf(ptr %fmt, ...) nounwind {
 ; X32ABI-NEXT:    movl %esp, %ebp
 ; X32ABI-NEXT:    pushq %rbx
 ; X32ABI-NEXT:    andl $-16, %esp
-; X32ABI-NEXT:    subl $208, %esp
+; X32ABI-NEXT:    subl $192, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
 ; X32ABI-NEXT:    movq %rsi, 24(%ebx)
 ; X32ABI-NEXT:    movq %rdx, 32(%ebx)

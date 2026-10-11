@@ -362,15 +362,28 @@ def CSR_O32_FP64 :
 def CSR_N32 : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
                   RA_64, FP_64, GP_64, (sequence "S%u_64", 7, 0))>;
 
+def CSR_N32_NoGP : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
+                  RA_64, FP_64, (sequence "S%u_64", 7, 0))>;
+
 def CSR_N32_SingleFloat
     : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), RA_64, FP_64,
           GP_64, (sequence "S%u_64", 7, 0))>;
 
+def CSR_N32_SingleFloat_NoGP
+    : CalleeSavedRegs<(add(decimate(sequence "F%u", 30, 20), 2), RA_64, FP_64,
+          (sequence "S%u_64", 7, 0))>;
+
 def CSR_N64 : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
                                    GP_64, (sequence "S%u_64", 7, 0))>;
 
+def CSR_N64_NoGP : CalleeSavedRegs<(add (sequence "D%u_64", 31, 24), RA_64, FP_64,
+                                   (sequence "S%u_64", 7, 0))>;
+
 def CSR_N64_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 24), RA_64,
                               FP_64, GP_64, (sequence "S%u_64", 7, 0))>;
+
+def CSR_N64_SingleFloat_NoGP : CalleeSavedRegs<(add(sequence "F%u", 31, 24), RA_64,
+                              FP_64, (sequence "S%u_64", 7, 0))>;
 
 def CSR_Mips16RetHelper :
   CalleeSavedRegs<(add V0, V1, FP,

@@ -5,7 +5,7 @@ define void @test(ptr %0, ptr %1, i1 %cond, double %2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], i1 [[COND:%.*]], double [[TMP2:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double poison>, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double poison>, double [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00>, <4 x i32> <i32 4, i32 5, i32 0, i32 7>
 ; CHECK-NEXT:    br [[DOTLR_PH383_US_US_US_US:label %.*]]
@@ -20,9 +20,9 @@ define void @test(ptr %0, ptr %1, i1 %cond, double %2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP9]], 0.000000e+00
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP11]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP10]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP11]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP14]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd <4 x double> [[TMP20]], [[TMP5]]
 ; CHECK-NEXT:    br label %[[BB16]]

@@ -32,7 +32,7 @@ public:
 
   const SBError &operator=(const lldb::SBError &rhs);
 
-  /// Get the error string as a NULL terminated UTF8 c-string.
+  /// Get the error string as a null-terminated UTF8 c-string.
   ///
   /// This SBError object owns the returned string and this object must be kept
   /// around long enough to use the returned string.
@@ -109,7 +109,7 @@ protected:
   friend class SBValueList;
   friend class SBWatchpoint;
 
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::python::SWIGBridge;
 
   SBError(lldb_private::Status &&error);

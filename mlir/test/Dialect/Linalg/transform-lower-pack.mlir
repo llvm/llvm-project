@@ -116,7 +116,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %pack = transform.structured.match ops{["linalg.pack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"linalg.pack">
-    transform.structured.lower_pack %pack {lowerPadLikeWithInsertSlice = false}: (!transform.op<"linalg.pack">)
+    transform.structured.lower_pack %pack lowerPadLikeWithInsertSlice = false: (!transform.op<"linalg.pack">)
       -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
       transform.yield
   }
@@ -285,7 +285,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %unpack = transform.structured.match ops{["linalg.unpack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"linalg.unpack">
-    transform.structured.lower_unpack %unpack {lowerUnpadLikeWithExtractSlice = false}: (!transform.op<"linalg.unpack">)
+    transform.structured.lower_unpack %unpack lowerUnpadLikeWithExtractSlice = false: (!transform.op<"linalg.unpack">)
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
@@ -802,5 +802,48 @@ module attributes {transform.with_named_sequence} {
           !transform.op<"tensor.extract_slice">,
           !transform.op<"linalg.copy">)
           transform.yield
+  }
+}
+
+// -----
+
+func.func @pack_unsupported_memref(%arg0: memref<128x8xf32>, %arg1: memref<8x8x16x1xf32>) {
+  // expected-error @below {{lower_pack only supports tensor semantics. The target has memref operands}}
+  linalg.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [16, 1] into %arg1
+    : memref<128x8xf32> -> memref<8x8x16x1xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %pack = transform.structured.match ops{["linalg.pack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.pack">
+    transform.structured.lower_pack %pack : (!transform.op<"linalg.pack">)
+      -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+      transform.yield
+  }
+}
+
+// -----
+
+func.func @unpack_unsupported_memref(%arg0: memref<8x8x16x1xf32>, %arg1: memref<128x8xf32>) {
+  // expected-note @below {{target payload op}}
+  linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [16, 1] into %arg1
+    : memref<8x8x16x1xf32> -> memref<128x8xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.unpack">
+    // expected-error @below {{lower_unpack only supports tensor semantics. The target has memref operands}}
+    transform.structured.lower_unpack %unpack : (!transform.op<"linalg.unpack">)
+      -> (!transform.op<"tensor.empty">,
+          !transform.op<"linalg.transpose">,
+          !transform.op<"tensor.collapse_shape">,
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
+      transform.yield
   }
 }

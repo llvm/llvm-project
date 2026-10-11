@@ -23,6 +23,7 @@
 #include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include <limits>
 #include <optional>
 
 using namespace mlir;
@@ -32,6 +33,17 @@ using namespace mlir;
 /// supports identifier-like tokens, strings, etc.
 static SMRange convertTokenLocToRange(SMLoc loc) {
   return lsp::convertTokenLocToRange(loc, "$-.");
+}
+
+/// Convert an MLIR one-based file position to a zero-based LSP position. A
+/// zero position represents an unknown coordinate and maps to zero.
+static std::optional<int> convertFileLocPosition(unsigned value) {
+  if (value == 0)
+    return 0;
+  --value;
+  if (value > static_cast<unsigned>(std::numeric_limits<int>::max()))
+    return std::nullopt;
+  return static_cast<int>(value);
 }
 
 /// Returns a language server location from the given MLIR file location.
@@ -61,9 +73,14 @@ getLocationFromLoc(StringRef uriScheme, FileLineColLoc loc,
     return std::nullopt;
   }
 
+  std::optional<int> line = convertFileLocPosition(loc.getLine());
+  std::optional<int> character = convertFileLocPosition(loc.getColumn());
+  if (!line || !character)
+    return std::nullopt;
+
   lsp::Position position;
-  position.line = loc.getLine() - 1;
-  position.character = loc.getColumn() ? loc.getColumn() - 1 : 0;
+  position.line = *line;
+  position.character = *character;
   return lsp::Location{*sourceURI, lsp::Range(position)};
 }
 
@@ -90,11 +107,15 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
 
       // Use range of potential identifier starting at location, else length 1
       // range.
-      location->range.end.character += 1;
-      if (std::optional<SMRange> range = convertTokenLocToRange(loc)) {
-        auto lineCol = sourceMgr.getLineAndColumn(range->End);
-        location->range.end.character =
-            std::max(fileLoc.getColumn() + 1, lineCol.second - 1);
+      if (location->range.end.character < std::numeric_limits<int>::max())
+        ++location->range.end.character;
+      if (loc.isValid()) {
+        SMRange range = convertTokenLocToRange(loc);
+        auto lineCol = sourceMgr.getLineAndColumn(range.End);
+        uint64_t endCharacter = std::max<uint64_t>(
+            static_cast<uint64_t>(fileLoc.getColumn()) + 1, lineCol.second - 1);
+        location->range.end.character = static_cast<int>(
+            std::min<uint64_t>(endCharacter, std::numeric_limits<int>::max()));
       }
       return WalkResult::interrupt();
     }

@@ -17,8 +17,10 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 
@@ -26,8 +28,74 @@
 #include "ExceptionRecord.h"
 #include "ProcessWindowsLog.h"
 
+#include <string>
+#include <string_view>
+
 using namespace lldb;
 using namespace lldb_private;
+
+static void NormalizeWindowsPathSeparators(std::string &s) {
+  for (char &c : s)
+    if (c == '/')
+      c = '\\';
+}
+
+bool ProcessDebugger::IsSystemDLL(llvm::StringRef path) {
+  if (path.empty())
+    return false;
+
+  static const std::string windows_prefix = []() {
+    std::string prefix;
+    wchar_t buf[MAX_PATH];
+    UINT len = ::GetWindowsDirectoryW(buf, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH)
+      return prefix;
+    llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
+    NormalizeWindowsPathSeparators(prefix);
+    if (!prefix.empty() && prefix.back() != '\\')
+      prefix += '\\';
+    return prefix;
+  }();
+
+  if (windows_prefix.empty())
+    return false;
+
+  // A module loaded through an extended-length path has the "\\?\" prefix,
+  // which would not match the Windows directory.
+  std::string normalized = StripExtendedLengthPrefix(path);
+  NormalizeWindowsPathSeparators(normalized);
+  return llvm::StringRef(normalized).starts_with_insensitive(windows_prefix);
+}
+
+bool ProcessDebugger::IsSystemModuleAddress(lldb::addr_t addr) {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return false;
+  lldb::process_t handle = m_session_data->m_debugger->GetProcess()
+                               .GetNativeProcess()
+                               .GetSystemHandle();
+  if (handle == nullptr || handle == LLDB_INVALID_PROCESS)
+    return false;
+
+  MEMORY_BASIC_INFORMATION mbi = {};
+  if (::VirtualQueryEx(handle, reinterpret_cast<LPCVOID>(addr), &mbi,
+                       sizeof(mbi)) != sizeof(mbi))
+    return false;
+  if (mbi.AllocationBase == nullptr)
+    return false;
+
+  // A truncated path still carries the leading directory, which is all
+  // IsSystemDLL() inspects. MAX_PATH is enough.
+  wchar_t module_path[MAX_PATH];
+  DWORD len = ::GetModuleFileNameExW(
+      handle, reinterpret_cast<HMODULE>(mbi.AllocationBase), module_path,
+      MAX_PATH);
+  if (len == 0)
+    return false;
+
+  std::string path_utf8;
+  llvm::convertWideToUTF8(std::wstring_view(module_path, len), path_utf8);
+  return IsSystemDLL(path_utf8);
+}
 
 static DWORD ConvertLldbToWinApiProtect(uint32_t protect) {
   // We also can process a read / write permissions here, but if the debugger
@@ -244,6 +312,18 @@ Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
   return error;
 }
 
+void ProcessDebugger::EndDebugSession() {
+  DebuggerThreadSP debugger_thread;
+  {
+    llvm::sys::ScopedLock lock(m_mutex);
+    if (!m_session_data)
+      return;
+    debugger_thread = m_session_data->m_debugger;
+  }
+  debugger_thread->StopDebugging(/*terminate=*/true);
+  m_session_data.reset();
+}
+
 Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
@@ -372,7 +452,7 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
 
   Log *log = GetLog(WindowsLog::Memory);
   llvm::sys::ScopedLock lock(m_mutex);
-  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", vm_addr);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0:x}", vm_addr);
 
   if (!m_session_data) {
     result = Status::FromErrorString(
@@ -476,7 +556,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   }
 
   LLDB_LOG_VERBOSE(log,
-                   "Memory region info for address {0}: readable={1}, "
+                   "Memory region info for address {0:x}: readable={1}, "
                    "executable={2}, writable={3}",
                    vm_addr, info.GetReadable(), info.GetExecutable(),
                    info.GetWritable());

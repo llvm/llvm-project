@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_1:
 ; GCN: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 1.0 op_sel:[0,1] op_sel_hi:[1,0]{{$}}
@@ -96,7 +96,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_0_41c8:
 ; GFX9:  s_mov_b32 [[C:s[0-9]+]], 0x41c80000
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c80000, v{{[0-9]+}}{{$}}
+; GFX10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 0x41c80000{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_0_41c8(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -111,7 +111,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_41c8_0:
 ; GFX9:  s_movk_i32 [[C:s[0-9]+]], 0x41c8
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c8, v{{[0-9]+}}{{$}}
+; GFX10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 0x41c8{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_41c8_0(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -126,7 +126,7 @@ bb:
 ; GCN-LABEL: {{^}}test_pk_max_f16_literal_42ca_41c8:
 ; GFX9:  s_mov_b32 [[C:s[0-9]+]], 0x41c842ca
 ; GFX9:  v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, [[C]]{{$}}
-; GFX10: v_pk_max_f16 v{{[0-9]+}}, 0x41c842ca, v{{[0-9]+}}{{$}}
+; GFX10: v_pk_max_f16 v{{[0-9]+}}, v{{[0-9]+}}, 0x41c842ca{{$}}
 define amdgpu_kernel void @test_pk_max_f16_literal_42ca_41c8(ptr addrspace(1) nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()

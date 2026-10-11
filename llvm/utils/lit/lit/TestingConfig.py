@@ -69,6 +69,10 @@ class TestingConfig:
             "HOME",
         ]
 
+        # Pass through any additional environment variables requested via the
+        # --pass-env command line option.
+        pass_vars += litConfig.pass_env
+
         if sys.platform.startswith("aix"):
             pass_vars += ["LIBPATH"]
         elif sys.platform == "win32":

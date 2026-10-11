@@ -20,6 +20,7 @@ from clang.cindex import (
     TypeKind,
     PrintingPolicyProperty,
     BaseEnumeration,
+    UnaryOperator,
 )
 
 
@@ -27,7 +28,6 @@ class TestEnums(unittest.TestCase):
     # Test all enum classes, except for AvailabilityKindCompat since it is
     # just a copy of AvailabilityKind and has no corresponding C-class
     enums = BaseEnumeration.__subclasses__()
-    enums.remove(CompletionString.AvailabilityKindCompat)
 
     def test_from_id(self):
         """Check that kinds can be constructed from valid IDs"""
@@ -57,6 +57,7 @@ class TestEnums(unittest.TestCase):
             "CXTLSKind": TLSKind,
             "CXTokenKind": TokenKind,
             "CXTypeKind": TypeKind,
+            "CXUnaryOperatorKind": UnaryOperator,
         }
 
         indexheader = (

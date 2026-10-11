@@ -22,39 +22,37 @@ include "llvm/Target/Target.td"
 // CPU Directives                                                             //
 //===----------------------------------------------------------------------===//
 
-def Directive440 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_440", "">;
-def Directive601 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_601", "">;
-def Directive602 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_602", "">;
-def Directive603 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
-def Directive604 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
-def Directive620 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_603", "">;
-def Directive7400: SubtargetFeature<"", "CPUDirective", "PPC::DIR_7400", "">;
-def Directive750 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_750", "">;
-def Directive970 : SubtargetFeature<"", "CPUDirective", "PPC::DIR_970", "">;
-def Directive32  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_32", "">;
-def Directive64  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_64", "">;
-def DirectiveA2  : SubtargetFeature<"", "CPUDirective", "PPC::DIR_A2", "">;
-def DirectiveE500   : SubtargetFeature<"", "CPUDirective",
-                                       "PPC::DIR_E500", "">;
-def DirectiveE500mc : SubtargetFeature<"", "CPUDirective",
-                                       "PPC::DIR_E500mc", "">;
-def DirectiveE5500  : SubtargetFeature<"", "CPUDirective",
-                                       "PPC::DIR_E5500", "">;
-def DirectivePwr3: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR3", "">;
-def DirectivePwr4: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR4", "">;
-def DirectivePwr5: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR5", "">;
-def DirectivePwr5x
-    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR5X", "">;
-def DirectivePwr6: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR6", "">;
-def DirectivePwr6x
-    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR6X", "">;
-def DirectivePwr7: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR7", "">;
-def DirectivePwr8: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR8", "">;
-def DirectivePwr9: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR9", "">;
-def DirectivePwr10: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR10", "">;
-def DirectivePwr11: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR11", "">;
-def DirectivePwrFuture
-    : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
+// These are only used for profitability decisions, so ignore during inlining.
+class Directive<string enum_name>
+  : SubtargetFeature<"", "CPUDirective", enum_name, "", [], InlineIgnore>;
+
+def Directive440 : Directive<"PPC::DIR_440">;
+def Directive601 : Directive<"PPC::DIR_601">;
+def Directive602 : Directive<"PPC::DIR_602">;
+def Directive603 : Directive<"PPC::DIR_603">;
+def Directive604 : Directive<"PPC::DIR_603">;
+def Directive620 : Directive<"PPC::DIR_603">;
+def Directive7400: Directive<"PPC::DIR_7400">;
+def Directive750 : Directive<"PPC::DIR_750">;
+def Directive970 : Directive<"PPC::DIR_970">;
+def Directive32  : Directive<"PPC::DIR_32">;
+def Directive64  : Directive<"PPC::DIR_64">;
+def DirectiveA2  : Directive<"PPC::DIR_A2">;
+def DirectiveE500   : Directive<"PPC::DIR_E500">;
+def DirectiveE500mc : Directive<"PPC::DIR_E500mc">;
+def DirectiveE5500  : Directive<"PPC::DIR_E5500">;
+def DirectivePwr3: Directive<"PPC::DIR_PWR3">;
+def DirectivePwr4: Directive<"PPC::DIR_PWR4">;
+def DirectivePwr5: Directive<"PPC::DIR_PWR5">;
+def DirectivePwr5x : Directive<"PPC::DIR_PWR5X">;
+def DirectivePwr6: Directive<"PPC::DIR_PWR6">;
+def DirectivePwr6x : Directive<"PPC::DIR_PWR6X">;
+def DirectivePwr7: Directive<"PPC::DIR_PWR7">;
+def DirectivePwr8: Directive<"PPC::DIR_PWR8">;
+def DirectivePwr9: Directive<"PPC::DIR_PWR9">;
+def DirectivePwr10: Directive<"PPC::DIR_PWR10">;
+def DirectivePwr11: Directive<"PPC::DIR_PWR11">;
+def DirectivePwrFuture : Directive<"PPC::DIR_PWR_FUTURE">;
 
 // Specifies that the selected CPU supports 64-bit instructions, regardless of
 // whether we are in 32-bit or 64-bit mode.
@@ -63,7 +61,8 @@ def Feature64BitSupport : SubtargetFeature<"64bit-support", "Has64BitSupport", "
 // 64-bit is enabled.
 def Feature64Bit     : SubtargetFeature<"64bit", "IsPPC64", "true",
                                         "Enable 64-bit mode",
-                                        [Feature64BitSupport]>;
+                                        [Feature64BitSupport],
+                                        InlineMustMatch>;
 
 def AIXOS: SubtargetFeature<"aix", "IsAIX", "true", "AIX OS">;
 def FeatureModernAIXAs
@@ -181,7 +180,8 @@ def FeatureQuadwordAtomic : SubtargetFeature<"quadword-atomics",
 def FeatureInvariantFunctionDescriptors :
   SubtargetFeature<"invariant-function-descriptors",
                    "HasInvariantFunctionDescriptors", "true",
-                   "Assume function descriptors are invariant">;
+                   "Assume function descriptors are invariant",
+                   [], InlineInverse>;
 def FeatureLongCall : SubtargetFeature<"longcall", "UseLongCalls", "true",
                                        "Always use indirect calls">;
 def FeatureHTM : SubtargetFeature<"htm", "HasHTM", "true",
@@ -242,10 +242,12 @@ def FeatureUnalignedFloats :
                    "true", "CPU does not trap on unaligned FP access">;
 def FeaturePPCPreRASched:
   SubtargetFeature<"ppc-prera-sched", "UsePPCPreRASchedStrategy", "true",
-                   "Use PowerPC pre-RA scheduling strategy">;
+                   "Use PowerPC pre-RA scheduling strategy",
+                   [], InlineIgnore>;
 def FeaturePPCPostRASched:
   SubtargetFeature<"ppc-postra-sched", "UsePPCPostRASchedStrategy", "true",
-                   "Use PowerPC post-RA scheduling strategy">;
+                   "Use PowerPC post-RA scheduling strategy",
+                   [], InlineIgnore>;
 def FeatureFloat128 :
   SubtargetFeature<"float128", "HasFloat128", "true",
                    "Enable the __float128 data type for IEEE-754R Binary128.",
@@ -258,7 +260,8 @@ def FeaturePOPCNTD   : SubtargetFeature<"popcntd","HasPOPCNTD",
 // microcoded, and the software emulation is about twice as fast.
 def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
                                           "POPCNTD_Slow",
-                                          "Has slow popcnt[dw] instructions">;
+                                          "Has slow popcnt[dw] instructions",
+                                          [], InlineIgnore>;
 
 def DeprecatedDST    : SubtargetFeature<"", "IsDeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
@@ -302,7 +305,8 @@ def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVector",
 def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
                                                  "VectorsUseTwoUnits",
                                                  "true",
-                                                 "Vectors use two units">;
+                                                 "Vectors use two units",
+                                                 [], InlineIgnore>;
 def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
                                            "true",
                                            "Enable prefixed instructions",
@@ -357,16 +361,19 @@ def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",
                    "true",
-                   "Prefer likely predicted branches over selects">;
+                   "Prefer likely predicted branches over selects",
+                   [], InlineIgnore>;
 
 def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
-                                       "MFLR is a fast instruction">;
+                                       "MFLR is a fast instruction",
+                                       [], InlineIgnore>;
 
 // When enabled indirect calls will place the address of the descriptor
 // into r11 and do a direct branch to the ._ptrgl routine.
 def FeaturePointerGlueHelper :
  SubtargetFeature<"use-ptrgl-helper", "UsePointerGlueHelper", "true",
-                  "Use ._ptrgl for indirect calls">;
+                  "Use ._ptrgl for indirect calls",
+                  [], InlineMustMatch>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.

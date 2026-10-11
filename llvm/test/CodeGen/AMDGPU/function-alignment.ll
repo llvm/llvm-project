@@ -8,30 +8,30 @@
 
 ; --- Default (cache line alignment) ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck -check-prefix=GFX12 %s
 
 ; --- Optsize: alignment drops to minimum (Align(4) = .p2align 2) ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=OPTSIZE %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=OPTSIZE %s
 
 ; --- IR align attribute: ensureAlignment must not lower explicit alignment ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=EXPLICIT-ALIGN %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=EXPLICIT-ALIGN %s
 
 ; --- -align-all-functions=1 with optsize: verify floor at Align(4) ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -align-all-functions=1 < %s | FileCheck -check-prefix=ALIGN-ALL %s
+; RUN: llc -mtriple=amdgpu9.00 -align-all-functions=1 < %s | FileCheck -check-prefix=ALIGN-ALL %s
 
 ; --- prefalign attribute: overrides target preferred alignment ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=PREFALIGN %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=PREFALIGN %s
 
 ; --- Entry function: 256B alignment unchanged ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=ENTRY %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=ENTRY %s
 
 
 ; Non-entry function: alignment matches instruction cache line size.

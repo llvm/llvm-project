@@ -53,7 +53,7 @@ public:
 protected:
   void CreatePathBreakpoint(const protocol::Source &source);
   llvm::Error
-  CreateAssemblyBreakpointWithSourceReference(int64_t source_reference);
+  CreateAssemblyBreakpointWithSourceReference(src_ref_t source_reference);
   llvm::Error CreateAssemblyBreakpointWithPersistenceData(
       const protocol::PersistenceData &persistence_data);
 

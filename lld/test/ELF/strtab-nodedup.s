@@ -8,18 +8,28 @@
 # RUN: ld.lld %t/a.o %t/b.o -o %t/a
 # RUN: llvm-readelf -p .strtab %t/a | FileCheck %s --check-prefix=NODEDUP
 # RUN: ld.lld -r -O2 %t/a.o %t/b.o -o %t/a.ro
-# RUN: llvm-readelf -p .strtab %t/a.ro | FileCheck %s --check-prefix=NODEDUP
+# RUN: llvm-readelf -p .strtab %t/a.ro | FileCheck %s --check-prefix=RO
 
 # NODEDUP:        [     1]  local
 # NODEDUP-NEXT:   [     7]  local
 # NODEDUP-NEXT:   [     d]  foo
 # NODEDUP-EMPTY:
 
+## For -r, a.o and b.o get a synthesized STT_FILE.
+# RO:        [     1]  a.o
+# RO-NEXT:   [     5]  local
+# RO-NEXT:   [     b]  b.o
+# RO-NEXT:   [     f]  local
+# RO-NEXT:   [    15]  foo
+# RO-EMPTY:
+
 # RUN: llvm-readelf -s %t/a.ro | FileCheck %s --check-prefix=SYMTAB
 
 # SYMTAB:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
+# SYMTAB-NEXT:           FILE    LOCAL  DEFAULT ABS a.o
 # SYMTAB-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] local
 # SYMTAB-NEXT:           SECTION LOCAL  DEFAULT [[#]] .text
+# SYMTAB-NEXT:           FILE    LOCAL  DEFAULT ABS b.o
 # SYMTAB-NEXT:           NOTYPE  LOCAL  DEFAULT [[#]] local
 # SYMTAB-NEXT:           NOTYPE  GLOBAL DEFAULT [[#]] foo
 

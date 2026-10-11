@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "test/UnitTest/Test.h"
 #include <sched.h>
 
 template <typename T, typename U> struct SameType {
@@ -16,19 +17,22 @@ template <typename T> struct SameType<T, T> {
   static constexpr bool value = true;
 };
 
-// Use unevaluated contexts to verify the public macro declarations without
-// requiring this include test to link the helper entrypoints.
-static_assert(SameType<decltype(CPU_ZERO((cpu_set_t *)0)), void>::value, "");
-static_assert(SameType<decltype(CPU_COUNT((cpu_set_t *)0)), int>::value, "");
-static_assert(SameType<decltype(CPU_SET(0, (cpu_set_t *)0)), void>::value, "");
-static_assert(SameType<decltype(CPU_ISSET(0, (cpu_set_t *)0)), int>::value, "");
+TEST(LlvmLibcSchedTest, HeaderInterface) {
+  // Use unevaluated contexts to verify the public macro declarations without
+  // requiring this include test to link the helper entrypoints.
+  static_assert(SameType<decltype(CPU_ZERO((cpu_set_t *)0)), void>::value, "");
+  static_assert(SameType<decltype(CPU_COUNT((cpu_set_t *)0)), int>::value, "");
+  static_assert(SameType<decltype(CPU_SET(0, (cpu_set_t *)0)), void>::value,
+                "");
+  static_assert(SameType<decltype(CPU_ISSET(0, (cpu_set_t *)0)), int>::value,
+                "");
 
-using SchedGetSchedulerT = int(pid_t) noexcept;
-using SchedSetSchedulerT = int(pid_t, int, const struct sched_param *) noexcept;
+  using SchedGetSchedulerT = int(pid_t) noexcept;
+  using SchedSetSchedulerT =
+      int(pid_t, int, const struct sched_param *) noexcept;
 
-static_assert(SameType<decltype(sched_getscheduler), SchedGetSchedulerT>::value,
-              "");
-static_assert(SameType<decltype(sched_setscheduler), SchedSetSchedulerT>::value,
-              "");
-
-extern "C" int main() { return 0; }
+  static_assert(
+      SameType<decltype(sched_getscheduler), SchedGetSchedulerT>::value, "");
+  static_assert(
+      SameType<decltype(sched_setscheduler), SchedSetSchedulerT>::value, "");
+}

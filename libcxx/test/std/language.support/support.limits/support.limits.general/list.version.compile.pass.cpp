@@ -230,7 +230,7 @@
 #    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_allocator_traits_is_always_equal
 #    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++26"
@@ -294,6 +294,70 @@
 #    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_allocator_traits_is_always_equal
+#    error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++29"
+#  endif
+#  if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#    error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_list
+#    error "__cpp_lib_constexpr_list should be defined in c++29"
+#  endif
+#  if __cpp_lib_constexpr_list != 202502L
+#    error "__cpp_lib_constexpr_list should have the value 202502L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_containers_ranges
+#    error "__cpp_lib_containers_ranges should be defined in c++29"
+#  endif
+#  if __cpp_lib_containers_ranges != 202202L
+#    error "__cpp_lib_containers_ranges should have the value 202202L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_default_template_type_for_algorithm_values
+#      error "__cpp_lib_default_template_type_for_algorithm_values should be defined in c++29"
+#    endif
+#    if __cpp_lib_default_template_type_for_algorithm_values != 202403L
+#      error "__cpp_lib_default_template_type_for_algorithm_values should have the value 202403L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_default_template_type_for_algorithm_values
+#      error "__cpp_lib_default_template_type_for_algorithm_values should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_erase_if
+#    error "__cpp_lib_erase_if should be defined in c++29"
+#  endif
+#  if __cpp_lib_erase_if != 202002L
+#    error "__cpp_lib_erase_if should have the value 202002L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_incomplete_container_elements
+#    error "__cpp_lib_incomplete_container_elements should be defined in c++29"
+#  endif
+#  if __cpp_lib_incomplete_container_elements != 201505L
+#    error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_list_remove_return_type
+#    error "__cpp_lib_list_remove_return_type should be defined in c++29"
+#  endif
+#  if __cpp_lib_list_remove_return_type != 201806L
+#    error "__cpp_lib_list_remove_return_type should have the value 201806L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_nonmember_container_access
+#    error "__cpp_lib_nonmember_container_access should be defined in c++29"
+#  endif
+#  if __cpp_lib_nonmember_container_access != 201411L
+#    error "__cpp_lib_nonmember_container_access should have the value 201411L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

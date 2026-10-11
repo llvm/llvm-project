@@ -14,9 +14,7 @@ define bfloat @return_arg_bf16(bfloat %x) #0 {
 ; FAST_ISEL_SSE2-LABEL: return_arg_bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %rax
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    popq %rax
 ; FAST_ISEL_SSE2-NEXT:    retq
@@ -27,9 +25,7 @@ define bfloat @return_arg_bf16(bfloat %x) #0 {
 ;
 ; FAST_ISEL_AVX512BF16-LABEL: return_arg_bf16:
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
-; FAST_ISEL_AVX512BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    retq
 ;
@@ -39,9 +35,7 @@ define bfloat @return_arg_bf16(bfloat %x) #0 {
 ;
 ; FAST_ISEL_AVXNECONVERT-LABEL: return_arg_bf16:
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $0, %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    retq
   ret bfloat %x
@@ -56,17 +50,15 @@ define <2 x bfloat> @return_arg_v2bf16(<2 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    subq $40, %rsp
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    addq $40, %rsp
@@ -97,31 +89,29 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: return_arg_v3bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
-; FAST_ISEL_SSE2-NEXT:    subq $40, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; FAST_ISEL_SSE2-NEXT:    movaps %xmm1, %xmm0
-; FAST_ISEL_SSE2-NEXT:    addq $40, %rsp
+; FAST_ISEL_SSE2-NEXT:    addq $56, %rsp
 ; FAST_ISEL_SSE2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: return_arg_v3bf16:
@@ -130,19 +120,16 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_AVX512BF16-LABEL: return_arg_v3bf16:
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
+; FAST_ISEL_AVX512BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; FAST_ISEL_AVX512BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm2
 ; FAST_ISEL_AVX512BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm2
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm0, %eax
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm1, %eax
+; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm1
+; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm0, %eax
+; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm0
+; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
 ; FAST_ISEL_AVX512BF16-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; FAST_ISEL_AVX512BF16-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
 ; FAST_ISEL_AVX512BF16-NEXT:    retq
@@ -153,19 +140,16 @@ define <3 x bfloat> @return_arg_v3bf16(<3 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_AVXNECONVERT-LABEL: return_arg_v3bf16:
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm2
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $2, %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vpextrw $1, %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm2
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm0, %eax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm1, %eax
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm0, %xmm0
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm0, %eax
+; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm0
+; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %xmm1, %rax
@@ -188,39 +172,37 @@ define <4 x bfloat> @return_arg_v4bf16(<4 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: return_arg_v4bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
-; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $72, %rsp
 ; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; FAST_ISEL_SSE2-NEXT:    addq $56, %rsp
+; FAST_ISEL_SSE2-NEXT:    addq $72, %rsp
 ; FAST_ISEL_SSE2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: return_arg_v4bf16:
@@ -250,48 +232,48 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %r14
 ; FAST_ISEL_SSE2-NEXT:    pushq %rbx
-; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $120, %rsp
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm1, %xmm1
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
 ; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm3
+; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm5
+; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm4
+; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm3
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm5
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm4
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm4, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -299,25 +281,21 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -325,9 +303,9 @@ define <8 x bfloat> @return_arg_v8bf16(<8 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm1
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; FAST_ISEL_SSE2-NEXT:    addq $56, %rsp
+; FAST_ISEL_SSE2-NEXT:    addq $120, %rsp
 ; FAST_ISEL_SSE2-NEXT:    popq %rbx
 ; FAST_ISEL_SSE2-NEXT:    popq %r14
 ; FAST_ISEL_SSE2-NEXT:    retq
@@ -360,126 +338,123 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %r14
 ; FAST_ISEL_SSE2-NEXT:    pushq %rbx
-; FAST_ISEL_SSE2-NEXT:    subq $104, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $248, %rsp
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm3, %xmm3
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm2, %xmm2
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm3
 ; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm4
 ; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm6
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm5
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, %xmm0
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
-; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
-; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
-; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
-; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
-; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
-; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm8
+; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm7
+; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm9
+; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm11
+; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm10
+; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm3
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm4
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm6
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm5
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm8
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm7
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm9
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm11
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm10
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm10, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
+; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
+; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
+; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
+; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
+; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
+; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -488,24 +463,20 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -515,8 +486,8 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; FAST_ISEL_SSE2-NEXT:    addq $104, %rsp
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    addq $248, %rsp
 ; FAST_ISEL_SSE2-NEXT:    popq %rbx
 ; FAST_ISEL_SSE2-NEXT:    popq %r14
 ; FAST_ISEL_SSE2-NEXT:    retq
@@ -607,20 +578,18 @@ define <2 x bfloat> @call_ret_v2bf16(ptr %ptr) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: call_ret_v2bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
-; FAST_ISEL_SSE2-NEXT:    subq $40, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
 ; FAST_ISEL_SSE2-NEXT:    movl (%rdi), %eax
 ; FAST_ISEL_SSE2-NEXT:    movl %eax, (%rsp)
 ; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
@@ -667,29 +636,28 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: call_ret_v3bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
-; FAST_ISEL_SSE2-NEXT:    subq $40, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
 ; FAST_ISEL_SSE2-NEXT:    movq (%rdi), %rax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, %ecx
-; FAST_ISEL_SSE2-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
-; FAST_ISEL_SSE2-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movl %eax, %ecx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ecx
-; FAST_ISEL_SSE2-NEXT:    movd %ecx, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    shrq $32, %rax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    psrld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; FAST_ISEL_SSE2-NEXT:    movaps %xmm1, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq returns_v3bf16@PLT
@@ -704,15 +672,14 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVX512BF16:       # %bb.0:
 ; FAST_ISEL_AVX512BF16-NEXT:    pushq %rax
 ; FAST_ISEL_AVX512BF16-NEXT:    movq (%rdi), %rax
-; FAST_ISEL_AVX512BF16-NEXT:    movl %eax, %ecx
-; FAST_ISEL_AVX512BF16-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %ecx, %xmm0
-; FAST_ISEL_AVX512BF16-NEXT:    movl %eax, %ecx
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %ecx
-; FAST_ISEL_AVX512BF16-NEXT:    vmovd %ecx, %xmm1
+; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm0
+; FAST_ISEL_AVX512BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; FAST_ISEL_AVX512BF16-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; FAST_ISEL_AVX512BF16-NEXT:    vmovq %rax, %xmm1
+; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; FAST_ISEL_AVX512BF16-NEXT:    shrq $32, %rax
-; FAST_ISEL_AVX512BF16-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVX512BF16-NEXT:    vmovd %eax, %xmm2
+; FAST_ISEL_AVX512BF16-NEXT:    vpslld $16, %xmm2, %xmm2
 ; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm2, %xmm2
 ; FAST_ISEL_AVX512BF16-NEXT:    vmovd %xmm2, %eax
 ; FAST_ISEL_AVX512BF16-NEXT:    vcvtneps2bf16 %xmm1, %xmm1
@@ -733,15 +700,14 @@ define <3 x bfloat> @call_ret_v3bf16(ptr %ptr) #0 {
 ; FAST_ISEL_AVXNECONVERT:       # %bb.0:
 ; FAST_ISEL_AVXNECONVERT-NEXT:    pushq %rax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    movq (%rdi), %rax
-; FAST_ISEL_AVXNECONVERT-NEXT:    movl %eax, %ecx
-; FAST_ISEL_AVXNECONVERT-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %ecx, %xmm0
-; FAST_ISEL_AVXNECONVERT-NEXT:    movl %eax, %ecx
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %ecx
-; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %ecx, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm0
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; FAST_ISEL_AVXNECONVERT-NEXT:    vmovq %rax, %xmm1
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm1, %xmm1
 ; FAST_ISEL_AVXNECONVERT-NEXT:    shrq $32, %rax
-; FAST_ISEL_AVXNECONVERT-NEXT:    shll $16, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %eax, %xmm2
+; FAST_ISEL_AVXNECONVERT-NEXT:    vpslld $16, %xmm2, %xmm2
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm2, %xmm2
 ; FAST_ISEL_AVXNECONVERT-NEXT:    vmovd %xmm2, %eax
 ; FAST_ISEL_AVXNECONVERT-NEXT:    {vex} vcvtneps2bf16 %xmm1, %xmm1
@@ -773,38 +739,36 @@ define <4 x bfloat> @call_ret_v4bf16(ptr %ptr) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: call_ret_v4bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
-; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
+; FAST_ISEL_SSE2-NEXT:    subq $88, %rsp
 ; FAST_ISEL_SSE2-NEXT:    movq (%rdi), %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -850,48 +814,49 @@ define <8 x bfloat> @call_ret_v8bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %r14
 ; FAST_ISEL_SSE2-NEXT:    pushq %rbx
-; FAST_ISEL_SSE2-NEXT:    subq $56, %rsp
-; FAST_ISEL_SSE2-NEXT:    movdqa (%rdi), %xmm1
-; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
+; FAST_ISEL_SSE2-NEXT:    subq $120, %rsp
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rdi), %xmm0
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm1, %xmm1
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
+; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm3
+; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm5
+; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm4
+; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm3
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm5
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm4
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm4, (%rsp) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movd %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -899,25 +864,21 @@ define <8 x bfloat> @call_ret_v8bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -925,7 +886,7 @@ define <8 x bfloat> @call_ret_v8bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm1
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; FAST_ISEL_SSE2-NEXT:    callq returns_v8bf16@PLT
 ;
@@ -970,127 +931,125 @@ define <16 x bfloat> @call_ret_v16bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2:       # %bb.0:
 ; FAST_ISEL_SSE2-NEXT:    pushq %r14
 ; FAST_ISEL_SSE2-NEXT:    pushq %rbx
-; FAST_ISEL_SSE2-NEXT:    subq $104, %rsp
-; FAST_ISEL_SSE2-NEXT:    movdqa (%rdi), %xmm1
-; FAST_ISEL_SSE2-NEXT:    movdqa 16(%rdi), %xmm0
-; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    subq $248, %rsp
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rdi), %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm3, %xmm3
+; FAST_ISEL_SSE2-NEXT:    pxor %xmm2, %xmm2
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm3
 ; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    pextrw $4, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm4
 ; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm6
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm5
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movd %xmm1, %eax
-; FAST_ISEL_SSE2-NEXT:    shll $16, %eax
-; FAST_ISEL_SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
-; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
-; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
-; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
-; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
-; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
-; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
-; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
-; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
-; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
-; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
+; FAST_ISEL_SSE2-NEXT:    pextrw $7, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm8
+; FAST_ISEL_SSE2-NEXT:    pextrw $6, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm7
+; FAST_ISEL_SSE2-NEXT:    pextrw $5, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm9
+; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm11
+; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm10
+; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm3
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm2
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm4
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm6
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm5
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm1
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm8
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm7
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm9
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm11
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm10
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm10, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
+; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
+; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
+; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %eax
+; FAST_ISEL_SSE2-NEXT:    shlq $32, %rax
+; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
+; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
+; FAST_ISEL_SSE2-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
+; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
+; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
+; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -1099,24 +1058,20 @@ define <16 x bfloat> @call_ret_v16bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2-NEXT:    orq %r14, %rax
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %r14d
 ; FAST_ISEL_SSE2-NEXT:    orl %ebx, %r14d
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; FAST_ISEL_SSE2-NEXT:    shll $16, %ebx
-; FAST_ISEL_SSE2-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; FAST_ISEL_SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq __truncsfbf2@PLT
 ; FAST_ISEL_SSE2-NEXT:    pextrw $0, %xmm0, %eax
 ; FAST_ISEL_SSE2-NEXT:    movzwl %ax, %eax
@@ -1126,7 +1081,7 @@ define <16 x bfloat> @call_ret_v16bf16(ptr %ptr) #0 {
 ; FAST_ISEL_SSE2-NEXT:    movq %rax, %xmm0
 ; FAST_ISEL_SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; FAST_ISEL_SSE2-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; FAST_ISEL_SSE2-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; FAST_ISEL_SSE2-NEXT:    callq returns_v16bf16@PLT
 ;
 ; AVX512BF16-LABEL: call_ret_v16bf16:

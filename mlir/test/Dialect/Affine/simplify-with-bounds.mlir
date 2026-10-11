@@ -174,9 +174,9 @@ func.func @input_not_linearize(%x: index) -> (index, index) {
 func.func @simplify_loop_bound() -> index{
   %c0 = arith.constant 0 :index
   %c1 = arith.constant 1 : index
-  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
-  %bound1 = test.value_with_bounds { min = 2 : index, max = 3 : index}
-  %bound2 = test.value_with_bounds { min = 2 : index, max = 3 : index} 
+  %bound = test.value_with_bounds < min = 0, max = 1>
+  %bound1 = test.value_with_bounds < min = 2, max = 3>
+  %bound2 = test.value_with_bounds < min = 2, max = 3>
   %res = affine.for %iv = max affine_map<(d0, d1, d2) -> (d0, d1,d2)>(%bound, %bound1,%bound2) to min affine_map<(d0, d1, d2) -> (d0, d1,d2)>(%bound, %bound1,%bound2) step 2 iter_args(%arg = %c0) -> index {
       %sum = arith.addi %arg, %c1 : index
       affine.yield %sum : index
@@ -186,9 +186,9 @@ func.func @simplify_loop_bound() -> index{
 
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-// CHECK-DAG: %[[BOUND0:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
-// CHECK-DAG: %[[BOUND1:.*]] = test.value_with_bounds {max = 3 : index, min = 2 : index}
-// CHECK-DAG: %[[BOUND2:.*]] = test.value_with_bounds {max = 3 : index, min = 2 : index}
+// CHECK-DAG: %[[BOUND0:.*]] = test.value_with_bounds <min = 0, max = 1>
+// CHECK-DAG: %[[BOUND1:.*]] = test.value_with_bounds <min = 2, max = 3>
+// CHECK-DAG: %[[BOUND2:.*]] = test.value_with_bounds <min = 2, max = 3>
 //     CHECK: affine.for %[[IV:.*]] = max #[[$MAP]]()[%[[BOUND1]], %[[BOUND2]]] to %[[BOUND0]] step 2 iter_args(%[[ARG:.*]] = %[[C0]]) -> (index) {
 //     CHECK:   %[[SUM:.*]] = arith.addi %[[ARG]], %[[C1]] : index
 //     CHECK:   affine.yield %[[SUM]] : index

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=R600 -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -394,7 +394,7 @@ endif:
 ; FUNC-LABEL: setcc-i1-and-xor
 ; GCN-DAG: v_cmp_nge_f32_e64 [[A:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
 ; GCN-DAG: v_cmp_nle_f32_e64 [[B:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 1.0
-; GCN: s_or_b64 s[2:3], [[A]], [[B]]
+; GCN: s_or_b64 vcc, [[A]], [[B]]
 define amdgpu_kernel void @setcc-i1-and-xor(ptr addrspace(1) %out, float %cond) #0 {
 bb0:
   %tmp5 = fcmp oge float %cond, 0.000000e+00

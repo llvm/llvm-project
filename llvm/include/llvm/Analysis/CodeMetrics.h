@@ -57,9 +57,6 @@ struct CodeMetrics {
   /// Keeps track of basic block code size estimates. Indexed by block number.
   SmallVector<InstructionCost, 0> NumBBInsts;
 
-  /// Keep track of the number of calls to 'big' functions.
-  unsigned NumCalls = 0;
-
   /// The number of calls to internal functions with a single caller.
   ///
   /// These are likely targets for future inlining, likely exposed by

@@ -196,9 +196,8 @@ define <8 x i8> @zip2_const_seq_with_variable(<8 x i8> %x) #0 {
 define void @build_vector_mod_inverse_v4i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_mod_inverse_v4i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #85 // =0x55
+; VBITS_GE_256-NEXT:    movi d0, #0xff000000ff0000
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl4
-; VBITS_GE_256-NEXT:    index z0.h, #0, w8
 ; VBITS_GE_256-NEXT:    st1b { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <4 x i8> <i8 0, i8 poison, i8 poison, i8 255>, ptr %a
@@ -211,9 +210,7 @@ define void @build_vector_mod_inverse_v4i8(ptr %a) #0 {
 define void @build_vector_mod_inverse_v8i8_0xAA(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_mod_inverse_v8i8_0xAA:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #170 // =0xaa
-; VBITS_GE_256-NEXT:    index z0.b, #0, w8
-; VBITS_GE_256-NEXT:    add z0.b, z0.b, #86 // =0x56
+; VBITS_GE_256-NEXT:    movi v0.4h, #254
 ; VBITS_GE_256-NEXT:    str d0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <8 x i8> <i8 poison, i8 0, i8 poison, i8 poison, i8 254, i8 poison, i8 poison, i8 poison>, ptr %a
@@ -239,9 +236,8 @@ define void @build_vector_mod_inverse_v8i8_neg1(ptr %a) #0 {
 define void @build_vector_mod_inverse_v7i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_mod_inverse_v7i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #85 // =0x55
-; VBITS_GE_256-NEXT:    index z0.b, #0, w8
-; VBITS_GE_256-NEXT:    add z0.b, z0.b, #85 // =0x55
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI18_0
+; VBITS_GE_256-NEXT:    ldr d0, [x8, :lo12:.LCPI18_0]
 ; VBITS_GE_256-NEXT:    mov h1, v0.h[2]
 ; VBITS_GE_256-NEXT:    str s0, [x0]
 ; VBITS_GE_256-NEXT:    str h1, [x0, #4]
@@ -256,8 +252,7 @@ define void @build_vector_mod_inverse_v7i8(ptr %a) #0 {
 define void @build_vector_mod_inverse_i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_mod_inverse_i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #21845 // =0x5555
-; VBITS_GE_256-NEXT:    index z0.h, #0, w8
+; VBITS_GE_256-NEXT:    movi d0, #0xffff0000ffff0000
 ; VBITS_GE_256-NEXT:    str d0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <4 x i16> <i16 0, i16 poison, i16 poison, i16 -1>, ptr %a
@@ -270,8 +265,7 @@ define void @build_vector_mod_inverse_i16(ptr %a) #0 {
 define void @build_vector_mod_inverse_i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_mod_inverse_i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #1431655765 // =0x55555555
-; VBITS_GE_256-NEXT:    index z0.s, #1, w8
+; VBITS_GE_256-NEXT:    mov z0.d, #1 // =0x1
 ; VBITS_GE_256-NEXT:    str q0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <4 x i32> <i32 1, i32 poison, i32 poison, i32 0>, ptr %a

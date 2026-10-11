@@ -148,7 +148,6 @@ private:
   /// \name Countable Loop Idiom Handling
   /// @{
 
-  bool runOnCountableLoop();
   bool runOnLoopBlock(BasicBlock *BB, const SCEV *BECount,
                       SmallVectorImpl<BasicBlock *> &ExitBlocks);
 
@@ -904,7 +903,7 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   //  3. We didn't find a mismatch in the vector loop, so we return MaxLen.
   //  4. We exitted the vector loop early due to a mismatch and need to return
   //  the index that we found.
-  Builder.SetInsertPoint(EndBlock, EndBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(EndBlock->getFirstInsertionPt());
   PHINode *ResPhi = Builder.CreatePHI(ResType, 4, "mismatch_result");
   ResPhi->addIncoming(MaxLen, LoopIncBlock);
   ResPhi->addIncoming(IndexPhi, LoopStartBlock);
@@ -1092,10 +1091,11 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
         return false;
     }
 
-  // Match the loads and check they are simple.
-  Value *Search, *Needle;
-  if (!match(LoadSearch, m_Load(m_Value(Search))) ||
-      !match(LoadNeedle, m_Load(m_Value(Needle))) ||
+  // Match the loads and check they are simple. The loads come from two PHIs,
+  // each with two incoming values.
+  PHINode *PSearch, *PNeedle;
+  if (!match(LoadSearch, m_Load(m_Phi(PSearch))) ||
+      !match(LoadNeedle, m_Load(m_Phi(PNeedle))) ||
       !cast<LoadInst>(LoadSearch)->isSimple() ||
       !cast<LoadInst>(LoadNeedle)->isSimple())
     return false;
@@ -1117,10 +1117,7 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
   if (TTI->getIntrinsicInstrCost(Attrs, TTI::TCK_SizeAndLatency) > 4)
     return false;
 
-  // The loads come from two PHIs, each with two incoming values.
-  PHINode *PSearch = dyn_cast<PHINode>(Search);
-  PHINode *PNeedle = dyn_cast<PHINode>(Needle);
-  if (!PSearch || PSearch->getNumIncomingValues() != 2 || !PNeedle ||
+  if (PSearch->getNumIncomingValues() != 2 ||
       PNeedle->getNumIncomingValues() != 2)
     return false;
 
@@ -1256,10 +1253,18 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   if (auto ParentLoop = CurLoop->getParentLoop()) {
     ParentLoop->addBasicBlockToLoop(BB0, *LI);
     ParentLoop->addChildLoop(OuterLoop);
-    ParentLoop->addBasicBlockToLoop(BB4, *LI);
   } else {
     LI->addTopLevelLoop(OuterLoop);
   }
+
+  // BB4 branches only to ExitSucc, so it belongs to the innermost enclosing
+  // loop that contains ExitSucc. That is not necessarily CurLoop's parent: a
+  // match can exit several levels out, or out of every loop.
+  Loop *ExitLoop = CurLoop->getParentLoop();
+  while (ExitLoop && !ExitLoop->contains(ExitSucc))
+    ExitLoop = ExitLoop->getParentLoop();
+  if (ExitLoop)
+    ExitLoop->addBasicBlockToLoop(BB4, *LI);
 
   // Add the inner loop to the outer.
   OuterLoop->addChildLoop(InnerLoop);

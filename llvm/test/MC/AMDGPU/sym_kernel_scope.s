@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgpu6.00 %s | FileCheck %s
 
 .byte .kernel.sgpr_count
 // CHECK: .byte 0

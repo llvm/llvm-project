@@ -1,8 +1,8 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck --check-prefixes=SIVI,GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=SIVI,GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1030 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck --check-prefixes=SIVI,GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=SIVI,GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.30 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.30 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 declare i64 @llvm.amdgcn.s.memtime() #0
 

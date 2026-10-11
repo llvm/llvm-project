@@ -8,6 +8,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IRWXU
 #include "hdr/types/struct_flock.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
@@ -16,8 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h> // For S_IRWXU
 
 using LlvmLibcFcntlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

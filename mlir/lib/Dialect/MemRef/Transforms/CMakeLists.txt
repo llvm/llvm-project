@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   FlattenMemRefs.cpp
   FoldMemRefAliasOps.cpp
   IndependenceTransforms.cpp
+  MemorySlotOpInterfaceImpl.cpp
   MultiBuffer.cpp
   NormalizeMemRefs.cpp
   ReifyResultShapes.cpp
@@ -35,7 +36,9 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRLoopLikeInterface
   MLIRMemRefDialect
   MLIRMemRefUtils
+  MLIRMemorySlotInterfaces
   MLIRPass
+  MLIRSCFDialect
   MLIRTensorDialect
   MLIRTransforms
   MLIRValueBoundsOpInterface

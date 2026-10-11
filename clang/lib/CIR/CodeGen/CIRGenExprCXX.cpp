@@ -118,10 +118,10 @@ CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
 
   // Build the call.
   CIRGenCallee callee(fpt, calleePtr.getDefiningOp());
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
                                                       /*PrefixSize=*/0),
-                  callee, returnValue, argsList, nullptr, loc);
+                  callee, returnValue, argsList, nullptr, ce == mustTailCall,
+                  ce->getSourceRange());
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -321,9 +321,9 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   auto &fnInfo = cgm.getTypes().arrangeCXXMethodCall(
       args, fpt, callInfo.reqArgs, callInfo.prefixSize);
   assert((ce || currSrcLoc) && "expected source location");
-  mlir::Location loc = ce ? getLoc(ce->getExprLoc()) : *currSrcLoc;
-  assert(!cir::MissingFeatures::opCallMustTail());
-  return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
+  SourceRange loc = ce ? ce->getSourceRange() : *currSrcLoc;
+  return emitCall(fnInfo, callee, returnValue, args, nullptr,
+                  ce && ce == mustTailCall, loc);
 }
 
 static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
@@ -485,7 +485,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   // the cookie size would bring the total size >= 0.
   //
   // If the array size is constant, Sema will have prevented negative
-  // values and size overflow.
+  // values.
 
   // Compute the constant factor.
   llvm::APInt arraySizeMultiplier(sizeWidth, 1);
@@ -515,8 +515,8 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
           .tryEmitAbstract(arraySize, arraySize->getType());
   if (constNumElements) {
     // Get an APInt from the constant
-    const llvm::APInt &count =
-        mlir::cast<cir::IntAttr>(constNumElements).getValue();
+    auto numEltsAttr = mlir::cast<cir::IntAttr>(constNumElements);
+    const llvm::APInt &count = numEltsAttr.getValue();
 
     [[maybe_unused]] unsigned numElementsWidth = count.getBitWidth();
     bool hasAnyOverflow = false;
@@ -529,7 +529,8 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // that.  We immediately do the zextOrTrunc below (which should really only
     // do zext, since our assert handles the trunc), but it will make sure the
     // width is correct.
-    assert(!count.isNegative() && "Expected non-negative array size");
+    assert(!(numEltsAttr.isSigned() && count.isNegative()) &&
+           "Expected non-negative array size");
     assert(numElementsWidth <= sizeWidth &&
            "Expected a size_t array size constant");
 
@@ -548,9 +549,7 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     bool overflow;
     llvm::APInt allocationSize =
         adjustedCount.umul_ov(typeSizeMultiplier, overflow);
-
-    // Sema prevents us from hitting this case
-    assert(!overflow && "Overflow in array allocation size");
+    hasAnyOverflow |= overflow;
 
     // Add in the cookie, and check whether it's overflowed.
     if (cookieSize != 0) {
@@ -756,9 +755,9 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   cir::FuncOp calleePtr = cgf.cgm.getAddrOfFunction(calleeDecl);
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(calleeDecl));
-  RValue rv =
-      cgf.emitCall(cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType),
-                   callee, ReturnValueSlot(), args, &callOrTryCall);
+  RValue rv = cgf.emitCall(
+      cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType), callee,
+      ReturnValueSlot(), args, /*isMustTail=*/false, &callOrTryCall);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -901,7 +900,7 @@ public:
     if (isAlignedAllocation(params.Alignment)) {
       QualType sizeType = cgf.getContext().getSizeType();
       cir::ConstantOp align = cgf.getBuilder().getAlignment(
-          *cgf.currSrcLoc, cgf.convertType(sizeType), allocAlign);
+          cgf.getLoc(*cgf.currSrcLoc), cgf.convertType(sizeType), allocAlign);
       deleteArgs.add(RValue::get(align), sizeType);
     }
 
@@ -1006,8 +1005,7 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
   // FIXME: Refactor with emitExprAsInit.
   switch (cgf.getEvaluationKind(allocType)) {
   case cir::TEK_Scalar:
-    cgf.emitScalarInit(init, cgf.getLoc(init->getSourceRange()),
-                       cgf.makeAddrLValue(newPtr, allocType), false);
+    cgf.emitScalarInit(init, cgf.makeAddrLValue(newPtr, allocType), false);
     return;
   case cir::TEK_Complex:
     cgf.emitComplexExprIntoLValue(init, cgf.makeAddrLValue(newPtr, allocType),
@@ -1367,11 +1365,9 @@ RValue CIRGenFunction::emitCXXDestructorCall(
   commonBuildCXXMemberOrOperatorCall(*this, dtorDecl, thisVal, implicitParam,
                                      implicitParamTy, ce, args, nullptr);
   assert((ce || dtor.getDecl()) && "expected source location provider");
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
-                  ReturnValueSlot(), args, nullptr,
-                  ce ? getLoc(ce->getExprLoc())
-                     : getLoc(dtor.getDecl()->getSourceRange()));
+                  ReturnValueSlot(), args, nullptr, ce && ce == mustTailCall,
+                  ce ? ce->getSourceRange() : dtor.getDecl()->getSourceRange());
 }
 
 RValue CIRGenFunction::emitCXXPseudoDestructorExpr(
@@ -1527,9 +1523,25 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
     auto deleteFn =
         mlir::FlatSymbolRefAttr::get(operatorDeleteFn.getSymNameAttr());
     UsualDeleteParams udp = operatorDelete->getUsualDeleteParams();
-    auto deleteParams = cir::UsualDeleteParamsAttr::get(
-        builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
-        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    std::optional<uint64_t> align;
+
+    if (isAlignedAllocation(udp.Alignment)) {
+      CharUnits elementSize = cgm.getASTContext().getTypeSizeInChars(deleteTy);
+      align =
+          ptr.getAlignment().alignmentOfArrayElement(elementSize).getQuantity();
+    }
+
+    cir::UsualDeleteParamsAttr deleteParams;
+    if (udp.Size || align || isTypeAwareAllocation(udp.TypeAwareDelete) ||
+        udp.DestroyingDelete)
+      deleteParams = cir::UsualDeleteParamsAttr::get(
+          builder.getContext(), udp.Size, align,
+          isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    // Alignment of the element, used for the 'cookie' later.
+    uint64_t elementAlign = cgm.getASTContext()
+                                .getPreferredTypeAlignInChars(deleteTy)
+                                .getQuantity();
 
     mlir::FlatSymbolRefAttr elementDtor;
     bool hasThrowingDtor = false;
@@ -1547,7 +1559,8 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
 
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
                                ptr.getPointer(), deleteFn, deleteParams,
-                               elementDtor, hasThrowingDtor);
+                               elementDtor, hasThrowingDtor,
+                               builder.getI64IntegerAttr(elementAlign));
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
@@ -1636,7 +1649,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
       if (allocatorType->getNumParams() > indexOfAlignArg)
         alignValType = allocatorType->getParamType(indexOfAlignArg);
       cir::ConstantOp align = builder.getAlignment(
-          *currSrcLoc, convertType(alignValType), allocAlign);
+          getLoc(*currSrcLoc), convertType(alignValType), allocAlign);
       allocatorArgs.add(RValue::get(align), alignValType);
       ++paramsToSkip;
     }
@@ -1696,9 +1709,15 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   // Lambda that emits the init sequence: cleanup setup, cookie init,
   // bitcast + initializer, and cleanup deactivation.
+  //
+  // \p conditional is non-null when this new-expression is null-checked.
+  // ConditionalEvaluation is activated only around emitNewInitializer so that
+  // temporaries created there get conditional cleanups, while the operator
+  // delete cleanup (which is entered and left entirely inside the null-check
+  // branch) stays on the cheaper unconditional path.
   Address result = Address::invalid();
   Address resultPtr = Address::invalid();
-  auto emitInit = [&]() {
+  auto emitInit = [&](ConditionalEvaluation *conditional) {
     EHScopeStack::stable_iterator operatorDeleteCleanup;
     mlir::Operation *cleanupDominator = nullptr;
     if (useNewDeleteCleanup) {
@@ -1740,8 +1759,12 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
     assert(!cir::MissingFeatures::sanitizers());
 
+    if (conditional)
+      conditional->beginEvaluation();
     emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
                        allocSizeWithoutCookie);
+    if (conditional)
+      conditional->endEvaluation();
 
     // Deactivate the 'operator delete' cleanup if we finished
     // initialization.
@@ -1756,17 +1779,24 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
   cir::IfOp nullCheckOp;
   if (nullCheck) {
+    // The initializer is only run if the allocation succeeds, so any
+    // temporaries created while emitting the initializer must be cleaned up
+    // conditionally (with an active flag) after the branch. The enclosing
+    // FullExprCleanupScope detects this via ConditionalEvaluationFinder and
+    // provides the cleanup region for the deferred destructors.
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
+
+    ConditionalEvaluation eval(*this, getLoc(e->getSourceRange()));
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,
                           /*thenBuilder=*/
                           [&](mlir::OpBuilder &, mlir::Location loc) {
-                            emitInit();
+                            emitInit(&eval);
                             builder.createYield(loc);
                           });
   } else {
-    emitInit();
+    emitInit(/*conditional=*/nullptr);
   }
 
   mlir::Value resultValue = result.getPointer();
@@ -1834,8 +1864,9 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
            "expected cir::IntType");
-    cir::ConstantOp size = builder.getConstInt(
-        *currSrcLoc, convertType(sizeType), deleteTypeSize.getQuantity());
+    cir::ConstantOp size =
+        builder.getConstInt(getLoc(*currSrcLoc), convertType(sizeType),
+                            deleteTypeSize.getQuantity());
 
     deleteArgs.add(RValue::get(size), sizeType);
   }
@@ -1847,7 +1878,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
         getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
             deleteTy, /*NeedsPreferredAlignment=*/true));
     cir::ConstantOp align = builder.getAlignment(
-        *currSrcLoc, convertType(alignValType), deleteTypeAlign);
+        getLoc(*currSrcLoc), convertType(alignValType), deleteTypeAlign);
     deleteArgs.add(RValue::get(align), alignValType);
   }
 
@@ -1916,9 +1947,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                          destCirTy, isRefCast, thisAddr);
 }
 
-static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
-                                           mlir::Type typeInfoPtrTy,
-                                           bool hasNullCheck) {
+static Address emitCXXTypeidOperand(CIRGenFunction &cgf, const Expr *e,
+                                    bool hasNullCheck) {
   Address thisPtr = cgf.emitLValue(e).getAddress();
   QualType srcType = e->getType();
 
@@ -1940,7 +1970,7 @@ static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
         });
   }
 
-  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+  return thisPtr;
 }
 
 mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
@@ -1958,11 +1988,13 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
-      !e->isMostDerived(getContext()))
-    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
-                                   e->hasNullCheck());
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated()) {
+    Address thisPtr =
+        emitCXXTypeidOperand(*this, e->getExprOperand(), e->hasNullCheck());
+    if (!e->isMostDerived(getContext()))
+      return cgm.getCXXABI().emitTypeid(*this, ty, thisPtr, resultType);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
   auto typeInfo =
       cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));

@@ -2,6 +2,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 add_llvm_component_library(LLVMDXILBitWriter
   DXILBitcodeWriter.cpp
+  DXILDebugInfoMap.cpp
   DXILValueEnumerator.cpp
   DXILWriterPass.cpp
 
@@ -12,6 +13,7 @@ add_llvm_component_library(LLVMDXILBitWriter
   Analysis
   BitWriter
   Core
+  DirectXDesc
   DirectXIRPasses
   MC
   Object

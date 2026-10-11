@@ -397,24 +397,24 @@ define void @first_mul_chain_jumbled(ptr %ptr.1, ptr %ptr.2) {
 ; CHECK-LABEL: @first_mul_chain_jumbled(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[V_1:%.*]] = load <9 x double>, ptr [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    [[V1_LANE_2:%.*]] = extractelement <9 x double> [[V_1]], i32 2
-; CHECK-NEXT:    [[V1_LANE_5:%.*]] = extractelement <9 x double> [[V_1]], i32 5
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, ptr [[PTR_2:%.*]], align 16
-; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
-; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <9 x double> [[V_1]], <9 x double> poison, <8 x i32> <i32 4, i32 3, i32 6, i32 5, i32 8, i32 7, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[V_2]], <4 x double> poison, <8 x i32> <i32 1, i32 0, i32 2, i32 0, i32 2, i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <8 x double> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[A_LANE_8:%.*]] = fmul double [[V1_LANE_2]], [[V2_LANE_1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison>
 ; CHECK-NEXT:    [[A_INS_72:%.*]] = shufflevector <9 x double> zeroinitializer, <9 x double> [[TMP3]], <9 x i32> <i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 8>
-; CHECK-NEXT:    [[A_INS_8:%.*]] = insertelement <9 x double> [[A_INS_72]], double [[A_LANE_8]], i32 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <9 x double> [[V_1]], <9 x double> poison, <8 x i32> <i32 6, i32 7, i32 8, i32 0, i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <8 x double> [[TMP4]], [[TMP1]]
-; CHECK-NEXT:    [[B_LANE_8:%.*]] = fmul double [[V1_LANE_5]], [[V2_LANE_0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <9 x double> [[V_1]], <9 x double> poison, <2 x i32> <i32 5, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[V_2]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP11]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <9 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <9 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A_INS_8:%.*]] = shufflevector <9 x double> [[TMP3]], <9 x double> [[TMP10]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 10>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison>
 ; CHECK-NEXT:    [[B_INS_71:%.*]] = shufflevector <9 x double> zeroinitializer, <9 x double> [[TMP6]], <9 x i32> <i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 8>
-; CHECK-NEXT:    [[B_INS_8:%.*]] = insertelement <9 x double> [[B_INS_71]], double [[B_LANE_8]], i32 8
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <9 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[B_INS_8:%.*]] = shufflevector <9 x double> [[TMP6]], <9 x double> [[TMP10]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 9>
 ; CHECK-NEXT:    [[RES:%.*]] = fsub <9 x double> [[A_INS_8]], [[B_INS_8]]
 ; CHECK-NEXT:    store <9 x double> [[RES]], ptr [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void

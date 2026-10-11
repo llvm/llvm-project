@@ -17,10 +17,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+using uint128_t = generic_v128;
+using uint256_t = generic_v256;
+using uint512_t = generic_v512;
+
 LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
-  using uint128_t = generic_v128;
-  using uint256_t = generic_v256;
-  using uint512_t = generic_v512;
   if (count == 0)
     return;
   if (count == 1)

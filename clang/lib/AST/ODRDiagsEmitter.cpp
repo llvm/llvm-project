@@ -1853,8 +1853,9 @@ bool ODRDiagsEmitter::diagnoseMismatch(const EnumDecl *FirstEnum,
   }
 
   if (!FirstUnderlyingType.isNull() && !SecondUnderlyingType.isNull()) {
-    if (computeODRHash(FirstUnderlyingType) !=
-        computeODRHash(SecondUnderlyingType)) {
+    // Match AddEnumDecl, which hashes the canonical underlying type.
+    if (!Context.hasSameType(FirstEnum->getIntegerType(),
+                             SecondEnum->getIntegerType())) {
       DiagError(FirstEnum, DifferentSpecifiedTypes) << FirstUnderlyingType;
       DiagNote(SecondEnum, DifferentSpecifiedTypes) << SecondUnderlyingType;
       return true;

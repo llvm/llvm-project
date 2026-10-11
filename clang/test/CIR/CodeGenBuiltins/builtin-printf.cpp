@@ -18,8 +18,6 @@ void func(char const * const str, int i) {
   __builtin_printf("%s %d\n", str, i);
 }
 
-// CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
-
 // CIR: cir.func{{.*}} @_Z4funcPKci(%[[arg0:.+]]: !cir.ptr<!s8i>{{.*}}, %[[arg1:.+]]: !s32i
 // CIR:   %[[str_ptr:.+]] = cir.alloca "str" {{.*}} init const : !cir.ptr<!cir.ptr<!s8i>>
 // CIR:   %[[i_ptr:.+]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
@@ -37,6 +35,8 @@ void func(char const * const str, int i) {
 // CIR:   %[[i_val:.+]] = cir.load{{.*}} %[[i_ptr]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[printf_result3:.+]] = cir.call @printf(%[[full_fmt_ptr]], %[[str_val2]], %[[i_val]]) nothrow : (!cir.ptr<!s8i> {llvm.noundef}, !cir.ptr<!s8i> {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 // CIR:   cir.return
+
+// CIR: cir.func{{.*}} @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
 
 // LLVM: define{{.*}} void @_Z4funcPKci(ptr noundef %[[arg0:.+]], i32 noundef %[[arg1:.+]])
 // LLVM:   %[[str_ptr:.+]] = alloca ptr

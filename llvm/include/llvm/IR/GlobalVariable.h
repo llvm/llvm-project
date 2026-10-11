@@ -277,6 +277,8 @@ public:
 
   /// Check if section name is present
   bool hasImplicitSection() const {
+    if (isDeclarationForLinker())
+      return false;
     return getAttributes().hasAttribute("bss-section") ||
            getAttributes().hasAttribute("data-section") ||
            getAttributes().hasAttribute("relro-section") ||
@@ -308,12 +310,6 @@ public:
   /// Remove the code model for this global.
   ///
   LLVM_ABI void clearCodeModel();
-
-  /// FIXME: Remove this function once transition to Align is over.
-  uint64_t getAlignment() const {
-    MaybeAlign Align = getAlign();
-    return Align ? Align->value() : 0;
-  }
 
   /// Returns the alignment of the given variable.
   MaybeAlign getAlign() const { return GlobalObject::getAlign(); }

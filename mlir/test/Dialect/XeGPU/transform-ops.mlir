@@ -218,7 +218,7 @@ func.func @set_anchor_layout_dpas_a(%arg0: memref<4096x4096xf16>, %arg1: memref<
   %4 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
   %5 = xegpu.load_nd %4[0, 0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
   // CHECK: = xegpu.dpas
-  // CHECK-SAME: {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>}
+  // CHECK-SAME: <{layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>}>
   %6 = xegpu.dpas %1, %3, %5 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
   return
 }
@@ -243,7 +243,7 @@ func.func @set_anchor_layout_dpas_b(%arg0: memref<4096x4096xf16>, %arg1: memref<
   %4 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
   %5 = xegpu.load_nd %4[0, 0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
   // CHECK: = xegpu.dpas
-  // CHECK-SAME: {layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [16, 16]>}
+  // CHECK-SAME: <{layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [16, 16]>}>
   %6 = xegpu.dpas %1, %3, %5 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
   return
 }
@@ -268,7 +268,7 @@ func.func @set_anchor_layout_dpas_c(%arg0: memref<4096x4096xf16>, %arg1: memref<
   %4 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
   %5 = xegpu.load_nd %4[0, 0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
   // CHECK: = xegpu.dpas
-  // CHECK-SAME: {layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>}
+  // CHECK-SAME: <{layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>}>
   %6 = xegpu.dpas %1, %3, %5 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
   return
 }
@@ -427,6 +427,103 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %func {
       transform.apply_patterns.canonicalization
     } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @insert_prefetch_computed_offset
+func.func @insert_prefetch_computed_offset(%a: memref<4096x4096xf16>) {
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+  // CHECK-DAG: %[[C32:.+]] = arith.constant 32 : index
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c128 = arith.constant 128 : index
+  // CHECK: %[[LOAD_DESC:.+]] = xegpu.create_nd_tdesc %arg0
+  // CHECK-NEXT: %[[PREFETCH_DESC:.+]] = xegpu.create_nd_tdesc %arg0
+  %desc = xegpu.create_nd_tdesc %a
+    : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+
+  // CHECK: %[[C64:.+]] = arith.constant 64 : index
+  // CHECK: %[[FIRST_SHIFT:.+]] = arith.addi %[[C0]], %[[C16]] : index
+  // CHECK-NEXT: %[[FIRST_OFFSET:.+]] = arith.muli %[[FIRST_SHIFT]], %[[C2]] : index
+  // CHECK-NEXT: xegpu.prefetch_nd %[[PREFETCH_DESC]][0, %[[FIRST_OFFSET]]]
+  // CHECK: %[[SECOND_IV:.+]] = arith.addi %[[C0]], %{{.+}} : index
+  // CHECK-NEXT: %[[SECOND_SHIFT:.+]] = arith.addi %[[SECOND_IV]], %[[C16]] : index
+  // CHECK-NEXT: %[[SECOND_OFFSET:.+]] = arith.muli %[[SECOND_SHIFT]], %[[C2]] : index
+  // CHECK-NEXT: xegpu.prefetch_nd %[[PREFETCH_DESC]][0, %[[SECOND_OFFSET]]]
+  // CHECK-NEXT: scf.for %[[IV:.+]] = %[[C0]]
+  scf.for %i = %c0 to %c128 step %c32 {
+    // CHECK-NEXT: %[[AHEAD:.+]] = arith.addi %[[IV]], %[[C64]] : index
+    // CHECK-NEXT: %[[PREFETCH_SHIFT:.+]] = arith.addi %[[AHEAD]], %[[C16]] : index
+    // CHECK-NEXT: %[[PREFETCH_OFFSET:.+]] = arith.muli %[[PREFETCH_SHIFT]], %[[C2]] : index
+    // CHECK-NEXT: xegpu.prefetch_nd %[[PREFETCH_DESC]][0, %[[PREFETCH_OFFSET]]]
+    // CHECK-NEXT: %[[LOAD_SHIFT:.+]] = arith.addi %[[IV]], %[[C16]] : index
+    // CHECK-NEXT: %[[LOAD_OFFSET:.+]] = arith.muli %[[LOAD_SHIFT]], %[[C2]] : index
+    // CHECK-NEXT: xegpu.load_nd %[[LOAD_DESC]][0, %[[LOAD_OFFSET]]]
+    %shifted = arith.addi %i, %c16 : index
+    %offset = arith.muli %shifted, %c2 : index
+    %tile = xegpu.load_nd %desc[0, %offset]
+      : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    %prefetch_desc = transform.xegpu.insert_prefetch %load nb_prefetch = 2
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @insert_prefetch_affine_apply_offset
+#prefetch_map = affine_map<(d0) -> (d0 + 16)>
+func.func @insert_prefetch_affine_apply_offset(%a: memref<128x128xf16>) {
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C16:.+]] = arith.constant 16 : index
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c128 = arith.constant 128 : index
+  // CHECK: %[[LOAD_DESC:.+]] = xegpu.create_nd_tdesc %arg0
+  // CHECK-NEXT: %[[PREFETCH_DESC:.+]] = xegpu.create_nd_tdesc %arg0
+  %desc = xegpu.create_nd_tdesc %a
+    : memref<128x128xf16> -> !xegpu.tensor_desc<16x16xf16>
+
+  // CHECK: %[[PREFETCH_STEP:.+]] = arith.constant 16 : index
+  // CHECK: %[[FIRST_OFFSET:.+]] = affine.apply #[[MAP:[a-zA-Z0-9_]+]](%[[C0]])
+  // CHECK-NEXT: xegpu.prefetch_nd %[[PREFETCH_DESC]][0, %[[FIRST_OFFSET]]]
+  // CHECK-NEXT: scf.for %[[IV:.+]] = %[[C0]]
+  scf.for %i = %c0 to %c128 step %c16 {
+    // CHECK-NEXT: %[[AHEAD:.+]] = arith.addi %[[IV]], %[[PREFETCH_STEP]] : index
+    // CHECK-NEXT: %[[PREFETCH_OFFSET:.+]] = affine.apply #[[MAP]](%[[AHEAD]])
+    // CHECK-NEXT: xegpu.prefetch_nd %[[PREFETCH_DESC]][0, %[[PREFETCH_OFFSET]]]
+    // CHECK-NEXT: %[[LOAD_OFFSET:.+]] = affine.apply #[[MAP]](%[[IV]])
+    // CHECK-NEXT: xegpu.load_nd %[[LOAD_DESC]][0, %[[LOAD_OFFSET]]]
+    %offset = affine.apply #prefetch_map(%i)
+    %tile = xegpu.load_nd %desc[0, %offset]
+      : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %root: !transform.any_op {transform.readonly}) {
+    %load = transform.structured.match ops{["xegpu.load_nd"]} in %root
+      : (!transform.any_op) -> !transform.any_op
+    %prefetch_desc = transform.xegpu.insert_prefetch %load nb_prefetch = 1
+      : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

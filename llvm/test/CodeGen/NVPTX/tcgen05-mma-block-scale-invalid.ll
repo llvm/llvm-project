@@ -16,5 +16,7 @@ define void @tcgen05_mma_block_scale_invalid_flags(ptr addrspace(6) %dtmem, ptr 
   call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 0, i32 0)
   ; CHECK: immarg value 5 for arg 8 out of range [0,4)
   call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 5)
+  ; CHECK: immarg value 5 for arg 9 out of range [0,4)
+  call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1, i32 0, i32 5)
   ret void
 }

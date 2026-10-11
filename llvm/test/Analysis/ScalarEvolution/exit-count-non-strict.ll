@@ -407,7 +407,6 @@ define void @sle_from_int_min_no_nsw(i32 %M, i32 %N) {
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    predicated exit count for loop: (2147483649 + (sext i32 %M to i64))<nsw>
 ; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    exit count for latch: (-2147483648 + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
@@ -415,18 +414,14 @@ define void @sle_from_int_min_no_nsw(i32 %M, i32 %N) {
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    predicated symbolic max exit count for loop: (2147483649 + (sext i32 %M to i64))<nsw>
 ; CHECK-NEXT:     Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: (-2147483648 + %N)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((zext i32 (-2147483648 + %N) to i64) umin (2147483649 + (sext i32 %M to i64))<nsw>)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nssw>
 ; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4294967295
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nssw>
 ; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((zext i32 (-2147483648 + %N) to i64) umin (2147483649 + (sext i32 %M to i64))<nsw>)
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {-2147483648,+,1}<nsw><%loop> Added Flags: <nssw>
 ;
 entry:
   br label %loop

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
-; RUN: llc -mtriple=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
-; RUN: llc -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
-; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -mtriple=amdgpu7.04 -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
+; RUN: llc -mtriple=amdgpu8.01 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
+; RUN: llc -mtriple=amdgpu9.00 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
+; RUN: llc -mtriple=amdgpu7.04-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -mtriple=amdgpu8.01-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -mtriple=amdgpu10.10-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -mtriple=amdgpu11.00-unknown-amdhsa -mattr=-flat-for-global,-architected-flat-scratch,-user-sgpr-init16-bug < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 

@@ -2,7 +2,7 @@
 // RUN:   -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl \
-// RUN:   -triple spirv-unknown-vulkan-compute %s -emit-llvm -O0 -o - | \
+// RUN:   -triple spirv-unknown-vulkan-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s --check-prefix=SPIRV
 
 // CHECK: define hidden noundef nofpclass(nan inf) float

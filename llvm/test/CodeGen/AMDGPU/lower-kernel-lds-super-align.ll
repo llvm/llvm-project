@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -S -mtriple=amdgpu-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=true --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_ON %s
+; RUN: opt -S -mtriple=amdgpu-- -amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds --amdgpu-super-align-lds-globals=false --amdgpu-lower-module-lds-strategy=module < %s | FileCheck --check-prefixes=CHECK,SUPER-ALIGN_OFF %s
 
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [32 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { i16, [2 x i8], i16 }
@@ -44,7 +44,7 @@ define amdgpu_kernel void @k1(i64 %x) {
 
 ; CHECK-LABEL: @k2
 ; CHECK: store i16 1, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, align 4
-; CHECK: store i16 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k2.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, i32 0, i32 2), align 4
+; CHECK: store i16 2, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, i32 4), align 4
 define amdgpu_kernel void @k2() {
   store i16 1, ptr addrspace(3) @lds.2, align 2
   store i16 2, ptr addrspace(3) @lds.3, align 2

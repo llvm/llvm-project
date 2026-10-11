@@ -42,8 +42,6 @@ class TargetMachine;
 class LLVM_LIBRARY_VISIBILITY MipsAsmPrinter : public AsmPrinter {
   MipsTargetStreamer &getTargetStreamer() const;
 
-  void EmitInstrWithMacroNoAT(const MachineInstr *MI);
-
   //===------------------------------------------------------------------===//
   // XRay implementation
   //===------------------------------------------------------------------===//
@@ -141,7 +139,6 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
   void printSavedRegsBitmask();
   void emitFrameDirective();
-  const char *getCurrentABIString() const;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
@@ -159,6 +156,9 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
   void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
+  void emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
+                              TargetMachine &TM, MCStreamer &OutStreamer,
+                              const MipsSubtarget &Subtarget);
 };
 
 } // end namespace llvm

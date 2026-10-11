@@ -12,6 +12,7 @@
 #include <__algorithm/for_each_n.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__utility/convert_to_integral.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 
@@ -26,20 +27,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-__generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
+__generate_n(_OutputIterator __first, _Size __n, _Generator& __gen) {
+  if (__n <= 0)
+    return __first;
+
   using __iter_ref = decltype(*__first);
   __identity __proj;
   return std::__for_each_n(
-      std::move(__first),
-      __orig_n,
-      [&](__iter_ref __element) { std::forward<__iter_ref>(__element) = __gen(); },
-      __proj);
+      std::move(__first), __n, [&](__iter_ref __element) { std::forward<__iter_ref>(__element) = __gen(); }, __proj);
 }
 
 template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
-  return std::__generate_n(std::move(__first), __orig_n, __gen);
+  return std::__generate_n(std::move(__first), std::__convert_to_integral(__orig_n), __gen);
 }
 
 _LIBCPP_END_NAMESPACE_STD

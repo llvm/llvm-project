@@ -46,6 +46,12 @@ int3 test_min_int3(int3 p0, int3 p1) { return min(p0, p1); }
 // CHECK: call <4 x i32> @llvm.smin.v4i32
 int4 test_min_int4(int4 p0, int4 p1) { return min(p0, p1); }
 
+// CHECK-LABEL: test_min_int5
+// CHECK: call <5 x i32> @llvm.smin.v5i32
+vector<int, 5> test_min_int5(vector<int, 5> p0, vector<int, 5> p1) {
+	return min(p0, p1);
+}
+
 // CHECK-LABEL: define hidden noundef i32 @_Z13test_min_uint
 // CHECK: call i32 @llvm.umin.i32(
 int test_min_uint(uint p0, uint p1) { return min(p0, p1); }

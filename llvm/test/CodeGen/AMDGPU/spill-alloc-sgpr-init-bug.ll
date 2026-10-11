@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=TONGA %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck --check-prefix=TONGA %s
 
 ; On Tonga and Iceland, limited SGPR availability means care must be taken to
 ; allocate scratch registers correctly. Check that this test compiles without

@@ -2,12 +2,8 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.tools.lldb_dap.dap_types import (
-    ExitedEvent,
-    LaunchArgs,
-    StoppedEvent,
-)
-from lldbsuite.test.tools.lldb_dap.lldb_dap_testcase import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import ExitedEvent, LaunchArgs, StoppedEvent
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
 class TestDAP_launch_stopOnEntry(DAPTestCaseBase):

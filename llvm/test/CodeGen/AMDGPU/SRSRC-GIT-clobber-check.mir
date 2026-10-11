@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -run-pass=prolog-epilog -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.10--amdpal -run-pass=prolog-epilog -o - %s | FileCheck %s
 
 # On PAL, we need to ensure SRSRC do not clobber GIT pointer, passed
 # in SGPR8 for HS or GS

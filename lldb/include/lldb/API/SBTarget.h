@@ -1067,7 +1067,7 @@ protected:
 
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
-  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   // Constructors are private, use static Target::Create function to create an
   // instance of this class.

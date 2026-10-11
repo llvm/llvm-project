@@ -1,0 +1,22 @@
+static_library("CodeGenUtils") {
+  output_name = "clangCodeGenUtils"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "BackendDiagnosticHandler.cpp",
+    "CallUtils.cpp",
+    "ClassUtils.cpp",
+    "EHPersonality.cpp",
+    "ExprUtils.cpp",
+    "FunctionUtils.cpp",
+    "ItaniumCXXABIUtils.cpp",
+    "ModuleUtils.cpp",
+    "RecordLayoutUtils.cpp",
+    "StmtUtils.cpp",
+    "TargetUtils.cpp",
+  ]
+}

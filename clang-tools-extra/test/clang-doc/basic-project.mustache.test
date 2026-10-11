@@ -7,7 +7,7 @@
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
-// RUN: clang-doc --format=md_mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/md/all_files.md -check-prefixes=MD-ALL-FILES
 // RUN: FileCheck %s -input-file=%t/docs/md/index.md -check-prefixes=MD-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/md/GlobalNamespace/_ZTV5Shape.md -check-prefixes=MD-SHAPE

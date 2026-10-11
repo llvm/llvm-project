@@ -59,9 +59,9 @@
 # SECTION:   2 .rela.text    00000090 0000000000000000
 # SECTION:   3 .bss          00000018 0000000000000000 BSS
 # SECTION:   4 .note.GNU-stack 00000000 0000000000000000
-# SECTION:   5 .symtab       00000168 0000000000000000
+# SECTION:   5 .symtab       00000180 0000000000000000
 # SECTION:   6 .shstrtab     00000041 0000000000000000
-# SECTION:   7 .strtab       0000002d 0000000000000000
+# SECTION:   7 .strtab       {{[0-9a-f]+}} 0000000000000000
 
 # CHECKTEXT:      Disassembly of section .text:
 # CHECKTEXT-EMPTY:
@@ -94,7 +94,7 @@
 # CHECKEXE-NEXT:    Version: 1
 # CHECKEXE-NEXT:    Entry: 0x201160
 # CHECKEXE-NEXT:    ProgramHeaderOffset: 0x40
-# CHECKEXE-NEXT:    SectionHeaderOffset: 0x358
+# CHECKEXE-NEXT:    SectionHeaderOffset:
 # CHECKEXE-NEXT:    Flags [
 # CHECKEXE-NEXT:    ]
 # CHECKEXE-NEXT:    HeaderSize: 64

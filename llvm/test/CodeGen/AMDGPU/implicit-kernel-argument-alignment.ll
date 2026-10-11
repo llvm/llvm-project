@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -mtriple=amdgpu9.06-amd-amdhsa < %s | FileCheck --check-prefixes=CHECK %s
 
 
 ; CHECK-LABEL: test_unaligned_to_eight:

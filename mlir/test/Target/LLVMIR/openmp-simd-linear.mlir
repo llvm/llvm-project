@@ -21,12 +21,12 @@ llvm.func @test_simd_linear() {
       omp.loop_nest (%arg1) : i32 = (%1) to (%3) inclusive step (%1) {
         llvm.store %arg1, %arg0 : i32, !llvm.ptr
         llvm.store %2, %4 : i32, !llvm.ptr
-        omp.simd linear(%4 : !llvm.ptr = %1 : i32) {
+        omp.simd linear(%4 : !llvm.ptr = %1 : i32) linear_var_types([i32]) {
           omp.loop_nest (%arg2) : i32 = (%1) to (%3) inclusive step (%1) {
             llvm.store %arg2, %4 : i32, !llvm.ptr
             omp.yield
           }
-        } {linear_var_types = [i32]}
+        }
         omp.yield
       }
     }
@@ -45,9 +45,9 @@ llvm.func @test_simd_linear() {
 // CHECK:       omp.region.cont1:
 
 llvm.func @test_simd_linear2(%a : !llvm.ptr) {
-  %c0_i64 = llvm.mlir.constant(0 : index) : i64
-  %c1_i64 = llvm.mlir.constant(1 : index) : i64
-  %c100_i64 = llvm.mlir.constant(100 : index) : i64
+  %c0_i64 = llvm.mlir.constant(0 : i64) : i64
+  %c1_i64 = llvm.mlir.constant(1 : i64) : i64
+  %c100_i64 = llvm.mlir.constant(100 : i64) : i64
   %c1_i32 = llvm.mlir.constant(1 : i32) : i32
   %c100_i32 = llvm.mlir.constant(100 : i32) : i32
 
@@ -64,7 +64,7 @@ llvm.func @test_simd_linear2(%a : !llvm.ptr) {
   llvm.br ^bb1(%i_next, %iv_next : i32, i64)
 ^bb3:  // pred: ^bb1
   llvm.store %i, %i_ptr : i32, !llvm.ptr
-  omp.simd linear(%i_ptr : !llvm.ptr = %c1_i32 : i32) {
+  omp.simd linear(%i_ptr : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
     omp.loop_nest (%arg0) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
       llvm.store %arg0, %i_ptr : i32, !llvm.ptr
       %i2 = llvm.load %i_ptr : !llvm.ptr -> i32
@@ -77,6 +77,6 @@ llvm.func @test_simd_linear2(%a : !llvm.ptr) {
       llvm.store %i2, %8 : i32, !llvm.ptr
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   llvm.return
 }

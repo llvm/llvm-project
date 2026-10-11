@@ -10,7 +10,6 @@
 
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 
 using namespace llvm;
 using namespace llvm::jitlink;

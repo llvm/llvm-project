@@ -175,6 +175,7 @@ bool NVVMIntrRange::runOnFunction(Function &F) { return runNVVMIntrRange(F); }
 
 PreservedAnalyses NVVMIntrRangePass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
-  return runNVVMIntrRange(F) ? PreservedAnalyses::none()
-                             : PreservedAnalyses::all();
+  if (!runNVVMIntrRange(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

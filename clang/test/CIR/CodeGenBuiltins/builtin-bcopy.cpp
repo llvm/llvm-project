@@ -20,8 +20,8 @@ void foo(void) {
   // CIR: cir.return
 
   // LLVM-LABEL: define dso_local void @_Z3foov()
-  // LLVM: %[[V1:.*]] = alloca [4 x float], i64 1, align 16
-  // LLVM: %[[V2:.*]] = alloca [8 x float], i64 1, align 16
+  // LLVM: %[[V1:.*]] = alloca [4 x float], align 16
+  // LLVM: %[[V2:.*]] = alloca [8 x float], align 16
   // LLVM: %[[V3:.*]] = getelementptr float, ptr %[[V1]], i32 0
   // LLVM: %[[V4:.*]] = getelementptr float, ptr %[[V2]], i32 0
   // LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[V4]], ptr %[[V3]], i64 16, i1 false)

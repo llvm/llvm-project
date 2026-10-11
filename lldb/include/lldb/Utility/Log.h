@@ -203,16 +203,15 @@ public:
                    uint32_t log_options, llvm::StringRef channel,
                    llvm::ArrayRef<const char *> categories);
 
-  static bool DisableLogChannel(llvm::StringRef channel,
-                                llvm::ArrayRef<const char *> categories,
-                                llvm::raw_ostream &error_stream);
+  static llvm::Error DisableLogChannel(llvm::StringRef channel,
+                                       llvm::ArrayRef<const char *> categories);
 
   static bool DumpLogChannel(llvm::StringRef channel,
                              llvm::raw_ostream &output_stream,
                              llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel,
-                                    llvm::raw_ostream &stream);
+  static llvm::Expected<std::string>
+  ListChannelCategories(llvm::StringRef channel);
 
   /// Returns the list of log channels.
   static std::vector<llvm::StringRef> ListChannels();

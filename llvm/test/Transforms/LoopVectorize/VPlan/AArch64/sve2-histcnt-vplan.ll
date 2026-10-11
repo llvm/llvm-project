@@ -77,7 +77,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
-; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer inbounds [[GEP_IDX]]
+; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer inbounds i32, [[GEP_IDX]]
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64
 ; CHECK-NEXT:     WIDEN-GEP [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
@@ -155,6 +155,6 @@ for.exit:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}
 !3 = !{!4}
 !4 = distinct !{!4, !2}

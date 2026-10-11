@@ -58,17 +58,7 @@ keepStackAllocation(fir::AllocaOp alloca,
 
 static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool deallocPointsDominateAlloc) {
-  mlir::Type varTy = alloca.getInType();
-  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-    if (opt)
-      return *opt;
-    return {};
-  };
-  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
-  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
-                                      bindcName, alloca.getTypeparams(),
-                                      alloca.getShape());
+  fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;

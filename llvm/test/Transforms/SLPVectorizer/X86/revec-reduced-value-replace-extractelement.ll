@@ -7,11 +7,11 @@ define void @test() {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP2:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 0, [[TMP1]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], [[TRUNC]]
-; CHECK-NEXT:    [[TMP4]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[OP_RDX1]], i32 1
+; CHECK-NEXT:    [[TMP2]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[OP_RDX1]], i64 1
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

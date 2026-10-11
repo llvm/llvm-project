@@ -1,8 +1,5 @@
 # MemorySanitizer
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

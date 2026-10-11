@@ -47,9 +47,10 @@ namespace pdb {
 class ClassLayout;
 class PDBFile;
 class SymbolGroup;
+class WithColor;
 
 class LinePrinter {
-  friend class WithColor;
+  friend class pdb::WithColor;
 
 public:
   LLVM_ABI LinePrinter(int Indent, bool UseColor, raw_ostream &Stream,

@@ -29,8 +29,7 @@ define <2 x i16> @test_prev_v2i16(<2 x i16> %a) {
 ;
 ; RV64-LABEL: test_prev_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    rev16 a0, a0
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ppairoe.h a0, a0, a0
 ; RV64-NEXT:    ret
   %r = shufflevector <2 x i16> %a, <2 x i16> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x i16> %r

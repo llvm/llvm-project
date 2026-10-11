@@ -1,13 +1,19 @@
-//===-- Exhaustive tester for SIMD math functions -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains exhaustive test logic for SIMD math functions.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/simd.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/SIMDMatcher.h"
 
 #include <atomic>
 #include <iostream>
@@ -37,7 +43,7 @@ using VectorUnaryOp =
 
 template <typename OutType, typename InType,
           ScalarUnaryOp<OutType, InType> ScalarFunc,
-          VectorUnaryOp<OutType, InType> VectorFunc>
+          VectorUnaryOp<OutType, InType> VectorFunc, uint64_t TOL = 0>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
@@ -60,10 +66,16 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       LIBC_NAMESPACE::cpp::simd<OutType> vec_result = VectorFunc(vec_x);
       OutType vec_res = vec_result[0];
       OutType scalar_result = ScalarFunc(x);
-      bool correct = TEST_FP_EQ(scalar_result, vec_res);
+      bool correct = TOL == 0 ? TEST_FP_EQ(scalar_result, vec_res)
+                              : LIBC_NAMESPACE::testing::within_ulp_tolerance(
+                                    scalar_result, vec_res, TOL);
 
       if (!correct) {
-        EXPECT_FP_EQ(scalar_result, vec_res);
+        if constexpr (TOL == 0)
+          EXPECT_FP_EQ(scalar_result, vec_res);
+        else
+          EXPECT_TRUE(LIBC_NAMESPACE::testing::within_ulp_tolerance(
+              scalar_result, vec_res, TOL));
         failed++;
       }
     } while (bits++ < stop);
@@ -95,6 +107,12 @@ struct LlvmLibcExhaustiveMathvecTest
   void test_full_range(LIBC_NAMESPACE::fputil::testing::RoundingMode rounding,
                        StorageType start, StorageType stop) {
     int n_threads = std::thread::hardware_concurrency();
+#ifdef LIBC_TEST_MAX_CONCURRENCY
+    if (n_threads <= 0 || n_threads > LIBC_TEST_MAX_CONCURRENCY)
+      n_threads = LIBC_TEST_MAX_CONCURRENCY;
+#endif
+    if (n_threads < 1)
+      n_threads = 1;
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
     int current_percent = -1;
@@ -192,9 +210,24 @@ struct LlvmLibcExhaustiveMathvecTest
     test_full_range_RD(start, stop);
     test_full_range_RZ(start, stop);
   }
+
+  static constexpr StorageType STORAGE_MAX =
+      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+
+  void test_full_range_RN() { test_full_range_RN(0, STORAGE_MAX); }
+
+  void test_full_range_RU() { test_full_range_RU(0, STORAGE_MAX); }
+
+  void test_full_range_RD() { test_full_range_RD(0, STORAGE_MAX); }
+
+  void test_full_range_RZ() { test_full_range_RZ(0, STORAGE_MAX); }
+
+  void test_full_range_all_roundings() {
+    test_full_range_all_roundings(0, STORAGE_MAX);
+  }
 };
 
 template <typename FloatType, ScalarUnaryOp<FloatType> ScalarFunc,
-          VectorUnaryOp<FloatType> VectorFunc>
+          VectorUnaryOp<FloatType> VectorFunc, uint64_t TOL = 0>
 using LlvmLibcUnaryOpExhaustiveMathvecTest = LlvmLibcExhaustiveMathvecTest<
-    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc>>;
+    UnaryOpChecker<FloatType, FloatType, ScalarFunc, VectorFunc, TOL>>;

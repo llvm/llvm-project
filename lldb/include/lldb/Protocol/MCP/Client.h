@@ -57,6 +57,11 @@ public:
   /// MCP notifications.
   void NotifyInitialized();
 
+  /// Fails every request still awaiting a response, invoking its reply with an
+  /// error. Use before teardown so abandoned replies are satisfied rather than
+  /// destroyed unanswered.
+  void CancelPendingRequests(llvm::StringRef reason);
+
 private:
   void Log(llvm::StringRef message);
 

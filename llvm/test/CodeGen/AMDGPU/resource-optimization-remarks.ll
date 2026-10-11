@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -pass-remarks-output=%t -pass-remarks-analysis=kernel-resource-usage -filetype=null %s 2>&1 | FileCheck -check-prefix=STDERR %s
+; RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -pass-remarks-output=%t -pass-remarks-analysis=kernel-resource-usage -filetype=null %s 2>&1 | FileCheck -check-prefix=STDERR %s
 ; RUN: FileCheck -check-prefix=REMARK %s < %t
 
 ; STDERR: remark: foo.cl:27:0: Function Name: test_kernel

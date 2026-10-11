@@ -1059,13 +1059,12 @@ LLVM_C_ABI LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForPath(
  * generator is owned by the client. Ownership is typically transferred by
  * adding the instance to a JITDylib using LLVMOrcJITDylibAddGenerator,
  *
- * Call with the optional TargetTriple argument will succeed if the file at
- * the given path is a static library or a MachO universal binary containing a
- * static library that is compatible with the given triple. Otherwise it will
- * return an error.
+ * Call will succeed if the file at the given path is a static library or a
+ * MachO universal binary containing a static library that is compatible with
+ * the ExecutionSession's triple. Otherwise it will return an error.
  *
  * THIS API IS EXPERIMENTAL AND LIKELY TO CHANGE IN THE NEAR FUTURE!
- * 
+ *
  */
 LLVM_C_ABI LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
     LLVMOrcDefinitionGeneratorRef *Result, LLVMOrcObjectLayerRef ObjLayer,

@@ -1,12 +1,23 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
 #include <sycl/sycl.hpp>
 
+#include <cassert>
 #include <cstddef>
+#include <memory>
 #include <numeric>
 #include <tuple>
+#include <vector>
 
 using namespace sycl;
 
@@ -17,9 +28,9 @@ constexpr std::size_t NumBytes = DataSize * sizeof(int);
 // performing a sequence of copies from one allocation to the next,
 // using MemCpyFunc to specify dependencies.
 // Assumes that the first and the last allocations are accessible on host.
-template <typename MemcpyFuncT, typename... AllocFuncssT>
+template <typename MemcpyFuncT, typename... AllocFuncsT>
 void test(queue &Q, MemcpyFuncT MemCpyFunc,
-          std::tuple<AllocFuncssT...> AllocFs) {
+          std::tuple<AllocFuncsT...> AllocFs) {
   constexpr std::size_t NAllocations = std::tuple_size_v<decltype(AllocFs)>;
   static_assert(NAllocations > 1);
 
@@ -74,13 +85,7 @@ void runTestsForMemCpyFunc(MemCpyFuncT MemCpyFunc) {
   // TODO: Pass a default-constructed event as a dependency in these cases
   // instead when those are implemented.
   if constexpr (!ExplicitDeps) {
-    // TODO: Remove try-catch once host-to-host copies are supported.
-    try {
-      RunTest(HostAllocF, HostAllocF);
-      assert(false);
-    } catch (const sycl::exception &e) {
-      assert(e.code() == make_error_code(errc::feature_not_supported));
-    }
+    RunTest(HostAllocF, HostAllocF);
     RunTest(HostAllocF, HostUSMAllocF);
     RunTest(HostAllocF, SharedUSMAllocF);
 

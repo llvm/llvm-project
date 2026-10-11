@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1170 < %s | FileCheck -check-prefix=GFX1170 -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu11.70--amdpal < %s | FileCheck -check-prefix=GFX1170 -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu12.00--amdpal < %s | FileCheck -check-prefix=GFX12 -enable-var-scope %s
 
 ; amdpal compute shader: check for 0x2e12 (COMPUTE_PGM_RSRC1) in pal metadata
 ; SI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x2f0000{{$}}

@@ -15,6 +15,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Mutex.h"
@@ -68,6 +69,10 @@ public:
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
 
+  static bool IsSystemDLL(llvm::StringRef path);
+
+  bool IsSystemModuleAddress(lldb::addr_t addr);
+
 protected:
   Status DetachProcess();
 
@@ -78,6 +83,10 @@ protected:
                        DebugDelegateSP delegate);
 
   Status DestroyProcess(lldb::StateType process_state);
+
+  /// End the debug session, terminating the inferior if it still runs, and wait
+  /// for the debugger thread to stop calling back into the delegate.
+  void EndDebugSession();
 
   Status HaltProcess(bool &caused_stop);
 

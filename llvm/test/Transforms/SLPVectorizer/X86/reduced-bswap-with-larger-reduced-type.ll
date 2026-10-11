@@ -5,7 +5,7 @@ define i80 @test(i8 %0, i80 %.sroa.0.7.insert.ext) {
 ; CHECK-LABEL: define i80 @test(
 ; CHECK-SAME: i8 [[TMP0:%.*]], i80 [[DOTSROA_0_7_INSERT_EXT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])

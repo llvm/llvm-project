@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu
-# RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa -mcpu=fiji %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=amdgpu8.03--amdhsa %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 # RUN: llvm-nm %t.so | FileCheck %s --check-prefix=NM

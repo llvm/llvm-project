@@ -228,7 +228,7 @@ void DynTypedNode::dump(llvm::raw_ostream &OS,
   else if (const Type *T = get<Type>())
     T->dump(OS, Context);
   else if (const ConceptReference *C = get<ConceptReference>())
-    C->dump(OS);
+    C->dump(OS, Context);
   else if (const TypeLoc *TL = get<TypeLoc>())
     TL->dump(OS, Context);
   else

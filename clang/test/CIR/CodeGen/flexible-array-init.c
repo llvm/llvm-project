@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
-// CIR: !rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
-// CIR: !rec_T = !cir.struct<"T" {!cir.ptr<!s32i>, !cir.array<!s32i x 0>}>
+// CIR: !rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
+// CIR: !rec_T = !cir.struct<"T" {data !cir.ptr<!s32i>, data !cir.array<!s32i x 0>}>
 
 // 's1' lowers via the bulk constant-record path (LowerToLLVM.cpp ~line 2585):
 // every member can be lowered to a constant attribute.

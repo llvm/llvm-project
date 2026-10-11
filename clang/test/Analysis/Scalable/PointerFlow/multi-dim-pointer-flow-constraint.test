@@ -6,7 +6,7 @@
 
 
 // RUN: %clang_cc1 -fsyntax-only %t/src.cpp \
-// RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage \
+// RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage,TypeConstrainedPointers \
 // RUN:   --ssaf-compilation-unit-id="tu-1" \
 // RUN:   --ssaf-tu-summary-file=%t/src.summary.json
 

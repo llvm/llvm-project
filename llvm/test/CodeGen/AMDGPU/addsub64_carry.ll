@@ -2,7 +2,7 @@
 ;; Test that carryout from 64-bit add/sub (synthesized from two 32-bit adds/subs) is utilized
 ;; (i.e. no additional compare is generated).
 
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdpal < %s | FileCheck %s
 
 %struct.uint96 = type { i64, i32 }
 %struct.uint64pair = type { i64, i64 }

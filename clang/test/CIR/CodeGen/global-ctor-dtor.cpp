@@ -36,7 +36,7 @@ void foo4(void) {
 
 // CIR-BEFORE-LPP: cir.func {{.*}} @_Z4foo4v() global_dtor(789)
 
-// CIR-AFTER: module @{{.*}} attributes {cir.global_ctors = [#cir.global_ctor<"_Z3foov", 65535>, #cir.global_ctor<"_Z4foo2v", 777>], cir.global_dtors = [#cir.global_dtor<"_Z4foo3v", 65535>, #cir.global_dtor<"_Z4foo4v", 789>]
+// CIR-AFTER: module @{{.*}} attributes {{{.*}}cir.global_ctors = [#cir.global_ctor<"_Z3foov", 65535>, #cir.global_ctor<"_Z4foo2v", 777>], cir.global_dtors = [#cir.global_dtor<"_Z4foo3v", 65535>, #cir.global_dtor<"_Z4foo4v", 789>]
 
 // LLVM: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z3foov, ptr null }, { i32, ptr, ptr } { i32 777, ptr @_Z4foo2v, ptr null }]
 // LLVM: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z4foo3v, ptr null }, { i32, ptr, ptr } { i32 789, ptr @_Z4foo4v, ptr null }]

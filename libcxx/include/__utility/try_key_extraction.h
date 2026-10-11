@@ -27,13 +27,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _KeyT, class _Ret, class _WithKey, class _WithoutKey, class... _Args>
+template <class _KeyT, bool, class _Ret, class _WithKey, class _WithoutKey, class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Ret
 __try_key_extraction_impl(__priority_tag<0>, _WithKey, _WithoutKey __without_key, _Args&&... __args) {
   return __without_key(std::forward<_Args>(__args)...);
 }
 
 template <class _KeyT,
+          bool,
           class _Ret,
           class _WithKey,
           class _WithoutKey,
@@ -45,11 +46,12 @@ __try_key_extraction_impl(__priority_tag<1>, _WithKey __with_key, _WithoutKey, _
 }
 
 template <class _KeyT,
+          bool __is_map,
           class _Ret,
           class _WithKey,
           class _WithoutKey,
           class _Arg,
-          __enable_if_t<__is_pair_v<__remove_const_ref_t<_Arg> > &&
+          __enable_if_t<__is_map && __is_pair_v<__remove_const_ref_t<_Arg> > &&
                             is_same<__remove_const_t<typename __remove_const_ref_t<_Arg>::first_type>, _KeyT>::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Ret
@@ -58,12 +60,13 @@ __try_key_extraction_impl(__priority_tag<1>, _WithKey __with_key, _WithoutKey, _
 }
 
 template <class _KeyT,
+          bool __is_map,
           class _Ret,
           class _WithKey,
           class _WithoutKey,
           class _Arg1,
           class _Arg2,
-          __enable_if_t<is_same<_KeyT, __remove_const_ref_t<_Arg1> >::value, int> = 0>
+          __enable_if_t<__is_map && is_same<_KeyT, __remove_const_ref_t<_Arg1> >::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Ret
 __try_key_extraction_impl(__priority_tag<1>, _WithKey __with_key, _WithoutKey, _Arg1&& __arg1, _Arg2&& __arg2) {
   return __with_key(__arg1, std::forward<_Arg1>(__arg1), std::forward<_Arg2>(__arg2));
@@ -71,13 +74,14 @@ __try_key_extraction_impl(__priority_tag<1>, _WithKey __with_key, _WithoutKey, _
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _KeyT,
+          bool __is_map,
           class _Ret,
           class _WithKey,
           class _WithoutKey,
           class _PiecewiseConstruct,
           class _Tuple1,
           class _Tuple2,
-          __enable_if_t<is_same<__remove_const_ref_t<_PiecewiseConstruct>, piecewise_construct_t>::value &&
+          __enable_if_t<__is_map && is_same<__remove_const_ref_t<_PiecewiseConstruct>, piecewise_construct_t>::value &&
                             __is_tuple_v<_Tuple1> && tuple_size<_Tuple1>::value == 1 &&
                             is_same<__remove_const_ref_t<typename tuple_element<0, _Tuple1>::type>, _KeyT>::value,
                         int> = 0>
@@ -101,11 +105,11 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Ret __try_key_extraction_im
 // arguments. Otherwise it calls the `__without_key` function with all of the arguments.
 //
 // Both `__with_key` and `__without_key` must take all arguments by reference.
-template <class _KeyT, class _WithKey, class _WithoutKey, class... _Args>
+template <class _KeyT, class _ValT, class _WithKey, class _WithoutKey, class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 decltype(std::declval<_WithoutKey>()(std::declval<_Args>()...))
 __try_key_extraction(_WithKey __with_key, _WithoutKey __without_key, _Args&&... __args) {
   using _Ret = decltype(__without_key(std::forward<_Args>(__args)...));
-  return std::__try_key_extraction_impl<_KeyT, _Ret>(
+  return std::__try_key_extraction_impl<_KeyT, !is_same<_KeyT, _ValT>::value, _Ret>(
       __priority_tag<1>(), __with_key, __without_key, std::forward<_Args>(__args)...);
 }
 

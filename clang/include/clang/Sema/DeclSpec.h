@@ -287,7 +287,7 @@ public:
       clang::TST_typename_pack_indexing;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   static const TST TST_##Trait = clang::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -298,6 +298,9 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   static const TST TST_##Name = clang::TST_##Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -458,7 +461,7 @@ public:
   static bool isTransformTypeTrait(TST T) {
     constexpr std::array<TST, 16> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
     };
 
     return T >= Traits.front() && T <= Traits.back();

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -std=c++20 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -std=c++20 %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 
 struct S { char buf[32]; };

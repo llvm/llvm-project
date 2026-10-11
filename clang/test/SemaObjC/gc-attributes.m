@@ -24,3 +24,15 @@ void test_f1(void) {
 // These qualifiers should silently expand to nothing in GC mode.
 void test_unsafe_unretained(__unsafe_unretained id *x) {}
 void test_autoreleasing(__autoreleasing id *x) {}
+
+extern id mergeQualsVar; // expected-note {{previous declaration is here}}
+extern __weak id mergeQualsVar; // expected-error {{redeclaration of 'mergeQualsVar' with a different type}}
+
+extern const id mergeQualsVar2; // expected-note {{previous declaration is here}}
+extern __strong id mergeQualsVar2; // expected-error {{redeclaration of 'mergeQualsVar2' with a different type}}
+
+extern id mergeQualsVar3; // expected-note {{previous declaration is here}}
+extern volatile id mergeQualsVar3; // expected-error {{redeclaration of 'mergeQualsVar3' with a different type}}
+
+extern id mergeQualsVarOk;
+extern __strong id mergeQualsVarOk; // Should merge just fine

@@ -102,6 +102,11 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// But the size does need to be exactly right or else things like struct
 /// layout will break.
 llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
+  if (const auto *ArrayTy = dyn_cast<ConstantArrayType>(T.getTypePtr())) {
+    llvm::Type *ElementTy = ConvertTypeForMem(ArrayTy->getElementType());
+    return llvm::ArrayType::get(ElementTy, ArrayTy->getZExtSize());
+  }
+
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
@@ -487,6 +492,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
       break;
 
+    case BuiltinType::MetaInfo:
+      // FIXME(Reflection): once consteval-only types are supported,
+      // make this an llvm_unreachable instead because reflection
+      // should not reach here
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 64);
+      break;
+
     case BuiltinType::UInt128:
     case BuiltinType::Int128:
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
@@ -590,6 +602,14 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
       ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
       break;
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
+      break;
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    return llvm::TargetExtType::get(getLLVMContext(), "spirv.Event");
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

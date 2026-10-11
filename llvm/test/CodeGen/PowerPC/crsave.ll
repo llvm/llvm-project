@@ -137,9 +137,7 @@ define i32 @test_cr234() nounwind {
 ; PPC32-NEXT:    bl foo
 ; PPC32-NEXT:    lwz 3, 20(31)
 ; PPC32-NEXT:    lwz 12, 24(31)
-; PPC32-NEXT:    mtocrf 32, 12
-; PPC32-NEXT:    mtocrf 16, 12
-; PPC32-NEXT:    mtocrf 8, 12
+; PPC32-NEXT:    mtcrf 56, 12
 ; PPC32-NEXT:    lwz 0, 36(1)
 ; PPC32-NEXT:    lwz 31, 28(1)
 ; PPC32-NEXT:    addi 1, 1, 32
@@ -172,9 +170,7 @@ define i32 @test_cr234() nounwind {
 ; PPC64-NEXT:    addi 1, 1, 128
 ; PPC64-NEXT:    ld 0, 16(1)
 ; PPC64-NEXT:    lwz 12, 8(1)
-; PPC64-NEXT:    mtocrf 32, 12
-; PPC64-NEXT:    mtocrf 16, 12
-; PPC64-NEXT:    mtocrf 8, 12
+; PPC64-NEXT:    mtcrf 56, 12
 ; PPC64-NEXT:    mtlr 0
 ; PPC64-NEXT:    blr
 ;
@@ -204,9 +200,7 @@ define i32 @test_cr234() nounwind {
 ; PPC64-ELFv2-NEXT:    addi 1, 1, 112
 ; PPC64-ELFv2-NEXT:    ld 0, 16(1)
 ; PPC64-ELFv2-NEXT:    lwz 12, 8(1)
-; PPC64-ELFv2-NEXT:    mtocrf 32, 12
-; PPC64-ELFv2-NEXT:    mtocrf 16, 12
-; PPC64-ELFv2-NEXT:    mtocrf 8, 12
+; PPC64-ELFv2-NEXT:    mtcrf 56, 12
 ; PPC64-ELFv2-NEXT:    mtlr 0
 ; PPC64-ELFv2-NEXT:    blr
 entry:
@@ -285,9 +279,7 @@ define void @cloberAllNvCrField() {
 ; PPC32-NEXT:    # clobbers
 ; PPC32-NEXT:    #NO_APP
 ; PPC32-NEXT:    lwz 12, 24(31)
-; PPC32-NEXT:    mtocrf 32, 12
-; PPC32-NEXT:    mtocrf 16, 12
-; PPC32-NEXT:    mtocrf 8, 12
+; PPC32-NEXT:    mtcrf 56, 12
 ; PPC32-NEXT:    lwz 31, 28(1)
 ; PPC32-NEXT:    addi 1, 1, 32
 ; PPC32-NEXT:    blr
@@ -300,9 +292,7 @@ define void @cloberAllNvCrField() {
 ; PPC64-NEXT:    # clobbers
 ; PPC64-NEXT:    #NO_APP
 ; PPC64-NEXT:    lwz 12, 8(1)
-; PPC64-NEXT:    mtocrf 32, 12
-; PPC64-NEXT:    mtocrf 16, 12
-; PPC64-NEXT:    mtocrf 8, 12
+; PPC64-NEXT:    mtcrf 56, 12
 ; PPC64-NEXT:    blr
 ;
 ; PPC64-ELFv2-LABEL: cloberAllNvCrField:
@@ -313,9 +303,7 @@ define void @cloberAllNvCrField() {
 ; PPC64-ELFv2-NEXT:    # clobbers
 ; PPC64-ELFv2-NEXT:    #NO_APP
 ; PPC64-ELFv2-NEXT:    lwz 12, 8(1)
-; PPC64-ELFv2-NEXT:    mtocrf 32, 12
-; PPC64-ELFv2-NEXT:    mtocrf 16, 12
-; PPC64-ELFv2-NEXT:    mtocrf 8, 12
+; PPC64-ELFv2-NEXT:    mtcrf 56, 12
 ; PPC64-ELFv2-NEXT:    blr
 entry:
   tail call void asm sideeffect "# clobbers", "~{cr2},~{cr3},~{cr4}"()

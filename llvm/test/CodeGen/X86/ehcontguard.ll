@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
+; RUN: llc -enable-new-pm < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 ; EHCont Guard is currently only available on Windows
 
 ; CHECK: @feat.00 = 16384

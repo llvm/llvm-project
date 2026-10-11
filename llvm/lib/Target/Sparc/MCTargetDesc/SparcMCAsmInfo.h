@@ -26,19 +26,13 @@ public:
   explicit SparcELFMCAsmInfo(const Triple &TheTriple,
                              const MCTargetOptions &Options);
 
-  const MCExpr*
-  getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
-                              MCStreamer &Streamer) const override;
-  const MCExpr* getExprForFDESymbol(const MCSymbol *Sym,
-                                    unsigned Encoding,
-                                    MCStreamer &Streamer) const override;
-
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
 };
 
 namespace Sparc {
 uint16_t parseSpecifier(StringRef name);
+uint16_t parseDataSpecifier(StringRef name);
 StringRef getSpecifierName(uint16_t S);
 } // namespace Sparc
 

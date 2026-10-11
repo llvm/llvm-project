@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"
@@ -224,7 +225,7 @@ public:
     if (m_arch.IsValid()) {
       if (dumped_something)
         strm.PutCString(", ");
-      strm.Printf("arch = ");
+      strm.PutCString("arch = ");
       m_arch.DumpTriple(strm.AsRawOstream());
       dumped_something = true;
     }

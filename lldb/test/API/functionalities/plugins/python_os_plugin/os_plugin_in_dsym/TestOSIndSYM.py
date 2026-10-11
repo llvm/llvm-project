@@ -41,7 +41,8 @@ class TestOSPluginIndSYM(TestBase):
             return "{} not available".format(self.PORT)
         return None
 
-    @skipUnlessDarwin
+    @requireDarwin
+    @skip(bugnumber="github.com/llvm/llvm-project/issues/213380")
     def test_python_os_plugin(self):
         """Test that the OS plugin in a dSYM works on attach."""
         executable = self.build_dsym("my_binary")
@@ -60,6 +61,7 @@ class TestOSPluginIndSYM(TestBase):
     @skipIfDarwinEmbedded
     @skipTestIfFn(no_debugserver)
     @skipTestIfFn(port_not_available)
+    @skip(bugnumber="github.com/llvm/llvm-project/issues/213380")
     def test_python_os_plugin_remote(self):
         """Test that the OS plugin in a dSYM works over a remote connection."""
         executable = self.build_dsym("my_binary")

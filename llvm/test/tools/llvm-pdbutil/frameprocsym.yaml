@@ -1,0 +1,54 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=PDB2YAML %s
+
+# YAML2PDB:         Mod 0000 | `C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj`: 
+# YAML2PDB-NEXT:        4 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:            size = 56, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:            bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:            local fp reg = RSP, param fp reg = R13
+# YAML2PDB-NEXT:            flags = has longjmp | inlined | safe buffers | pgo
+
+# PDB2YAML:               - Kind:            S_FRAMEPROC
+# PDB2YAML-NEXT:            FrameProcSym:
+# PDB2YAML-NEXT:              TotalFrameBytes: 56
+# PDB2YAML-NEXT:              PaddingFrameBytes: 0
+# PDB2YAML-NEXT:              OffsetToPadding: 0
+# PDB2YAML-NEXT:              BytesOfCalleeSavedRegisters: 0
+# PDB2YAML-NEXT:              OffsetOfExceptionHandler: 0
+# PDB2YAML-NEXT:              SectionIdOfExceptionHandler: 0
+# PDB2YAML-NEXT:              Flags:           [ HasLongJmp, Inlined, SafeBuffers, ProfileGuidedOptimization ]
+# PDB2YAML-NEXT:              LocalFramePtrReg: StackPtr
+# PDB2YAML-NEXT:              ParamFramePtrReg: BasePtr
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          'C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj'
+      ObjFile:         'C:\Users\johannes\AppData\Local\Temp\main-7524b3.obj'
+      SourceFiles:
+        - 'F:\Dev\dummy\lldb-repro\main.cpp'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 56
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ HasLongJmp, Inlined, SafeBuffers, ProfileGuidedOptimization ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: BasePtr
+...

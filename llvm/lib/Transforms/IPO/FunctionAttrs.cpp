@@ -27,7 +27,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -762,7 +761,7 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
 
 // Collect the uses of argument "A" in "F".
 ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   unsigned PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
   ArgumentUsesSummary Result;
@@ -952,7 +951,8 @@ determinePointerAccessAttrs(Argument *A,
       if (isModSet(ArgMR) && !CB->onlyReadsMemory(UseIndex)) {
         Props.IsWrite = true;
         if (CB->isArgOperand(U) && !CB->hasFnAttr(Attribute::NoFree) &&
-            !CB->paramHasAttr(UseIndex, Attribute::NoFree))
+            !CB->paramHasAttr(UseIndex, Attribute::NoFree) &&
+            !CB->paramHasAttr(UseIndex, Attribute::NoFreeObj))
           Props.IsFree = true;
       }
     } else {
@@ -1075,7 +1075,8 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   assert(A && "Argument must not be null.");
 
   bool Changed = false;
-  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree)) {
+  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree) &&
+      !A->hasAttribute(Attribute::NoFreeObj)) {
     ++NumNoFreeArg;
     A->addAttr(Attribute::NoFree);
     Changed = true;
@@ -1484,7 +1485,11 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
         return false; // Did not come from an allocation.
       }
 
-    if (PointerMayBeCaptured(RetVal, /*ReturnCaptures=*/false))
+    // Only capturing the provenance of the result prevents it from being
+    // noalias.
+    if (capturesAnything(
+            PointerMayBeCaptured(RetVal, CaptureComponents::Provenance)
+                .WithoutRet))
       return false;
   }
 

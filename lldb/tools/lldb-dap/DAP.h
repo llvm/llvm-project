@@ -15,13 +15,13 @@
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
-#include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "Variables.h"
+#include "Watchpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -63,6 +63,7 @@ typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, Watchpoint> WatchpointMap;
 
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
@@ -107,6 +108,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
+  WatchpointMap data_breakpoints;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
@@ -133,7 +135,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   bool configuration_done;
 
   std::mutex call_mutex;
-  ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
   /// unless we send a "thread" event to indicate the thread exited.
@@ -146,6 +147,10 @@ struct DAP final : public DAPTransport::MessageHandler {
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
   llvm::unique_function<void()> on_configuration_done;
+
+  /// Called after the session ends, to send the 'disconnect' response as the
+  /// last message to the client.
+  llvm::unique_function<void()> on_session_end;
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
@@ -232,12 +237,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
-  void SendProgressEvent(uint64_t progress_id, const char *message,
-                         uint64_t completed, uint64_t total);
+  src_ref_t CreateSourceReference(lldb::addr_t address);
 
-  int32_t CreateSourceReference(lldb::addr_t address);
-
-  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(src_ref_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -340,6 +342,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::Error Disconnect();
 
   /// Disconnect the DAP session and optionally terminate the debuggee.
+  ///
+  /// The session ends once the current request handler returns, see `Loop()`.
+  /// Does nothing if the session is already disconnected.
   llvm::Error Disconnect(bool terminateDebuggee);
 
   /// Send a "terminated" event to indicate the process is done being debugged.
@@ -467,6 +472,24 @@ private:
   void TransportHandler();
   void TerminateLoop(bool failed = false);
 
+  /// What `Loop()` does with the queued messages. It only moves forward.
+  enum class QueueState {
+    Running,
+    /// The client closed the connection, or the transport failed.
+    InputClosed,
+    /// `Disconnect()` ended the session and we killed or detached the debuggee.
+    Disconnected,
+  };
+
+  /// Updates the queue to `state`. Only updates if state it is greater than the
+  /// current state. Used in `Loop()`. Caller must hold `m_queue_mutex`.
+  void SetQueueState(QueueState state);
+
+  /// Ends the session and does cleanup.
+  /// Reports the end of the debuggee, stops reading from the
+  /// client, answers the queued requests, then calls `on_session_end`.
+  void EndSession(std::thread &transport_thread);
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -496,7 +519,7 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
-  bool m_disconnecting = false;
+  QueueState m_queue_state = QueueState::Running;
   bool m_error_occurred = false;
 
   // Loop for managing reading from the client.
@@ -509,7 +532,7 @@ private:
   const protocol::Request *m_active_request;
 
   llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
-  llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
+  llvm::DenseMap<src_ref_t, SourceBreakpointMap> m_source_assembly_breakpoints;
 };
 
 } // namespace lldb_dap

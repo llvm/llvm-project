@@ -58,10 +58,9 @@ static constexpr char LoopInitVarName[] = "loop_init_var";
 static constexpr char LoopEndExprName[] = "loop_end_expr";
 static constexpr char RangeLoopName[] = "for_range_loop";
 
-static ast_matchers::internal::Matcher<Expr> supportedContainerTypesMatcher() {
-  return hasType(cxxRecordDecl(hasAnyName(
-      "::std::vector", "::std::set", "::std::unordered_set", "::std::map",
-      "::std::unordered_map", "::std::array", "::std::deque")));
+static ast_matchers::internal::Matcher<Expr>
+supportedContainerTypesMatcher(ArrayRef<StringRef> ContainerTypes) {
+  return hasType(cxxRecordDecl(hasAnyName(ContainerTypes)));
 }
 
 namespace {
@@ -77,12 +76,18 @@ InefficientVectorOperationCheck::InefficientVectorOperationCheck(
     : ClangTidyCheck(Name, Context),
       VectorLikeClasses(utils::options::parseStringList(
           Options.get("VectorLikeClasses", "::std::vector"))),
+      ForRangeLoopClasses(utils::options::parseStringList(Options.get(
+          "ForRangeLoopClasses",
+          "::std::array;::std::deque;::std::map;::std::set;"
+          "::std::unordered_map;::std::unordered_set;::std::vector"))),
       EnableProto(Options.get("EnableProto", false)) {}
 
 void InefficientVectorOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "VectorLikeClasses",
                 utils::options::serializeStringList(VectorLikeClasses));
+  Options.store(Opts, "ForRangeLoopClasses",
+                utils::options::serializeStringList(ForRangeLoopClasses));
   Options.store(Opts, "EnableProto", EnableProto);
 }
 
@@ -146,10 +151,10 @@ void InefficientVectorOperationCheck::addMatcher(
   // FIXME: Support more complex range-expressions.
   Finder->addMatcher(
       cxxForRangeStmt(
-          hasRangeInit(
-              anyOf(declRefExpr(supportedContainerTypesMatcher()),
-                    memberExpr(hasObjectExpression(unless(hasSideEffects())),
-                               supportedContainerTypesMatcher()))),
+          hasRangeInit(anyOf(
+              declRefExpr(supportedContainerTypesMatcher(ForRangeLoopClasses)),
+              memberExpr(hasObjectExpression(unless(hasSideEffects())),
+                         supportedContainerTypesMatcher(ForRangeLoopClasses)))),
           HasInterestingLoopBody, InInterestingCompoundStmt)
           .bind(RangeLoopName),
       this);
@@ -259,10 +264,11 @@ void InefficientVectorOperationCheck::check(
     ReserveSize = std::string(LoopEndSource);
   }
 
-  auto Diag = diag(AppendCall->getBeginLoc(),
-                   "%0 is called inside a loop; consider pre-allocating the "
-                   "container capacity before the loop")
-              << AppendCall->getMethodDecl()->getDeclName();
+  const auto Diag =
+      diag(AppendCall->getBeginLoc(),
+           "%0 is called inside a loop; consider pre-allocating the "
+           "container capacity before the loop")
+      << AppendCall->getMethodDecl()->getDeclName();
   if (!ReserveSize.empty()) {
     const std::string ReserveStmt =
         (VarName + PartialReserveStmt + "(" + ReserveSize + ");\n").str();

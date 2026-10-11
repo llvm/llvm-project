@@ -34,7 +34,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.bufferization.one_shot_bufferize %0 {memcpy_op = "linalg.copy"} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.bufferization.one_shot_bufferize %0 <{memcpy_op = "linalg.copy"}> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -65,7 +65,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.bufferization.one_shot_bufferize %0
-        {test_analysis_only = true} : (!transform.any_op) -> !transform.any_op
+        <{test_analysis_only = true}> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -135,7 +135,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
-      { bufferize_function_boundaries = true } : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -221,7 +221,7 @@ module attributes {transform.with_named_sequence} {
     %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
       : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
     %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor
-      {alloc_op = "memref.alloca"}
+      <alloc_op = "memref.alloca">
         : !transform.op<"bufferization.alloc_tensor">
     transform.yield
   }
@@ -235,4 +235,57 @@ func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
   // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
   %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
   return %0 : tensor<2x2xf32>
+}
+
+// -----
+
+// The loop's parent block is outside the analysis rooted at the target loop.
+// CHECK-LABEL: func @buffer_loop_hoisting_while_scope_no_exit_alias(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.while"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %loop : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_while_scope_no_exit_alias(%condition: i1, %value: index) {
+    %c0 = arith.constant 0 : index
+    scf.while : () -> () {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %value, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition)
+    } do {
+      scf.yield
+    }
+    return
+  }
+}
+
+// -----
+
+// The same loop can be crossed when the function is the analysis target.
+// CHECK-LABEL: func @buffer_loop_hoisting_function_scope_no_exit_alias(
+// CHECK: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.any_op
+    transform.bufferization.buffer_loop_hoisting %func : !transform.any_op
+    transform.yield
+  }
+  func.func @buffer_loop_hoisting_function_scope_no_exit_alias(%condition: i1, %value: index) {
+    %c0 = arith.constant 0 : index
+    scf.while : () -> () {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %value, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition)
+    } do {
+      scf.yield
+    }
+    return
+  }
 }

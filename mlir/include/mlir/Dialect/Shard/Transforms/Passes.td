@@ -39,9 +39,6 @@ def ShardingPropagation : InterfacePass<"sharding-propagation", "mlir::FunctionO
               "backward-forward traversal.")
             )}]>,
   ];
-  let dependentDialects = [
-    "shard::ShardDialect"
-  ];
 }
 
 def ShardSimplify : Pass<"shard-simplify"> {
@@ -55,10 +52,7 @@ def ShardSimplify : Pass<"shard-simplify"> {
       share the same grid and grid_axes.
     - Folding static grid shapes into constants.
   }];
-  let dependentDialects = [
-    "arith::ArithDialect",
-    "shard::ShardDialect"
-  ];
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 def Partition : InterfacePass<"shard-partition", "mlir::FunctionOpInterface"> {
@@ -114,9 +108,6 @@ def Partition : InterfacePass<"shard-partition", "mlir::FunctionOpInterface"> {
     }
     ```
   }];
-  let dependentDialects = [
-    "shard::ShardDialect"
-  ];
 }
 
 #endif // MLIR_DIALECT_SHARD_TRANSFORMS_PASSES_TD

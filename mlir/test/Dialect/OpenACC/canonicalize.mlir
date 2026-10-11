@@ -116,10 +116,10 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
   acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    } inclusiveUpperbound(array<i1: true>) independent
     acc.terminator
   }
   return
@@ -243,6 +243,6 @@ func.func @kernel_environment_canonicalization(%q1: i32, %q2: i32, %q3: i32) {
 // CHECK-SAME: ([[Q1:%.*]]: i32, [[Q2:%.*]]: i32, [[Q3:%.*]]: i32)
 // CHECK-NOT: acc.kernel_environment
 // CHECK: acc.wait([[Q1]], [[Q2]] : i32, i32)
-// CHECK: acc.wait
+// CHECK: acc.wait{{ *$}}
 // CHECK: acc.wait([[Q3]] : i32)
 // CHECK: return

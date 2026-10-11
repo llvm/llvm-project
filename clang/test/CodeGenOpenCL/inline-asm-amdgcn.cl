@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -emit-llvm -O0 -o - -triple amdgcn %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -O0 -o - -triple amdgpu %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -O0 -o - -triple spirv64-amd-amdhsa %s | FileCheck %s
 
 typedef float float32 __attribute__((ext_vector_type(32)));

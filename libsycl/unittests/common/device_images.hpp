@@ -20,7 +20,8 @@
 #include <llvm/Frontend/Offloading/Utility.h>
 #include <llvm/Object/OffloadBinary.h>
 
-namespace sycl::unittest {
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
+namespace unittests {
 
 inline llvm::object::OffloadBinary::OffloadingImage createSYCLImage(
     llvm::StringRef SymbolsBlob,
@@ -49,6 +50,7 @@ inline llvm::SmallString<0> createSYCLDeviceBinary(
   return llvm::object::OffloadBinary::write(Image);
 }
 
-} // namespace sycl::unittest
+} // namespace unittests
+_LIBSYCL_END_NAMESPACE_SYCL
 
 #endif // _LIBSYCL_UNITTESTS_COMMON_DEVICE_IMAGES_HPP

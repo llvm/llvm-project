@@ -158,9 +158,7 @@ define void @test_stnp_v2f32(ptr %p, <2 x float> %v) #0 {
 define void @test_stnp_v1f64(ptr %p, <1 x double> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v1f64:
 ; CHECK-LE:       // %bb.0:
-; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-LE-NEXT:    mov s1, v0.s[1]
-; CHECK-LE-NEXT:    stnp s0, s1, [x0]
+; CHECK-LE-NEXT:    str d0, [x0]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_stnp_v1f64:

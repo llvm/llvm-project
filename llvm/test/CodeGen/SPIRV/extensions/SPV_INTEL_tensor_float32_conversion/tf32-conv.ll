@@ -45,18 +45,18 @@ declare spir_func <8 x float> @_Z25__spirv_RoundFToTF32INTELDv8_f(<8 x float>)
 
 define dso_local spir_kernel void @test_ocl(float %a) {
 entry:
-  %res4 = call spir_func float @_Z35intel_round_as_tensor_float32_floatt(float 0.000000e+00)
-  %res5 = call spir_func <2 x float> @_Z37intel_round_as_tensor_float322_float2Dv2_t(<2 x float> zeroinitializer)
-  %res6 = call spir_func <3 x float> @_Z37intel_round_as_tensor_float323_float3Dv3_t(<3 x float> zeroinitializer)
-  %res7 = call spir_func <4 x float> @_Z37intel_round_as_tensor_float324_float4Dv4_t(<4 x float> zeroinitializer)
-  %res8 = call spir_func <8 x float> @_Z37intel_round_as_tensor_float328_float8Dv8_t(<8 x float> zeroinitializer)
-  %res9 = call spir_func <16 x float> @_Z39intel_round_as_tensor_float3216_float16Dv16_t(<16 x float> zeroinitializer)
+  %res4 = call spir_func float @_Z35intel_round_as_tensor_float32_floatf(float 0.000000e+00)
+  %res5 = call spir_func <2 x float> @_Z37intel_round_as_tensor_float322_float2Dv2_f(<2 x float> zeroinitializer)
+  %res6 = call spir_func <3 x float> @_Z37intel_round_as_tensor_float323_float3Dv3_f(<3 x float> zeroinitializer)
+  %res7 = call spir_func <4 x float> @_Z37intel_round_as_tensor_float324_float4Dv4_f(<4 x float> zeroinitializer)
+  %res8 = call spir_func <8 x float> @_Z37intel_round_as_tensor_float328_float8Dv8_f(<8 x float> zeroinitializer)
+  %res9 = call spir_func <16 x float> @_Z39intel_round_as_tensor_float3216_float16Dv16_f(<16 x float> zeroinitializer)
   ret void
 }
 
-declare spir_func float @_Z35intel_round_as_tensor_float32_floatt(float)
-declare spir_func <2 x float> @_Z37intel_round_as_tensor_float322_float2Dv2_t(<2 x float>)
-declare spir_func <3 x float> @_Z37intel_round_as_tensor_float323_float3Dv3_t(<3 x float>)
-declare spir_func <4 x float> @_Z37intel_round_as_tensor_float324_float4Dv4_t(<4 x float>)
-declare spir_func <8 x float> @_Z37intel_round_as_tensor_float328_float8Dv8_t(<8 x float>)
-declare spir_func <16 x float> @_Z39intel_round_as_tensor_float3216_float16Dv16_t(<16 x float>)
+declare spir_func float @_Z35intel_round_as_tensor_float32_floatf(float)
+declare spir_func <2 x float> @_Z37intel_round_as_tensor_float322_float2Dv2_f(<2 x float>)
+declare spir_func <3 x float> @_Z37intel_round_as_tensor_float323_float3Dv3_f(<3 x float>)
+declare spir_func <4 x float> @_Z37intel_round_as_tensor_float324_float4Dv4_f(<4 x float>)
+declare spir_func <8 x float> @_Z37intel_round_as_tensor_float328_float8Dv8_f(<8 x float>)
+declare spir_func <16 x float> @_Z39intel_round_as_tensor_float3216_float16Dv16_f(<16 x float>)

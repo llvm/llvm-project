@@ -16,12 +16,12 @@ define void @samplegrad_texture2d_float4(<2 x float> %coords, <2 x float> %ddx, 
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -53,12 +53,12 @@ define void @samplegrad_texture2d_with_clamp(<2 x float> %coords, <2 x float> %d
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -90,12 +90,12 @@ define void @samplegrad_texture2d_with_offset(<2 x float> %coords, <2 x float> %
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -127,14 +127,14 @@ define void @samplegrad_texture2d_with_dynamic_offset(<2 x float> %coords, <2 x 
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[OFF0:.*]] = extractelement <2 x i32> %offsets, i64 0
-  ; CHECK: %[[OFF1:.*]] = extractelement <2 x i32> %offsets, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[OFF0:.*]] = extractelement <2 x i32> %offsets, i32 0
+  ; CHECK: %[[OFF1:.*]] = extractelement <2 x i32> %offsets, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -166,12 +166,12 @@ define void @samplegrad_texture2d_with_offset_and_clamp(<2 x float> %coords, <2 
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -233,15 +233,15 @@ define void @samplegrad_texture3d_float4(<3 x float> %coords, <3 x float> %ddx, 
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <3 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <3 x float> %coords, i64 1
-  ; CHECK: %[[COORD2:.*]] = extractelement <3 x float> %coords, i64 2
-  ; CHECK: %[[DDX0:.*]] = extractelement <3 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <3 x float> %ddx, i64 1
-  ; CHECK: %[[DDX2:.*]] = extractelement <3 x float> %ddx, i64 2
-  ; CHECK: %[[DDY0:.*]] = extractelement <3 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <3 x float> %ddy, i64 1
-  ; CHECK: %[[DDY2:.*]] = extractelement <3 x float> %ddy, i64 2
+  ; CHECK: %[[COORD0:.*]] = extractelement <3 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <3 x float> %coords, i32 1
+  ; CHECK: %[[COORD2:.*]] = extractelement <3 x float> %coords, i32 2
+  ; CHECK: %[[DDX0:.*]] = extractelement <3 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <3 x float> %ddx, i32 1
+  ; CHECK: %[[DDX2:.*]] = extractelement <3 x float> %ddx, i32 2
+  ; CHECK: %[[DDY0:.*]] = extractelement <3 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <3 x float> %ddy, i32 1
+  ; CHECK: %[[DDY2:.*]] = extractelement <3 x float> %ddy, i32 2
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -273,12 +273,12 @@ define void @samplegrad_texture2d_scalar(<2 x float> %coords, <2 x float> %ddx, 
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
   ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -310,12 +310,12 @@ define void @samplegrad_texture2d_half4(<2 x float> %coords, <2 x float> %ddx, <
       @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i64 0
-  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i64 1
-  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i64 0
-  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i64 1
-  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i64 0
-  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i64 1
+  ; CHECK: %[[COORD0:.*]] = extractelement <2 x float> %coords, i32 0
+  ; CHECK: %[[COORD1:.*]] = extractelement <2 x float> %coords, i32 1
+  ; CHECK: %[[DDX0:.*]] = extractelement <2 x float> %ddx, i32 0
+  ; CHECK: %[[DDX1:.*]] = extractelement <2 x float> %ddx, i32 1
+  ; CHECK: %[[DDY0:.*]] = extractelement <2 x float> %ddy, i32 0
+  ; CHECK: %[[DDY1:.*]] = extractelement <2 x float> %ddy, i32 1
   ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f16
   ; CHECK-SAME: @dx.op.sampleGrad.f16(i32 63,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
@@ -334,5 +334,48 @@ define void @samplegrad_texture2d_half4(<2 x float> %coords, <2 x float> %ddx, <
 
   ; CHECK: extractvalue %dx.types.ResRet.f16 %[[SAMPLE]], 0
   call void @use_half4(<4 x half> %data)
+  ret void
+}
+
+; DXIL has no vector instructions, so the scalars the vector operands were
+; built from are forwarded into the sample rather than extracted again.
+; CHECK-LABEL: define void @sample_grad_texture2d_scalarized(
+define void @sample_grad_texture2d_scalarized(float %u, float %v, float %ddxu,
+                                              float %ddxv, float %ddyu,
+                                              float %ddyv) {
+  %texture = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+  %sampler = call target("dx.Sampler", 0)
+      @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %coords.0 = insertelement <2 x float> poison, float %u, i32 0
+  %coords.1 = insertelement <2 x float> %coords.0, float %v, i32 1
+  %ddx.0 = insertelement <2 x float> poison, float %ddxu, i32 0
+  %ddx.1 = insertelement <2 x float> %ddx.0, float %ddxv, i32 1
+  %ddy.0 = insertelement <2 x float> poison, float %ddyu, i32 0
+  %ddy.1 = insertelement <2 x float> %ddy.0, float %ddyv, i32 1
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
+  ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: float %u, float %v, float undef, float undef,
+  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %ddxu, float %ddxv, float undef,
+  ; CHECK-SAME: float %ddyu, float %ddyv, float undef,
+  ; CHECK-SAME: float undef)
+  %data = call <4 x float>
+      @llvm.dx.resource.samplegrad.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2f32.v2f32.v2i32(
+          target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
+          target("dx.Sampler", 0) %sampler,
+          <2 x float> %coords.1, <2 x float> %ddx.1, <2 x float> %ddy.1,
+          <2 x i32> zeroinitializer)
+
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[SAMPLE]], 0
+  call void @use_float4(<4 x float> %data)
   ret void
 }

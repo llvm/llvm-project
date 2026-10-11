@@ -18,6 +18,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <queue>
 
 using namespace llvm;
@@ -27,20 +28,27 @@ using namespace llvm;
 
 namespace {
 
-class RISCVFoldMemOffset : public MachineFunctionPass {
+class RISCVFoldMemOffsetImpl {
 public:
-  static char ID;
+  bool run(MachineFunction &MF);
 
-  RISCVFoldMemOffset() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
+private:
   bool foldOffset(Register OrigReg, int64_t InitialOffset,
                   const MachineRegisterInfo &MRI,
                   DenseMap<MachineInstr *, int64_t> &FoldableInstrs);
+};
+
+class RISCVFoldMemOffsetLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVFoldMemOffsetLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -72,12 +80,12 @@ public:
 
 } // end anonymous namespace
 
-char RISCVFoldMemOffset::ID = 0;
-INITIALIZE_PASS(RISCVFoldMemOffset, DEBUG_TYPE, RISCV_FOLD_MEM_OFFSET_NAME,
-                false, false)
+char RISCVFoldMemOffsetLegacy::ID = 0;
+INITIALIZE_PASS(RISCVFoldMemOffsetLegacy, DEBUG_TYPE,
+                RISCV_FOLD_MEM_OFFSET_NAME, false, false)
 
-FunctionPass *llvm::createRISCVFoldMemOffsetPass() {
-  return new RISCVFoldMemOffset();
+FunctionPass *llvm::createRISCVFoldMemOffsetLegacyPass() {
+  return new RISCVFoldMemOffsetLegacy();
 }
 
 // Walk forward from the ADDI looking for arithmetic instructions we can
@@ -87,7 +95,7 @@ FunctionPass *llvm::createRISCVFoldMemOffsetPass() {
 // calculate the contribution to the output of this instruction.
 // Only addition and left shift are supported.
 // FIXME: Add multiplication by constant. The constant will be in a register.
-bool RISCVFoldMemOffset::foldOffset(
+bool RISCVFoldMemOffsetImpl::foldOffset(
     Register OrigReg, int64_t InitialOffset, const MachineRegisterInfo &MRI,
     DenseMap<MachineInstr *, int64_t> &FoldableInstrs) {
   // Map to hold how much the offset contributes to the value of this register.
@@ -233,10 +241,7 @@ bool RISCVFoldMemOffset::foldOffset(
   return true;
 }
 
-bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVFoldMemOffsetImpl::run(MachineFunction &MF) {
   // This optimization may increase size by preventing compression.
   if (MF.getFunction().hasOptSize())
     return false;
@@ -283,4 +288,23 @@ bool RISCVFoldMemOffset::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return MadeChange;
+}
+
+bool RISCVFoldMemOffsetLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return RISCVFoldMemOffsetImpl().run(MF);
+}
+
+PreservedAnalyses
+RISCVFoldMemOffsetPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = RISCVFoldMemOffsetImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
 }

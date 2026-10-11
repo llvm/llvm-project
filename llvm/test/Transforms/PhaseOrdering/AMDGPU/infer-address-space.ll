@@ -42,9 +42,7 @@ define void @caller(ptr addrspace(1) %ptr_as1, i32 %value) {
 ; NO-INFER-NEXT:    store i32 [[VALUE]], ptr addrspace(5) [[VAL_FIELD]], align 4
 ; NO-INFER-NEXT:    [[GENERIC_INPUT:%.*]] = addrspacecast ptr addrspace(1) [[PTR_AS1]] to ptr
 ; NO-INFER-NEXT:    store ptr [[GENERIC_INPUT]], ptr addrspace(5) [[DATA]], align 8
-; NO-INFER-NEXT:    [[RETRIEVED_PTR:%.*]] = load ptr, ptr addrspace(5) [[DATA]], align 8
-; NO-INFER-NEXT:    [[RETRIEVED_VAL:%.*]] = load i32, ptr addrspace(5) [[VAL_FIELD]], align 4
-; NO-INFER-NEXT:    call void @callee(ptr [[RETRIEVED_PTR]], i32 [[RETRIEVED_VAL]])
+; NO-INFER-NEXT:    call void @callee(ptr [[GENERIC_INPUT]], i32 [[VALUE]])
 ; NO-INFER-NEXT:    ret void
 ;
   %data = alloca %struct.data, align 8, addrspace(5)

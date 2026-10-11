@@ -13,6 +13,8 @@
 //   constexpr OutputIterator      // constexpr after C++17
 //   fill_n(Iter first, Size n, const T& value);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -51,6 +53,14 @@ struct Test {
       std::array<T, 4> in       = {1, 2, 3, 4};
       std::array<T, 4> expected = {1, 5, 5, 4};
       test<Iter>(in, 1, 2, 5, expected);
+    }
+    { // A negative count is a no-op that returns the unchanged iterator.
+      // Regression test for https://llvm.org/PR193613.
+      std::array<T, 4> in       = {1, 2, 3, 4};
+      std::array<T, 4> expected = {1, 2, 3, 4};
+      Iter it                   = std::fill_n(Iter(in.data()), -5, T(9));
+      assert(base(it) == in.data());
+      assert(in == expected);
     }
   }
 };
@@ -124,6 +134,13 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
       std::fill_n(expected.end() - 4, 4, false);
       assert(in == expected);
     }
+  }
+
+  { // Negative count test
+    std::vector<bool> v(N, false);
+    std::vector<bool>::iterator r = std::fill_n(v.begin(), -5, true);
+    assert(r == v.begin());
+    assert(v == std::vector<bool>(N, false));
   }
 
   return true;

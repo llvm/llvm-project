@@ -704,7 +704,7 @@ PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec) {
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back("_sigtramp");
 }
 
 const UnixSignalsSP &PlatformRemoteGDBServer::GetRemoteUnixSignals() {

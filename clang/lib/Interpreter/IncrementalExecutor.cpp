@@ -12,11 +12,9 @@
 
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "OrcIncrementalExecutor.h"
-#ifdef __EMSCRIPTEN__
-#include "Wasm.h"
-#endif // __EMSCRIPTEN__
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
@@ -35,8 +33,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
 #include "llvm/Support/Error.h"
@@ -62,12 +60,18 @@
 #endif
 
 // Address of the host's emulated-TLS runtime entry point, or null if the host
-// cannot provide one. On Darwin, __emutls_get_address lives in the compiler-rt
-// builtins archive; referencing it here force-links the archive member into
-// the binary. The reference must not exist elsewhere: MSVC has no emulated-TLS
-// runtime (the link would fail), and ELF hosts resolve it from libgcc_s /
-// compiler-rt through regular process-symbol lookup.
-#ifdef __APPLE__
+// cannot provide one. clang-repl's JIT always lowers thread_local to emulated
+// TLS (JITTargetMachineBuilder forces EmulatedTLS on), so JIT'd code references
+// __emutls_get_address on every target. That symbol lives in the compiler
+// runtime -- libgcc_s.so on a glibc toolchain, or the compiler-rt builtins
+// static archive on Darwin and on compiler-rt-rtlib toolchains. When it is only
+// in a static archive and nothing else references it, it is never linked in and
+// ORC's process-symbol lookup cannot resolve it. Referencing it here
+// force-links the archive member so it is present regardless of how the host
+// provides it. Defined if available at configure time
+// (CLANG_HAVE_EMUTLS_GET_ADDRESS). When unavailable, thread_locals instead rely
+// on process-symbol lookup.
+#if CLANG_HAVE_EMUTLS_GET_ADDRESS
 extern "C" void *__emutls_get_address(void *);
 static void *getEmuTLSGetAddressPtr() {
   return reinterpret_cast<void *>(&__emutls_get_address);
@@ -105,22 +109,10 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
-  llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = llvm::orc::sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
   size_t SlabSize;
   if (llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows())
@@ -132,7 +124,7 @@ createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, ES, std::move(*B));
 }
 
 static llvm::Expected<
@@ -404,19 +396,21 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
-    // TODO: Switch to native TLS on Darwin once clang-repl can adopt the ORC
-    // runtime (which provides __emutls_get_address and supports the full TLS
+    // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
+    // (which provides __emutls_get_address and supports the full TLS
     // lifecycle). That will also remove the in-process-only constraint below.
     //
-    // For MachO targets, thread_locals are lowered to emulated TLS, but the
-    // runtime (__emutls_get_address) lives in the compiler-rt builtins archive
-    // and nothing else in this process references it, so it isn't linked in
-    // and process-symbol lookup cannot find it. Define the force-linked host
-    // symbol (see getEmuTLSGetAddressPtr) as an absolute symbol so it is
-    // visible to JIT'd code. In-process execution only: the address is
-    // meaningless in an out-of-process executor.
-    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr();
-        EmuTLSGetAddress && TT.isOSBinFormatMachO())
+    // clang-repl lowers thread_local to emulated TLS on every target (see
+    // JITTargetMachineBuilder), so JIT'd code calls __emutls_get_address. When
+    // the host cannot resolve that symbol through process-symbol lookup
+    // (Darwin, and ELF toolchains that link compiler-rt builtins rather than
+    // libgcc_s), define the force-linked host symbol (see
+    // getEmuTLSGetAddressPtr) as an absolute symbol so it is visible to JIT'd
+    // code. This is harmless where process-symbol lookup would already resolve
+    // it: an already-defined symbol shadows the process-symbols generator.
+    // In-process execution only -- the host address is meaningless in an
+    // out-of-process executor.
+    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr())
       JITBuilder->setNotifyCreatedCallback(
           [EmuTLSGetAddress](llvm::orc::LLJIT &J) {
             auto &JD = J.getProcessSymbolsJITDylib()
@@ -430,12 +424,8 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   }
 
   llvm::Error Err = llvm::Error::success();
-  std::unique_ptr<IncrementalExecutor> Executor;
-#ifdef __EMSCRIPTEN__
-  Executor = std::make_unique<WasmIncrementalExecutor>(Err);
-#else
-  Executor = std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
-#endif
+  std::unique_ptr<IncrementalExecutor> Executor =
+      std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
 
   if (Err)
     return std::move(Err);

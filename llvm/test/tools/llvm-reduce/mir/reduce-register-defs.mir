@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-defs -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS0,ALL --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-defs -mtriple=amdgpu9.00-amd-amdhsa --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS0,ALL --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefixes=RESULT0,ALL %s < %t
 
 # ALL-LABEL: name: func0

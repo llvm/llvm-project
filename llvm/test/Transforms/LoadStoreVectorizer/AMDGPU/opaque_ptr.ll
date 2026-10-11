@@ -10,8 +10,8 @@ define i64 @order() {
 ; CHECK-LABEL: @order(
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr inbounds [[S:%.*]], ptr @S, i32 0, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[IDX0]], align 8
-; CHECK-NEXT:    [[L01:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
+; CHECK-NEXT:    [[L01:%.*]] = extractelement <2 x i64> [[TMP1]], i64 0
+; CHECK-NEXT:    [[L12:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[L01]], [[L12]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;

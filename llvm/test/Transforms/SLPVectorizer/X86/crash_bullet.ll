@@ -9,14 +9,14 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @_ZN23btGeneric6DofConstraint8getInfo1EPN17btTypedConstraint17btConstraintInfo1E(ptr nocapture %info, i1 %arg) {
 ; CHECK-LABEL: @_ZN23btGeneric6DofConstraint8getInfo1EPN17btTypedConstraint17btConstraintInfo1E(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[NUB5:%.*]] = getelementptr inbounds %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960", ptr [[INFO:%.*]], i64 0, i32 1
-; CHECK-NEXT:    br i1 %arg, label [[LAND_LHS_TRUE_I_1:%.*]], label [[IF_THEN7_1:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAND_LHS_TRUE_I_1:%.*]], label [[IF_THEN7_1:%.*]]
 ; CHECK:       land.lhs.true.i.1:
-; CHECK-NEXT:    br i1 %arg, label [[FOR_INC_1:%.*]], label [[IF_THEN7_1]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_INC_1:%.*]], label [[IF_THEN7_1]]
 ; CHECK:       if.then7.1:
 ; CHECK-NEXT:    store <2 x i32> <i32 1, i32 5>, ptr [[INFO]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC_1]]
@@ -69,16 +69,16 @@ define void @_ZN30GIM_TRIANGLE_CALCULATION_CACHE18triangle_collisionERK9btVector
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [[CLASS_GIM_TRIANGLE_CALCULATION_CACHE_9_34_69_94_119_144_179_189_264_284_332:%.*]], ptr [[THIS:%.*]], i64 0, i32 2, i64 0, i32 0, i64 1
 ; CHECK-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds [[CLASS_GIM_TRIANGLE_CALCULATION_CACHE_9_34_69_94_119_144_179_189_264_284_332]], ptr [[THIS]], i64 0, i32 2, i64 0, i32 0, i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX36]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float poison>, float [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float undef, float poison>, float [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], undef
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP2]], undef
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    store float [[TMP4]], ptr undef, align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[ARRAYIDX26]], align 4
-; CHECK-NEXT:    br i1 %arg, label [[IF_ELSE1609:%.*]], label [[IF_THEN1595:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_ELSE1609:%.*]], label [[IF_THEN1595:%.*]]
 ; CHECK:       if.then1595:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN:%.*]], label [[FOR_BODY_LR_PH_I_I1702:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN:%.*]], label [[FOR_BODY_LR_PH_I_I1702:%.*]]
 ; CHECK:       for.body.lr.ph.i.i1702:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.else1609:
@@ -117,31 +117,31 @@ return:                                           ; preds = %if.then1595
 define void @_Z8dBoxBox2RK9btVector3PKfS1_S1_S3_S1_RS_PfPiiP12dContactGeomiRN36btDiscreteCollisionDetectorInterface6ResultE(i1 %arg) {
 ; CHECK-LABEL: @_Z8dBoxBox2RK9btVector3PKfS1_S1_S3_S1_RS_PfPiiP12dContactGeomiRN36btDiscreteCollisionDetectorInterface6ResultE(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END111:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END111:%.*]]
 ; CHECK:       if.end111:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END136:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END136:%.*]]
 ; CHECK:       if.end136:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END162:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END162:%.*]]
 ; CHECK:       if.end162:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END189:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END189:%.*]]
 ; CHECK:       if.end189:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END216:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END216:%.*]]
 ; CHECK:       if.end216:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN218:%.*]], label [[IF_END225:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN218:%.*]], label [[IF_END225:%.*]]
 ; CHECK:       if.then218:
 ; CHECK-NEXT:    br label [[IF_END225]]
 ; CHECK:       if.end225:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END248:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END248:%.*]]
 ; CHECK:       if.end248:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END304:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END304:%.*]]
 ; CHECK:       if.end304:
-; CHECK-NEXT:    br i1 %arg, label [[RETURN]], label [[IF_END361:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[RETURN]], label [[IF_END361:%.*]]
 ; CHECK:       if.end361:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN370:%.*]], label [[IF_END395:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN370:%.*]], label [[IF_END395:%.*]]
 ; CHECK:       if.then370:
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN374:%.*]], label [[IF_END395]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN374:%.*]], label [[IF_END395]]
 ; CHECK:       if.then374:
 ; CHECK-NEXT:    br label [[IF_END395]]
 ; CHECK:       if.end395:

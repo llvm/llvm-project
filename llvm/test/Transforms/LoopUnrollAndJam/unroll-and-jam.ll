@@ -28,7 +28,7 @@ define void @test1(i32 %N, i32 %M, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[I]], 3
 ; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[I]], 4
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw i32 [[NITER]], 4
 ; CHECK-NEXT:    br label %[[FOR_INNER:.*]]
 ; CHECK:       [[FOR_INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[FOR_OUTER]] ], [ [[INC:%.*]], %[[FOR_INNER]] ]
@@ -1128,7 +1128,7 @@ define void @test9(i32 %N, i32 %M, ptr nocapture %A, ptr nocapture readonly %B) 
 ; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[I]], 3
 ; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[I]], 4
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw i32 [[NITER]], 4
 ; CHECK-NEXT:    br label %[[FOR_INNER:.*]]
 ; CHECK:       [[FOR_INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[FOR_OUTER]] ], [ [[INC:%.*]], %[[FOR_INNER]] ]

@@ -19,6 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
@@ -69,6 +70,10 @@ inline unsigned getFunctionOrMethodNumParams(const Decl *D) {
   return cast<ObjCMethodDecl>(D)->param_size();
 }
 
+/// getFunctionOrMethodParam - Return parameter declaration for the given index
+/// of the passed Decl, which must have a FunctionProtoType. When the Decl is
+/// not a FunctionDecl/ObjCMethodDecl/BlockDecl, do best effort to find
+/// underlying FunctionProtoType using the Decl's TypeSourceInfo.
 inline const ParmVarDecl *getFunctionOrMethodParam(const Decl *D,
                                                    unsigned Idx) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
@@ -77,6 +82,33 @@ inline const ParmVarDecl *getFunctionOrMethodParam(const Decl *D,
     return MD->getParamDecl(Idx);
   if (const auto *BD = dyn_cast<BlockDecl>(D))
     return BD->getParamDecl(Idx);
+
+  // Handle declarations that do not directly own parameters but have an
+  // underlying FunctionProtoType (e.g. function pointers).
+  const TypeSourceInfo *TSI = nullptr;
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D))
+    TSI = DD->getTypeSourceInfo();
+  else if (const auto *TD = dyn_cast<TypedefNameDecl>(D))
+    TSI = TD->getTypeSourceInfo();
+
+  if (!TSI)
+    return nullptr;
+
+  TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+
+  if (auto PTL = TL.getAsAdjusted<PointerTypeLoc>())
+    TL = PTL.getPointeeLoc();
+  else if (auto MPTL = TL.getAsAdjusted<MemberPointerTypeLoc>())
+    TL = MPTL.getPointeeLoc();
+  else if (auto RTL = TL.getAsAdjusted<ReferenceTypeLoc>())
+    TL = RTL.getPointeeLoc();
+  else if (auto BPTL = TL.getAsAdjusted<BlockPointerTypeLoc>())
+    TL = BPTL.getPointeeLoc();
+
+  if (auto FPTL = TL.getAsAdjusted<FunctionProtoTypeLoc>())
+    if (Idx < FPTL.getNumParams())
+      return FPTL.getParam(Idx);
+
   return nullptr;
 }
 

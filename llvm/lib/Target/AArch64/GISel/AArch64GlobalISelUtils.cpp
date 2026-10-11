@@ -9,11 +9,13 @@
 /// GlobalISel pipeline.
 //===----------------------------------------------------------------------===//
 #include "AArch64GlobalISelUtils.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstrTypes.h"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 std::optional<RegOrConstant>
 AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
@@ -110,21 +112,21 @@ AArch64GISelUtils::extractPtrauthBlendDiscriminators(Register Disc,
   if (auto ConstDiscVal = getIConstantVRegVal(Disc, MRI)) {
     if (isUInt<16>(ConstDiscVal->getZExtValue())) {
       ConstDisc = ConstDiscVal->getZExtValue();
-      AddrDisc = AArch64::NoRegister;
+      AddrDisc = Register();
     }
     return std::make_tuple(ConstDisc, AddrDisc);
   }
 
-  const MachineInstr *DiscMI = MRI.getVRegDef(Disc);
-  if (!DiscMI || DiscMI->getOpcode() != TargetOpcode::G_INTRINSIC ||
-      DiscMI->getOperand(1).getIntrinsicID() != Intrinsic::ptrauth_blend)
+  Register BlendAddrDisc, BlendConstDisc;
+  if (!mi_match(Disc, MRI,
+                m_GIntrinsic<Intrinsic::ptrauth_blend>(m_Reg(BlendAddrDisc),
+                                                       m_Reg(BlendConstDisc))))
     return std::make_tuple(ConstDisc, AddrDisc);
 
-  if (auto ConstDiscVal =
-          getIConstantVRegVal(DiscMI->getOperand(3).getReg(), MRI)) {
+  if (auto ConstDiscVal = getIConstantVRegVal(BlendConstDisc, MRI)) {
     if (isUInt<16>(ConstDiscVal->getZExtValue())) {
       ConstDisc = ConstDiscVal->getZExtValue();
-      AddrDisc = DiscMI->getOperand(2).getReg();
+      AddrDisc = BlendAddrDisc;
     }
   }
   return std::make_tuple(ConstDisc, AddrDisc);

@@ -39,35 +39,35 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-    m_current_value.Clear();
-    m_value_was_set = false;
-  }
-
   bool IsAggregateValue() const override { return true; }
 
   // Subclass specific functions
 
   FileSpecList GetCurrentValue() const {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     return m_current_value;
   }
 
   void SetCurrentValue(const FileSpecList &value) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     m_current_value = value;
   }
 
   void AppendCurrentValue(const FileSpec &value) {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> lock(m_rmutex);
     m_current_value.Append(value);
   }
 
 protected:
   lldb::OptionValueSP Clone() const override;
 
-  mutable std::recursive_mutex m_mutex;
+  void ClearImpl() override {
+    m_current_value.Clear();
+    m_value_was_set = false;
+  }
+  // FIXME: This could use the existing m_mutex from the OptionValue
+  // parent class, but needs clean up in callsites to avoid deadlock.
+  mutable std::recursive_mutex m_rmutex;
   FileSpecList m_current_value;
 };
 

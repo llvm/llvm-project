@@ -1,5 +1,13 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
-// RUN: %clangxx %sycl_options %s -o %t.out
+// RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 //
 // Tests platform::get_devices for each device type.
@@ -7,9 +15,12 @@
 #include <sycl/sycl.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <iostream>
+#include <string>
+#include <vector>
 
-std::string BackendToString(sycl::backend Backend) {
+std::string backendToString(sycl::backend Backend) {
   switch (Backend) {
   case sycl::backend::opencl:
     return "opencl";
@@ -24,7 +35,7 @@ std::string BackendToString(sycl::backend Backend) {
   }
 }
 
-std::string DeviceTypeToString(sycl::info::device_type DevType) {
+std::string deviceTypeToString(sycl::info::device_type DevType) {
   switch (DevType) {
   case sycl::info::device_type::all:
     return "device_type::all";
@@ -45,14 +56,14 @@ std::string DeviceTypeToString(sycl::info::device_type DevType) {
   }
 }
 
-std::string GenerateDeviceDescription(sycl::info::device_type DevType,
+std::string generateDeviceDescription(sycl::info::device_type DevType,
                                       const sycl::platform &Platform) {
-  return std::string(DeviceTypeToString(DevType)) + " (" +
-         BackendToString(Platform.get_backend()) + ")";
+  return std::string(deviceTypeToString(DevType)) + " (" +
+         backendToString(Platform.get_backend()) + ")";
 }
 
 template <typename T1, typename T2>
-int Check(const T1 &LHS, const T2 &RHS, std::string TestName) {
+int check(const T1 &LHS, const T2 &RHS, std::string TestName) {
   if (LHS == RHS)
     return 0;
 
@@ -61,7 +72,7 @@ int Check(const T1 &LHS, const T2 &RHS, std::string TestName) {
   return 1;
 }
 
-int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
+int checkDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
                     std::vector<sycl::device> &AllDevices) {
   // This check verifies data of device with specific device_type and if it is
   // correctly chosen among all devices (device_type::all).
@@ -73,14 +84,14 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
 
   if (DevType == sycl::info::device_type::automatic) {
     if (AllDevices.empty()) {
-      Failures += Check(Devices.size(), 0,
+      Failures += check(Devices.size(), 0,
                         "No devices reported for device_type::all query, but "
                         "device_type::automatic returns a device.");
     } else {
-      Failures += Check(Devices.size(), 1,
+      Failures += check(Devices.size(), 1,
                         "Number of devices for device_type::automatic query.");
       if (Devices.size())
-        Failures += Check(
+        Failures += check(
             std::count(AllDevices.begin(), AllDevices.end(), Devices[0]), 1,
             "Device is in the set of device_type::all devices in the "
             "platform.");
@@ -93,18 +104,18 @@ int CheckDeviceType(const sycl::platform &P, sycl::info::device_type DevType,
   for (sycl::device Device : Devices)
     DevCount += (Device.get_info<sycl::info::device::device_type>() == DevType);
 
-  Failures += Check(Devices.size(), DevCount,
+  Failures += check(Devices.size(), DevCount,
                     "Unexpected number of devices for " +
-                        GenerateDeviceDescription(DevType, P));
+                        generateDeviceDescription(DevType, P));
 
   Failures +=
-      Check(std::all_of(Devices.begin(), Devices.end(),
+      check(std::all_of(Devices.begin(), Devices.end(),
                         [&](const auto &Dev) {
                           return std::count(AllDevices.begin(),
                                             AllDevices.end(), Dev) == 1;
                         }),
             true,
-            "Not all devices for " + GenerateDeviceDescription(DevType, P) +
+            "Not all devices for " + generateDeviceDescription(DevType, P) +
                 " appear in the list of all devices");
 
   return Failures;
@@ -119,7 +130,7 @@ int main() {
          {sycl::info::device_type::cpu, sycl::info::device_type::gpu,
           sycl::info::device_type::accelerator, sycl::info::device_type::custom,
           sycl::info::device_type::automatic, sycl::info::device_type::host})
-      Failures += CheckDeviceType(P, DevType, Devices);
+      Failures += checkDeviceType(P, DevType, Devices);
   }
   return Failures;
 }

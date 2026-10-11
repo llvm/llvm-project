@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ;
 ; This test used to crash with the following assertion:
 ; llc: include/llvm/ADT/IntervalMap.h:632: unsigned int llvm::IntervalMapImpl::LeafNode<llvm::SlotIndex, llvm::LiveInterval *, 8, llvm::IntervalMapInfo<llvm::SlotIndex> >::insertFrom(unsigned int &, unsigned int, KeyT, KeyT, ValT) [KeyT = llvm::SlotIndex, ValT = llvm::LiveInterval *, N = 8, Traits = llvm::IntervalMapInfo<llvm::SlotIndex>]: Assertion `(i == Size || Traits::stopLess(b, start(i))) && "Overlapping insert"' failed.
@@ -104,7 +104,7 @@ declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
 declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
 
-attributes #0 = { nounwind "InitialPSInputAddr"="36983" "target-cpu"="tonga" }
+attributes #0 = { nounwind "InitialPSInputAddr"="36983" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind }

@@ -2961,7 +2961,7 @@ public:
       return "";
 
     ModuleSP module_sp = target->GetExecutableModule();
-    if (!module_sp->IsExecutable())
+    if (!module_sp)
       return "";
 
     return module_sp->GetFileSpec().GetFilename().str();
@@ -3444,6 +3444,8 @@ public:
                               /*adopt_dummy_target=*/false)
                           .GetTargetSP();
     ModuleSP executable_module = target->GetExecutableModule();
+    if (!executable_module)
+      return;
     llvm::StringRef target_settings_argv0 = target->GetArg0();
 
     if (!target_settings_argv0.empty()) {
@@ -4347,7 +4349,8 @@ public:
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
-    ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
+    llvm::StringRef broadcaster_class_process(
+        Process::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
     m_update_screen = true;
@@ -4424,8 +4427,7 @@ public:
             if (event_sp) {
               Broadcaster *broadcaster = event_sp->GetBroadcaster();
               if (broadcaster) {
-                // uint32_t event_type = event_sp->GetType();
-                ConstString broadcaster_class(
+                llvm::StringRef broadcaster_class(
                     broadcaster->GetBroadcasterClass());
                 if (broadcaster_class == broadcaster_class_process) {
                   m_update_screen = true;
@@ -6927,9 +6929,9 @@ public:
         m_sc = frame_sp->GetSymbolContext(eSymbolContextEverything);
         if (m_sc.module_sp) {
           m_title.Format("{0}", m_sc.module_sp->GetFileSpec().GetFilename());
-          ConstString func_name = m_sc.GetFunctionName();
-          if (func_name)
-            m_title.Printf("`%s", func_name.GetCString());
+          llvm::StringRef func_name = m_sc.GetFunctionName().GetStringRef();
+          if (!func_name.empty())
+            m_title.Format("`{0}", func_name);
         }
         const uint32_t frame_idx = frame_sp->GetFrameIndex();
         frame_changed = frame_idx != m_frame_idx;
@@ -7254,7 +7256,7 @@ public:
           else if (mnemonic != nullptr && operands != nullptr)
             strm.Printf("%-8s %s", mnemonic, operands);
           else if (mnemonic != nullptr)
-            strm.Printf("%s", mnemonic);
+            strm.PutCString(mnemonic);
 
           int right_pad = 1;
           window.PutCStringTruncated(

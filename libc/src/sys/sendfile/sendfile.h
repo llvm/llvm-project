@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SYS_SENDFILE_SENDFILE_H
 #define LLVM_LIBC_SRC_SYS_SENDFILE_SENDFILE_H
 
+#include "hdr/types/off_t.h"
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/macros/config.h"
-#include <sys/sendfile.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -4,8 +4,8 @@
 define <2 x float> @v2f32_diff_consts(float %a, float %b)
 ; CHECK-LABEL: define <2 x float> @v2f32_diff_consts(
 ; CHECK-SAME: float [[A:%.*]], float [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], <float 2.200000e+01, float 2.300000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[TMP3]]
 ;
@@ -20,8 +20,8 @@ define <2 x float> @v2f32_diff_consts(float %a, float %b)
 define <2 x float> @v2f32_const_splat(float %a, float %b)
 ; CHECK-LABEL: define <2 x float> @v2f32_const_splat(
 ; CHECK-SAME: float [[A:%.*]], float [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], splat (float 2.200000e+01)
 ; CHECK-NEXT:    ret <2 x float> [[TMP3]]
 ;
@@ -36,10 +36,10 @@ define <2 x float> @v2f32_const_splat(float %a, float %b)
 define <4 x double> @v4f64_illegal_type(double %a, double %b, double %c, double %d)
 ; CHECK-LABEL: define <4 x double> @v4f64_illegal_type(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[B]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[D]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[D]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x double> [[TMP4]], <double 2.100000e+01, double 2.200000e+01, double 2.300000e+01, double 2.400000e+01>
 ; CHECK-NEXT:    ret <4 x double> [[TMP5]]
 ;
@@ -58,11 +58,11 @@ define <4 x double> @v4f64_illegal_type(double %a, double %b, double %c, double 
 define <2 x double> @v2f64_dup_const_vector_case1(double %a, double %b, double %c, double %d)
 ; CHECK-LABEL: define <2 x double> @v2f64_dup_const_vector_case1(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 2.100000e+01, double 2.200000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[D]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[D]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP5]], <double 2.100000e+01, double 2.200000e+01>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP7]]
@@ -83,8 +83,8 @@ define <2 x double> @v2f64_dup_const_vector_case1(double %a, double %b, double %
 define <2 x double> @v2f64_dup_const_vector_case2(double %a, double %b, double %c, double %d)
 ; CHECK-LABEL: define <2 x double> @v2f64_dup_const_vector_case2(
 ; CHECK-SAME: double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 2.100000e+01, double 2.200000e+01>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], <double 2.100000e+01, double 2.200000e+01>
 ; CHECK-NEXT:    ret <2 x double> [[TMP4]]

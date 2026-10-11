@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
+; RUN: llc -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s
 
 ; GCN-LABEL: {{^}}load.f32.1d:
 ; GFX9: image_load v0, v0, s[0:7] dmask:0x1 unorm a16

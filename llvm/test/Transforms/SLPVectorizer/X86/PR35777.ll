@@ -9,7 +9,7 @@ define { i64, i64 } @patatino(double %arg) {
 ; CHECK-NEXT:    [[VEC2STRUCT_SLOT:%.*]] = alloca { i64, i64 }, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr @global, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([6 x double], ptr @global, i64 0, i64 2), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[ARG:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP0]], [[TMP4]]

@@ -1,4 +1,4 @@
-; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=fiji -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel -mtriple=amdgpu8.03 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; This asm is broken because it's using a 5 element wide physical
 ; register for a 4 element wide value. Make sure we don't crash, and

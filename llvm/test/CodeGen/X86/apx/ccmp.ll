@@ -2103,16 +2103,16 @@ define i32 @ccmp_cmov_and(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: ccmp_cmov_and:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; CHECK-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
-; CHECK-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
-; CHECK-NEXT:    cmovll %esi, %eax # encoding: [0x0f,0x4c,0xc6]
+; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    cmovnel %esi, %eax # encoding: [0x0f,0x45,0xc6]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NDD-LABEL: ccmp_cmov_and:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
-; NDD-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
-; NDD-NEXT:    cmovll %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4c,0xfe]
+; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    cmovnel %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xfe]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; ZU_COMMON-LABEL: ccmp_cmov_and:
@@ -2136,17 +2136,17 @@ define i32 @ccmp_cmov_and_or(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: ccmp_cmov_and_or:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; CHECK-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
-; CHECK-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
-; CHECK-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
+; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
 ; CHECK-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NDD-LABEL: ccmp_cmov_and_or:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
-; NDD-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
-; NDD-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
+; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
 ; NDD-NEXT:    cmovgl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4f,0xfe]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
@@ -2176,17 +2176,17 @@ define i32 @ccmp_cmov_and_or_c(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: ccmp_cmov_and_or_c:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
-; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
-; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
-; CHECK-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
+; CHECK-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; CHECK-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
+; CHECK-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
 ; CHECK-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NDD-LABEL: ccmp_cmov_and_or_c:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
-; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
-; NDD-NEXT:    ccmpel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x04,0x39,0xcf]
+; NDD-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; NDD-NEXT:    ccmpnel {dfv=} %edx, %edi # encoding: [0x62,0xf4,0x04,0x05,0x39,0xd7]
+; NDD-NEXT:    ccmpgel {dfv=} %ecx, %edi # encoding: [0x62,0xf4,0x04,0x0d,0x39,0xcf]
 ; NDD-NEXT:    cmovgl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4f,0xfe]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
@@ -2207,6 +2207,48 @@ entry:
   %cmp3 = icmp sgt i32 %a, %d
   %or = or i1 %cmp3, %and
   %sel = select i1 %or, i32 %b, i32 %a
+  ret i32 %sel
+}
+
+; (b != d) && ((a < c) || (a > d)): OR nested inside an AND. This shape needs
+; the De Morgan negation bookkeeping in the CCMP conjunction emitter; a naive
+; emitter miscompiles it (the inner OR wrongly forces the result true when the
+; AND's left operand is false).
+define i32 @ccmp_cmov_and_of_or(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: ccmp_cmov_and_of_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; CHECK-NEXT:    ccmplel {dfv=sf} %edx, %edi # encoding: [0x62,0xf4,0x24,0x0e,0x39,0xd7]
+; CHECK-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; CHECK-NEXT:    cmovnel %esi, %eax # encoding: [0x0f,0x45,0xc6]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp_cmov_and_of_or:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; NDD-NEXT:    ccmplel {dfv=sf} %edx, %edi # encoding: [0x62,0xf4,0x24,0x0e,0x39,0xd7]
+; NDD-NEXT:    ccmpll {dfv=zf} %ecx, %esi # encoding: [0x62,0xf4,0x14,0x0c,0x39,0xce]
+; NDD-NEXT:    cmovnel %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xfe]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; ZU_COMMON-LABEL: ccmp_cmov_and_of_or:
+; ZU_COMMON:       # %bb.0: # %entry
+; ZU_COMMON-NEXT:    cmpl %ecx, %edi # encoding: [0x39,0xcf]
+; ZU_COMMON-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; ZU_COMMON-NEXT:    cmovgl %esi, %eax # encoding: [0x0f,0x4f,0xc6]
+; ZU_COMMON-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
+; ZU_COMMON-NEXT:    cmovll %esi, %eax # encoding: [0x0f,0x4c,0xc6]
+; ZU_COMMON-NEXT:    cmpl %ecx, %esi # encoding: [0x39,0xce]
+; ZU_COMMON-NEXT:    cmovel %edi, %eax # encoding: [0x0f,0x44,0xc7]
+; ZU_COMMON-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp1 = icmp ne i32 %b, %d
+  %cmp2 = icmp slt i32 %a, %c
+  %cmp3 = icmp sgt i32 %a, %d
+  %or = or i1 %cmp2, %cmp3
+  %and = and i1 %cmp1, %or
+  %sel = select i1 %and, i32 %b, i32 %a
   ret i32 %sel
 }
 

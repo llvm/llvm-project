@@ -17,7 +17,6 @@
 
 struct PlatformConnectOptions;
 struct PlatformShellCommand;
-class ProcessInstanceInfoMatch;
 
 namespace lldb {
 

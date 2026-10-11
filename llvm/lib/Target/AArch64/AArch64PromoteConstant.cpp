@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -40,7 +41,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -49,10 +49,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-promote-const"
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("aarch64-stress-promote-const", cl::Hidden,
-                            cl::desc("Promote all vector constants"));
 
 STATISTIC(NumPromoted, "Number of promoted constants");
 STATISTIC(NumPromotedUses, "Number of promoted constants uses");
@@ -136,7 +132,6 @@ private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 
   /// Type to store a list of Uses.
@@ -349,7 +344,7 @@ static bool shouldConvertImpl(const Constant *Cst) {
   if (Cst->getType()->isScalableTy())
     return false;
 
-  if (Stress)
+  if (AArch64Options::Global.stress_promote_const)
     return true;
 
   // FIXME: see function \todo

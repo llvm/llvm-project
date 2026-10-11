@@ -10,11 +10,11 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
 
 #include "Plugins/Process/Utility/RegisterInfoPOSIXDynamic_riscv32.h"
-
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include <memory>
 
@@ -65,6 +65,10 @@ protected:
   BuildDynamicRegister(const lldb_private::RegisterInfo &reg_info,
                        const lldb_private::ConstString &set_name,
                        uint32_t byte_offset);
+
+  /// Retrieves enabled RISC-V ISA extension feature names from the module's
+  /// ArchSpec.
+  void GetFeatures(llvm::SmallVectorImpl<std::string> &features) const;
 
 private:
   std::unique_ptr<RegisterInfoPOSIXDynamic_riscv32> m_reg_infos_up;

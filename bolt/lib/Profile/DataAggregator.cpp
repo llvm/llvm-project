@@ -57,12 +57,7 @@ static cl::alias BasicAggregationAlias("ba",
 
 static cl::opt<bool> DeprecatedBasicAggregationNl(
     "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
-    cl::cat(AggregatorCategory), cl::ReallyHidden,
-    cl::callback([](const bool &Enabled) {
-      errs()
-          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
-      BasicAggregation = Enabled;
-    }));
+    cl::cat(AggregatorCategory), cl::ReallyHidden);
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
@@ -84,23 +79,22 @@ static cl::opt<bool> ParseMemProfile(
              "on by default unless `--itrace` is set."),
     cl::init(true), cl::cat(AggregatorCategory));
 
-static cl::opt<unsigned long long>
-FilterPID("pid",
-  cl::desc("only use samples from process with specified PID"),
-  cl::init(0),
-  cl::Optional,
-  cl::cat(AggregatorCategory));
+static cl::list<unsigned long long>
+    FilterPID("pid",
+              cl::desc("only use samples from process with specified PID(s) "
+                       "(comma-separated)"),
+              cl::CommaSeparated, cl::cat(AggregatorCategory));
 
 static cl::opt<bool> ImputeTraceFallthrough(
     "impute-trace-fall-through",
     cl::desc("impute missing fall-throughs for branch-only traces"),
-    cl::Optional, cl::cat(AggregatorCategory));
+    cl::cat(AggregatorCategory));
 
-static cl::opt<bool>
-IgnoreBuildID("ignore-build-id",
-  cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
-  cl::init(false),
-  cl::cat(AggregatorCategory));
+cl::opt<bool> IgnoreBuildID(
+    "ignore-build-id",
+    cl::desc(
+        "continue even if build-ids in input binary and perf.data mismatch"),
+    cl::init(false), cl::cat(AggregatorCategory));
 
 static cl::opt<bool> IgnoreInterruptLBR(
     "ignore-interrupt-lbr",
@@ -111,7 +105,6 @@ static cl::opt<unsigned long long>
 MaxSamples("max-samples",
   cl::init(-1ULL),
   cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
@@ -140,7 +133,6 @@ static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
   cl::init(false),
-  cl::ZeroOrMore,
   cl::cat(AggregatorCategory));
 
 } // namespace opts
@@ -387,13 +379,20 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     return;
   }
 
+  if (opts::IgnoreBuildID) {
+    errs() << "PERF2BOLT-WARNING: failed to match build-id from perf output, "
+              "continuing because -ignore-build-id was requested. The profile "
+              "will be meaningless if the perf data was not recorded for this "
+              "binary.\n";
+    return;
+  }
+
   errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
             "This indicates the input binary supplied for data aggregation "
             "is not the same recorded by perf when collecting profiling "
             "data, or there were no samples recorded for the binary. "
             "Use -ignore-build-id option to override.\n";
-  if (!opts::IgnoreBuildID)
-    abort();
+  abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
@@ -622,18 +621,27 @@ Error DataAggregator::generatePerfScriptData() {
 }
 
 Error DataAggregator::filterBinaryMMapInfo() {
-  if (opts::FilterPID) {
-    auto MMapInfoIter = BinaryMMapInfo.find(opts::FilterPID);
-    if (MMapInfoIter != BinaryMMapInfo.end()) {
-      MMapInfo MMap = MMapInfoIter->second;
-      BinaryMMapInfo.clear();
-      BinaryMMapInfo.insert(std::make_pair(MMap.PID, MMap));
-    } else {
+  if (!opts::FilterPID.empty()) {
+    std::unordered_map<uint64_t, MMapInfo> FilteredMMapInfo;
+    for (unsigned long long PID : opts::FilterPID) {
+      auto MMapInfoIter = BinaryMMapInfo.find(PID);
+      if (MMapInfoIter != BinaryMMapInfo.end())
+        FilteredMMapInfo.insert(*MMapInfoIter);
+    }
+    if (FilteredMMapInfo.empty()) {
       if (errs().has_colors())
         errs().changeColor(raw_ostream::RED);
-      errs() << "PERF2BOLT-ERROR: could not find a profile matching PID \""
-             << opts::FilterPID << "\""
-             << " for binary \"" << BC->getFilename() << "\".";
+      errs() << "PERF2BOLT-ERROR: could not find a profile matching ";
+      if (opts::FilterPID.size() == 1) {
+        errs() << "PID \"" << opts::FilterPID[0] << "\"";
+      } else {
+        errs() << "any requested PID(s) \"";
+        for (size_t I = 0; I < opts::FilterPID.size(); ++I)
+          errs() << opts::FilterPID[I]
+                 << (I == opts::FilterPID.size() - 1 ? "" : ",");
+        errs() << "\"";
+      }
+      errs() << " for binary \"" << BC->getFilename() << "\".";
       assert(!BinaryMMapInfo.empty() && "No memory map for matching binary");
       errs() << " Profile for the following process is available:\n";
       for (std::pair<const uint64_t, MMapInfo> &MMI : BinaryMMapInfo)
@@ -646,6 +654,7 @@ Error DataAggregator::filterBinaryMMapInfo() {
       return createStringError(std::errc::not_supported,
                                "could not find a profile matching PID");
     }
+    BinaryMMapInfo = std::move(FilteredMMapInfo);
   }
   return Error::success();
 }
@@ -908,6 +917,11 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Turn on heatmap building if requested by --heatmap flag.
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
     opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
+  if (opts::DeprecatedBasicAggregationNl.getNumOccurrences()) {
+    errs() << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+    opts::BasicAggregation = opts::DeprecatedBasicAggregationNl;
+  }
 
   this->BC = &BC;
 
@@ -1750,7 +1764,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
   opts::HeatmapBlockSizes &HMBS = opts::HeatmapBlock;
-  Heatmap HM(HMBS[0], opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
+  Heatmap HM(HMBS[0].Value, opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
              getTextSections(BC));
   auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
     if (Symbol)
@@ -1792,19 +1806,21 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   HM.print(opts::HeatmapOutput);
   if (opts::HeatmapOutput == "-") {
-    HM.printCDF(opts::HeatmapOutput);
+    HM.printCDF(opts::HeatmapOutput, HMBS.front().Spec);
     HM.printSectionHotness(opts::HeatmapOutput);
   } else {
-    HM.printCDF(opts::HeatmapOutput + ".csv");
+    HM.printCDF(opts::HeatmapOutput + ".csv", HMBS.front().Spec);
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
   }
   // Provide coarse-grained heatmaps if requested via zoom-out scales
-  for (const uint64_t NewBucketSize : ArrayRef(HMBS).drop_front()) {
+  for (const auto &[NewBucketSize, Label] : ArrayRef(HMBS).drop_front()) {
     HM.resizeBucket(NewBucketSize);
     if (opts::HeatmapOutput == "-")
       HM.print(opts::HeatmapOutput);
     else
       HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
+    // Working set only; the table is emitted once, at the finest granularity.
+    HM.printCDF(nulls(), Label);
   }
 
   return std::error_code();
@@ -2206,7 +2222,7 @@ std::optional<DataAggregator::ForkInfo> DataAggregator::parseForkEvent() {
   return FI;
 }
 
-ErrorOr<std::pair<StringRef, DataAggregator::MMapInfo>>
+ErrorOr<std::tuple<StringRef, StringRef, DataAggregator::MMapInfo>>
 DataAggregator::parseMMapEvent() {
   while (checkAndConsumeFS()) {
   }
@@ -2224,7 +2240,7 @@ DataAggregator::parseMMapEvent() {
   size_t Pos = Line.find("PERF_RECORD_MMAP2");
   if (Pos == StringRef::npos) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
 
   // Line:
@@ -2238,12 +2254,13 @@ DataAggregator::parseMMapEvent() {
   Line = Line.drop_front(Pos);
 
   // Line:
-  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
+  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) @ <hexoffset>
+  //   \<<buildid>\>]: .* <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
   if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
   FileName = sys::path::filename(FileName);
 
@@ -2276,9 +2293,11 @@ DataAggregator::parseMMapEvent() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  const StringRef BuildId = Line.split('<').second.split('>').first;
+
   consumeRestOfLine();
 
-  return std::make_pair(FileName, ParsedInfo);
+  return std::make_tuple(FileName, BuildId, ParsedInfo);
 }
 
 std::error_code DataAggregator::parseMMapEvents() {
@@ -2287,26 +2306,30 @@ std::error_code DataAggregator::parseMMapEvents() {
                      TimerGroupDesc, opts::TimeAggregator);
 
   std::multimap<StringRef, MMapInfo> GlobalMMapInfo;
+  std::multimap<StringRef, MMapInfo *> BuildIdMMapInfo;
   while (hasData()) {
-    ErrorOr<std::pair<StringRef, MMapInfo>> FileMMapInfoRes = parseMMapEvent();
+    ErrorOr<std::tuple<StringRef, StringRef, MMapInfo>> FileMMapInfoRes =
+        parseMMapEvent();
     if (std::error_code EC = FileMMapInfoRes.getError())
       return EC;
 
-    std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
-    if (FileMMapInfo.second.PID == -1)
+    auto [File, BuildId, MMapInfo] = FileMMapInfoRes.get();
+    if (MMapInfo.PID == -1)
       continue;
-    if (FileMMapInfo.first == "(deleted)")
+    if (File == "(deleted)")
       continue;
 
-    GlobalMMapInfo.insert(FileMMapInfo);
+    auto It = GlobalMMapInfo.emplace(File, MMapInfo);
+    if (!BuildId.empty())
+      BuildIdMMapInfo.emplace(BuildId, &It->second);
   }
 
   LLVM_DEBUG({
     dbgs() << "FileName -> mmap info:\n"
-           << "  Filename : PID [MMapAddr, Size, Offset]\n";
-    for (const auto &[Name, MMap] : GlobalMMapInfo)
-      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", Name, MMap.PID,
-                        MMap.MMapAddress, MMap.Size, MMap.Offset);
+           << "  FileName : PID [MMapAddr, Size, Offset]\n";
+    for (const auto &[FileName, MMap] : GlobalMMapInfo)
+      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", FileName,
+                        MMap.PID, MMap.MMapAddress, MMap.Size, MMap.Offset);
   });
 
   StringRef NameToUse = llvm::sys::path::filename(BC->getFilename());
@@ -2316,8 +2339,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     NameToUse = BuildIDBinaryName;
   }
 
-  auto Range = GlobalMMapInfo.equal_range(NameToUse);
-  for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
+  auto matchMMapInfo = [&](MMapInfo &MMapInfo) {
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
       bool MatchFound = llvm::any_of(
@@ -2334,7 +2356,7 @@ std::error_code DataAggregator::parseMMapEvents() {
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
                << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
-        continue;
+        return;
       }
     }
 
@@ -2348,7 +2370,7 @@ std::error_code DataAggregator::parseMMapEvents() {
                << Twine::utohexstr(MMapInfo.MMapAddress)
                << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
                << ". Ignoring profile data for this mapping\n";
-        continue;
+        return;
       }
       MMapInfo.BaseAddress = *BaseAddress;
     }
@@ -2365,6 +2387,17 @@ std::error_code DataAggregator::parseMMapEvents() {
     const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
     if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
+  };
+
+  std::optional<StringRef> BuildId = BC->getFileBuildID();
+  if (!opts::IgnoreBuildID && BuildId && BuildIdMMapInfo.count(*BuildId) > 0) {
+    auto Range = BuildIdMMapInfo.equal_range(*BuildId);
+    for (MMapInfo *MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(*MMapInfo);
+  } else {
+    auto Range = GlobalMMapInfo.equal_range(NameToUse);
+    for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(MMapInfo);
   }
 
   if (BinaryMMapInfo.empty()) {

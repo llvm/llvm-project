@@ -73,6 +73,8 @@ public:
       function_ref<bool(const CodeGenIntrinsic &Int)> GetProperty);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitImmArgRangeSetChecks(const CodeGenIntrinsicTable &Ints,
+                                raw_ostream &OS);
   void EmitPrettyPrintArguments(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
   void EmitDefaultArgValuesTable(const CodeGenIntrinsicTable &Ints,
@@ -129,6 +131,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic parameter attributes.
     EmitAttributes(Ints, OS);
+
+    // Emit immediate argument range-set checks.
+    EmitImmArgRangeSetChecks(Ints, OS);
 
     // Emit the intrinsic ID -> pretty print table.
     EmitIntrinsicToPrettyPrintTable(Ints, OS);
@@ -577,6 +582,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Dereferenceable";
   case CodeGenIntrinsic::Range:
     return "Range";
+  case CodeGenIntrinsic::NoFreeObj:
+    return "NoFreeObj";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -886,6 +893,133 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
                 NoFunctionAttrsID);
 }
 
+void IntrinsicEmitter::EmitImmArgRangeSetChecks(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  using ImmArgRangeSet = CodeGenIntrinsic::ImmArgRangeSet;
+  struct RangeSetInfo {
+    uint32_t ArgNo;
+    uint32_t RangesStart;
+    uint32_t NumRanges;
+  };
+  struct RangeSetListInfo {
+    uint32_t RangeSetsStart;
+    uint32_t NumRangeSets;
+  };
+
+  SequenceToOffsetTable<ImmArgRangeSet::RangeList> RangeTable(
+      /*Terminator=*/std::nullopt);
+
+  for (const CodeGenIntrinsic &Int : Ints) {
+    for (const ImmArgRangeSet &RangeSet : Int.ImmArgRangeSets)
+      RangeTable.add(RangeSet.Ranges);
+  }
+
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS");
+  if (RangeTable.empty()) {
+    OS << R"(
+bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                        const APInt &Value) {
+  return true;
+}
+)";
+    return;
+  }
+
+  RangeTable.layout();
+
+  std::vector<RangeSetInfo> RangeSetInfos;
+  std::vector<RangeSetListInfo> PerIntrinsicRangeSetInfos;
+  PerIntrinsicRangeSetInfos.reserve(Ints.size() + 1);
+  PerIntrinsicRangeSetInfos.push_back({0, 0}); // not_intrinsic
+
+  for (const CodeGenIntrinsic &Int : Ints) {
+    uint32_t Start = static_cast<uint32_t>(RangeSetInfos.size());
+    for (const ImmArgRangeSet &RangeSet : Int.ImmArgRangeSets)
+      RangeSetInfos.push_back({RangeSet.ArgNo, RangeTable.get(RangeSet.Ranges),
+                               static_cast<uint32_t>(RangeSet.Ranges.size())});
+    PerIntrinsicRangeSetInfos.push_back(
+        {Start, static_cast<uint32_t>(Int.ImmArgRangeSets.size())});
+  }
+
+  OS << R"(
+namespace {
+struct ImmArgRange {
+  int64_t Lower, Upper;
+};
+
+struct ImmArgRangeSet {
+  uint32_t ArgIdx;
+  uint32_t RangesStart;
+  uint32_t NumRanges;
+};
+
+struct ImmArgRangeSetList {
+  uint32_t RangeSetsStart;
+  uint32_t NumRangeSets;
+};
+} // namespace
+
+static constexpr ImmArgRange ImmArgRangeTable[] = {
+)";
+  RangeTable.emit(OS, [](raw_ostream &OS, ImmArgRangeSet::Range Elem) {
+    OS << "{" << Elem.first << ", " << Elem.second << "}";
+  });
+  OS << R"(}; // ImmArgRangeTable
+
+static constexpr ImmArgRangeSet ImmArgRangeSetTable[] = {
+)";
+  for (const RangeSetInfo &Info : RangeSetInfos)
+    OS << "  {" << Info.ArgNo << ", " << Info.RangesStart << ", "
+       << Info.NumRanges << "},\n";
+  OS << R"(}; // ImmArgRangeSetTable
+
+static constexpr ImmArgRangeSetList ImmArgRangeSetListTable[] = {
+)";
+  for (const auto &[Idx, Infos] : enumerate(PerIntrinsicRangeSetInfos)) {
+    OS << "  {" << Infos.RangeSetsStart << ", " << Infos.NumRangeSets << "},";
+    if (Idx == 0)
+      OS << " // not_intrinsic\n";
+    else
+      OS << " // " << Ints[Idx - 1].Name << "\n";
+  }
+  OS << R"(}; // ImmArgRangeSetListTable
+
+static bool isValueInImmArgRange(const ImmArgRange &Range,
+                                 const APInt &Value) {
+  unsigned BitWidth = Value.getBitWidth();
+  return ConstantRange(
+             APInt(BitWidth, Range.Lower, /*isSigned=*/true,
+                   /*implicitTrunc=*/true),
+             APInt(BitWidth, Range.Upper, /*isSigned=*/true,
+                   /*implicitTrunc=*/true))
+      .contains(Value);
+}
+
+bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                        const APInt &Value) {
+  if (IID >= Intrinsic::num_intrinsics)
+    return true;
+
+  const ImmArgRangeSetList &List = ImmArgRangeSetListTable[IID];
+  ArrayRef<ImmArgRangeSet> RangeSets(
+      ImmArgRangeSetTable + List.RangeSetsStart, List.NumRangeSets);
+  for (const ImmArgRangeSet &RangeSet : RangeSets) {
+    if (RangeSet.ArgIdx != ArgIdx)
+      continue;
+
+    ArrayRef<ImmArgRange> Ranges(ImmArgRangeTable + RangeSet.RangesStart,
+                                 RangeSet.NumRanges);
+    for (const ImmArgRange &Range : Ranges) {
+      if (isValueInImmArgRange(Range, Value))
+        return true;
+    }
+    return false;
+  }
+  return true;
+}
+)";
+}
+
 void IntrinsicEmitter::EmitIntrinsicToPrettyPrintTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   EmitIntrinsicBitTable(Ints, OS, "GET_INTRINSIC_PRETTY_PRINT_TABLE", "PPTable",
@@ -912,7 +1046,8 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
     OS << "    switch (ArgIdx) {\n";
     for (const auto [ArgIdx, ArgName, FuncName] : Int.PrettyPrintFunctions) {
       OS << "    case " << ArgIdx << ":\n";
-      OS << "      OS << \"" << ArgName << "=\";\n";
+      if (!ArgName.empty())
+        OS << "      OS << \"" << ArgName << "=\";\n";
       if (!FuncName.empty()) {
         OS << "      ";
         if (!Int.TargetPrefix.empty())
@@ -932,21 +1067,10 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
 
 void IntrinsicEmitter::EmitDefaultArgValuesTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  // Build the per-intrinsic default-value sequences:
-  //   [Header = (NumDefaults << 32) | FirstDefault, val0, val1, ...]
-  // Each value is the (non-negative) default for one parameter, stored as a
-  // uint64_t bit pattern.
-  //
-  // Offset 0 of the values table is reserved as the "no defaults" sentinel
-  // (a single 0 word, decoding to NumDefaults = 0). Intrinsics without
-  // defaults point to offset 0; real sequences are emitted after it.
-  // SequenceToOffsetTable deduplicates the real sequences.
-
+  // Sequences are [NumDefaults << 32 | FirstDefault, values...].
   using Sequence = SmallVector<uint64_t, 8>;
 
   SequenceToOffsetTable<Sequence> Table;
-  // An empty Sequence means "no defaults" (maps to the reserved offset 0);
-  // otherwise it holds the intrinsic's value sequence.
   SmallVector<Sequence> PerIntrinsic;
   PerIntrinsic.reserve(Ints.size());
 
@@ -956,7 +1080,6 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
       continue;
     }
 
-    // Find the first parameter with a default.
     unsigned FirstDefault = 0;
     for (size_t j = 0U, N = Int.ParamDefaultValues.size(); j < N; ++j) {
       if (Int.ParamDefaultValues[j].has_value()) {
@@ -983,17 +1106,11 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
 
   IfDefEmitter IfDef(OS, "GET_INTRINSIC_DEFAULT_ARG_VALUES");
 
-  // Emit the flat values table. Offset 0 is the reserved "no defaults"
-  // sentinel; the deduplicated real sequences follow it.
   OS << "static constexpr uint64_t DefaultArgValuesTable[] = {\n";
   OS << "  0, // offset 0: sentinel for intrinsics without defaults\n";
   Table.emit(OS, [](raw_ostream &OS, uint64_t Val) { OS << "  " << Val; });
   OS << "};\n\n";
 
-  // Emit the per-intrinsic offset table. Entry #0 is for the invalid
-  // Intrinsic::not_intrinsic (IID 0); it and every intrinsic without defaults
-  // point to the reserved sentinel at offset 0. Real sequences are shifted by
-  // +1 to skip past the sentinel slot.
   OS << "static constexpr uint32_t DefaultArgValuesTableOffset[] = {\n";
   OS << "  0, // not_intrinsic\n";
   for (const Sequence &Seq : PerIntrinsic) {
@@ -1004,7 +1121,6 @@ void IntrinsicEmitter::EmitDefaultArgValuesTable(
   }
   OS << "};\n\n";
 
-  // Emit the lookup function body.
   OS << R"(
 std::pair<unsigned, ArrayRef<uint64_t>>
 Intrinsic::getAllDefaultArgValues(ID IID) {

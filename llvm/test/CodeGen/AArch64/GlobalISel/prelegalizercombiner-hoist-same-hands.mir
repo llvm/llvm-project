@@ -14,18 +14,18 @@ body:             |
     ; CHECK-LABEL: name: or_combine_sext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SEXT [[OR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SEXT [[OR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_SEXT %x(s32)
-    %hand2:_(s64) = G_SEXT %y(s32)
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_SEXT %x(i32)
+    %hand2:_(i64) = G_SEXT %y(i32)
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -40,18 +40,18 @@ body:             |
     ; CHECK-LABEL: name: or_combine_zext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ZEXT [[OR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ZEXT [[OR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ZEXT %x(s32)
-    %hand2:_(s64) = G_ZEXT %y(s32)
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ZEXT %x(i32)
+    %hand2:_(i64) = G_ZEXT %y(i32)
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -66,18 +66,18 @@ body:             |
     ; CHECK-LABEL: name: or_combine_anyext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ANYEXT [[OR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ANYEXT [[OR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ANYEXT %x(s32)
-    %hand2:_(s64) = G_ANYEXT %y(s32)
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ANYEXT %x(i32)
+    %hand2:_(i64) = G_ANYEXT %y(i32)
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -92,18 +92,18 @@ body:             |
     ; CHECK-LABEL: name: and_combine_sext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SEXT [[AND]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SEXT [[AND]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_SEXT %x(s32)
-    %hand2:_(s64) = G_SEXT %y(s32)
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_SEXT %x(i32)
+    %hand2:_(i64) = G_SEXT %y(i32)
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -118,18 +118,18 @@ body:             |
     ; CHECK-LABEL: name: and_combine_zext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ZEXT [[AND]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ZEXT [[AND]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ZEXT %x(s32)
-    %hand2:_(s64) = G_ZEXT %y(s32)
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ZEXT %x(i32)
+    %hand2:_(i64) = G_ZEXT %y(i32)
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -144,18 +144,18 @@ body:             |
     ; CHECK-LABEL: name: and_combine_anyext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ANYEXT [[AND]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ANYEXT [[AND]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ANYEXT %x(s32)
-    %hand2:_(s64) = G_ANYEXT %y(s32)
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ANYEXT %x(i32)
+    %hand2:_(i64) = G_ANYEXT %y(i32)
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -170,18 +170,18 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_sext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SEXT [[XOR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_SEXT %x(s32)
-    %hand2:_(s64) = G_SEXT %y(s32)
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_SEXT %x(i32)
+    %hand2:_(i64) = G_SEXT %y(i32)
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -196,18 +196,18 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_zext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ZEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ZEXT [[XOR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ZEXT %x(s32)
-    %hand2:_(s64) = G_ZEXT %y(s32)
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ZEXT %x(i32)
+    %hand2:_(i64) = G_ZEXT %y(i32)
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -222,18 +222,18 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_anyext
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ANYEXT [[XOR]](i32)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_ANYEXT %x(s32)
-    %hand2:_(s64) = G_ANYEXT %y(s32)
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_ANYEXT %x(i32)
+    %hand2:_(i64) = G_ANYEXT %y(i32)
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -248,21 +248,21 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_different_types
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %hand1:_(s32) = COPY $w1
-    ; CHECK-NEXT: %y:_(s16) = G_TRUNC %hand1(s32)
-    ; CHECK-NEXT: %hand2:_(s64) = G_SEXT %x(s32)
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SEXT %y(s16)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %hand2, %logic_op
-    ; CHECK-NEXT: $x0 = COPY [[OR]](s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %hand1:_(i32) = COPY $w1
+    ; CHECK-NEXT: %y:_(i16) = G_TRUNC %hand1(i32)
+    ; CHECK-NEXT: %hand2:_(i64) = G_SEXT %x(i32)
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SEXT %y(i16)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR %hand2, %logic_op
+    ; CHECK-NEXT: $x0 = COPY [[OR]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %hand1:_(s32) = COPY $w1
-    %y:_(s16) = G_TRUNC %hand1(s32)
-    %hand2:_(s64) = G_SEXT %x(s32)
-    %logic_op:_(s64) = G_SEXT %y(s16)
-    %5:_(s64) = G_OR %hand2, %logic_op
-    $x0 = COPY %5(s64)
+    %x:_(i32) = COPY $w0
+    %hand1:_(i32) = COPY $w1
+    %y:_(i16) = G_TRUNC %hand1(i32)
+    %hand2:_(i64) = G_SEXT %x(i32)
+    %logic_op:_(i64) = G_SEXT %y(i16)
+    %5:_(i64) = G_OR %hand2, %logic_op
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -277,34 +277,34 @@ body:             |
     ; CHECK-PRE-LABEL: name: illegal_ty
     ; CHECK-PRE: liveins: $w0, $w1
     ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: %x_wide:_(s32) = COPY $w0
-    ; CHECK-PRE-NEXT: %y_wide:_(s32) = COPY $w1
-    ; CHECK-PRE-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR %x_wide, %y_wide
-    ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[OR]](s32)
-    ; CHECK-PRE-NEXT: %logic_op:_(s64) = G_SEXT [[TRUNC]](s1)
-    ; CHECK-PRE-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-PRE-NEXT: %x_wide:_(i32) = COPY $w0
+    ; CHECK-PRE-NEXT: %y_wide:_(i32) = COPY $w1
+    ; CHECK-PRE-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR %x_wide, %y_wide
+    ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[OR]](i32)
+    ; CHECK-PRE-NEXT: %logic_op:_(i64) = G_SEXT [[TRUNC]](i1)
+    ; CHECK-PRE-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-PRE-NEXT: RET_ReallyLR implicit $x0
     ;
     ; CHECK-POST-LABEL: name: illegal_ty
     ; CHECK-POST: liveins: $w0, $w1
     ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: %x_wide:_(s32) = COPY $w0
-    ; CHECK-POST-NEXT: %y_wide:_(s32) = COPY $w1
-    ; CHECK-POST-NEXT: %x:_(s1) = G_TRUNC %x_wide(s32)
-    ; CHECK-POST-NEXT: %y:_(s1) = G_TRUNC %y_wide(s32)
-    ; CHECK-POST-NEXT: %hand1:_(s64) = G_SEXT %x(s1)
-    ; CHECK-POST-NEXT: %hand2:_(s64) = G_SEXT %y(s1)
-    ; CHECK-POST-NEXT: %logic_op:_(s64) = G_OR %hand1, %hand2
-    ; CHECK-POST-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-POST-NEXT: %x_wide:_(i32) = COPY $w0
+    ; CHECK-POST-NEXT: %y_wide:_(i32) = COPY $w1
+    ; CHECK-POST-NEXT: %x:_(i1) = G_TRUNC %x_wide(i32)
+    ; CHECK-POST-NEXT: %y:_(i1) = G_TRUNC %y_wide(i32)
+    ; CHECK-POST-NEXT: %hand1:_(i64) = G_SEXT %x(i1)
+    ; CHECK-POST-NEXT: %hand2:_(i64) = G_SEXT %y(i1)
+    ; CHECK-POST-NEXT: %logic_op:_(i64) = G_OR %hand1, %hand2
+    ; CHECK-POST-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-POST-NEXT: RET_ReallyLR implicit $x0
-    %x_wide:_(s32) = COPY $w0
-    %y_wide:_(s32) = COPY $w1
-    %x:_(s1) = G_TRUNC %x_wide
-    %y:_(s1) = G_TRUNC %y_wide
-    %hand1:_(s64) = G_SEXT %x(s1)
-    %hand2:_(s64) = G_SEXT %y(s1)
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x_wide:_(i32) = COPY $w0
+    %y_wide:_(i32) = COPY $w1
+    %x:_(i1) = G_TRUNC %x_wide
+    %y:_(i1) = G_TRUNC %y_wide
+    %hand1:_(i64) = G_SEXT %x(i1)
+    %hand2:_(i64) = G_SEXT %y(i1)
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -319,20 +319,20 @@ body:             |
     ; CHECK-LABEL: name: or_combine_and
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_AND [[OR]], %z
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_AND [[OR]], %z
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_AND %x(s64), %z
-    %hand2:_(s64) = G_AND %y(s64), %z
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_AND %x(i64), %z
+    %hand2:_(i64) = G_AND %y(i64), %z
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -347,20 +347,20 @@ body:             |
     ; CHECK-LABEL: name: or_combine_ashr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ASHR [[OR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ASHR [[OR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_ASHR %x(s64), %z
-    %hand2:_(s64) = G_ASHR %y(s64), %z
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_ASHR %x(i64), %z
+    %hand2:_(i64) = G_ASHR %y(i64), %z
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -375,20 +375,20 @@ body:             |
     ; CHECK-LABEL: name: or_combine_lshr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_LSHR [[OR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_LSHR [[OR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_LSHR %x(s64), %z
-    %hand2:_(s64) = G_LSHR %y(s64), %z
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_LSHR %x(i64), %z
+    %hand2:_(i64) = G_LSHR %y(i64), %z
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -403,20 +403,20 @@ body:             |
     ; CHECK-LABEL: name: or_combine_shl
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SHL [[OR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i64) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SHL [[OR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_SHL %x(s64), %z
-    %hand2:_(s64) = G_SHL %y(s64), %z
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_SHL %x(i64), %z
+    %hand2:_(i64) = G_SHL %y(i64), %z
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -431,20 +431,20 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_and
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_AND [[XOR]], %z
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_AND [[XOR]], %z
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_AND %x(s64), %z
-    %hand2:_(s64) = G_AND %y(s64), %z
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_AND %x(i64), %z
+    %hand2:_(i64) = G_AND %y(i64), %z
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -459,20 +459,20 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_ashr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ASHR [[XOR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ASHR [[XOR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_ASHR %x(s64), %z
-    %hand2:_(s64) = G_ASHR %y(s64), %z
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_ASHR %x(i64), %z
+    %hand2:_(i64) = G_ASHR %y(i64), %z
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -487,20 +487,20 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_lshr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_LSHR [[XOR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_LSHR [[XOR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_LSHR %x(s64), %z
-    %hand2:_(s64) = G_LSHR %y(s64), %z
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_LSHR %x(i64), %z
+    %hand2:_(i64) = G_LSHR %y(i64), %z
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -515,20 +515,20 @@ body:             |
     ; CHECK-LABEL: name: xor_combine_shl
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SHL [[XOR]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SHL [[XOR]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_SHL %x(s64), %z
-    %hand2:_(s64) = G_SHL %y(s64), %z
-    %logic_op:_(s64) = G_XOR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_SHL %x(i64), %z
+    %hand2:_(i64) = G_SHL %y(i64), %z
+    %logic_op:_(i64) = G_XOR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -543,20 +543,20 @@ body:             |
     ; CHECK-LABEL: name: and_combine_and
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_AND [[AND]], %z
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_AND [[AND]], %z
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_AND %x(s64), %z
-    %hand2:_(s64) = G_AND %y(s64), %z
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_AND %x(i64), %z
+    %hand2:_(i64) = G_AND %y(i64), %z
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -571,20 +571,20 @@ body:             |
     ; CHECK-LABEL: name: and_combine_ashr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_ASHR [[AND]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_ASHR [[AND]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_ASHR %x(s64), %z
-    %hand2:_(s64) = G_ASHR %y(s64), %z
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_ASHR %x(i64), %z
+    %hand2:_(i64) = G_ASHR %y(i64), %z
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -599,20 +599,20 @@ body:             |
     ; CHECK-LABEL: name: and_combine_lshr
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_LSHR [[AND]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_LSHR [[AND]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_LSHR %x(s64), %z
-    %hand2:_(s64) = G_LSHR %y(s64), %z
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_LSHR %x(i64), %z
+    %hand2:_(i64) = G_LSHR %y(i64), %z
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -627,20 +627,20 @@ body:             |
     ; CHECK-LABEL: name: and_combine_shl
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %x, %y
-    ; CHECK-NEXT: %logic_op:_(s64) = G_SHL [[AND]], %z(s64)
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND %x, %y
+    ; CHECK-NEXT: %logic_op:_(i64) = G_SHL [[AND]], %z(i64)
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z:_(s64) = COPY $x2
-    %hand1:_(s64) = G_SHL %x(s64), %z
-    %hand2:_(s64) = G_SHL %y(s64), %z
-    %logic_op:_(s64) = G_AND %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z:_(i64) = COPY $x2
+    %hand1:_(i64) = G_SHL %x(i64), %z
+    %hand2:_(i64) = G_SHL %y(i64), %z
+    %logic_op:_(i64) = G_AND %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -655,23 +655,23 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_different_defs_on_binop
     ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: %y:_(s64) = COPY $x1
-    ; CHECK-NEXT: %z1:_(s64) = COPY $x2
-    ; CHECK-NEXT: %z2:_(s64) = COPY $x3
-    ; CHECK-NEXT: %hand1:_(s64) = G_AND %x, %z1
-    ; CHECK-NEXT: %hand2:_(s64) = G_AND %y, %z2
-    ; CHECK-NEXT: %logic_op:_(s64) = G_OR %hand1, %hand2
-    ; CHECK-NEXT: $x0 = COPY %logic_op(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: %y:_(i64) = COPY $x1
+    ; CHECK-NEXT: %z1:_(i64) = COPY $x2
+    ; CHECK-NEXT: %z2:_(i64) = COPY $x3
+    ; CHECK-NEXT: %hand1:_(i64) = G_AND %x, %z1
+    ; CHECK-NEXT: %hand2:_(i64) = G_AND %y, %z2
+    ; CHECK-NEXT: %logic_op:_(i64) = G_OR %hand1, %hand2
+    ; CHECK-NEXT: $x0 = COPY %logic_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %y:_(s64) = COPY $x1
-    %z1:_(s64) = COPY $x2
-    %z2:_(s64) = COPY $x3
-    %hand1:_(s64) = G_AND %x(s64), %z1
-    %hand2:_(s64) = G_AND %y(s64), %z2
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    $x0 = COPY %logic_op(s64)
+    %x:_(i64) = COPY $x0
+    %y:_(i64) = COPY $x1
+    %z1:_(i64) = COPY $x2
+    %z2:_(i64) = COPY $x3
+    %hand1:_(i64) = G_AND %x(i64), %z1
+    %hand2:_(i64) = G_AND %y(i64), %z2
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    $x0 = COPY %logic_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -686,21 +686,21 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_more_than_one_use
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %hand1:_(s64) = G_SEXT %x(s32)
-    ; CHECK-NEXT: %hand2:_(s64) = G_SEXT %y(s32)
-    ; CHECK-NEXT: %logic_op:_(s64) = G_OR %hand1, %hand2
-    ; CHECK-NEXT: %other_op:_(s64) = G_ADD %hand1, %logic_op
-    ; CHECK-NEXT: $x0 = COPY %other_op(s64)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: %hand1:_(i64) = G_SEXT %x(i32)
+    ; CHECK-NEXT: %hand2:_(i64) = G_SEXT %y(i32)
+    ; CHECK-NEXT: %logic_op:_(i64) = G_OR %hand1, %hand2
+    ; CHECK-NEXT: %other_op:_(i64) = G_ADD %hand1, %logic_op
+    ; CHECK-NEXT: $x0 = COPY %other_op(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %hand1:_(s64) = G_SEXT %x(s32)
-    %hand2:_(s64) = G_SEXT %y(s32)
-    %logic_op:_(s64) = G_OR %hand1, %hand2
-    %other_op:_(s64) = G_ADD %hand1, %logic_op
-    $x0 = COPY %other_op(s64)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %hand1:_(i64) = G_SEXT %x(i32)
+    %hand2:_(i64) = G_SEXT %y(i32)
+    %logic_op:_(i64) = G_OR %hand1, %hand2
+    %other_op:_(i64) = G_ADD %hand1, %logic_op
+    $x0 = COPY %other_op(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -715,18 +715,18 @@ body:             |
     ; CHECK-LABEL: name: combine_vector
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: %y:_(<2 x s32>) = COPY $d1
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR %x, %y
-    ; CHECK-NEXT: %logic_op:_(<2 x s64>) = G_SEXT [[OR]](<2 x s32>)
-    ; CHECK-NEXT: $q0 = COPY %logic_op(<2 x s64>)
+    ; CHECK-NEXT: %x:_(<2 x i32>) = COPY $d0
+    ; CHECK-NEXT: %y:_(<2 x i32>) = COPY $d1
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = G_OR %x, %y
+    ; CHECK-NEXT: %logic_op:_(<2 x i64>) = G_SEXT [[OR]](<2 x i32>)
+    ; CHECK-NEXT: $q0 = COPY %logic_op(<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %x:_(<2 x s32>) = COPY $d0
-    %y:_(<2 x s32>) = COPY $d1
-    %hand1:_(<2 x s64>) = G_SEXT %x(<2 x s32>)
-    %hand2:_(<2 x s64>) = G_SEXT %y(<2 x s32>)
-    %logic_op:_(<2 x s64>) = G_OR %hand1, %hand2
-    $q0 = COPY %logic_op(<2 x s64>)
+    %x:_(<2 x i32>) = COPY $d0
+    %y:_(<2 x i32>) = COPY $d1
+    %hand1:_(<2 x i64>) = G_SEXT %x(<2 x i32>)
+    %hand2:_(<2 x i64>) = G_SEXT %y(<2 x i32>)
+    %logic_op:_(<2 x i64>) = G_OR %hand1, %hand2
+    $q0 = COPY %logic_op(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -740,12 +740,12 @@ body:             |
     ; CHECK-LABEL: name: combine_vector_implicitdef
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %logic_op:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: $q0 = COPY %logic_op(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %logic_op:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
+    ; CHECK-NEXT: $q0 = COPY %logic_op(<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %x:_(<2 x s64>) = G_IMPLICIT_DEF
-    %y:_(<2 x s64>) = G_IMPLICIT_DEF
-    %logic_op:_(<2 x s64>) = G_AND %x, %y
-    $q0 = COPY %logic_op(<2 x s64>)
+    %x:_(<2 x i64>) = G_IMPLICIT_DEF
+    %y:_(<2 x i64>) = G_IMPLICIT_DEF
+    %logic_op:_(<2 x i64>) = G_AND %x, %y
+    $q0 = COPY %logic_op(<2 x i64>)
     RET_ReallyLR implicit $q0

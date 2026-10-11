@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMCallingConv.h"
-#include "ARM.h"
 #include "ARMSubtarget.h"
 using namespace llvm;
 

@@ -49,7 +49,7 @@ define weak ptx_kernel void @will_be_spmd() "kernel" {
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr null) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @is_spmd_helper2()
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;

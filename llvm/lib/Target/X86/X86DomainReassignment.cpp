@@ -35,10 +35,6 @@ using namespace llvm;
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");
 STATISTIC(NumClosuresBuilt, "Number of closures built by the pass");
 
-static cl::opt<bool> DisableX86DomainReassignment(
-    "disable-x86-domain-reassignment", cl::Hidden,
-    cl::desc("X86: Disable Virtual Register Reassignment."), cl::init(false));
-
 namespace {
 enum RegDomain { NoDomain = -1, GPRDomain, MaskDomain, OtherDomain, NumDomains };
 
@@ -528,12 +524,10 @@ static bool usedAsAddr(const MachineInstr &MI, Register Reg,
   if (!MI.mayLoadOrStore())
     return false;
 
-  const MCInstrDesc &Desc = TII->get(MI.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(Desc.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(TII->get(MI.getOpcode()));
   if (MemOpStart == -1)
     return false;
 
-  MemOpStart += X86II::getOperandBias(Desc);
   for (unsigned MemOpIdx = MemOpStart,
                 MemOpEnd = MemOpStart + X86::AddrNumOperands;
        MemOpIdx < MemOpEnd; ++MemOpIdx) {
@@ -564,10 +558,7 @@ void X86DomainReassignmentImpl::buildClosure(Closure &C, Register Reg) {
     // Do not add registers which are used in address calculation, they will be
     // added to a different closure.
     int OpEnd = DefMI->getNumOperands();
-    const MCInstrDesc &Desc = DefMI->getDesc();
-    int MemOp = X86II::getMemoryOperandNo(Desc.TSFlags);
-    if (MemOp != -1)
-      MemOp += X86II::getOperandBias(Desc);
+    int MemOp = X86II::getMemoryOperandIdx(DefMI->getDesc());
     for (int OpIdx = 0; OpIdx < OpEnd; ++OpIdx) {
       if (OpIdx == MemOp) {
         // skip address calculation.
@@ -764,14 +755,14 @@ void X86DomainReassignmentImpl::initConverters() {
 }
 
 bool X86DomainReassignmentImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (DisableX86DomainReassignment)
+  STI = &MF.getSubtarget<X86Subtarget>();
+  if (STI->getCLOpts().disable_x86_domain_reassignment)
     return false;
 
   LLVM_DEBUG(
       dbgs() << "***** Machine Function before Domain Reassignment *****\n");
   LLVM_DEBUG(MF.print(dbgs()));
 
-  STI = &MF.getSubtarget<X86Subtarget>();
   // GPR->K is the only transformation currently supported, bail out early if no
   // AVX512.
   // TODO: We're also bailing of AVX512BW isn't supported since we use VK32 and

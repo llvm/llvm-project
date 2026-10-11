@@ -47,6 +47,17 @@ int baz() { return y + x; }
 // ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
 //
+// Check that GNU response files are expanded to nvlink.
+//
+// RUN: echo '-arch sm_52 %t-u.o -o a.out' > %t.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RUN: echo '"-arch" "sm_52" "%t-u.o" "-o" "a.out"' > %t.quoted.rsp
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object @%t.quoted.rsp 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RSP
+// RSP: nvlink{{.*}} -arch sm_52 -o a.out {{.*}}.cubin
+
+//
 // Check the symbol resolution for static archives. We expect to only link
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
@@ -73,6 +84,19 @@ int baz() { return y + x; }
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LTO
 // LTO: ptxas{{.*}} -m64 -c [[PTX:.+]].s -O3 -arch sm_52 -o [[CUBIN:.+]].cubin
 // LTO: nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin {{.*}}-y-{{.*}}.cubin
+
+//
+// Check that '-Xptxas' is forwarded to 'ptxas' and not to 'nvlink'.
+//
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN:   -Xptxas -maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
+// RUN:   -Xptxas=-maxrregcount=32 -arch sm_52 -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=PTXAS-ARGS
+// PTXAS-ARGS: ptxas{{.*}} -arch sm_52 -maxrregcount=32 -o [[CUBIN:.+]].cubin
+// PTXAS-ARGS: nvlink{{.*}} -arch sm_52 -o a.out
+// PTXAS-ARGS-NOT: -maxrregcount=32
 
 //
 // Check that we don't forward some arguments.

@@ -13,7 +13,7 @@ __UINTPTR_TYPE__ __ptrauth(3, 1, 23) g3 = (__UINTPTR_TYPE__)&test_int;
 
 __INTPTR_TYPE__ __ptrauth(1, 1, 712) ga[3] = {0,0,(__UINTPTR_TYPE__)&test_int};
 
-// CHECK: @ga = global [3 x i64] [i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 712, ptr getelementptr inbounds ([3 x i64], ptr @ga, i32 0, i32 2)) to i64)]
+// CHECK: @ga = global [3 x i64] [i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 712, ptr getelementptr inbounds (i8, ptr @ga, i64 16)) to i64)]
 
 struct A {
   __INTPTR_TYPE__ __ptrauth(1, 0, 431) f0;
@@ -31,7 +31,7 @@ struct B {
 };
 
 struct B gs2 = {0, 0, (__UINTPTR_TYPE__)&test_int};
-// CHECK: @gs2 = global %struct.B { i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 163, ptr getelementptr inbounds (%struct.B, ptr @gs2, i32 0, i32 2)) to i64) }
+// CHECK: @gs2 = global %struct.B { i64 0, i64 0, i64 ptrtoint (ptr ptrauth (ptr @test_int, i32 1, i64 163, ptr getelementptr inbounds (i8, ptr @gs2, i64 16)) to i64) }
 
 // CHECK-LABEL: i64 @test_read_globals
 __INTPTR_TYPE__ test_read_globals() {

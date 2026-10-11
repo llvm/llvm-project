@@ -30,9 +30,9 @@ bb2:
   br label %exit
 
 exit:
-  %p = phi float [ %a, %bb1 ], [ 0x7FF8000000000000, %bb2 ]
+  %p = phi float [ %a, %bb1 ], [ +qnan, %bb2 ]
   %v.1 = fmul float %p, 0.000000e+00
-  %v.2 = fadd float %v.1, 0xFFF8000000000000
+  %v.2 = fadd float %v.1, -qnan
   ret float %v.2
 }
 
@@ -60,8 +60,8 @@ bb2:
   br label %exit
 
 exit:
-  %p = phi float [ 0x7FF8000000000000, %bb1 ], [ %a, %bb2 ]
+  %p = phi float [ +qnan, %bb1 ], [ %a, %bb2 ]
   %v.1 = fmul float %p, 0.000000e+00
-  %v.2 = fadd float %v.1, 0xFFF8000000000000
+  %v.2 = fadd float %v.1, -qnan
   ret float %v.2
 }

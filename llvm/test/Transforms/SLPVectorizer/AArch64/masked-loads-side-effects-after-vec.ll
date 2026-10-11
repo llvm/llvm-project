@@ -8,9 +8,36 @@ define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call dereferenceable_or_null(16) ptr @malloc()
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile ptr, ptr null, align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <15 x i8>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <15 x i8> [[TMP3]], <15 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    store <8 x i8> [[TMP4]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
+; CHECK-NEXT:    store i8 [[TMP3]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP1]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP2]], i64 1
+; CHECK-NEXT:    store i8 [[TMP5]], ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    store i8 [[TMP8]], ptr [[TMP9]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP1]], i64 6
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP2]], i64 3
+; CHECK-NEXT:    store i8 [[TMP11]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
+; CHECK-NEXT:    [[TMP14:%.*]] = load i8, ptr [[TMP13]], align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP1]], i64 10
+; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP16]], align 1
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP2]], i64 5
+; CHECK-NEXT:    store i8 [[TMP17]], ptr [[TMP18]], align 1
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP1]], i64 12
+; CHECK-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP2]], i64 6
+; CHECK-NEXT:    store i8 [[TMP20]], ptr [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP1]], i64 14
+; CHECK-NEXT:    [[TMP23:%.*]] = load i8, ptr [[TMP22]], align 1
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 7
+; CHECK-NEXT:    store i8 [[TMP23]], ptr [[TMP24]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %1 = call dereferenceable_or_null(16) ptr @malloc()

@@ -94,8 +94,8 @@ attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-f
 !0 = !{!0, !1, !5}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
 !2 = !{!2, !1, !3}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i32 1}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!4, !1, !5}
-!5 = !{!"llvm.loop.vectorize.scalable.enable", i32 0}
+!5 = !{!"llvm.loop.vectorize.scalable.disable"}
 !6 = !{!6, !7}
 !7 = !{!"llvm.loop.vectorize.width", i32 8}

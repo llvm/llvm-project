@@ -119,8 +119,8 @@ static_assert(!b2);
 constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
-constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b3 = name1() == name1(); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 
@@ -1530,4 +1530,37 @@ namespace SubPtr {
     return r;
   }
   static_assert(dynAlloc() == 1);
+}
+
+namespace InvalidVirtualCall {
+  struct A {
+    virtual void foo(); // both-note {{overridden virtual function is here}}
+  };
+
+  struct B : A {
+    constexpr void bar() { foo(); } // both-error {{never produces a constant expression}} \
+                                    // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    static void foo(); // both-error {{'static' member function 'foo' overrides a virtual function in a base class}} \
+                       // both-note {{declared here}}
+  };
+}
+
+namespace FailInTrivialCopy {
+
+  struct S {
+    S &operator=(const S &) = default;
+    int val; // ref-note {{subobject declared here}}
+  };
+
+  constexpr bool foo() {
+    S s1; // expected-note {{declared here}}
+    S s2{42};
+    s2 = s1; // expected-note {{read of uninitialized object}} \
+             // ref-note {{subobject 'val' is not initialized}} \
+             // both-note {{in call to}}
+    return true;
+  }
+
+  static_assert(foo(), ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
 }

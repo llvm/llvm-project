@@ -10,8 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCGOFFAttributes.h"
-#include "llvm/MC/MCGOFFStreamer.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
@@ -76,10 +75,170 @@ void SystemZHLASMAsmStreamer::EmitEOL() {
   Str.clear();
 }
 
+static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
+                      bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
+                      GOFF::ESDExecutable Executable,
+                      GOFF::ESDBindingScope BindingScope) {
+  llvm::ListSeparator Sep(",");
+  OS << Name << " XATTR ";
+  OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
+     << ")";
+
+  const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
+  if (NotUnspecified || IsIndirectReference) {
+    OS << Sep << "REFERENCE(";
+    llvm::ListSeparator SepRef(",");
+
+    if (NotUnspecified)
+      OS << SepRef << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
+
+    if (IsIndirectReference)
+      OS << SepRef << "INDIRECT";
+
+    OS << ")";
+  }
+  // Emit PSECT only for code symbols.
+  if (ADA && Executable != GOFF::ESD_EXE_DATA)
+    OS << Sep << "PSECT(" << ADA->getName() << ")";
+  if (BindingScope != GOFF::ESD_BSC_Unspecified) {
+    OS << Sep << "SCOPE(";
+    switch (BindingScope) {
+    case GOFF::ESD_BSC_Section:
+      OS << "SECTION";
+      break;
+    case GOFF::ESD_BSC_Module:
+      OS << "MODULE";
+      break;
+    case GOFF::ESD_BSC_Library:
+      OS << "LIBRARY";
+      break;
+    case GOFF::ESD_BSC_ImportExport:
+      OS << "EXPORT";
+      break;
+    default:
+      break;
+    }
+    OS << ')';
+  }
+}
+
+static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
+                      GOFF::ESDAlignment Alignment,
+                      GOFF::ESDLoadingBehavior LoadBehavior,
+                      GOFF::ESDExecutable Executable, bool IsReadOnly,
+                      uint32_t SortKey, uint8_t FillByteValue,
+                      StringRef PartName) {
+  OS << Name << " CATTR ";
+  OS << "ALIGN(" << static_cast<unsigned>(Alignment) << "),"
+     << "FILL(" << static_cast<unsigned>(FillByteValue) << ")";
+  switch (LoadBehavior) {
+  case GOFF::ESD_LB_Deferred:
+    OS << ",DEFLOAD";
+    break;
+  case GOFF::ESD_LB_NoLoad:
+    OS << ",NOLOAD";
+    break;
+  default:
+    break;
+  }
+  switch (Executable) {
+  case GOFF::ESD_EXE_CODE:
+    OS << ",EXECUTABLE";
+    break;
+  case GOFF::ESD_EXE_DATA:
+    OS << ",NOTEXECUTABLE";
+    break;
+  default:
+    break;
+  }
+  if (IsReadOnly)
+    OS << ",READONLY";
+  if (Rmode != GOFF::ESD_RMODE_None) {
+    OS << ',';
+    OS << "RMODE(";
+    switch (Rmode) {
+    case GOFF::ESD_RMODE_None:
+      llvm_unreachable("");
+    case GOFF::ESD_RMODE_24:
+      OS << "24";
+      break;
+    case GOFF::ESD_RMODE_31:
+      OS << "31";
+      break;
+    case GOFF::ESD_RMODE_64:
+      OS << "64";
+      break;
+    }
+    OS << ')';
+  }
+  if (SortKey)
+    OS << ",PRIORITY(" << SortKey << ")";
+  if (!PartName.empty())
+    OS << ",PART(" << PartName << ")";
+  OS << '\n';
+}
+
 void SystemZHLASMAsmStreamer::changeSection(MCSection *Section,
                                             uint32_t Subsection) {
-  MAI->printSwitchToSection(*Section, Subsection,
-                            getContext().getTargetTriple(), OS);
+  auto &Sec = *static_cast<MCSectionGOFF *>(Section);
+  auto EmitExternalName = [&Sec, this]() {
+    if (Sec.hasExternalName())
+      OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
+  };
+  switch (Sec.getSymbolType()) {
+  case GOFF::ESD_ST_SectionDefinition: {
+    OS << Sec.getName() << " CSECT\n";
+    Sec.setEmitted();
+    EmitExternalName();
+    break;
+  }
+  case GOFF::ESD_ST_ElementDefinition: {
+    changeSection(Sec.getParent(), Subsection);
+    if (!Sec.isEmitted()) {
+      GOFF::EDAttr ED = Sec.getEDAttributes();
+      emitCATTR(OS, Sec.getName(), ED.Rmode, Sec.getEDAlignment(),
+                ED.LoadBehavior, GOFF::ESD_EXE_Unspecified, ED.IsReadOnly, 0,
+                ED.FillByteValue, StringRef());
+      if (auto *BeginSym = static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())) {
+        if (BeginSym->getADA()) {
+          emitXATTR(OS, BeginSym->getName(), BeginSym->getADA(),
+                    /*IsIndirectReference=*/false, GOFF::ESD_LT_XPLink,
+                    GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Section);
+          OS << '\n';
+        }
+      }
+      Sec.setEmitted();
+      EmitExternalName();
+    } else
+      OS << Sec.getName() << " CATTR\n";
+    break;
+  }
+  case GOFF::ESD_ST_PartReference: {
+    MCSectionGOFF *ED = Sec.getParent();
+    changeSection(ED->getParent(), Subsection);
+    if (!Sec.isEmitted()) {
+      GOFF::EDAttr EDAttr = ED->getEDAttributes();
+      GOFF::PRAttr PRAttr = Sec.getPRAttributes();
+      emitCATTR(OS, ED->getName(), EDAttr.Rmode, ED->getEDAlignment(),
+                EDAttr.LoadBehavior, PRAttr.Executable, EDAttr.IsReadOnly,
+                PRAttr.SortKey, EDAttr.FillByteValue, Sec.getName());
+      MCSectionGOFF *ADA =
+          Sec.getBeginSymbol() != nullptr
+              ? static_cast<MCSymbolGOFF *>(Sec.getBeginSymbol())->getADA()
+              : nullptr;
+      emitXATTR(OS, Sec.getName(), ADA, /*IsIndirectReference=*/false,
+                PRAttr.Linkage, PRAttr.Executable, PRAttr.BindingScope);
+      OS << '\n';
+      ED->setEmitted();
+      Sec.setEmitted();
+      EmitExternalName();
+    } else
+      OS << ED->getName() << " CATTR PART(" << Sec.getName() << ")\n";
+    break;
+  }
+  default:
+    llvm_unreachable("Wrong section type");
+  }
   MCStreamer::changeSection(Section, Subsection);
   EmitEOL();
 }
@@ -294,53 +453,6 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
-static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
-                      bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
-                      GOFF::ESDExecutable Executable,
-                      GOFF::ESDBindingScope BindingScope) {
-  llvm::ListSeparator Sep(",");
-  OS << Name << " XATTR ";
-  OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
-     << ")";
-
-  const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
-  if (NotUnspecified || IsIndirectReference) {
-    OS << Sep << "REFERENCE(";
-    llvm::ListSeparator SepRef(",");
-
-    if (NotUnspecified)
-      OS << SepRef << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
-
-    if (IsIndirectReference)
-      OS << SepRef << "INDIRECT";
-
-    OS << ")";
-  }
-  // Emit PSECT only for code symbols.
-  if (ADA && Executable != GOFF::ESD_EXE_DATA)
-    OS << Sep << "PSECT(" << ADA->getName() << ")";
-  if (BindingScope != GOFF::ESD_BSC_Unspecified) {
-    OS << Sep << "SCOPE(";
-    switch (BindingScope) {
-    case GOFF::ESD_BSC_Section:
-      OS << "SECTION";
-      break;
-    case GOFF::ESD_BSC_Module:
-      OS << "MODULE";
-      break;
-    case GOFF::ESD_BSC_Library:
-      OS << "LIBRARY";
-      break;
-    case GOFF::ESD_BSC_ImportExport:
-      OS << "EXPORT";
-      break;
-    default:
-      break;
-    }
-    OS << ')';
-  }
-}
-
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCSymbolGOFF *Sym = static_cast<MCSymbolGOFF *>(Symbol);
 
@@ -375,6 +487,18 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
+}
+
+void SystemZHLASMAsmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
+                                               Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(S);
+  MCSectionGOFF *Section =
+      Symbol->getSectionForCommonSymbol(getContext(), ByteAlignment);
+  pushSection();
+  switchSection(Section);
+  emitLabel(Symbol, SMLoc());
+  emitZeros(Size);
+  popSection();
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {

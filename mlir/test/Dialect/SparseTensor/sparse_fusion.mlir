@@ -22,8 +22,8 @@
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1.000000e+00 : f64
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 1.000000e+02 : f64
 // CHECK-DAG:       %[[VAL_8:.*]] = tensor.empty() : tensor<100xf64>
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<100xf64, #sparse> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<100xf64, #sparse> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_0]] level = 0 : tensor<100xf64, #sparse> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_0]] level = 0 : tensor<100xf64, #sparse> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<100xf64, #sparse> to memref<?xf64>
 // CHECK-DAG:       %[[VAL_12:.*]] = bufferization.to_buffer %[[VAL_8]] :
 // CHECK-DAG:        linalg.fill ins(%[[VAL_4]] : f64) outs(%[[VAL_12]] : memref<100xf64>)

@@ -40,9 +40,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
@@ -53,20 +53,11 @@
 
 using namespace llvm;
 
-cl::opt<bool>
-    X86EnableMachineCombinerPass("x86-machine-combiner",
-                                 cl::desc("Enable the machine combiner pass"),
-                                 cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableTileRAPass("x86-tile-ra",
-                     cl::desc("Enable the tile register allocation pass"),
-                     cl::init(true), cl::Hidden);
-
 extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   // Register the target.
   RegisterTargetMachine<X86TargetMachine> X(getTheX86_32Target());
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
+  static opt::RegisterLibraryOptions<X86Options> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
@@ -190,10 +181,11 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, JIT, RM),
                                getEffectiveX86CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
+      CLOpts(X86Options::Global), TLOF(createTLOF(getTargetTriple())),
+      IsJIT(JIT) {
   // On PS4/PS5, the "return address" of a 'noreturn' call must still be within
   // the calling function. Note that this also includes __stack_chk_fail,
   // so there was some target-specific logic in the instruction selectors
@@ -317,10 +309,10 @@ bool X86TargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool X86TargetMachine::isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
-  if (getPointerSize(SrcAS) != getPointerSize(DestAS))
+  if (DL.getPointerSize(SrcAS) != DL.getPointerSize(DestAS))
     return false;
   return SrcAS < 256 && DestAS < 256;
 }
@@ -435,7 +427,7 @@ void X86PassConfig::addIRPasses() {
   // Add passes that handle indirect branch removal and insertion of a retpoline
   // thunk. These will be a no-op unless a function subtarget has the retpoline
   // feature enabled.
-  addPass(createIndirectBrExpandPass());
+  addPass(createIndirectBrExpandPass(getOptLevel()));
 
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
@@ -462,7 +454,7 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -473,17 +465,17 @@ void X86PassConfig::addPreRegBankSelect() {
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool X86PassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   // Add GlobalBaseReg in case there is no SelectionDAG passes afterwards
   if (isGlobalISelAbortEnabled())
     addPass(createX86GlobalBaseRegLegacyPass());
@@ -498,7 +490,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 
 bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
-  if (X86EnableMachineCombinerPass)
+  if (getX86TargetMachine().getCLOpts().machine_combiner)
     addPass(&MachineCombinerID);
   addPass(createX86CmovConversionLegacyPass());
   return true;
@@ -573,6 +565,9 @@ void X86PassConfig::addPreEmitPass() {
   }
   addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87WaitLegacyPass());
+
+  if (TM->getTargetTriple().isLFI())
+    addPass(createX86LFIRewritePass());
 }
 
 void X86PassConfig::addPreEmitPass2() {
@@ -603,13 +598,13 @@ void X86PassConfig::addPreEmitPass2() {
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
        MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
-    addPass(createCFIInstrInserter());
+    addPass(createCFIInstrInserterLegacy());
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
   addPass(createX86LoadValueInjectionRetHardeningLegacyPass());
 
@@ -655,7 +650,7 @@ static bool onlyAllocateTileRegisters(const TargetRegisterInfo &TRI,
 
 bool X86PassConfig::addRegAssignAndRewriteOptimized() {
   // Don't support tile RA when RA is specified by command line "-regalloc".
-  if (!isCustomizedRegAlloc() && EnableTileRAPass) {
+  if (!isCustomizedRegAlloc() && getX86TargetMachine().getCLOpts().tile_ra) {
     // Allocate tile register first.
     addPass(createGreedyRegisterAllocator(onlyAllocateTileRegisters));
     addPass(createX86TileConfigLegacyPass());

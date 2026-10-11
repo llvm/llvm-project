@@ -14,10 +14,10 @@ define i8 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr @c, align 2
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i32 [[CONV]], 32769
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <8 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 32769>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> poison, i32 [[CONV1]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> poison, i32 [[CONV1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <8 x i32> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP8]])

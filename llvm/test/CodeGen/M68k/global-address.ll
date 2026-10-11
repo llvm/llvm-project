@@ -10,7 +10,7 @@ define i1 @folded_offset(i32 %conv29) {
 ; CHECK-NEXT:    move.b (VBRTag+1,%pc), %d0
 ; CHECK-NEXT:    ext.w %d0
 ; CHECK-NEXT:    ext.l %d0
-; CHECK-NEXT:    sub.l (4,%sp), %d0
+; CHECK-NEXT:    cmp.l (4,%sp), %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    rts
 entry:
@@ -29,7 +29,7 @@ define i1 @non_folded_offset(i32 %conv29) {
 ; CHECK-NEXT:    move.b (0,%a0,%d0), %d0
 ; CHECK-NEXT:    ext.w %d0
 ; CHECK-NEXT:    ext.l %d0
-; CHECK-NEXT:    sub.l (4,%sp), %d0
+; CHECK-NEXT:    cmp.l (4,%sp), %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    rts
 entry:

@@ -249,3 +249,24 @@ LegalityPredicate LegalityPredicates::atomicOrderingAtLeastOrStrongerThan(
     return isAtLeastOrStrongerThan(Query.MMODescrs[MMOIdx].Ordering, Ordering);
   };
 }
+
+LegalityPredicate LegalityPredicates::immIs(unsigned ImmIdx, int64_t Imm) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Immediates[ImmIdx] == Imm;
+  };
+}
+
+LegalityPredicate
+LegalityPredicates::immInSet(unsigned ImmIdx,
+                             std::initializer_list<int64_t> ImmsInit) {
+  SmallVector<int64_t, 4> Imms = ImmsInit;
+  return [=](const LegalityQuery &Query) {
+    return llvm::is_contained(Imms, Query.Immediates[ImmIdx]);
+  };
+}
+
+LegalityPredicate LegalityPredicates::immIsNot(unsigned ImmIdx, int64_t Imm) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Immediates[ImmIdx] != Imm;
+  };
+}

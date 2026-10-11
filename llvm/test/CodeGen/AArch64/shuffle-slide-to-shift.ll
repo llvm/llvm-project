@@ -79,11 +79,9 @@ define <16 x i8> @slide_left_v16i8_lane_independent_commuted(<16 x i8> %v) {
 ;
 ; CHECK-GI-LABEL: slide_left_v16i8_lane_independent_commuted:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI4_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %v,
        <16 x i32> <i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 0,
@@ -211,11 +209,9 @@ define <16 x i8> @slide_left_v16i8_lane_independent(<16 x i8> %v) {
 ;
 ; CHECK-GI-LABEL: slide_left_v16i8_lane_independent:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer,
        <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16,
@@ -232,11 +228,9 @@ define <16 x i8> @slide_right_v16i8_lane_independent(<16 x i8> %v) {
 ;
 ; CHECK-GI-LABEL: slide_right_v16i8_lane_independent:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q31_q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
-; CHECK-GI-NEXT:    movi v31.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v31.16b, v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <16 x i8> zeroinitializer, <16 x i8> %v,
        <16 x i32> <i32 0, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22,
@@ -253,11 +247,9 @@ define <8 x i16> @slide_left_v8i16_lane_independent(<8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: slide_left_v8i16_lane_independent:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <8 x i16> %v, <8 x i16> zeroinitializer,
        <8 x i32> <i32 1, i32 2, i32 3, i32 8,
@@ -274,11 +266,9 @@ define <4 x i32> @slide_left_v4i32_lane_independent(<4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: slide_left_v4i32_lane_independent:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <4 x i32> %v, <4 x i32> zeroinitializer,
        <4 x i32> <i32 1, i32 4, i32 3, i32 6>
@@ -287,21 +277,12 @@ define <4 x i32> @slide_left_v4i32_lane_independent(<4 x i32> %v) {
 
 ; Negative: halves slide different amounts (should NOT optimize to shift)
 define <16 x i8> @slide_different_amounts(<16 x i8> %v) {
-; CHECK-SD-LABEL: slide_different_amounts:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI15_0
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: slide_different_amounts:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI15_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: slide_different_amounts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    ret
   %r = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer,
        <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16,
                    i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25>

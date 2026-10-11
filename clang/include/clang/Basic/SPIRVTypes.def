@@ -1,0 +1,30 @@
+//===-- SPIRVTypes.def - Metadata about SPIRV types -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines SPIRV builtin opaque types. The macro is:
+//
+//    SPIRV_TYPE(Name, Id, SingletonId)
+//
+// where:
+//
+//  - Name is the name of the builtin type.
+//
+//  - BuiltinType::Id is the enumerator defining the type.
+//
+//  - Context.SingletonId is the global singleton of this type.
+//
+// To include this file, define SPIRV_TYPE. The macro will be undefined after
+// inclusion.
+//
+//===----------------------------------------------------------------------===//
+
+// This type corresponds to the OpTypeEvent type specified in version 1.6 of the
+// SPIR-V specification.
+SPIRV_TYPE("__spirv_event_t", SPIRVEvent, SPIRVEventTy)
+
+#undef SPIRV_TYPE
