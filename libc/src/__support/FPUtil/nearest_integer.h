@@ -16,7 +16,9 @@
 
 #if (defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE4_2))
 #include "x86_64/nearest_integer.h"
-#elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP))
+#elif (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                 \
+       defined(LIBC_TARGET_ARCH_IS_ARM64EC)) &&                                \
+    defined(__ARM_FP)
 #include "aarch64/nearest_integer.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 

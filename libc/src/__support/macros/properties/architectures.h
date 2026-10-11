@@ -34,7 +34,10 @@
 #define LIBC_TARGET_ARCH_IS_X86_32
 #endif
 
-#if (defined(_M_X64) || defined(__x86_64__)) && !defined(LIBC_TARGET_ARCH_IS_VM)
+#if defined(__arm64ec__) || defined(_M_ARM64EC)
+#define LIBC_TARGET_ARCH_IS_ARM64EC
+#elif (defined(_M_X64) || defined(__x86_64__)) &&                              \
+    !defined(LIBC_TARGET_ARCH_IS_VM)
 #define LIBC_TARGET_ARCH_IS_X86_64
 #endif
 
@@ -54,7 +57,8 @@
 #define LIBC_TARGET_ARCH_IS_AARCH64
 #endif
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(LIBC_TARGET_ARCH_IS_ARM)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_ARM64EC)
 #define LIBC_TARGET_ARCH_IS_ANY_ARM
 #endif
 
