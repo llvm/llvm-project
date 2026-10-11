@@ -17,7 +17,7 @@ _start:
   nop // Here to not make the _start and the %pcrel_lo label coincide
 
 /// The load follows the AUIPC, so BOLT resolves the right GOT entry.
-// CHECK:      auipc t0, %pcrel_hi(__BOLT_got_zero+[[GOT:[0-9]+]]) # Label: [[HI:\.Ltmp[0-9]+]]
+// CHECK:      auipc t0, %pcrel_hi(__BOLT_got_zero+[[GOT:[0-9]+]]) # Offset: 2 # Label: [[HI:\.Ltmp[0-9]+]]
 // CHECK-NEXT: ld t0, %pcrel_lo([[HI]])(t0)
 1:
   auipc t0, %got_pcrel_hi(d)
@@ -25,7 +25,7 @@ _start:
 
 /// An unrelated instruction can sit between the AUIPC and its load. The
 /// symbolizer locates the low relocation through its reference to the AUIPC.
-// CHECK:      auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Label: [[HI2:\.Ltmp[0-9]+]]
+// CHECK:      auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Offset: 10 # Label: [[HI2:\.Ltmp[0-9]+]]
 // CHECK-NEXT: addi t2, t2, 0x7ff
 // CHECK-NEXT: ld t1, %pcrel_lo([[HI2]])(t1)
 2:
@@ -42,7 +42,7 @@ _start:
   nop
 /// The low relocation can also precede the AUIPC in output basic-block order.
 // CHECK:      nop
-// CHECK-NEXT: auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Label: [[HI3]]
+// CHECK-NEXT: auipc t1, %pcrel_hi(__BOLT_got_zero+[[GOT]]) # Offset: 32 # Label: [[HI3]]
 // CHECK-NEXT: j
 3:
   auipc t1, %got_pcrel_hi(d)

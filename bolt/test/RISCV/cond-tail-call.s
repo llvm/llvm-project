@@ -1,6 +1,6 @@
 // RUN: %clang %cflags64 -o %t %s
 // RUN: llvm-bolt -o %t.bolt %t
-// RUN: llvm-objdump -d --disassemble-symbols=f %t.bolt | FileCheck %s
+// RUN: llvm-objdump -d --disassemble-symbols=f,.Lcont %t.bolt | FileCheck %s
 
   .text
 
@@ -24,6 +24,7 @@ f:
 /// which drops both the condition and the fall-through path.
 /// NOTE: This seems not reasonable in general, however this might created when
 ///       program has __builtin_unreachable or undefined behavior.
+// CHECK: <.Lcont>:
 // CHECK-NEXT: j {{.*}} <g>
   beqz a0, .Lend
 // CHECK-NEXT: li a0, 0x1
