@@ -888,3 +888,31 @@ func.func @vector_multi_reduction_rank_mismatch(%v : vector<2x2x4xf32>, %acc: ve
 //       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R3]], %[[V1]] offsets = [1, 0], strides = [1, 1] : vector<1x2xf32> into vector<2x2xf32>
 //       CHECK:   return %[[V2]] : vector<2x2xf32>
+
+// -----
+
+// Region-masked ops are not unrolled: the enclosing mask would not be sliced.
+
+func.func @masked_vector_contract(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
+                                  %init : vector<8x8xf32>, %mask : vector<8x8x4xi1>) -> vector<8x8xf32> {
+  %0 = vector.mask %mask { vector.contract
+         {indexing_maps = [affine_map<(i, j, k) -> (i, k)>,
+                           affine_map<(i, j, k) -> (j, k)>,
+                           affine_map<(i, j, k) -> (i, j)>],
+          iterator_types = ["parallel", "parallel", "reduction"]}
+       %lhs, %rhs, %init : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> } : vector<8x8x4xi1> -> vector<8x8xf32>
+  return %0 : vector<8x8xf32>
+}
+// CHECK-LABEL: func @masked_vector_contract
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.contract {{.*}} : vector<8x4xf32>, vector<8x4xf32> into vector<8x8xf32> }
+//  CHECK-NEXT:   return %[[R]]
+
+// -----
+
+func.func @masked_vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>, %mask : vector<4x6xi1>) -> vector<4xf32> {
+  %0 = vector.mask %mask { vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32> } : vector<4x6xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+// CHECK-LABEL: func @masked_vector_multi_reduction
+//  CHECK-NEXT:   %[[R:.*]] = vector.mask %{{.*}} { vector.multi_reduction <add>, {{.*}} : vector<4x6xf32> to vector<4xf32> }
+//  CHECK-NEXT:   return %[[R]]
