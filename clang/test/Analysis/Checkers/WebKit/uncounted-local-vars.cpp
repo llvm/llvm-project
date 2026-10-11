@@ -214,6 +214,28 @@ void foo9(RefCountable& o) {
   }
 }
 
+bool operator==(const Ref<RefCountable>&, const Ref<RefCountable>&);
+void consumeConstRef(const Ref<RefCountable>&);
+
+void guardian_const_operator_call(RefCountable& o, Ref<RefCountable>& other) {
+  Ref<RefCountable> guardian(o);
+  {
+    RefCountable *bar = guardian.ptr();
+    guardian->method();
+    bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    if (guardian == other)
+      bar->method();
+  }
+  {
+    RefCountable *bar = guardian.ptr();
+    consumeConstRef(guardian);
+    bar->method();
+  }
+}
+
 RefCountable* provide();
 
 struct Derived : public RefCountable {
