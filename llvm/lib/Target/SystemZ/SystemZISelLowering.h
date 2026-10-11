@@ -99,6 +99,11 @@ public:
   MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;
 
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const MachineFunction &MF) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
+
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
@@ -462,7 +467,6 @@ private:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
-  const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
 private:
   bool enableNarrowIntArgsVerification() const;

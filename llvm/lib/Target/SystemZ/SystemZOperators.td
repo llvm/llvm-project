@@ -50,7 +50,7 @@ def SDT_ZProbedAlloca       : SDTypeProfile<1, 2,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisPtrTy<0>]>;
 def SDT_ZGR128Binary        : SDTypeProfile<1, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisInt<1>,
                                              SDTCisInt<2>]>;
 def SDT_ZBinaryWithFlags    : SDTypeProfile<2, 2,
@@ -96,17 +96,17 @@ def SDT_ZAtomicCmpSwap      : SDTypeProfile<2, 3,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisSameAs<0, 4>]>;
 def SDT_ZAtomicLoad128      : SDTypeProfile<1, 1,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicStore128     : SDTypeProfile<0, 2,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisPtrTy<1>]>;
 def SDT_ZAtomicCmpSwap128   : SDTypeProfile<2, 3,
-                                            [SDTCisVT<0, untyped>,
+                                            [SDTCisVT<0, v2i64>,
                                              SDTCisVT<1, i32>,
                                              SDTCisPtrTy<2>,
-                                             SDTCisVT<3, untyped>,
-                                             SDTCisVT<4, untyped>]>;
+                                             SDTCisVT<3, v2i64>,
+                                             SDTCisVT<4, v2i64>]>;
 def SDT_ZMemMemLength       : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,

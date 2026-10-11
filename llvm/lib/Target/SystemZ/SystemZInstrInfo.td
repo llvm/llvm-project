@@ -481,8 +481,7 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
   // These instructions are split after register allocation, so we don't
   // want a custom inserter.
   let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-    def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src),
-                      [(set GR128:$dst, (load bdxaddr20only128:$src))]>;
+    def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src), []>;
   }
 }
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
@@ -525,8 +524,7 @@ let SimpleBDXStore = 1, mayStore = 1 in {
   // These instructions are split after register allocation, so we don't
   // want a custom inserter.
   let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-    def ST128 : Pseudo<(outs), (ins GR128:$src, bdxaddr20only128:$dst),
-                       [(store GR128:$src, bdxaddr20only128:$dst)]>;
+    def ST128 : Pseudo<(outs), (ins GR128:$src, bdxaddr20only128:$dst), []>;
   }
 }
 
@@ -2756,6 +2754,28 @@ defm : BlockLoadStore<anyextloadi8, i64, MVCImm, NCImm, OCImm, XCImm, 0>;
 defm : BlockLoadStore<anyextloadi16, i64, MVCImm, NCImm, OCImm, XCImm, 1>;
 defm : BlockLoadStore<anyextloadi32, i64, MVCImm, NCImm, OCImm, XCImm, 3>;
 defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
+
+//===----------------------------------------------------------------------===//
+// GR128 vectors
+//===----------------------------------------------------------------------===//
+
+let Predicates = [FeatureNoVector] in {
+  def : Pat<(v2i64 (build_vector GR64:$hi, GR64:$lo)),
+            (REG_SEQUENCE GR128Bit, GR64:$hi, subreg_h64, GR64:$lo, subreg_l64)>;
+
+  def : Pat<(i64 (extractelt GR128:$src, (i32 0))),
+            (EXTRACT_SUBREG GR128:$src, subreg_h64)>;
+  def : Pat<(i64 (extractelt GR128:$src, (i32 1))),
+            (EXTRACT_SUBREG GR128:$src, subreg_l64)>;
+
+  def : Pat<(v2i64 (insertelt GR128:$src, GR64:$elt, (i32 0))),
+            (INSERT_SUBREG GR128:$src, GR64:$elt, subreg_h64)>;
+  def : Pat<(v2i64 (insertelt GR128:$src, GR64:$elt, (i32 1))),
+            (INSERT_SUBREG GR128:$src, GR64:$elt, subreg_l64)>;
+
+  def : Pat<(v2i64 (scalar_to_vector GR64:$src)),
+            (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), GR64:$src, subreg_h64)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Mnemonic Aliases

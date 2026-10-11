@@ -15,12 +15,12 @@ define void @v1i64_arg(<1 x i64> %arg, ptr %out) nounwind {
 define void @v3i64_arg(<3 x i64> %arg, ptr %out) nounwind {
 ; LINUX-LABEL: v3i64_arg:
 ; LINUX:       # %bb.0:
-; LINUX-NEXT:    lg %r0, 0(%r2)
-; LINUX-NEXT:    lg %r1, 8(%r2)
-; LINUX-NEXT:    lg %r2, 16(%r2)
-; LINUX-NEXT:    stg %r2, 16(%r3)
-; LINUX-NEXT:    stg %r1, 8(%r3)
-; LINUX-NEXT:    stg %r0, 0(%r3)
+; LINUX-NEXT:    lg %r0, 16(%r2)
+; LINUX-NEXT:    lg %r1, 0(%r2)
+; LINUX-NEXT:    lg %r2, 8(%r2)
+; LINUX-NEXT:    stg %r2, 8(%r3)
+; LINUX-NEXT:    stg %r1, 0(%r3)
+; LINUX-NEXT:    stg %r0, 16(%r3)
 ; LINUX-NEXT:    br %r14
   store <3 x i64> %arg, ptr %out
   ret void
