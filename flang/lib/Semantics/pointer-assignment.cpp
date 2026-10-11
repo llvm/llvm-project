@@ -50,10 +50,14 @@ public:
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    set_isProtectedTarget(FindProtectedTargetPointer(lhs,
+                              /*isPointerDefinition=*/false,
+                              /*lookThroughAssociateNames=*/false) != nullptr);
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
@@ -92,6 +96,7 @@ private:
   bool characterizedProcedure_{false};
   bool isContiguous_{false};
   bool isVolatile_{false};
+  bool isProtectedTarget_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
@@ -114,6 +119,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isContiguous(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isVolatile(
     bool isVolatile) {
   isVolatile_ = isVolatile;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
   return *this;
 }
 
@@ -207,6 +218,32 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
+  const Symbol *protectedTarget{FindProtectedTargetPointer(rhs,
+      /*isPointerDefinition=*/false, /*lookThroughAssociateNames=*/false)};
+  const Symbol *pointer{protectedTarget};
+  const Symbol *component{nullptr};
+  if (!pointer && lhs_ && evaluate::IsObjectPointer(rhs)) {
+    // e.g. "p%next" (see FindProtectedTargetPointer())
+    pointer = FindProtectedTargetPointer(rhs, /*isPointerDefinition=*/true,
+        /*lookThroughAssociateNames=*/false);
+    component = GetLastSymbol(rhs);
+  }
+  if (pointer && lhs_ && !isProtectedTarget_) { // F'2028 C870, C871
+    parser::Message *msg{nullptr};
+    if (component) {
+      msg = Say(
+          "Pointer component '%s' of the target of PROTECTED_TARGET pointer '%s' may not be a data-target for %s, which does not have the PROTECTED_TARGET attribute"_err_en_US,
+          component->name(), pointer->name(), description_);
+    } else {
+      msg = Say(
+          "The target of PROTECTED_TARGET pointer '%s' may not be associated with %s, which does not have the PROTECTED_TARGET attribute"_err_en_US,
+          pointer->name(), description_);
+    }
+    if (msg) {
+      evaluate::AttachDeclaration(msg, *pointer);
+    }
+    return false;
+  }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
     if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
@@ -243,9 +280,22 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
   }
-  // Warn about undefinable data targets
-  if (auto because{
-          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
+  // Warn about undefinable data targets.  F'2028 C864, a data-target or
+  // initial-data-target (not an actual argument) whose base object is
+  // PROTECTED, is reported only as this optional warning, for every pointer;
+  // WhyNotDefinable() reports such an object when it is use-associated and
+  // not a pointer.  A PROTECTED_TARGET pointer keeps the warning for that
+  // case, which also lets the "p => x" of 8.5.16 NOTE 1 compile by default.
+  // It gets no warning for other undefinable targets, since it cannot
+  // define its target (F'2028 C866, 8.5.16p2).
+  const Symbol *base{GetFirstSymbol(rhs)};
+  if (protectedTarget) {
+    // F'2028 C870-C872 apply instead
+  } else if (isProtectedTarget_ &&
+      !(lhs_ && base && IsProtected(GetAssociationRoot(*base)))) {
+    // not F'2028 C864
+  } else if (auto because{WhyNotDefinable(
+                 foldingContext_.messages().at(), scope_, {}, rhs)}) {
     if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
             "Pointer target is not a definable variable"_warn_en_US)}) {
       msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
@@ -619,6 +669,7 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isProtectedTarget(lhs.protectedTarget)
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
       .set_ignoreTKR(lhs.ignoreTKR)

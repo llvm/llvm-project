@@ -178,6 +178,9 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
@@ -359,6 +362,33 @@ const Symbol *FindExternallyVisibleObject(
 const Symbol &BypassGeneric(const Symbol &);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
+
+// F'2028 8.5.16: The target of a data pointer with the PROTECTED_TARGET
+// attribute is not definable via that pointer.  When a designator is such a
+// pointer, or designates its target or a subobject of its target, returns the
+// pointer; a reference to a function whose result is such a pointer returns
+// the result.  Only the rightmost pointer in a data-ref matters, since the
+// target of a pointer component is not a subobject of its parent.  In a
+// context that pertains to the pointer association status of the rightmost
+// pointer, that pointer is itself a subobject of its parent (F'2023 9.4.2p5),
+// so "p%next" is then a subobject of the target of "p".  Such contexts
+// include the definition of that association, a pointer data-target, whose
+// association status the pointer object takes (F'2023 10.2.2.3p2), and an
+// actual argument for a pointer dummy argument.  "isPointerDefinition" is
+// true for them, and the search then starts with that parent.
+// A RANK DEFAULT associate name has exactly the attributes of its selector
+// (F'2028 11.1.12.3p2), so it always stands for its selector.  Other
+// associate names do not have the PROTECTED_TARGET attribute; they stand for
+// their selectors only in variable definition contexts, since the selector
+// is then in one too (F'2028 20.6.7(11), 11.1.3.3p5).  So
+// "lookThroughAssociateNames" is true for the checks of definition contexts
+// (C866, C868, C869, 8.5.16p2) and false for C870-C874.
+const Symbol *FindProtectedTargetPointer(const Symbol &,
+    bool isPointerDefinition = false, bool lookThroughAssociateNames = true);
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &,
+    bool isPointerDefinition = false, bool lookThroughAssociateNames = true);
+const Symbol *FindProtectedTargetPointer(const SomeExpr &,
+    bool isPointerDefinition = false, bool lookThroughAssociateNames = true);
 
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type);

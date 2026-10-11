@@ -262,6 +262,9 @@ struct DummyDataObject {
   Attrs attrs;
   common::IgnoreTKRSet ignoreTKR;
   std::optional<common::CUDADataAttr> cudaDataAttr;
+  // F'2028 PROTECTED_TARGET; it is not a characteristic (15.3.2.2), so it is
+  // kept apart from attrs and does not affect compatibility or equality.
+  bool protectedTarget{false};
 };
 
 // 15.3.2.3
