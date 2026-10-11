@@ -3137,17 +3137,17 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
       while (!WorkList.empty()) {
         auto *Curr = WorkList.pop_back_val();
 
-        // If a user is an AND, add all its users to the work list. We only
-        // propagate "pred != null" condition through AND because it is only
-        // correct to assume that all conditions of AND are met in true branch.
-        // TODO: Support similar logic of OR and EQ predicate?
-        if (NonNullIfTrue)
-          if (match(Curr, m_LogicalAnd(m_Value(), m_Value()))) {
-            for (const auto *CurrU : Curr->users())
-              if (Visited.insert(CurrU).second)
-                WorkList.push_back(CurrU);
-            continue;
-          }
+        // All operands of a true AND or a false OR must have the corresponding
+        // value. Follow their users to find a branch that establishes this.
+        if ((NonNullIfTrue &&
+             match(Curr, m_LogicalAnd(m_Value(), m_Value()))) ||
+            (!NonNullIfTrue &&
+             match(Curr, m_LogicalOr(m_Value(), m_Value())))) {
+          for (const auto *CurrU : Curr->users())
+            if (Visited.insert(CurrU).second)
+              WorkList.push_back(CurrU);
+          continue;
+        }
 
         if (const CondBrInst *BI = dyn_cast<CondBrInst>(Curr)) {
           BasicBlock *NonNullSuccessor =
