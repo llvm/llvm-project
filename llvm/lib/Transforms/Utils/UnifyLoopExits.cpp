@@ -23,9 +23,13 @@
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
@@ -147,7 +151,8 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
   }
 }
 
-static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
+static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L,
+                           ProfileInfo Profile) {
   // To unify the loop exits, we need a list of the exiting blocks as
   // well as exit blocks. The functions for locating these lists both
   // traverse the entire loop body. It is more efficient to first
@@ -224,7 +229,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
             ExitingBlocks[I] = NewSucc;
           else
             ExitingBlocks.push_back(NewSucc);
-          CHub.addBranch(NewSucc, Succ);
+          CHub.addSplitTarget(NewSucc, Succ);
           BrTargets[Succ] = NewSucc;
         }
         LLVM_DEBUG(dbgs() << "Added exiting branch: "
@@ -241,8 +246,9 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> GuardBlocks;
   BasicBlock *LoopExitBlock;
   bool ChangedCFG;
-  std::tie(LoopExitBlock, ChangedCFG) = CHub.finalize(
-      &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
+  std::tie(LoopExitBlock, ChangedCFG) =
+      CHub.finalize(&DTU, GuardBlocks, "loop.exit",
+                    MaxBooleansInControlFlowHub.getValue(), Profile);
   ChangedCFG |= Changed;
   if (!ChangedCFG)
     return false;
@@ -281,13 +287,29 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   return true;
 }
 
-static bool runImpl(LoopInfo &LI, DominatorTree &DT) {
+static bool hasMultiExitLoop(const LoopInfo &LI) {
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    SmallVector<BasicBlock *, 4> Exits;
+    L->getUniqueExitBlocks(Exits);
+    if (Exits.size() > 1)
+      return true;
+  }
+  return false;
+}
 
+// BPI extracts weights as uint32_t and asserts when one needs more bits.
+static bool shouldCollectProfileInfo(const Function &F, const LoopInfo &LI) {
+  // Profile first. An unprofiled function is one metadata scan.
+  return functionHasScalableBranchProfile(F) &&
+         !functionHasBranchWeightsWiderThan32Bits(F) && hasMultiExitLoop(LI);
+}
+
+static bool runImpl(LoopInfo &LI, DominatorTree &DT, ProfileInfo Profile) {
   bool Changed = false;
   auto Loops = LI.getLoopsInPreorder();
   for (auto *L : Loops) {
     LLVM_DEBUG(dbgs() << "Processing loop:\n"; L->print(dbgs()));
-    Changed |= unifyLoopExits(DT, LI, L);
+    Changed |= unifyLoopExits(DT, LI, L, Profile);
   }
   return Changed;
 }
@@ -298,7 +320,26 @@ bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  return runImpl(LI, DT);
+  std::optional<CycleInfo> CI;
+  std::optional<BranchProbabilityInfo> BPI;
+  std::optional<BlockFrequencyInfo> OwnedBFI;
+  ProfileInfo Profile;
+  SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
+  if (shouldCollectProfileInfo(F, LI)) {
+    CI.emplace();
+    CI->compute(F);
+    // Use TLI if the legacy pipeline already computed it.
+    const TargetLibraryInfo *TLI = nullptr;
+    if (auto *TLIWP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>())
+      TLI = &TLIWP->getTLI(F);
+    BPI.emplace(F, *CI, TLI, &DT);
+    OwnedBFI.emplace(F, *BPI, *CI);
+    Profile.BFI = &*OwnedBFI;
+    // Record which blocks this BFI covers before transforming the CFG.
+    recordBlocksBeforeTransform(F, BlocksSeenBefore);
+    Profile.KnownBlocks = &BlocksSeenBefore;
+  }
+  return runImpl(LI, DT, Profile);
 }
 
 namespace llvm {
@@ -310,7 +351,16 @@ PreservedAnalyses UnifyLoopExitsPass::run(Function &F,
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!runImpl(LI, DT))
+  // Always run: a switch can still need splitting with one exit.
+  ProfileInfo Profile;
+  SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
+  if (shouldCollectProfileInfo(F, LI)) {
+    Profile.BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+    // Record which blocks this BFI covers before transforming the CFG.
+    recordBlocksBeforeTransform(F, BlocksSeenBefore);
+    Profile.KnownBlocks = &BlocksSeenBefore;
+  }
+  if (!runImpl(LI, DT, Profile))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<LoopAnalysis>();

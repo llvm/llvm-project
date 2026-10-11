@@ -129,9 +129,12 @@
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -272,7 +275,7 @@ static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, CycleRef C,
 // natural loop. Also insert this new loop at its appropriate place in the
 // hierarchy of loops.
 static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
-                           LoopInfo *LI) {
+                           LoopInfo *LI, ProfileInfo Profile) {
   if (CI.isReducible(C))
     return false;
   LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(C) << "\n";);
@@ -318,7 +321,7 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(Succ) << '\n');
       }
       if (NewSucc)
-        CHub.addBranch(NewSucc, Header);
+        CHub.addSplitTarget(NewSucc, Header);
     } else {
       reportFatalUsageError(
           "unsupported block terminator: fix-irreducible "
@@ -368,7 +371,7 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
         BasicBlock *NewSucc =
             SplitMultiBrEdge(P, Succ, I, ExistingTarget, &DTU, &CI, LI);
         if (!ExistingTarget) {
-          CHub.addBranch(NewSucc, Succ);
+          CHub.addSplitTarget(NewSucc, Succ);
           MultiBrTargets[Succ] = NewSucc;
         }
         LLVM_DEBUG(dbgs() << "Added external branch: "
@@ -395,7 +398,8 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   SetVector<BasicBlock *> Entries;
   Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
 
-  CHub.finalize(&DTU, GuardBlocks, "irr");
+  CHub.finalize(&DTU, GuardBlocks, "irr",
+                /*MaxControlFlowBooleans=*/std::nullopt, Profile);
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
 #else
@@ -422,14 +426,21 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   return true;
 }
 
+static bool hasIrreducibleCycle(const CycleInfo &CI) {
+  for (auto C : CI.cycles())
+    if (!CI.isReducible(C))
+      return true;
+  return false;
+}
+
 static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
-                               LoopInfo *LI) {
+                               LoopInfo *LI, ProfileInfo Profile) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
 
   bool Changed = false;
   for (auto C : CI.cycles())
-    Changed |= fixIrreducible(C, CI, DT, LI);
+    Changed |= fixIrreducible(C, CI, DT, LI, Profile);
 
   if (!Changed)
     return false;
@@ -448,16 +459,48 @@ bool FixIrreducible::runOnFunction(Function &F) {
   LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   auto &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return FixIrreducibleImpl(F, CI, DT, LI);
+
+  std::optional<BranchProbabilityInfo> BPI;
+  std::optional<BlockFrequencyInfo> OwnedBFI;
+  ProfileInfo Profile;
+  SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
+  // BPI extracts weights as uint32_t and asserts when one needs more bits.
+  if (hasIrreducibleCycle(CI) && functionHasScalableBranchProfile(F) &&
+      !functionHasBranchWeightsWiderThan32Bits(F)) {
+    // Use TLI if the legacy pipeline already computed it.
+    const TargetLibraryInfo *TLI = nullptr;
+    if (auto *TLIWP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>())
+      TLI = &TLIWP->getTLI(F);
+    BPI.emplace(F, CI, TLI, &DT);
+    OwnedBFI.emplace(F, *BPI, CI);
+    Profile.BFI = &*OwnedBFI;
+    // Record which blocks this BFI covers before transforming the CFG.
+    recordBlocksBeforeTransform(F, BlocksSeenBefore);
+    Profile.KnownBlocks = &BlocksSeenBefore;
+  }
+  return FixIrreducibleImpl(F, CI, DT, LI, Profile);
 }
 
 PreservedAnalyses FixIrreduciblePass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto &CI = AM.getResult<CycleAnalysis>(F);
+  if (!hasIrreducibleCycle(CI))
+    return PreservedAnalyses::all();
+
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!FixIrreducibleImpl(F, CI, DT, LI))
+  ProfileInfo Profile;
+  SmallPtrSet<const BasicBlock *, 32> BlocksSeenBefore;
+  // BPI extracts weights as uint32_t and asserts when one needs more bits.
+  if (functionHasScalableBranchProfile(F) &&
+      !functionHasBranchWeightsWiderThan32Bits(F)) {
+    Profile.BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+    // Record which blocks this BFI covers before transforming the CFG.
+    recordBlocksBeforeTransform(F, BlocksSeenBefore);
+    Profile.KnownBlocks = &BlocksSeenBefore;
+  }
+  if (!FixIrreducibleImpl(F, CI, DT, LI, Profile))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
