@@ -122,15 +122,14 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    [[CMP8_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; CHECK:       for.body.preheader.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[N]], -2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL_PREHEADER]]
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = trunc i32 [[N]] to i1
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_BODY_EPIL_PREHEADER]], label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    [[I_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
 ; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = trunc i32 [[N]] to i1
