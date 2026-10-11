@@ -389,12 +389,6 @@ void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
 
 void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
                                                CapturedCleanups &condCleanup) {
-  // A condition variable always has automatic storage duration, so this
-  // mirrors the auto-var path of emitVarDecl/emitAutoVarDecl. Capture the
-  // lifetime-end cleanup pushed while emitting the alloca, but emit the
-  // initializer with capturing disabled so its own cleanups get their normal
-  // cir.cleanup.scope handling. The variable's destructor cleanup is captured
-  // separately after initialization.
   assert(d.hasLocalStorage() && "loop condition variable is not local");
 
   // Mirror the diagnostic emitted by emitVarDecl on the automatic-storage path.
@@ -404,22 +398,23 @@ void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
     cgm.errorNYI(d.getSourceRange(),
                  "emitLoopConditionVariable: OpenCL local address space");
 
+  emitAutoVarDeclWithCapturedCleanups(d, condCleanup,
+                                      /*guardDestruction=*/true);
+}
+
+void CIRGenFunction::emitAutoVarDeclWithCapturedCleanups(
+    const VarDecl &d, CapturedCleanups &cleanups, bool guardDestruction) {
+  assert(d.hasLocalStorage() && "captured cleanups for a non-local variable");
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   CIRGenFunction::AutoVarEmission emission = [&] {
-    CapturedCleanups::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(cleanups);
     return emitAutoVarAlloca(d);
   }();
 
-  // The condition variable's destructor is captured into the loop op's
-  // per-iteration cleanup region, which structurally spans the initializer.
-  // If the initializer throws, the variable was never constructed and its
-  // destructor must not run. Classic codegen avoids this by pushing the
-  // cleanup only after the initializer, but our deferred cleanup necessarily
-  // covers the whole condition region, so guard it with an active flag that is
-  // false while the initializer runs and set to true once construction
-  // completes. The flag is stored to on every iteration, so it also resets
-  // correctly across iterations.
-  bool needsCleanup = d.needsDestruction(getContext()) != QualType::DK_none;
+  // If the cleanup region covers initialization, guard destruction so it
+  // cannot run when the initializer throws. Reset the flag each iteration.
+  bool needsCleanup =
+      guardDestruction && d.needsDestruction(getContext()) != QualType::DK_none;
   Address activeFlag = Address::invalid();
   if (needsCleanup) {
     mlir::Location loc = getLoc(d.getSourceRange());
@@ -430,7 +425,14 @@ void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
     builder.createFlagStore(loc, false, activeFlag.getPointer());
   }
 
+  // Initializer temporaries keep their normal cleanup handling. For unguarded
+  // regions, initialization must not leave uncaptured cleanups, e.g. those of
+  // lifetime-extended temporaries.
+  [[maybe_unused]] EHScopeStack::stable_iterator initDepth =
+      ehStack.stable_begin();
   emitAutoVarInit(emission);
+  assert((guardDestruction || ehStack.stable_begin() == initDepth) &&
+         "initializer left cleanups that cannot be captured");
 
   if (needsCleanup) {
     // Construction has completed, so activate the destructor cleanup.
@@ -439,7 +441,7 @@ void CIRGenFunction::emitLoopConditionVariable(const VarDecl &d,
   }
 
   {
-    CapturedCleanups::CaptureScope capture(condCleanup);
+    CapturedCleanups::CaptureScope capture(cleanups);
     emitAutoVarCleanups(emission);
   }
 

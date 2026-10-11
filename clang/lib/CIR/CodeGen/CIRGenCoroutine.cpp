@@ -409,20 +409,27 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     // For zipping the arg map into debug info.
     assert(!cir::MissingFeatures::generateDebugInfo());
 
+    // Capture frame cleanups for destroy: promise first, then parameter copies,
+    // before freeing the frame ([dcl.fct.def.coroutine]p11, p13). Local cleanup
+    // scopes would end their lifetimes too early.
+
+    assert(!cir::MissingFeatures::coroUnwindRegion());
+    CapturedCleanups frameCleanups(*this, /*active=*/true);
+
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
     // parameter copies.
     assert(!cir::MissingFeatures::coroOutsideFrameMD());
     for (auto *pm : paramMoves) {
-      if (emitStmt(pm, /*useCurrentScope=*/true).failed())
-        return mlir::failure();
-      paramReplacer.addCopy(cast<DeclStmt>(pm));
+      const auto *paramMove = cast<DeclStmt>(pm);
+      emitAutoVarDeclWithCapturedCleanups(
+          cast<VarDecl>(*paramMove->getSingleDecl()), frameCleanups);
+      paramReplacer.addCopy(paramMove);
     }
 
     // Builds `initial_suspend`.
     auto initialSuspendBuilder = [&]() -> mlir::LogicalResult {
-      if (emitStmt(s.getPromiseDeclStmt(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
+      emitAutoVarDeclWithCapturedCleanups(*s.getPromiseDecl(), frameCleanups);
       // returnValue should be valid as long as the coroutine's return type
       // is not void. The assertion could help us to reduce the check later.
       assert(returnValue.isValid() == (bool)s.getReturnStmt());
@@ -435,10 +442,14 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       // So we couldn't emit return value when we emit return statment,
       // otherwise the call to get_return_object wouldn't be in front
       // of initial_suspend.
-      if (returnValue.isValid())
+      if (returnValue.isValid()) {
+        // Sema may omit ExprWithCleanups when the return types match. Clean
+        // up the GRO full-expression with its temporaries here explicitly.
+        FullExprCleanupScope groScope(*this, s.getReturnValue());
         emitAnyExprToMem(s.getReturnValue(), returnValue,
                          s.getReturnValue()->getType().getQualifiers(),
                          /*isInit*/ true);
+      }
 
       curCoro.data->currentAwaitKind = cir::AwaitKind::Init;
       curCoro.data->exceptionHandler = s.getExceptionHandler();
@@ -453,6 +464,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
     // Builds `body`: the user-written coroutine code, including its
     // implicit `try { ... } catch (...) { unhandled_exception(); }`.
     auto bodyBuilder = [&]() -> mlir::LogicalResult {
+      RunCleanupsScope bodyRegionScope(*this);
       curCoro.data->currentAwaitKind = cir::AwaitKind::User;
 
       if (curCoro.data->exceptionHandler) {
@@ -519,8 +531,11 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       return mlir::success();
     };
 
-    // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
+    // Destroy the promise and the parameter copies, then emit
+    // "if (coro.free(CoroId, CoroBegin)) Deallocate;"
     auto destroyBuilder = [&]() -> mlir::LogicalResult {
+      frameCleanups.emitIntoCleanupRegion(openCurlyLoc);
+
       Stmt *deallocate = s.getDeallocate();
       if (emitStmt(deallocate, /*useCurrentScope=*/true).failed()) {
         cgm.error(deallocate->getBeginLoc(),

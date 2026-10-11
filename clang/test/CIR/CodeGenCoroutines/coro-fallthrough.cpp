@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefixes=CIR,CIR-NOEH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
 // RUN: FileCheck --input-file=%t-eh.cir %s -check-prefixes=CIR,CIR-EH
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -O1 -fclangir -emit-cir %s -o %t-O1.cir
+// RUN: FileCheck --input-file=%t-O1.cir %s -check-prefix=CIR-O1
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,OGCG-NOEH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
@@ -33,6 +35,7 @@ struct Task {
 };
 
 S make();
+void use(int &);
 
 Task falls_off_end() {
   co_await std::suspend_always{};
@@ -105,6 +108,31 @@ Task falls_off_end_with_extended_temporary() {
 // OGCG-NEXT:    call void @llvm.lifetime.end.p0(
 // OGCG-NOEH-NEXT: call void @_ZN4Task12promise_type11return_voidEv(
 // OGCG-EH-NEXT:   invoke void @_ZN4Task12promise_type11return_voidEv(
+
+// With optimizations, even a local variable without a destructor has a
+// cleanup, its lifetime end.
+
+Task falls_off_end_with_trivial_local() {
+  co_await std::suspend_always{};
+  int i = 0;
+  use(i);
+}
+
+// CIR-O1-LABEL: cir.func coroutine {{.*}} @_Z32falls_off_end_with_trivial_localv(
+// CIR-O1:         %[[PROMISE:.*]] = cir.alloca "__promise"
+// CIR-O1:         %[[I:.*]] = cir.alloca "i"
+// CIR-O1:         }, body : {
+// CIR-O1:           cir.lifetime.start %[[I]]
+// CIR-O1-NEXT:      cir.cleanup.scope {
+// CIR-O1:             cir.call @_Z3useRi(%[[I]])
+// CIR-O1-NEXT:        cir.yield
+// CIR-O1-NEXT:      } cleanup normal {
+// CIR-O1-NEXT:        cir.lifetime.end %[[I]]
+// CIR-O1-NEXT:        cir.yield
+// CIR-O1-NEXT:      }
+// CIR-O1-NEXT:      cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
+// CIR-O1-NEXT:      cir.co_return
+// CIR-O1-NEXT:    }, finalSuspend : {
 
 // A co_return inside an if does not make the end of the body unreachable, so
 // the fall-through handler is still emitted, after the local variables are
