@@ -38,6 +38,8 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.limits_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_sigaction
     libc.hdr.time_macros
     libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
@@ -51,6 +53,8 @@ add_libc_test(
     libc.src.semaphore.sem_timedwait
     libc.src.semaphore.sem_trywait
     libc.src.semaphore.sem_wait
+    libc.src.signal.sigaction
+    libc.src.unistd.alarm
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
