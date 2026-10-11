@@ -588,8 +588,7 @@ define i1 @trunc_dom_cond(i64 %x) {
 ; CHECK-NEXT:    [[ISZERO:%.*]] = trunc i64 [[X:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[ISZERO]], label [[NON_ZERO:%.*]], label [[ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq i64 [[X]], 0
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       zero:
 ; CHECK-NEXT:    ret i1 false
 ;
