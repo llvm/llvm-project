@@ -27,6 +27,27 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
+static bool HasProtectedTargetPointerActualArgument(
+    const SomeExpr &actual, bool asPointer = false) {
+  if (FindProtectedTargetPointer(actual, asPointer)) {
+    return true;
+  }
+  semantics::Attrs attrs{evaluate::GetAttrs(actual)};
+  return evaluate::IsObjectPointer(actual) && attrs.test(Attr::POINTER) &&
+      attrs.test(Attr::PROTECTED_TARGET);
+}
+
+static bool IsIntrinsicNullMoldArgument(
+    const evaluate::SpecificIntrinsic *intrinsic,
+    const characteristics::DummyArgument &dummyArg) {
+  if (!intrinsic || dummyArg.name != "mold") {
+    return false;
+  }
+  const auto &attrs{intrinsic->characteristics.value().attrs};
+  return attrs.test(characteristics::Procedure::Attr::NullPointer) ||
+      attrs.test(characteristics::Procedure::Attr::NullAllocatable);
+}
+
 void CheckImplicitInterfaceArgKeywords(
     const evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
   auto restorer{
@@ -69,6 +90,17 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
+    }
+    const Symbol *protectedTarget{FindProtectedTargetPointer(*expr)};
+    if (protectedTarget || HasProtectedTargetPointerActualArgument(*expr)) {
+      if (auto *msg{messages.Say(
+              "Actual argument that is a PROTECTED_TARGET pointer or a subobject of one may not be passed to a procedure with an implicit interface"_err_en_US)}) {
+        if (protectedTarget) {
+          msg->Attach(protectedTarget->name(),
+              "PROTECTED_TARGET pointer '%s' declared here"_en_US,
+              protectedTarget->name());
+        }
+      }
     }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
@@ -454,6 +486,22 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool actualIsAssumedRank{IsAssumedRank(actual)};
   bool actualIsPointer{evaluate::IsObjectPointer(actual)};
   bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
+  const Symbol *actualProtectedTarget{
+      FindProtectedTargetPointer(actual, /*asPointer=*/false)};
+  const Symbol *actualProtectedTargetForPointerUse{
+      FindProtectedTargetPointer(actual, /*asPointer=*/true)};
+  bool actualHasProtectedTarget{actualProtectedTarget ||
+      HasProtectedTargetPointerActualArgument(actual, /*asPointer=*/false)};
+  bool actualHasProtectedTargetForPointerUse{
+      actualProtectedTargetForPointerUse ||
+      HasProtectedTargetPointerActualArgument(actual, /*asPointer=*/true)};
+  const bool emitProtectedTargetRules{scope != nullptr};
+  const bool isNullMoldArg{IsIntrinsicNullMoldArgument(intrinsic, dummyArg)};
+  // NULL's MOLD= and other intrinsic inquiry-only arguments are exempt from
+  // C872/C874: they are never defined and their association never changes.
+  const bool isIntrinsicInquiryOnly{isNullMoldArg ||
+      dummy.attrs.test(
+          characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)};
   bool actualMayBeAssumedSize{actualIsAssumedSize ||
       (actualIsAssumedRank && !actualIsPointer && !actualIsAllocatable)};
   bool actualIsPolymorphic{actualType.type().IsPolymorphic()};
@@ -826,6 +874,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         "ALLOCATABLE coarray '%s' may not be associated with INTENT(OUT) %s"_err_en_US,
         actualLastSymbol->name(), dummyName);
   }
+  bool emittedC874Error{false};
+  if (emitProtectedTargetRules && actualHasProtectedTarget && !dummyIsPointer &&
+      dummy.intent != common::Intent::In &&
+      !isIntrinsicInquiryOnly) { // F'2028 draft C874
+    if (auto *msg{messages.Say(
+            "Non-POINTER %s must have INTENT(IN) when the actual argument is a PROTECTED_TARGET pointer or a subobject of one"_err_en_US,
+            dummyName)}) {
+      if (actualProtectedTarget) {
+        msg->Attach(actualProtectedTarget->name(),
+            "PROTECTED_TARGET pointer '%s' declared here"_en_US,
+            actualProtectedTarget->name());
+      }
+      emittedC874Error = true;
+    }
+  }
 
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
@@ -855,6 +918,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (undefinableMessage) {
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+      }
+      if (emittedC874Error) {
+        // F'2028 draft C874 diagnoses this explicitly above; avoid duplicate
+        // F'2028 draft C866 "not definable" errors from the same root cause.
+        flags.set(DefinabilityFlag::IgnoreProtectedTarget);
       }
       if (actualIsPointer && dummyIsPointer) { // 19.6.8
         flags.set(DefinabilityFlag::PointerDefinition);
@@ -1039,7 +1107,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // 15.5.2.7 -- dummy is POINTER
   if (dummyIsPointer) {
-    if (actualIsPointer || dummy.intent == common::Intent::In) {
+    bool missingDummyProtectedTarget{emitProtectedTargetRules &&
+        actualHasProtectedTargetForPointerUse && !isIntrinsicInquiryOnly &&
+        !dummy.attrs.test(characteristics::DummyDataObject::Attr::
+                ProtectedTarget)}; // F'2028 draft C872
+    if (missingDummyProtectedTarget) {
+      if (auto *msg{messages.Say(
+              "POINTER %s must have the PROTECTED_TARGET attribute when the actual argument is a PROTECTED_TARGET pointer or a subobject of one"_err_en_US,
+              dummyName)}) {
+        if (actualProtectedTargetForPointerUse) {
+          msg->Attach(actualProtectedTargetForPointerUse->name(),
+              "PROTECTED_TARGET pointer '%s' declared here"_en_US,
+              actualProtectedTargetForPointerUse->name());
+        }
+      }
+    } else if (actualIsPointer || dummy.intent == common::Intent::In) {
       if (scope) {
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,

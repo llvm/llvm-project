@@ -178,6 +178,15 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
+const Symbol *FindNearestPointer(
+    const evaluate::DataRef &, bool skipRightmostSymbol = false);
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::DataRef &, bool asPointer = false);
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &, bool asPointer = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

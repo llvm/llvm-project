@@ -94,6 +94,31 @@ static bool DefinesComponentPointerTarget(
   }
 }
 
+static std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock at, DefinabilityFlags flags,
+    const evaluate::DataRef &dataRef) {
+  if (flags.test(DefinabilityFlag::IgnoreProtectedTarget)) {
+    return std::nullopt;
+  }
+  if (const Symbol *definingPointer{FindNearestPointer(
+          dataRef, flags.test(DefinabilityFlag::PointerDefinition))};
+      definingPointer && IsProtectedTarget(definingPointer->GetUltimate())) {
+    const bool wholePointer{&definingPointer->GetUltimate() ==
+        &dataRef.GetLastSymbol().GetUltimate()};
+    parser::Message message{wholePointer
+            ? parser::Message{at,
+                  "'%s' is a PROTECTED_TARGET pointer, so its target may not be defined through it"_en_US,
+                  dataRef.GetLastSymbol().name()}
+            : parser::Message{at,
+                  "'%s' may not be defined via PROTECTED_TARGET pointer '%s'"_en_US,
+                  dataRef.GetLastSymbol().name(), definingPointer->name()}};
+    message.set_severity(parser::Severity::Error);
+    evaluate::AttachDeclaration(message, *definingPointer);
+    return message;
+  }
+  return std::nullopt;
+}
+
 // Check the leftmost (or only) symbol from a data-ref or expression.
 static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original,
@@ -102,6 +127,13 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
   bool isPointerDefinition{flags.test(DefinabilityFlag::PointerDefinition)};
   bool acceptAllocatable{flags.test(DefinabilityFlag::AcceptAllocatable)};
   bool isTargetDefinition{!isPointerDefinition && IsPointer(ultimate)};
+  if (isTargetDefinition && IsProtectedTarget(ultimate) &&
+      !isComponentPointerTarget &&
+      !flags.test(DefinabilityFlag::IgnoreProtectedTarget)) {
+    return BlameSymbol(at,
+        "'%s' is a PROTECTED_TARGET pointer, so its target may not be defined through it"_en_US,
+        original);
+  }
   if (const auto *association{ultimate.detailsIf<AssocEntityDetails>()}) {
     if (!IsVariable(association->expr())) {
       return BlameSymbol(at,
@@ -111,11 +143,31 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
           "Construct association '%s' has a vector subscript"_en_US, original);
     } else if (auto dataRef{evaluate::ExtractDataRef(
                    *association->expr(), true, true)}) {
+      DefinabilityFlags selectorFlags{flags};
+      selectorFlags.reset(DefinabilityFlag::PointerDefinition);
+      if (!isComponentPointerTarget) {
+        if (auto whyNotSelector{WhyNotDefinableViaProtectedTarget(
+                at, selectorFlags, *dataRef)}) {
+          return whyNotSelector;
+        }
+      }
       return WhyNotDefinableBase(at, scope, flags, dataRef->GetFirstSymbol(),
           isWholeSymbol &&
               std::holds_alternative<evaluate::SymbolRef>(dataRef->u),
           isComponentPointerTarget ||
               DefinesComponentPointerTarget(*dataRef, flags));
+    } else if (!isComponentPointerTarget &&
+        evaluate::IsObjectPointer(association->expr().value()) &&
+        evaluate::GetAttrs(association->expr().value())
+            .test(Attr::PROTECTED_TARGET)) {
+      // Defining the associate name defines the target of the selector's
+      // PROTECTED_TARGET function result (F'2028 draft 8.5.16p2).
+      DefinabilityFlags selectorFlags{flags};
+      selectorFlags.reset(DefinabilityFlag::PointerDefinition);
+      if (auto whyNot{WhyNotDefinable(
+              at, scope, selectorFlags, *association->expr())}) {
+        return whyNot;
+      }
     }
   }
   if (isTargetDefinition || isComponentPointerTarget) {
@@ -253,6 +305,10 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (auto whyNotViaProtectedTarget{
+          WhyNotDefinableViaProtectedTarget(at, flags, dataRef)}) {
+    return whyNotViaProtectedTarget;
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -397,6 +453,15 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
+  } else if (!flags.test(DefinabilityFlag::PointerDefinition) &&
+      !flags.test(DefinabilityFlag::IgnoreProtectedTarget) &&
+      evaluate::IsObjectPointer(expr) &&
+      evaluate::GetAttrs(expr).test(Attr::PROTECTED_TARGET)) {
+    parser::Message message{at,
+        "'%s' may not be defined via PROTECTED_TARGET pointer function result"_en_US,
+        expr.AsFortran()};
+    message.set_severity(parser::Severity::Error);
+    return std::move(message);
   } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};

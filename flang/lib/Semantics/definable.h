@@ -32,6 +32,7 @@ ENUM_CLASS(DefinabilityFlag,
     AcceptAllocatable, // treat allocatable as if it were a pointer
     SourcedAllocation, // ALLOCATE(a,SOURCE=)
     PolymorphicOkInPure, // don't check for polymorphic type in pure subprogram
+    IgnoreProtectedTarget, // don't enforce PROTECTED_TARGET target-defn checks
     DoNotNoteDefinition, // context does not imply definition
     AllowEventLockOrNotifyType, PotentialDeallocation,
     OnlyWarnOnImpureFinalInPureContext)

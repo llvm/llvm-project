@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -325,6 +326,62 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
+}
+
+const Symbol *FindNearestPointer(
+    const evaluate::DataRef &dataRef, bool skipRightmostSymbol) {
+  // Returns the nearest (rightmost) pointer part in a designator.
+  // skipRightmostSymbol=true skips that rightmost pointer symbol and returns
+  // the next pointer above it, if any.
+  if (!skipRightmostSymbol) {
+    return evaluate::GetLastPointerSymbol(dataRef);
+  }
+  return common::visit(
+      common::visitors{
+          [](const evaluate::SymbolRef &) -> const Symbol * { return nullptr; },
+          [](const evaluate::Component &component) -> const Symbol * {
+            return evaluate::GetLastPointerSymbol(component.base());
+          },
+          [](const evaluate::ArrayRef &) -> const Symbol * {
+            // The rightmost part is an element/section, not a pointer.
+            return nullptr;
+          },
+          [](const evaluate::CoarrayRef &) -> const Symbol * {
+            return nullptr;
+          },
+      },
+      dataRef.u);
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::DataRef &dataRef, bool asPointer) {
+  // F'2028 draft C870-C874 says "or a subobject thereof".
+  // We read that as a part of the pointer target with no pointer in between,
+  // as in F'2023 9.4.2p5.
+  // F'2028 draft C870/C871/C873/C874 check the nearest pointer.
+  // F'2028 draft C872 also checks above a rightmost pointer component.
+  if (const Symbol *pointer{
+          FindNearestPointer(dataRef, /*skipRightmostSymbol=*/false)};
+      pointer && IsProtectedTarget(pointer->GetUltimate())) {
+    return pointer;
+  }
+  if (asPointer) {
+    if (const Symbol *pointerAboveRightmost{
+            FindNearestPointer(dataRef, /*skipRightmostSymbol=*/true)};
+        pointerAboveRightmost &&
+        IsProtectedTarget(pointerAboveRightmost->GetUltimate())) {
+      return pointerAboveRightmost;
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &expr, bool asPointer) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(*dataRef, asPointer);
+  }
+  return nullptr;
 }
 
 bool IsBindCProcedure(const Symbol &original) {

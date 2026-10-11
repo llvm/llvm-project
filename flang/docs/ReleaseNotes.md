@@ -169,6 +169,12 @@ page](https://llvm.org/releases/).
   `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
   interface.
 
+- Flang now accepts the `PROTECTED_TARGET` attribute and statement from the
+  Fortran 2028 working draft and enforces its constraints at compile time.
+  The target of such a pointer cannot be defined through it. Where the draft's
+  C864 and NOTE 1 conflict, Flang follows NOTE 1 and accepts associating such a
+  pointer with a use-associated `PROTECTED` variable.
+
 ## Build System Changes
 
 ## New Issues Found

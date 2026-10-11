@@ -347,6 +347,19 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    // F'2028 draft C781 and C8109 cover components and the PROTECTED_TARGET
+    // statement. 8.5.16 describes the attribute only for data pointers, so a
+    // nonpointer with the attr-spec is rejected as well.
+    if (!evaluate::IsVariable(symbol) || !IsPointer(symbol)) {
+      messages_.Say(
+          "A PROTECTED_TARGET entity must be a data pointer"_err_en_US);
+    }
+    if (FindCommonBlockContaining(symbol)) { // F'2028 draft C867
+      messages_.Say(
+          "A pointer with the PROTECTED_TARGET attribute may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -1580,6 +1593,16 @@ private:
       return FoldShape(*shape);
     }
     return std::nullopt;
+  }
+  template <typename ATTRS> ATTRS FilterNonCharacteristicAttrs(ATTRS attrs) {
+    return attrs;
+  }
+  DummyDataObject::Attrs FilterNonCharacteristicAttrs(
+      DummyDataObject::Attrs attrs) {
+    // PROTECTED_TARGET is carried for F'2028 draft C872/C874 checking, but
+    // it is not a procedure characteristic in the F'2028 draft (15.3.2.2).
+    attrs.reset(DummyDataObject::Attr::ProtectedTarget);
+    return attrs;
   }
   std::string AsFortran(DummyDataObject::Attr attr) {
     return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
@@ -4234,6 +4257,8 @@ void SubprogramMatchHelper::Say(const Symbol &symbol1, const Symbol &symbol2,
 template <typename ATTRS>
 bool SubprogramMatchHelper::CheckSameAttrs(
     const Symbol &symbol1, const Symbol &symbol2, ATTRS attrs1, ATTRS attrs2) {
+  attrs1 = FilterNonCharacteristicAttrs(attrs1);
+  attrs2 = FilterNonCharacteristicAttrs(attrs2);
   if (attrs1 == attrs2) {
     return true;
   }
