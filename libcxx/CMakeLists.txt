@@ -70,12 +70,14 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
-set(LIBCXX_HARDENING_MODE "none" CACHE STRING
+set(LIBCXX_SUPPORTED_HARDENING_MODES auto none fast extensive debug)
+set(LIBCXX_HARDENING_MODE "auto" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
    users can override this setting in their own code. This does not affect the
-   ABI. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
+   ABI. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.
+   The default value is 'auto', equivalent to 'extensive' when LLVM_ENABLE_ASSERTIONS is ON,
+   and 'none' otherwise.")
 if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
   message(FATAL_ERROR
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
@@ -776,6 +778,18 @@ elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
   config_define(1 _LIBCPP_LIBC_LLVM_LIBC)
 endif()
 
+if (LIBCXX_HARDENING_MODE STREQUAL "auto")
+  # Set a normal (non-cache) variable when the cache value is 'auto'.
+  # This will shadow the cache value, so later references to LIBCXX_HARDENING_MODE
+  # will see the resolved value instead of 'auto'.
+  # This approach allows changes of LLVM_ENABLE_ASSERTIONS to correctly propagate to the
+  # hardening mode without cleaning the CMake cache, while also allows manual overrides.
+  if (LLVM_ENABLE_ASSERTIONS)
+    set(LIBCXX_HARDENING_MODE "extensive")
+  else()
+    set(LIBCXX_HARDENING_MODE "none")
+  endif()
+endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")
