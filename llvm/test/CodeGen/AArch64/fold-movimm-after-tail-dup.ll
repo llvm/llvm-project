@@ -25,8 +25,7 @@ define i64 @cmp_phi_zero(ptr %p, i64 %idx, ptr %q) {
 ; CHECK-NEXT:    ldr x0, [x8, x1, lsl #3]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    cmp x1, x9
+; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lo .LBB0_4
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    mov x0, #-1 // =0xffffffffffffffff
@@ -71,8 +70,7 @@ define i32 @or_phi_flag(ptr %p, i32 %x, i1 %c) {
 ; CHECK-NEXT:    orr w0, w1, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mov w8, #65536 // =0x10000
-; CHECK-NEXT:    orr w0, w1, w8
+; CHECK-NEXT:    orr w0, w1, #0x10000
 ; CHECK-NEXT:    ret
 entry:
   br i1 %c, label %a, label %join
