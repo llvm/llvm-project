@@ -100,7 +100,8 @@ public:
     OB_kcfi,                   // "kcfi"
     OB_convergencectrl,        // "convergencectrl"
     OB_deactivation_symbol,    // "deactivation-symbol"
-    OB_LastBundleID = OB_deactivation_symbol
+    OB_atomicity,              // "atomicity"
+    OB_LastBundleID = OB_atomicity
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
