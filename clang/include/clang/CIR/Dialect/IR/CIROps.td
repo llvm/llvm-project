@@ -32,6 +32,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Ops
@@ -510,7 +511,8 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
-  Pure, AllTypesMatch<["base", "result"]>
+  Pure, AllTypesMatch<["base", "result"]>,
+  DeclareOpInterfaceMethods<ViewLikeOpInterface>
 ]> {
   let summary = "Pointer access with stride";
   let description = [{
@@ -548,7 +550,8 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 //===----------------------------------------------------------------------===//
 
 def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
-  Pure, AllTypesMatch<["ptr", "result"]>
+  Pure, AllTypesMatch<["ptr", "result"]>,
+  DeclareOpInterfaceMethods<ViewLikeOpInterface>
 ]> {
   let summary = "Clear bits of a pointer";
   let description = [{
@@ -3998,7 +4001,9 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 // GetMemberOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetMemberOp : CIR_Op<"get_member", [Pure]> {
+def CIR_GetMemberOp : CIR_Op<"get_member", [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+]> {
   let summary = "Get the address of a member of a record";
   let description = [{
     The `cir.get_member` operation gets the address of a particular named
@@ -4161,7 +4166,8 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
       "type of 'result' matches element type of 'base'", "base", "result",
       "cir::PointerType::get("
       "mlir::cast<cir::ArrayType>(mlir::cast<cir::PointerType>($_self).getPointee()).getElementType(), "
-      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">,
+  DeclareOpInterfaceMethods<ViewLikeOpInterface>
 ]> {
   let summary = "Get the address of an array element";
 
@@ -5879,7 +5885,9 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor", [
 // GetRuntimeMemberOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member", [Pure]> {
+def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member", [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+]> {
   let summary = "Get the address of a member of a record";
   let description = [{
     The `cir.get_runtime_member` operation gets the address of a member from
@@ -6291,7 +6299,9 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 // BaseClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
+def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+]> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
@@ -6336,7 +6346,9 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
 // DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
+def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+]> {
   let summary = "Get the derived class address for a class/struct";
   let description = [{
     The `cir.derived_class_addr` operaration gets the address of a particular
@@ -6593,7 +6605,9 @@ def CIR_ComplexImagOp : CIR_ComplexPartOp<"complex.imag"> {
 // ComplexRealPtrOp and ComplexImagPtrOp
 //===----------------------------------------------------------------------===//
 
-class CIR_ComplexPartPtrOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+class CIR_ComplexPartPtrOp<string mnemonic> : CIR_Op<mnemonic, [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+]> {
   let arguments = (ins CIR_PtrToComplexType:$operand);
   let results = (outs CIR_PtrToIntOrFloatType:$result);
 

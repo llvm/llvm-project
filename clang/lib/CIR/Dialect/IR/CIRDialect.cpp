@@ -5341,6 +5341,20 @@ bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
 }
 
 //===----------------------------------------------------------------------===//
+// ViewLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+mlir::Value cir::PtrStrideOp::getViewSource() { return getBase(); }
+mlir::Value cir::PtrMaskOp::getViewSource() { return getPtr(); }
+mlir::Value cir::GetMemberOp::getViewSource() { return getAddr(); }
+mlir::Value cir::GetElementOp::getViewSource() { return getBase(); }
+mlir::Value cir::GetRuntimeMemberOp::getViewSource() { return getAddr(); }
+mlir::Value cir::BaseClassAddrOp::getViewSource() { return getDerivedAddr(); }
+mlir::Value cir::DerivedClassAddrOp::getViewSource() { return getBaseAddr(); }
+mlir::Value cir::ComplexRealPtrOp::getViewSource() { return getOperand(); }
+mlir::Value cir::ComplexImagPtrOp::getViewSource() { return getOperand(); }
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
