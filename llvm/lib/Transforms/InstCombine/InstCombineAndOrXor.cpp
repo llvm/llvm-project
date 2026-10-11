@@ -1334,6 +1334,33 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
                              SubstituteCmp);
 }
 
+/// Return (V, CR) for a range check idiom V in CR.
+static std::optional<std::pair<Value *, ConstantRange>>
+matchExactRangeCheck(CmpPredicate Pred, Value *LHS, Value *RHS) {
+  const APInt *C;
+  if (!match(RHS, m_APInt(C)))
+    return std::nullopt;
+
+  Value *X;
+  // Match (x & NegPow2) ==/!= C
+  const APInt *Mask;
+  if (ICmpInst::isEquality(Pred) &&
+      match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
+      C->countr_zero() >= Mask->countr_zero()) {
+    ConstantRange CR(*C, *C - *Mask);
+    if (Pred == ICmpInst::ICMP_NE)
+      CR = CR.inverse();
+    return std::make_pair(X, CR);
+  }
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
+  // Match (add X, C1) pred C
+  // TODO: investigate whether we should apply the one-use check on m_AddLike.
+  const APInt *C1;
+  if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
+    return std::make_pair(X, CR.subtract(*C1));
+  return std::make_pair(LHS, CR);
+}
+
 /// Fold (icmp Pred1 V1, C1) & (icmp Pred2 V2, C2)
 /// or   (icmp Pred1 V1, C1) | (icmp Pred2 V2, C2)
 /// into a single comparison using range-based reasoning.
@@ -1341,39 +1368,11 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
 Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
     CmpPredicate PredL, Value *LHS0, Value *LHS1, bool LHSOneUse,
     CmpPredicate PredR, Value *RHS0, Value *RHS1, bool RHSOneUse, bool IsAnd) {
-  // Return (V, CR) for a range check idiom V in CR.
-  auto MatchExactRangeCheck =
-      [](CmpPredicate Pred, Value *LHS,
-         Value *RHS) -> std::optional<std::pair<Value *, ConstantRange>> {
-    const APInt *C;
-    if (!match(RHS, m_APInt(C)))
-      return std::nullopt;
-
-    Value *X;
-    // Match (x & NegPow2) ==/!= C
-    const APInt *Mask;
-    if (ICmpInst::isEquality(Pred) &&
-        match(LHS, m_OneUse(m_And(m_Value(X), m_NegatedPower2(Mask)))) &&
-        C->countr_zero() >= Mask->countr_zero()) {
-      ConstantRange CR(*C, *C - *Mask);
-      if (Pred == ICmpInst::ICMP_NE)
-        CR = CR.inverse();
-      return std::make_pair(X, CR);
-    }
-    ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *C);
-    // Match (add X, C1) pred C
-    // TODO: investigate whether we should apply the one-use check on m_AddLike.
-    const APInt *C1;
-    if (match(LHS, m_AddLike(m_Value(X), m_APInt(C1))))
-      return std::make_pair(X, CR.subtract(*C1));
-    return std::make_pair(LHS, CR);
-  };
-
-  auto RC1 = MatchExactRangeCheck(PredL, LHS0, LHS1);
+  auto RC1 = matchExactRangeCheck(PredL, LHS0, LHS1);
   if (!RC1)
     return nullptr;
 
-  auto RC2 = MatchExactRangeCheck(PredR, RHS0, RHS1);
+  auto RC2 = matchExactRangeCheck(PredR, RHS0, RHS1);
   if (!RC2)
     return nullptr;
 
