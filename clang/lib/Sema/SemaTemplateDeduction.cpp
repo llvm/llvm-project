@@ -2999,8 +2999,9 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
     }
 
     // If the pack is empty, we still need to substitute into the parameter
-    // itself, in case that substitution fails.
-    if (SugaredPackedArgsBuilder.empty()) {
+    // itself, in case that substitution fails. An expanded parameter pack was
+    // already checked when it was expanded.
+    if (SugaredPackedArgsBuilder.empty() && !getExpandedPackSize(Param)) {
       LocalInstantiationScope Scope(S);
       MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);

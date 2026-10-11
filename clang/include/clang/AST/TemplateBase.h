@@ -453,6 +453,10 @@ public:
   /// the pattern of the pack expansion.
   TemplateArgument getPackExpansionPattern() const;
 
+  /// When the template argument is a pack expansion, returns the number of
+  /// expansions that it will produce, if known.
+  UnsignedOrNone getNumExpansions() const;
+
   /// Print this template argument to the given output stream.
   void print(const PrintingPolicy &Policy, raw_ostream &Out,
              bool IncludeType) const;
