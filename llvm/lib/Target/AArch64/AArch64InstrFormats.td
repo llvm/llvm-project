@@ -2785,6 +2785,17 @@ def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
 def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
                       GIComplexPatternEquiv<shiftMask64>;
 
+// A 32-bit shift reads only the low 5 bits of its amount, so the same masking
+// applies when that amount is held in an i64 register (e.g. a narrow shift
+// amount widened by sext/zext). Reuse the 32-bit matcher on an i64 node; the
+// widen pattern narrows the result with EXTRACT_SUBREG.
+def shiftMask32In64 : ComplexPattern<i64, 1, "SelectShiftMask<32>", [], [], 0>;
+
+// A 64-bit shift reads the low 6 bits of its amount; when that amount is an
+// i32 value widened to i64 (e.g. a (64 - x) computed in i32 then zero/any/
+// sign-extended), run the 64-bit matcher on the i32 node and widen the result.
+def shiftMask64In32 : ComplexPattern<i32, 1, "SelectShiftMask<64>", [], [], 0>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2811,10 +2822,41 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
 
+  // Peek through the widening when the i64 shift amount is an extended i32
+  // value that still carries a maskable AND or a (C - x) subtract.
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (anyext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (sext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+
   def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
   def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn, shiftMask64:$Rm)>;
+
+  // For 32-bit rotates the shift amount is legalized with a zext to i64;
+  // peek through it and apply the 32-bit shift-amount masking.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+
+  // The same masking applies when the i32 shift amount is widened to i64 with
+  // any_extend or sign_extend (not just zero_extend).
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (anyext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+
+  // A 32-bit shift may take an i64 shift amount that carries a redundant
+  // AND mask, e.g. an i8/i16 shift amount widened to i64. Strip the mask
+  // with the 32-bit matcher (shiftMask32In64) and narrow the result to i32.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 shiftMask32In64:$Rm))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn,
+                (EXTRACT_SUBREG shiftMask32In64:$Rm, sub_32))>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
