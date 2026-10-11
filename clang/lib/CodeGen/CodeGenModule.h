@@ -39,6 +39,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -52,10 +53,6 @@ class DataLayout;
 class FunctionType;
 class LLVMContext;
 class IndexedInstrProfReader;
-
-namespace vfs {
-class FileSystem;
-}
 
 namespace abi {
 class ArgInfo;
@@ -509,7 +506,10 @@ private:
 
   // Store deferred function annotations so they can be emitted at the end with
   // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::MapVector<StringRef, const ValueDecl *> DeferredAnnotations;
+  // The key owns its storage: not every mangled name handed to
+  // GetOrCreateLLVMFunction outlives the call.
+  llvm::MapVector<std::string, const ValueDecl *, llvm::StringMap<unsigned>>
+      DeferredAnnotations;
 
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
@@ -1524,6 +1524,7 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param Attrs [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
+  /// \param AttrOnCallSite - Whether or not the attributes are on a call site
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,

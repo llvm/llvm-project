@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -111,7 +112,7 @@ using namespace llvm;
 namespace llvm {
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
-    "sanitizer-early-opt-ep", cl::Optional,
+    "sanitizer-early-opt-ep",
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 // Experiment to mark cold functions as optsize/minsize/optnone.
@@ -128,9 +129,6 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                           "Mark cold functions with minsize."),
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
-
-LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
-    ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
@@ -418,7 +416,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
   }
 
-  Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
+  if (CodeGenOpts.SplitMachineFunctions)
+    Options.FunctionSplitting = llvm::FunctionSplittingMode::All;
   Options.EnableStaticDataPartitioning =
       CodeGenOpts.PartitionStaticDataSections;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
@@ -443,7 +442,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
   Options.ObjectFilenameForDebug =
       CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
-  Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
   Options.VecLib =
@@ -1059,6 +1057,23 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
               MPM.addPass(InferFunctionAttrsPass());
             }
           });
+
+      if (CodeGenOpts.CopyProf) {
+        // Early pass: insert callbacks into special member functions before the
+        // inliner removes function boundaries.
+        PB.registerPipelineEarlySimplificationEPCallback(
+            [](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
+              MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfPass()));
+              MPM.addPass(ModuleCopyProfPass());
+            });
+        // Late pass: to reduce runtime overhead, instrument stores only after
+        // optimizations have been run so only useful stores are instrumented.
+        PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                              OptimizationLevel,
+                                              ThinOrFullLTOPhase) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfStoresPass()));
+        });
+      }
     }
 
     if (std::optional<GCOVOptions> Options =
@@ -1167,7 +1182,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // This should be done for both clang and flang simultaneously.
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     MPM.printPipeline(outs(), [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
@@ -1216,9 +1231,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
 
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
-        !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
-        CI.getVirtualFileSystemPtr());
+        *TM, *TheModule, *OS, DwoOS, CGFT, !CodeGenOpts.VerifyModule,
+        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });

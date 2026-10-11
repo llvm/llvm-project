@@ -325,12 +325,17 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST1-NEXT:    [[TMP1:%.*]] = alloca i8, i64 0, align 16
-; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
-; COST1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; COST1-NEXT:    [[TMP10:%.*]] = alloca i8, i64 0, align 16
+; COST1-NEXT:    [[TMP11:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
+; COST1-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> [[TMP11]], ptr [[TMP10]], i64 1
+; COST1-NEXT:    [[TMP6:%.*]] = alloca i8, i64 0, align 16
+; COST1-NEXT:    [[TMP7:%.*]] = alloca i8, i64 0, align 16
+; COST1-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i64 0
+; COST1-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> [[TMP8]], ptr [[TMP7]], i64 1
 ; COST1-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
 ; COST1-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 2
-; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
-; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8
+; COST1-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP2]], align 8
+; COST1-NEXT:    store <2 x ptr> [[TMP9]], ptr [[TMP3]], align 8
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; COST1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
@@ -352,10 +357,11 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST10:       [[VECTOR_BODY]]:
 ; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST10-NEXT:    [[TMP1:%.*]] = alloca i8, i64 0, align 16
-; COST10-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
-; COST10-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; COST10-NEXT:    [[TMP6:%.*]] = alloca i8, i64 0, align 16
+; COST10-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
+; COST10-NEXT:    [[TMP5:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[TMP6]], i64 1
 ; COST10-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
-; COST10-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
+; COST10-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP2]], align 8
 ; COST10-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; COST10-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COST10-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
@@ -450,8 +456,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST1-NEXT:    [[TMP28:%.*]] = add i64 [[TMP26]], 0
-; COST1-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP28]], 1
+; COST1-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP26]], 1
 ; COST1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], [[TMP5]]
 ; COST1-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 3
 ; COST1-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 3

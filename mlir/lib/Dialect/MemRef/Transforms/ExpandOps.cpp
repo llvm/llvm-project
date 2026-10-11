@@ -28,7 +28,7 @@ namespace {
 /// size to `memref.reinterpret_cast`.
 struct MemRefReshapeOpConverter : public OpRewritePattern<memref::ReshapeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::ReshapeOp op,
                                 PatternRewriter &rewriter) const final {

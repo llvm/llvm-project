@@ -631,6 +631,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
       return $_get(type.getContext(), type,
                    mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
+    // Pointer-to-data-member reusing an existing path attribute.
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "mlir::DenseI32ArrayAttr":$member_path),
+                                  [{
+      return $_get(type.getContext(), type, member_path);
+    }]>,
   ];
 
   // This attribute gets lowered during CXXABILowering.
@@ -948,6 +954,40 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FastMathFlagsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FMFnone     : I32BitEnumAttrCaseNone<"none">;
+def CIR_FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
+def CIR_FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
+def CIR_FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
+def CIR_FMFarcp     : I32BitEnumAttrCaseBit<"arcp", 3>;
+def CIR_FMFcontract : I32BitEnumAttrCaseBit<"contract", 4>;
+def CIR_FMFafn      : I32BitEnumAttrCaseBit<"afn", 5>;
+def CIR_FMFreassoc  : I32BitEnumAttrCaseBit<"reassoc", 6>;
+def CIR_FMFfast     : I32BitEnumAttrCaseGroup<"fast", [
+  CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp, CIR_FMFcontract,
+  CIR_FMFafn, CIR_FMFreassoc
+]>;
+
+def CIR_FastMathFlags : CIR_I32BitEnum<
+    "FastMathFlags", "fast-math flags", [
+  CIR_FMFnone, CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp,
+  CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc, CIR_FMFfast
+]> {
+  let description = [{
+    Describes fast-math flags for CIR operations. This attribute is shared by
+    operations with floating-point semantics and is not specific to LLVM intrinsic
+    calls.
+  }];
+
+  let separator = ", ";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -999,28 +1039,35 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
       int b;
     };
     ```
+    `address_point` marks a vtable address point: `symbol` is a vtable and
+    `indices` are the vtable within the group and the address point within
+    it. As in classic codegen, it lowers to an `inbounds` GEP whose `inrange`
+    spans that one vtable.
+
     VTT for B in CIR:
     ```
     cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
-              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
-                   : !cir.array<!cir.ptr<!u8i> x 1>
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32], address_point>
+                   : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>
     ```
     VTT for B in LLVM IR:
     ```
     @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
-              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+              inrange(-24, 0) (i8, ptr @_ZTV1B, i64 24)], align 8
     ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "mlir::FlatSymbolRefAttr":$symbol,
-                        OptionalParameter<"mlir::ArrayAttr">:$indices);
+                        OptionalParameter<"mlir::ArrayAttr">:$indices,
+                        DefaultValuedParameter<"bool", "false">:$address_point);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "mlir::FlatSymbolRefAttr":$symbol,
-                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
-      return $_get(type.getContext(), type, symbol, indices);
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices,
+                                        CArg<"bool", "false">:$addressPoint), [{
+      return $_get(type.getContext(), type, symbol, indices, addressPoint);
     }]>
   ];
 
@@ -1029,6 +1076,7 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     `<`
       $symbol
       (`,` $indices^)?
+      (`,` `address_point` $address_point^)?
     `>`
   }];
 }
@@ -1392,29 +1440,54 @@ def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
 ]>;
 
 //===----------------------------------------------------------------------===//
+// UnwindTableKind
+//===----------------------------------------------------------------------===//
+def CIR_UnwindTableKind : CIR_I32Enum<"UnwindTableKind", "Unwind Table Kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"Sync", 1, "sync">,
+  I32EnumCase<"Async", 2, "async">
+]>;
+
+def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
+  let summary = "Encodes the unwind table kind for a function.";
+
+  let description = [{
+    This mirrors the UWTableKindEnum in The LLVM dialect,
+    and is passed through to the llvm dialect. According to the LLVM
+    documentation:
+        The ‘uwtable’ attribute is about the ABI or the user mandating an /
+            entry in the unwind table.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 
 class CIR_GlobalCtorDtor<string name, string attrMnemonic>
-    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
-  let parameters = (ins "mlir::StringAttr":$name, "int":$priority);
+    : CIR_Attr<"Global" #name, "global_" #attrMnemonic> {
+  let parameters = (ins "mlir::StringAttr":$name, "int":$priority,
+                        OptionalParameter<"mlir::FlatSymbolRefAttr">:$associated);
 
   let skipDefaultBuilders = 1;
   let builders = [
     AttrBuilder<(ins
         "llvm::StringRef":$name,
-        CArg<"int", "65535">:$priority), [{
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority);
+        CArg<"int", "65535">:$priority,
+        CArg<"mlir::FlatSymbolRefAttr", "{}">:$associated), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), priority,
+                   associated);
     }]>,
     AttrBuilderWithInferredContext<(ins
         "mlir::StringAttr":$name,
-        CArg<"int", "65535">:$priority), [{
-      return $_get(name.getContext(), name, priority);
+        CArg<"int", "65535">:$priority,
+        CArg<"mlir::FlatSymbolRefAttr", "{}">:$associated), [{
+      return $_get(name.getContext(), name, priority, associated);
     }]>
   ];
 
   let assemblyFormat = [{
-    `<` $name `,` $priority `>`
+    `<` $name `,` $priority (`,` $associated^)? `>`
   }];
 
   let extraClassDeclaration = [{
@@ -1422,9 +1495,7 @@ class CIR_GlobalCtorDtor<string name, string attrMnemonic>
       return getPriority() == getDefaultPriority();
     };
 
-    static int getDefaultPriority() {
-      return 65535;
-    }
+    static int getDefaultPriority() { return 65535; }
   }];
   let canHaveIllegalCXXABIType = 0;
 }
@@ -1986,54 +2057,155 @@ def CIR_BlockAddrDiffAttr
 }
 
 //===----------------------------------------------------------------------===//
-// Side Effect
+// Memory Effects
 //===----------------------------------------------------------------------===//
 
-def CIR_SideEffect : CIR_I32Enum<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumCase<"All", 0, "all">,
-      I32EnumCase<"Pure", 1, "pure">,
-      I32EnumCase<"Const", 2, "const">
+def CIR_ModRefInfo : CIR_I32Enum<
+    "ModRefInfo", "whether memory may be read and/or written", [
+      I32EnumCase<"NoModRef", 0, "none">,
+      I32EnumCase<"Ref", 1, "read">,
+      I32EnumCase<"Mod", 2, "write">,
+      I32EnumCase<"ModRef", 3, "readwrite">
 ]> {
   let description = [{
-    The side effect attribute specifies the possible side effects of a function
-    or the target of a call operation.  This is an enumeration attribute with
-    the following possible values:
+    The access a function or callee may perform on a class of memory.  Which
+    class is given by the `#cir.memory_effects` parameter that holds the
+    value.  The possible values are:
 
-    - all: The function or callee can have any side effects. This is the default
-      if no side effects are explicitly listed.
-    - pure: The function or callee may read data from memory, but it cannot
-      write data to memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The function or callee may not read or write data from memory. This
-      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
+    - `none`: the memory is neither read nor written.
+    - `read`: the memory may be read, but it is not written.
+    - `write`: the memory may be written, but it is not read.
+    - `readwrite`: the memory may be both read and written.
   }];
 }
 
-def CIR_SideEffectAttr : CIR_EnumAttr<CIR_SideEffect, "side_effect">;
-
-//===----------------------------------------------------------------------===//
-// StaticLocalGuardAttr
-//===----------------------------------------------------------------------===//
-
-def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
-                                         "static_local_guard"> {
-  let summary = "Guard variable name for static local variables";
+def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
+  let summary = "Describes the possible memory effects of a function or callee";
   let description = [{
-    Contains the mangled guard variable name for static local variable
-    initialization.
+    Specifies the possible memory effects of a function or callee.  Memory
+    is divided into classes, each carrying its own access, so that a promise
+    about one class need not be a promise about all of them:
+
+    - `other`: the access for every location not named by one of the other
+      parameters, including locations with no class of their own such as
+      globals and captured pointers.
+    - `arg_mem`: accesses based on the function's pointer arguments.
+    - `inaccessible_mem`: accesses to memory the current module cannot reach,
+      often used to model the control dependencies of intrinsics.
+    - `errno_mem`: accesses to the `errno` variable.
+    - `target_mem0`, `target_mem1`: target-specific state.
+
+    The classes and their meanings match the LLVM dialect's
+    `#llvm.memory_effects`, which lowering converts this attribute to.
+
+    An absent attribute means the effects are unknown, which is the
+    conservative default and what a function with no memory annotation gets.
+    Lowering leaves such a function with no memory attribute at all.
 
     Example:
     ```
-    cir.global internal static_local_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
+    #cir.memory_effects<other = read, arg_mem = readwrite,
+                        inaccessible_mem = none, errno_mem = none,
+                        target_mem0 = none, target_mem1 = none>
+    ```
+
+    The attribute has no keyword syntax, so on an operation it is written in
+    the attribute dictionary:
+
+    ```
+    cir.func private @f() attributes {memory_effects = #cir.memory_effects<...>}
+    %0 = cir.call @f() {memory_effects = #cir.memory_effects<...>} : () -> !s32i
+    ```
+  }];
+
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$arg_mem,
+                        "ModRefInfo":$inaccessible_mem,
+                        "ModRefInfo":$errno_mem, "ModRefInfo":$target_mem0,
+                        "ModRefInfo":$target_mem1);
+
+  let builders = [
+    AttrBuilder<(ins "ModRefInfo":$all), [{
+      return $_get($_ctxt, all, all, all, all, all, all);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    // These mirror the like-named factories on `llvm::MemoryEffects`.
+
+    /// Create MemoryEffectsAttr that cannot read or write any memory.
+    static MemoryEffectsAttr none(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can read any memory.
+    static MemoryEffectsAttr readOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can write any memory.
+    static MemoryEffectsAttr writeOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can only access argument memory.
+    static MemoryEffectsAttr argMemOnly(::mlir::MLIRContext *ctx,
+                                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible memory.
+    static MemoryEffectsAttr
+    inaccessibleMemOnly(::mlir::MLIRContext *ctx,
+                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access errno memory.
+    static MemoryEffectsAttr errnoMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access other memory.
+    static MemoryEffectsAttr otherMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or argument
+    /// memory.
+    static MemoryEffectsAttr
+    inaccessibleOrArgMemOnly(::mlir::MLIRContext *ctx,
+                             ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or errno
+    /// memory.
+    static MemoryEffectsAttr inaccessibleOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible, argument or
+    /// errno memory.
+    static MemoryEffectsAttr inaccessibleOrArgOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleOrArgMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access argument or errno memory.
+    static MemoryEffectsAttr
+    argumentOrErrnoMemOnly(::mlir::MLIRContext *ctx,
+                           ModRefInfo argMr = ModRefInfo::ModRef,
+                           ModRefInfo errnoMr = ModRefInfo::ModRef);
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicInitGuardAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DynamicInitGuardAttr : CIR_Attr<"DynamicInitGuard",
+                                         "dynamic_init_guard"> {
+  let summary = "Guard variable name for guarded dynamic initialization";
+  let description = [{
+    Contains the mangled guard variable name for guarded dynamic
+    initialization. This covers both function-local static variables and
+    namespace-scope variables with vague linkage (e.g. weak/linkonce_odr
+    inline variables), which both use the Itanium `__cxa_guard_*` protocol.
+    See `DynamicInitInfoAttr` for the facts that distinguish the two.
+
+    Example:
+    ```
+    cir.global internal dynamic_init_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
     ```
   }];
   let parameters = (ins "mlir::StringAttr":$name);
@@ -2167,7 +2339,7 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 ]>;
 
 //===----------------------------------------------------------------------===//
-// StaticLocalInfoAttr
+// DynamicInitInfoAttr
 //===----------------------------------------------------------------------===//
 
 // CIR-native thread-local storage kind. Cases mirror clang::VarDecl::TLSKind
@@ -2198,12 +2370,15 @@ def CIR_TemplateSpecializationKind
                   "explicit_instantiation_definition">
 ]>;
 
-def CIR_StaticLocalInfoAttr
-    : CIR_Attr<"StaticLocalInfo", "static_local_info"> {
-  let summary = "Static-local variable facts needed by later lowering";
+def CIR_DynamicInitInfoAttr
+    : CIR_Attr<"DynamicInitInfo", "dynamic_init_info"> {
+  let summary = "Variable facts needed by guarded dynamic initialization lowering";
   let description = [{
-    Holds the subset of a static-local variable's declaration facts that
-    post-CIRGen lowering needs, as plain data (no `clang::VarDecl` pointer).
+    Holds the subset of a guarded-dynamic-initialization variable's
+    declaration facts that post-CIRGen lowering needs, as plain data (no
+    `clang::VarDecl` pointer). Always accompanies a `DynamicInitGuardAttr`,
+    and applies equally to function-local statics and to namespace-scope
+    variables with vague linkage (e.g. weak/linkonce_odr inline variables).
 
     - `local`: whether the variable is a block-scope (local) declaration.
       Mirrors `clang::VarDecl::isLocalVarDecl()`. The namespace-scope inline
@@ -2222,8 +2397,8 @@ def CIR_StaticLocalInfoAttr
     Example:
     ```
     cir.global ... @x = ...
-      {static_local_info = #cir.static_local_info<
-         local = true, tls = none, is_inline = false, tsk = undeclared>}
+      dynamic_init_info<local = true, tls = none, is_inline = false,
+                        tsk = undeclared>
     ```
 
     Because it stores plain data rather than a `clang::VarDecl` pointer, it
@@ -2242,6 +2417,72 @@ def CIR_StaticLocalInfoAttr
 
   let assemblyFormat = [{
     `<` struct($local, $tls, $is_inline, $tsk) `>`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Whether the variable is an instantiation of a template. Matches clang's
+    /// isTemplateInstantiation(TemplateSpecializationKind).
+    bool isTemplateInstantiation() const {
+      cir::TemplateSpecializationKind kind = getTsk();
+      return kind == cir::TemplateSpecializationKind::ImplicitInstantiation ||
+             kind == cir::TemplateSpecializationKind::
+                         ExplicitInstantiationDeclaration ||
+             kind ==
+                 cir::TemplateSpecializationKind::ExplicitInstantiationDefinition;
+    }
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// LoweringLangOptionsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LoweringLangOptionsAttr
+    : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
+  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+  let description = [{
+    Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
+    reads, as plain data, so a reloaded `.cir` module lowers the same way it
+    was compiled without a live `clang::LangOptions`. Only LangOpts flags with
+    no triple/module representation live here; target-derived facts (size_t
+    width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
+
+    Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `gpu_rdc`,
+    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
+    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
+    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
+    `ClangABI` gains an enumerator every Clang release (see
+    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
+    single toolchain.
+
+    Example:
+    ```
+    module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+      exceptions = false, threadsafe_statics = true, cuda = false,
+      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
+      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+    ```
+  }];
+
+  let parameters = (ins
+    "bool":$exceptions,
+    "bool":$threadsafe_statics,
+    "bool":$cuda,
+    "bool":$cuda_is_device,
+    "bool":$hip,
+    "bool":$gpu_rdc,
+    "bool":$openmp,
+    "bool":$openmp_is_target_device,
+    "int32_t":$clang_abi_compat
+  );
+
+  let assemblyFormat = [{
+    `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
+               $gpu_rdc, $openmp, $openmp_is_target_device,
+               $clang_abi_compat) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

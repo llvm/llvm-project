@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/RunCodeGen.h"
+#include "PassesOptions.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
@@ -25,17 +26,11 @@
 
 using namespace llvm;
 
-static cl::opt<cl::boolOrDefault>
-    ForceNewPM("force-new-pm-codegen",
-               cl::desc("Whether to force the NewPM on/off. Not setting the "
-                        "option will default to what the target prefers."),
-               cl::init(cl::boolOrDefault::BOU_UNSET));
-
-static Error
-runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
-                         std::unique_ptr<ToolOutputFile> &DwoOS,
-                         CodeGenFileType CGFT, bool PrintPipelinePasses,
-                         bool DisableVerify, bool DisableSimplifyLibCalls) {
+static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
+                                      raw_pwrite_stream &OS,
+                                      std::unique_ptr<ToolOutputFile> &DwoOS,
+                                      CodeGenFileType CGFT, bool DisableVerify,
+                                      bool DisableSimplifyLibCalls) {
   legacy::PassManager CodeGenPasses;
   CodeGenPasses.add(
       createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
@@ -46,8 +41,8 @@ runCodeGenPipelineLegacy(TargetMachine &TM, Module &M, raw_pwrite_stream &OS,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
 
   const TargetOptions &Options = TM.Options;
-  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-      Options.ExceptionModel, Options.MCOptions.ABIName, Options.VecLib));
+  CodeGenPasses.add(
+      new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName, Options.VecLib));
 
   if (TM.addPassesToEmitFile(CodeGenPasses, OS, DwoOS ? &DwoOS->os() : nullptr,
                              CGFT, DisableVerify))
@@ -97,15 +92,14 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
 Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
                                raw_pwrite_stream &OS,
                                std::unique_ptr<ToolOutputFile> &DwoOS,
-                               CodeGenFileType CGFT, bool PrintPipelinePasses,
-                               bool DisableVerify, bool DisableSimplifyLibCalls,
+                               CodeGenFileType CGFT, bool DisableVerify,
+                               bool DisableSimplifyLibCalls,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  if (ForceNewPM == cl::boolOrDefault::BOU_TRUE ||
-      (TM.shouldDefaultToNewPM() &&
-       ForceNewPM != cl::boolOrDefault::BOU_FALSE)) {
+  if (valueOr(PassesOptions::Global.force_new_pm_codegen,
+              TM.shouldDefaultToNewPM())) {
     return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, VFS);
   }
 
-  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, PrintPipelinePasses,
-                                  DisableVerify, DisableSimplifyLibCalls);
+  return runCodeGenPipelineLegacy(TM, M, OS, DwoOS, CGFT, DisableVerify,
+                                  DisableSimplifyLibCalls);
 }

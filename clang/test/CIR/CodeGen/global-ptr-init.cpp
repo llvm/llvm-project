@@ -11,6 +11,19 @@ struct B {
 };
 B x;
 
-// CIR: cir.global external @x = #cir.const_record<{#cir.global_view<@_ZTV1B, [0 : i32, 2 : i32]> : !cir.vptr}> : !rec_B
-// LLVM: @x = global %struct.B { ptr getelementptr inbounds nuw (i8, ptr @_ZTV1B, i64 16) }, align 8
-// OGCG: @x = global %struct.B { ptr getelementptr inbounds inrange(-16, 24) ({ [5 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2) }, align 8
+// CIR: cir.global external @x = #cir.const_record<{#cir.global_view<@_ZTV1B, [0 : i32, 2 : i32], address_point true> : !cir.vptr}> : !rec_B
+// LLVM: @x = global %struct.B { ptr getelementptr inbounds nuw inrange(-16, 24) (i8, ptr @_ZTV1B, i64 16) }, align 8
+// OGCG: @x = global %struct.B { ptr getelementptr inbounds inrange(-16, 24) (i8, ptr @_ZTV1B, i64 16) }, align 8
+
+// The vtable is only declared here: the inrange bound still comes from its type.
+struct K {
+  virtual void f();
+};
+K k;
+
+// CIR: cir.global "private" constant external @_ZTV1K : !rec_anon_struct
+// CIR: cir.global external @k = #cir.const_record<{#cir.global_view<@_ZTV1K, [0 : i32, 2 : i32], address_point true> : !cir.vptr}> : !rec_K
+// LLVM: @_ZTV1K = external constant { [3 x ptr] }, align 8
+// OGCG: @_ZTV1K = external constant { [3 x ptr] }, align 8
+// LLVM: @k = global %struct.K { ptr getelementptr inbounds nuw inrange(-16, 8) (i8, ptr @_ZTV1K, i64 16) }, align 8
+// OGCG: @k = global %struct.K { ptr getelementptr inbounds inrange(-16, 8) (i8, ptr @_ZTV1K, i64 16) }, align 8

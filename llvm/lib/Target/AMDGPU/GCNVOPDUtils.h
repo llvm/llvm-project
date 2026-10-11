@@ -51,6 +51,9 @@ struct VOPDMatchInfo {
   /// can be built. They all have the same 32-bit value, so one register serves
   /// the whole pair. Only a VOPD3 pair can need this.
   SmallVector<VOPDLiteralFixup, 2> LiteralFixups;
+  /// Entries in \p InOrder which only pair once commuted. The match was checked
+  /// with them commuted, but they are left unchanged until the pair is built.
+  bool Commute[2] = {false, false};
 
   MachineInstr *getMIX() const { return InOrder[XIdx]; }
   MachineInstr *getMIY() const { return InOrder[1 - XIdx]; }

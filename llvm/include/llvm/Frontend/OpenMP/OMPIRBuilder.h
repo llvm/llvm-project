@@ -27,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -42,10 +43,6 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -516,8 +513,8 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
+        IsFinalized(false) {}
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -1179,13 +1176,17 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
+  ///                     the loop.
   /// \param NoLoop   If true, no-loop code is generated.
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP,
+                           omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+                           bool NoLoop, bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1343,8 +1344,8 @@ public:
   /// \param NoLoop If true, no-loop code is generated.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  ///
   /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1357,7 +1358,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool NeedsLastIter = false);
 
   /// Tile a loop nest.
   ///
@@ -1579,8 +1580,10 @@ public:
   ///
   /// \param Loc The location where the taskwait directive was encountered.
   /// \param Dependencies dependencies as specified by the 'depend' clause.
+  /// \param IsNowait True when a 'nowait' clause is present
   LLVM_ABI void createTaskwait(const LocationDescription &Loc,
-                               DependenciesInfo Dependencies = {});
+                               DependenciesInfo Dependencies = {},
+                               bool IsNowait = false);
 
   ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
@@ -2532,7 +2535,7 @@ public:
   bool updateToLocation(const LocationDescription &Loc) {
     Builder.restoreIP(Loc.IP);
     Builder.SetCurrentDebugLocation(Loc.DL);
-    return Loc.IP.getBlock() != nullptr;
+    return Loc.IP.isValid();
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
@@ -2562,7 +2565,7 @@ public:
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
   LLVM_ABI Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                          Function *F = nullptr);
+                                          const Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
   LLVM_ABI Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
@@ -3548,6 +3551,19 @@ public:
   ///
   ///{
 
+  /// Create (or update) the '<kernel>_kernel_environment' global describing
+  /// the launch configuration of the kernel at the current insertion point,
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Attrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  ///
+  /// \returns the (possibly address-space-cast) kernel environment constant,
+  ///          or nullptr if \p Loc has no valid insertion point.
+  LLVM_ABI Constant *emitKernelEnvironment(
+      const LocationDescription &Loc,
+      const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
+
   /// Create a runtime call for kmpc_target_init
   ///
   /// \param Loc The insert and source location description.
@@ -3827,6 +3843,9 @@ public:
   ///        parent function, so it cannot be used for code emitted inside the
   ///        outlined function. If this is empty, such code is emitted without a
   ///        debug location.
+  /// \param RTLocOverride Optional runtime source-location identifier to report
+  ///        to the offload runtime for the kernel launch. When null, a default
+  ///        source-location identifier is used.
   LLVM_ABI InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -3843,7 +3862,7 @@ public:
       Value *DynCGroupMem = nullptr,
       omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
           omp::OMPDynGroupprivateFallbackType::Abort,
-      DebugLoc OutlinedFnLoc = {});
+      DebugLoc OutlinedFnLoc = {}, Value *RTLocOverride = nullptr);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned. Will create a distribute call
@@ -4276,10 +4295,13 @@ public:
   ///
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
-  ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///  - \p BodyGen may freely emit instructions and introduce control flow
+  ///    within the loop body.
+  ///  - If the body leaves exactly one block without a terminator after
+  ///    \p BodyGen returns, a branch to the latch is inserted there. Otherwise,
+  ///    some block of the body must already branch to the latch.
+  ///  - The body must not branch to blocks that existed before \p BodyGen ran,
+  ///    other than the body block and the latch.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.
@@ -4601,21 +4623,21 @@ public:
   OpenMPIRBuilder::InsertPointTy getPreheaderIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Preheader = getPreheader();
-    return {Preheader, std::prev(Preheader->end())};
+    return std::prev(Preheader->end());
   };
 
   /// Return the insertion point for user code in the body.
   OpenMPIRBuilder::InsertPointTy getBodyIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Body = getBody();
-    return {Body, Body->begin()};
+    return Body->begin();
   };
 
   /// Return the insertion point for user code after the loop.
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *After = getAfter();
-    return {After, After->begin()};
+    return After->begin();
   };
 
   Function *getFunction() const {

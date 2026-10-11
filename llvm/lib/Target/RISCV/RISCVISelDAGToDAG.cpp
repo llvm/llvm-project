@@ -29,14 +29,6 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
-extern cl::opt<uint32_t> PreferredLandingPadLabel;
-
-static cl::opt<bool> UsePseudoMovImm(
-    "riscv-use-rematerializable-movimm", cl::Hidden,
-    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
-             "constant materialization"),
-    cl::init(false));
-
 #define GET_DAGISEL_BODY RISCVDAGToDAGISel
 #include "RISCVGenDAGISel.inc"
 
@@ -288,7 +280,7 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, Subtarget);
 
   // Use a rematerializable pseudo instruction for short sequences if enabled.
-  if (Seq.size() == 2 && UsePseudoMovImm)
+  if (Seq.size() == 2 && Subtarget.getCLOpts().use_rematerializable_movimm)
     return SDValue(
         CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
                                CurDAG->getSignedTargetConstant(Imm, DL, VT)),
@@ -3224,6 +3216,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Insert.getNode());
     return;
   }
+  case RISCVISD::TUPLE_CAST: {
+    // TUPLE_CAST reinterprets a vector tuple as a different tuple type with
+    // the same register class (same NF and LMUL), just a different minimum
+    // number of elements per field. The two types occupy identical
+    // registers, so just forward the operand like we do for same-register-
+    // class ISD::BITCAST, without emitting a copy.
+    assert(RISCVTargetLowering::getRegClassIDForVecVT(VT) ==
+               RISCVTargetLowering::getRegClassIDForVecVT(
+                   Node->getOperand(0).getSimpleValueType()) &&
+           "Expected input and output of TUPLE_CAST to use the same "
+           "register class");
+    ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::EXTRACT_SUBVECTOR:
   case RISCVISD::TUPLE_EXTRACT: {
     if (Subtarget->hasStdExtP())
@@ -3349,11 +3356,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                     : RISCV::PseudoCALLLpadAlign;
 
     uint32_t LpadLabel = 0;
-    if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
-      if (!isUInt<20>(PreferredLandingPadLabel))
+    if (std::optional<uint32_t> Label =
+            Subtarget->getCLOpts().landing_pad_label) {
+      if (!isUInt<20>(*Label))
         report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit "
                            "in unsigned 20-bits");
-      LpadLabel = PreferredLandingPadLabel;
+      LpadLabel = *Label;
     }
 
     // Preserve the argument-register and register-mask operands, between
@@ -3695,6 +3703,29 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
                          /*IsPrefetch=*/false))
     return true;
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+/// Similar to SelectAddrRegImm, but only matches a register, or a register
+/// plus a simm12 offset. Doesn't match a FrameIndex or global address, since
+/// those aren't valid for the callers of this function (e.g. the target of
+/// an indirect branch).
+bool RISCVDAGToDAGISel::SelectBrindRegImm(SDValue Addr, SDValue &Base,
+                                          SDValue &Offset) {
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
@@ -4649,7 +4680,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BSET:
     case RISCV::BCLR:
     case RISCV::BINV:
-      // Shift amount operands only use log2(Xlen) bits.
+    case RISCV::BEXT:
+      // Shift amount and bit index operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;

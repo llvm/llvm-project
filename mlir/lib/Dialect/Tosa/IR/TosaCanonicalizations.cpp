@@ -250,7 +250,7 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct AvgPool2dAdaptiveToAvgPool2d
     : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -274,7 +274,7 @@ struct AvgPool2dAdaptiveToAvgPool2d
 };
 
 struct AvgPool2dIsNoOp : public OpRewritePattern<tosa::AvgPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::AvgPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -321,7 +321,7 @@ void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
 }
 
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const override {
@@ -369,7 +369,7 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 struct MaxPool2dAdaptiveToMaxPool2d
     : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
                                 PatternRewriter &rewriter) const override {
@@ -491,7 +491,7 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
 
 struct ConsolidateTransposeOptimization
     : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -529,7 +529,7 @@ struct ConsolidateTransposeOptimization
 
 // Determines the case when tosa.transpose is a tosa.reshape operation.
 struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -590,7 +590,7 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1772,6 +1772,23 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+OpFoldResult ArgMinOp::fold(FoldAdaptor adaptor) {
+  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
+  if (!inputTy || !outputTy || !inputTy.hasStaticShape() ||
+      !outputTy.hasStaticShape())
+    return {};
+
+  const Type outputElementTy = getElementTypeOrSelf(outputTy);
+  if (inputTy.getDimSize(getAxis()) == 1 && outputElementTy.isInteger()) {
+    const auto outputElemIntTy = cast<IntegerType>(outputElementTy);
+    const APInt zero = APInt::getZero(outputElemIntTy.getWidth());
+    return DenseElementsAttr::get(outputTy, zero);
+  }
+
+  return {};
+}
+
 OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
   auto rhsTy = llvm::dyn_cast<RankedTensorType>(getInput2().getType());
@@ -2216,7 +2233,9 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   // If the dim-length is 1, or reversing axis is unit-dim, also a no-op.
+  // A splat of block-scaled values may still have different scales per block.
   const bool isSplatInput =
+      !isa<BlockScaledType>(operandTy.getElementType()) &&
       llvm::isa_and_nonnull<SplatElementsAttr>(adaptor.getInput1());
   if (!operandTy.hasRank() ||
       (!isSplatInput && operandTy.getDimSize(axis) != 1))

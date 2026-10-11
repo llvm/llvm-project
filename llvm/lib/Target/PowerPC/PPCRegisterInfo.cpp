@@ -160,23 +160,6 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::PSTXVP] = PPC::STXVPX;
 }
 
-/// getPointerRegClass - Return the register class to use to hold pointers.
-/// This is used for addressing modes.
-const TargetRegisterClass *
-PPCRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // Note that PPCInstrInfo::foldImmediate also directly uses this Kind value
-  // when it checks for ZERO folding.
-  if (Kind == 1) {
-    if (TM.isPPC64())
-      return &PPC::G8RC_NOX0RegClass;
-    return &PPC::GPRC_NOR0RegClass;
-  }
-
-  if (TM.isPPC64())
-    return &PPC::G8RCRegClass;
-  return &PPC::GPRCRegClass;
-}
-
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
@@ -551,12 +534,10 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
   return false;
 }
 
-bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool PPCRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   // Call the base implementation first to set any hints based on the usual
@@ -597,11 +578,11 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
           // Ensure that the hint is a VSRp register.
           if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         } else if (RegClass->contains(PPC::ACC0)) {
           HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
           if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         }
       }
       break;
@@ -615,7 +596,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         assert((ACCPhys >= PPC::ACC0 && ACCPhys <= PPC::ACC7) &&
                "Expecting an ACC register for BUILD_UACC.");
         Register HintReg = PPC::UACC0 + (ACCPhys - PPC::ACC0);
-        Hints.push_back(HintReg);
+        Hints.insert(HintReg);
       }
       break;
     }

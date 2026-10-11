@@ -65,6 +65,8 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
+def Int8PackedTy : HLSLType<"int8_t4_packed">;
+def UInt8PackedTy : HLSLType<"uint8_t4_packed">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
@@ -326,7 +328,6 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 }];
   let VaryingTypes = SignedTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Unsigned abs is a constexpr identity - unsigned values are already non-negative.
@@ -344,7 +345,6 @@ function returns its input unchanged.
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the arccosine of the input value, Val.
@@ -958,7 +958,7 @@ value, \a Val.
   let VaryingLongVector = 1;
 }
 
-// Returns the floating-point remainder of x/y (scalar overloads).
+// Returns the floating-point remainder of x/y.
 def hlsl_fmod : HLSLBuiltin<"fmod"> {
   let Doc = [{
 \fn T fmod(T x, T y)
@@ -975,17 +975,8 @@ parameter.
   let ReturnType = Varying;
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingScalar = 1;
-  let VaryingMatDims = [];
-}
-
-// Returns the floating-point remainder of x/y (vector overloads).
-def hlsl_fmod_vec : HLSLBuiltin<"fmod"> {
-  let DetailFunc = "fmod_vec_impl";
-  let ParamNames = ["X", "Y"];
-  let Args = [Varying, Varying];
-  let ReturnType = Varying;
-  let VaryingTypes = [HalfTy, FloatTy];
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1092,6 +1083,34 @@ accesses have been completed and all threads in the group have reached this
 call.
 }];
   let IsConvergent = 1;
+}
+
+// Inserts a memory barrier with the specified memory and semantic flags.
+def hlsl_barrier : HLSLBuiltin<"Barrier", "__builtin_hlsl_barrier"> {
+  let Doc = [{
+\fn void Barrier(uint MemoryTypeFlags, uint SemanticFlags)
+\brief Inserts a memory barrier.
+\param MemoryTypeFlags The memory types affected by the barrier.
+\param SemanticFlags The synchronization and scope behavior.
+}];
+  let Args = [UIntTy, UIntTy];
+  let IsConvergent = 1;
+  let Availability = SM6_8;
+}
+
+// Determines if the specified value x is finite.
+def hlsl_isfinite : HLSLOneArgBuiltin<"isfinite", "__builtin_hlsl_elementwise_isfinite"> {
+  let Doc = [{
+\fn T isfinite(T x)
+\brief Determines if the specified value \a x  is finite.
+\param x The specified input value.
+
+Returns a value of the same size as the input, with a value set
+to False if the x parameter is +INF, -INF, NaN, or QNaN. Otherwise, True.
+}];
+  let ReturnType = VaryingShape<BoolTy>;
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Determines if the specified value x is infinite.
@@ -1921,4 +1940,18 @@ the specified wave.
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
+}
+
+// Reads the value from the first active lane in the wave.
+def hlsl_wave_read_lane_first :
+    HLSLOneArgBuiltin<"WaveReadLaneFirst",
+                      "__builtin_hlsl_wave_read_lane_first"> {
+  let Doc = [{
+\brief Returns the value from the active lane with the smallest index.
+\param Val The value to read.
+}];
+  let VaryingTypes = AllTypesWithBool;
+let VaryingLongVector = 1;
+let IsConvergent = 1;
+let Availability = SM6_0;
 }

@@ -137,8 +137,7 @@ int llvm::compileModuleWithNewPM(
 
   MAM.registerPass([&] {
     const TargetOptions &Options = Target->Options;
-    return RuntimeLibraryAnalysis(Options.ExceptionModel,
-                                  Options.MCOptions.ABIName, Options.VecLib);
+    return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
   });
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
@@ -183,14 +182,15 @@ int llvm::compileModuleWithNewPM(
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), PipelineStr, *Format);
     outs() << '\n';
     return 0;
   }
