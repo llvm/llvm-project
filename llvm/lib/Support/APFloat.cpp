@@ -741,9 +741,9 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
   unsigned count = bits / APFloatBase::integerPartWidth;
   unsigned partBits = bits % APFloatBase::integerPartWidth + 1;
 
-  APFloatBase::integerPart part =
-      parts[count] & (~(APFloatBase::integerPart)0 >>
-                      (APFloatBase::integerPartWidth - partBits));
+  APFloatBase::integerPart mask = ~(APFloatBase::integerPart)0 >>
+                                  (APFloatBase::integerPartWidth - partBits);
+  APFloatBase::integerPart part = parts[count] & mask;
 
   APFloatBase::integerPart boundary;
   if (isNearest)
@@ -752,6 +752,9 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
     boundary = 0;
 
   if (count == 0) {
+    // Directed rounding has boundaries at both ends of the truncated bits.
+    if (!isNearest)
+      return std::min(part, -part & mask);
     if (part - boundary <= boundary - part)
       return part - boundary;
     else
@@ -764,7 +767,7 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
         return ~(APFloatBase::integerPart) 0; /* A lot.  */
 
     return parts[0];
-  } else if (part == boundary - 1) {
+  } else if (part == ((boundary - 1) & mask)) {
     while (--count)
       if (~parts[count])
         return ~(APFloatBase::integerPart) 0; /* A lot.  */
