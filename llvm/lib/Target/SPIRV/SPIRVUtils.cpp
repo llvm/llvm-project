@@ -324,7 +324,10 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
           .addUse(IdReg);
       continue;
     }
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
+    unsigned Opcode = Dec == SPIRV::Decoration::UserTypeGOOGLE
+                          ? SPIRV::OpDecorateString
+                          : SPIRV::OpDecorate;
+    auto MIB = MIRBuilder.buildInstr(Opcode).addUse(Reg).addImm(Dec);
     for (unsigned OpI = 1, OpE = OpMD->getNumOperands(); OpI != OpE; ++OpI) {
       if (ConstantInt *OpV =
               mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(OpI)))
