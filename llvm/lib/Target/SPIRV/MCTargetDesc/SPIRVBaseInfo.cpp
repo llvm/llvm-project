@@ -102,6 +102,11 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
   return Name;
 }
 
+// Versions are encoded as in the SPIR-V header: 0x00MMmm00.
+static VersionTuple decodeVersion(uint32_t V) {
+  return VersionTuple((V >> 16) & 0xff, (V >> 8) & 0xff);
+}
+
 VersionTuple
 getSymbolicOperandMinVersion(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value) {
@@ -109,7 +114,7 @@ getSymbolicOperandMinVersion(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupSymbolicOperandByCategoryAndValue(Category, Value);
 
   if (Lookup)
-    return VersionTuple(Lookup->MinVersion / 10, Lookup->MinVersion % 10);
+    return decodeVersion(Lookup->MinVersion);
 
   return VersionTuple(0);
 }
@@ -121,7 +126,7 @@ getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupSymbolicOperandByCategoryAndValue(Category, Value);
 
   if (Lookup)
-    return VersionTuple(Lookup->MaxVersion / 10, Lookup->MaxVersion % 10);
+    return decodeVersion(Lookup->MaxVersion);
 
   return VersionTuple();
 }
