@@ -1,0 +1,31 @@
+# RUN: llvm-mc -triple=thumb -mattr=+thumb2 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=thumbv7a -mattr=-db -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=thumbv7a -disassemble < %s | FileCheck %s
+
+# Without the data-barrier feature, these instructions are decoded through
+# DecodeThumb2BCCInstruction. They still need their implicit predicate operands.
+
+# CHECK: dsb sy
+0xbf 0xf3 0x4f 0x8f
+# CHECK: dmb ish
+0xbf 0xf3 0x5b 0x8f
+# CHECK: isb sy
+0xbf 0xf3 0x6f 0x8f
+# CHECK: isb #0xa
+0xbf 0xf3 0x6a 0x8f
+
+# CHECK: it eq
+0x08 0xbf
+# CHECK: dsbeq sy
+0xbf 0xf3 0x4f 0x8f
+# CHECK: it ne
+0x18 0xbf
+# CHECK: dmbne ish
+0xbf 0xf3 0x5b 0x8f
+# CHECK: it eq
+0x08 0xbf
+# CHECK: isbeq sy
+0xbf 0xf3 0x6f 0x8f
+
+# CHECK: isb sy
+0xbf 0xf3 0x6f 0x8f

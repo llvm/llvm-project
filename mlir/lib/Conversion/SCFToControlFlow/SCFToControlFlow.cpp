@@ -294,7 +294,7 @@ struct DoWhileLowering : public OpRewritePattern<WhileOp> {
 
 /// Lower an `scf.index_switch` operation to a `cf.switch` operation.
 struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IndexSwitchOp op,
                                 PatternRewriter &rewriter) const override;

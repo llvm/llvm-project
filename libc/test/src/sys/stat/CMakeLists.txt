@@ -292,7 +292,7 @@ add_libc_test(
     libc.src.fcntl.open
     libc.src.sys.stat.stat
     libc.src.unistd.close
-    libc.src.stdio.remove    
+    libc.src.stdio.remove
     libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

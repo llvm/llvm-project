@@ -517,8 +517,9 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
-  if (ElementTypesInLoop.empty() && !Legal->getReductionVars().empty()) {
-    for (const auto &[_, RdxDesc] : Legal->getReductionVars()) {
+  if (ElementTypesInLoop.empty()) {
+    for (const RecurrenceDescriptor &RdxDesc :
+         Legal->getReductionVars().values()) {
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
       MinWidth = std::min(

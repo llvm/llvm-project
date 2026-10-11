@@ -1567,7 +1567,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   if (WritingModule && !WritingModule->getDirectoryDependencies().empty()) {
     Record.clear();
-    ArrayRef<std::string> Dirs = WritingModule->getDirectoryDependencies();
+    // Sort so that dependencies are reported in a stable order.
+    SmallVector<StringRef> Dirs(WritingModule->getDirectoryDependencies());
+    llvm::sort(Dirs);
     Record.push_back(Dirs.size());
     for (StringRef Dir : Dirs)
       AddPath(Dir, Record);
@@ -2954,10 +2956,12 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   if (SkippedRanges.size() > 0) {
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
-    for (auto const& Range : SkippedRanges)
+    for (auto const &Range : SkippedRanges) {
+      SourceRange R = getAdjustedRange(Range);
       SerializedSkippedRanges.emplace_back(
-          getRawSourceLocationEncoding(Range.getBegin()),
-          getRawSourceLocationEncoding(Range.getEnd()));
+          getRawSourceLocationEncoding(R.getBegin()),
+          getRawSourceLocationEncoding(R.getEnd()));
+    }
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();

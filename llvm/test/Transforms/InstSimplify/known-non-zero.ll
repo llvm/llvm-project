@@ -583,3 +583,44 @@ define i1 @src_x_uadd.sat_c1_fail(i8 %x, i1 %c1) {
   ret i1 %r
 }
 
+define i1 @trunc_dom_cond(i64 %x) {
+; CHECK-LABEL: @trunc_dom_cond(
+; CHECK-NEXT:    [[ISZERO:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[NON_ZERO:%.*]], label [[ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       zero:
+; CHECK-NEXT:    ret i1 false
+;
+  %iszero = trunc i64 %x to i1
+  br i1 %iszero, label %non_zero, label %zero
+
+non_zero:
+  %result = icmp eq i64 %x, 0
+  ret i1 %result
+
+zero:
+  ret i1 false
+}
+
+define i1 @neg_trunc_dom_cond(i64 %x) {
+; CHECK-LABEL: @neg_trunc_dom_cond(
+; CHECK-NEXT:    [[ISZERO:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[NON_ZERO:%.*]], label [[ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       zero:
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %iszero = trunc i64 %x to i1
+  br i1 %iszero, label %non_zero, label %zero
+
+non_zero:
+  ret i1 false
+
+zero:
+  %result = icmp eq i64 %x, 0
+  ret i1 %result
+}
+

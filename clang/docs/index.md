@@ -45,7 +45,6 @@ BoundsSafetyAdoptionGuide
 BoundsSafetyImplPlans
 ControlFlowIntegrity
 LTOVisibility
-ReturnAddressAuthenticationHardening
 SafeStack
 ShadowCallStack
 StructureProtection
@@ -143,7 +142,6 @@ LLVMExceptionHandlingCodeGen
 * {doc}`ControlFlowIntegrity`
 * {doc}`LTOVisibility`
 * {doc}`PointerAuthentication`
-* {doc}`ReturnAddressAuthenticationHardening`
 * {doc}`SafeStack`
 * {doc}`ShadowCallStack`
 * {doc}`StructureProtection`
@@ -215,3 +213,4 @@ LLVMExceptionHandlingCodeGen
 
 - {ref}`genindex`
 - {ref}`search`
+

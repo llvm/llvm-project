@@ -85,6 +85,8 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
       return 32;
     if (Arch == Triple::loongarch64)
       return 20; // lu12i.w; ori; lu32i.d; lu52i.d; jr
+    else if (Arch == Triple::ppc)
+      return 16; // lis; ori; mtctr; bctr
     else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
       return 44;
     else if (Arch == Triple::x86_64)

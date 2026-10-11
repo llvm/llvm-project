@@ -545,6 +545,61 @@ class TestFileWriting(unittest.TestCase):
         )
         self.assertEqual(proc.stdout, expected)
 
+    def test_dry_run_diff_outputs_pure_diff(self):
+        """--dry-run --diff exits 1 and outputs only the unified diff."""
+        import subprocess
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(code)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertTrue(proc.stdout.startswith("--- a/"))
+            self.assertNotIn("Formatting needed:", proc.stdout)
+            self.assertNotIn("file(s) need formatting.", proc.stdout)
+
+    def test_parse_error_exits_nonzero(self):
+        """A file with a CMake syntax error causes the CLI to exit with code 1."""
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write('set(FOO "unterminated)\n')
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(proc.stdout, "")
+            self.assertIn("Error parsing file", proc.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

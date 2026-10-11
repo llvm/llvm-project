@@ -42,6 +42,7 @@ private:
   bool visitPtrSBufferLoad(IntrinsicInst &I);
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
+  bool visitUnscaledWMMA(IntrinsicInst &I);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -104,6 +105,10 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_cvt_scale_pk16_f32_fp6:
     case Intrinsic::amdgcn_cvt_scale_pk16_f32_bf6:
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitCvtScale(*II); });
+      break;
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+      forEachCall(
+          F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
       break;
     }
   }
@@ -300,6 +305,38 @@ bool AMDGPULowerIntrinsicsImpl::visitCvtScale(IntrinsicInst &I) {
       I.getDebugLoc()));
 
   return false;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
+  assert(I.getIntrinsicID() == Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4);
+
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (!ST.hasGFX1250_STRICT())
+    return false;
+
+  IRBuilder<> B(&I);
+
+  // Convert unscaled WMMA into a scaled version with scale factors 0.
+  SmallVector<Value *, 14> Args(I.args());
+  Args.push_back(B.getInt32(0)); // matrix_a_scale
+  Args.push_back(
+      B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_FMT_E8)); // matrix_a_scale_fmt
+  Args.push_back(B.getInt32(0)); // matrix a scale exponential
+  Args.push_back(B.getInt32(0)); // matrix_b_scale
+  Args.push_back(
+      B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_FMT_E8)); // matrix_b_scale_fmt
+  Args.push_back(B.getInt32(0)); // matrix b scale exponential
+  Args.push_back(B.getInt1(0));  // matrix_a_reuse
+  Args.push_back(B.getInt1(0));  // matrix_b_reuse
+
+  CallInst *NewI = B.CreateIntrinsicWithoutFolding(
+      I.getType(), Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4, Args);
+  I.replaceAllUsesWith(NewI);
+  NewI->copyMetadata(I);
+  NewI->takeName(&I);
+  I.eraseFromParent();
+
+  return true;
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,
