@@ -49,7 +49,7 @@ body:             |
   ; SGPR_SPILL-NEXT:   renamable $sgpr10 = IMPLICIT_DEF
   ; SGPR_SPILL-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; SGPR_SPILL-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
-  ; SGPR_SPILL-NEXT:   DBG_VALUE $noreg, 0
+  ; SGPR_SPILL-NEXT:   DBG_VALUE $noreg, 0, !0, !DIExpression(), debug-location !DILocation(line: 10, column: 9, scope: !1)
   ; SGPR_SPILL-NEXT: {{  $}}
   ; SGPR_SPILL-NEXT: bb.1:
   ; SGPR_SPILL-NEXT:   $sgpr10 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
@@ -70,7 +70,7 @@ body:             |
   ; PEI-NEXT:   S_ENDPGM 0
   bb.0:
     renamable $sgpr10 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
     DBG_VALUE %stack.0, 0, !1, !8, debug-location !9
 
   bb.1:

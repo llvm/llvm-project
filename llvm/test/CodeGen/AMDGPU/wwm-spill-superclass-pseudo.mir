@@ -42,7 +42,7 @@ body:             |
 
   bb.4:
     liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
-    SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.0, implicit $exec, implicit $sgpr32
+    SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.0, -1, implicit $exec, implicit $sgpr32
     $sgpr56_sgpr57 = S_LOAD_DWORDX2_IMM $sgpr4_sgpr5, 48, 0
     $sgpr2 = S_MOV_B32 124
     %temp5:vreg_64 = COPY  $sgpr56_sgpr57

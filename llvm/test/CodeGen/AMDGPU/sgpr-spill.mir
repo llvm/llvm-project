@@ -543,37 +543,37 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     renamable $sgpr12 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE killed $sgpr12, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr12, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE $sgpr12, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE $sgpr12, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13 = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE killed $sgpr12_sgpr13, %stack.1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S64_SAVE killed $sgpr12_sgpr13, %stack.1, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13 = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE $sgpr12_sgpr13, %stack.1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S64_SAVE $sgpr12_sgpr13, %stack.1, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13_sgpr14 = IMPLICIT_DEF
-    SI_SPILL_S96_SAVE killed $sgpr12_sgpr13_sgpr14, %stack.2, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S96_SAVE killed $sgpr12_sgpr13_sgpr14, %stack.2, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13_sgpr14_sgpr15 = IMPLICIT_DEF
-    SI_SPILL_S128_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15, %stack.3, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S128_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15, %stack.3, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16 = IMPLICIT_DEF
-    SI_SPILL_S160_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16, %stack.4, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S160_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16, %stack.4, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = IMPLICIT_DEF
-    SI_SPILL_S256_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, %stack.5, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S256_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, %stack.5, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
-    SI_SPILL_S512_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27, %stack.6, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S512_SAVE killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27, %stack.6, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = IMPLICIT_DEF
-    SI_SPILL_S1024_SAVE killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, %stack.7, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, %stack.7, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     renamable $sgpr12 = IMPLICIT_DEF
-    SI_SPILL_S32_SAVE $sgpr12, %stack.8, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S32_SAVE $sgpr12, %stack.8, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 ...
 
 ---

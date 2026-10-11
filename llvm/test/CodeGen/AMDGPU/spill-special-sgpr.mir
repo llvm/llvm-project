@@ -142,10 +142,10 @@ body:             |
     ; GFX11-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
     ; GFX11-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     $vcc = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE $vcc, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S64_SAVE $vcc, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     $vcc = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE killed $vcc, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
+    SI_SPILL_S64_SAVE killed $vcc, %stack.0, -1, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 
     $vcc = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 ...

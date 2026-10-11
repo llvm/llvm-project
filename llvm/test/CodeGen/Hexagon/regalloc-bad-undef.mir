@@ -157,8 +157,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $d2:0x0000000000000002, $d8:0x0000000000000001, $d13, $r20
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S2_storerd_io %stack.0, 0, renamable $d2 :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+  ; CHECK-NEXT:   S2_storerd_io %stack.0, 0, renamable $d2 :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   J2_call @lrand48, implicit-def dead $d0, implicit-def dead $d1, implicit-def dead $d2, implicit-def dead $d3, implicit-def dead $d4, implicit-def dead $d5, implicit-def dead $d6, implicit-def dead $d7, implicit-def dead $r28, implicit-def dead $r31, implicit-def dead $p0, implicit-def dead $p1, implicit-def dead $p2, implicit-def dead $p3, implicit-def dead $m0, implicit-def dead $m1, implicit-def dead $lc0, implicit-def dead $lc1, implicit-def dead $sa0, implicit-def dead $sa1, implicit-def dead $usr, implicit-def $usr_ovf, implicit-def dead $cs0, implicit-def dead $cs1, implicit-def dead $w0, implicit-def dead $w1, implicit-def dead $w2, implicit-def dead $w3, implicit-def dead $w4, implicit-def dead $w5, implicit-def dead $w6, implicit-def dead $w7, implicit-def dead $w8, implicit-def dead $w9, implicit-def dead $w10, implicit-def dead $w11, implicit-def dead $w12, implicit-def dead $w13, implicit-def dead $w14, implicit-def dead $w15, implicit-def dead $q0, implicit-def dead $q1, implicit-def dead $q2, implicit-def dead $q3, implicit-def $r0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
   ; CHECK-NEXT:   renamable $r18 = COPY $r0
