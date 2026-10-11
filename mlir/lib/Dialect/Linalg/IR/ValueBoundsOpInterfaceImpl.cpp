@@ -40,7 +40,8 @@ struct IndexOpInterface
       // Scalar operands do not contribute dimensions to the flattened shape.
       int64_t rank = linalgOp.getRank(&operand);
       if (flatDimPos < flatDimCtr + rank) {
-        cstr.bound(value) < cstr.getExpr(operand.get(), flatDimPos - flatDimCtr);
+        cstr.bound(value) <
+            cstr.getExpr(operand.get(), flatDimPos - flatDimCtr);
         break;
       }
       flatDimCtr += rank;
