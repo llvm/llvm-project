@@ -58,6 +58,14 @@ class CGBuilderTy : public CGBuilderBaseTy {
 
   CodeGenFunction *getCGF() const { return getInserter().CGF; }
 
+  /// If debug info is enabled, rewrite the debug location of \p CI so that it
+  /// appears inlined from a synthetic artificial function named \p FuncName at
+  /// its current location. This lets profilers and debuggers attribute the
+  /// stores that implicit llvm.memset/llvm.memcpy calls are later expanded
+  /// into to a memset/memcpy frame instead of the enclosing function.
+  void attachSyntheticInlineDebugLoc(llvm::CallInst *CI,
+                                     llvm::StringRef FuncName);
+
   llvm::Value *emitRawPointerFromAddress(Address Addr) const {
     return Addr.getBasePointer();
   }
@@ -400,15 +408,21 @@ public:
                                bool IsVolatile = false) {
     llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
     llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
-    return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
-                        Src.getAlignment().getAsAlign(), Size, IsVolatile);
+    llvm::CallInst *CI =
+        CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
+                     Src.getAlignment().getAsAlign(), Size, IsVolatile);
+    attachSyntheticInlineDebugLoc(CI, "memcpy");
+    return CI;
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
     llvm::Value *DestPtr = emitRawPointerFromAddress(Dest);
     llvm::Value *SrcPtr = emitRawPointerFromAddress(Src);
-    return CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
-                        Src.getAlignment().getAsAlign(), Size, IsVolatile);
+    llvm::CallInst *CI =
+        CreateMemCpy(DestPtr, Dest.getAlignment().getAsAlign(), SrcPtr,
+                     Src.getAlignment().getAsAlign(), Size, IsVolatile);
+    attachSyntheticInlineDebugLoc(CI, "memcpy");
+    return CI;
   }
 
   using CGBuilderBaseTy::CreateMemCpyInline;
@@ -431,8 +445,11 @@ public:
   using CGBuilderBaseTy::CreateMemSet;
   llvm::CallInst *CreateMemSet(Address Dest, llvm::Value *Value,
                                llvm::Value *Size, bool IsVolatile = false) {
-    return CreateMemSet(emitRawPointerFromAddress(Dest), Value, Size,
-                        Dest.getAlignment().getAsAlign(), IsVolatile);
+    llvm::CallInst *CI =
+        CreateMemSet(emitRawPointerFromAddress(Dest), Value, Size,
+                     Dest.getAlignment().getAsAlign(), IsVolatile);
+    attachSyntheticInlineDebugLoc(CI, "memset");
+    return CI;
   }
 
   using CGBuilderBaseTy::CreateMemSetInline;

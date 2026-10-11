@@ -545,23 +545,23 @@ int main (int argc, char **argv) {
 // SIMD-NEXT:      #dbg_declare(ptr [[F]], [[META46:![0-9]+]], !DIExpression(), [[META47:![0-9]+]])
 // SIMD-NEXT:      #dbg_declare(ptr [[G]], [[META48:![0-9]+]], !DIExpression(), [[META49:![0-9]+]])
 // SIMD-NEXT:      #dbg_declare(ptr [[STR1]], [[META50:![0-9]+]], !DIExpression(), [[META51:![0-9]+]])
-// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR1]], ptr align 1 @__const.main.str1, i64 4, i1 false), !dbg [[META51]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR2]], [[META52:![0-9]+]], !DIExpression(), [[META54:![0-9]+]])
-// SIMD-NEXT:    store ptr @.str, ptr [[STR2]], align 8, !dbg [[META54]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR3]], [[META55:![0-9]+]], !DIExpression(), [[META57:![0-9]+]])
-// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR3]], ptr align 1 @__const.main.str3, i64 4, i1 false), !dbg [[META57]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR4]], [[META58:![0-9]+]], !DIExpression(), [[META59:![0-9]+]])
-// SIMD-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG60:![0-9]+]]
-// SIMD-NEXT:    store ptr [[ARRAYDECAY]], ptr [[STR4]], align 8, !dbg [[META59]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR5]], [[META61:![0-9]+]], !DIExpression(), [[META63:![0-9]+]])
-// SIMD-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG64:![0-9]+]]
-// SIMD-NEXT:    store ptr [[ARRAYDECAY1]], ptr [[STR5]], align 8, !dbg [[META63]]
-// SIMD-NEXT:    store i32 2, ptr @_ZZ4mainE1a, align 4, !dbg [[DBG65:![0-9]+]]
-// SIMD-NEXT:    call void @_Z3foov(), !dbg [[DBG66:![0-9]+]]
-// SIMD-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG67:![0-9]+]]
-// SIMD-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !dbg [[DBG68:![0-9]+]]
-// SIMD-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiLi10EEiT_PPc(i32 noundef [[TMP1]], ptr noundef [[TMP2]]), !dbg [[DBG69:![0-9]+]]
-// SIMD-NEXT:    ret i32 0, !dbg [[DBG70:![0-9]+]]
+// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR1]], ptr align 1 @__const.main.str1, i64 4, i1 false), !dbg [[DBG52:![0-9]+]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR2]], [[META55:![0-9]+]], !DIExpression(), [[META57:![0-9]+]])
+// SIMD-NEXT:    store ptr @.str, ptr [[STR2]], align 8, !dbg [[META57]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR3]], [[META58:![0-9]+]], !DIExpression(), [[META60:![0-9]+]])
+// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR3]], ptr align 1 @__const.main.str3, i64 4, i1 false), !dbg [[DBG61:![0-9]+]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR4]], [[META62:![0-9]+]], !DIExpression(), [[META63:![0-9]+]])
+// SIMD-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG64:![0-9]+]]
+// SIMD-NEXT:    store ptr [[ARRAYDECAY]], ptr [[STR4]], align 8, !dbg [[META63]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR5]], [[META65:![0-9]+]], !DIExpression(), [[META67:![0-9]+]])
+// SIMD-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG68:![0-9]+]]
+// SIMD-NEXT:    store ptr [[ARRAYDECAY1]], ptr [[STR5]], align 8, !dbg [[META67]]
+// SIMD-NEXT:    store i32 2, ptr @_ZZ4mainE1a, align 4, !dbg [[DBG69:![0-9]+]]
+// SIMD-NEXT:    call void @_Z3foov(), !dbg [[DBG70:![0-9]+]]
+// SIMD-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG71:![0-9]+]]
+// SIMD-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !dbg [[DBG72:![0-9]+]]
+// SIMD-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiLi10EEiT_PPc(i32 noundef [[TMP1]], ptr noundef [[TMP2]]), !dbg [[DBG73:![0-9]+]]
+// SIMD-NEXT:    ret i32 0, !dbg [[DBG74:![0-9]+]]
 //
 //
 // SIMD-LABEL: define linkonce_odr noundef i32 @_Z5tmainIiLi10EEiT_PPc(
@@ -583,49 +583,49 @@ int main (int argc, char **argv) {
 // SIMD-NEXT:    [[B3:%.*]] = alloca i32, align 4
 // SIMD-NEXT:    [[C4:%.*]] = alloca i32, align 4
 // SIMD-NEXT:    store i32 [[ARGC]], ptr [[ARGC_ADDR]], align 4
-// SIMD-NEXT:      #dbg_declare(ptr [[ARGC_ADDR]], [[META71:![0-9]+]], !DIExpression(), [[META72:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[ARGC_ADDR]], [[META75:![0-9]+]], !DIExpression(), [[META76:![0-9]+]])
 // SIMD-NEXT:    store ptr [[ARGV]], ptr [[ARGV_ADDR]], align 8
-// SIMD-NEXT:      #dbg_declare(ptr [[ARGV_ADDR]], [[META73:![0-9]+]], !DIExpression(), [[META74:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[B]], [[META75:![0-9]+]], !DIExpression(), [[META76:![0-9]+]])
-// SIMD-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG77:![0-9]+]]
-// SIMD-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !dbg [[META76]]
-// SIMD-NEXT:      #dbg_declare(ptr [[C]], [[META78:![0-9]+]], !DIExpression(), [[META79:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[D]], [[META80:![0-9]+]], !DIExpression(), [[META81:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[E]], [[META82:![0-9]+]], !DIExpression(), [[META83:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[F]], [[META84:![0-9]+]], !DIExpression(), [[META85:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[G]], [[META86:![0-9]+]], !DIExpression(), [[META87:![0-9]+]])
-// SIMD-NEXT:      #dbg_declare(ptr [[STR1]], [[META88:![0-9]+]], !DIExpression(), [[META89:![0-9]+]])
-// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR1]], ptr align 1 @__const._Z5tmainIiLi10EEiT_PPc.str1, i64 4, i1 false), !dbg [[META89]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR2]], [[META90:![0-9]+]], !DIExpression(), [[META91:![0-9]+]])
-// SIMD-NEXT:    store ptr @.str, ptr [[STR2]], align 8, !dbg [[META91]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR3]], [[META92:![0-9]+]], !DIExpression(), [[META93:![0-9]+]])
-// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR3]], ptr align 1 @__const._Z5tmainIiLi10EEiT_PPc.str3, i64 4, i1 false), !dbg [[META93]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR4]], [[META94:![0-9]+]], !DIExpression(), [[META95:![0-9]+]])
-// SIMD-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG96:![0-9]+]]
-// SIMD-NEXT:    store ptr [[ARRAYDECAY]], ptr [[STR4]], align 8, !dbg [[META95]]
-// SIMD-NEXT:      #dbg_declare(ptr [[STR5]], [[META97:![0-9]+]], !DIExpression(), [[META98:![0-9]+]])
-// SIMD-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG99:![0-9]+]]
-// SIMD-NEXT:    store ptr [[ARRAYDECAY1]], ptr [[STR5]], align 8, !dbg [[META98]]
-// SIMD-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !dbg [[DBG100:![0-9]+]]
-// SIMD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i64 0, !dbg [[DBG100]]
-// SIMD-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !dbg [[DBG100]]
-// SIMD-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 0, !dbg [[DBG100]]
-// SIMD-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1, !dbg [[DBG100]]
-// SIMD-NEXT:    [[CONV:%.*]] = sext i8 [[TMP3]] to i32, !dbg [[DBG100]]
-// SIMD-NEXT:    store i32 [[CONV]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG101:![0-9]+]]
-// SIMD-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG102:![0-9]+]]
-// SIMD-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1, !dbg [[DBG102]]
-// SIMD-NEXT:    store i32 [[INC]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG102]]
-// SIMD-NEXT:      #dbg_declare(ptr [[B3]], [[META103:![0-9]+]], !DIExpression(), [[META105:![0-9]+]])
-// SIMD-NEXT:    store i32 10, ptr [[B3]], align 4, !dbg [[META105]]
-// SIMD-NEXT:      #dbg_declare(ptr [[C4]], [[META106:![0-9]+]], !DIExpression(), [[META107:![0-9]+]])
-// SIMD-NEXT:    store i32 100, ptr [[C4]], align 4, !dbg [[META107]]
-// SIMD-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B3]], align 4, !dbg [[DBG108:![0-9]+]]
-// SIMD-NEXT:    [[TMP6:%.*]] = load i32, ptr [[C4]], align 4, !dbg [[DBG109:![0-9]+]]
-// SIMD-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]], !dbg [[DBG110:![0-9]+]]
-// SIMD-NEXT:    store i32 [[ADD]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG111:![0-9]+]]
-// SIMD-NEXT:    call void @_Z3foov(), !dbg [[DBG112:![0-9]+]]
-// SIMD-NEXT:    ret i32 10, !dbg [[DBG113:![0-9]+]]
+// SIMD-NEXT:      #dbg_declare(ptr [[ARGV_ADDR]], [[META77:![0-9]+]], !DIExpression(), [[META78:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[B]], [[META79:![0-9]+]], !DIExpression(), [[META80:![0-9]+]])
+// SIMD-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4, !dbg [[DBG81:![0-9]+]]
+// SIMD-NEXT:    store i32 [[TMP0]], ptr [[B]], align 4, !dbg [[META80]]
+// SIMD-NEXT:      #dbg_declare(ptr [[C]], [[META82:![0-9]+]], !DIExpression(), [[META83:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[D]], [[META84:![0-9]+]], !DIExpression(), [[META85:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[E]], [[META86:![0-9]+]], !DIExpression(), [[META87:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[F]], [[META88:![0-9]+]], !DIExpression(), [[META89:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[G]], [[META90:![0-9]+]], !DIExpression(), [[META91:![0-9]+]])
+// SIMD-NEXT:      #dbg_declare(ptr [[STR1]], [[META92:![0-9]+]], !DIExpression(), [[META93:![0-9]+]])
+// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR1]], ptr align 1 @__const._Z5tmainIiLi10EEiT_PPc.str1, i64 4, i1 false), !dbg [[DBG94:![0-9]+]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR2]], [[META95:![0-9]+]], !DIExpression(), [[META96:![0-9]+]])
+// SIMD-NEXT:    store ptr @.str, ptr [[STR2]], align 8, !dbg [[META96]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR3]], [[META97:![0-9]+]], !DIExpression(), [[META98:![0-9]+]])
+// SIMD-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[STR3]], ptr align 1 @__const._Z5tmainIiLi10EEiT_PPc.str3, i64 4, i1 false), !dbg [[DBG99:![0-9]+]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR4]], [[META100:![0-9]+]], !DIExpression(), [[META101:![0-9]+]])
+// SIMD-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG102:![0-9]+]]
+// SIMD-NEXT:    store ptr [[ARRAYDECAY]], ptr [[STR4]], align 8, !dbg [[META101]]
+// SIMD-NEXT:      #dbg_declare(ptr [[STR5]], [[META103:![0-9]+]], !DIExpression(), [[META104:![0-9]+]])
+// SIMD-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i8], ptr [[STR3]], i64 0, i64 0, !dbg [[DBG105:![0-9]+]]
+// SIMD-NEXT:    store ptr [[ARRAYDECAY1]], ptr [[STR5]], align 8, !dbg [[META104]]
+// SIMD-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !dbg [[DBG106:![0-9]+]]
+// SIMD-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[TMP1]], i64 0, !dbg [[DBG106]]
+// SIMD-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8, !dbg [[DBG106]]
+// SIMD-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 0, !dbg [[DBG106]]
+// SIMD-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1, !dbg [[DBG106]]
+// SIMD-NEXT:    [[CONV:%.*]] = sext i8 [[TMP3]] to i32, !dbg [[DBG106]]
+// SIMD-NEXT:    store i32 [[CONV]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG107:![0-9]+]]
+// SIMD-NEXT:    [[TMP4:%.*]] = load i32, ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG108:![0-9]+]]
+// SIMD-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1, !dbg [[DBG108]]
+// SIMD-NEXT:    store i32 [[INC]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG108]]
+// SIMD-NEXT:      #dbg_declare(ptr [[B3]], [[META109:![0-9]+]], !DIExpression(), [[META111:![0-9]+]])
+// SIMD-NEXT:    store i32 10, ptr [[B3]], align 4, !dbg [[META111]]
+// SIMD-NEXT:      #dbg_declare(ptr [[C4]], [[META112:![0-9]+]], !DIExpression(), [[META113:![0-9]+]])
+// SIMD-NEXT:    store i32 100, ptr [[C4]], align 4, !dbg [[META113]]
+// SIMD-NEXT:    [[TMP5:%.*]] = load i32, ptr [[B3]], align 4, !dbg [[DBG114:![0-9]+]]
+// SIMD-NEXT:    [[TMP6:%.*]] = load i32, ptr [[C4]], align 4, !dbg [[DBG115:![0-9]+]]
+// SIMD-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]], !dbg [[DBG116:![0-9]+]]
+// SIMD-NEXT:    store i32 [[ADD]], ptr @_ZZ5tmainIiLi10EEiT_PPcE1a, align 4, !dbg [[DBG117:![0-9]+]]
+// SIMD-NEXT:    call void @_Z3foov(), !dbg [[DBG118:![0-9]+]]
+// SIMD-NEXT:    ret i32 10, !dbg [[DBG119:![0-9]+]]
 //
 //.
 // SIMD: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression())
@@ -678,66 +678,72 @@ int main (int argc, char **argv) {
 // SIMD: [[META49]] = !DILocation(line: 60, column: 29, scope: [[DBG2]])
 // SIMD: [[META50]] = !DILocalVariable(name: "str1", scope: [[DBG2]], file: [[META3]], line: 62, type: [[META15]])
 // SIMD: [[META51]] = !DILocation(line: 62, column: 14, scope: [[DBG2]])
-// SIMD: [[META52]] = !DILocalVariable(name: "str2", scope: [[DBG2]], file: [[META3]], line: 63, type: [[META53:![0-9]+]])
-// SIMD: [[META53]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META16]], size: 64)
-// SIMD: [[META54]] = !DILocation(line: 63, column: 15, scope: [[DBG2]])
-// SIMD: [[META55]] = !DILocalVariable(name: "str3", scope: [[DBG2]], file: [[META3]], line: 64, type: [[META56:![0-9]+]])
-// SIMD: [[META56]] = !DICompositeType(tag: DW_TAG_array_type, baseType: [[META9]], size: 32, elements: [[META17]])
-// SIMD: [[META57]] = !DILocation(line: 64, column: 8, scope: [[DBG2]])
-// SIMD: [[META58]] = !DILocalVariable(name: "str4", scope: [[DBG2]], file: [[META3]], line: 65, type: [[META8]])
-// SIMD: [[META59]] = !DILocation(line: 65, column: 9, scope: [[DBG2]])
-// SIMD: [[DBG60]] = !DILocation(line: 65, column: 16, scope: [[DBG2]])
-// SIMD: [[META61]] = !DILocalVariable(name: "str5", scope: [[DBG2]], file: [[META3]], line: 66, type: [[META62:![0-9]+]])
-// SIMD: [[META62]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META8]])
-// SIMD: [[META63]] = !DILocation(line: 66, column: 16, scope: [[DBG2]])
-// SIMD: [[DBG64]] = !DILocation(line: 66, column: 23, scope: [[DBG2]])
-// SIMD: [[DBG65]] = !DILocation(line: 73, column: 5, scope: [[DBG2]])
-// SIMD: [[DBG66]] = !DILocation(line: 80, column: 3, scope: [[DBG2]])
-// SIMD: [[DBG67]] = !DILocation(line: 81, column: 18, scope: [[DBG2]])
-// SIMD: [[DBG68]] = !DILocation(line: 81, column: 24, scope: [[DBG2]])
-// SIMD: [[DBG69]] = !DILocation(line: 81, column: 3, scope: [[DBG2]])
-// SIMD: [[DBG70]] = !DILocation(line: 82, column: 1, scope: [[DBG2]])
-// SIMD: [[META71]] = !DILocalVariable(name: "argc", arg: 1, scope: [[DBG22]], file: [[META3]], line: 20, type: [[META6]])
-// SIMD: [[META72]] = !DILocation(line: 20, column: 13, scope: [[DBG22]])
-// SIMD: [[META73]] = !DILocalVariable(name: "argv", arg: 2, scope: [[DBG22]], file: [[META3]], line: 20, type: [[META7]])
-// SIMD: [[META74]] = !DILocation(line: 20, column: 26, scope: [[DBG22]])
-// SIMD: [[META75]] = !DILocalVariable(name: "b", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META76]] = !DILocation(line: 21, column: 5, scope: [[DBG22]])
-// SIMD: [[DBG77]] = !DILocation(line: 21, column: 9, scope: [[DBG22]])
-// SIMD: [[META78]] = !DILocalVariable(name: "c", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META79]] = !DILocation(line: 21, column: 15, scope: [[DBG22]])
-// SIMD: [[META80]] = !DILocalVariable(name: "d", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META81]] = !DILocation(line: 21, column: 18, scope: [[DBG22]])
-// SIMD: [[META82]] = !DILocalVariable(name: "e", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META83]] = !DILocation(line: 21, column: 21, scope: [[DBG22]])
-// SIMD: [[META84]] = !DILocalVariable(name: "f", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META85]] = !DILocation(line: 21, column: 24, scope: [[DBG22]])
-// SIMD: [[META86]] = !DILocalVariable(name: "g", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
-// SIMD: [[META87]] = !DILocation(line: 21, column: 27, scope: [[DBG22]])
-// SIMD: [[META88]] = !DILocalVariable(name: "str1", scope: [[DBG22]], file: [[META3]], line: 23, type: [[META15]])
-// SIMD: [[META89]] = !DILocation(line: 23, column: 14, scope: [[DBG22]])
-// SIMD: [[META90]] = !DILocalVariable(name: "str2", scope: [[DBG22]], file: [[META3]], line: 24, type: [[META53]])
-// SIMD: [[META91]] = !DILocation(line: 24, column: 15, scope: [[DBG22]])
-// SIMD: [[META92]] = !DILocalVariable(name: "str3", scope: [[DBG22]], file: [[META3]], line: 25, type: [[META56]])
-// SIMD: [[META93]] = !DILocation(line: 25, column: 8, scope: [[DBG22]])
-// SIMD: [[META94]] = !DILocalVariable(name: "str4", scope: [[DBG22]], file: [[META3]], line: 26, type: [[META8]])
-// SIMD: [[META95]] = !DILocation(line: 26, column: 9, scope: [[DBG22]])
-// SIMD: [[DBG96]] = !DILocation(line: 26, column: 16, scope: [[DBG22]])
-// SIMD: [[META97]] = !DILocalVariable(name: "str5", scope: [[DBG22]], file: [[META3]], line: 27, type: [[META62]])
-// SIMD: [[META98]] = !DILocation(line: 27, column: 16, scope: [[DBG22]])
-// SIMD: [[DBG99]] = !DILocation(line: 27, column: 23, scope: [[DBG22]])
-// SIMD: [[DBG100]] = !DILocation(line: 34, column: 7, scope: [[DBG22]])
-// SIMD: [[DBG101]] = !DILocation(line: 34, column: 5, scope: [[DBG22]])
-// SIMD: [[DBG102]] = !DILocation(line: 35, column: 3, scope: [[DBG22]])
-// SIMD: [[META103]] = !DILocalVariable(name: "b", scope: [[META104:![0-9]+]], file: [[META3]], line: 43, type: [[META6]])
-// SIMD: [[META104]] = distinct !DILexicalBlock(scope: [[DBG22]], file: [[META3]], line: 42, column: 3)
-// SIMD: [[META105]] = !DILocation(line: 43, column: 9, scope: [[META104]])
-// SIMD: [[META106]] = !DILocalVariable(name: "c", scope: [[META104]], file: [[META3]], line: 44, type: [[META6]])
-// SIMD: [[META107]] = !DILocation(line: 44, column: 7, scope: [[META104]])
-// SIMD: [[DBG108]] = !DILocation(line: 45, column: 9, scope: [[META104]])
-// SIMD: [[DBG109]] = !DILocation(line: 45, column: 13, scope: [[META104]])
-// SIMD: [[DBG110]] = !DILocation(line: 45, column: 11, scope: [[META104]])
-// SIMD: [[DBG111]] = !DILocation(line: 45, column: 7, scope: [[META104]])
-// SIMD: [[DBG112]] = !DILocation(line: 53, column: 3, scope: [[DBG22]])
-// SIMD: [[DBG113]] = !DILocation(line: 54, column: 1, scope: [[DBG22]])
+// SIMD: [[DBG52]] = !DILocation(line: 0, scope: [[META53:![0-9]+]], inlinedAt: [[META51]])
+// SIMD: [[META53]] = distinct !DISubprogram(name: "memcpy", scope: [[META3]], file: [[META3]], type: [[META54:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META10]])
+// SIMD: [[META54]] = !DISubroutineType(types: null)
+// SIMD: [[META55]] = !DILocalVariable(name: "str2", scope: [[DBG2]], file: [[META3]], line: 63, type: [[META56:![0-9]+]])
+// SIMD: [[META56]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META16]], size: 64)
+// SIMD: [[META57]] = !DILocation(line: 63, column: 15, scope: [[DBG2]])
+// SIMD: [[META58]] = !DILocalVariable(name: "str3", scope: [[DBG2]], file: [[META3]], line: 64, type: [[META59:![0-9]+]])
+// SIMD: [[META59]] = !DICompositeType(tag: DW_TAG_array_type, baseType: [[META9]], size: 32, elements: [[META17]])
+// SIMD: [[META60]] = !DILocation(line: 64, column: 8, scope: [[DBG2]])
+// SIMD: [[DBG61]] = !DILocation(line: 0, scope: [[META53]], inlinedAt: [[META60]])
+// SIMD: [[META62]] = !DILocalVariable(name: "str4", scope: [[DBG2]], file: [[META3]], line: 65, type: [[META8]])
+// SIMD: [[META63]] = !DILocation(line: 65, column: 9, scope: [[DBG2]])
+// SIMD: [[DBG64]] = !DILocation(line: 65, column: 16, scope: [[DBG2]])
+// SIMD: [[META65]] = !DILocalVariable(name: "str5", scope: [[DBG2]], file: [[META3]], line: 66, type: [[META66:![0-9]+]])
+// SIMD: [[META66]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[META8]])
+// SIMD: [[META67]] = !DILocation(line: 66, column: 16, scope: [[DBG2]])
+// SIMD: [[DBG68]] = !DILocation(line: 66, column: 23, scope: [[DBG2]])
+// SIMD: [[DBG69]] = !DILocation(line: 73, column: 5, scope: [[DBG2]])
+// SIMD: [[DBG70]] = !DILocation(line: 80, column: 3, scope: [[DBG2]])
+// SIMD: [[DBG71]] = !DILocation(line: 81, column: 18, scope: [[DBG2]])
+// SIMD: [[DBG72]] = !DILocation(line: 81, column: 24, scope: [[DBG2]])
+// SIMD: [[DBG73]] = !DILocation(line: 81, column: 3, scope: [[DBG2]])
+// SIMD: [[DBG74]] = !DILocation(line: 82, column: 1, scope: [[DBG2]])
+// SIMD: [[META75]] = !DILocalVariable(name: "argc", arg: 1, scope: [[DBG22]], file: [[META3]], line: 20, type: [[META6]])
+// SIMD: [[META76]] = !DILocation(line: 20, column: 13, scope: [[DBG22]])
+// SIMD: [[META77]] = !DILocalVariable(name: "argv", arg: 2, scope: [[DBG22]], file: [[META3]], line: 20, type: [[META7]])
+// SIMD: [[META78]] = !DILocation(line: 20, column: 26, scope: [[DBG22]])
+// SIMD: [[META79]] = !DILocalVariable(name: "b", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META80]] = !DILocation(line: 21, column: 5, scope: [[DBG22]])
+// SIMD: [[DBG81]] = !DILocation(line: 21, column: 9, scope: [[DBG22]])
+// SIMD: [[META82]] = !DILocalVariable(name: "c", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META83]] = !DILocation(line: 21, column: 15, scope: [[DBG22]])
+// SIMD: [[META84]] = !DILocalVariable(name: "d", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META85]] = !DILocation(line: 21, column: 18, scope: [[DBG22]])
+// SIMD: [[META86]] = !DILocalVariable(name: "e", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META87]] = !DILocation(line: 21, column: 21, scope: [[DBG22]])
+// SIMD: [[META88]] = !DILocalVariable(name: "f", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META89]] = !DILocation(line: 21, column: 24, scope: [[DBG22]])
+// SIMD: [[META90]] = !DILocalVariable(name: "g", scope: [[DBG22]], file: [[META3]], line: 21, type: [[META6]])
+// SIMD: [[META91]] = !DILocation(line: 21, column: 27, scope: [[DBG22]])
+// SIMD: [[META92]] = !DILocalVariable(name: "str1", scope: [[DBG22]], file: [[META3]], line: 23, type: [[META15]])
+// SIMD: [[META93]] = !DILocation(line: 23, column: 14, scope: [[DBG22]])
+// SIMD: [[DBG94]] = !DILocation(line: 0, scope: [[META53]], inlinedAt: [[META93]])
+// SIMD: [[META95]] = !DILocalVariable(name: "str2", scope: [[DBG22]], file: [[META3]], line: 24, type: [[META56]])
+// SIMD: [[META96]] = !DILocation(line: 24, column: 15, scope: [[DBG22]])
+// SIMD: [[META97]] = !DILocalVariable(name: "str3", scope: [[DBG22]], file: [[META3]], line: 25, type: [[META59]])
+// SIMD: [[META98]] = !DILocation(line: 25, column: 8, scope: [[DBG22]])
+// SIMD: [[DBG99]] = !DILocation(line: 0, scope: [[META53]], inlinedAt: [[META98]])
+// SIMD: [[META100]] = !DILocalVariable(name: "str4", scope: [[DBG22]], file: [[META3]], line: 26, type: [[META8]])
+// SIMD: [[META101]] = !DILocation(line: 26, column: 9, scope: [[DBG22]])
+// SIMD: [[DBG102]] = !DILocation(line: 26, column: 16, scope: [[DBG22]])
+// SIMD: [[META103]] = !DILocalVariable(name: "str5", scope: [[DBG22]], file: [[META3]], line: 27, type: [[META66]])
+// SIMD: [[META104]] = !DILocation(line: 27, column: 16, scope: [[DBG22]])
+// SIMD: [[DBG105]] = !DILocation(line: 27, column: 23, scope: [[DBG22]])
+// SIMD: [[DBG106]] = !DILocation(line: 34, column: 7, scope: [[DBG22]])
+// SIMD: [[DBG107]] = !DILocation(line: 34, column: 5, scope: [[DBG22]])
+// SIMD: [[DBG108]] = !DILocation(line: 35, column: 3, scope: [[DBG22]])
+// SIMD: [[META109]] = !DILocalVariable(name: "b", scope: [[META110:![0-9]+]], file: [[META3]], line: 43, type: [[META6]])
+// SIMD: [[META110]] = distinct !DILexicalBlock(scope: [[DBG22]], file: [[META3]], line: 42, column: 3)
+// SIMD: [[META111]] = !DILocation(line: 43, column: 9, scope: [[META110]])
+// SIMD: [[META112]] = !DILocalVariable(name: "c", scope: [[META110]], file: [[META3]], line: 44, type: [[META6]])
+// SIMD: [[META113]] = !DILocation(line: 44, column: 7, scope: [[META110]])
+// SIMD: [[DBG114]] = !DILocation(line: 45, column: 9, scope: [[META110]])
+// SIMD: [[DBG115]] = !DILocation(line: 45, column: 13, scope: [[META110]])
+// SIMD: [[DBG116]] = !DILocation(line: 45, column: 11, scope: [[META110]])
+// SIMD: [[DBG117]] = !DILocation(line: 45, column: 7, scope: [[META110]])
+// SIMD: [[DBG118]] = !DILocation(line: 53, column: 3, scope: [[DBG22]])
+// SIMD: [[DBG119]] = !DILocation(line: 54, column: 1, scope: [[DBG22]])
 //.
