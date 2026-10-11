@@ -18,7 +18,10 @@ struct Chain : Chain<Depth - 1> {};
 
 template <>
 struct Chain<0> {
-  virtual ~Chain() noexcept = default;
+  Chain()                        = default;
+  Chain(const Chain&)            = default;
+  Chain& operator=(const Chain&) = default;
+  virtual ~Chain() noexcept      = default;
 };
 
 template <std::size_t Index, std::size_t Depth>
@@ -26,7 +29,10 @@ struct Dag : Dag<Index, Depth - 1>, Dag<Index + 1, Depth - 1> {};
 
 template <std::size_t Index>
 struct Dag<Index, 0> {
-  virtual ~Dag() noexcept = default;
+  Dag()                      = default;
+  Dag(const Dag&)            = default;
+  Dag& operator=(const Dag&) = default;
+  virtual ~Dag() noexcept    = default;
 };
 
 template <std::size_t Depth>
@@ -34,7 +40,10 @@ struct VChain : virtual VChain<Depth - 1> {};
 
 template <>
 struct VChain<0> {
-  virtual ~VChain() noexcept = default;
+  VChain()                         = default;
+  VChain(const VChain&)            = default;
+  VChain& operator=(const VChain&) = default;
+  virtual ~VChain() noexcept       = default;
 };
 
 template <std::size_t Index, std::size_t Depth>
@@ -42,7 +51,10 @@ struct VDag : virtual VDag<Index, Depth - 1>, virtual VDag<Index + 1, Depth - 1>
 
 template <std::size_t Index>
 struct VDag<Index, 0> {
-  virtual ~VDag() noexcept = default;
+  VDag()                       = default;
+  VDag(const VDag&)            = default;
+  VDag& operator=(const VDag&) = default;
+  virtual ~VDag() noexcept     = default;
 };
 
 template <typename Dyn, typename From, typename To = Dyn>
@@ -171,5 +183,50 @@ BENCHMARK(DynCast<VDag<0, 3>, VDag<3, 0>, void>)->Name("dynamic_cast (VDAG to co
 
 // Static cast as the baseline.
 BENCHMARK(StaticCast)->Name("static_cast");
+
+template <class ThrowT, class CatchT>
+static TEST_ALIGN_BENCHMARK void ThrowCatch(benchmark::State& state) {
+  for (auto _ : state) {
+    try {
+      throw ThrowT();
+    } catch (CatchT& v) {
+      benchmark::DoNotOptimize(v);
+    }
+  }
+}
+
+// Downcast along a chain from base to the most derived type
+BENCHMARK(ThrowCatch<Chain<1>, Chain<0>>)->Name("throw/catch (Chain, 1 level)");
+BENCHMARK(ThrowCatch<Chain<2>, Chain<0>>)->Name("throw/catch (Chain, 2 levels)");
+BENCHMARK(ThrowCatch<Chain<3>, Chain<0>>)->Name("throw/catch (Chain, 3 levels)");
+BENCHMARK(ThrowCatch<Chain<4>, Chain<0>>)->Name("throw/catch (Chain, 4 levels)");
+BENCHMARK(ThrowCatch<Chain<5>, Chain<0>>)->Name("throw/catch (Chain, 5 levels)");
+BENCHMARK(ThrowCatch<Chain<6>, Chain<0>>)->Name("throw/catch (Chain, 6 levels)");
+BENCHMARK(ThrowCatch<Chain<7>, Chain<0>>)->Name("throw/catch (Chain, 7 levels)");
+BENCHMARK(ThrowCatch<Chain<8>, Chain<0>>)->Name("throw/catch (Chain, 8 levels)");
+BENCHMARK(ThrowCatch<Chain<9>, Chain<0>>)->Name("throw/catch (Chain, 9 levels)");
+
+// Downcast along a virtual inheritance chain from base to the most derived type
+BENCHMARK(ThrowCatch<VChain<1>, VChain<0>>)->Name("throw/catch (VChain, 1 level)");
+BENCHMARK(ThrowCatch<VChain<2>, VChain<0>>)->Name("throw/catch (VChain, 2 levels)");
+BENCHMARK(ThrowCatch<VChain<3>, VChain<0>>)->Name("throw/catch (VChain, 3 levels)");
+BENCHMARK(ThrowCatch<VChain<4>, VChain<0>>)->Name("throw/catch (VChain, 4 levels)");
+BENCHMARK(ThrowCatch<VChain<5>, VChain<0>>)->Name("throw/catch (VChain, 5 levels)");
+
+// Downcast along a DAG from base to the most derived type
+BENCHMARK(ThrowCatch<Dag<0, 3>, Dag<3, 0>>)->Name("throw/catch (DAG rightmost, 3 levels)");
+BENCHMARK(ThrowCatch<Dag<0, 4>, Dag<4, 0>>)->Name("throw/catch (DAG rightmost, 4 levels)");
+BENCHMARK(ThrowCatch<Dag<0, 5>, Dag<5, 0>>)->Name("throw/catch (DAG rightmost, 5 levels)");
+BENCHMARK(ThrowCatch<Dag<0, 3>, Dag<0, 0>>)->Name("throw/catch (DAG leftmost, 3 levels)");
+BENCHMARK(ThrowCatch<Dag<0, 4>, Dag<0, 0>>)->Name("throw/catch (DAG leftmost, 4 levels)");
+BENCHMARK(ThrowCatch<Dag<0, 5>, Dag<0, 0>>)->Name("throw/catch (DAG leftmost, 5 levels)");
+
+// Downcast along a virtual inheritance DAG from base to the most derived type
+BENCHMARK(ThrowCatch<VDag<0, 3>, VDag<3, 0>>)->Name("throw/catch (VDAG rightmost, 3 levels)");
+BENCHMARK(ThrowCatch<VDag<0, 4>, VDag<4, 0>>)->Name("throw/catch (VDAG rightmost, 4 levels)");
+BENCHMARK(ThrowCatch<VDag<0, 5>, VDag<5, 0>>)->Name("throw/catch (VDAG rightmost, 5 levels)");
+BENCHMARK(ThrowCatch<VDag<0, 3>, VDag<0, 0>>)->Name("throw/catch (VDAG leftmost, 3 levels)");
+BENCHMARK(ThrowCatch<VDag<0, 4>, VDag<0, 0>>)->Name("throw/catch (VDAG leftmost, 4 levels)");
+BENCHMARK(ThrowCatch<VDag<0, 5>, VDag<0, 0>>)->Name("throw/catch (VDAG leftmost, 5 levels)");
 
 BENCHMARK_MAIN();
