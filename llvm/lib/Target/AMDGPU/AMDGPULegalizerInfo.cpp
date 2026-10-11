@@ -3312,6 +3312,7 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
       MIB.addImm(0);
     else
       MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+    MIB.setOperandDead(3); // $scc
   }
 
   if (PtrTy.getSizeInBits() == 32)
