@@ -110,6 +110,7 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
 
   switch(N.getOpcode()) {
   case SHISD::WRAPPER:
+  case SHISD::FPWRAPPER:
 
     // Address is a wrapper, get the underlying data.
     Base = N;
