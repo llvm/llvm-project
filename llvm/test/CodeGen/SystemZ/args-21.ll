@@ -2,20 +2,15 @@
 ; RUN:   | FileCheck %s
 ; REQUIRES: asserts
 ;
-; Test detection of missing extension involving an internal function which is
-; passed as a function pointer to an external function.
+; Test an indirect call: even without the function prototype we can check that
+; a C ABI call has some kind of extension.
 
-define internal i32 @bar(i32 %Arg) {
-  ret i32 %Arg
-}
-
-declare void @ExtFun(ptr %FunPtr);
-
-define void @foo() {
-  call void @ExtFun(ptr @bar)
+define void @caller(ptr %fptr) {
+  call void %fptr(i32 0)
   ret void
 }
 
-; CHECK: ERROR: Missing extension attribute of returned value from function:
-; CHECK: i32 @bar(i32)
-; CHECK: UNREACHABLE executed
+; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: Callee: -
+; CHECK: Caller: void @caller(ptr)
+; CHECK:         call void %fptr(i32 0)

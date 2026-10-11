@@ -9,8 +9,16 @@ define void @caller() {
   ret void
 }
 
-declare void @bar_Struct(i16 %Arg)
+define internal void @bar_Struct(i16 %Arg) { ret void }
 
-; CHECK: ERROR: Missing extension attribute of passed value in call to function:
-; CHECK: Callee:  void @bar_Struct(i16)
-; CHECK: Caller:  void @caller()
+declare void @ExtFun(ptr %FunPtr)
+define void @foo() {
+  call void @ExtFun(ptr @bar_Struct)
+  ret void
+}
+
+; CHECK: ERROR:  (C ABI violiation) missing extension attribute on arg 0.
+; CHECK: Callee: void @bar_Struct(i16)
+; CHECK: Caller: void @caller()
+; CHECK:         call void @bar_Struct(i16 123)
+; CHECK: UNREACHABLE executed

@@ -486,14 +486,18 @@ private:
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
 private:
+  bool enableNarrowIntArgsVerification() const;
   bool isInternal(const Function *Fn) const;
   mutable std::map<const Function *, bool> IsInternalCache;
-  void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Call(CallLoweringInfo &CLI,
+                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
-  void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+  void verifyNarrowIntegerArgs_Ret(CallingConv::ID CallConv,
+                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const Function *F) const;
-  bool
-  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+  bool verifyNarrowIntegerArgs(bool C_ABI,
+                               const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               const Function *FunHeader, bool IsRet) const;
 
 public:
 };
