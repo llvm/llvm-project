@@ -23,10 +23,13 @@ class OptionsStruct<string namespace = "llvm", string prefix = ""> {
 }
 
 // The member an option sets, and the member's type and default value.
+// `let Condition = "!defined(NDEBUG)" in` makes the option unknown where the
+// preprocessor condition is false; the member then keeps its default.
 class Field<string name, string type, code default> {
   string FieldName = name;
   string FieldType = type;
   code FieldDefault = default;
+  code Condition = ?;
 }
 
 // The value a FlagOrEq row assigns when given without one.
