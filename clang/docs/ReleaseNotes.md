@@ -918,6 +918,8 @@ features cannot lower the translation-unit ABI level;
   take effect, causing them to be dropped from llvm.used and omitted from
   the object file. (#GH226572)
 
+- Fixed rejection of non-dependent `void{}` during template instantiation,
+  which previously rebuilt the expression as `void({})`. (#GH226485, #GH181448)
 - Fixed an assertion failure when the initializer of a variable template
   specialization with a deduced type is instantiated from inside a lambda in
   the initializer of another specialization of the same variable template.
