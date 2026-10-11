@@ -36,6 +36,7 @@ module @TestDenseArray attributes {
 // CHECK-DAG: bytecode.i64 = dense<1000000> : tensor<4xi64>
 // CHECK-DAG: bytecode.f16 = dense<[1.500000e+00, 2.500000e+00]> : tensor<2xf16>
 // CHECK-DAG: bytecode.bf16 = dense<[-5.000000e-01, 5.000000e-01]> : tensor<2xbf16>
+// CHECK-DAG: bytecode.ocp_int8 = dense<tensor<4xocp_int8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>
 // CHECK-DAG: bytecode.complex_val = dense<(1.000000e+00,2.000000e+00)> : tensor<1xcomplex<f32>>
 module @TestDenseTypedElements attributes {
   bytecode.test1 = dense<true> : tensor<256xi1>,
@@ -45,6 +46,7 @@ module @TestDenseTypedElements attributes {
   bytecode.i64 = dense<1000000> : tensor<4xi64>,
   bytecode.f16 = dense<[1.5, 2.5]> : tensor<2xf16>,
   bytecode.bf16 = dense<[-0.5, 0.5]> : tensor<2xbf16>,
+  bytecode.ocp_int8 = dense<tensor<4xocp_int8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>,
   bytecode.complex_val = dense<(1.0, 2.0)> : tensor<1xcomplex<f32>>
 } {}
 
