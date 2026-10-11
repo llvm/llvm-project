@@ -5443,11 +5443,16 @@ void DAGTypeLegalizer::ExpandIntRes_UREM(SDNode *N,
     return;
   }
 
+  RTLIB::Libcall LC = RTLIB::getUREM(VT);
+
   // Try to expand UREM by constant.
   if (isa<ConstantSDNode>(N->getOperand(1))) {
     EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-    // Only if the new type is legal.
-    if (isTypeLegal(NVT)) {
+    // Only if the new type is legal, or if there is no libcall to fall back
+    // to. In the latter case the expansion produces a UREM in the new type,
+    // which is legalized in turn.
+    if (isTypeLegal(NVT) ||
+        DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
       SDValue InL, InH;
       GetExpandedInteger(N->getOperand(0), InL, InH);
       SmallVector<SDValue> Result;
@@ -5459,7 +5464,6 @@ void DAGTypeLegalizer::ExpandIntRes_UREM(SDNode *N,
     }
   }
 
-  RTLIB::Libcall LC = RTLIB::getUREM(VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported UREM!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
