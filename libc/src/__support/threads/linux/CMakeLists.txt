@@ -76,6 +76,7 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.OSUtil.linux.syscall_wrappers.clone
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.OSUtil.linux.syscall_wrappers.exit
     libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
