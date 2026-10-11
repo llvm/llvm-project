@@ -945,6 +945,12 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Bug Fixes
 
+- Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
+  `/Ox` being ignored when compiling HIP device code or using a non-MSVC
+  host toolchain. Macro definitions using `#` as the value separator and
+  `/permissive` options are also translated consistently for host and device
+  compilation.
+
 #### Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when Microsoft extensions were enabled and an unterminated

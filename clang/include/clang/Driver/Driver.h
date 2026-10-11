@@ -360,7 +360,8 @@ private:
   /// TranslateInputArgs - Create a new derived argument list from the input
   /// arguments, after applying the standard argument translations.
   llvm::opt::DerivedArgList *
-  TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
+  TranslateInputArgs(const llvm::opt::InputArgList &Args,
+                     const llvm::Triple &Triple) const;
 
   // handleArguments - All code related to claiming and printing diagnostics
   // related to arguments to the driver are done here.
