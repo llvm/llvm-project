@@ -63,51 +63,39 @@ public:
   }
 };
 
-struct rcu_atomic_list_view_entry {
-  __rcu_node* head_ = nullptr;
-  __rcu_node* tail_ = nullptr;
-
-  bool empty() const { return !head_; }
-};
-
 // Like rcu_singly_list_view, but operations can be done without external synchronization and
 // are lockfree.
 class rcu_atomic_list_view {
-  std::atomic<rcu_atomic_list_view_entry> entry_{};
+  std::atomic<__rcu_node*> head_{};
 
   friend class rcu_singly_list_view;
 
 public:
   void push_front(__rcu_node* node) noexcept {
     _LIBCPP_ASSERT_INTERNAL(node->__next_ == nullptr, "The node pushed to the rcu_atomic_list_view must not be linked");
-    auto expected_entry = entry_.load(std::memory_order_relaxed);
+    auto expected_head = head_.load(std::memory_order_relaxed);
     while (true) {
-      auto new_entry = [&] {
-        if (expected_entry.empty()) {
-          return rcu_atomic_list_view_entry{node, node};
-        } else {
-          node->__next_ = expected_entry.head_;
-          return rcu_atomic_list_view_entry{node, expected_entry.tail_};
-        }
-      }();
-      if (entry_.compare_exchange_weak(
-              expected_entry, new_entry, std::memory_order_relaxed, std::memory_order_relaxed)) {
-        break;
+      node->__next_ = expected_head;
+      if (expected_head == nullptr) {
+        node->__tail_if_atomic_head = node;
       } else {
-        node->__next_ = nullptr;
+        node->__tail_if_atomic_head = expected_head->__tail_if_atomic_head;
+      }
+      if (head_.compare_exchange_weak(expected_head, node, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        break;
       }
     }
   }
 };
 
 inline void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {
-  if (other.entry_.load(std::memory_order_relaxed).empty()) {
+  if (other.head_.load(std::memory_order_relaxed) == nullptr) {
     return;
   }
-  auto entry = other.entry_.exchange(rcu_atomic_list_view_entry{nullptr, nullptr}, std::memory_order_relaxed);
+  auto head = other.head_.exchange(nullptr, std::memory_order_acquire);
   rcu_singly_list_view tmp;
-  tmp.head_ = entry.head_;
-  tmp.tail_ = entry.tail_;
+  tmp.head_ = head;
+  tmp.tail_ = head ? head->__tail_if_atomic_head : nullptr;
   this->splice_back(tmp);
 }
 
