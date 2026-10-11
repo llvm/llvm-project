@@ -514,7 +514,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     int Elt = Mask[i];
     if (Elt == -1) {
-      Result.push_back(UndefValue::get(EltTy));
+      Result.push_back(PoisonValue::get(EltTy));
       continue;
     }
     Constant *InElt;
