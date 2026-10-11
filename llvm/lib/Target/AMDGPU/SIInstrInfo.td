@@ -1083,7 +1083,7 @@ def extract_cpol : SDNodeXForm<timm, [{
       N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12),
-      SDLoc(N), MVT::i8);
+      SDLoc(N), MVT::i16);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
@@ -1098,7 +1098,7 @@ def extract_cpol_set_glc : SDNodeXForm<timm, [{
   const uint32_t cpol = N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12);
-  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i16);
 }]>;
 
 //===----------------------------------------------------------------------===//

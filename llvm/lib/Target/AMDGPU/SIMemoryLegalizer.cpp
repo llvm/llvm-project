@@ -148,6 +148,7 @@ private:
   bool IsLastUse = false;
   bool IsCooperative = false;
   bool IsAVNone = false;
+  unsigned CFSBits = 0;
 
   // TODO: Should we assume Cooperative=true if no MMO is present?
   SIMemOpInfo(
@@ -159,12 +160,14 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false)
+      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false,
+      unsigned CFSBits = 0)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
-        IsLastUse(IsLastUse), IsCooperative(IsCooperative), IsAVNone(IsAVNone) {
+        IsLastUse(IsLastUse), IsCooperative(IsCooperative), IsAVNone(IsAVNone),
+        CFSBits(CFSBits) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
@@ -274,6 +277,8 @@ public:
     return Ordering != AtomicOrdering::NotAtomic;
   }
 
+  /// \returns cache fill size bits
+  unsigned getCFS() const { return CFSBits; }
 };
 
 class SIMemOpAccess final {
@@ -464,6 +469,11 @@ public:
   /// See \ref isNonVolatileMemoryAccess
   virtual bool handleNonVolatile(MachineInstr &MI) const { return false; }
 
+  virtual bool setCFS(const MachineBasicBlock::iterator &MI,
+                      unsigned CFSBits = 0) const {
+    return false;
+  }
+
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 };
@@ -623,6 +633,9 @@ public:
   }
 
   bool handleNonVolatile(MachineInstr &MI) const override;
+
+  bool setCFS(const MachineBasicBlock::iterator &MI,
+              unsigned CFSBits) const override;
 };
 
 class SIMemoryLegalizer final {
@@ -840,6 +853,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   bool IsVolatile = false;
   bool IsLastUse = false;
   bool IsCooperative = false;
+  unsigned CFSBits = 0;
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
@@ -848,6 +862,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
     IsCooperative |= MMO->getFlags() & MOCooperative;
+    CFSBits = (MMO->getFlags() / MOCFSB0) & AMDGPU::CPol::CFS_MASK;
     InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
@@ -898,7 +913,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative,
-                     hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI), CFSBits);
 }
 
 std::optional<SIMemOpInfo>
@@ -2304,6 +2319,27 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+bool SIGfx12CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
+                                 unsigned CFSBits) const {
+  if (!ST.hasCacheFillSize())
+    return false;
+  auto CoreMI = &*MI;
+
+  MachineOperand *CPol = TII->getNamedOperand(*CoreMI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  uint64_t NewCFS = CFSBits << AMDGPU::CPol::CFS_SHIFT & AMDGPU::CPol::CFS;
+  if (CFSBits) {
+    if ((CPol->getImm() & AMDGPU::CPol::CFS) != NewCFS) {
+      CPol->setImm((CPol->getImm() & ~AMDGPU::CPol::CFS) | NewCFS);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
   if (AtomicPseudoMIs.empty())
     return false;
@@ -2361,6 +2397,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     }
 
     Changed |= CC->finalizeLoad(MI);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
@@ -2372,6 +2409,8 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MOI.isNonTemporal(), MOI.isLastUse());
 
   Changed |= CC->finalizeLoad(MI);
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+
   return Changed;
 }
 
@@ -2411,6 +2450,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
     }
 
     Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
@@ -2424,6 +2464,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
   Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
+
+  Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
 }
 
@@ -2538,9 +2580,11 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
     }
 
     Changed |= CC->finalizeStore(RMWMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
+  Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
 }
 

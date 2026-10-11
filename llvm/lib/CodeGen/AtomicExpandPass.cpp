@@ -259,6 +259,9 @@ static void copyMetadataForAtomic(Instruction &Dest,
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
 
+      if (ID == Ctx.getMDKindID("amdgpu.cfs"))
+        Dest.setMetadata(ID, N);
+
       // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
       // uses.
       break;
