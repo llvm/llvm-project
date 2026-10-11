@@ -128,7 +128,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Improvements to clang-query
 
-### Improvements to include-cleaner
+### Improvements to clang-include-cleaner
 
 - A project's own declarations of standard library names, such as `strcmp` in
   a freestanding project's string header, now count as providers. Such headers
