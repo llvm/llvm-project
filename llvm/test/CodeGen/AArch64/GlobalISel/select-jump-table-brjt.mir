@@ -87,7 +87,7 @@ body:             |
   ; CHECK-NEXT:   [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY]], [[MOVi32imm]], $wzr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.return:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[MADDWrrr]], %bb.3, [[ADDWri]], %bb.2, [[COPY1]], %bb.0, [[COPY2]], %bb.1
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32all = PHI [[MADDWrrr]], %bb.3, [[ADDWri]], %bb.2, [[COPY1]], %bb.0, [[COPY2]], %bb.1
   ; CHECK-NEXT:   $w0 = COPY [[PHI]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   bb.1.entry:
