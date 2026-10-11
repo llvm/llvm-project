@@ -201,3 +201,527 @@ define i8 @test_v8i8_to_i8(<8 x i8> %a) {
   %2 = bitcast <8 x i1> %1 to i8
   ret i8 %2
 }
+
+define fastcc <16 x i16> @test_v16i8_to_v16i16_poison(<16 x i1> %0) {
+; CHECK-LE-LABEL: test_v16i8_to_v16i16_poison:
+; CHECK-LE:       # %bb.0: # %Entry
+; CHECK-LE-NEXT:    plxv 35, .LCPI3_0@PCREL(0), 1
+; CHECK-LE-NEXT:    vbpermq 2, 2, 3
+; CHECK-LE-NEXT:    mfvsrwz 3, 34
+; CHECK-LE-NEXT:    mtvsrd 34, 3
+; CHECK-LE-NEXT:    vsplth 2, 2, 3
+; CHECK-LE-NEXT:    vmr 3, 2
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_v16i8_to_v16i16_poison:
+; CHECK-BE:       # %bb.0: # %Entry
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI3_0@toc@l
+; CHECK-BE-NEXT:    lxv 35, 0(3)
+; CHECK-BE-NEXT:    vbpermq 2, 2, 3
+; CHECK-BE-NEXT:    mfvsrwz 3, 34
+; CHECK-BE-NEXT:    mtvsrwz 34, 3
+; CHECK-BE-NEXT:    vsplth 2, 2, 3
+; CHECK-BE-NEXT:    vmr 3, 2
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-P7-BE-LABEL: test_v16i8_to_v16i16_poison:
+; CHECK-P7-BE:       # %bb.0: # %Entry
+; CHECK-P7-BE-NEXT:    addi 3, 1, -112
+; CHECK-P7-BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-P7-BE-NEXT:    stxvw4x 34, 0, 3
+; CHECK-P7-BE-NEXT:    lbz 6, -97(1)
+; CHECK-P7-BE-NEXT:    lbz 4, -98(1)
+; CHECK-P7-BE-NEXT:    lbz 5, -99(1)
+; CHECK-P7-BE-NEXT:    lbz 7, -100(1)
+; CHECK-P7-BE-NEXT:    lbz 8, -101(1)
+; CHECK-P7-BE-NEXT:    lbz 9, -102(1)
+; CHECK-P7-BE-NEXT:    lbz 10, -103(1)
+; CHECK-P7-BE-NEXT:    lbz 11, -104(1)
+; CHECK-P7-BE-NEXT:    lbz 12, -105(1)
+; CHECK-P7-BE-NEXT:    mr 3, 6
+; CHECK-P7-BE-NEXT:    mr 24, 6
+; CHECK-P7-BE-NEXT:    lbz 0, -106(1)
+; CHECK-P7-BE-NEXT:    lbz 30, -107(1)
+; CHECK-P7-BE-NEXT:    lbz 29, -108(1)
+; CHECK-P7-BE-NEXT:    lbz 28, -109(1)
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 24, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    lbz 27, -110(1)
+; CHECK-P7-BE-NEXT:    lbz 26, -111(1)
+; CHECK-P7-BE-NEXT:    lbz 25, -112(1)
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 24, 5, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 24, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 24, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 24, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 24, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 24, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 3, 12, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 24, 12, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 3, 0, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 24, 0, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 3, 30, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 24, 30, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 3, 29, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 24, 29, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 3, 28, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 24, 28, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 3, 27, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 24, 27, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 3, 26, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 24, 26, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 3, 25, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 24, 25, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 24, 6, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 24, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 24, 5, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 24, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 24, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 24, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 24, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 24, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 3, 12, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 24, 12, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 3, 0, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 24, 0, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 3, 30, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 24, 30, 26, 5, 5
+; CHECK-P7-BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rlwimi 3, 29, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 24, 29, 27, 4, 4
+; CHECK-P7-BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rlwimi 3, 28, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 24, 28, 28, 3, 3
+; CHECK-P7-BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rlwimi 3, 27, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 24, 27, 29, 2, 2
+; CHECK-P7-BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rlwimi 3, 26, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 24, 26, 30, 1, 1
+; CHECK-P7-BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rlwimi 3, 25, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rlwimi 24, 25, 31, 0, 0
+; CHECK-P7-BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    rldimi 24, 3, 32, 0
+; CHECK-P7-BE-NEXT:    addi 3, 1, -96
+; CHECK-P7-BE-NEXT:    std 24, -88(1)
+; CHECK-P7-BE-NEXT:    std 24, -96(1)
+; CHECK-P7-BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; CHECK-P7-BE-NEXT:    lxvd2x 34, 0, 3
+; CHECK-P7-BE-NEXT:    vmr 3, 2
+; CHECK-P7-BE-NEXT:    blr
+Entry:
+  %1 = bitcast <16 x i1> %0 to i16
+  %2 = insertelement <16 x i16> poison, i16 %1, i64 0
+  ret <16 x i16> %2
+}
+
+define fastcc <32 x i8> @test_v8i16_to_v32i8_poison(<8 x i1> %0) {
+; CHECK-LE-LABEL: test_v8i16_to_v32i8_poison:
+; CHECK-LE:       # %bb.0: # %Entry
+; CHECK-LE-NEXT:    plxv 35, .LCPI4_0@PCREL(0), 1
+; CHECK-LE-NEXT:    vbpermq 2, 2, 3
+; CHECK-LE-NEXT:    mfvsrwz 3, 34
+; CHECK-LE-NEXT:    mtvsrd 34, 3
+; CHECK-LE-NEXT:    vspltb 2, 2, 7
+; CHECK-LE-NEXT:    vmr 3, 2
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_v8i16_to_v32i8_poison:
+; CHECK-BE:       # %bb.0: # %Entry
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI4_0@toc@l
+; CHECK-BE-NEXT:    lxv 35, 0(3)
+; CHECK-BE-NEXT:    vbpermq 2, 2, 3
+; CHECK-BE-NEXT:    mfvsrwz 3, 34
+; CHECK-BE-NEXT:    mtvsrwz 34, 3
+; CHECK-BE-NEXT:    vspltb 2, 2, 7
+; CHECK-BE-NEXT:    vmr 3, 2
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-P7-BE-LABEL: test_v8i16_to_v32i8_poison:
+; CHECK-P7-BE:       # %bb.0: # %Entry
+; CHECK-P7-BE-NEXT:    addi 3, 1, -48
+; CHECK-P7-BE-NEXT:    stxvw4x 34, 0, 3
+; CHECK-P7-BE-NEXT:    lhz 5, -34(1)
+; CHECK-P7-BE-NEXT:    lhz 4, -36(1)
+; CHECK-P7-BE-NEXT:    lhz 6, -38(1)
+; CHECK-P7-BE-NEXT:    lhz 7, -40(1)
+; CHECK-P7-BE-NEXT:    lhz 8, -42(1)
+; CHECK-P7-BE-NEXT:    lhz 9, -44(1)
+; CHECK-P7-BE-NEXT:    lhz 10, -46(1)
+; CHECK-P7-BE-NEXT:    lhz 11, -48(1)
+; CHECK-P7-BE-NEXT:    mr 3, 5
+; CHECK-P7-BE-NEXT:    mr 12, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rldimi 3, 12, 32, 0
+; CHECK-P7-BE-NEXT:    std 3, -24(1)
+; CHECK-P7-BE-NEXT:    std 3, -32(1)
+; CHECK-P7-BE-NEXT:    addi 3, 1, -32
+; CHECK-P7-BE-NEXT:    lxvd2x 34, 0, 3
+; CHECK-P7-BE-NEXT:    vmr 3, 2
+; CHECK-P7-BE-NEXT:    blr
+Entry:
+  %1 = bitcast <8 x i1> %0 to i8
+  %2 = insertelement <32 x i8> poison, i8 %1, i64 0
+  ret <32 x i8> %2
+}
+
+define fastcc <16 x i8> @test_v8i16_to_v16i8_poison(<8 x i1> %0) {
+; CHECK-LE-LABEL: test_v8i16_to_v16i8_poison:
+; CHECK-LE:       # %bb.0: # %Entry
+; CHECK-LE-NEXT:    plxv 35, .LCPI5_0@PCREL(0), 1
+; CHECK-LE-NEXT:    vbpermq 2, 2, 3
+; CHECK-LE-NEXT:    mfvsrwz 3, 34
+; CHECK-LE-NEXT:    mtvsrd 34, 3
+; CHECK-LE-NEXT:    vspltb 2, 2, 7
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_v8i16_to_v16i8_poison:
+; CHECK-BE:       # %bb.0: # %Entry
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI5_0@toc@l
+; CHECK-BE-NEXT:    lxv 35, 0(3)
+; CHECK-BE-NEXT:    vbpermq 2, 2, 3
+; CHECK-BE-NEXT:    mfvsrwz 3, 34
+; CHECK-BE-NEXT:    mtvsrwz 34, 3
+; CHECK-BE-NEXT:    vspltb 2, 2, 7
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-P7-BE-LABEL: test_v8i16_to_v16i8_poison:
+; CHECK-P7-BE:       # %bb.0: # %Entry
+; CHECK-P7-BE-NEXT:    addi 3, 1, -48
+; CHECK-P7-BE-NEXT:    stxvw4x 34, 0, 3
+; CHECK-P7-BE-NEXT:    lhz 5, -34(1)
+; CHECK-P7-BE-NEXT:    lhz 4, -36(1)
+; CHECK-P7-BE-NEXT:    lhz 6, -38(1)
+; CHECK-P7-BE-NEXT:    lhz 7, -40(1)
+; CHECK-P7-BE-NEXT:    lhz 8, -42(1)
+; CHECK-P7-BE-NEXT:    lhz 9, -44(1)
+; CHECK-P7-BE-NEXT:    lhz 10, -46(1)
+; CHECK-P7-BE-NEXT:    lhz 11, -48(1)
+; CHECK-P7-BE-NEXT:    mr 3, 5
+; CHECK-P7-BE-NEXT:    mr 12, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rldimi 3, 12, 32, 0
+; CHECK-P7-BE-NEXT:    std 3, -24(1)
+; CHECK-P7-BE-NEXT:    std 3, -32(1)
+; CHECK-P7-BE-NEXT:    addi 3, 1, -32
+; CHECK-P7-BE-NEXT:    lxvd2x 34, 0, 3
+; CHECK-P7-BE-NEXT:    blr
+Entry:
+  %1 = bitcast <8 x i1> %0 to i8
+  %2 = insertelement <16 x i8> poison, i8 %1, i64 0
+  ret <16 x i8> %2
+}
+
+define fastcc <16 x i8> @test_v8i8_to_v16i8_poison(<8 x i8> %a) {
+; CHECK-LE-LABEL: test_v8i8_to_v16i8_poison:
+; CHECK-LE:       # %bb.0: # %Entry
+; CHECK-LE-NEXT:    plxv 35, .LCPI6_0@PCREL(0), 1
+; CHECK-LE-NEXT:    vbpermq 2, 2, 3
+; CHECK-LE-NEXT:    mfvsrwz 3, 34
+; CHECK-LE-NEXT:    mtvsrd 34, 3
+; CHECK-LE-NEXT:    vspltb 2, 2, 7
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_v8i8_to_v16i8_poison:
+; CHECK-BE:       # %bb.0: # %Entry
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI6_0@toc@l
+; CHECK-BE-NEXT:    lxv 35, 0(3)
+; CHECK-BE-NEXT:    vbpermq 2, 2, 3
+; CHECK-BE-NEXT:    mfvsrwz 3, 34
+; CHECK-BE-NEXT:    mtvsrwz 34, 3
+; CHECK-BE-NEXT:    vspltb 2, 2, 7
+; CHECK-BE-NEXT:    blr
+;
+; CHECK-P7-BE-LABEL: test_v8i8_to_v16i8_poison:
+; CHECK-P7-BE:       # %bb.0: # %Entry
+; CHECK-P7-BE-NEXT:    addi 3, 1, -64
+; CHECK-P7-BE-NEXT:    addi 4, 1, -80
+; CHECK-P7-BE-NEXT:    addi 5, 1, -96
+; CHECK-P7-BE-NEXT:    addi 6, 1, -112
+; CHECK-P7-BE-NEXT:    stxvw4x 34, 0, 3
+; CHECK-P7-BE-NEXT:    lbz 3, -57(1)
+; CHECK-P7-BE-NEXT:    addi 7, 1, -128
+; CHECK-P7-BE-NEXT:    addi 8, 1, -144
+; CHECK-P7-BE-NEXT:    addi 9, 1, -160
+; CHECK-P7-BE-NEXT:    addi 10, 1, -176
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -80(1)
+; CHECK-P7-BE-NEXT:    std 3, -72(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -58(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -96(1)
+; CHECK-P7-BE-NEXT:    std 3, -88(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -59(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -112(1)
+; CHECK-P7-BE-NEXT:    std 3, -104(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -60(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -128(1)
+; CHECK-P7-BE-NEXT:    std 3, -120(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -61(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -144(1)
+; CHECK-P7-BE-NEXT:    std 3, -136(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -62(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -160(1)
+; CHECK-P7-BE-NEXT:    std 3, -152(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -63(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -176(1)
+; CHECK-P7-BE-NEXT:    std 3, -168(1)
+; CHECK-P7-BE-NEXT:    lbz 3, -64(1)
+; CHECK-P7-BE-NEXT:    sldi 3, 3, 48
+; CHECK-P7-BE-NEXT:    std 3, -192(1)
+; CHECK-P7-BE-NEXT:    std 3, -184(1)
+; CHECK-P7-BE-NEXT:    addi 3, 1, -192
+; CHECK-P7-BE-NEXT:    lxvw4x 34, 0, 4
+; CHECK-P7-BE-NEXT:    lxvw4x 35, 0, 5
+; CHECK-P7-BE-NEXT:    lxvw4x 36, 0, 6
+; CHECK-P7-BE-NEXT:    vmrghh 2, 3, 2
+; CHECK-P7-BE-NEXT:    lxvw4x 35, 0, 7
+; CHECK-P7-BE-NEXT:    vmrghh 3, 3, 4
+; CHECK-P7-BE-NEXT:    lxvw4x 36, 0, 8
+; CHECK-P7-BE-NEXT:    xxmrghw 0, 35, 34
+; CHECK-P7-BE-NEXT:    lxvw4x 34, 0, 9
+; CHECK-P7-BE-NEXT:    lxvw4x 35, 0, 10
+; CHECK-P7-BE-NEXT:    vmrghh 2, 2, 4
+; CHECK-P7-BE-NEXT:    lxvw4x 36, 0, 3
+; CHECK-P7-BE-NEXT:    addi 3, 1, -48
+; CHECK-P7-BE-NEXT:    vmrghh 3, 4, 3
+; CHECK-P7-BE-NEXT:    xxmrghw 1, 35, 34
+; CHECK-P7-BE-NEXT:    vspltish 3, 1
+; CHECK-P7-BE-NEXT:    xxmrghd 34, 1, 0
+; CHECK-P7-BE-NEXT:    xxland 0, 34, 35
+; CHECK-P7-BE-NEXT:    stxvw4x 0, 0, 3
+; CHECK-P7-BE-NEXT:    lhz 5, -34(1)
+; CHECK-P7-BE-NEXT:    lhz 4, -36(1)
+; CHECK-P7-BE-NEXT:    lhz 6, -38(1)
+; CHECK-P7-BE-NEXT:    lhz 7, -40(1)
+; CHECK-P7-BE-NEXT:    lhz 8, -42(1)
+; CHECK-P7-BE-NEXT:    lhz 9, -44(1)
+; CHECK-P7-BE-NEXT:    lhz 10, -46(1)
+; CHECK-P7-BE-NEXT:    lhz 11, -48(1)
+; CHECK-P7-BE-NEXT:    mr 3, 5
+; CHECK-P7-BE-NEXT:    mr 12, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 1, 30, 30
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 2, 29, 29
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 3, 28, 28
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 4, 27, 27
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 5, 26, 26
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 6, 25, 25
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 7, 24, 24
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 8, 23, 23
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 9, 22, 22
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 10, 21, 21
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 11, 20, 20
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 12, 19, 19
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 13, 18, 18
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 14, 17, 17
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 15, 16, 16
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 16, 15, 15
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 17, 14, 14
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 18, 13, 13
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 19, 12, 12
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 20, 11, 11
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 21, 10, 10
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 22, 9, 9
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 23, 8, 8
+; CHECK-P7-BE-NEXT:    rlwimi 3, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 12, 5, 24, 7, 7
+; CHECK-P7-BE-NEXT:    rlwimi 3, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 12, 4, 25, 6, 6
+; CHECK-P7-BE-NEXT:    rlwimi 3, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 12, 6, 26, 5, 5
+; CHECK-P7-BE-NEXT:    rlwimi 3, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 12, 7, 27, 4, 4
+; CHECK-P7-BE-NEXT:    rlwimi 3, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 12, 8, 28, 3, 3
+; CHECK-P7-BE-NEXT:    rlwimi 3, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 12, 9, 29, 2, 2
+; CHECK-P7-BE-NEXT:    rlwimi 3, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 12, 10, 30, 1, 1
+; CHECK-P7-BE-NEXT:    rlwimi 3, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rlwimi 12, 11, 31, 0, 0
+; CHECK-P7-BE-NEXT:    rldimi 3, 12, 32, 0
+; CHECK-P7-BE-NEXT:    std 3, -24(1)
+; CHECK-P7-BE-NEXT:    std 3, -32(1)
+; CHECK-P7-BE-NEXT:    addi 3, 1, -32
+; CHECK-P7-BE-NEXT:    lxvd2x 34, 0, 3
+; CHECK-P7-BE-NEXT:    blr
+Entry:
+  %1 = trunc <8 x i8> %a to <8 x i1>
+  %2 = bitcast <8 x i1> %1 to i8
+  %3 = insertelement <16 x i8> poison, i8 %2, i64 0
+  ret <16 x i8> %3
+}

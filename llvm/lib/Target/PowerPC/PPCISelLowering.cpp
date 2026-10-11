@@ -21199,34 +21199,60 @@ bool PPCTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const {
   return TargetLowering::isShuffleMaskLegal(Mask, VT);
 }
 
-// Optimize the following patterns using vbpermq/vbpermd:
+// Optimize the following patterns using vbpermq:
 //   i16 = bitcast(v16i1 truncate(v16i8))
 //   i8  = bitcast(v8i1  truncate(v8i16))
 //   i8  = bitcast(v8i1  truncate(v8i8))
+//   v16i16 = bitcast(v256i1 concat_vectors(v16i1 truncate(v16i8), ...))
+//   v32i8  = bitcast(v256i1 concat_vectors(v8i1  truncate(v8i16), ...))
+//   v16i8  = bitcast(v128i1 concat_vectors(v8i1  truncate(v8i16), ...))
+//   v16i8  = bitcast(v128i1 concat_vectors(v8i1  truncate(v8i8), ...))
 SDValue PPCTargetLowering::DAGCombineBitcast(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SDValue Op0 = N->getOperand(0);
+  EVT ResVT = N->getValueType(0);
+
+  bool IsScalar = (ResVT == MVT::i16 || ResVT == MVT::i8);
+  bool IsVector =
+      (ResVT == MVT::v16i16 || ResVT == MVT::v32i8 || ResVT == MVT::v16i8);
+  if (!IsScalar && !IsVector)
+    return SDValue();
+
+  if (IsVector) {
+    if (Op0.getOpcode() != ISD::CONCAT_VECTORS || !all_equal(Op0->op_values()))
+      return SDValue();
+    Op0 = Op0.getOperand(0);
+  }
+
   if (Op0.getOpcode() != ISD::TRUNCATE)
     return SDValue();
+
   SDValue Src = Op0.getOperand(0);
-  EVT ResVT = N->getValueType(0);
   EVT TruncResVT = Op0.getValueType();
+
+  if (IsVector &&
+      TruncResVT.getVectorNumElements() != ResVT.getScalarSizeInBits())
+    return SDValue();
+
   EVT SrcVT = Src.getValueType();
   SDLoc dl(N);
   SelectionDAG &DAG = DCI.DAG;
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
-  if (ResVT != MVT::i16 && ResVT != MVT::i8)
-    return SDValue();
   SDValue VBPerm =
       GenerateVBPERM(DAG, dl, Src, SrcVT, TruncResVT, IsLittleEndian);
   if (!VBPerm)
     return SDValue();
+
   SDValue ForExtract = DAG.getBitcast(MVT::v4i32, VBPerm);
   SDValue Extracted =
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32, ForExtract,
                   DAG.getIntPtrConstant(IsLittleEndian ? 2 : 1, dl));
-  return DAG.getNode(ISD::TRUNCATE, dl, ResVT, Extracted);
+
+  EVT EltVT = IsVector ? ResVT.getVectorElementType() : ResVT;
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, EltVT, Extracted);
+
+  return IsVector ? DAG.getSplatBuildVector(ResVT, dl, Trunc) : Trunc;
 }
 
 SDValue PPCTargetLowering::GenerateVBPERM(SelectionDAG &DAG, SDLoc dl,
