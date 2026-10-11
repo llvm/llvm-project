@@ -60928,6 +60928,45 @@ static SDValue combineSubABS(EVT VT, const SDLoc &DL, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+// Try to fold, keeping the same CC and Flags:
+//   (sub X, (cmov Q, 0, CC, Flags)) -> (cmov (X-Q), X, CC, Flags)
+//   (sub X, (cmov 0, Q, CC, Flags)) -> (cmov X, (X-Q), CC, Flags)
+// X-Q and Flags are results 0 and 1 of the same X86ISD::SUB(X, Q).
+// The original CMOV must have one use.
+static SDValue combineConditionalSub(EVT VT, const SDLoc &DL, SDValue N0,
+                                     SDValue N1, SelectionDAG &DAG) {
+  // Match the single-use (cmov ..., CC, Flags).
+  if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
+    return SDValue();
+
+  // Match Flags from result 1 of X86ISD::SUB.
+  SDValue Flags = N1.getOperand(3);
+  if (Flags.getOpcode() != X86ISD::SUB)
+    return SDValue();
+  assert(Flags.getResNo() == 1 && "Expected FLAGS");
+
+  // Match X in SUB(X, Q) with the outer subtraction's X.
+  if (Flags.getOperand(0) != N0)
+    return SDValue();
+
+  SDValue Q = Flags.getOperand(1);
+  SDValue FalseOp = N1.getOperand(0);
+  SDValue TrueOp = N1.getOperand(1);
+
+  SDValue Sub = Flags.getValue(0);
+  SDValue CC = N1.getOperand(2);
+
+  // Match (cmov Q, 0, CC, Flags).
+  if (FalseOp == Q && isNullConstant(TrueOp))
+    return DAG.getNode(X86ISD::CMOV, DL, VT, Sub, N0, CC, Flags);
+
+  // Match (cmov 0, Q, CC, Flags).
+  if (isNullConstant(FalseOp) && TrueOp == Q)
+    return DAG.getNode(X86ISD::CMOV, DL, VT, N0, Sub, CC, Flags);
+
+  return SDValue();
+}
+
 static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61035,6 +61074,9 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))
+    return V;
+
+  if (SDValue V = combineConditionalSub(VT, DL, Op0, Op1, DAG))
     return V;
 
   // Try to synthesize horizontal subs from subs of shuffles.
