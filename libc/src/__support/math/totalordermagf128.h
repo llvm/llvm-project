@@ -1,16 +1,10 @@
-//===----------------------------------------------------------------------===//
+//===-- Implementation header for totalordermagf128 -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains the implementation header for totalordermagf128.
-///
-//===----------------------------------------------------------------------===//
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TOTALORDERMAGF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TOTALORDERMAGF128_H
 
