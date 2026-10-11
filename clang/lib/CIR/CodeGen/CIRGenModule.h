@@ -385,6 +385,12 @@ public:
                                     bool attrOnCallSite,
                                     mlir::NamedAttrList &attrs);
 
+  /// Returns the frame pointer kind to record on functions and on the module,
+  /// or std::nullopt when \p kind is CodeGenOptions::FramePointerKind::None,
+  /// the default, which is left implicit.
+  static std::optional<cir::FramePointerKind>
+  getFramePointerKind(CodeGenOptions::FramePointerKind kind);
+
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
   /// will be created and all uses of the old variable will be replaced with a

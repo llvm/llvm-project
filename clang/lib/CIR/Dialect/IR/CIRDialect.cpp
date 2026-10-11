@@ -275,6 +275,16 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
 
+  if (attrName == getModuleFramePointerAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getModuleFramePointerAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    if (!mlir::isa<cir::FramePointerKindAttr>(attr.getValue()))
+      return op->emitOpError() << "expects '" << getModuleFramePointerAttrName()
+                               << "' to be a #cir.frame_pointer attribute";
+  }
+
   // LoweringPrepare uses this attribute directly as the fatbin global's
   // initializer, so it must be a valid #cir.const_array payload for its type.
   if (attrName == getCUDADeviceBinaryAttrName()) {
@@ -1374,9 +1384,10 @@ parseTryCallDestinations(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-/// Reject an effect attribute of the wrong kind in an explicit attribute
-/// dictionary.  Where these are declared they are stored as properties, so a
-/// value of the wrong kind would be dropped without a diagnostic.
+/// Reject an attribute in an explicit attribute dictionary whose value is not
+/// the attribute class expected for its name.  Where an op declares the
+/// attribute it is stored as a property, so a value of the wrong class would
+/// be dropped without a diagnostic.
 static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
                                         llvm::SMLoc loc,
                                         const mlir::NamedAttrList &attrs) {
@@ -1392,6 +1403,13 @@ static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
       return parser.emitError(loc, "attribute '")
              << CIRDialect::getUwtableAttrName()
              << "' must be a #cir.uwtable attribute";
+
+  if (mlir::Attribute framePointer =
+          attrs.get(CIRDialect::getFramePointerAttrName()))
+    if (!mlir::isa<cir::FramePointerKindAttr>(framePointer))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getFramePointerAttrName()
+             << "' must be a #cir.frame_pointer attribute";
 
   for (llvm::StringRef name :
        {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName(),
@@ -3101,11 +3119,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   // Every other declared attribute has dedicated syntax above, so
-  // memory_effects and uwtable is the only one the explicit list may carry.
-  // Without the exception cir.func could not parse back what it prints.
+  // memory_effects, uwtable and frame_pointer are the only ones the explicit
+  // list may carry.  Without these exceptions cir.func could not parse back
+  // what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
     if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
-        disallowed == CIRDialect::getUwtableAttrName())
+        disallowed == CIRDialect::getUwtableAttrName() ||
+        disallowed == CIRDialect::getFramePointerAttrName())
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3298,12 +3318,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   // Every declared attribute is printed by the syntax above, except
-  // memory_effects and uwtable, which have none and so must reach the
-  // dictionary.
+  // memory_effects, uwtable and frame_pointer, which have none and so must
+  // reach the dictionary.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
     if (name != CIRDialect::getMemoryEffectsAttrName() &&
-        name != CIRDialect::getUwtableAttrName())
+        name != CIRDialect::getUwtableAttrName() &&
+        name != CIRDialect::getFramePointerAttrName())
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 

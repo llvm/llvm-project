@@ -27,6 +27,23 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+static llvm::FramePointerKind
+convertFramePointerKind(cir::FramePointerKind kind) {
+  switch (kind) {
+  case cir::FramePointerKind::None:
+    return llvm::FramePointerKind::None;
+  case cir::FramePointerKind::NonLeaf:
+    return llvm::FramePointerKind::NonLeaf;
+  case cir::FramePointerKind::All:
+    return llvm::FramePointerKind::All;
+  case cir::FramePointerKind::Reserved:
+    return llvm::FramePointerKind::Reserved;
+  case cir::FramePointerKind::NonLeafNoReserve:
+    return llvm::FramePointerKind::NonLeafNoReserve;
+  }
+  llvm_unreachable("Unknown CIR frame pointer kind");
+}
+
 /// Implementation of the dialect interface that converts CIR attributes to LLVM
 /// IR metadata.
 class CIRDialectLLVMIRTranslationInterface
@@ -134,6 +151,11 @@ private:
               mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     llvm::LLVMContext &llvmContext = llvmModule->getContext();
+
+    if (attribute.getName() == cir::CIRDialect::getModuleFramePointerAttrName())
+      llvmModule->setFramePointer(convertFramePointerKind(
+          mlir::cast<cir::FramePointerKindAttr>(attribute.getValue())
+              .getValue()));
 
     if (attribute.getName() == "cir.amdhsa_code_object_version") {
       if (auto intAttr =

@@ -3923,6 +3923,12 @@ void CIRGenModule::release() {
 
   emitGlobalAnnotations();
 
+  if (std::optional<cir::FramePointerKind> kind =
+          getFramePointerKind(codeGenOpts.getFramePointer()))
+    theModule->setAttr(
+        cir::CIRDialect::getModuleFramePointerAttrName(),
+        cir::FramePointerKindAttr::get(&getMLIRContext(), *kind));
+
   if (!recordLayoutEntries.empty())
     theModule->setAttr(
         cir::CIRDialect::getRecordLayoutsAttrName(),

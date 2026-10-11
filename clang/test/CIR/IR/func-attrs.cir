@@ -126,3 +126,34 @@ cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwta
 // CHECK: cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwtable = #cir.uwtable<async>} {
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func @noneFramePointer() attributes {frame_pointer = #cir.frame_pointer<none>} {
+  cir.return
+}
+// CHECK: cir.func @noneFramePointer() attributes {frame_pointer = #cir.frame_pointer<none>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @allFramePointer() attributes {frame_pointer = #cir.frame_pointer<all>} {
+  cir.return
+}
+// CHECK: cir.func @allFramePointer() attributes {frame_pointer = #cir.frame_pointer<all>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @nonLeafNoReserveFramePointer() attributes {frame_pointer = #cir.frame_pointer<non_leaf_no_reserve>} {
+  cir.return
+}
+// CHECK: cir.func @nonLeafNoReserveFramePointer() attributes {frame_pointer = #cir.frame_pointer<non_leaf_no_reserve>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func private @framePointerDecl() attributes {frame_pointer = #cir.frame_pointer<non_leaf>}
+// CHECK: cir.func private @framePointerDecl() attributes {frame_pointer = #cir.frame_pointer<non_leaf>}
+
+cir.func no_inline dso_local @framePointerWithOthers() attributes {mustprogress, frame_pointer = #cir.frame_pointer<reserved>, uwtable = #cir.uwtable<async>} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @framePointerWithOthers() attributes {mustprogress, frame_pointer = #cir.frame_pointer<reserved>, uwtable = #cir.uwtable<async>} {
+// CHECK:   cir.return
+// CHECK: }
