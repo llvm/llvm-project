@@ -74,6 +74,7 @@ def SHRetGlue       : SDNode<"SHISD::RET_GLUE", SDTNone,
                              SDNPVariadic]>;
 
 def SHWrapper       : SDNode<"SHISD::WRAPPER", SDTIntUnaryOp>;
+def SHFPWrapper     : SDNode<"SHISD::FPWRAPPER", SDTFPUnaryOp>;
 def SHPICAdd        : SDNode<"SHISD::PIC_ADD", SHSDT_PICAdd>;
 
 // Conditional Branching and Comparison
@@ -1622,3 +1623,16 @@ def : Pat<(i32 (sextloadi16    i32:$src)),        (EXTSW (MOVWL     i32:$src))>;
 def : Pat<(i32 (zextloadi1     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
 def : Pat<(i32 (zextloadi8     i32:$src)),        (EXTUB (MOVBL     i32:$src))>;
 def : Pat<(i32 (zextloadi16    i32:$src)),        (EXTUW (MOVWL     i32:$src))>;
+
+//===--------------------------------------------------------------------------===//
+// Stores
+//===--------------------------------------------------------------------------===//
+def : Pat<(truncstorei8    i32:$src,    GPR:$dst),  (MOVBS  GPR:$src,    GPR:$dst)>;
+def : Pat<(truncstorei8    i32:$src,   addr:$dst),  (MOVBSP GPR:$src,   addr:$dst)>;
+def : Pat<(truncstorei8    i32:$src, fraddr:$dst),  (MOVBSF GPR:$src, fraddr:$dst)>;
+def : Pat<(truncstorei16   i32:$src,    GPR:$dst),  (MOVWS  GPR:$src,    GPR:$dst)>;
+def : Pat<(truncstorei16   i32:$src,   addr:$dst),  (MOVWSP GPR:$src,   addr:$dst)>;
+def : Pat<(truncstorei16   i32:$src, fraddr:$dst),  (MOVWSF GPR:$src, fraddr:$dst)>;
+def : Pat<(store           i32:$src,    GPR:$dst),  (MOVLS  GPR:$src,    GPR:$dst)>;
+def : Pat<(store           i32:$src,   addr:$dst),  (MOVLSP GPR:$src,   addr:$dst)>;
+def : Pat<(store           i32:$src, fraddr:$dst),  (MOVLSF GPR:$src, fraddr:$dst)>;

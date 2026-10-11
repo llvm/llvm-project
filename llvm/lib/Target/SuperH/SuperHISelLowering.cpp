@@ -440,7 +440,7 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
 
     // lower to constpool.
     SDValue Const = DAG.getTargetConstantFP(*C->getConstantFPValue(), DL, C->getValueType(0));
-    return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
+    return DAG.getNode(SHISD::FPWRAPPER, DL, C->getValueType(0), Const);
   }
 
   return SDValue();

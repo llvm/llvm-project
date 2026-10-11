@@ -271,21 +271,31 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
     }
   }
 
-  // FP Constants
-  if (ConstantFPSDNode *Const = dyn_cast<ConstantFPSDNode>(N0.getNode())) {
-    if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
-      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
-      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVIF32, DL, MVT::f32, TGA);
-      ReplaceNode(N, Res);
-      return true;
-    }
-  }
-
   // Int Constants
   if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
     if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
+      ReplaceNode(N, Res);
+      return true;
+    }
+  }
+  return false;
+}
+
+template <> bool SuperHDAGToDAGISel::trySelect<SHISD::FPWRAPPER>(SDNode *N) {
+  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
+  auto DL = SDLoc(N);
+
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
+  SDValue N0 = N->getOperand(0);
+
+  // FP Constants
+  if (ConstantFPSDNode *Const = dyn_cast<ConstantFPSDNode>(N0.getNode())) {
+    if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
+      SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
+      MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVIF32, DL, MVT::f32, TGA);
       ReplaceNode(N, Res);
       return true;
     }
@@ -486,6 +496,7 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
 
   SELECT(ISD::FrameIndex);
   SELECT(SHISD::WRAPPER);
+  SELECT(SHISD::FPWRAPPER);
   SELECT(SHISD::BRCOND);
   SELECT(SHISD::CMP);
   SELECT(SHISD::FCMP);
