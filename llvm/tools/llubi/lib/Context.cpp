@@ -27,7 +27,9 @@ bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
   for (Function &F : M) {
-    if (F.hasAddressTaken()) {
+    if (F.hasAddressTaken(nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false)) {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
