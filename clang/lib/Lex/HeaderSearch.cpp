@@ -80,6 +80,29 @@ HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
 
 ExternalHeaderFileInfoSource::~ExternalHeaderFileInfoSource() = default;
 
+std::vector<std::string>
+clang::getNonSystemSearchDirs(const HeaderSearchOptions &HSOpts,
+                              const FileManager &FileMgr) {
+  std::vector<std::string> Dirs;
+  for (const HeaderSearchOptions::Entry &Entry : HSOpts.UserEntries) {
+    if (Entry.Group != frontend::Quoted && Entry.Group != frontend::Angled)
+      continue;
+    SmallString<256> Path(Entry.Path);
+    FileMgr.makeAbsolutePath(Path);
+    // A header map is a file.
+    llvm::ErrorOr<llvm::vfs::Status> Status =
+        FileMgr.getVirtualFileSystem().status(Path);
+    if (Status && !Status->isDirectory())
+      continue;
+    SmallVector<std::string, 2> Paths;
+    FileMgr.getDirectoryContentRealSources(Path, Paths);
+    llvm::append_range(Dirs, Paths);
+  }
+  llvm::sort(Dirs);
+  Dirs.erase(llvm::unique(Dirs), Dirs.end());
+  return Dirs;
+}
+
 HeaderSearch::HeaderSearch(const HeaderSearchOptions &HSOpts,
                            SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                            const LangOptions &LangOpts,

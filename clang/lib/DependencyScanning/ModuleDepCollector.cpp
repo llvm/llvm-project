@@ -714,6 +714,13 @@ void ModuleDepCollector::run(DependencyConsumer &Consumer) {
   for (auto &&I : MDC.FileDeps)
     Consumer.handleFileDependency(I);
 
+  // The translation unit depends on every non system serach directory.
+  if (MDC.Service.getOpts().TrackSearchDirectories)
+    for (const std::string &Dir :
+         getNonSystemSearchDirs(MDC.ScanInstance.getHeaderSearchOpts(),
+                                MDC.ScanInstance.getFileManager()))
+      Consumer.handleDirectoryDependency(Dir);
+
   for (auto &&I : MDC.DirectPrebuiltModularDeps)
     Consumer.handlePrebuiltModuleDependency(I.second);
 }
