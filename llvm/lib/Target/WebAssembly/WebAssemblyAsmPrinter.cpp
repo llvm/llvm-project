@@ -190,24 +190,41 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   return WasmSym;
 }
 
-static std::optional<uint64_t> getWasmGlobalInitBits(const Constant *C) {
-  // Sub-i32 ints and half/bfloat legalize to a single i32/f32 MVT and so pass
-  // wasmSymbolSetType(), but their bits are not an i32/f32 init value; gate on
-  // the exact IR type so they fall back to the default 0 rather than emit a
-  // garbage init expr.
-  if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-    unsigned BW = CI->getType()->getIntegerBitWidth();
-    if (BW == 32 || BW == 64)
-      return CI->getValue().getZExtValue();
+static std::optional<wasm::WasmInitExpr>
+getWasmGlobalInitExpr(const Constant *C, wasm::ValType Type) {
+  // A single-element aggregate legalizes to its element's type.
+  while (C->getType()->isAggregateType() || C->getType()->isVectorTy()) {
+    if (C->getAggregateElement(1u))
+      return std::nullopt;
+    C = C->getAggregateElement(0u);
+    if (!C)
+      return std::nullopt;
+  }
+  switch (Type) {
+  case wasm::ValType::I32:
+  case wasm::ValType::I64: {
+    // i1, i8, i16 and half also legalize to i32, but loads and stores of such
+    // a global do not use global.get or global.set.
+    const auto *CI = dyn_cast<ConstantInt>(C);
+    unsigned Width = Type == wasm::ValType::I32 ? 32 : 64;
+    if (!CI || CI->getBitWidth() != Width)
+      return std::nullopt;
+    return WebAssembly::makeGlobalInitExpr(Type, CI->getValue().getZExtValue());
+  }
+  case wasm::ValType::F32:
+  case wasm::ValType::F64: {
+    // bfloat also legalizes to f32, but loads and stores of such a global
+    // fail instruction selection.
+    const auto *CF = dyn_cast<ConstantFP>(C);
+    if (!CF || (Type == wasm::ValType::F32 ? !CF->getType()->isFloatTy()
+                                           : !CF->getType()->isDoubleTy()))
+      return std::nullopt;
+    return WebAssembly::makeGlobalInitExpr(
+        Type, CF->getValueAPF().bitcastToAPInt().getZExtValue());
+  }
+  default:
     return std::nullopt;
   }
-  if (const auto *CF = dyn_cast<ConstantFP>(C)) {
-    Type *T = CF->getType();
-    if (T->isFloatTy() || T->isDoubleTy())
-      return CF->getValueAPF().bitcastToAPInt().getZExtValue();
-    return std::nullopt;
-  }
-  return std::nullopt;
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
@@ -258,12 +275,24 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
 
-  // WasmObjectWriter reads these init bits back off the symbol to emit the init
-  // expression instead of the type's default 0.
   if (GV->hasInitializer() && Sym->isGlobal()) {
-    if (std::optional<uint64_t> Bits =
-            getWasmGlobalInitBits(GV->getInitializer()))
-      Sym->setGlobalInitValue(*Bits);
+    const Constant *Init = GV->getInitializer();
+    auto Type = static_cast<wasm::ValType>(Sym->getGlobalType().Type);
+    // The object writer gives reference types ref.null and rejects v128.
+    // undef, poison and zero take the type's default.
+    if (WebAssembly::isNumType(Type) && !isa<UndefValue>(Init) &&
+        !Init->isNullValue()) {
+      if (std::optional<wasm::WasmInitExpr> InitExpr =
+              getWasmGlobalInitExpr(Init, Type)) {
+        Sym->setGlobalInitExpr(*InitExpr);
+      } else {
+        // Keep emitting the declaration so the printed assembly stays well
+        // formed. The error discards the object.
+        OutContext.reportError(SMLoc(), "unsupported initializer for "
+                                        "WebAssembly global '" +
+                                            Sym->getName() + "'");
+      }
+    }
   }
 
   emitSymbolType(Sym);
@@ -366,6 +395,7 @@ void WebAssemblyAsmPrinter::emitSymbolType(const MCSymbolWasm *Sym) {
   switch (*WasmTy) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     getTargetStreamer()->emitGlobalType(Sym);
+    getTargetStreamer()->emitGlobalInit(Sym);
     break;
   case wasm::WASM_SYMBOL_TYPE_TAG:
     getTargetStreamer()->emitTagType(Sym);
