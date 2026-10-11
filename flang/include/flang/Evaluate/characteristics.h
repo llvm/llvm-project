@@ -234,7 +234,8 @@ private:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
+      Volatile, Pointer, ProtectedTarget, Target, DeducedFromActual,
+      OnlyIntrinsicInquiry)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
@@ -327,7 +328,7 @@ using DummyArguments = std::vector<DummyArgument>;
 
 // 15.3.3
 struct FunctionResult {
-  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous)
+  ENUM_CLASS(Attr, Allocatable, Pointer, Contiguous, ProtectedTarget)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(FunctionResult)
   explicit FunctionResult(DynamicType);

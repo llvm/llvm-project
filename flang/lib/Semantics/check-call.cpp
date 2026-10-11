@@ -67,6 +67,10 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (FindProtectedTarget(*expr)) { // F2028 C873
+      messages.Say(
+          "A PROTECTED_TARGET pointer or a subobject of its target requires an explicit interface"_err_en_US);
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +403,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  if (FindProtectedTarget(actual)) {
+    if (dummyIsPointer &&
+        !dummy.attrs.test(
+            characteristics::DummyDataObject::Attr::ProtectedTarget)) {
+      messages.Say( // F2028 C872
+          "A PROTECTED_TARGET pointer or a subobject of its target may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+          dummyName);
+      return;
+    } else if (!dummyIsPointer && dummy.intent != common::Intent::In) {
+      messages.Say( // F2028 C874
+          "A PROTECTED_TARGET pointer or a subobject of its target may be associated only with a nonpointer %s that has INTENT(IN)"_err_en_US,
+          dummyName);
+      return;
+    }
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{

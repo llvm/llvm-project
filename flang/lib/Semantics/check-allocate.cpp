@@ -492,6 +492,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     CHECK(context.AnyFatalError());
     return false;
   }
+  if (IsProtectedTarget(*ultimate_) && !allocateInfo_.gotSource) { // F2028 C869
+    context.Say(name_.source,
+        "An ALLOCATE statement for a PROTECTED_TARGET pointer must have SOURCE="_err_en_US);
+    return false;
+  }
   if (!IsVariableName(*ultimate_)) { // C932 pre-requisite
     context.Say(name_.source,
         "Name in ALLOCATE statement must be a variable name"_err_en_US);

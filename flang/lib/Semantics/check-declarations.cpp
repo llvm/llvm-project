@@ -347,6 +347,17 @@ void CheckHelper::Check(const Symbol &symbol) {
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
   }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET)) {
+    // F2028 C781, C8109; 8.5.16 applies only to data pointers.
+    if (!IsObjectPointer(&symbol)) {
+      messages_.Say(
+          "An entity with the PROTECTED_TARGET attribute must be a data pointer"_err_en_US);
+    }
+    if (FindCommonBlockContaining(symbol)) { // F2028 C867
+      messages_.Say(
+          "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
+    }
+  }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
   }
@@ -619,6 +630,16 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
                       *componentPath),
                   derived->typeSymbol()),
               *ref);
+        }
+        if (!IsPointer(*ref)) {
+          if (const Symbol *component{FindUltimateComponent(
+                  *derived, IsProtectedTarget)}) { // F2028 C867
+            evaluate::AttachDeclaration(
+                messages_.Say(
+                    "Object '%s' in COMMON block /%s/ has PROTECTED_TARGET pointer component '%s'"_err_en_US,
+                    ref->name(), symbol.name(), component->name()),
+                *component);
+          }
         }
       }
     }

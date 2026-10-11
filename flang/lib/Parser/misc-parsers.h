@@ -50,6 +50,8 @@ constexpr auto contiguous{construct<Contiguous>("CONTIGUOUS"_tok)};
 constexpr auto optional{construct<Optional>("OPTIONAL"_tok)};
 constexpr auto pointer{construct<Pointer>("POINTER"_tok)};
 constexpr auto protectedAttr{construct<Protected>("PROTECTED"_tok)};
+constexpr auto protectedTarget{
+    construct<ProtectedTarget>("PROTECTED_TARGET"_tok)};
 constexpr auto save{construct<Save>("SAVE"_tok)};
 
 template <typename A> common::IfNoLvalue<std::list<A>, A> singletonList(A &&x) {

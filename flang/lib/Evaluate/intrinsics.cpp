@@ -3199,6 +3199,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
               *type, GetShape(context, *mold)};
           args.emplace_back(
               "mold"s, characteristics::DummyDataObject{typeAndShape});
+          args.back().SetIntent(common::Intent::In);
           fResult.emplace(std::move(typeAndShape));
           isAllocatableMold = IsAllocatableDesignator(*mold);
         } else {

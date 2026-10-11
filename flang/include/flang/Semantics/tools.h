@@ -178,6 +178,15 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.GetUltimate().attrs().test(Attr::PROTECTED_TARGET);
+}
+// The PROTECTED_TARGET pointer whose target (or a subobject of it) is
+// designated, if any. Does not follow a component pointer's separate target.
+// For a pointer definition, check the containing object, not the final pointer.
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTarget(const evaluate::Expr<evaluate::SomeType> &);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

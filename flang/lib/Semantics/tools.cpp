@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -325,6 +326,43 @@ bool IsStmtFunctionResult(const Symbol &symbol) {
 
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &dataRef, bool isPointerDefinition) {
+  auto symbols{evaluate::GetSymbolVector(dataRef)};
+  if (isPointerDefinition && !symbols.empty()) {
+    symbols.pop_back();
+  }
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    const Symbol &symbol{**iter};
+    if (IsPointer(symbol)) {
+      // F2028 9.4.2 p5: a component pointer's target is not a subobject
+      // of its containing object.
+      return IsProtectedTarget(symbol) ? &symbol : nullptr;
+    }
+    if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()};
+        assoc && assoc->expr()) {
+      return FindProtectedTarget(*assoc->expr());
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::Expr<evaluate::SomeType> &expr) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(*dataRef);
+  }
+  if (const auto *ref{evaluate::UnwrapProcedureRef(expr)}) {
+    if (const Symbol *proc{ref->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)};
+          result && IsProtectedTarget(*result)) {
+        return result;
+      }
+    }
+  }
+  return nullptr;
 }
 
 bool IsBindCProcedure(const Symbol &original) {
