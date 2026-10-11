@@ -3591,26 +3591,28 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     For FP8 operations, A and B can independently use `e4m3` or `e5m2`.
 
     ```
-    | A/B Type | Shape     | ALayout | BLayout | A Type   | B Type   | C/D Type          |
-    |----------|-----------|---------|---------|----------|----------|-------------------|
-    | f64      | .m8n8k4   | row     | col     | 1x f64   | 1x f64   | 2x f64            |
-    | f16      | .m8n8k4   | row/col | row/col | 2x f16x2 | 2x f16x2 | 4x f16x2 or 8xf32 |
-    |          | .m16n8k8  | row     | col     | 2x f16x2 | 1x f16x2 | 2x f16x2 or 4 f32 |
-    |          | .m16n8k16 | row     | col     | 4x f16x2 | 2x f16x2 | 2x f16x2 or 4 f32 |
-    | bf16     | .m16n8k8  | row     | col     | 2x i32   | 1x i32   | 4x f32            |
-    |          | .m16n8k16 | row     | col     | 4x i32   | 2x i32   | 4x f32            |
-    | tf32     | .m16n8k4  | row     | col     | 2x i32   | 1x i32   | 4x f32            |
-    |          | .m16n8k8  | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
-    | u8/s8    | .m8n8k16  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
-    |          | .m16n8k16 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
-    |          | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 4x i32            |
-    | u4/s4    | .m8n8k32  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
-    |          | m16n8k32  | row     | col     | 2x i32   | 1x i32   | 4x i32            |
-    |          | m16n8k64  | row     | col     | 4x i32   | 2x i32   | 4x i32            |
-    | b1       | m8n8k128  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
-    |          | m16n8k128 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    | A/B Type  | Shape     | ALayout | BLayout | A Type   | B Type   | C/D Type          |
+    |-----------|-----------|---------|---------|----------|----------|-------------------|
+    | f64       | .m8n8k4   | row     | col     | 1x f64   | 1x f64   | 2x f64            |
+    | f16       | .m8n8k4   | row/col | row/col | 2x f16x2 | 2x f16x2 | 4x f16x2 or 8xf32 |
+    |           | .m16n8k8  | row     | col     | 2x f16x2 | 1x f16x2 | 2x f16x2 or 4 f32 |
+    |           | .m16n8k16 | row     | col     | 4x f16x2 | 2x f16x2 | 2x f16x2 or 4 f32 |
+    | bf16      | .m16n8k8  | row     | col     | 2x i32   | 1x i32   | 4x f32            |
+    |           | .m16n8k16 | row     | col     | 4x i32   | 2x i32   | 4x f32            |
+    | tf32      | .m16n8k4  | row     | col     | 2x i32   | 1x i32   | 4x f32            |
+    |           | .m16n8k8  | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
+    | u8/s8     | .m8n8k16  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |           | .m16n8k16 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    |           | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 4x i32            |
+    | u4/s4     | .m8n8k32  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |           | m16n8k32  | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    |           | m16n8k64  | row     | col     | 4x i32   | 2x i32   | 4x i32            |
+    | b1        | m8n8k128  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
+    |           | m16n8k128 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
     | e4m3/e5m2 | .m16n8k16 | row     | col     | 2x i32   | 1x i32   | 2x f16x2 or 4 f32 |
-    |            | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
+    |           | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-shape)
     ```
 
 
