@@ -1520,16 +1520,19 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  bool cfiJumpTablesChanged = false;
   if (ctx.arg.branchToBranch)
-    ctx.target->relaxCFIJumpTables();
+    cfiJumpTablesChanged = ctx.target->relaxCFIJumpTables();
 
   // Iterate until a fixed point is reached, skipping relocatable links since
   // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
   while (!ctx.arg.relocatable) {
-    bool changed = ctx.target->needsThunks
-                       ? tc.createThunks(pass, ctx.outputSections)
-                       : ctx.target->relaxOnce(pass);
+    bool changed = cfiJumpTablesChanged;
+    cfiJumpTablesChanged = false;
+    changed |= ctx.target->needsThunks
+                   ? tc.createThunks(pass, ctx.outputSections)
+                   : ctx.target->relaxOnce(pass);
     bool spilled = ctx.script->spillSections();
     changed |= spilled;
     ++pass;

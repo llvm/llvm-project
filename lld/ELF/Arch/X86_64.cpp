@@ -51,7 +51,7 @@ public:
   bool deleteFallThruJmpInsn(InputSection &is,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
-  void relaxCFIJumpTables() const override;
+  bool relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
@@ -314,7 +314,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is,
   return true;
 }
 
-void X86_64::relaxCFIJumpTables() const {
+bool X86_64::relaxCFIJumpTables() const {
   // Relax CFI jump tables.
   // - Split jump table into pieces and place target functions inside the jump
   //   table if small enough.
@@ -480,7 +480,7 @@ void X86_64::relaxCFIJumpTables() const {
   }
 
   if (sectionReplacements.empty())
-    return;
+    return false;
 
   // Now that we have the complete mapping of replacements, go through the input
   // section lists and apply the replacements.
@@ -502,6 +502,7 @@ void X86_64::relaxCFIJumpTables() const {
       isd->sections = std::move(newSections);
     }
   }
+  return true;
 }
 
 bool X86_64::relaxOnce(int pass) const {
