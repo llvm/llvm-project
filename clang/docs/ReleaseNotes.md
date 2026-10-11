@@ -275,6 +275,12 @@ features cannot lower the translation-unit ABI level;
 
 ### New Compiler Flags
 
+- Added `-fmodules-unique-gmf-internal-linkage` (enabled by default) to keep
+  internal-linkage functions from different C++20 global module fragments
+  distinct by including their named module-unit owner in the Itanium mangling.
+  Use `-fno-modules-unique-gmf-internal-linkage` to restore ordinary
+  internal-linkage identity and mangling. (#GH195661)
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it
