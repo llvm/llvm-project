@@ -377,6 +377,7 @@ tool_symbolizer_path_list = [
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
     "UBSAN_SYMBOLIZER_PATH",
+    "CSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
