@@ -11628,9 +11628,9 @@ public:
     return S;
   }
 
-  SmallVector<BoUpSLP::ValueList> buildOperands(const InstructionsState &S,
-                                                ArrayRef<Value *> VL,
-                                                const BoUpSLP &R) {
+  SmallVector<BoUpSLP::ValueList>
+  buildOperands(const InstructionsState &S, ArrayRef<Value *> VL,
+                const BoUpSLP &R, bool AllowPoisonPlaceholders = true) {
     assert(S && "Invalid state!");
     SmallVector<BoUpSLP::ValueList> Operands;
     if (S.areInstructionsWithCopyableElements()) {
@@ -11660,7 +11660,8 @@ public:
       Operands.assign(NumMainOpOperands,
                       BoUpSLP::ValueList(VL.size(), nullptr));
       SmallPtrSet<const Value *, 4> SelfOpLanes = findSelfOpLanes(S, VL, R);
-      const bool PoisonPlaceholders = canUsePoisonPlaceholders(S, VL);
+      const bool PoisonPlaceholders =
+          AllowPoisonPlaceholders && canUsePoisonPlaceholders(S, VL);
       // Populate operands for every lane.
       for (auto [Idx, V] : enumerate(VL)) {
         SmallVector<Value *> OperandsForValue =
@@ -12201,8 +12202,10 @@ static void scanAssociativeOperands(
       continue;
     }
     BoUpSLP::ValueList Column = std::move(Columns[Idx].Col);
-    SmallVector<BoUpSLP::ValueList> SubOperands =
-        Analysis.buildOperands(ColS, Column, R);
+    // The absorbing constants of the peeled lanes keep the identity as the
+    // other operand: the poison operand is not frozen in the flattened node.
+    SmallVector<BoUpSLP::ValueList> SubOperands = Analysis.buildOperands(
+        ColS, Column, R, /*AllowPoisonPlaceholders=*/false);
     assert(SubOperands.size() == 2 && "Expected 2 operand columns.");
     // Poison and copyable lanes have no real instruction left to erase
     // later: a copyable V is used as-is, not subsumed by the flattened

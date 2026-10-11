@@ -423,7 +423,7 @@ define void @reassoc_absorbing_lane(ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[TMP0]], <i32 -3, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 -1, i32 255>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> <i32 256, i32 poison>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> <i32 256, i32 0>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], <i32 16, i32 -1>
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
