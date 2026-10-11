@@ -2137,7 +2137,7 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
 /// with the known fpclass if not simplified.
 static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
                                           FPClassTest DemandedMask,
-                                          KnownFPClass KnownSrc, bool NSZ) {
+                                          KnownFPClass KnownSrc) {
   if ((DemandedMask & fcNan) == fcNone)
     KnownSrc.knownNot(fcNan);
   if ((DemandedMask & fcInf) == fcNone)
@@ -2145,11 +2145,6 @@ static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
 
   if (KnownSrc.getSignBit() == false ||
       ((DemandedMask & fcNan) == fcNone && KnownSrc.isKnownNever(fcNegative)))
-    return Src;
-
-  // If the only sign bit difference is due to -0, ignore it with nsz
-  if (NSZ &&
-      KnownSrc.isKnownNever(KnownFPClass::OrderedLessThanZeroMask | fcNan))
     return Src;
 
   Known = KnownFPClass::fabs(KnownSrc);
@@ -2436,7 +2431,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       FPClassTest ThisDemandedMask =
           adjustDemandedMaskFromFlags(DemandedMask, FabsFMF);
 
-      bool IsNSZ = FMF.noSignedZeros() || FabsFMF.noSignedZeros();
+      bool IsNSZ = FMF.noSignedZeros();
       if (Value *Simplified = simplifyDemandedFPClassFnegFabs(
               Known, FNegFAbsSrc, ThisDemandedMask, KnownSrc, IsNSZ))
         return Simplified;
@@ -2919,8 +2914,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return I;
 
       if (Value *Simplified = simplifyDemandedFPClassFabs(
-              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
-              FMF.noSignedZeros()))
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc))
         return Simplified;
       break;
     }
@@ -3727,11 +3721,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       KnownFPClass KnownSrc =
           computeKnownFPClass(Src, fcAllFlags, SQ, Depth + 1);
 
-      // NSZ cannot be applied in multiple use case (maybe it could if all uses
-      // were known nsz)
       if (Value *Simplified = simplifyDemandedFPClassFabs(
-              Known, CI->getArgOperand(0), DemandedMask, KnownSrc,
-              /*NSZ=*/false))
+              Known, CI->getArgOperand(0), DemandedMask, KnownSrc))
         return Simplified;
       break;
     }
