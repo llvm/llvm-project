@@ -423,7 +423,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   setTargetDAGCombine({ISD::SDIVREM, ISD::UDIVREM, ISD::SELECT, ISD::AND,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
-                       ISD::SIGN_EXTEND});
+                       ISD::SIGN_EXTEND, ISD::SETCC});
 
   // Sink shifts into their users' blocks to expose extract patterns.
   setHasExtractBitsInsn(Subtarget.hasExtractInsert());
@@ -1163,6 +1163,63 @@ static SDValue performSignExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineFPBoundarySetCC(SDNode *N, SelectionDAG &DAG,
+                                      const MipsSubtarget &Subtarget) {
+  SDValue X = N->getOperand(0);
+  SDValue Bound = N->getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (isa<ConstantFPSDNode>(X)) {
+    std::swap(X, Bound);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+  EVT FPVT = X.getValueType();
+  if (!Subtarget.hasMips32r6() || Subtarget.useSoftFloat() ||
+      Subtarget.inMicroMipsMode() || (FPVT != MVT::f32 && FPVT != MVT::f64) ||
+      (FPVT == MVT::f64 && Subtarget.isSingleFloat()) ||
+      !isa<ConstantFPSDNode>(Bound))
+    return SDValue();
+
+  const APFloat &C = cast<ConstantFPSDNode>(Bound)->getValueAPF();
+  FPClassTest Mask = fcNone;
+  FPClassTest NaNs = fcSNan | fcQNan;
+  if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics(), true))) {
+    if (CC == ISD::SETOLT || CC == ISD::SETULT)
+      Mask = fcNegInf;
+    else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
+      Mask = fcAllFlags & ~(fcNegInf | NaNs);
+  } else if (C.bitwiseIsEqual(APFloat::getLargest(C.getSemantics()))) {
+    if (CC == ISD::SETOGT || CC == ISD::SETUGT)
+      Mask = fcPosInf;
+    else if (CC == ISD::SETOLE || CC == ISD::SETULE)
+      Mask = fcAllFlags & ~(fcPosInf | NaNs);
+  } else if (FPVT == MVT::f64 &&
+             DAG.getDenormalMode(FPVT).Input == DenormalMode::IEEE) {
+    // Materializing this bound costs more than CLASS.D.
+    FPClassTest Below = fcNegInf | fcNegNormal | fcNegSubnormal | fcNegZero |
+                        fcPosZero | fcPosSubnormal;
+    if (C.bitwiseIsEqual(APFloat::getSmallestNormalized(C.getSemantics()))) {
+      if (CC == ISD::SETOLT || CC == ISD::SETULT)
+        Mask = Below;
+      else if (CC == ISD::SETOGE || CC == ISD::SETUGE)
+        Mask = fcPosNormal | fcPosInf;
+    } else if (C.bitwiseIsEqual(
+                   APFloat::getSmallestNormalized(C.getSemantics(), true))) {
+      if (CC == ISD::SETOGT || CC == ISD::SETUGT)
+        Mask = fcAllFlags & ~(fcNegInf | fcNegNormal | NaNs);
+      else if (CC == ISD::SETOLE || CC == ISD::SETULE)
+        Mask = fcNegInf | fcNegNormal;
+    }
+  }
+  if (Mask == fcNone)
+    return SDValue();
+  if (CC == ISD::SETULT || CC == ISD::SETUGE || CC == ISD::SETUGT ||
+      CC == ISD::SETULE)
+    Mask |= NaNs;
+  SDLoc DL(N);
+  return DAG.getNode(ISD::IS_FPCLASS, DL, N->getValueType(0), X,
+                     DAG.getTargetConstant(Mask, DL, MVT::i32));
+}
+
 SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1170,6 +1227,10 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
 
   switch (Opc) {
   default: break;
+  case ISD::SETCC:
+    if (DCI.isBeforeLegalizeOps())
+      return combineFPBoundarySetCC(N, DAG, Subtarget);
+    break;
   case ISD::SDIVREM:
   case ISD::UDIVREM:
     return performDivRemCombine(N, DAG, DCI, Subtarget);
