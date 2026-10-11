@@ -9000,131 +9000,6 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
 }
 
 static MachineBasicBlock *
-emitVecCondBranchPseudo(MachineInstr &MI, MachineBasicBlock *BB,
-                        const LoongArchSubtarget &Subtarget) {
-  unsigned CondOpc;
-  switch (MI.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case LoongArch::PseudoVBZ:
-    CondOpc = LoongArch::VSETEQZ_V;
-    break;
-  case LoongArch::PseudoVBZ_B:
-    CondOpc = LoongArch::VSETANYEQZ_B;
-    break;
-  case LoongArch::PseudoVBZ_H:
-    CondOpc = LoongArch::VSETANYEQZ_H;
-    break;
-  case LoongArch::PseudoVBZ_W:
-    CondOpc = LoongArch::VSETANYEQZ_W;
-    break;
-  case LoongArch::PseudoVBZ_D:
-    CondOpc = LoongArch::VSETANYEQZ_D;
-    break;
-  case LoongArch::PseudoVBNZ:
-    CondOpc = LoongArch::VSETNEZ_V;
-    break;
-  case LoongArch::PseudoVBNZ_B:
-    CondOpc = LoongArch::VSETALLNEZ_B;
-    break;
-  case LoongArch::PseudoVBNZ_H:
-    CondOpc = LoongArch::VSETALLNEZ_H;
-    break;
-  case LoongArch::PseudoVBNZ_W:
-    CondOpc = LoongArch::VSETALLNEZ_W;
-    break;
-  case LoongArch::PseudoVBNZ_D:
-    CondOpc = LoongArch::VSETALLNEZ_D;
-    break;
-  case LoongArch::PseudoXVBZ:
-    CondOpc = LoongArch::XVSETEQZ_V;
-    break;
-  case LoongArch::PseudoXVBZ_B:
-    CondOpc = LoongArch::XVSETANYEQZ_B;
-    break;
-  case LoongArch::PseudoXVBZ_H:
-    CondOpc = LoongArch::XVSETANYEQZ_H;
-    break;
-  case LoongArch::PseudoXVBZ_W:
-    CondOpc = LoongArch::XVSETANYEQZ_W;
-    break;
-  case LoongArch::PseudoXVBZ_D:
-    CondOpc = LoongArch::XVSETANYEQZ_D;
-    break;
-  case LoongArch::PseudoXVBNZ:
-    CondOpc = LoongArch::XVSETNEZ_V;
-    break;
-  case LoongArch::PseudoXVBNZ_B:
-    CondOpc = LoongArch::XVSETALLNEZ_B;
-    break;
-  case LoongArch::PseudoXVBNZ_H:
-    CondOpc = LoongArch::XVSETALLNEZ_H;
-    break;
-  case LoongArch::PseudoXVBNZ_W:
-    CondOpc = LoongArch::XVSETALLNEZ_W;
-    break;
-  case LoongArch::PseudoXVBNZ_D:
-    CondOpc = LoongArch::XVSETALLNEZ_D;
-    break;
-  }
-
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  DebugLoc DL = MI.getDebugLoc();
-  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  MachineFunction::iterator It = ++BB->getIterator();
-
-  MachineFunction *F = BB->getParent();
-  MachineBasicBlock *FalseBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *TrueBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *SinkBB = F->CreateMachineBasicBlock(LLVM_BB);
-
-  F->insert(It, FalseBB);
-  F->insert(It, TrueBB);
-  F->insert(It, SinkBB);
-
-  // Transfer the remainder of MBB and its successor edges to Sink.
-  SinkBB->splice(SinkBB->end(), BB, std::next(MI.getIterator()), BB->end());
-  SinkBB->transferSuccessorsAndUpdatePHIs(BB);
-
-  // Insert the real instruction to BB.
-  Register FCC = MRI.createVirtualRegister(&LoongArch::CFRRegClass);
-  BuildMI(BB, DL, TII->get(CondOpc), FCC).addReg(MI.getOperand(1).getReg());
-
-  // Insert branch.
-  BuildMI(BB, DL, TII->get(LoongArch::BCNEZ)).addReg(FCC).addMBB(TrueBB);
-  BB->addSuccessor(FalseBB);
-  BB->addSuccessor(TrueBB);
-
-  // FalseBB.
-  Register RD1 = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
-  BuildMI(FalseBB, DL, TII->get(LoongArch::ADDI_W), RD1)
-      .addReg(LoongArch::R0)
-      .addImm(0);
-  BuildMI(FalseBB, DL, TII->get(LoongArch::PseudoBR)).addMBB(SinkBB);
-  FalseBB->addSuccessor(SinkBB);
-
-  // TrueBB.
-  Register RD2 = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
-  BuildMI(TrueBB, DL, TII->get(LoongArch::ADDI_W), RD2)
-      .addReg(LoongArch::R0)
-      .addImm(1);
-  TrueBB->addSuccessor(SinkBB);
-
-  // SinkBB: merge the results.
-  BuildMI(*SinkBB, SinkBB->begin(), DL, TII->get(LoongArch::PHI),
-          MI.getOperand(0).getReg())
-      .addReg(RD1)
-      .addMBB(FalseBB)
-      .addReg(RD2)
-      .addMBB(TrueBB);
-
-  // The pseudo instruction is gone now.
-  MI.eraseFromParent();
-  return SinkBB;
-}
-
-static MachineBasicBlock *
 emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
                      const LoongArchSubtarget &Subtarget) {
   unsigned InsOp;
@@ -9585,27 +9460,6 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     return emitBuildPairF64Pseudo(MI, BB, Subtarget);
   case LoongArch::SplitPairF64Pseudo:
     return emitSplitPairF64Pseudo(MI, BB, Subtarget);
-  case LoongArch::PseudoVBZ:
-  case LoongArch::PseudoVBZ_B:
-  case LoongArch::PseudoVBZ_H:
-  case LoongArch::PseudoVBZ_W:
-  case LoongArch::PseudoVBZ_D:
-  case LoongArch::PseudoVBNZ:
-  case LoongArch::PseudoVBNZ_B:
-  case LoongArch::PseudoVBNZ_H:
-  case LoongArch::PseudoVBNZ_W:
-  case LoongArch::PseudoVBNZ_D:
-  case LoongArch::PseudoXVBZ:
-  case LoongArch::PseudoXVBZ_B:
-  case LoongArch::PseudoXVBZ_H:
-  case LoongArch::PseudoXVBZ_W:
-  case LoongArch::PseudoXVBZ_D:
-  case LoongArch::PseudoXVBNZ:
-  case LoongArch::PseudoXVBNZ_B:
-  case LoongArch::PseudoXVBNZ_H:
-  case LoongArch::PseudoXVBNZ_W:
-  case LoongArch::PseudoXVBNZ_D:
-    return emitVecCondBranchPseudo(MI, BB, Subtarget);
   case LoongArch::PseudoXVINSGR2VR_B:
   case LoongArch::PseudoXVINSGR2VR_H:
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
@@ -11907,7 +11761,11 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   default:
     break;
   case LoongArchISD::VANYNONZERO:
-  case LoongArchISD::VALLZERO: {
+  case LoongArchISD::VALLZERO:
+  case LoongArchISD::VALL_ZERO:
+  case LoongArchISD::VANY_ZERO:
+  case LoongArchISD::VALL_NONZERO:
+  case LoongArchISD::VANY_NONZERO: {
     // MOVCF2GR zero-extend the i1 cond to GPR.
     Known.Zero.setBitsFrom(1);
     break;
