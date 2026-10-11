@@ -162,6 +162,23 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return builtin(__rs1);                                                     \
   }
 
+#define __packed_cls(name, ty, builtin)                                        \
+  static __inline__ unsigned __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {     \
+    return builtin(__rs1);                                                     \
+  }
+
+#define __packed_slx(name, ty)                                                 \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __shamt) {   \
+    return __builtin_elementwise_fshl(__rd, __rs1, (ty)__shamt);               \
+  }
+
+#define __packed_srx(name, ty)                                                 \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __shamt) {   \
+    return __builtin_elementwise_fshr(__rs1, __rd, (ty)__shamt);               \
+  }
+
 #define __packed_widen_convert(name, rty, ty)                                  \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
@@ -417,9 +434,15 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 // confuses clang-format into a deeply nested expression.
 
 /* Scalar Bitmanip */
+__packed_cls(cls_32, int32_t, __builtin_clrsb)
 __packed_unary_builtin(rev_32, uint32_t, __builtin_bitreverse32)
+__packed_slx(slx_32, uint32_t)
+__packed_srx(srx_32, uint32_t)
 #if __riscv_xlen == 64
+__packed_cls(cls_64, int64_t, __builtin_clrsbll)
 __packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+__packed_slx(slx_64, uint64_t)
+__packed_srx(srx_64, uint64_t)
 #endif
 
 /* Scalar Saturating Addition and Subtraction */
@@ -1552,6 +1575,9 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_reduction
 #undef __packed_merge_builtin
 #undef __packed_unary_builtin
+#undef __packed_cls
+#undef __packed_slx
+#undef __packed_srx
 #undef __packed_widen_convert
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op
