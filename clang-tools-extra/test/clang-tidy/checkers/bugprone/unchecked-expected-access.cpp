@@ -642,9 +642,131 @@ void convert_nested_from_unchecked(
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
 }
 
-// FIXME: should warn once converting assignments are modeled.
 int default_construct_then_assign_unexpected() {
   std::expected<int, int> e;
   e = std::unexpected(1);
   return *e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+// Assignment.
+
+int assign_value(std::expected<int, int> e) {
+  e = 5;
+  return *e;
+}
+
+int assign_braces(std::expected<int, int> e) {
+  e = {};
+  return *e;
+}
+
+int assign_value_after_error(std::expected<int, int> e) {
+  if (e)
+    return 0;
+  e = 5;
+  return *e;
+}
+
+int assign_unexpected_lvalue(std::expected<int, int> e) {
+  const std::unexpected<int> u(1);
+  e = u;
+  return e.error();
+}
+
+int assign_unexpected_rvalue(std::expected<int, int> e) {
+  e = std::unexpected(1);
+  return e.error();
+}
+
+int chained_assign_value(std::expected<int, int> e) {
+  return (e = 5).value();
+}
+
+void void_assign_unexpected(std::expected<void, int> e) {
+  e = std::unexpected(1);
+  e.error();
+}
+
+int copy_assign_from_checked(std::expected<int, int> a,
+                             std::expected<int, int> b) {
+  if (!b)
+    return 0;
+  a = b;
+  return *a;
+}
+
+int move_assign_from_checked(std::expected<int, int> a,
+                             std::expected<int, int> b) {
+  if (!b)
+    return 0;
+  a = std::move(b);
+  return *a;
+}
+
+int assign_from_converted_checked(std::expected<int, int> a,
+                                  std::expected<long, int> b) {
+  if (!b)
+    return 0;
+  a = b;
+  return *a;
+}
+
+void assign_nested_from_inner_with_error(
+    std::expected<std::expected<int, int>, int> outer) {
+  std::expected<int, int> inner(std::unexpect, 1);
+  outer = inner;
+  outer.value();
+}
+
+int value_access_after_assign_unexpected(std::expected<int, int> e) {
+  e = std::unexpected(1);
+  return *e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int error_access_after_assign_value(std::expected<int, int> e) {
+  e = 5;
+  return e.error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
+}
+
+int assign_value_on_one_path(std::expected<int, int> e, bool cond) {
+  if (cond)
+    e = 5;
+  return *e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int chained_assign_unexpected(std::expected<int, int> e) {
+  return (e = std::unexpected(1)).value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+void void_value_access_after_assign_unexpected(std::expected<void, int> e) {
+  e = std::unexpected(1);
+  e.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int copy_assign_from_unchecked(std::expected<int, int> a,
+                               std::expected<int, int> b) {
+  a = b;
+  return *a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int assign_from_converted_unchecked(std::expected<int, int> a,
+                                    std::expected<long, int> b) {
+  a = b;
+  return *a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+void error_access_after_assign_nested_from_inner_with_error(
+    std::expected<std::expected<int, int>, int> outer) {
+  std::expected<int, int> inner(std::unexpect, 1);
+  outer = inner;
+  outer.error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
 }

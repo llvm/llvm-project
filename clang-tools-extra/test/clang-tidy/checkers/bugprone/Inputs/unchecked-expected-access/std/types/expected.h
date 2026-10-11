@@ -99,6 +99,13 @@ public:
   expected &operator=(const expected &);
   expected &operator=(expected &&) noexcept;
 
+  template <class U = T>
+    requires(!__is_same(__remove_cvref_t<U>, expected) &&
+             !__is_unexpected<__remove_cvref_t<U>> &&
+             __is_constructible(T, U) && __is_assignable(T &, U))
+  expected &operator=(U &&v);
+
+  template <class G> expected &operator=(const unexpected<G> &e);
   template <class G> expected &operator=(unexpected<G> &&e);
 
   const T *operator->() const noexcept;
@@ -166,6 +173,9 @@ public:
 
   expected &operator=(const expected &);
   expected &operator=(expected &&) noexcept;
+
+  template <class G> expected &operator=(const unexpected<G> &e);
+  template <class G> expected &operator=(unexpected<G> &&e);
 
   explicit operator bool() const noexcept;
   bool has_value() const noexcept;
