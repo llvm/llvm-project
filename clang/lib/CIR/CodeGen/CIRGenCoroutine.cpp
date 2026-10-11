@@ -623,11 +623,17 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
             res = mlir::failure();
         });
 
-    if (coro && !coro.getBody().empty() &&
-        !coro.getBody().back().mightHaveTerminator()) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointAfter(&coro.getBody().back().back());
-      cir::YieldOp::create(builder, openCurlyLoc);
+    if (coro && !coro.getBody().empty()) {
+      mlir::Block &lastBlock = coro.getBody().back();
+      mlir::Block *prevBlock = lastBlock.getPrevNode();
+      if (lastBlock.empty() && lastBlock.hasNoPredecessors() && prevBlock &&
+          !prevBlock->empty() && isa<cir::CoReturnOp>(prevBlock->back())) {
+        lastBlock.erase();
+      } else if (!lastBlock.mightHaveTerminator()) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(&lastBlock);
+        cir::YieldOp::create(builder, openCurlyLoc);
+      }
     }
   }
 
@@ -878,7 +884,6 @@ RValue CIRGenFunction::emitCoyieldExpr(const CoyieldExpr &e,
 
 mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
   ++curCoro.data->coreturnCount;
-  curLexScope->setCoreturn();
 
   const Expr *rv = s.getOperand();
   if (rv && rv->getType()->isVoidType() && !isa<InitListExpr>(rv)) {
@@ -890,11 +895,12 @@ mlir::LogicalResult CIRGenFunction::emitCoreturnStmt(CoreturnStmt const &s) {
 
   if (emitStmt(s.getPromiseCall(), /*useCurrentScope=*/true).failed())
     return mlir::failure();
-  // Create a new return block (if not existent) and add a branch to
-  // it. The actual return instruction is only inserted during current
-  // scope cleanup handling.
   mlir::Location loc = getLoc(s.getSourceRange());
   cir::CoReturnOp::create(builder, loc);
+  curLexScope->markCoreturnEmitted();
 
+  // Statements after a co_return may stil be reachable through a label.
+  // Continue codegen.
+  builder.createBlock(builder.getBlock()->getParent());
   return mlir::success();
 }
