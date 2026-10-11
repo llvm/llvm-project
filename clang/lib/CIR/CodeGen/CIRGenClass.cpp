@@ -393,7 +393,8 @@ static Address applyNonVirtualAndVirtualOffset(
   // not bytes.  So the pointer must be cast to a byte pointer and back.
 
   mlir::Value ptr = addr.getPointer();
-  mlir::Type charPtrType = cgf.cgm.uInt8PtrTy;
+  mlir::Type charPtrType =
+      cgf.getBuilder().getPointerTo(cgf.uInt8Ty, addr.getAddressSpace());
   mlir::Value charPtr = cgf.getBuilder().createBitcast(ptr, charPtrType);
   mlir::Value adjusted = cir::PtrStrideOp::create(
       cgf.getBuilder(), loc, charPtrType, charPtr, baseOffset);
@@ -1256,7 +1257,6 @@ Address CIRGenFunction::getAddressOfBaseClass(
 
   // Get the base pointer type.
   mlir::Type baseValueTy = convertType((path.end()[-1])->getType());
-  assert(!cir::MissingFeatures::addressSpace());
 
   // If there is no virtual base, use cir.base_class_addr.  It takes care of
   // the adjustment and the null pointer check.
@@ -1277,7 +1277,8 @@ Address CIRGenFunction::getAddressOfBaseClass(
     CharUnits alignment =
         cgm.getVBaseAlignment(value.getAlignment(), derived, vBase)
             .alignmentAtOffset(nonVirtualOffset);
-    mlir::Type basePtrTy = builder.getPointerTo(baseValueTy);
+    mlir::Type basePtrTy =
+        builder.getPointerTo(baseValueTy, value.getAddressSpace());
     mlir::Value ptrIsNull = builder.createPtrIsNull(value.getPointer());
     mlir::Value result =
         cir::TernaryOp::create(
