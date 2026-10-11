@@ -24992,7 +24992,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        auto [IsMasked, InterleaveFactor, CompressMask, LoadVecTy] =
+        auto &[IsMasked, InterleaveFactor, CompressMask, LoadVecTy] =
             CompressEntryToData.at(E);
         Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
