@@ -6246,8 +6246,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 void VPlanTransforms::convertToStridedAccesses(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
     VFRange &Range,
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
-        &InterleaveGroups) {
+    SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -6262,16 +6261,115 @@ void VPlanTransforms::convertToStridedAccesses(
       auto *MemR = cast<VPWidenMemoryRecipe>(&R);
       IRMemberToRecipe[&MemR->getIngredient()] = MemR;
     }
-  // Build Recipe to Group
-  DenseMap<VPWidenMemoryRecipe *, const InterleaveGroup<Instruction> *>
-      RecipeToGroup;
+
+  VPValue *I32VF = nullptr;
+  auto &DL = Plan.getDataLayout();
+  // Transform interleave access into multiple strided accesses.
+  InterleaveGroups.remove_if([&](const auto *IG) {
+    auto It =
+        llvm::find_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
+          return IRMemberToRecipe.contains(Member);
+        });
+    // Skip dead group
+    if (It == IG->members().end())
+      return false;
+    VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
+    VPRecipeBase *StartR = StartMemR->getAsRecipe();
+
+    Type *DataTy;
+    Intrinsic::ID IntrinID;
+    if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(StartR)) {
+      DataTy = StoreR->getStoredValue()->getScalarType();
+      IntrinID = Intrinsic::experimental_vp_strided_store;
+    } else {
+      auto *LoadR = cast<VPWidenLoadRecipe>(StartR);
+      DataTy = LoadR->getScalarType();
+      IntrinID = Intrinsic::experimental_vp_strided_load;
+    }
+
+    unsigned NumOfMembers =
+        llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
+          return IRMemberToRecipe.contains(Member);
+        });
+    Align Alignment = StartMemR->getAlign();
+    auto IsProfitable = [&](ElementCount VF) {
+      Type *VectorTy = toVectorTy(DataTy, VF);
+      if (!Ctx.TTI.isLegalStridedLoadStore(VectorTy, Alignment))
+        return false;
+      const InstructionCost InterleavedCost =
+          Ctx.getLegacyCost(IG->getInsertPos(), VF);
+      const InstructionCost StridedLoadStoreCost =
+          VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+              IntrinID, VectorTy, StartMemR->isMasked(), Alignment, Ctx);
+      return StridedLoadStoreCost * NumOfMembers < InterleavedCost;
+    };
+
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                            Range))
+      return false;
+
+    // TODO: legacy cost invalid?
+    // Get VF as i32 for the vector length operand.
+    if (!I32VF) {
+      VPBuilder Builder(Plan.getVectorPreheader());
+      I32VF = Builder.createScalarZExtOrTrunc(
+          &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
+          DebugLoc::getUnknown());
+    }
+
+    // Get stride from the factor of group
+    VPValue *Addr = StartMemR->getAddr();
+    Type *IndexTy = DL.getIndexType(Addr->getScalarType());
+    APInt StrideSize(IndexTy->getIntegerBitWidth(),
+                     IG->getFactor() *
+                         DL.getTypeAllocSize(DataTy).getFixedValue(),
+                     /*IsSigned=*/true);
+    VPValue *StrideInBytes =
+        Plan.getConstantInt(IG->isReverse() ? -StrideSize : StrideSize);
+
+    for (auto *Member : IG->members()) {
+      VPWidenMemoryRecipe *MemR = IRMemberToRecipe.lookup(Member);
+      if (!MemR)
+        continue;
+
+      VPRecipeBase *R = MemR->getAsRecipe();
+      VPBuilder Builder(R);
+      // Create a new vector pointer for strided access.
+      VPValue *BasePtr = MemR->getAddr();
+      VPValue *NewPtr = Builder.createVectorPointer(
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
+          vputils::getGEPFlagsForPtr(BasePtr), R->getDebugLoc());
+
+      VPValue *Mask = MemR->getMask();
+      if (!Mask)
+        Mask = Plan.getTrue();
+      SmallVector<VPValue *, 5> Ops;
+      VPValue *StoredValue = nullptr;
+      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(R)) {
+        StoredValue = StoreR->getStoredValue();
+        Ops.push_back(StoredValue);
+      }
+      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
+
+      auto *StridedR = Builder.createWidenMemIntrinsic(
+          IntrinID, Ops,
+          StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy,
+          MemR->getAlign(), *MemR, R->getDebugLoc());
+      if (!StoredValue)
+        cast<VPWidenLoadRecipe>(R)->replaceAllUsesWith(StridedR);
+      R->eraseFromParent();
+    }
+    return true;
+  });
+
+  // Get who still in a interleaved group
+  SmallPtrSet<VPWidenMemoryRecipe *, 4> InGroups;
   for (const auto *IG : InterleaveGroups)
     for (auto *Member : IG->members())
       if (VPWidenMemoryRecipe *R = IRMemberToRecipe.lookup(Member))
-        RecipeToGroup[R] = IG;
+        InGroups.insert(R);
 
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  VPValue *I32VF = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(VectorLoop->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6279,8 +6377,7 @@ void VPlanTransforms::convertToStridedAccesses(
       // TODO: Transform reverse access into strided access with -1 stride.
       // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
-      // TODO: Transform interleave access into multiple strided accesses.
-      if (!MemR || MemR->isConsecutive() || RecipeToGroup.contains(MemR))
+      if (!MemR || MemR->isConsecutive() || InGroups.contains(MemR))
         continue;
 
       VPValue *Ptr = MemR->getAddr();
@@ -6345,7 +6442,7 @@ void VPlanTransforms::convertToStridedAccesses(
       VPValue *StartVPV =
           VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
-      Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+      Type *IndexTy = DL.getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIV = Builder.createScalarZExtOrTrunc(
