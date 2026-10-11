@@ -53,12 +53,12 @@ entry:
 define void @add_sext_shl_moreOneUse_addexceedsign12(ptr %array1, i32 %a, i32 %b) {
 ; NO-ZBA-LABEL: add_sext_shl_moreOneUse_addexceedsign12:
 ; NO-ZBA:       # %bb.0: # %entry
-; NO-ZBA-NEXT:    lui a3, 2
-; NO-ZBA-NEXT:    sext.w a4, a1
-; NO-ZBA-NEXT:    slli a4, a4, 2
-; NO-ZBA-NEXT:    add a0, a0, a3
-; NO-ZBA-NEXT:    addi a1, a1, 2047
+; NO-ZBA-NEXT:    sext.w a3, a1
+; NO-ZBA-NEXT:    lui a4, 2
+; NO-ZBA-NEXT:    slli a3, a3, 2
 ; NO-ZBA-NEXT:    add a0, a0, a4
+; NO-ZBA-NEXT:    addi a1, a1, 2047
+; NO-ZBA-NEXT:    add a0, a0, a3
 ; NO-ZBA-NEXT:    addi a1, a1, 1
 ; NO-ZBA-NEXT:    sw a2, 0(a0)
 ; NO-ZBA-NEXT:    sw a1, 4(a0)

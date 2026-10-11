@@ -2566,10 +2566,8 @@ bool RISCVTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 // On RV32, 64-bit integers are split into their high and low parts and held
 // in two different registers, so the trunc is free since the low register can
 // just be used.
-// FIXME: Should we consider i64->i32 free on RV64 to match the EVT version of
-// isTruncateFree?
 bool RISCVTargetLowering::isTruncateFree(Type *SrcTy, Type *DstTy) const {
-  if (Subtarget.is64Bit() || !SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
+  if (!SrcTy->isIntegerTy() || !DstTy->isIntegerTy())
     return false;
   unsigned SrcBits = SrcTy->getPrimitiveSizeInBits();
   unsigned DestBits = DstTy->getPrimitiveSizeInBits();
