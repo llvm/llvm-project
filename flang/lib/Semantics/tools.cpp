@@ -382,6 +382,86 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
+static const Symbol *FindProtectedTargetPointer(
+    const evaluate::Component &component, bool isPointerDefinition,
+    bool lookThroughAssociateNames) {
+  const Symbol &symbol{component.GetLastSymbol()};
+  if (!isPointerDefinition && IsPointer(symbol)) {
+    return IsProtectedTarget(symbol) ? &symbol : nullptr;
+  } else {
+    return FindProtectedTargetPointer(
+        component.base(), false, lookThroughAssociateNames);
+  }
+}
+
+const Symbol *FindProtectedTargetPointer(const Symbol &original,
+    bool isPointerDefinition, bool lookThroughAssociateNames) {
+  const Symbol &ultimate{original.GetUltimate()};
+  if (const auto *assoc{ultimate.detailsIf<AssocEntityDetails>()}; assoc &&
+      (lookThroughAssociateNames || assoc->IsAssumedRank()) &&
+      (!isPointerDefinition || IsPointer(ultimate))) {
+    // An associate name that stands for its selector may be a pointer
+    // (SELECT RANK), so this is checked before IsPointer().
+    if (const auto &expr{assoc->expr()}) {
+      return FindProtectedTargetPointer(
+          *expr, isPointerDefinition, lookThroughAssociateNames);
+    }
+  } else if (isPointerDefinition) {
+    // a whole pointer may be associated, nullified, etc.
+  } else if (IsPointer(ultimate) && IsProtectedTarget(ultimate)) {
+    return &original;
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &dataRef,
+    bool isPointerDefinition, bool lookThroughAssociateNames) {
+  return common::visit(
+      common::visitors{
+          [&](const evaluate::SymbolRef &symbol) {
+            return FindProtectedTargetPointer(
+                *symbol, isPointerDefinition, lookThroughAssociateNames);
+          },
+          [&](const evaluate::Component &component) {
+            return FindProtectedTargetPointer(
+                component, isPointerDefinition, lookThroughAssociateNames);
+          },
+          [&](const evaluate::ArrayRef &arrayRef) {
+            // An array element or section is not itself a pointer.
+            if (const auto *component{arrayRef.base().UnwrapComponent()}) {
+              return FindProtectedTargetPointer(
+                  *component, false, lookThroughAssociateNames);
+            } else {
+              return FindProtectedTargetPointer(arrayRef.base().GetLastSymbol(),
+                  false, lookThroughAssociateNames);
+            }
+          },
+          [&](const evaluate::CoarrayRef &coarrayRef) {
+            return FindProtectedTargetPointer(coarrayRef.base(),
+                isPointerDefinition, lookThroughAssociateNames);
+          },
+      },
+      dataRef.u);
+}
+
+const Symbol *FindProtectedTargetPointer(const SomeExpr &expr,
+    bool isPointerDefinition, bool lookThroughAssociateNames) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(
+        *dataRef, isPointerDefinition, lookThroughAssociateNames);
+  } else if (!isPointerDefinition) {
+    if (const auto *procRef{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *proc{procRef->proc().GetSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*proc)};
+            result && IsPointer(*result) && IsProtectedTarget(*result)) {
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};

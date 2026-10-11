@@ -169,6 +169,24 @@ page](https://llvm.org/releases/).
   `SIMPLE` constraints, or give the pointer or dummy an explicit `PURE`
   interface.
 
+- The `PROTECTED_TARGET` attribute and statement from the Fortran 2028
+  working draft (J3/26-007r1 8.5.16 and 8.6.14) are now accepted for data
+  pointers and data pointer components. The target of such a pointer cannot
+  be defined through it, so assignment through the pointer, `DEALLOCATE`,
+  and `ALLOCATE` without `SOURCE=` are errors. In a pointer assignment or a
+  structure constructor, the pointer, or a part of its target designated
+  through the pointer, can be a data-target only for a `PROTECTED_TARGET`
+  pointer or pointer component. As an actual argument, except to an
+  intrinsic procedure or to an intrinsic module procedure that Flang
+  implements as one, such as `C_F_POINTER`, it can correspond only to a
+  `PROTECTED_TARGET` pointer dummy argument or a nonpointer `INTENT(IN)`
+  dummy argument. Following 8.5.16 NOTE 1, a `PROTECTED_TARGET` pointer may
+  be associated with an `INTENT(IN)` target without a diagnostic.
+  Associating it with a use-associated `PROTECTED` target by pointer
+  assignment or pointer initialization, which C864 forbids, is accepted by
+  default and gets the same optional warning as other pointers under
+  `-Wpointer-to-undefinable` or `-pedantic`.
+
 ## Build System Changes
 
 ## New Issues Found

@@ -6184,6 +6184,13 @@ void OmpStructureChecker::CheckDefinableObjects(
     if (!IsVariableListItem(*symbol)) {
       continue;
     }
+    if (clause == llvm::omp::Clause::OMPC_lastprivate && IsPointer(*symbol) &&
+        FindProtectedTargetPointer(*symbol)) {
+      // A pointer list item is updated as if by pointer assignment
+      // (OpenMP 5.2 5.4.5), which does not define the target of a
+      // PROTECTED_TARGET pointer (F2028 8.5.16).
+      continue;
+    }
     if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
             DefinabilityFlags{}, *symbol)}) {
       context_

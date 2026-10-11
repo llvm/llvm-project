@@ -510,6 +510,15 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         "Entity in ALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
     return false;
   }
+  // F'2028 C869.  The selector of an associate name is taken to appear in
+  // its place as the allocate-object (F'2028 20.6.7(11)).
+  if (const Symbol *pointer{FindProtectedTargetPointer(*name_.symbol)};
+      pointer && !allocateInfo_.gotSource) {
+    context.Say(name_.source,
+        "An ALLOCATE statement with PROTECTED_TARGET pointer '%s' must have SOURCE="_err_en_US,
+        pointer->name());
+    return false;
+  }
   bool gotSourceExprOrTypeSpec{allocateInfo_.gotMold ||
       allocateInfo_.gotTypeSpec || allocateInfo_.gotSource};
   if (hasDeferredTypeParameter_ && !gotSourceExprOrTypeSpec) {

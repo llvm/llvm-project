@@ -70,6 +70,13 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
+    if (const Symbol *pointer{FindProtectedTargetPointer(*expr,
+            /*isPointerDefinition=*/false,
+            /*lookThroughAssociateNames=*/false)}) {
+      messages.Say( // F'2028 C873
+          "The target of PROTECTED_TARGET pointer '%s' may not be an actual argument to a procedure with an implicit interface"_err_en_US,
+          pointer->name());
+    }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
           expr->AsFortran());
@@ -880,6 +887,52 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
       }
+    }
+  }
+
+  // F'2028 C872 and C874.  Intrinsic procedures are exempt, and so are the
+  // intrinsic module procedures that Flang implements as intrinsic
+  // procedures, such as C_F_POINTER.  For C872 this departs from the text:
+  // read literally, it would reject a PROTECTED_TARGET pointer as an
+  // argument to ASSOCIATED, C_F_POINTER or any other of these procedures
+  // with a pointer dummy argument, since those dummy arguments do not have
+  // PROTECTED_TARGET.  C874 needs no check for them: Flang gives each of
+  // their dummy arguments an INTENT, which is INTENT(IN) unless stated
+  // otherwise (F'2028 17.2.1p3).
+  // An INTENT(OUT) or INTENT(IN OUT) nonpointer dummy argument has already
+  // been diagnosed above, since the actual argument is not definable (C866).
+  // For a pointer dummy argument, a pointer component of the target, e.g.
+  // "p%next", is a subobject of the target (see
+  // FindProtectedTargetPointer()).  With INTENT(OUT) or INTENT(IN OUT), that
+  // was diagnosed above as well.
+  if (scope && !intrinsic) {
+    const Symbol *pointer{FindProtectedTargetPointer(actual,
+        /*isPointerDefinition=*/false, /*lookThroughAssociateNames=*/false)};
+    if (dummyIsPointer) {
+      const Symbol *component{nullptr};
+      if (!pointer && actualIsPointer &&
+          (dummy.intent == common::Intent::Default ||
+              dummy.intent == common::Intent::In)) {
+        pointer = FindProtectedTargetPointer(actual,
+            /*isPointerDefinition=*/true, /*lookThroughAssociateNames=*/false);
+        component = evaluate::GetLastSymbol(actual);
+      }
+      if (pointer && !dummy.protectedTarget &&
+          (actualIsPointer || dummy.intent == common::Intent::In)) {
+        if (component) {
+          messages.Say(
+              "Pointer component '%s' of the target of PROTECTED_TARGET pointer '%s' may not be associated with POINTER %s, which does not have the PROTECTED_TARGET attribute"_err_en_US,
+              component->name(), pointer->name(), dummyName);
+        } else {
+          messages.Say(
+              "The target of PROTECTED_TARGET pointer '%s' may not be associated with POINTER %s, which does not have the PROTECTED_TARGET attribute"_err_en_US,
+              pointer->name(), dummyName);
+        }
+      }
+    } else if (pointer && dummy.intent == common::Intent::Default) {
+      messages.Say(
+          "The target of PROTECTED_TARGET pointer '%s' may not be associated with %s, which does not have the INTENT(IN) attribute"_err_en_US,
+          pointer->name(), dummyName);
     }
   }
 

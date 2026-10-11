@@ -443,6 +443,8 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
           });
       result->intent = GetIntent(symbol.attrs());
       result->ignoreTKR = GetIgnoreTKR(symbol);
+      result->protectedTarget =
+          symbol.attrs().test(semantics::Attr::PROTECTED_TARGET);
       if (object) {
         result->cudaDataAttr = object->cudaDataAttr();
         if (!result->cudaDataAttr &&
@@ -545,6 +547,9 @@ llvm::raw_ostream &DummyDataObject::Dump(llvm::raw_ostream &o) const {
   }
   if (cudaDataAttr) {
     o << " cudaDataAttr: " << common::EnumToString(*cudaDataAttr);
+  }
+  if (protectedTarget) {
+    o << " PROTECTED_TARGET";
   }
   if (!ignoreTKR.empty()) {
     ignoreTKR.Dump(o << ' ', common::EnumToString);
