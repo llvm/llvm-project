@@ -1817,6 +1817,18 @@ llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0
 
 // -----
 
+module attributes {llvm.data_layout = "P4"} {
+  llvm.func @__gxx_personality_v0(...) -> i32
+
+  // CHECK-LABEL: @personality_program_as
+  // CHECK-SAME: personality ptr addrspace(4) @__gxx_personality_v0
+  llvm.func @personality_program_as() attributes { personality = @__gxx_personality_v0 } {
+    llvm.return
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @hasGCFunction
 // CHECK-SAME: gc "statepoint-example"
 llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" } {
