@@ -3262,6 +3262,15 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
       FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
                      sizeTy, intTy, intTy},
                     voidTy));
+  // void __hipRegisterManagedVar(void **fatbinHandle, char *managedVar,
+  //                              char *var, const char *deviceName,
+  //                              size_t size, unsigned align);
+  FuncOp cudaRegisterManagedVar = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterManagedVar"),
+      loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
+          voidTy));
 
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
@@ -3287,8 +3296,9 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
       llvm_unreachable("Texture registration NYI");
     }
 
-    if (regAttr.getIsManaged())
-      llvm_unreachable("Managed variable registration NYI");
+    // External managed variables are registered by their defining TU.
+    if (regAttr.getIsManaged() && global.isDeclaration())
+      continue;
 
     GlobalOp deviceNameStr = makeConstantString(regAttr.getDeviceSideName());
     mlir::Value deviceName = builder.createBitcast(
@@ -3296,9 +3306,28 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
     mlir::Value hostVar =
         builder.createBitcast(builder.createGetGlobal(global), voidPtrTy);
 
+    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
+
+    if (regAttr.getIsManaged()) {
+      llvm::StringRef name = global.getSymName();
+      assert(name.ends_with(".managed") &&
+             "HIP managed variables not transformed");
+      auto managedVar = mlirModule.lookupSymbol<GlobalOp>(
+          name.drop_back(llvm::StringRef(".managed").size()));
+      mlir::Value managedPtr =
+          builder.createBitcast(builder.createGetGlobal(managedVar), voidPtrTy);
+      auto varSize = ConstantOp::create(
+          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+      auto align = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, global.getAlignment().value_or(1)));
+      builder.createCallOp(
+          loc, cudaRegisterManagedVar,
+          {fatbinHandle, managedPtr, hostVar, deviceName, varSize, align});
+      continue;
+    }
+
     auto isExtern = ConstantOp::create(
         builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
     auto varSize = ConstantOp::create(
         builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
     auto isConstant = ConstantOp::create(
