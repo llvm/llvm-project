@@ -3,7 +3,7 @@
 func.func @empty_body(%sz : index) {
   // expected-error@+1 {{'gpu.launch' op body region is empty}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
@@ -13,7 +13,7 @@ func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>} : (index, index, index, index, index) -> ()
   return
 }
 
@@ -25,7 +25,7 @@ func.func @no_region_attrs(%sz : index) {
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
@@ -39,7 +39,7 @@ func.func @not_enough_cluster_region_attrs(%sz : index) {
        %sbx: index, %sby: index, %sbz: index,
        %stx: index, %sty: index, %stz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0>} : (index, index, index, index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0>} : (index, index, index, index, index, index, index, index, index) -> ()
   return
 }
 
@@ -111,7 +111,7 @@ func.func @launch_async_deps_no_token(%dep : !gpu.async.token, %sz : index) {
        %nbx: index, %nby: index, %nbz: index,
        %ntx: index, %nty: index, %ntz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>}
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>}
      : (!gpu.async.token, index, index, index, index, index, index) -> ()
   return
 }
@@ -124,6 +124,34 @@ func.func @launch_async_object_and_token(%sz : index, %stream : !llvm.ptr) {
              threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
     gpu.terminator
   }
+  return
+}
+
+// -----
+
+func.func @launch_unused_calling_convention_operand(%sz : index, %value : i32) {
+  // expected-error@+1 {{'gpu.launch' op calling convention operands must be used in the launch body}}
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz)
+             calling_convention(%value : i32) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_mismatched_arg_attrs(%sz : index, %value : i32) {
+  // expected-error@+1 {{'gpu.launch' op arg_attrs must have one entry per calling convention operand}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz, %value) ({
+  ^bb0(%bx: index, %by: index, %bz: index,
+       %tx: index, %ty: index, %tz: index,
+       %nbx: index, %nby: index, %nbz: index,
+       %ntx: index, %nty: index, %ntz: index):
+    %sum = arith.addi %value, %value : i32
+    gpu.terminator
+  }) {arg_attrs = [], operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1>}
+     : (index, index, index, index, index, index, i32) -> ()
   return
 }
 
