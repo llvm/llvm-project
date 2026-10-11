@@ -55082,6 +55082,18 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
+  // vXbf16 types are only legal with BF16/AVXNECONVERT, but the masked load
+  // itself doesn't need them. Load as vXi16 so it isn't scalarized.
+  if (VT.getScalarType() == MVT::bf16 && !TLI.isTypeLegal(VT) &&
+      Mld->getExtensionType() == ISD::NON_EXTLOAD) {
+    EVT IntVT = VT.changeVectorElementTypeToInteger();
+    SDValue NewLd = DAG.getMaskedLoad(
+        IntVT, DL, Mld->getChain(), Mld->getBasePtr(), Mld->getOffset(), Mask,
+        DAG.getBitcast(IntVT, Mld->getPassThru()), IntVT, Mld->getMemOperand(),
+        Mld->getAddressingMode(), ISD::NON_EXTLOAD);
+    return DCI.CombineTo(N, DAG.getBitcast(VT, NewLd), NewLd.getValue(1));
+  }
+
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
   // by legalization.
   if (SDValue NewMask =
@@ -55201,6 +55213,15 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 
     // Otherwise don't combine if this store already truncates.
     return SDValue();
+  }
+
+  // vXbf16 types are only legal with BF16/AVXNECONVERT, but the masked store
+  // itself doesn't need them. Store as vXi16 so it isn't scalarized.
+  if (VT.getScalarType() == MVT::bf16 && !TLI.isTypeLegal(VT)) {
+    EVT IntVT = VT.changeVectorElementTypeToInteger();
+    return DAG.getMaskedStore(Mst->getChain(), DL, DAG.getBitcast(IntVT, Value),
+                              Mst->getBasePtr(), Mst->getOffset(), Mask, IntVT,
+                              Mst->getMemOperand(), Mst->getAddressingMode());
   }
 
   // Attempt to convert a (vXi1 bitcast(iX Mask)) mask before it might get split
