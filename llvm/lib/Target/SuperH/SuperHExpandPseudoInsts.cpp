@@ -114,13 +114,13 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
   // we index correctly into the negative stack with a positive index.
   int64_t RealOffset = (StackSize-Offset);
 
+  // Adjust the offset to be within the access range.
+  Offset = AccessRange-(RealOffset % AccessRange);
+
   // On big endian systems, adjust the pointer for
   // < 32-bit offsets.
   if (!STI->isLittleEndian() && Scale != 4)
-    RealOffset -= 4-(Scale-1);
-
-  // Adjust the offset to be within the access range.
-  Offset = RealOffset % AccessRange;
+    Offset += Scale;
 
   switch(MI.getOpcode()) {
   case SH::MOVF32SF:
@@ -143,6 +143,7 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
     int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
       .addReg(FrameReg);
+
     TII->emitAddressAdjust(SH::R1, MBB, MBBI, SpAdjust, INT_MAX);
     break;
   }
