@@ -2822,6 +2822,9 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   UnaryExprOrTypeTrait Kind = E->getKind();
   const ASTContext &ASTCtx = Ctx.getASTContext();
 
+  if (Kind == UETT_AddrSpaceOf)
+    return this->emitConst(E->getAddressSpaceQueryResult(ASTCtx), E);
+
   if (Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
     QualType ArgType = E->getTypeOfArgument();
 

@@ -2884,8 +2884,8 @@ public:
   ExprResult RebuildUnaryExprOrTypeTrait(Expr *SubExpr, SourceLocation OpLoc,
                                          UnaryExprOrTypeTrait ExprKind,
                                          SourceRange R) {
-    ExprResult Result
-      = getSema().CreateUnaryExprOrTypeTraitExpr(SubExpr, OpLoc, ExprKind);
+    ExprResult Result = getSema().CreateUnaryExprOrTypeTraitExpr(
+        SubExpr, OpLoc, ExprKind, R.getEnd());
     if (Result.isInvalid())
       return ExprError();
 
