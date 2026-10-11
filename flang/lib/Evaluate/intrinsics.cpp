@@ -2877,9 +2877,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   }
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */) {
-      // TODO: set Attr::Simple for MOVE_ALLOC when FROM is not a coarray
-      // (F2023)
-      attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.9.147 p2: MOVE_ALLOC is simple if and only if FROM is not a
+      // coarray
+      if (!IsCoarray(*rearranged[0])) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+        attrs.set(characteristics::Procedure::Attr::Pure);
+      }
     } else if (intrinsicClass == IntrinsicClass::simpleSubroutine ||
         intrinsicClass == IntrinsicClass::simpleElementalSubroutine) {
       attrs.set(characteristics::Procedure::Attr::Simple);
