@@ -2246,7 +2246,7 @@ void SymtabShndxSection::finalizeContents() {
 }
 
 size_t SymtabShndxSection::getSize() const {
-  return ctx.in.symTab->getNumSymbols() * 4;
+  return size_t(ctx.in.symTab->getNumSymbols()) * 4;
 }
 
 // .hash and .gnu.hash sections contain on-disk hash tables that map
@@ -2399,7 +2399,7 @@ void HashTableSection::finalizeContents() {
   if (OutputSection *sec = symTab->getParent())
     getParent()->link = sec->sectionIndex;
 
-  unsigned numEntries = 2;               // nbucket and nchain.
+  size_t numEntries = 2;                 // nbucket and nchain.
   numEntries += symTab->getNumSymbols(); // The chain entries.
 
   // Create as many buckets as there are symbols.
