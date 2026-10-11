@@ -1538,9 +1538,21 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
   LogicalResult matchAndRewrite(OutOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    // Calculate NNZ.
     Value src = op.getTensor();
-    Value nnz = NumberOfEntriesOp::create(rewriter, loc, src);
+
+    // The writer metadata precedes the records, so count exactly the entries
+    // that sparse iteration will emit before creating the writer.
+    Value zero = constantIndex(rewriter, loc, 0);
+    Value one = constantIndex(rewriter, loc, 1);
+    auto count = ForeachOp::create(
+        rewriter, loc, src, ValueRange{zero},
+        [one](OpBuilder &builder, Location loc, ValueRange, Value,
+              ValueRange iterArgs) {
+          Value next = arith::AddIOp::create(builder, loc, iterArgs.front(),
+                                             one);
+          sparse_tensor::YieldOp::create(builder, loc, next);
+        });
+    Value numEntries = count.getResult(0);
 
     // Allocate a temporary buffer for storing dimension-sizes/coordinates.
     const auto srcTp = getSparseTensorType(src);
@@ -1565,7 +1577,8 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
             .getResult(0);
     Value rankValue = constantIndex(rewriter, loc, dimRank);
     createFuncCall(rewriter, loc, "outSparseTensorWriterMetaData", {},
-                   {writer, rankValue, nnz, dimSizes}, EmitCInterface::On);
+                   {writer, rankValue, numEntries, dimSizes},
+                   EmitCInterface::On);
 
     Value dimCoords = dimSizes; // Reuse the dimSizes buffer for dimCoords.
     Type eltTp = srcTp.getElementType();
