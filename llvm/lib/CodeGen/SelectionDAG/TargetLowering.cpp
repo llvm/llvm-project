@@ -1366,7 +1366,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (MaskedBits.isZero())
       return TLO.CombineTo(Op, LHS);
 
-    KnownBits LHSKnown(BitWidth);
+    KnownBits LHSKnown;
     if (SimplifyDemandedBits(LHS, DemandedBits, DemandedElts, LHSKnown, TLO,
                              Depth + 1))
       return true;
@@ -1384,12 +1384,16 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // Reuse LHS facts if the RHS did not reduce its earlier demand. Otherwise,
     // query independent facts to avoid using bits outside that demand.
-    KnownBits FullDemandKnown =
+    SDValue LHS = Op.getOperand(0);
+    // Keep only the selected mask, then compute DemandedBits & ~Mask in place.
+    // This avoids copying the unused KnownBits mask and extra APInt
+    // temporaries, which can allocate memory for masks wider than one word.
+    APInt RHSDemandedBits =
         DemandedBits.intersects(Known.*KnownMask)
-            ? TLO.DAG.computeKnownBits(Op.getOperand(0), DemandedElts,
-                                       Depth + 1)
-            : LHSKnown;
-    APInt RHSDemandedBits = ~(FullDemandKnown.*KnownMask) & DemandedBits;
+            ? TLO.DAG.computeKnownBits(LHS, DemandedElts, Depth + 1).*KnownMask
+            : LHSKnown.*KnownMask;
+    RHSDemandedBits.flipAllBits();
+    RHSDemandedBits &= DemandedBits;
     if (RHSDemandedBits == DemandedBits)
       return false;
 
