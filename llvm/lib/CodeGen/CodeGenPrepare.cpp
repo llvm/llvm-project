@@ -475,13 +475,15 @@ bool CodeGenPrepare::_run(Function &F) {
   if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
     const DenseMap<unsigned int, unsigned int> &BypassWidths =
         TLI->getBypassSlowDivWidths();
+    bool ShouldBypassConstantDivisor = TLI->shouldBypassConstantDivisor();
     BasicBlock *BB = &*F.begin();
     while (BB != nullptr) {
       // bypassSlowDivision may create new BBs, but we don't want to reapply the
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
+        EverMadeChange |= bypassSlowDivision(
+            BB, BypassWidths, ShouldBypassConstantDivisor, DTU, LI, BPI);
       BB = Next;
     }
   }
