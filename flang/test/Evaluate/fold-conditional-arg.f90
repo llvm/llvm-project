@@ -3,6 +3,7 @@
 ! When a condition in a conditional-arg is a compile-time constant,
 ! the conditional-arg should be folded to the selected consequent,
 ! enabling further constant folding of the enclosing expression.
+! Type-only inquiries fold regardless of the condition.
 
 module m_funcs
   implicit none
@@ -24,6 +25,8 @@ end module
 
 module m
   use m_funcs
+  use ieee_arithmetic, only: ieee_support_underflow_control, &
+      ieee_support_flag, ieee_invalid
   implicit none
 
   ! Basic: .TRUE. selects the first consequent.
@@ -107,6 +110,74 @@ module m
   logical, parameter :: test_double_paren_false = abs(((.false. ? -7 : -3))) == 3
   logical, parameter :: test_double_paren_multi = &
       abs(((.false. ? -10 : .true. ? -20 : -30))) == 20
+
+  ! Type-only inquiries fold even when the condition isn't constant.
+  ! F2023 C1538 (declared type and kind type parameters) and C1539 (rank)
+  ! require every consequent-arg to agree on what such an inquiry examines,
+  ! so the first consequent-arg stands in for the whole conditional argument.
+  logical :: flag, flag2
+  integer(4) :: i4a, i4b, i4c
+  integer(8) :: i8a, i8b
+  real(4) :: r4a, r4b
+  real(8) :: r8a, r8b
+  complex(8) :: z8a, z8b
+  character(4) :: c4a
+  character(8) :: c8a
+  real(4) :: a2a(2, 3), a2b(4, 5), a2c(1, 1)
+  logical, parameter :: test_kind_int = kind((flag ? i8a : i8b)) == 8
+  logical, parameter :: test_kind_real = kind((flag ? r8a : r8b)) == 8
+  logical, parameter :: test_kind_complex = kind((flag ? z8a : z8b)) == 8
+  ! Character lengths differ; kind agrees.
+  logical, parameter :: test_kind_char = kind((flag ? c4a : c8a)) == 1
+  logical, parameter :: test_kind_multi = &
+      kind((flag ? i4a : flag2 ? i4b : i4c)) == 4
+  ! An expression consequent-arg is a valid representative.
+  logical, parameter :: test_kind_expr = kind((flag ? i8a + 1_8 : i8b)) == 8
+  ! FoldOperation doesn't fold the argument of KIND, so a constant condition
+  ! reaches the inquiry unresolved.
+  logical, parameter :: test_kind_const_cond = kind((.true. ? i8a : i8b)) == 8
+  logical, parameter :: test_kind_const_cond_tail = &
+      kind((.false. ? i8a : i8b)) == 8
+  logical, parameter :: test_bit_size = bit_size((flag ? i8a : i8b)) == 64
+  logical, parameter :: test_digits_int = digits((flag ? i4a : i4b)) == 31
+  logical, parameter :: test_digits_real = digits((flag ? r8a : r8b)) == 53
+  logical, parameter :: test_huge_int = huge((flag ? i4a : i4b)) == huge(0_4)
+  logical, parameter :: test_huge_real = &
+      huge((flag ? r4a : r4b)) == huge(0.0_4)
+  logical, parameter :: test_tiny = tiny((flag ? r8a : r8b)) == tiny(0.0_8)
+  logical, parameter :: test_epsilon = &
+      epsilon((flag ? r4a : r4b)) == epsilon(0.0_4)
+  logical, parameter :: test_precision_real = &
+      precision((flag ? r8a : r8b)) == 15
+  logical, parameter :: test_precision_complex = &
+      precision((flag ? z8a : z8b)) == 15
+  logical, parameter :: test_range_int = range((flag ? i8a : i8b)) == 18
+  logical, parameter :: test_range_real = range((flag ? r4a : r4b)) == 37
+  logical, parameter :: test_radix = radix((flag ? r4a : r4b)) == 2
+  logical, parameter :: test_maxexponent = &
+      maxexponent((flag ? r4a : r4b)) == 128
+  logical, parameter :: test_minexponent = &
+      minexponent((flag ? r4a : r4b)) == -125
+  logical, parameter :: test_rank_scalar = rank((flag ? i4a : i4b)) == 0
+  ! Shapes differ; rank agrees.
+  logical, parameter :: test_rank_array = &
+      rank((flag ? a2a : flag2 ? a2b : a2c)) == 2
+  ! Character lengths differ; kind agrees.
+  logical, parameter :: test_new_line = &
+      new_line((flag ? c4a : c8a)) == achar(10)
+  ! The intrinsic table flags X= of the IEEE inquiry functions as a type-only
+  ! inquiry too.
+  logical, parameter :: test_ieee_support = &
+      ieee_support_underflow_control((flag ? r4a : r4b)) .eqv. &
+      ieee_support_underflow_control(r4a)
+  ! The check is per dummy position: X= is the second dummy here, and the
+  ! keyword form reaches the same position after argument rearrangement.
+  logical, parameter :: test_ieee_flag_pos2 = &
+      ieee_support_flag(ieee_invalid, (flag ? r4a : r4b)) .eqv. &
+      ieee_support_flag(ieee_invalid, r4a)
+  logical, parameter :: test_ieee_flag_keyword = &
+      ieee_support_flag(x=(flag ? r4a : r4b), flag=ieee_invalid) .eqv. &
+      ieee_support_flag(ieee_invalid, r4a)
 
 contains
 
