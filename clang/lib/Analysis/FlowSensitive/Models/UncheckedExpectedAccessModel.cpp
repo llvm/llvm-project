@@ -148,6 +148,22 @@ auto expectedConvertingConstructor() {
       hasDeclaration(cxxConstructorDecl(expectedConvertingConstructorDecl())));
 }
 
+// Copy and move assignments are modeled by the framework, which copies the
+// "has_value" property of the source.
+auto expectedAssignment() {
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("="), argumentCountIs(2),
+      callee(cxxMethodDecl(ofClass(expectedClass()),
+                           unless(anyOf(isCopyAssignmentOperator(),
+                                        isMoveAssignmentOperator())))));
+}
+
+// `operator=(const unexpected<G> &)` and `operator=(unexpected<G> &&)`.
+auto expectedErrorAssignment() {
+  return cxxOperatorCallExpr(expectedAssignment(),
+                             hasArgument(1, hasUnexpectedType()));
+}
+
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   auto *Value = Env.get<BoolValue>(E);
@@ -287,7 +303,29 @@ void transferConvertingConstructor(const CXXConstructExpr *E,
     constructExpected(*E, *HasValueVal, State.Env);
 }
 
-// FIXME: Model the assignments and `swap`.
+void assignExpected(const CXXOperatorCallExpr &E, BoolValue &HasValueVal,
+                    Environment &Env) {
+  auto *Loc = Env.get<RecordStorageLocation>(*E.getArg(0));
+  if (Loc == nullptr)
+    return;
+  setHasValue(Loc, HasValueVal, Env);
+  // The result of the assignment refers to the assigned object.
+  Env.setStorageLocation(E, *Loc);
+}
+
+void transferValueAssignment(const CXXOperatorCallExpr *E,
+                             const MatchFinder::MatchResult &,
+                             LatticeTransferState &State) {
+  assignExpected(*E, State.Env.getBoolLiteralValue(true), State.Env);
+}
+
+void transferErrorAssignment(const CXXOperatorCallExpr *E,
+                             const MatchFinder::MatchResult &,
+                             LatticeTransferState &State) {
+  assignExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
+}
+
+// FIXME: Model `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
       // expected::has_value, expected::operator bool
@@ -315,6 +353,12 @@ auto buildTransferMatchSwitch() {
                                        transferConvertingConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(expectedConstructor(),
                                        transferValueConstructor)
+      // Assignments. The order matters: the last case matches every
+      // assignment that is not matched by the one before it.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedErrorAssignment(),
+                                          transferErrorAssignment)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedAssignment(),
+                                          transferValueAssignment)
       .Build();
 }
 

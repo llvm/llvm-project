@@ -98,10 +98,14 @@ int n() {
   std::expected<int, Error> e; // a default-constructed expected holds a value.
   return *e;
 }
+
+void o(std::expected<int, Error> e) {
+  e = std::unexpected(Error::NotFound);
+  report(e.error());
+}
 ```
 
 ## Limitations
 
-The check does not yet model the assignment operators (other than copy and
-move assignment) or `swap` of `std::expected`. For example, it does not know
-that `e = std::unexpected(err)` leaves `e` holding an error.
+The check does not yet model `swap` of `std::expected`. For example, it does
+not know that after `a.swap(b)`, `a` holds a value if `b` held one before.
