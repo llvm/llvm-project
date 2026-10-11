@@ -52,6 +52,12 @@ template <class T> struct __remove_cvref_impl<const T &&>  { using type = T; };
 template <class T>
 using __remove_cvref_t = typename __remove_cvref_impl<T>::type;
 
+// `__remove_cv` is a clang builtin as well.
+template <class T> struct __remove_cv_impl { using type = T; };
+template <class T> struct __remove_cv_impl<const T> { using type = T; };
+
+template <class T> using __remove_cv_t = typename __remove_cv_impl<T>::type;
+
 // Whether `T` can be constructed from `expected<U, G>`, in which case the
 // converting constructors from `expected<U, G>` are disabled.
 template <class T, class U, class G>
@@ -135,6 +141,34 @@ public:
   template <class G> E error_or(G &&e) const &;
   template <class G> E error_or(G &&e) &&;
 
+  // Defined, so that they can be called with lambdas, whose types have no
+  // linkage.
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()(declval<T &>()))>, E>
+  transform(F &&) & { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()(declval<const T &>()))>, E>
+  transform(F &&) const & { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()(declval<T>()))>, E>
+  transform(F &&) && { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()(declval<const T>()))>, E>
+  transform(F &&) const && { return {}; }
+
+  template <class F>
+  expected<T, __remove_cv_t<decltype(declval<F>()(declval<E &>()))>>
+  transform_error(F &&) & { return {}; }
+  template <class F>
+  expected<T, __remove_cv_t<decltype(declval<F>()(declval<const E &>()))>>
+  transform_error(F &&) const & { return {}; }
+  template <class F>
+  expected<T, __remove_cv_t<decltype(declval<F>()(declval<E>()))>>
+  transform_error(F &&) && { return {}; }
+  template <class F>
+  expected<T, __remove_cv_t<decltype(declval<F>()(declval<const E>()))>>
+  transform_error(F &&) const && { return {}; }
+
   template <class... Args> T &emplace(Args &&...args) noexcept;
 
   void swap(expected &rhs) noexcept;
@@ -192,6 +226,35 @@ public:
 
   template <class G> E error_or(G &&e) const &;
   template <class G> E error_or(G &&e) &&;
+
+  // Defined, so that they can be called with lambdas, whose types have no
+  // linkage.
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()())>, E>
+  transform(F &&) & { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()())>, E>
+  transform(F &&) const & { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()())>, E>
+  transform(F &&) && { return {}; }
+  template <class F>
+  expected<__remove_cv_t<decltype(declval<F>()())>, E>
+  transform(F &&) const && { return {}; }
+
+  template <class F>
+  expected<void, __remove_cv_t<decltype(declval<F>()(declval<E &>()))>>
+  transform_error(F &&) & { return {}; }
+  template <class F>
+  expected<void,
+           __remove_cv_t<decltype(declval<F>()(declval<const E &>()))>>
+  transform_error(F &&) const & { return {}; }
+  template <class F>
+  expected<void, __remove_cv_t<decltype(declval<F>()(declval<E>()))>>
+  transform_error(F &&) && { return {}; }
+  template <class F>
+  expected<void, __remove_cv_t<decltype(declval<F>()(declval<const E>()))>>
+  transform_error(F &&) const && { return {}; }
 
   void emplace() noexcept;
 

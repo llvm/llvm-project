@@ -770,3 +770,113 @@ void error_access_after_assign_nested_from_inner_with_error(
   outer.error();
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
 }
+
+// Monadic operations.
+
+constexpr auto add_one = [](int v) { return v + 1; };
+
+int transform_value_access(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  auto r = e.transform(add_one);
+  return *r;
+}
+
+int transform_temporary_value_access(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  return e.transform(add_one).value();
+}
+
+int transform_rvalue(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  auto r = std::move(e).transform(add_one);
+  return *r;
+}
+
+int transform_const(const std::expected<int, int> &e) {
+  if (!e)
+    return 0;
+  return *e.transform(add_one);
+}
+
+int transform_error_access_when_source_has_error(std::expected<int, int> e) {
+  if (e)
+    return 0;
+  return e.transform(add_one).error();
+}
+
+int transform_error_error_access(std::expected<int, int> e) {
+  if (e)
+    return 0;
+  auto r = e.transform_error(add_one);
+  return r.error();
+}
+
+int transform_error_value_access(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  return *e.transform_error(add_one);
+}
+
+int chained_transform(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  return *e.transform(add_one).transform(add_one);
+}
+
+void transform_to_void(std::expected<int, int> e) {
+  if (!e)
+    return;
+  e.transform([](int) {}).value();
+}
+
+int transform_result_keeps_state(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  auto r = e.transform(add_one);
+  e = std::unexpected(1);
+  return *r;
+}
+
+int void_transform(std::expected<void, int> e) {
+  if (!e)
+    return 0;
+  return *e.transform([] { return 1; });
+}
+
+int void_transform_error(std::expected<void, int> e) {
+  if (e)
+    return 0;
+  return e.transform_error(add_one).error();
+}
+
+int transform_unchecked(std::expected<int, int> e) {
+  return *e.transform(add_one);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int value_access_after_transform_of_error(std::expected<int, int> e) {
+  if (e)
+    return 0;
+  return *e.transform(add_one);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
+
+int transform_error_unchecked(std::expected<int, int> e) {
+  return e.transform_error(add_one).error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
+}
+
+int error_access_after_transform_error_of_value(std::expected<int, int> e) {
+  if (!e)
+    return 0;
+  return e.transform_error(add_one).error();
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: unchecked access to 'std::expected' error [bugprone-unchecked-expected-access]
+}
+
+int void_transform_unchecked(std::expected<void, int> e) {
+  return *e.transform([] { return 1; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: unchecked access to 'std::expected' value [bugprone-unchecked-expected-access]
+}
