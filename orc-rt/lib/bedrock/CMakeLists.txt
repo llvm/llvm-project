@@ -17,6 +17,7 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/GDBJITRegistrarSPSCI.cpp
   sps/MemoryAccessSPSCI.cpp
   sps/NativeDylibManagerSPSCI.cpp
+  sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
   sps/SimpleRemoteCA.cpp
   )
