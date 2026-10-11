@@ -15,6 +15,7 @@ define void @store_of_undef(ptr %P) {
 ; that the high bit of this byte in memory will be zero.
 define void @store_of_nonbyte_undef(ptr %P) {
 ; CHECK-LABEL: @store_of_nonbyte_undef(
+; CHECK-NEXT:    store i7 undef, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
   store i7 undef, ptr %P
