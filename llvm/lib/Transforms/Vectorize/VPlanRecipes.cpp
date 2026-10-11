@@ -2232,16 +2232,8 @@ void VPIRMetadata::clearExecutionFrequency() {
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
-  SmallVector<std::pair<unsigned, MDNode *>> MetadataIntersection;
-  for (const auto &[KindA, MDA] : Metadata) {
-    for (const auto &[KindB, MDB] : Other.Metadata) {
-      if (KindA == KindB && MDA == MDB) {
-        MetadataIntersection.emplace_back(KindA, MDA);
-        break;
-      }
-    }
-  }
-  Metadata = std::move(MetadataIntersection);
+  erase_if(Metadata,
+           [&](const auto &MD) { return !is_contained(Other.Metadata, MD); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
