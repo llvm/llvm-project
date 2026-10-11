@@ -625,7 +625,8 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
+  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
+      .setOperandDead(2); // $x1 (ra)
 
   OutgoingValueAssigner ArgAssigner(CC_RISCV);
   RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);
