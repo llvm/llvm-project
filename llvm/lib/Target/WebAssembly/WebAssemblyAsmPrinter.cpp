@@ -589,7 +589,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   // Read target features and linkage policies from module metadata
   SmallVector<FeatureEntry, 4> EmittedFeatures;
   auto EmitFeature = [&](std::string Feature) {
-    std::string MDKey = (StringRef("wasm-feature-") + Feature).str();
+    std::string MDKey = (Twine("wasm-feature-") + Feature).str();
     Metadata *Policy = M.getModuleFlag(MDKey);
     if (Policy == nullptr)
       return;
