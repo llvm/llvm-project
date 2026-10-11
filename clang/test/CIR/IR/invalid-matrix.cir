@@ -119,3 +119,27 @@ cir.func @splat_element_type_mismatch(%arg0: !s32i) {
   %0 = cir.vec.splat %arg0 : !s32i, !cir.matrix<2 x 2 x !cir.float>
   cir.return
 }
+
+// -----
+
+cir.func @multiply_dim_mismatch(%arg0: !cir.matrix<2 x 3 x !cir.float>, %arg1: !cir.matrix<4 x 2 x !cir.float>) {
+  // expected-error@+1 {{failed to verify that left operand column count matches right operand row count}}
+  %0 = cir.matrix.multiply %arg0, %arg1 : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<4 x 2 x !cir.float>) -> !cir.matrix<2 x 2 x !cir.float>
+  cir.return
+}
+
+// -----
+
+cir.func @multiply_result_mismatch(%arg0: !cir.matrix<2 x 3 x !cir.float>, %arg1: !cir.matrix<3 x 4 x !cir.float>) {
+  // expected-error@+1 {{failed to verify that result is left operand rows by right operand columns}}
+  %0 = cir.matrix.multiply %arg0, %arg1 : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>) -> !cir.matrix<3 x 4 x !cir.float>
+  cir.return
+}
+
+// -----
+
+cir.func @multiply_elt_mismatch(%arg0: !cir.matrix<2 x 3 x !cir.float>, %arg1: !cir.matrix<3 x 4 x !cir.double>) {
+  // expected-error@+1 {{failed to verify that all of {lhs, rhs, result} have same element type}}
+  %0 = cir.matrix.multiply %arg0, %arg1 : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.double>) -> !cir.matrix<2 x 4 x !cir.float>
+  cir.return
+}

@@ -45,4 +45,14 @@ cir.func @matrix_splat(%arg0: !s32i, %arg1: !cir.float) {
 // CHECK:   cir.return
 // CHECK: }
 
+cir.func @matrix_multiply(%lhs: !cir.matrix<2 x 3 x !cir.float>, %rhs: !cir.matrix<3 x 4 x !cir.float>) {
+  %0 = cir.matrix.multiply %lhs, %rhs : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>) -> !cir.matrix<2 x 4 x !cir.float>
+  cir.return
+}
+
+// CHECK: cir.func @matrix_multiply(%[[L:.*]]: !cir.matrix<2 x 3 x !cir.float>, %[[R:.*]]: !cir.matrix<3 x 4 x !cir.float>) {
+// CHECK:   %{{.*}} = cir.matrix.multiply %[[L]], %[[R]] : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>) -> !cir.matrix<2 x 4 x !cir.float>
+// CHECK:   cir.return
+// CHECK: }
+
 }
