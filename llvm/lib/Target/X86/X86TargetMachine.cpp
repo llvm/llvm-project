@@ -489,6 +489,7 @@ void X86PassConfig::addPreLegalizeMachineIR() {
 }
 
 bool X86PassConfig::addILPOpts() {
+  addPass(&MachineConditionalComparesLegacyID);
   addPass(&EarlyIfConverterLegacyID);
   if (getX86TargetMachine().getCLOpts().machine_combiner)
     addPass(&MachineCombinerID);

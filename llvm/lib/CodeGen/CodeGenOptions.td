@@ -75,6 +75,15 @@ defm : BoolField<"profile-unknown-in-special-section", "false",
   "In profiling mode like sampleFDO, if a function doesn't have profile, we cannot tell the function is cold for sure because it may be a function newly added without ever being sampled. "
   "With the flag enabled, compiler can put such profile unknown functions into a special section, so runtime system can choose to handle it in a different way than .text section, to save RAM for example">;
 
+// MachineConditionalCompares.cpp
+// Absolute maximum number of instructions allowed per speculated block.
+// This bypasses all other heuristics, so it should be set fairly high.
+defm : ValueField<"machine-ccmp-limit", "unsigned", "30",
+  "Maximum number of instructions per speculated block">;
+// Stress testing mode - disable heuristics.
+defm : BoolField<"machine-stress-ccmp", "false",
+  "Turn all knobs to 11">;
+
 // TargetPassConfig.cpp
 defm : BoolField<"basic-block-section-match-infer", "false",
   "Enable matching and inference when generating basic block sections">;

@@ -41,15 +41,6 @@ defm : EnumField<"aarch64-ptrauth-auth-checks", "std::optional<AArch64PAuth::Ptr
 defm : ValueField<"aarch64-code-layout-opt-align-functions", "unsigned", "64",
   "Function alignment in bytes for code layout optimization (must be a power of 2)">;
 
-// AArch64ConditionalCompares.cpp
-// Absolute maximum number of instructions allowed per speculated block.
-// This bypasses all other heuristics, so it should be set fairly high.
-defm : ValueField<"aarch64-ccmp-limit", "unsigned", "30",
-  "Maximum number of instructions per speculated block">;
-// Stress testing mode - disable heuristics.
-defm : BoolField<"aarch64-stress-ccmp", "false",
-  "Turn all knobs to 11">;
-
 // AArch64FrameLowering.cpp
 defm : BoolField<"aarch64-disable-multivector-spill-fill", "false",
   "Disable use of LD/ST pairs for SME2 or SVE2p1">;
@@ -211,6 +202,8 @@ defm : EnumField<"aarch64-authenticated-lr-check-method", "std::optional<AArch64
   "Override the variant of check applied to authenticated LR during tail call">;
 defm : BoolField<"aarch64-early-ifcvt", "true",
   "Enable the early if converter pass">;
+defm : BoolField<"aarch64-enable-ccmp", "true",
+  "Enable the CCMP formation pass">;
 // Subreg liveness tracking is disabled by default for now until all issues
 // are ironed out. This option allows the feature to be used in tests.
 defm : BoolField<"aarch64-enable-subreg-liveness-tracking", "false",
@@ -243,8 +236,6 @@ defm : BoolField<"aarch64-enable-branch-relax", "true",
   "Relax out of range conditional branches">;
 defm : BoolField<"aarch64-enable-branch-targets", "true",
   "Enable the AArch64 branch target pass">;
-defm : BoolField<"aarch64-enable-ccmp", "true",
-  "Enable the CCMP formation pass">;
 defm : BoolField<"aarch64-enable-collect-loh", "true",
   "Enable the pass that emits the linker optimization hints (LOH)">;
 defm : BoolField<"aarch64-enable-compress-jump-tables", "true",
