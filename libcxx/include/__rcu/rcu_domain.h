@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct __rcu_node;
 class rcu_domain;
-struct _LIBCPP_EXPORTED_FROM_ABI __rcu_domain_export {
+struct _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU __rcu_domain_export {
   static rcu_domain& __rcu_default_domain() noexcept;
 
   static void __retire(rcu_domain& __dom, __rcu_node*) noexcept;

@@ -220,23 +220,34 @@ class rcu_domain::__impl : public rcu_domain_impl {};
 
 // exported symbols
 
-rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
-rcu_domain::~rcu_domain() = default;
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU rcu_domain::~rcu_domain() = default;
 
-rcu_domain& __rcu_domain_export::__rcu_default_domain() noexcept {
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU rcu_domain& __rcu_domain_export::__rcu_default_domain() noexcept {
   static rcu_domain default_domain;
   return default_domain;
 }
 
-void __rcu_domain_export::__lock(rcu_domain& dom) noexcept { dom.__pimpl_->lock(); }
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU void __rcu_domain_export::__lock(rcu_domain& dom) noexcept {
+  dom.__pimpl_->lock();
+}
 
-void __rcu_domain_export::__unlock(rcu_domain& dom) noexcept { dom.__pimpl_->unlock(); }
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU void __rcu_domain_export::__unlock(rcu_domain& dom) noexcept {
+  dom.__pimpl_->unlock();
+}
 
-void __rcu_domain_export::__retire(rcu_domain& dom, __rcu_node* node) noexcept { dom.__pimpl_->retire(node); }
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU void
+__rcu_domain_export::__retire(rcu_domain& dom, __rcu_node* node) noexcept {
+  dom.__pimpl_->retire(node);
+}
 
-void __rcu_domain_export::__synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(false); }
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU void __rcu_domain_export::__synchronize(rcu_domain& dom) noexcept {
+  dom.__pimpl_->synchronize(false);
+}
 
-void __rcu_domain_export::__barrier(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(true); }
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_RCU void __rcu_domain_export::__barrier(rcu_domain& dom) noexcept {
+  dom.__pimpl_->synchronize(true);
+}
 
 // exported symbols end
 
