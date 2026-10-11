@@ -96,6 +96,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  clearenv
+  SRCS
+    clearenv.cpp
+  HDRS
+    ../clearenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
   system
   SRCS
     system.cpp

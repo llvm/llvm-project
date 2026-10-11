@@ -397,9 +397,9 @@ defm : ValueField<"max-counter-promotions-per-loop", "unsigned", "20",
   "Max number counter promotions per loop to avoid increasing register pressure too much">;
 defm : ValueField<"offload-pgo-sampling", "unsigned", "3",
   "Log2 of the sampling period for offload PGO instrumentation. Only 1 in every 2^N blocks is instrumented. 0 = all blocks, 1 = 50%, 2 = 25%, 3 = 12.5%. Higher values reduce overhead at the cost of sparser profiles">;
-defm : EnumField<"profile-correlate", "InstrProfCorrelator::ProfCorrelatorKind", "InstrProfCorrelator::NONE",
+defm : OptionalEnumField<"profile-correlate", "ProfCorrelatorKind",
   "debug-info,binary",
-  ["InstrProfCorrelator::DEBUG_INFO", "InstrProfCorrelator::BINARY"],
+  ["ProfCorrelatorKind::DebugInfo", "ProfCorrelatorKind::Binary"],
   "Use debug info or binary file to correlate profiles">;
 defm : OptionalBoolField<"runtime-counter-relocation",
   "Enable relocating counters at runtime">;
