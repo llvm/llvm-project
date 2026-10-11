@@ -30,15 +30,18 @@ llvm::Constant *mlir::LLVM::createSourceLocStrFromLocation(
   return builder.getOrCreateSrcLocStr(locStr, strLen);
 }
 
-llvm::Constant *
-mlir::LLVM::createMappingInformation(Location loc,
-                                     llvm::OpenMPIRBuilder &builder) {
+llvm::Constant *mlir::LLVM::createMappingInformation(
+    Location loc, llvm::OpenMPIRBuilder &builder, StringRef mapName) {
   uint32_t strLen;
+  Location childLoc = loc;
+  StringRef name = mapName;
   if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
-    StringRef name = nameLoc.getName();
-    return createSourceLocStrFromLocation(nameLoc.getChildLoc(), builder, name,
-                                          strLen, /*forOffloadMap=*/true);
+    childLoc = nameLoc.getChildLoc();
+    if (name.empty())
+      name = nameLoc.getName();
   }
-  return createSourceLocStrFromLocation(loc, builder, "unknown", strLen,
+  if (name.empty())
+    name = "unknown";
+  return createSourceLocStrFromLocation(childLoc, builder, name, strLen,
                                         /*forOffloadMap=*/true);
 }

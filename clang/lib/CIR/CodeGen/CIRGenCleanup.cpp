@@ -33,6 +33,10 @@ class ConditionalEvaluationFinder
   bool foundConditional = false;
 
 public:
+  // Default arguments and default member initializers can contain conditional
+  // temporaries whose cleanups belong to the enclosing full-expression.
+  bool shouldVisitImplicitCode() const { return true; }
+
   bool found() const { return foundConditional; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
@@ -59,10 +63,31 @@ public:
     return true;
   }
 
-  // Don't cross evaluation-context boundaries.
-  bool TraverseLambdaExpr(LambdaExpr *) { return true; }
+  // Don't cross evaluation-context boundaries. Only the initializers of a
+  // lambda's captures are part of the enclosing full-expression.
+  bool TraverseLambdaExpr(LambdaExpr *e) {
+    for (Expr *init : e->capture_inits())
+      if (init && !TraverseStmt(init))
+        return false;
+    return true;
+  }
   bool TraverseBlockExpr(BlockExpr *) { return true; }
   bool TraverseStmtExpr(StmtExpr *) { return true; }
+
+  // Skip over the implicit call to await_resume(). This requires cleanup
+  // scopes for await full-expressions which don't exist yet.
+  bool TraverseCoawaitExpr(CoawaitExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
+  bool TraverseDependentCoawaitExpr(DependentCoawaitExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
+  bool TraverseCoyieldExpr(CoyieldExpr *e) {
+    assert(!cir::MissingFeatures::coroAwaitFullExprCleanups());
+    return TraverseStmt(e->getOperand());
+  }
 };
 } // namespace
 
@@ -428,10 +453,10 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
       skipCleanupScope = true;
   }
 
-  // While emitting a loop's condition variable, suppress cir.cleanup.scope
-  // creation. The variable's cleanups are captured on the EH stack and later
-  // emitted into the loop op's per-iteration cleanup region.
-  if (capturingLoopConditionCleanups)
+  // While emitting a variable with captured cleanups, suppress
+  // cir.cleanup.scope creation. The variable's cleanups are captured on the EH
+  // stack and later emitted into the cleanup region of the op that owns them.
+  if (capturingCleanups)
     skipCleanupScope = true;
 
   cir::CleanupScopeOp cleanupScope = nullptr;
@@ -790,17 +815,17 @@ void CIRGenFunction::popCleanupBlock(bool forDeactivation) {
   emitCleanup(*this, cleanupScope, cleanup, cleanupFlags, cleanupActiveFlag);
 }
 
-void CIRGenFunction::emitLoopConditionCleanups(
-    EHScopeStack::stable_iterator depth, mlir::Location loc) {
-  // The captured cleanups were pushed while emitting the loop's condition
-  // variable with EHScopeStack capturing condition cleanups, so they own no
-  // cir.cleanup.scope. Emit them directly into the loop's cleanup region (the
-  // current insertion point), popping each off the EH stack.
+void CIRGenFunction::emitCapturedCleanups(EHScopeStack::stable_iterator depth,
+                                          mlir::Location loc) {
+  // The captured cleanups were pushed while EHScopeStack was capturing
+  // cleanups, so they own no cir.cleanup.scope. Emit them directly into the
+  // owning op's cleanup region (the current insertion point), popping each off
+  // the EH stack.
   while (ehStack.stable_begin() != depth) {
     assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     assert(!scope.getCleanupScopeOp() &&
-           "captured loop-condition cleanup should not own a cleanup scope");
+           "captured cleanup should not own a cleanup scope");
 
     EHScopeStack::Cleanup::Flags cleanupFlags;
     if (scope.isNormalCleanup())
@@ -808,10 +833,11 @@ void CIRGenFunction::emitLoopConditionCleanups(
     if (scope.isEHCleanup())
       cleanupFlags.setIsEHCleanupKind();
 
-    // A condition variable's destructor cleanup is guarded by an active flag
-    // that is false while its initializer runs, so a throwing initializer does
-    // not destroy the not-yet-constructed variable. The lifetime-end cleanup
-    // has no flag because its lifetime starts before initialization. Each
+    // A captured cleanup may be guarded by an active flag. A loop condition
+    // variable's destructor cleanup has one that is false while its
+    // initializer runs, so a throwing initializer does not destroy the
+    // not-yet-constructed variable. The lifetime-end cleanup has no flag
+    // because its lifetime starts before initialization. For a loop, each
     // emission serves both the normal per-iteration exit and the EH unwind
     // path.
     Address activeFlag = scope.getActiveFlag();

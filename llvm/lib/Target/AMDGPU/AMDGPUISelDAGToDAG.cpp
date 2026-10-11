@@ -1017,6 +1017,10 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectSTACKRESTORE(N);
     return;
   }
+  case ISD::WRITE_REGISTER: {
+    SelectWRITE_REGISTER(N);
+    return;
+  }
   }
 
   SelectCode(N);
@@ -2170,7 +2174,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
-      if (COffsetVal > 0) {
+      if (COffsetVal != 0) {
         SDLoc SL(N);
         // saddr + large_offset -> saddr +
         //                         (voffset = large_offset & ~MaxOffset) +
@@ -2185,10 +2189,12 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                             : isUInt<32>(RemainderOffset)) {
           SDNode *VMov = CurDAG->getMachineNode(
               AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
-              CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
+              CurDAG->getTargetConstant(Lo_32(RemainderOffset), SDLoc(),
+                                        MVT::i32));
           VOffset = SDValue(VMov, 0);
           SAddr = LHS;
-          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
+          Offset = CurDAG->getSignedTargetConstant(SplitImmOffset, SDLoc(),
+                                                   MVT::i32);
           return true;
         }
       }
@@ -3543,6 +3549,55 @@ void AMDGPUDAGToDAGISel::SelectSTACKRESTORE(SDNode *N) {
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), CopyToSP);
 }
 
+void AMDGPUDAGToDAGISel::SelectWRITE_REGISTER(SDNode *N) {
+  const MDString *RegStr = cast<MDString>(
+      cast<MDNodeSDNode>(N->getOperand(1))->getMD()->getOperand(0));
+  SDValue SrcVal = N->getOperand(2);
+  EVT VT = SrcVal.getValueType();
+  Register Reg = TLI->getRegisterByName(RegStr->getString().data(),
+                                        getLLTForMVT(VT.getSimpleVT()),
+                                        CurDAG->getMachineFunction());
+  if (!Reg) {
+    const Function &Fn = CurDAG->getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+        "invalid register \"" + Twine(RegStr->getString()) +
+            "\" for llvm.write_register",
+        Fn, N->getDebugLoc()));
+    ReplaceUses(SDValue(N, 0), N->getOperand(0));
+    CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
+  // Speculatively insert a readfirstlane in case the source value ends up in a
+  // VGPR, which hopefully will fold away if not.
+  SDLoc SL(N);
+  SDValue CopyVal;
+  if (isa<ConstantSDNode>(SrcVal)) {
+    CopyVal = SrcVal;
+  } else if (VT == MVT::i32) {
+    CopyVal = SDValue(CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, SL,
+                                             MVT::i32, SrcVal),
+                      0);
+  } else {
+    assert(VT == MVT::i64);
+    SDValue Lo =
+        CurDAG->getTargetExtractSubreg(AMDGPU::sub0, SL, MVT::i32, SrcVal);
+    SDValue Hi =
+        CurDAG->getTargetExtractSubreg(AMDGPU::sub1, SL, MVT::i32, SrcVal);
+    Lo = SDValue(
+        CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, SL, MVT::i32, Lo),
+        0);
+    Hi = SDValue(
+        CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, SL, MVT::i32, Hi),
+        0);
+    CopyVal = emitRegSequence(*CurDAG, AMDGPU::SReg_64RegClassID, VT, {Lo, Hi},
+                              {AMDGPU::sub0, AMDGPU::sub1}, SL);
+  }
+
+  SDValue CopyToReg = CurDAG->getCopyToReg(N->getOperand(0), SL, Reg, CopyVal);
+  CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), CopyToReg);
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
                                             unsigned &Mods,
                                             bool IsCanonicalizing,
@@ -4344,16 +4399,28 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex32(SDValue In, SDValue &Src,
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
+  unsigned Mods = SISrcMods::NONE;
   Src = In;
-  // FIXME: Handle op_sel
-  SrcMods = CurDAG->getTargetConstant(0, SDLoc(In), MVT::i32);
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
   return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSelMods(SDValue In, SDValue &Src,
                                              SDValue &SrcMods) const {
-  // FIXME: Handle op_sel
-  return SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods;
+  if (!SelectVOP3ModsImpl(In, Src, Mods, /*IsCanonicalizing=*/true,
+                          /*AllowAbs=*/true))
+    return false;
+
+  if (!Subtarget->useRealTrue16Insts() && In.getValueSizeInBits() == 16 &&
+      isExtractHiElt(Src, Src))
+    Mods |= SISrcMods::OP_SEL_0;
+
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
 }
 
 // Match lowered fpext from bf16 to f32. This is a bit operation extending

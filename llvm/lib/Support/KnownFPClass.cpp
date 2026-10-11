@@ -815,20 +815,15 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
 
   Known.propagateNonSNaN(KnownSrc);
 
-  // Any negative value besides -0.0 returns a nan.
+  // Any negative value besides -0 returns a nan.
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(fcNan);
 
-  // The only negative value that can be returned is -0.0 for -0.0 inputs.
+  // The only negative value that can be returned is -0 for -0 inputs.
   Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
 
-  // Only sqrt(+0.0) == +0.0. However, subnormals may also be treated as +0.0
-  // depending on the input denormal mode.
-  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
-    Known.knownNot(fcPosZero);
-
-  // Only sqrt(-0.0) == -0.0. However, negative subnormals may also be treated
-  // as -0.0 depending on the input denormal mode.
+  // If the input denormal mode could be PreserveSign, a negative
+  // subnormal input could produce a negative zero output.
   if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
     Known.knownNot(fcNegZero);
 
@@ -1028,8 +1023,8 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
 }
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
-                                           bool IsTrunc,
-                                           bool IsMultiUnitFPType) {
+                                           bool IsTrunc, bool IsMultiUnitFPType,
+                                           DenormalMode Mode) {
   KnownFPClass Known;
 
   // Integer results cannot be subnormal.
@@ -1046,11 +1041,21 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
       Known.knownNot(fcNegInf);
   }
 
-  // Negative round ups to 0 produce -0
-  if (KnownSrc.isKnownNever(fcPosFinite))
-    Known.knownNot(fcPosFinite);
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal);
+
+  // Negative round ups towards zero produce negative zero.
   if (KnownSrc.isKnownNever(fcNegFinite))
-    Known.knownNot(fcNegFinite);
+    Known.knownNot(fcNegZero);
+
+  // Negative subnormals may flush to positive zero.
+  if (KnownSrc.isKnownNever(fcPosFinite) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) ||
+       !Mode.inputsMayBePositiveZero()))
+    Known.knownNot(fcPosZero);
 
   return Known;
 }

@@ -53,6 +53,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1210,6 +1211,11 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(
         Ops[0], Ops[1], cast<ShuffleVectorInst>(InstOrCE)->getShuffleMask());
+  case Instruction::BitInsert:
+    return ConstantFoldBitInsertOperands(Ops[0], Ops[1], Ops[2], DL);
+  case Instruction::BitExtract:
+    return ConstantFoldBitExtractOperands(InstOrCE->getType(), Ops[0], Ops[1],
+                                          DL);
   case Instruction::Load: {
     const auto *LI = dyn_cast<LoadInst>(InstOrCE);
     if (LI->isVolatile())
@@ -1729,6 +1735,87 @@ Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,
   return ConstantFoldCastOperand(Instruction::ZExt, C, DestTy, DL);
 }
 
+Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
+                                              Constant *Offset,
+                                              const DataLayout &DL) {
+  // bitinsert C, C, undef -> poison
+  if (isa<UndefValue>(Offset))
+    return PoisonValue::get(Base->getType());
+
+  // bitinsert poison, poison, C -> poison
+  if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
+    return Base;
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // bitinsert C, C, out_of_range -> poison
+  unsigned BaseBits = DL.getTypeSizeInBits(Base->getType());
+  unsigned Bits = DL.getTypeSizeInBits(Val->getType());
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > BaseBits)
+    return PoisonValue::get(Base->getType());
+
+  // Overwriting every bit of the base is a bitcast of the value.
+  if (Bits == BaseBits)
+    return ConstantFoldCastOperand(Instruction::BitCast, Val, Base->getType(),
+                                   DL);
+
+  // bitinsert undef, undef, C -> undef
+  // Any poison bits are refined to undef.
+  if (isa<UndefValue>(Base) && isa<UndefValue>(Val))
+    return UndefValue::get(Base->getType());
+
+  // A byte constant can't mix poison or undef bits with other bits.
+  auto *CB = dyn_cast<ConstantByte>(Base);
+  // The value bits are unknown.
+  if (!CB || isa<ConstantExpr>(Val) || Val->getType()->isPointerTy())
+    return nullptr;
+
+  auto *CI = dyn_cast_or_null<ConstantInt>(
+      ConstantFoldCastOperand(Instruction::BitCast, Val,
+                              IntegerType::get(Base->getContext(), Bits), DL));
+  if (!CI)
+    return nullptr;
+
+  APInt Res = CB->getValue();
+  Res.insertBits(CI->getValue(), Off);
+  return ConstantByte::get(Base->getType(), Res);
+}
+
+Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
+                                               Constant *Offset,
+                                               const DataLayout &DL) {
+  // bitextract poison, C -> poison
+  // bitextract C, undef -> poison
+  if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
+    return PoisonValue::get(Ty);
+
+  auto *COffset = dyn_cast<ConstantInt>(Offset);
+  if (!COffset)
+    return nullptr;
+
+  // bitextract C, out_of_range -> poison
+  unsigned Bits = DL.getTypeSizeInBits(Ty);
+  uint64_t Off = COffset->getZExtValue();
+  if (Off + Bits > DL.getTypeSizeInBits(Src->getType()))
+    return PoisonValue::get(Ty);
+
+  // bitextract undef, C -> undef
+  if (isa<UndefValue>(Src))
+    return UndefValue::get(Ty);
+
+  auto *CB = dyn_cast<ConstantByte>(Src);
+  // An integer can't be bitcast to a pointer.
+  if (!CB || Ty->isPointerTy())
+    return nullptr;
+
+  APInt Res = CB->getValue().extractBits(Bits, Off);
+  return ConstantFoldCastOperand(
+      Instruction::BitCast, ConstantInt::get(Src->getContext(), Res), Ty, DL);
+}
+
 //===----------------------------------------------------------------------===//
 //  Constant Folding for Calls
 //
@@ -1817,6 +1904,14 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  case Intrinsic::aarch64_crc32b:
+  case Intrinsic::aarch64_crc32h:
+  case Intrinsic::aarch64_crc32w:
+  case Intrinsic::aarch64_crc32x:
+  case Intrinsic::aarch64_crc32cb:
+  case Intrinsic::aarch64_crc32ch:
+  case Intrinsic::aarch64_crc32cw:
+  case Intrinsic::aarch64_crc32cx:
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
@@ -1824,6 +1919,10 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -2003,9 +2102,11 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !IsStrictFP;
 
-  // NVVM add intrinsics with explicit rounding modes
+  // NVVM fadd/fmul intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
 
   // NVVM div intrinsics with explicit rounding modes
   case Intrinsic::nvvm_div_rm_d:
@@ -2020,20 +2121,6 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_div_rn_ftz_f:
   case Intrinsic::nvvm_div_rp_ftz_f:
   case Intrinsic::nvvm_div_rz_ftz_f:
-
-  // NVVM mul intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_mul_rm_d:
-  case Intrinsic::nvvm_mul_rn_d:
-  case Intrinsic::nvvm_mul_rp_d:
-  case Intrinsic::nvvm_mul_rz_d:
-  case Intrinsic::nvvm_mul_rm_f:
-  case Intrinsic::nvvm_mul_rn_f:
-  case Intrinsic::nvvm_mul_rp_f:
-  case Intrinsic::nvvm_mul_rz_f:
-  case Intrinsic::nvvm_mul_rm_ftz_f:
-  case Intrinsic::nvvm_mul_rn_ftz_f:
-  case Intrinsic::nvvm_mul_rp_ftz_f:
-  case Intrinsic::nvvm_mul_rz_ftz_f:
 
   // NVVM fma intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fma_rm_d:
@@ -3488,6 +3575,17 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   return nullptr;
 }
 
+static Constant *ConstantFoldCRC32(Type *Ty, const APInt *CrcArg,
+                                   const APInt *DataArg, unsigned DataBytes,
+                                   uint32_t Poly) {
+  if (!CrcArg || !DataArg)
+    return nullptr;
+  uint32_t Crc = CrcArg->getZExtValue();
+  uint64_t Data = DataArg->getZExtValue();
+  uint32_t Result = calculateReflectedCRC32(Crc, Data, DataBytes, Poly);
+  return ConstantInt::get(Ty, Result);
+}
+
 static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                             ArrayRef<Constant *> Operands,
                                             const CallBase *Call = nullptr) {
@@ -3673,37 +3771,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           Res.changeSign();
 
         return ConstantFP::get(Ty, Res);
-      }
-
-      case Intrinsic::nvvm_mul_rm_f:
-      case Intrinsic::nvvm_mul_rn_f:
-      case Intrinsic::nvvm_mul_rp_f:
-      case Intrinsic::nvvm_mul_rz_f:
-      case Intrinsic::nvvm_mul_rm_d:
-      case Intrinsic::nvvm_mul_rn_d:
-      case Intrinsic::nvvm_mul_rp_d:
-      case Intrinsic::nvvm_mul_rz_d:
-      case Intrinsic::nvvm_mul_rm_ftz_f:
-      case Intrinsic::nvvm_mul_rn_ftz_f:
-      case Intrinsic::nvvm_mul_rp_ftz_f:
-      case Intrinsic::nvvm_mul_rz_ftz_f: {
-
-        bool IsFTZ = nvvm::FMulShouldFTZ(IntrinsicID);
-        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
-        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
-
-        APFloat::roundingMode RoundMode =
-            nvvm::GetFMulRoundingMode(IntrinsicID);
-
-        APFloat Res = A;
-        APFloat::opStatus Status = Res.multiply(B, RoundMode);
-
-        if (!Res.isNaN() &&
-            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-          return ConstantFP::get(Ty, Res);
-        }
-        return nullptr;
       }
 
       case Intrinsic::nvvm_div_rm_f:
@@ -3969,6 +4036,26 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::amdgcn_wave_reduce_and:
     case Intrinsic::amdgcn_wave_reduce_or:
       return Operands[0];
+    case Intrinsic::aarch64_crc32b:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0xEDB88320);
+    case Intrinsic::aarch64_crc32h:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0xEDB88320);
+    case Intrinsic::aarch64_crc32w:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0xEDB88320);
+    case Intrinsic::aarch64_crc32x:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0xEDB88320);
+    case Intrinsic::aarch64_crc32cb:
+    case Intrinsic::x86_sse42_crc32_32_8:
+      return ConstantFoldCRC32(Ty, C0, C1, 1, 0x82F63B78);
+    case Intrinsic::aarch64_crc32ch:
+    case Intrinsic::x86_sse42_crc32_32_16:
+      return ConstantFoldCRC32(Ty, C0, C1, 2, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cw:
+    case Intrinsic::x86_sse42_crc32_32_32:
+      return ConstantFoldCRC32(Ty, C0, C1, 4, 0x82F63B78);
+    case Intrinsic::aarch64_crc32cx:
+    case Intrinsic::x86_sse42_crc32_64_64:
+      return ConstantFoldCRC32(Ty, C0, C1, 8, 0x82F63B78);
     }
 
     return nullptr;
@@ -4240,17 +4327,24 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
       }
 
       // TODO: Add constant folding for the _sat variants.
-      if (IntrinsicID == Intrinsic::nvvm_fadd ||
-          IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
-        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+      const bool IsFAdd = IntrinsicID == Intrinsic::nvvm_fadd ||
+                          IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+      const bool IsFMul = IntrinsicID == Intrinsic::nvvm_fmul ||
+                          IntrinsicID == Intrinsic::nvvm_fmul_ftz;
+      if (IsFAdd || IsFMul) {
+        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz ||
+                     IntrinsicID == Intrinsic::nvvm_fmul_ftz;
         APFloat A =
             IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
         APFloat B =
             IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
 
+        APFloat::roundingMode RoundMode =
+            nvvm::GetRoundingModeFromImmArg(Operands[2]);
+
         APFloat Res = A;
         APFloat::opStatus Status =
-            Res.add(B, nvvm::GetRoundingModeFromImmArg(Operands[2]));
+            IsFAdd ? Res.add(B, RoundMode) : Res.multiply(B, RoundMode);
 
         if (!Res.isNaN() &&
             (Status == APFloat::opOK || Status == APFloat::opInexact)) {
@@ -4549,6 +4643,8 @@ static Constant *ConstantFoldFixedVectorCall(
   }
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
     // The rounding mode operand is a scalar, so the lane-wise folding below
     // does not apply.
     // TODO: Fold these by passing the rounding mode through to every lane.

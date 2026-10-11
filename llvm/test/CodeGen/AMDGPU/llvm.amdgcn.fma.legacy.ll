@@ -87,7 +87,7 @@ define float @v_fma_imm(float %a, float %c)  {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, 0x41200000, v0, v1
+; GFX12-NEXT:    v_fma_dx9_zero_f32 v0, v0, 0x41200000, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fma = call float @llvm.amdgcn.fma.legacy(float %a, float 10.0, float %c)
   ret float %fma

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
@@ -1530,6 +1531,41 @@ cc_library(
     ],
 )
 
+copy_file(
+    name = "generate_inliner_model1_h",
+    src = "lib/Analysis/models/inline-oz-test-model.inc",
+    out = "include/llvm/Analysis/inliner_Model1.h",
+)
+
+write_file(
+    name = "generate_inliner_models_def",
+    out = "include/llvm/Analysis/InlinerModels.def",
+    content = [
+        "/* Auto-generated */",
+        "#ifndef MLGO_MODEL",
+        "#  define MLGO_MODEL(CLASS_NAME, CLI_FLAG)",
+        "#endif",
+        "",
+        "MLGO_MODEL(inliner_Model1, \"_test_inc\")",
+        "",
+        "#undef MLGO_MODEL",
+    ],
+)
+
+write_file(
+    name = "generate_inliner_models_h",
+    out = "include/llvm/Analysis/InlinerModels.h",
+    content = [
+        "/* Auto-generated */",
+        "namespace llvm {",
+        "namespace inliner_Model1_ns {",
+        "#include \"llvm/Analysis/inliner_Model1.h\"",
+        "} // namespace inliner_Model1_ns",
+        "using inliner_Model1 = inliner_Model1_ns::Model;",
+        "} // namespace llvm",
+    ],
+)
+
 cc_library(
     name = "Analysis",
     srcs = glob(
@@ -1540,7 +1576,11 @@ cc_library(
             "include/llvm/Analysis/*.h",
             "include/llvm/Analysis/Utils/*.h",
         ],
-    ) + ["include/llvm-c/Analysis.h"],
+    ) + [
+        "include/llvm-c/Analysis.h",
+        "include/llvm/Analysis/InlinerModels.h",
+        "include/llvm/Analysis/inliner_Model1.h",
+    ],
     copts = llvm_copts + select({
         ":is_windows_clang_cl": ["/fp:except"],
         ":is_windows_msvc": ["/fp:except"],
@@ -1550,7 +1590,9 @@ cc_library(
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
-    ]),
+    ]) + [
+        "include/llvm/Analysis/InlinerModels.def",
+    ],
     deps = [
         ":BinaryFormat",
         ":Core",
@@ -1900,6 +1942,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InstrumentationOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Instrumentation",
+    tbl_outs = {
+        "lib/Transforms/Instrumentation/InstrumentationOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Instrumentation/InstrumentationOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Instrumentation",
     srcs = glob([
@@ -1917,7 +1970,9 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOffloading",
+        ":InstrumentationOptionsTableGen",
         ":MC",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -1965,10 +2020,22 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "ScalarOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Scalar",
+    tbl_outs = {
+        "lib/Transforms/Scalar/ScalarOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Scalar/ScalarOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Scalar",
     srcs = glob([
         "lib/Transforms/Scalar/*.cpp",
+        "lib/Transforms/Scalar/*.h",
     ]),
     hdrs = glob(["include/llvm/Transforms/Scalar/*.h"]) + [
         "include/llvm/Transforms/Scalar.h",
@@ -1981,7 +2048,9 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":InstCombine",
+        ":Option",
         ":ProfileData",
+        ":ScalarOptionsTableGen",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -2037,6 +2106,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Instrumentation",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -2463,6 +2533,41 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+copy_file(
+    name = "generate_regalloc_model1_h",
+    src = "lib/Analysis/models/regalloc-eviction-test-model.inc",
+    out = "include/llvm/CodeGen/regalloc_Model1.h",
+)
+
+write_file(
+    name = "generate_regalloc_evict_models_def",
+    out = "include/llvm/CodeGen/RegAllocEvictModels.def",
+    content = [
+        "/* Auto-generated */",
+        "#ifndef MLGO_MODEL",
+        "#  define MLGO_MODEL(CLASS_NAME, CLI_FLAG)",
+        "#endif",
+        "",
+        "MLGO_MODEL(regalloc_Model1, \"_test_inc\")",
+        "",
+        "#undef MLGO_MODEL",
+    ],
+)
+
+write_file(
+    name = "generate_regalloc_evict_models_h",
+    out = "include/llvm/CodeGen/RegAllocEvictModels.h",
+    content = [
+        "/* Auto-generated */",
+        "namespace llvm {",
+        "namespace regalloc_Model1_ns {",
+        "#include \"llvm/CodeGen/regalloc_Model1.h\"",
+        "} // namespace regalloc_Model1_ns",
+        "using regalloc_Model1 = regalloc_Model1_ns::Model;",
+        "} // namespace llvm",
+    ],
+)
+
 cc_library(
     name = "CodeGen",
     srcs = glob(
@@ -2474,6 +2579,8 @@ cc_library(
         ],
     ),
     hdrs = [
+        "include/llvm/CodeGen/RegAllocEvictModels.h",
+        "include/llvm/CodeGen/regalloc_Model1.h",
         "include/llvm/LinkAllPasses.h",
     ] + glob(
         [
@@ -2484,7 +2591,9 @@ cc_library(
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/CodeGen/**/*.def",
-    ]),
+    ]) + [
+        "include/llvm/CodeGen/RegAllocEvictModels.def",
+    ],
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
@@ -2656,6 +2765,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-exegesis"],
                 "lib/Target/AArch64/AArch64GenExegesis.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":AArch64MCOptionsTableGen",
+            ":AArch64OptionsTableGen",
         ],
     },
     {
@@ -3390,6 +3503,8 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":RISCVMCOptionsTableGen",
+            ":RISCVOptionsTableGen",
             ":riscv_isel_target_gen",
         ],
     },
@@ -4000,6 +4115,42 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AArch64MCOptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/MCTargetDesc/AArch64MCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "AArch64OptionsTableGen",
+    strip_include_prefix = "lib/Target/AArch64",
+    tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/MCTargetDesc/RISCVMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "RISCVOptionsTableGen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = {"lib/Target/RISCV/RISCVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCVOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SparcOptionsTableGen",
     strip_include_prefix = "lib/Target/Sparc",
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4369,10 +4520,20 @@ cc_library(
     textual_hdrs = ["lib/Passes/PassRegistry.def"],
 )
 
+gentbl_cc_library(
+    name = "PassesOptionsTableGen",
+    strip_include_prefix = "lib/Passes",
+    tbl_outs = {"lib/Passes/PassesOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Passes/PassesOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Passes",
     srcs = glob([
         "lib/Passes/*.cpp",
+        "lib/Passes/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Passes/*.h",
@@ -4394,6 +4555,8 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":ObjCARC",
+        ":Option",
+        ":PassesOptionsTableGen",
         ":Plugins",
         ":Scalar",
         ":Support",

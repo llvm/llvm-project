@@ -18567,6 +18567,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
   }
 
+  // vt (bitcast (scalar_to_vector vt:x)) -> x
+  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+      N0.getOperand(0).getValueType() == VT)
+    return N0.getOperand(0);
+
   // Remove double bitcasts from shuffles - this is often a legacy of
   // XformToShuffleWithZero being used to combine bitmaskings (of
   // float vectors bitcast to integer vectors) into shuffles.
@@ -20745,6 +20750,32 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  // fold (uint_to_fp x) -> (uint_to_fp (trunc x)) when the value of x is known
+  // to fit in a narrower type the target can convert from directly.
+  LLVMContext &Ctx = *DAG.getContext();
+  unsigned ScalarBits = OpVT.getScalarSizeInBits();
+  unsigned ActiveBits = DAG.computeKnownBits(N0).countMaxActiveBits();
+  for (unsigned Bits = bit_ceil(ActiveBits); Bits < ScalarBits; Bits *= 2) {
+    EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
+
+    // Vector conversion is unrolled to scalars, but truncate is not.
+    if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
+        !TLI.isTruncateFree(N0, NarrowVT))
+      continue;
+
+    // Avoid creating an illegal vector type before type legalization.
+    if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
+      continue;
+
+    // Avoid undoing a target combine that widened the source operand.
+    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+        NarrowVT == N0.getOperand(0).getValueType())
+      continue;
+
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Trunc);
+  }
 
   // fold (uint_to_fp (trunc nuw x)) -> (uint_to_fp x)
   if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoUnsignedWrap() &&
@@ -31919,14 +31950,14 @@ SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getRecipEstimateDivEnabled(VT, MF);
+  const Function &F = DAG.getMachineFunction().getFunction();
+  int Enabled = TLI.getRecipEstimateDivEnabled(VT, F);
   if (Enabled == TLI.ReciprocalEstimate::Disabled)
     return SDValue();
 
   // Estimates may be explicitly enabled for this type with a custom number of
   // refinement steps.
-  int Iterations = TLI.getDivRefinementSteps(VT, MF);
+  int Iterations = TLI.getDivRefinementSteps(VT, F);
   if (SDValue Est = TLI.getRecipEstimate(Op, DAG, Enabled, Iterations)) {
     AddToWorklist(Est.getNode());
 
@@ -32057,14 +32088,14 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal,
     return SDValue();
 
   // If estimates are explicitly disabled for this function, we're done.
-  MachineFunction &MF = DAG.getMachineFunction();
-  int Enabled = TLI.getRecipEstimateSqrtEnabled(VT, MF);
+  const Function &F = DAG.getMachineFunction().getFunction();
+  int Enabled = TLI.getRecipEstimateSqrtEnabled(VT, F);
   if (Enabled == TLI.ReciprocalEstimate::Disabled)
     return SDValue();
 
   // Estimates may be explicitly enabled for this type with a custom number of
   // refinement steps.
-  int Iterations = TLI.getSqrtRefinementSteps(VT, MF);
+  int Iterations = TLI.getSqrtRefinementSteps(VT, F);
 
   bool UseOneConstNR = false;
   if (SDValue Est =

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,7 +32,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -53,23 +53,6 @@ static const char *const kTysanShadowMemoryAddress =
     "__tysan_shadow_memory_address";
 static const char *const kTysanAppMemMask = "__tysan_app_memory_mask";
 
-static cl::opt<bool>
-    ClWritesAlwaysSetType("tysan-writes-always-set-type",
-                          cl::desc("Writes always set the type"), cl::Hidden,
-                          cl::init(false));
-
-static cl::opt<bool> ClOutlineInstrumentation(
-    "tysan-outline-instrumentation",
-    cl::desc("Uses function calls for all TySan instrumentation, reducing "
-             "ELF size"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClVerifyOutlinedInstrumentation(
-    "tysan-verify-outlined-instrumentation",
-    cl::desc("Check types twice with both inlined instrumentation and "
-             "function calls. This verifies that they behave the same."),
-    cl::Hidden, cl::init(false));
-
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
 namespace {
@@ -77,9 +60,12 @@ namespace {
 /// TypeSanitizer: instrument the code in module to find type-based aliasing
 /// violations.
 struct TypeSanitizer {
-  TypeSanitizer(Module &M);
+  TypeSanitizer(const InstrumentationOptions &Opts, Module &M);
   bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
   void instrumentGlobals(Module &M);
+
+  const InstrumentationOptions &Opts;
+  bool OutlineInstrumentation;
 
 private:
   typedef SmallDenseMap<const MDNode *, GlobalVariable *, 8>
@@ -132,8 +118,9 @@ private:
 };
 } // namespace
 
-TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(M.getTargetTriple()),
+TypeSanitizer::TypeSanitizer(const InstrumentationOptions &Opts, Module &M)
+    : Opts(Opts), OutlineInstrumentation(Opts.tysan_outline_instrumentation),
+      TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
@@ -145,7 +132,7 @@ TypeSanitizer::TypeSanitizer(Module &M)
 
 void TypeSanitizer::initializeCallbacks(Module &M) {
   LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   OrdTy = IRB.getInt32Ty();
   U64Ty = IRB.getInt64Ty();
   Type *BoolType = IRB.getInt1Ty();
@@ -650,8 +637,8 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *TD = IRB.CreateBitCast(TDGV, IRB.getPtrTy());
 
-  if (ClOutlineInstrumentation) {
-    if (!ForceSetType && (!ClWritesAlwaysSetType || IsRead)) {
+  if (OutlineInstrumentation) {
+    if (!ForceSetType && (!Opts.tysan_writes_always_set_type || IsRead)) {
       // We need to check the type here. If the type is unknown, then the read
       // sets the type. If the type is known, then it is checked. If the type
       // doesn't match, then we call the runtime type check (which may yet
@@ -700,14 +687,14 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
     }
   };
 
-  if (ForceSetType || (ClWritesAlwaysSetType && IsWrite)) {
+  if (ForceSetType || (Opts.tysan_writes_always_set_type && IsWrite)) {
     // In the mode where writes always set the type, for a write (which does
     // not also read), we just set the type.
     SetType();
     return true;
   }
 
-  assert((!ClWritesAlwaysSetType || IsRead) &&
+  assert((!Opts.tysan_writes_always_set_type || IsRead) &&
          "should have handled case above");
   LLVMContext &C = IRB.getContext();
   MDNode *UnlikelyBW = MDBuilder(C).createBranchWeights(1, 100000);
@@ -917,7 +904,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
     }
   }
 
-  if (ClOutlineInstrumentation) {
+  if (OutlineInstrumentation) {
     if (!Src)
       Src = ConstantPointerNull::get(IRB.getPtrTy());
 
@@ -974,7 +961,8 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
                                           kTysanInitName, /*InitArgTypes=*/{},
                                           /*InitArgs=*/{});
 
-  TypeSanitizer TySan(M);
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  TypeSanitizer TySan(Opts, M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);
 
@@ -982,15 +970,16 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
   for (Function &F : M) {
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     TySan.sanitizeFunction(F, TLI);
-    if (ClVerifyOutlinedInstrumentation && ClOutlineInstrumentation) {
+    if (Opts.tysan_verify_outlined_instrumentation &&
+        Opts.tysan_outline_instrumentation) {
       // Outlined instrumentation is a new option, and so this exists to
       // verify there is no difference in behaviour between the options.
       // If the outlined instrumentation triggers a verification failure
       // when the original inlined instrumentation does not, or vice versa,
       // then there is a discrepency which should be investigated.
-      ClOutlineInstrumentation = false;
+      TySan.OutlineInstrumentation = false;
       TySan.sanitizeFunction(F, TLI);
-      ClOutlineInstrumentation = true;
+      TySan.OutlineInstrumentation = true;
     }
   }
 

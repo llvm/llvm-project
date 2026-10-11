@@ -3211,7 +3211,7 @@ define amdgpu_cs void @amdgpu_cs_v16i1(<16 x i1> %arg0) {
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v1.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -3651,10 +3651,10 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v1.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v17.l, v2.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, 0xff, v1.h
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v1.h, 0xff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v2.l, v1.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
