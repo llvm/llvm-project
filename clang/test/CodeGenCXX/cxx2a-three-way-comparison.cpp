@@ -70,3 +70,66 @@ void builtin_cmp(int a) {
   // CHECK: select
   a <=> a;
 }
+
+namespace GH140368 {
+union U {
+  bool operator==(const U&) const = default;
+  std::strong_ordering operator<=>(const U&) const = default;
+};
+template<typename T> union TU {
+  bool operator==(const TU&) const = default;
+};
+
+// ITANIUM-LABEL: define {{.*}}@_ZN8GH1403682eqERKNS_1UES2_(
+// MSABI-LABEL: define {{.*}}@"?eq@GH140368@@YA_NAEBTU@1@0@Z"(
+bool eq(const U &a, const U &b) {
+  // ITANIUM: %[[RET:.*]] = call {{.*}}@_ZNK8GH1403681UeqERKS0_(
+  // ITANIUM: ret i1 %[[RET]]
+  // MSABI: %[[RET:.*]] = call {{.*}}@"??8U@GH140368@@QEBA_NAEBT01@@Z"(
+  // MSABI: ret i1 %[[RET]]
+  return a == b;
+}
+
+// ITANIUM-LABEL: define linkonce_odr {{.*}}@_ZNK8GH1403681UeqERKS0_(
+// ITANIUM: ret i1 true
+// MSABI-LABEL: define linkonce_odr {{.*}}@"??8U@GH140368@@QEBA_NAEBT01@@Z"(
+// MSABI: ret i1 true
+
+// ITANIUM-LABEL: define {{.*}}@_ZN8GH1403682neERKNS_1UES2_(
+// MSABI-LABEL: define {{.*}}@"?ne@GH140368@@YA_NAEBTU@1@0@Z"(
+bool ne(const U &a, const U &b) {
+  // ITANIUM: %[[EQ:.*]] = call {{.*}}@_ZNK8GH1403681UeqERKS0_(
+  // ITANIUM: xor i1 %[[EQ]], true
+  // MSABI: %[[EQ:.*]] = call {{.*}}@"??8U@GH140368@@QEBA_NAEBT01@@Z"(
+  // MSABI: xor i1 %[[EQ]], true
+  return a != b;
+}
+
+// ITANIUM-LABEL: define {{.*}}@_ZN8GH1403683cmpERKNS_1UES2_(
+// MSABI-LABEL: define {{.*}}@"?cmp@GH140368@@YAHAEBTU@1@0@Z"(
+int cmp(const U &a, const U &b) {
+  // ITANIUM: call {{.*}}@_ZNK8GH1403681UssERKS0_(
+  // MSABI: call {{.*}}@"??__MU@GH140368@@QEBA?AUstrong_ordering@std@@AEBT01@@Z"(
+  return a <=> b;
+}
+
+// ITANIUM-LABEL: define {{.*}}@_ZN8GH1403682ltERKNS_1UES2_(
+// MSABI-LABEL: define {{.*}}@"?lt@GH140368@@YA_NAEBTU@1@0@Z"(
+bool lt(const U &a, const U &b) {
+  // ITANIUM: call {{.*}}@_ZNK8GH1403681UssERKS0_(
+  // ITANIUM: icmp slt
+  // MSABI: call {{.*}}@"??__MU@GH140368@@QEBA?AUstrong_ordering@std@@AEBT01@@Z"(
+  // MSABI: icmp slt
+  return a < b;
+}
+
+// ITANIUM-LABEL: define {{.*}}@_ZN8GH1403683teqERKNS_2TUIiEES3_(
+// MSABI-LABEL: define {{.*}}@"?teq@GH140368@@YA_NAEBT?$TU@H@1@0@Z"(
+bool teq(const TU<int> &a, const TU<int> &b) {
+  // ITANIUM: %[[RET:.*]] = call {{.*}}@_ZNK8GH1403682TUIiEeqERKS1_(
+  // ITANIUM: ret i1 %[[RET]]
+  // MSABI: %[[RET:.*]] = call {{.*}}@"??8?$TU@H@GH140368@@QEBA_NAEBT01@@Z"(
+  // MSABI: ret i1 %[[RET]]
+  return a == b;
+}
+}
