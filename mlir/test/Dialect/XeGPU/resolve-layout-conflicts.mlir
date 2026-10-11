@@ -421,3 +421,202 @@ func.func @extract_source_conflict_with_order() -> vector<16x32xf16> {
   return %1 : vector<16x32xf16>
 }
 }
+
+
+// -----
+
+#inst_data_8x16 = #xegpu.layout<inst_data = [8, 16]>
+#inst_data_16x16 = #xegpu.layout<inst_data = [16, 16]>
+#inst_data_32x16 = #xegpu.layout<inst_data = [32, 16]>
+gpu.module @test_convert_chain_bypass {
+
+// Two users of the convert: exp wants [32, 16], sqrt wants [8, 16]. sqrt reads
+// the convert's source, the convert stays for exp, no [32, 16] -> [8, 16]
+// convert is inserted.
+// CHECK-LABEL: func.func @bypass_multi_use
+// CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>}
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [32, 16]>}>
+// CHECK-NEXT:    math.exp %[[CVT]]
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         math.sqrt %[[V0]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>}
+// CHECK:         return
+func.func @bypass_multi_use() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+  %3 = math.sqrt %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// In case of single user no bypass. The existing retarget turns the convert into a
+// [8, 16] -> [8, 16] no-op, it is kept and sqrt still reads it.
+// CHECK-LABEL: func.func @single_use_retarget
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    math.sqrt %[[CVT]]
+// CHECK:         return
+func.func @single_use_retarget() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.sqrt %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// Chain [8, 16] -> [32, 16] -> [16, 16] whose last value has two users. sqrt
+// reads the start of the chain.
+// CHECK-LABEL: func.func @bypass_chain_multi_use
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT1:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    %[[CVT2:.*]] = xegpu.convert_layout %[[CVT1]]
+// CHECK-NEXT:    math.exp %[[CVT2]]
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         math.sqrt %[[V0]]
+// CHECK:         return
+func.func @bypass_chain_multi_use() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = xegpu.convert_layout %1 <{input_layout = #inst_data_32x16, target_layout = #inst_data_16x16}> : vector<32x32xf16>
+  %3 = math.exp %2 {layout_result_0 = #inst_data_16x16} : vector<32x32xf16>
+  %4 = math.sqrt %2 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// Same chain with a single user, no bypass. The last convert is retargeted to
+// [32, 16] -> [8, 16], both converts stay.
+// CHECK-LABEL: func.func @chain_single_use_retarget
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT1:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    %[[CVT2:.*]] = xegpu.convert_layout %[[CVT1]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [32, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    math.sqrt %[[CVT2]]
+// CHECK:         return
+func.func @chain_single_use_retarget() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = xegpu.convert_layout %1 <{input_layout = #inst_data_32x16, target_layout = #inst_data_16x16}> : vector<32x32xf16>
+  %3 = math.sqrt %2 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// Two users, but no value in the chain has the wanted layout [16, 16], a new
+// convert is still inserted.
+// CHECK-LABEL: func.func @no_bypass_no_matching_source
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    %[[NEW:.*]] = xegpu.convert_layout %[[CVT]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [32, 16]>, target_layout = #xegpu.layout<inst_data = [16, 16]>}>
+// CHECK-NEXT:    math.exp %[[CVT]]
+// CHECK-NEXT:    math.sqrt %[[NEW]]
+// CHECK:         return
+func.func @no_bypass_no_matching_source() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+  %3 = math.sqrt %1 {layout_result_0 = #inst_data_16x16} : vector<32x32xf16>
+  return
+}
+
+// A compute op (math.exp) sits between the consumer and the convert. The walk
+// must stop there, sqrt must not read %0, which holds different values.
+// CHECK-LABEL: func.func @no_bypass_through_compute_op
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    %[[EXP:.*]] = math.exp %[[CVT]]
+// CHECK-NEXT:    %[[NEW:.*]] = xegpu.convert_layout %[[EXP]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [32, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    math.sqrt %[[NEW]]
+// CHECK:         return
+func.func @no_bypass_through_compute_op() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+  %3 = math.sqrt %2 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// Three users: exp wants [32, 16], sqrt and absf want [8, 16]. Both [8, 16]
+// users read the convert's source, the convert stays for exp.
+// CHECK-LABEL: func.func @bypass_three_users
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    math.exp %[[CVT]]
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         math.sqrt %[[V0]]
+// CHECK-NOT:     xegpu.convert_layout
+// CHECK:         math.absf %[[V0]]
+// CHECK:         return
+func.func @bypass_three_users() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+  %3 = math.sqrt %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  %4 = math.absf %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// Two users that both want the source layout. sqrt (two uses) reads the
+// source, absf then sees a single use and takes the retarget, so the convert
+// becomes a [8, 16] -> [8, 16] no-op. Nothing is erased.
+// CHECK-LABEL: func.func @all_users_want_source
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [8, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-NEXT:    math.sqrt %[[V0]]
+// CHECK-NEXT:    math.absf %[[CVT]]
+// CHECK:         return
+func.func @all_users_want_source() {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.sqrt %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  %3 = math.absf %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  return
+}
+
+// The [8, 16] user is inside an scf.if. The source is defined before the if,
+// so it is visible there and sqrt reads it directly.
+// CHECK-LABEL: func.func @bypass_inside_if
+// CHECK:         %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:    %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:    math.exp %[[CVT]]
+// CHECK:         scf.if
+// CHECK-NOT:       xegpu.convert_layout
+// CHECK:           math.sqrt %[[V0]]
+// CHECK:         return
+func.func @bypass_inside_if(%cond: i1) {
+  %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+  %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+  %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+  scf.if %cond {
+    %3 = math.sqrt %1 {layout_result_0 = #inst_data_8x16} : vector<32x32xf16>
+  }
+  return
+}
+
+// The conflicting consumer is an scf.yield whose loop carries [8, 16]. The
+// yielded value comes from a convert with another user, so the yield is
+// rewritten to the convert's source.
+// CHECK-LABEL: func.func @bypass_yield_operand
+// CHECK:         scf.for
+// CHECK:           %[[V0:.*]] = "some_op"()
+// CHECK-NEXT:      %[[CVT:.*]] = xegpu.convert_layout %[[V0]]
+// CHECK-NEXT:      math.exp %[[CVT]]
+// CHECK-NOT:       xegpu.convert_layout
+// CHECK:           scf.yield %[[V0]]
+// CHECK:         return
+func.func @bypass_yield_operand() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_8x16} dense<0.0> : vector<32x32xf16>
+  %r = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> vector<32x32xf16> {
+    %0 = "some_op"() {layout_result_0 = #inst_data_8x16} : () -> vector<32x32xf16>
+    %1 = xegpu.convert_layout %0 <{input_layout = #inst_data_8x16, target_layout = #inst_data_32x16}> : vector<32x32xf16>
+    %2 = math.exp %1 {layout_result_0 = #inst_data_32x16} : vector<32x32xf16>
+    scf.yield %1 : vector<32x32xf16>
+  } {layout_operand_3 = #inst_data_8x16, layout_result_0 = #inst_data_8x16}
+  return
+}
+}
