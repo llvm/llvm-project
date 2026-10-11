@@ -135,21 +135,9 @@ define void @indirect_unsafe_dep_after_unknown_deps(ptr %A, i64 %off) {
 ;
 ; MAXDEP5-LABEL: 'indirect_unsafe_dep_after_unknown_deps'
 ; MAXDEP5-NEXT:    loop:
-; MAXDEP5-NEXT:      Memory dependences are safe with run-time checks
 ; MAXDEP5-NEXT:      Too many dependences, not recorded
 ; MAXDEP5-NEXT:      Run-time memory checks:
-; MAXDEP5-NEXT:      Check 0:
-; MAXDEP5-NEXT:        Comparing group GRP0:
-; MAXDEP5-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
-; MAXDEP5-NEXT:        Against group GRP1:
-; MAXDEP5-NEXT:          %gep.A.off = getelementptr inbounds i8, ptr %A.off, i64 %iv
 ; MAXDEP5-NEXT:      Grouped accesses:
-; MAXDEP5-NEXT:        Group GRP0:
-; MAXDEP5-NEXT:          (Low: %A High: (100 + %A))
-; MAXDEP5-NEXT:            Member: {%A,+,1}<nuw><%loop>
-; MAXDEP5-NEXT:        Group GRP1:
-; MAXDEP5-NEXT:          (Low: (%off + %A) High: (100 + %off + %A))
-; MAXDEP5-NEXT:            Member: {(%off + %A),+,1}<nw><%loop>
 ; MAXDEP5-EMPTY:
 ; MAXDEP5-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MAXDEP5-NEXT:      SCEV assumptions:
