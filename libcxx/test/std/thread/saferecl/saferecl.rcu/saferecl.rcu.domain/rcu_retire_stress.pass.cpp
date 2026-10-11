@@ -9,6 +9,7 @@
 // UNSUPPORTED: no-threads
 // XFAIL: libcpp-has-no-experimental-rcu
 // XFAIL: availability-rcu-missing
+// XFAIL: !has-128-bit-atomics
 // REQUIRES: std-at-least-c++26
 
 // template<class T, class D = default_delete<T>>
