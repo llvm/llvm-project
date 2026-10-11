@@ -392,6 +392,14 @@ nigelp@xmos.com (email), [nigelp-xmos](https://github.com/nigelp-xmos) (GitHub)
 Andrei Safronov \
 andrei.safronov@espressif.com (email), [andreisfr](https://github.com/andreisfr) (GitHub)
 
+#### SuperH backend
+
+Luna Nielsen \
+luna@foxgirls.gay (email), [LunaTheFoxgirl](https://github.com/LunaTheFoxgirl) (GitHub)
+
+Falco Girgis \
+gyrovorbis@gmail.com (email), [gyrovorbis](https://github.com/gyrovorbis) (GitHub)
+
 ### Libraries and shared infrastructure
 
 #### ADT, Support
