@@ -57,6 +57,7 @@ Implemented Papers
 - P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
 - P3793R2: Better shifting (`Github <https://llvm.org/PR219389>`__) (no ``std::simd`` overloads)
 - P0040R3: Extending memory management tools (`Github <https://github.com/llvm/llvm-project/issues/103640>`__)
+- P2545R4: Read-Copy Update (RCU) (guarded by ``-fexperimental-library``, `Github <https://github.com/llvm/llvm-project/issues/105361>`__)
 
 Improvements and New Features
 -----------------------------
