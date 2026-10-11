@@ -30,6 +30,11 @@ namespace llvm {
 
     /// IsLeafProc - True if the function is a leaf procedure.
     bool IsLeafProc;
+
+    /// BranchRelaxationSpillFrameIndex - FrameIndex of the spill slot when
+    /// there is no scavenged register in insertIndirectBranch.
+    int BranchRelaxationSpillFrameIndex = -1;
+
   public:
     SparcMachineFunctionInfo()
       : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
@@ -54,6 +59,13 @@ namespace llvm {
 
     void setLeafProc(bool rhs) { IsLeafProc = rhs; }
     bool isLeafProc() const { return IsLeafProc; }
+
+    int getBranchRelaxationSpillFrameIndex() {
+      return BranchRelaxationSpillFrameIndex;
+    }
+    void setBranchRelaxationSpillFrameIndex(int Index) {
+      BranchRelaxationSpillFrameIndex = Index;
+    }
   };
 }
 

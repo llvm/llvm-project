@@ -319,7 +319,7 @@ define i32 @branch_relax_large(i32 %in) {
 ; SPARC64-LABEL: branch_relax_large:
 ; SPARC64:         .cfi_startproc
 ; SPARC64-NEXT:  ! %bb.0:
-; SPARC64-NEXT:    save %sp, -128, %sp
+; SPARC64-NEXT:    save %sp, -144, %sp
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
@@ -392,7 +392,7 @@ define i32 @branch_relax_large_o7_used(i32 %in) {
 ; SPARC64-LABEL: branch_relax_large_o7_used:
 ; SPARC64:         .cfi_startproc
 ; SPARC64-NEXT:  ! %bb.0:
-; SPARC64-NEXT:    save %sp, -128, %sp
+; SPARC64-NEXT:    save %sp, -144, %sp
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
@@ -460,7 +460,7 @@ define i32 @branch_relax_large_o7_spilled(i32 %in) {
 ; SPARC-SPILL-O7-NEXT:    bne .LBB5_1
 ; SPARC-SPILL-O7-NEXT:    nop
 ; SPARC-SPILL-O7-NEXT:  ! %bb.3:
-; SPARC-SPILL-O7-NEXT:    st %o7, [%fp] ! 4-byte Folded Spill
+; SPARC-SPILL-O7-NEXT:    st %o7, [%fp+-4] ! 4-byte Folded Spill
 ; SPARC-SPILL-O7-NEXT:    call .LBB5_4
 ; SPARC-SPILL-O7-NEXT:    nop
 ; SPARC-SPILL-O7-NEXT:  .LBB5_1: ! %false
@@ -470,7 +470,7 @@ define i32 @branch_relax_large_o7_spilled(i32 %in) {
 ; SPARC-SPILL-O7-NEXT:    ret
 ; SPARC-SPILL-O7-NEXT:    restore
 ; SPARC-SPILL-O7-NEXT:  .LBB5_4: ! %true
-; SPARC-SPILL-O7-NEXT:    ld [%fp], %o7 ! 4-byte Folded Reload
+; SPARC-SPILL-O7-NEXT:    ld [%fp+-4], %o7 ! 4-byte Folded Reload
 ; SPARC-SPILL-O7-NEXT:  ! %bb.2: ! %true
 ; SPARC-SPILL-O7-NEXT:    !APP
 ; SPARC-SPILL-O7-NEXT:    .skip 268435456
@@ -481,7 +481,7 @@ define i32 @branch_relax_large_o7_spilled(i32 %in) {
 ; SPARC64-SPILL-O7-LABEL: branch_relax_large_o7_spilled:
 ; SPARC64-SPILL-O7:         .cfi_startproc
 ; SPARC64-SPILL-O7-NEXT:  ! %bb.0:
-; SPARC64-SPILL-O7-NEXT:    save %sp, -128, %sp
+; SPARC64-SPILL-O7-NEXT:    save %sp, -144, %sp
 ; SPARC64-SPILL-O7-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-SPILL-O7-NEXT:    .cfi_window_save
 ; SPARC64-SPILL-O7-NEXT:    .cfi_register %o7, %i7
@@ -498,7 +498,7 @@ define i32 @branch_relax_large_o7_spilled(i32 %in) {
 ; SPARC64-SPILL-O7-NEXT:    bne %icc, .LBB5_1
 ; SPARC64-SPILL-O7-NEXT:    nop
 ; SPARC64-SPILL-O7-NEXT:  ! %bb.3:
-; SPARC64-SPILL-O7-NEXT:    stx %o7, [%fp+2047] ! 8-byte Folded Spill
+; SPARC64-SPILL-O7-NEXT:    stx %o7, [%fp+2039] ! 8-byte Folded Spill
 ; SPARC64-SPILL-O7-NEXT:    call .LBB5_4
 ; SPARC64-SPILL-O7-NEXT:    nop
 ; SPARC64-SPILL-O7-NEXT:  .LBB5_1: ! %false
@@ -508,7 +508,7 @@ define i32 @branch_relax_large_o7_spilled(i32 %in) {
 ; SPARC64-SPILL-O7-NEXT:    ret
 ; SPARC64-SPILL-O7-NEXT:    restore
 ; SPARC64-SPILL-O7-NEXT:  .LBB5_4: ! %true
-; SPARC64-SPILL-O7-NEXT:    ldx [%fp+2047], %o7 ! 8-byte Folded Reload
+; SPARC64-SPILL-O7-NEXT:    ldx [%fp+2039], %o7 ! 8-byte Folded Reload
 ; SPARC64-SPILL-O7-NEXT:  ! %bb.2: ! %true
 ; SPARC64-SPILL-O7-NEXT:    !APP
 ; SPARC64-SPILL-O7-NEXT:    .skip 268435456
