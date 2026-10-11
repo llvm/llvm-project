@@ -265,7 +265,8 @@ SparcInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case SP::BPRA:
   case SP::BPRNT:
   case SP::BPRANT:
-      return MI.getOperand(0).getMBB();
+  case SP::CALL_LONGJUMP:
+    return MI.getOperand(0).getMBB();
   }
 }
 
@@ -400,7 +401,7 @@ void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   assert(RS && "RegScavenger required for long branching");
   assert(MBB.empty() &&
          "new block should be inserted for expanding unconditional branch");
-  assert(MBB.pred_size() == 1);
+  assert(MBB.pred_size() == 1 && "should only have a single predecessor");
   assert(RestoreBB.empty() &&
          "restore block should be inserted for restoring clobbered registers");
 
@@ -500,6 +501,9 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
                                            int64_t Offset) const {
   assert((Offset & 0b11) == 0 && "Malformed branch offset");
   switch (BranchOpc) {
+  case SP::CALL_LONGJUMP:
+    return isIntN(30, Offset >> 2);
+
   case SP::BA:
   case SP::BCOND:
   case SP::BCONDA:
