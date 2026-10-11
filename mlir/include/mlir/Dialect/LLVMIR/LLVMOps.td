@@ -383,7 +383,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>,
+     DeclareOpInterfaceMethods<RangeOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -393,7 +394,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
-              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
+              OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -414,6 +416,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A nontemporal load of a float variable.
     %0 = llvm.load %ptr <nontemporal> : !llvm.ptr -> f32
 
+    // A load of an integer known to lie in [0, 10).
+    %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
@@ -428,7 +433,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     oilist(
       `invariant` $invariant |
       `invariant_group` $invariantGroup |
-      `dereferenceable` `` $dereferenceable
+      `dereferenceable` `` $dereferenceable |
+      `range` `` $range
     )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
@@ -442,6 +448,11 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     }
     if ($dereferenceable)
       moduleTranslation.setDereferenceableMetadata(op, inst);
+    if ($range) {
+      llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
+          .createRange($range->getLower(), $range->getUpper());
+      inst->setMetadata(llvm::LLVMContext::MD_range, metadata);
+    }
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
