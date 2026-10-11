@@ -61,25 +61,25 @@ template <typename Key>
     } -> std::same_as<std::true_type>;
   }
 struct constexpr_hash<Key> {
-  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const Key& __v) const noexcept {
+  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const Key& key) const noexcept {
     if constexpr (std::is_integral_v<Key>) {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
-        return static_cast<size_t>(__v);
+        return static_cast<size_t>(key);
       } else {
         constexpr size_t multiple           = sizeof(Key) / sizeof(size_t);
-        std::array<size_t, multiple> region = std::bit_cast<std::array<size_t, multiple>>(__v);
+        std::array<size_t, multiple> region = std::bit_cast<std::array<size_t, multiple>>(key);
 
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
     } else if constexpr (std::is_floating_point_v<Key>) {
-      if (__v == 0.0f)
+      if (key == 0.0f)
 
         return 0;
-      // return __scalar_hash<Key>::operator()(__v);
+      // return __scalar_hash<Key>::operator()(key);
 
       constexpr size_t multiple         = sizeof(Key) / sizeof(char);
-      std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(__v);
+      std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(key);
 
       // TODO: pack indexing?
       size_t res = 0;
@@ -94,7 +94,7 @@ struct constexpr_hash<Key> {
 
     } else if constexpr (std::is_enum_v<Key>) {
       using type = decltype(std::to_underlying(std::declval<Key>()));
-      return constexpr_hash<type>()(static_cast<type>(__v));
+      return constexpr_hash<type>()(static_cast<type>(key));
     }
     __builtin_unreachable(); // todo: revisit
   }
