@@ -260,6 +260,10 @@ LIBC_INLINE constexpr T fminimum_mag_num(T x, T y) {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T constexpr fdim(T x, T y) {
+  // Do not speculate x - y when x <= y: it can raise spurious FP exceptions.
+  // See https://github.com/llvm/llvm-project/issues/88771.
+  // The entry points also enable FENV_ACCESS to allow inlining this function.
+  LIBC_FENV_ACCESS_ON
   FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {

@@ -60,6 +60,33 @@ public:
     EXPECT_FP_EQ(zero, func(neg_zero, neg_zero));
   }
 
+  void test_no_spurious_exceptions(FuncPtr func) {
+    const T max = FPBits::max_normal().get_val();
+    const T neg_max = FPBits::max_normal(Sign::NEG).get_val();
+    const T neg_denorm = FPBits::min_subnormal(Sign::NEG).get_val();
+    auto call = [func](T x, T y) {
+      T result = func(x, y);
+      // Comparing subnormal operands can raise the non-standard denormal
+      // exception. Only check the standard floating-point exceptions here.
+#ifdef FE_DENORM
+      LIBC_NAMESPACE::fputil::clear_except(FE_DENORM);
+#elif defined(FE_DENORMAL)
+      LIBC_NAMESPACE::fputil::clear_except(FE_DENORMAL);
+#elif defined(__FE_DENORM)
+      LIBC_NAMESPACE::fputil::clear_except(__FE_DENORM);
+#endif
+      return result;
+    };
+
+    // When x <= y, the subtraction must not raise exceptions before returning
+    // zero, even when it would produce an invalid, inexact, or overflow result.
+    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(zero, call(inf, inf), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(zero, call(neg_inf, neg_inf), 0);
+    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(zero, call(neg_max, neg_denorm),
+                                             0);
+    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(zero, call(neg_max, max), 0);
+  }
+
   void test_in_range(FuncPtr func) {
     constexpr StorageType STORAGE_MAX =
         LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
@@ -92,5 +119,8 @@ public:
   TEST_F(LlvmLibc##Name##Test, InfArg) { test_inf_arg(&func); }                \
   TEST_F(LlvmLibc##Name##Test, NegInfArg) { test_neg_inf_arg(&func); }         \
   TEST_F(LlvmLibc##Name##Test, BothZero) { test_both_zero(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, NoSpuriousExceptions) {                         \
+    test_no_spurious_exceptions(&func);                                        \
+  }                                                                            \
   TEST_F(LlvmLibc##Name##Test, InFloatRange) { test_in_range(&func); }         \
   static_assert(true, "Require semicolon.")
