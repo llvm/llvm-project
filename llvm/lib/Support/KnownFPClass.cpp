@@ -1023,7 +1023,7 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
 }
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
-                                           bool IsTrunc, bool IsMultiUnitFPType,
+                                           bool MayBeMultiUnitFPType,
                                            DenormalMode Mode) {
   KnownFPClass Known;
 
@@ -1032,9 +1032,8 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   Known.propagateNonNaN(KnownSrc);
 
-  // Pass through infinities, except PPC_FP128 is a special case for
-  // intrinsics other than trunc.
-  if (IsTrunc || !IsMultiUnitFPType) {
+  // Pass through infinities, except PPC_FP128 is a special case for intrinsics.
+  if (!MayBeMultiUnitFPType) {
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
     if (KnownSrc.isKnownNeverNegInfinity())
@@ -1056,6 +1055,41 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
       (KnownSrc.isKnownNever(fcNegSubnormal) ||
        !Mode.inputsMayBePositiveZero()))
     Known.knownNot(fcPosZero);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::trunc(const KnownFPClass &KnownSrc,
+                                 DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc,
+                                       /*MayBeMultiUnitFPType=*/true, Mode);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::floor(const KnownFPClass &KnownSrc,
+                                 bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  return Known;
+}
+
+KnownFPClass KnownFPClass::ceil(const KnownFPClass &KnownSrc,
+                                bool IsMultiUnitFPType, DenormalMode Mode) {
+  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+
+  // Applicable for multi-unit floating point types.
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
 
   return Known;
 }

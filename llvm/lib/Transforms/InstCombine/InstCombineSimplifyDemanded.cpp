@@ -3327,6 +3327,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
 
+      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+      // Rounding a finite multi-unit value may overflow to an infinity.
+      if (IsMultiUnitFPType) {
+        if (IID != Intrinsic::trunc && IID != Intrinsic::floor &&
+            (DemandedMask & fcPosInf))
+          DemandedSrcMask |= fcPosNormal;
+        if (IID != Intrinsic::trunc && IID != Intrinsic::ceil &&
+            (DemandedMask & fcNegInf))
+          DemandedSrcMask |= fcNegNormal;
+      }
+
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
@@ -3372,11 +3383,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
-
-      const bool IsTrunc = IID == Intrinsic::trunc;
-      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
-                                            IsMultiUnitFPType, Mode);
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
 
       Known.knownNot(~DemandedMask);
 
