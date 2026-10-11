@@ -179,15 +179,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   return true;
 }
 
-static bool isOrHasPtr(const Descriptor *D) {
-  if ((D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() == PT_Ptr)
-    return true;
-
-  if (D->ElemRecord)
-    return D->ElemRecord->hasPtrField();
-  return false;
-}
-
 static void collectBlocks(PtrView Ptr,
                           llvm::SmallPtrSet<const Block *, 4> &Blocks,
                           bool IsCompleteClass = true) {
@@ -218,7 +209,7 @@ static void collectBlocks(PtrView Ptr,
     }
 
     for (const Record::Field &F : R->fields()) {
-      if (!isOrHasPtr(F.Desc))
+      if (!F.Desc->containsPointer())
         continue;
       PtrView FieldPtr = Ptr.atField(F.Offset);
       collectBlocks(FieldPtr, Blocks);
@@ -253,7 +244,7 @@ static void collectBlocks(PtrView Ptr,
     return;
   }
 
-  if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
+  if (Desc->isCompositeArray() && Desc->ElemDesc->containsPointer()) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
@@ -466,7 +457,7 @@ static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
 
     for (const Record::Field &F : R->fields()) {
       PtrView FieldPtr = Ptr.atField(F.Offset);
-      if (!isOrHasPtr(F.Desc))
+      if (!F.Desc->containsPointer())
         continue;
 
       if (F.Desc->isPrimitive() && F.Desc->getPrimType() == PT_Ptr) {
