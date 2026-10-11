@@ -39,6 +39,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 namespace {
 
   /// Class representing coefficient of floating-point addend.
@@ -2046,6 +2050,16 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldDivCeil(I))
     return Res;
 
+  // (A | -2) + A -> (A - 1) & -2
+  APInt NegTwo(Ty->getScalarSizeInBits(), -2, /*isSigned=*/true);
+  if (match(&I, m_c_BinOp(m_OneUse(m_Or(m_Value(A), m_SpecificInt(NegTwo))),
+                          m_Deferred(A)))) {
+    Value *Ret = Builder.CreateAdd(
+        A, ConstantInt::get(
+               Ty, APInt(Ty->getScalarSizeInBits(), -1, /*isSigned=*/true)));
+    return BinaryOperator::CreateAnd(Ret, ConstantInt::get(Ty, NegTwo));
+  }
+
   // Re-enqueue users of the induction variable of add recurrence if we infer
   // new nuw/nsw flags.
   if (Changed) {
@@ -3244,14 +3258,18 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     Value *P;
     if (match(X, m_FNeg(m_Value(P)))) {
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, P, NegY);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, P, NegY, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, P == Y);
       return NewSel;
     }
     // -(Cond ? X : -P) --> Cond ? -X : P
     if (match(Y, m_FNeg(m_Value(P)))) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, NegX, P);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, NegX, P, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, P == X);
       return NewSel;
     }
@@ -3261,7 +3279,9 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-      SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
+      SelectInst *NewSel = SelectInst::Create(
+          Cond, NegX, NegY, "", nullptr,
+          ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op));
       propagateSelectFMF(NewSel, /*CommonOperand=*/true);
       return NewSel;
     }

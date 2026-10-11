@@ -267,18 +267,13 @@ void SCEV::computeAndSetCanonical(ScalarEvolution &SE) {
   // For all other expressions, check whether any immediate operand has a
   // different canonical. Since operands are always created before their parent,
   // their canonical pointers are already set — no recursion needed.
-  bool Changed = false;
-  SmallVector<SCEVUse, 4> CanonOps;
-  for (SCEVUse Op : operands()) {
-    CanonOps.push_back(Op->getCanonical());
-    Changed |= CanonOps.back() != Op;
-  }
-
-  if (!Changed) {
+  if (all_of(operands(), [](SCEVUse Op) { return Op.isCanonical(); })) {
     CanonicalSCEV = this;
     return;
   }
 
+  SmallVector<SCEVUse, 4> CanonOps(
+      map_range(operands(), [](SCEVUse Op) { return Op.getCanonical(); }));
   // Rebuild the expression from the canonical operands, stripping use flags.
   CanonicalSCEV = SE.getWithOperands(this, CanonOps);
 }
@@ -4189,19 +4184,21 @@ bool ScalarEvolution::canReuseInstruction(
   SmallVector<Value *> Worklist;
   SmallPtrSet<Value *, 8> Visited;
   Worklist.push_back(I);
+  unsigned NumVisitedInsts = 0;
+  const unsigned InstLimit = std::max<unsigned>(16, S->getExpressionSize());
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
     if (!Visited.insert(V).second)
       continue;
 
-    // Avoid walking large instruction graphs.
-    if (Visited.size() > 16)
-      return false;
-
     // Either the value can't be poison, or the S would also be poison if it
     // is.
     if (PoisonVals.contains(V) || ::isGuaranteedNotToBePoison(V))
       continue;
+
+    // Avoid walking large instruction graphs.
+    if (++NumVisitedInsts > InstLimit)
+      return false;
 
     auto *I = dyn_cast<Instruction>(V);
     if (!I)

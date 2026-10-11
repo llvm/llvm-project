@@ -347,6 +347,11 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);
 
+/// Returns the alignment of the shared base pointer of a blended load for
+/// the loads \p VL.
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL);
+
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.
 /// \p IsGEPLane tells which lanes of \p VL are matching GEPs, whose index is
@@ -439,9 +444,11 @@ struct NarrowedLeafInfo {
   NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
       : V(V), Shift(Shift), Mask(std::move(Mask)) {}
 
-  Value *V;
-  unsigned Shift;
+  Value *V = nullptr;
+  unsigned Shift = 0;
   APInt Mask;
+  /// Set to false, if the or chain is not disjoint
+  bool Disjoint = true;
 };
 
 /// Recursively collects the narrow leaves of the widened reduction value
@@ -503,6 +510,13 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 /// \p NumInsts returns the number of emitted instructions.
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
                     unsigned ShiftWidth, unsigned &NumInsts);
+
+/// The debug values of the erased \p From are kept on its replacement \p To.
+/// A record placed before \p To is cloned right after it, while the original
+/// one is killed together with the scalar, so the variable is undefined up to
+/// \p To. The clone is skipped if it would pass a record of the same variable,
+/// otherwise the variable would show a stale value.
+void redirectDbgValues(Instruction &From, Value &To);
 
 } // namespace llvm::slpvectorizer
 

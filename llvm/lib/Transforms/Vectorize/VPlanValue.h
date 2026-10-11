@@ -186,9 +186,8 @@ public:
   /// Go through the uses list for this VPValue and make each use point to \p
   /// New if the callback ShouldReplace returns true for the given use specified
   /// by a pair of (VPUser, the use index).
-  void replaceUsesWithIf(
-      VPValue *New,
-      llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace);
+  void replaceUsesWithIf(VPValue *New,
+                         llvm::function_ref<bool(VPUser &U)> ShouldReplace);
 
   /// Returns the recipe defining this VPValue or nullptr if it is not defined
   /// by a recipe, i.e. is a live-in.
@@ -440,6 +439,9 @@ public:
     assert(N < Operands.size() && "Operand index out of bounds");
     return Operands[N];
   }
+
+  /// Returns the last operand.
+  VPValue *getLastOperand() const { return Operands.back(); }
 
   void setOperand(unsigned I, VPValue *New) {
     assert((!Operands[I]->getScalarType() || !New->getScalarType() ||

@@ -24,9 +24,11 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
+class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
+class IRBuilderBase;
 class SCEV;
 class ScalarEvolution;
 class TargetLibraryInfo;
@@ -41,6 +43,17 @@ namespace llvm::slpvectorizer {
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL,
+                                      bool IsReverse = false);
+
+/// Casts \p V between the widened strided access type and the entry vector
+/// type \p DstTy.
+Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
+                                const DataLayout &DL);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);

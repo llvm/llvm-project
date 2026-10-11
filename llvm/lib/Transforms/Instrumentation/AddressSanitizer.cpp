@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -66,7 +67,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -194,276 +194,6 @@ constexpr size_t kAccessSizeIndexMask = 0xf;
 constexpr size_t kIsWriteShift = 5;
 constexpr size_t kIsWriteMask = 0x1;
 
-// Command-line flags.
-
-static cl::opt<bool> ClEnableKasan(
-    "asan-kernel", cl::desc("Enable KernelAddressSanitizer instrumentation"),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClRecover(
-    "asan-recover",
-    cl::desc("Enable recovery mode (continue-after-error)."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClInsertVersionCheck(
-    "asan-guard-against-version-mismatch",
-    cl::desc("Guard against compiler/runtime version mismatch."), cl::Hidden,
-    cl::init(true));
-
-// This flag may need to be replaced with -f[no-]asan-reads.
-static cl::opt<bool> ClInstrumentReads("asan-instrument-reads",
-                                       cl::desc("instrument read instructions"),
-                                       cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClInstrumentWrites(
-    "asan-instrument-writes", cl::desc("instrument write instructions"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
-
-static cl::opt<bool> ClInstrumentAtomics(
-    "asan-instrument-atomics",
-    cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
-    cl::init(true));
-
-static cl::opt<bool>
-    ClInstrumentByval("asan-instrument-byval",
-                      cl::desc("instrument byval call arguments"), cl::Hidden,
-                      cl::init(true));
-
-static cl::opt<bool> ClAlwaysSlowPath(
-    "asan-always-slow-path",
-    cl::desc("use instrumentation with slow path for all accesses"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClForceDynamicShadow(
-    "asan-force-dynamic-shadow",
-    cl::desc("Load shadow address into a local variable for each function"),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool>
-    ClWithIfunc("asan-with-ifunc",
-                cl::desc("Access dynamic shadow through an ifunc global on "
-                         "platforms that support this"),
-                cl::Hidden, cl::init(true));
-
-static cl::opt<int>
-    ClShadowAddrSpace("asan-shadow-addr-space",
-                      cl::desc("Address space for pointers to the shadow map"),
-                      cl::Hidden, cl::init(0));
-
-static cl::opt<bool> ClWithIfuncSuppressRemat(
-    "asan-with-ifunc-suppress-remat",
-    cl::desc("Suppress rematerialization of dynamic shadow address by passing "
-             "it through inline asm in prologue."),
-    cl::Hidden, cl::init(true));
-
-// This flag limits the number of instructions to be instrumented
-// in any given BB. Normally, this should be set to unlimited (INT_MAX),
-// but due to http://llvm.org/bugs/show_bug.cgi?id=12652 we temporary
-// set it to 10000.
-static cl::opt<int> ClMaxInsnsToInstrumentPerBB(
-    "asan-max-ins-per-bb", cl::init(10000),
-    cl::desc("maximal number of instructions to instrument in any given BB"),
-    cl::Hidden);
-
-// This flag may need to be replaced with -f[no]asan-stack.
-static cl::opt<bool> ClStack("asan-stack", cl::desc("Handle stack memory"),
-                             cl::Hidden, cl::init(true));
-static cl::opt<uint32_t> ClMaxInlinePoisoningSize(
-    "asan-max-inline-poisoning-size",
-    cl::desc(
-        "Inline shadow poisoning for blocks up to the given size in bytes."),
-    cl::Hidden, cl::init(64));
-
-static cl::opt<AsanDetectStackUseAfterReturnMode> ClUseAfterReturn(
-    "asan-use-after-return",
-    cl::desc("Sets the mode of detection for stack-use-after-return."),
-    cl::values(
-        clEnumValN(AsanDetectStackUseAfterReturnMode::Never, "never",
-                   "Never detect stack use after return."),
-        clEnumValN(
-            AsanDetectStackUseAfterReturnMode::Runtime, "runtime",
-            "Detect stack use after return if "
-            "binary flag 'ASAN_OPTIONS=detect_stack_use_after_return' is set."),
-        clEnumValN(AsanDetectStackUseAfterReturnMode::Always, "always",
-                   "Always detect stack use after return.")),
-    cl::Hidden, cl::init(AsanDetectStackUseAfterReturnMode::Runtime));
-
-static cl::opt<bool> ClRedzoneByvalArgs("asan-redzone-byval-args",
-                                        cl::desc("Create redzones for byval "
-                                                 "arguments (extra copy "
-                                                 "required)"), cl::Hidden,
-                                        cl::init(true));
-
-static cl::opt<bool> ClUseAfterScope("asan-use-after-scope",
-                                     cl::desc("Check stack-use-after-scope"),
-                                     cl::Hidden, cl::init(false));
-
-// This flag may need to be replaced with -f[no]asan-globals.
-static cl::opt<bool> ClGlobals("asan-globals",
-                               cl::desc("Handle global objects"), cl::Hidden,
-                               cl::init(true));
-
-static cl::opt<bool> ClInitializers("asan-initialization-order",
-                                    cl::desc("Handle C++ initializer order"),
-                                    cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClInvalidPointerPairs(
-    "asan-detect-invalid-pointer-pair",
-    cl::desc("Instrument <, <=, >, >=, - with pointer operands"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClInvalidPointerCmp(
-    "asan-detect-invalid-pointer-cmp",
-    cl::desc("Instrument <, <=, >, >= with pointer operands"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClInvalidPointerSub(
-    "asan-detect-invalid-pointer-sub",
-    cl::desc("Instrument - operations with pointer operands"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<unsigned> ClRealignStack(
-    "asan-realign-stack",
-    cl::desc("Realign stack to the value of this flag (power of two)"),
-    cl::Hidden, cl::init(32));
-
-static cl::opt<int> ClInstrumentationWithCallsThreshold(
-    "asan-instrumentation-with-call-threshold",
-    cl::desc("If the function being instrumented contains more than "
-             "this number of memory accesses, use callbacks instead of "
-             "inline checks (-1 means never use callbacks)."),
-    cl::Hidden, cl::init(7000));
-
-static cl::opt<std::string> ClMemoryAccessCallbackPrefix(
-    "asan-memory-access-callback-prefix",
-    cl::desc("Prefix for memory access callbacks"), cl::Hidden,
-    cl::init("__asan_"));
-
-static cl::opt<bool> ClKasanMemIntrinCallbackPrefix(
-    "asan-kernel-mem-intrinsic-prefix",
-    cl::desc("Use prefix for memory intrinsics in KASAN mode"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool>
-    ClInstrumentDynamicAllocas("asan-instrument-dynamic-allocas",
-                               cl::desc("instrument dynamic allocas"),
-                               cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClSkipPromotableAllocas(
-    "asan-skip-promotable-allocas",
-    cl::desc("Do not instrument promotable allocas"), cl::Hidden,
-    cl::init(true));
-
-static cl::opt<AsanCtorKind> ClConstructorKind(
-    "asan-constructor-kind",
-    cl::desc("Sets the ASan constructor kind"),
-    cl::values(clEnumValN(AsanCtorKind::None, "none", "No constructors"),
-               clEnumValN(AsanCtorKind::Global, "global",
-                          "Use global constructors")),
-    cl::init(AsanCtorKind::Global), cl::Hidden);
-// These flags allow to change the shadow mapping.
-// The shadow mapping looks like
-//    Shadow = (Mem >> scale) + offset
-
-static cl::opt<int> ClMappingScale("asan-mapping-scale",
-                                   cl::desc("scale of asan shadow mapping"),
-                                   cl::Hidden, cl::init(0));
-
-static cl::opt<uint64_t>
-    ClMappingOffset("asan-mapping-offset",
-                    cl::desc("offset of asan shadow mapping [EXPERIMENTAL]"),
-                    cl::Hidden, cl::init(0));
-
-// Optimization flags. Not user visible, used mostly for testing
-// and benchmarking the tool.
-
-static cl::opt<bool> ClOpt("asan-opt", cl::desc("Optimize instrumentation"),
-                           cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClOptimizeCallbacks("asan-optimize-callbacks",
-                                         cl::desc("Optimize callbacks"),
-                                         cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClOptSameTemp(
-    "asan-opt-same-temp", cl::desc("Instrument the same temp just once"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClOptGlobals("asan-opt-globals",
-                                  cl::desc("Don't instrument scalar globals"),
-                                  cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClOptStack(
-    "asan-opt-stack", cl::desc("Don't instrument scalar stack variables"),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClDynamicAllocaStack(
-    "asan-stack-dynamic-alloca",
-    cl::desc("Use dynamic alloca to represent stack variables"), cl::Hidden,
-    cl::init(true));
-
-static cl::opt<uint32_t> ClForceExperiment(
-    "asan-force-experiment",
-    cl::desc("Force optimization experiment (for testing)"), cl::Hidden,
-    cl::init(0));
-
-static cl::opt<bool>
-    ClUsePrivateAlias("asan-use-private-alias",
-                      cl::desc("Use private aliases for global variables"),
-                      cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClUseOdrIndicator("asan-use-odr-indicator",
-                      cl::desc("Use odr indicators to improve ODR reporting"),
-                      cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClUseGlobalsGC("asan-globals-live-support",
-                   cl::desc("Use linker features to support dead "
-                            "code stripping of globals"),
-                   cl::Hidden, cl::init(true));
-
-// This is on by default even though there is a bug in gold:
-// https://sourceware.org/bugzilla/show_bug.cgi?id=19002
-static cl::opt<bool>
-    ClWithComdat("asan-with-comdat",
-                 cl::desc("Place ASan constructors in comdat sections"),
-                 cl::Hidden, cl::init(true));
-
-static cl::opt<AsanDtorKind> ClOverrideDestructorKind(
-    "asan-destructor-kind",
-    cl::desc("Sets the ASan destructor kind. The default is to use the value "
-             "provided to the pass constructor"),
-    cl::values(clEnumValN(AsanDtorKind::None, "none", "No destructors"),
-               clEnumValN(AsanDtorKind::Global, "global",
-                          "Use global destructors")),
-    cl::init(AsanDtorKind::Invalid), cl::Hidden);
-
-static cl::list<unsigned> ClAddrSpaces(
-    "asan-instrument-address-spaces",
-    cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated);
-
-// Debug flags.
-
-static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
-                            cl::init(0));
-
-static cl::opt<int> ClDebugStack("asan-debug-stack", cl::desc("debug stack"),
-                                 cl::Hidden, cl::init(0));
-
-static cl::opt<std::string> ClDebugFunc("asan-debug-func", cl::Hidden,
-                                        cl::desc("Debug func"));
-
-static cl::opt<int> ClDebugMin("asan-debug-min", cl::desc("Debug min inst"),
-                               cl::Hidden, cl::init(-1));
-
-static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
-                               cl::Hidden, cl::init(-1));
-
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumOptimizedAccessesToGlobalVar,
@@ -487,7 +217,8 @@ struct ShadowMapping {
 
 } // end anonymous namespace
 
-static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
+static ShadowMapping getShadowMapping(const InstrumentationOptions &Opts,
+                                      const Triple &TargetTriple, int LongSize,
                                       bool IsKasan) {
   bool IsAndroid = TargetTriple.isAndroid();
   bool IsIOS = TargetTriple.isiOS() || TargetTriple.isWatchOS() ||
@@ -518,10 +249,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
 
   ShadowMapping Mapping;
 
-  Mapping.Scale = kDefaultShadowScale;
-  if (ClMappingScale.getNumOccurrences() > 0) {
-    Mapping.Scale = ClMappingScale;
-  }
+  Mapping.Scale = Opts.asan_mapping_scale.value_or(kDefaultShadowScale);
 
   if (LongSize == 32) {
     if (IsAndroid)
@@ -600,12 +328,12 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       Mapping.Offset = kDefaultShadowOffset64;
   }
 
-  if (ClForceDynamicShadow) {
+  if (Opts.asan_force_dynamic_shadow) {
     Mapping.Offset = kDynamicShadowSentinel;
   }
 
-  if (ClMappingOffset.getNumOccurrences() > 0) {
-    Mapping.Offset = ClMappingOffset;
+  if (Opts.asan_mapping_offset) {
+    Mapping.Offset = *Opts.asan_mapping_offset;
   }
 
   // OR-ing shadow offset if more efficient (at least on x86) if the offset
@@ -617,7 +345,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            !IsRISCV64 && !IsLoongArch64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
-  Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
+  Mapping.InGlobal = Opts.asan_with_ifunc && IsAndroid && IsArmOrThumb;
 
   return Mapping;
 }
@@ -625,7 +353,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
 void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
                                      bool IsKasan, uint64_t *ShadowBase,
                                      int *MappingScale, bool *OrShadowOffset) {
-  auto Mapping = getShadowMapping(TargetTriple, LongSize, IsKasan);
+  auto Mapping = getShadowMapping(InstrumentationOptions::Global, TargetTriple,
+                                  LongSize, IsKasan);
   *ShadowBase = Mapping.Offset;
   *MappingScale = Mapping.Scale;
   *OrShadowOffset = Mapping.OrShadowOffset;
@@ -798,27 +527,23 @@ public:
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer {
-  AddressSanitizer(Module &M, const StackSafetyGlobalInfo *SSGI,
+  AddressSanitizer(const InstrumentationOptions &Opts, Module &M,
+                   const StackSafetyGlobalInfo *SSGI,
                    int InstrumentationWithCallsThreshold,
                    uint32_t MaxInlinePoisoningSize, bool CompileKernel = false,
                    bool Recover = false, bool UseAfterScope = false,
                    AsanDetectStackUseAfterReturnMode UseAfterReturn =
                        AsanDetectStackUseAfterReturnMode::Runtime)
-      : M(M), Inserter(M),
-        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
-                                                            : CompileKernel),
-        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
-        UseAfterScope(UseAfterScope || ClUseAfterScope),
-        UseAfterReturn(ClUseAfterReturn.getNumOccurrences() ? ClUseAfterReturn
-                                                            : UseAfterReturn),
-        SSGI(SSGI),
-        InstrumentationWithCallsThreshold(
-            ClInstrumentationWithCallsThreshold.getNumOccurrences() > 0
-                ? ClInstrumentationWithCallsThreshold
-                : InstrumentationWithCallsThreshold),
-        MaxInlinePoisoningSize(ClMaxInlinePoisoningSize.getNumOccurrences() > 0
-                                   ? ClMaxInlinePoisoningSize
-                                   : MaxInlinePoisoningSize) {
+      : Opts(Opts), M(M), Inserter(M),
+        CompileKernel(valueOr(Opts.asan_kernel, CompileKernel)),
+        Recover(valueOr(Opts.asan_recover, Recover)),
+        UseAfterScope(UseAfterScope || Opts.asan_use_after_scope),
+        UseAfterReturn(Opts.asan_use_after_return.value_or(UseAfterReturn)),
+        SSGI(SSGI), InstrumentationWithCallsThreshold(
+                        Opts.asan_instrumentation_with_call_threshold.value_or(
+                            InstrumentationWithCallsThreshold)),
+        MaxInlinePoisoningSize(Opts.asan_max_inline_poisoning_size.value_or(
+            MaxInlinePoisoningSize)) {
     C = &(M.getContext());
     DL = &M.getDataLayout();
     LongSize = M.getDataLayout().getPointerSizeInBits();
@@ -827,7 +552,8 @@ struct AddressSanitizer {
     Int32Ty = Type::getInt32Ty(*C);
     TargetTriple = M.getTargetTriple();
 
-    Mapping = getShadowMapping(TargetTriple, LongSize, this->CompileKernel);
+    Mapping =
+        getShadowMapping(Opts, TargetTriple, LongSize, this->CompileKernel);
 
     assert(this->UseAfterReturn != AsanDetectStackUseAfterReturnMode::Invalid);
   }
@@ -915,6 +641,7 @@ private:
     }
   };
 
+  const InstrumentationOptions &Opts;
   Module &M;
   AsanFunctionInserter Inserter;
   LLVMContext *C;
@@ -954,47 +681,42 @@ private:
 
 class ModuleAddressSanitizer {
 public:
-  ModuleAddressSanitizer(Module &M, bool InsertVersionCheck,
-                         bool CompileKernel = false, bool Recover = false,
-                         bool UseGlobalsGC = true, bool UseOdrIndicator = true,
+  ModuleAddressSanitizer(const InstrumentationOptions &Opts, Module &M,
+                         bool InsertVersionCheck, bool CompileKernel = false,
+                         bool Recover = false, bool UseGlobalsGC = true,
+                         bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
-      : M(M), Inserter(M),
-        CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
-                                                            : CompileKernel),
-        InsertVersionCheck(ClInsertVersionCheck.getNumOccurrences() > 0
-                               ? ClInsertVersionCheck
-                               : InsertVersionCheck),
-        Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
-        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC && !this->CompileKernel),
+      : Opts(Opts), M(M), Inserter(M),
+        CompileKernel(valueOr(Opts.asan_kernel, CompileKernel)),
+        InsertVersionCheck(valueOr(Opts.asan_guard_against_version_mismatch,
+                                   InsertVersionCheck)),
+        Recover(valueOr(Opts.asan_recover, Recover)),
+        UseGlobalsGC(UseGlobalsGC && Opts.asan_globals_live_support &&
+                     !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
-        UsePrivateAlias(ClUsePrivateAlias.getNumOccurrences() > 0
-                            ? ClUsePrivateAlias
-                            : UseOdrIndicator),
-        UseOdrIndicator(ClUseOdrIndicator.getNumOccurrences() > 0
-                            ? ClUseOdrIndicator
-                            : UseOdrIndicator),
-        // Not a typo: ClWithComdat is almost completely pointless without
-        // ClUseGlobalsGC (because then it only works on modules without
-        // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;
-        // and both suffer from gold PR19002 for which UseGlobalsGC constructor
-        // argument is designed as workaround. Therefore, disable both
-        // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
-        // do globals-gc.
-        UseCtorComdat(UseGlobalsGC && ClWithComdat && !this->CompileKernel),
-        DestructorKind(DestructorKind),
-        ConstructorKind(ClConstructorKind.getNumOccurrences() > 0
-                            ? ClConstructorKind
-                            : ConstructorKind) {
+        UsePrivateAlias(valueOr(Opts.asan_use_private_alias, UseOdrIndicator)),
+        UseOdrIndicator(valueOr(Opts.asan_use_odr_indicator, UseOdrIndicator)),
+        // Not a typo: -asan-with-comdat is almost completely pointless without
+        // -asan-globals-live-support (because then it only works on modules
+        // without globals, which are rare); it is a prerequisite for
+        // -asan-globals-live-support; and both suffer from gold PR19002 for
+        // which UseGlobalsGC constructor argument is designed as workaround.
+        // Therefore, disable both -asan-with-comdat and
+        // -asan-globals-live-support unless the frontend says it's ok to do
+        // globals-gc.
+        UseCtorComdat(UseGlobalsGC && Opts.asan_with_comdat &&
+                      !this->CompileKernel),
+        DestructorKind(Opts.asan_destructor_kind.value_or(DestructorKind)),
+        ConstructorKind(Opts.asan_constructor_kind.value_or(ConstructorKind)) {
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
     PtrTy = PointerType::getUnqual(*C);
     TargetTriple = M.getTargetTriple();
-    Mapping = getShadowMapping(TargetTriple, LongSize, this->CompileKernel);
+    Mapping =
+        getShadowMapping(Opts, TargetTriple, LongSize, this->CompileKernel);
 
-    if (ClOverrideDestructorKind != AsanDtorKind::Invalid)
-      this->DestructorKind = ClOverrideDestructorKind;
     assert(this->DestructorKind != AsanDtorKind::Invalid);
   }
 
@@ -1038,6 +760,7 @@ private:
   int GetAsanVersion() const;
   GlobalVariable *getOrCreateModuleName();
 
+  const InstrumentationOptions &Opts;
   Module &M;
   AsanFunctionInserter Inserter;
   bool CompileKernel;
@@ -1078,6 +801,7 @@ private:
 // This causes asan to report a non-existing bug on 453.povray.
 // It sounds like an LLVM bug.
 struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
+  const InstrumentationOptions &Opts;
   Function &F;
   AddressSanitizer &ASan;
   RuntimeCallInserter &RTCI;
@@ -1118,18 +842,19 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
   FunctionStackPoisoner(Function &F, AddressSanitizer &ASan,
                         RuntimeCallInserter &RTCI)
-      : F(F), ASan(ASan), RTCI(RTCI),
+      : Opts(ASan.Opts), F(F), ASan(ASan), RTCI(RTCI),
         DIB(*F.getParent(), /*AllowUnresolved*/ false), C(ASan.C),
         IntptrTy(ASan.IntptrTy),
         IntptrPtrTy(PointerType::get(IntptrTy->getContext(), 0)),
         Mapping(ASan.Mapping),
-        PoisonStack(ClStack && !F.getParent()->getTargetTriple().isAMDGPU()) {}
+        PoisonStack(Opts.asan_stack &&
+                    !F.getParent()->getTargetTriple().isAMDGPU()) {}
 
   bool runOnFunction() {
     if (!PoisonStack)
       return false;
 
-    if (ClRedzoneByvalArgs)
+    if (Opts.asan_redzone_byval_args)
       copyArgsPassedByValToAllocas();
 
     // Collect alloca, ret, lifetime instructions etc.
@@ -1142,7 +867,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     processDynamicAllocas();
     processStaticAllocas();
 
-    if (ClDebugStack) {
+    if (Opts.asan_debug_stack) {
       LLVM_DEBUG(dbgs() << F);
     }
     return true;
@@ -1268,7 +993,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     AllocaPoisonCall APC = {&II, AI, *Size, DoPoison};
     if (AI->isStaticAlloca())
       StaticAllocaPoisonCallVec.push_back(APC);
-    else if (ClInstrumentDynamicAllocas)
+    else if (Opts.asan_instrument_dynamic_allocas)
       DynamicAllocaPoisonCallVec.push_back(APC);
   }
 
@@ -1331,26 +1056,29 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   if (checkIfAlreadyInstrumented(M, "nosanitize_address"))
     return PreservedAnalyses::all();
 
-  ModuleAddressSanitizer ModuleSanitizer(
-      M, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
-      UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind);
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
+                                         Options.CompileKernel, Options.Recover,
+                                         UseGlobalGC, UseOdrIndicator,
+                                         DestructorKind, ConstructorKind);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   const StackSafetyGlobalInfo *const SSGI =
-      ClUseStackSafety ? &MAM.getResult<StackSafetyGlobalAnalysis>(M) : nullptr;
+      Opts.asan_use_stack_safety ? &MAM.getResult<StackSafetyGlobalAnalysis>(M)
+                                 : nullptr;
   for (Function &F : M) {
     if (F.empty())
       continue;
     if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
       continue;
-    if (!ClDebugFunc.empty() && ClDebugFunc == F.getName())
+    if (!Opts.asan_debug_func.empty() && Opts.asan_debug_func == F.getName())
       continue;
     if (F.getName().starts_with("__asan_"))
       continue;
     if (F.isPresplitCoroutine())
       continue;
     AddressSanitizer FunctionSanitizer(
-        M, SSGI, Options.InstrumentationWithCallsThreshold,
+        Opts, M, SSGI, Options.InstrumentationWithCallsThreshold,
         Options.MaxInlinePoisoningSize, Options.CompileKernel, Options.Recover,
         Options.UseAfterScope, Options.UseAfterReturn);
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
@@ -1403,12 +1131,13 @@ static bool isUnsupportedAMDGPUAddrspace(Value *Addr) {
   return false;
 }
 
-static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
+static bool isSupportedAddrspace(const InstrumentationOptions &Opts,
+                                 const Triple &TargetTriple, Value *Addr) {
   Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
   unsigned int AddrSpace = PtrTy->getPointerAddressSpace();
 
-  if (!ClAddrSpaces.empty())
-    return is_contained(ClAddrSpaces, AddrSpace);
+  if (!Opts.asan_instrument_address_spaces.empty())
+    return is_contained(Opts.asan_instrument_address_spaces, AddrSpace);
 
   if (TargetTriple.isAMDGPU())
     return !isUnsupportedAMDGPUAddrspace(Addr);
@@ -1469,7 +1198,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
       (((!AI.isStaticAlloca()) || !getAllocaSizeInBytes(AI).isZero()) &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
-       (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
+       (!Opts.asan_skip_promotable_allocas || !isAllocaPromotable(&AI)) &&
        // inalloca allocas are not treated as static, and we don't want
        // dynamic alloca instrumentation for them as well.
        !AI.isUsedWithInAlloca() &&
@@ -1485,7 +1214,7 @@ bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
 bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // Check whether the target supports sanitizing the address space
   // of the pointer.
-  if (!isSupportedAddrspace(TargetTriple, Ptr))
+  if (!isSupportedAddrspace(Opts, TargetTriple, Ptr))
     return true;
 
   // Ignore swifterror addresses.
@@ -1499,7 +1228,7 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
   if (auto AI = dyn_cast_or_null<AllocaInst>(Ptr))
-    if (ClSkipPromotableAllocas && !isInterestingAlloca(*AI))
+    if (Opts.asan_skip_promotable_allocas && !isInterestingAlloca(*AI))
       return true;
 
   if (SSGI != nullptr && SSGI->stackAccessIsSafe(*Inst) &&
@@ -1517,22 +1246,25 @@ void AddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(I, LI->getPointerOperand()))
+    if (!Opts.asan_instrument_reads || ignoreAccess(I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(I, SI->getPointerOperand()))
+    if (!Opts.asan_instrument_writes ||
+        ignoreAccess(I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(I, RMW->getPointerOperand()))
+    if (!Opts.asan_instrument_atomics ||
+        ignoreAccess(I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), std::nullopt);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(I, XCHG->getPointerOperand()))
+    if (!Opts.asan_instrument_atomics ||
+        ignoreAccess(I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
@@ -1546,7 +1278,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
       bool IsWrite = CI->getType()->isVoidTy();
       // Masked store has an initial operand for the value.
       unsigned OpOffset = IsWrite ? 1 : 0;
-      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+      if (IsWrite ? !Opts.asan_instrument_writes : !Opts.asan_instrument_reads)
         return;
 
       auto BasePtr = CI->getOperand(OpOffset);
@@ -1562,7 +1294,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
     case Intrinsic::masked_compressstore: {
       bool IsWrite = CI->getIntrinsicID() == Intrinsic::masked_compressstore;
       unsigned OpOffset = IsWrite ? 1 : 0;
-      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+      if (IsWrite ? !Opts.asan_instrument_writes : !Opts.asan_instrument_reads)
         return;
       auto BasePtr = CI->getOperand(OpOffset);
       if (ignoreAccess(I, BasePtr))
@@ -1588,7 +1320,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
       auto *VPI = cast<VPIntrinsic>(CI);
       unsigned IID = CI->getIntrinsicID();
       bool IsWrite = CI->getType()->isVoidTy();
-      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+      if (IsWrite ? !Opts.asan_instrument_writes : !Opts.asan_instrument_reads)
         return;
       unsigned PtrOpNo = *VPI->getMemoryPointerParamPos(IID);
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
@@ -1615,7 +1347,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
       auto *VPI = cast<VPIntrinsic>(CI);
       unsigned IID = CI->getIntrinsicID();
       bool IsWrite = IID == Intrinsic::vp_scatter;
-      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+      if (IsWrite ? !Opts.asan_instrument_writes : !Opts.asan_instrument_reads)
         return;
       unsigned PtrOpNo = *VPI->getMemoryPointerParamPos(IID);
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
@@ -1633,7 +1365,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
         return;
       }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
-        if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
+        if (!Opts.asan_instrument_byval || !CI->isByValArgument(ArgNo) ||
             ignoreAccess(I, CI->getArgOperand(ArgNo)))
           continue;
         Type *Ty = CI->getParamByValType(ArgNo);
@@ -1844,20 +1576,21 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   // exit status). Then you run the new compiler on a buggy corpus, collect
   // the special terminations (ideally, you don't see them at all -- no false
   // negatives) and make the decision on the optimization.
-  uint32_t Exp = ClForceExperiment;
+  uint32_t Exp = Opts.asan_force_experiment;
 
-  if (ClOpt && ClOptGlobals) {
+  if (Opts.asan_opt && Opts.asan_opt_globals) {
     // If initialization order checking is disabled, a simple access to a
     // dynamically initialized global is always valid.
     GlobalVariable *G = dyn_cast<GlobalVariable>(getUnderlyingObject(Addr));
-    if (G && (!ClInitializers || GlobalIsLinkerInitialized(G)) &&
+    if (G &&
+        (!Opts.asan_initialization_order || GlobalIsLinkerInitialized(G)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeStoreSize)) {
       NumOptimizedAccessesToGlobalVar++;
       return;
     }
   }
 
-  if (ClOpt && ClOptStack) {
+  if (Opts.asan_opt && Opts.asan_opt_stack) {
     // A direct inbounds access to a stack variable is always valid.
     if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeStoreSize)) {
@@ -2012,7 +1745,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   InstrumentationIRBuilder IRB(InsertBefore);
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
 
-  if (UseCalls && ClOptimizeCallbacks) {
+  if (UseCalls && Opts.asan_optimize_callbacks) {
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
     IRB.CreateIntrinsic(Intrinsic::asan_check_memaccess, {},
                         {IRB.CreatePointerCast(Addr, PtrTy),
@@ -2034,7 +1767,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(*C, ClShadowAddrSpace);
+  Type *ShadowPtrTy = PointerType::get(*C, Opts.asan_shadow_addr_space);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);
@@ -2045,7 +1778,8 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
   size_t Granularity = 1ULL << Mapping.Scale;
   Instruction *CrashTerm = nullptr;
 
-  bool GenSlowPath = (ClAlwaysSlowPath || (TypeStoreSize < 8 * Granularity));
+  bool GenSlowPath =
+      (Opts.asan_always_slow_path || (TypeStoreSize < 8 * Granularity));
 
   if (TargetTriple.isAMDGCN()) {
     if (GenSlowPath) {
@@ -2115,8 +1849,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
 
 void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit) {
   // Set up the arguments to our poison/unpoison functions.
-  IRBuilder<> IRB(&GlobalInit.front(),
-                  GlobalInit.front().getFirstInsertionPt());
+  IRBuilder<> IRB(GlobalInit.front().getFirstInsertionPt());
 
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr =
@@ -2190,7 +1923,7 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     return false;
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
-  if (!isSupportedAddrspace(TargetTriple, G))
+  if (!isSupportedAddrspace(Opts, TargetTriple, G))
     return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
   // Two problems with thread-locals:
@@ -2362,7 +2095,7 @@ StringRef ModuleAddressSanitizer::getGlobalMetadataSection() const {
 }
 
 void ModuleAddressSanitizer::initializeCallbacks() {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   // Declare our poisoning and unpoisoning functions.
   AsanPoisonGlobals = Inserter.insertFunction(kAsanPoisonGlobalsName,
@@ -2828,7 +2561,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
   }
 
   // Create calls for poisoning before initializers run and unpoisoning after.
-  if (ClInitializers)
+  if (Opts.asan_initialization_order)
     createInitializerPoisonCalls();
 
   LLVM_DEBUG(dbgs() << M);
@@ -2905,13 +2638,13 @@ bool ModuleAddressSanitizer::instrumentModule() {
   }
 
   bool CtorComdat = true;
-  if (ClGlobals) {
+  if (Opts.asan_globals) {
     assert(AsanCtorFunction || ConstructorKind == AsanCtorKind::None);
     if (AsanCtorFunction) {
       IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
       instrumentGlobals(IRB, &CtorComdat);
     } else {
-      IRBuilder<> IRB(*C);
+      IRBuilder<> IRB(M);
       instrumentGlobals(IRB, &CtorComdat);
     }
   }
@@ -2941,7 +2674,7 @@ bool ModuleAddressSanitizer::instrumentModule() {
 }
 
 void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   // Create __asan_report* callbacks.
   // IsWrite, TypeSize and Exp are encoded in the function name.
   for (int Exp = 0; Exp < 2; Exp++) {
@@ -2969,7 +2702,9 @@ void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
 
       AsanMemoryAccessCallbackSized[AccessIsWrite][Exp] =
           Inserter.insertFunction(
-              ClMemoryAccessCallbackPrefix + ExpStr + TypeStr + "N" + EndingStr,
+              (Opts.asan_memory_access_callback_prefix + ExpStr + TypeStr +
+               "N" + EndingStr)
+                  .str(),
               FunctionType::get(IRB.getVoidTy(), Args2, false), AL2);
 
       for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
@@ -2982,16 +2717,18 @@ void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
 
         AsanMemoryAccessCallback[AccessIsWrite][Exp][AccessSizeIndex] =
             Inserter.insertFunction(
-                ClMemoryAccessCallbackPrefix + ExpStr + Suffix + EndingStr,
+                (Opts.asan_memory_access_callback_prefix + ExpStr + Suffix +
+                 EndingStr)
+                    .str(),
                 FunctionType::get(IRB.getVoidTy(), Args1, false), AL1);
       }
     }
   }
 
   const std::string MemIntrinCallbackPrefix =
-      (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
+      (CompileKernel && !Opts.asan_kernel_mem_intrinsic_prefix)
           ? std::string("")
-          : ClMemoryAccessCallbackPrefix;
+          : Opts.asan_memory_access_callback_prefix.str();
   AsanMemmove = Inserter.insertFunction(MemIntrinCallbackPrefix + "memmove",
                                         PtrTy, PtrTy, PtrTy, IntptrTy);
   AsanMemcpy = Inserter.insertFunction(MemIntrinCallbackPrefix + "memcpy",
@@ -3030,7 +2767,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }
@@ -3044,7 +2781,7 @@ bool AddressSanitizer::maybeInsertDynamicShadowAtFunctionEntry(Function &F) {
 
   IRBuilder<> IRB(&F.front().front());
   if (Mapping.InGlobal) {
-    if (ClWithIfuncSuppressRemat) {
+    if (Opts.asan_with_ifunc_suppress_remat) {
       // An empty inline asm with input reg == output reg.
       // An opaque pointer-to-int cast, basically.
       InlineAsm *Asm = InlineAsm::get(
@@ -3110,9 +2847,9 @@ void AddressSanitizer::markCatchParametersAsUninteresting(Function &F) {
 }
 
 bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
-  bool ShouldInstrument =
-      ClDebugMin < 0 || ClDebugMax < 0 ||
-      (Instrumented >= ClDebugMin && Instrumented <= ClDebugMax);
+  bool ShouldInstrument = Opts.asan_debug_min < 0 || Opts.asan_debug_max < 0 ||
+                          (Instrumented >= Opts.asan_debug_min &&
+                           Instrumented <= Opts.asan_debug_max);
   Instrumented++;
   return !ShouldInstrument;
 }
@@ -3179,7 +2916,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
 
       if (!InterestingOperands.empty()) {
         for (auto &Operand : InterestingOperands) {
-          if (ClOpt && ClOptSameTemp) {
+          if (Opts.asan_opt && Opts.asan_opt_same_temp) {
             Value *Ptr = Operand.getPtr();
             // If we have a mask, skip instrumentation if we've already
             // instrumented the full object. But don't add to TempsToInstrument
@@ -3195,9 +2932,11 @@ bool AddressSanitizer::instrumentFunction(Function &F,
           OperandsToInstrument.push_back(Operand);
           NumInsnsPerBB++;
         }
-      } else if (((ClInvalidPointerPairs || ClInvalidPointerCmp) &&
+      } else if (((Opts.asan_detect_invalid_pointer_pair ||
+                   Opts.asan_detect_invalid_pointer_cmp) &&
                   isInterestingPointerComparison(&Inst)) ||
-                 ((ClInvalidPointerPairs || ClInvalidPointerSub) &&
+                 ((Opts.asan_detect_invalid_pointer_pair ||
+                   Opts.asan_detect_invalid_pointer_sub) &&
                   isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
       } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst)) {
@@ -3214,7 +2953,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
       }
-      if (NumInsnsPerBB >= ClMaxInsnsToInstrumentPerBB) break;
+      if (NumInsnsPerBB >= Opts.asan_max_ins_per_bb)
+        break;
     }
   }
 
@@ -3274,8 +3014,8 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
   return true;
 }
 
-void FunctionStackPoisoner::initializeCallbacks(Module &) {
-  IRBuilder<> IRB(*C);
+void FunctionStackPoisoner::initializeCallbacks(Module &M) {
+  IRBuilder<> IRB(M);
   if (ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Always ||
       ASan.UseAfterReturn == AsanDetectStackUseAfterReturnMode::Runtime) {
     const char *MallocNameTemplate =
@@ -3466,8 +3206,9 @@ Value *FunctionStackPoisoner::createAllocaForLayout(
                               nullptr, "MyAlloca");
     assert(Alloca->isStaticAlloca());
   }
-  assert((ClRealignStack & (ClRealignStack - 1)) == 0);
-  uint64_t FrameAlignment = std::max(L.FrameAlignment, uint64_t(ClRealignStack));
+  assert((Opts.asan_realign_stack & (Opts.asan_realign_stack - 1)) == 0);
+  uint64_t FrameAlignment =
+      std::max(L.FrameAlignment, uint64_t(Opts.asan_realign_stack));
   Alloca->setAlignment(Align(FrameAlignment));
   return Alloca;
 }
@@ -3481,7 +3222,7 @@ void FunctionStackPoisoner::createDynamicAllocasInitStorage() {
 }
 
 void FunctionStackPoisoner::processDynamicAllocas() {
-  if (!ClInstrumentDynamicAllocas || DynamicAllocaVec.empty()) {
+  if (!Opts.asan_instrument_dynamic_allocas || DynamicAllocaVec.empty()) {
     assert(DynamicAllocaPoisonCallVec.empty());
     return;
   }
@@ -3671,7 +3412,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   bool DoStackMalloc =
       ASan.UseAfterReturn != AsanDetectStackUseAfterReturnMode::Never &&
       !ASan.CompileKernel && LocalStackSize <= kMaxStackMallocSize;
-  bool DoDynamicAlloca = ClDynamicAllocaStack;
+  bool DoDynamicAlloca = Opts.asan_stack_dynamic_alloca;
   // Don't do dynamic alloca or stack malloc if:
   // 1) There is inline asm: too often it makes assumptions on which registers
   //    are available.

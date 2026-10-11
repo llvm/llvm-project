@@ -23,6 +23,7 @@ struct olMemFillTest : OffloadQueueTest {
     // Block/enqueue tests ensure that the test has been enqueued to a queue
     // (rather than being done synchronously if the queue happens to be empty)
     if constexpr (Block) {
+      SKIP_IF_FORCE_SYNC_OPS();
       ASSERT_SUCCESS(Manual.enqueue(Queue));
     }
 
@@ -105,6 +106,7 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
   constexpr size_t Size = 1024;
   void *Alloc;
   ManuallyTriggeredTask Manual;
+  SKIP_IF_FORCE_SYNC_OPS();
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
   ASSERT_SUCCESS(
@@ -161,6 +163,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
   constexpr size_t Size = 17 * 64;
   void *Alloc;
   ManuallyTriggeredTask Manual;
+  SKIP_IF_FORCE_SYNC_OPS();
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
   ASSERT_SUCCESS(

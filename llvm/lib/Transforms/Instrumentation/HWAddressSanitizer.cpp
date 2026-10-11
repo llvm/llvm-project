@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -95,95 +96,6 @@ enum class OffsetKind {
 };
 }
 
-static cl::opt<std::string>
-    ClMemoryAccessCallbackPrefix("hwasan-memory-access-callback-prefix",
-                                 cl::desc("Prefix for memory access callbacks"),
-                                 cl::Hidden, cl::init("__hwasan_"));
-
-static cl::opt<bool> ClKasanMemIntrinCallbackPrefix(
-    "hwasan-kernel-mem-intrinsic-prefix",
-    cl::desc("Use prefix for memory intrinsics in KASAN mode"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClInstrumentWithCalls(
-    "hwasan-instrument-with-calls",
-    cl::desc("instrument reads and writes with callbacks"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClInstrumentReads("hwasan-instrument-reads",
-                                       cl::desc("instrument read instructions"),
-                                       cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClInstrumentWrites("hwasan-instrument-writes",
-                       cl::desc("instrument write instructions"), cl::Hidden,
-                       cl::init(true));
-
-static cl::opt<bool> ClInstrumentAtomics(
-    "hwasan-instrument-atomics",
-    cl::desc("instrument atomic instructions (rmw, cmpxchg)"), cl::Hidden,
-    cl::init(true));
-
-static cl::opt<bool> ClInstrumentByval("hwasan-instrument-byval",
-                                       cl::desc("instrument byval arguments"),
-                                       cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClRecover("hwasan-recover",
-              cl::desc("Enable recovery mode (continue-after-error)."),
-              cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
-                                       cl::desc("instrument stack (allocas)"),
-                                       cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClUseStackSafety("hwasan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
-
-static cl::opt<size_t> ClMaxLifetimes(
-    "hwasan-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
-    cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."));
-
-static cl::opt<bool>
-    ClUseAfterScope("hwasan-use-after-scope",
-                    cl::desc("detect use after scope within function"),
-                    cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClStrictUseAfterScope(
-    "hwasan-strict-use-after-scope",
-    cl::desc("for complicated lifetimes, tag both on end and return"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<bool> ClGenerateTagsWithCalls(
-    "hwasan-generate-tags-with-calls",
-    cl::desc("generate new tags with runtime library calls"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClGlobals("hwasan-globals", cl::desc("Instrument globals"),
-                               cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClAllGlobals(
-    "hwasan-all-globals",
-    cl::desc(
-        "Instrument globals, even those within user-defined sections. Warning: "
-        "This may break existing code which walks globals via linker-generated "
-        "symbols, expects certain globals to be contiguous with each other, or "
-        "makes other assumptions which are invalidated by HWASan "
-        "instrumentation."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<int> ClMatchAllTag(
-    "hwasan-match-all-tag",
-    cl::desc("don't report bad accesses via pointers with this tag"),
-    cl::Hidden, cl::init(-1));
-
-static cl::opt<bool>
-    ClEnableKhwasan("hwasan-kernel",
-                    cl::desc("Enable KernelHWAddressSanitizer instrumentation"),
-                    cl::Hidden, cl::init(false));
-
 // These flags allow to change the shadow mapping and control how shadow memory
 // is accessed. The shadow mapping looks like:
 //    Shadow = (Mem >> scale) + offset
@@ -200,140 +112,59 @@ static cl::opt<OffsetKind> ClMappingOffsetDynamic(
                clEnumValN(OffsetKind::kIfunc, "ifunc", "Use ifunc global"),
                clEnumValN(OffsetKind::kTls, "tls", "Use TLS")));
 
-static cl::opt<bool>
-    ClFrameRecords("hwasan-with-frame-record",
-                   cl::desc("Use ring buffer for stack allocations"),
-                   cl::Hidden);
-
-static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
-                                          cl::desc("Hot percentile cutoff."));
-
-static cl::opt<float>
-    ClRandomKeepRate("hwasan-random-rate",
-                     cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to keep instrumentation of a function. "
-                              "Note: instrumentation can be skipped randomly "
-                              "OR because of the hot percentile cutoff, if "
-                              "both are supplied."));
-
-static cl::opt<bool> ClStaticLinking(
-    "hwasan-static-linking",
-    cl::desc("Don't use .note.hwasan.globals section to instrument globals "
-             "from loadable libraries. "
-             "Note: in static binaries, the global variables section can be "
-             "accessed directly via linker-provided "
-             "__start_hwasan_globals and __stop_hwasan_globals symbols"),
-    cl::Hidden, cl::init(false));
-
-// Mode for selecting how to insert frame record info into the stack ring
-// buffer.
-enum RecordStackHistoryMode {
-  // Do not record frame record info.
-  none,
-
-  // Insert instructions into the prologue for storing into the stack ring
-  // buffer directly.
-  instr,
-
-  // Add a call to __hwasan_add_frame_record in the runtime.
-  libcall,
-};
-
-static cl::opt<RecordStackHistoryMode> ClRecordStackHistory(
-    "hwasan-record-stack-history",
-    cl::desc("Record stack frames with tagged allocations in a thread-local "
-             "ring buffer"),
-    cl::values(clEnumVal(none, "Do not record stack ring history"),
-               clEnumVal(instr, "Insert instructions into the prologue for "
-                                "storing into the stack ring buffer directly"),
-               clEnumVal(libcall, "Add a call to __hwasan_add_frame_record for "
-                                  "storing into the stack ring buffer")),
-    cl::Hidden, cl::init(instr));
-
-static cl::opt<bool>
-    ClInstrumentMemIntrinsics("hwasan-instrument-mem-intrinsics",
-                              cl::desc("instrument memory intrinsics"),
-                              cl::Hidden, cl::init(true));
-
-static cl::opt<bool>
-    ClInstrumentLandingPads("hwasan-instrument-landing-pads",
-                            cl::desc("instrument landing pads"), cl::Hidden,
-                            cl::init(false));
-
-static cl::opt<bool> ClUseShortGranules(
-    "hwasan-use-short-granules",
-    cl::desc("use short granules in allocas and outlined checks"), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> ClInstrumentPersonalityFunctions(
-    "hwasan-instrument-personality-functions",
-    cl::desc("instrument personality functions"), cl::Hidden);
-
-static cl::opt<bool> ClInlineAllChecks("hwasan-inline-all-checks",
-                                       cl::desc("inline all checks"),
-                                       cl::Hidden, cl::init(false));
-
-static cl::opt<bool> ClInlineFastPathChecks("hwasan-inline-fast-path-checks",
-                                            cl::desc("inline all checks"),
-                                            cl::Hidden, cl::init(false));
-
-// Enabled from clang by "-fsanitize-hwaddress-experimental-aliasing".
-static cl::opt<bool> ClUsePageAliases("hwasan-experimental-use-page-aliases",
-                                      cl::desc("Use page aliasing in HWASan"),
-                                      cl::Hidden, cl::init(false));
-
-static cl::opt<uint64_t>
-    ClTagBits("hwasan-tag-bits",
-              cl::desc("Restrict tag to at most N bits. Needs to be > 4."),
-              cl::Hidden, cl::init(0));
-
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
 STATISTIC(NumNoProfileSummaryFuncs, "Number of funcs without PS");
 
 namespace {
 
-template <typename T> T optOr(cl::opt<T> &Opt, T Other) {
-  return Opt.getNumOccurrences() ? Opt : Other;
+bool shouldUsePageAliases(const InstrumentationOptions &Opts,
+                          const Triple &TargetTriple) {
+  return Opts.hwasan_experimental_use_page_aliases &&
+         TargetTriple.getArch() == Triple::x86_64;
 }
 
-bool shouldUsePageAliases(const Triple &TargetTriple) {
-  return ClUsePageAliases && TargetTriple.getArch() == Triple::x86_64;
+bool shouldInstrumentStack(const InstrumentationOptions &Opts,
+                           const Triple &TargetTriple) {
+  return !shouldUsePageAliases(Opts, TargetTriple) &&
+         Opts.hwasan_instrument_stack;
 }
 
-bool shouldInstrumentStack(const Triple &TargetTriple) {
-  return !shouldUsePageAliases(TargetTriple) && ClInstrumentStack;
+bool shouldInstrumentWithCalls(const InstrumentationOptions &Opts,
+                               const Triple &TargetTriple) {
+  return valueOr(Opts.hwasan_instrument_with_calls,
+                 TargetTriple.getArch() == Triple::x86_64);
 }
 
-bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
-  return optOr(ClInstrumentWithCalls, TargetTriple.getArch() == Triple::x86_64);
+bool mightUseStackSafetyAnalysis(const InstrumentationOptions &Opts,
+                                 bool DisableOptimization) {
+  return valueOr(Opts.hwasan_use_stack_safety, !DisableOptimization);
 }
 
-bool mightUseStackSafetyAnalysis(bool DisableOptimization) {
-  return optOr(ClUseStackSafety, !DisableOptimization);
-}
-
-bool shouldUseStackSafetyAnalysis(const Triple &TargetTriple,
+bool shouldUseStackSafetyAnalysis(const InstrumentationOptions &Opts,
+                                  const Triple &TargetTriple,
                                   bool DisableOptimization) {
-  return shouldInstrumentStack(TargetTriple) &&
-         mightUseStackSafetyAnalysis(DisableOptimization);
+  return shouldInstrumentStack(Opts, TargetTriple) &&
+         mightUseStackSafetyAnalysis(Opts, DisableOptimization);
 }
 
-bool shouldDetectUseAfterScope(const Triple &TargetTriple) {
-  return ClUseAfterScope && shouldInstrumentStack(TargetTriple);
+bool shouldDetectUseAfterScope(const InstrumentationOptions &Opts,
+                               const Triple &TargetTriple) {
+  return Opts.hwasan_use_after_scope &&
+         shouldInstrumentStack(Opts, TargetTriple);
 }
 
 /// An instrumentation pass implementing detection of addressability bugs
 /// using tagged pointers.
 class HWAddressSanitizer {
 public:
-  HWAddressSanitizer(Module &M, bool CompileKernel, bool Recover,
+  HWAddressSanitizer(const InstrumentationOptions &Opts, Module &M,
+                     bool CompileKernel, bool Recover,
                      const StackSafetyGlobalInfo *SSI)
-      : M(M), SSI(SSI) {
-    this->Recover = optOr(ClRecover, Recover);
-    this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng = ClRandomKeepRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
-                                                     : nullptr;
+      : Opts(Opts), M(M), SSI(SSI) {
+    this->Recover = valueOr(Opts.hwasan_recover, Recover);
+    this->CompileKernel = valueOr(Opts.hwasan_kernel, CompileKernel);
+    this->Rng = Opts.hwasan_random_rate ? M.createRNG(DEBUG_TYPE) : nullptr;
 
     initializeModule();
   }
@@ -415,6 +246,7 @@ private:
 
   void instrumentPersonalityFunctions();
 
+  const InstrumentationOptions &Opts;
   LLVMContext *C;
   Module &M;
   const StackSafetyGlobalInfo *SSI;
@@ -448,8 +280,8 @@ private:
     }
 
   public:
-    void init(Triple &TargetTriple, bool InstrumentWithCalls,
-              bool CompileKernel);
+    void init(const InstrumentationOptions &Opts, Triple &TargetTriple,
+              bool InstrumentWithCalls, bool CompileKernel);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
     bool isInGlobal() const { return Kind == OffsetKind::kGlobal; }
     bool isInIfunc() const { return Kind == OffsetKind::kIfunc; }
@@ -519,10 +351,13 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   const Triple &TargetTriple = M.getTargetTriple();
-  if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))
+  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  if (shouldUseStackSafetyAnalysis(Opts, TargetTriple,
+                                   Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
 
-  HWAddressSanitizer HWASan(M, Options.CompileKernel, Options.Recover, SSI);
+  HWAddressSanitizer HWASan(Opts, M, Options.CompileKernel, Options.Recover,
+                            SSI);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)
     HWASan.sanitizeFunction(F, FAM);
@@ -655,7 +490,7 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   // binaries, the global variables section can be accessed directly via the
   // __start_hwasan_globals and __stop_hwasan_globals symbols inserted by the
   // linker.
-  if (!ClStaticLinking)
+  if (!Opts.hwasan_static_linking)
     createHwasanNote();
 }
 
@@ -675,23 +510,23 @@ void HWAddressSanitizer::initializeModule() {
   // - Intel LAM (default)
   // - pointer aliasing (heap only)
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
-  UsePageAliases = shouldUsePageAliases(TargetTriple);
-  InstrumentWithCalls = shouldInstrumentWithCalls(TargetTriple);
-  InstrumentStack = shouldInstrumentStack(TargetTriple);
-  DetectUseAfterScope = shouldDetectUseAfterScope(TargetTriple);
+  UsePageAliases = shouldUsePageAliases(Opts, TargetTriple);
+  InstrumentWithCalls = shouldInstrumentWithCalls(Opts, TargetTriple);
+  InstrumentStack = shouldInstrumentStack(Opts, TargetTriple);
+  DetectUseAfterScope = shouldDetectUseAfterScope(Opts, TargetTriple);
   PointerTagShift = IsX86_64 ? 57 : 56;
   TagMaskByte = IsX86_64 ? 0x3F : 0xFF;
-  if (ClTagBits) {
+  if (Opts.hwasan_tag_bits) {
     if (TagMaskByte < 4)
       reportFatalUsageError(
           "need more than 4 bits of tag to have non-short-granule tags");
-    TagMaskByte &= (1ULL << ClTagBits) - 1;
+    TagMaskByte &= (1ULL << Opts.hwasan_tag_bits) - 1;
   }
 
-  Mapping.init(TargetTriple, InstrumentWithCalls, CompileKernel);
+  Mapping.init(Opts, TargetTriple, InstrumentWithCalls, CompileKernel);
 
   C = &(M.getContext());
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
 
   HwasanCtorFunction = nullptr;
 
@@ -701,18 +536,19 @@ void HWAddressSanitizer::initializeModule() {
   bool NewRuntime =
       !TargetTriple.isAndroid() || !TargetTriple.isAndroidVersionLT(30);
 
-  UseShortGranules = optOr(ClUseShortGranules, NewRuntime);
+  UseShortGranules = valueOr(Opts.hwasan_use_short_granules, NewRuntime);
   OutlinedChecks = (TargetTriple.isAArch64() || TargetTriple.isRISCV64()) &&
                    TargetTriple.isOSBinFormatELF() &&
-                   !optOr(ClInlineAllChecks, Recover);
+                   !valueOr(Opts.hwasan_inline_all_checks, Recover);
 
   // These platforms may prefer less inlining to reduce binary size.
-  InlineFastPath = optOr(ClInlineFastPathChecks, !(TargetTriple.isAndroid() ||
-                                                   TargetTriple.isOSFuchsia()));
+  InlineFastPath =
+      valueOr(Opts.hwasan_inline_fast_path_checks,
+              !(TargetTriple.isAndroid() || TargetTriple.isOSFuchsia()));
 
-  if (ClMatchAllTag.getNumOccurrences()) {
-    if (ClMatchAllTag != -1) {
-      MatchAllTag = ClMatchAllTag & 0xFF;
+  if (Opts.hwasan_match_all_tag) {
+    if (*Opts.hwasan_match_all_tag != -1) {
+      MatchAllTag = *Opts.hwasan_match_all_tag & 0xFF;
     }
   } else if (CompileKernel) {
     MatchAllTag = 0xFF;
@@ -720,10 +556,11 @@ void HWAddressSanitizer::initializeModule() {
   UseMatchAllCallback = !CompileKernel && MatchAllTag.has_value();
 
   // If we don't have personality function support, fall back to landing pads.
-  InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
+  InstrumentLandingPads =
+      valueOr(Opts.hwasan_instrument_landing_pads, !NewRuntime);
 
-  InstrumentGlobals =
-      !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
+  InstrumentGlobals = !CompileKernel && !UsePageAliases &&
+                      valueOr(Opts.hwasan_globals, NewRuntime);
 
   if (!CompileKernel) {
     if (InstrumentGlobals)
@@ -732,7 +569,7 @@ void HWAddressSanitizer::initializeModule() {
     createHwasanCtorComdat();
 
     bool InstrumentPersonalityFunctions =
-        optOr(ClInstrumentPersonalityFunctions, NewRuntime);
+        valueOr(Opts.hwasan_instrument_personality_functions, NewRuntime);
     if (InstrumentPersonalityFunctions)
       instrumentPersonalityFunctions();
   }
@@ -750,7 +587,7 @@ void HWAddressSanitizer::initializeModule() {
 }
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(*C);
+  IRBuilder<> IRB(M);
   const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
   FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
       *HwasanMemoryAccessCallbackFnTy, *HwasanMemTransferFnTy,
@@ -779,24 +616,27 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
     const std::string EndingStr = Recover ? "_noabort" : "";
 
-    HwasanMemoryAccessCallbackSized[AccessIsWrite] = M.getOrInsertFunction(
-        ClMemoryAccessCallbackPrefix + TypeStr + "N" + MatchAllStr + EndingStr,
-        HwasanMemoryAccessCallbackSizedFnTy);
+    HwasanMemoryAccessCallbackSized[AccessIsWrite] =
+        M.getOrInsertFunction((Opts.hwasan_memory_access_callback_prefix +
+                               TypeStr + "N" + MatchAllStr + EndingStr)
+                                  .str(),
+                              HwasanMemoryAccessCallbackSizedFnTy);
 
     for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
          AccessSizeIndex++) {
       HwasanMemoryAccessCallback[AccessIsWrite][AccessSizeIndex] =
-          M.getOrInsertFunction(ClMemoryAccessCallbackPrefix + TypeStr +
-                                    itostr(1ULL << AccessSizeIndex) +
-                                    MatchAllStr + EndingStr,
+          M.getOrInsertFunction((Opts.hwasan_memory_access_callback_prefix +
+                                 TypeStr + itostr(1ULL << AccessSizeIndex) +
+                                 MatchAllStr + EndingStr)
+                                    .str(),
                                 HwasanMemoryAccessCallbackFnTy);
     }
   }
 
   const std::string MemIntrinCallbackPrefix =
-      (CompileKernel && !ClKasanMemIntrinCallbackPrefix)
+      (CompileKernel && !Opts.hwasan_kernel_mem_intrinsic_prefix)
           ? std::string("")
-          : ClMemoryAccessCallbackPrefix;
+          : Opts.hwasan_memory_access_callback_prefix.str();
 
   HwasanMemmove = M.getOrInsertFunction(
       MemIntrinCallbackPrefix + "memmove" + MatchAllStr, HwasanMemTransferFnTy);
@@ -846,9 +686,8 @@ Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
   if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
-  Value *GlobalDynamicAddress =
-      IRB.GetInsertBlock()->getParent()->getParent()->getOrInsertGlobal(
-          kHwasanShadowMemoryDynamicAddress, PtrTy);
+  Value *GlobalDynamicAddress = IRB.getModule()->getOrInsertGlobal(
+      kHwasanShadowMemoryDynamicAddress, PtrTy);
   return IRB.CreateLoad(PtrTy, GlobalDynamicAddress);
 }
 
@@ -910,29 +749,33 @@ void HWAddressSanitizer::getInterestingMemoryOperands(
     return;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-    if (!ClInstrumentReads || ignoreAccess(ORE, I, LI->getPointerOperand()))
+    if (!Opts.hwasan_instrument_reads ||
+        ignoreAccess(ORE, I, LI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, LI->getPointerOperandIndex(), false,
                              LI->getType(), LI->getAlign());
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-    if (!ClInstrumentWrites || ignoreAccess(ORE, I, SI->getPointerOperand()))
+    if (!Opts.hwasan_instrument_writes ||
+        ignoreAccess(ORE, I, SI->getPointerOperand()))
       return;
     Interesting.emplace_back(I, SI->getPointerOperandIndex(), true,
                              SI->getValueOperand()->getType(), SI->getAlign());
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(ORE, I, RMW->getPointerOperand()))
+    if (!Opts.hwasan_instrument_atomics ||
+        ignoreAccess(ORE, I, RMW->getPointerOperand()))
       return;
     Interesting.emplace_back(I, RMW->getPointerOperandIndex(), true,
                              RMW->getValOperand()->getType(), std::nullopt);
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
-    if (!ClInstrumentAtomics || ignoreAccess(ORE, I, XCHG->getPointerOperand()))
+    if (!Opts.hwasan_instrument_atomics ||
+        ignoreAccess(ORE, I, XCHG->getPointerOperand()))
       return;
     Interesting.emplace_back(I, XCHG->getPointerOperandIndex(), true,
                              XCHG->getCompareOperand()->getType(),
                              std::nullopt);
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
-      if (!ClInstrumentByval || !CI->isByValArgument(ArgNo) ||
+      if (!Opts.hwasan_instrument_byval || !CI->isByValArgument(ArgNo) ||
           ignoreAccess(ORE, I, CI->getArgOperand(ArgNo)))
         continue;
       Type *Ty = CI->getParamByValType(ArgNo);
@@ -1140,11 +983,14 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
 bool HWAddressSanitizer::ignoreMemIntrinsic(OptimizationRemarkEmitter &ORE,
                                             MemIntrinsic *MI) {
   if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI)) {
-    return (!ClInstrumentWrites || ignoreAccess(ORE, MTI, MTI->getDest())) &&
-           (!ClInstrumentReads || ignoreAccess(ORE, MTI, MTI->getSource()));
+    return (!Opts.hwasan_instrument_writes ||
+            ignoreAccess(ORE, MTI, MTI->getDest())) &&
+           (!Opts.hwasan_instrument_reads ||
+            ignoreAccess(ORE, MTI, MTI->getSource()));
   }
   if (isa<MemSetInst>(MI))
-    return !ClInstrumentWrites || ignoreAccess(ORE, MI, MI->getDest());
+    return !Opts.hwasan_instrument_writes ||
+           ignoreAccess(ORE, MI, MI->getDest());
   return false;
 }
 
@@ -1291,7 +1137,7 @@ Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
-  if (ClGenerateTagsWithCalls)
+  if (Opts.hwasan_generate_tags_with_calls)
     return nullptr;
   if (StackBaseTag)
     return StackBaseTag;
@@ -1308,7 +1154,7 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
 
 Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
                                         unsigned AllocaNo) {
-  if (ClGenerateTagsWithCalls)
+  if (Opts.hwasan_generate_tags_with_calls)
     return getNextTagWithCall(IRB);
   return IRB.CreateXor(
       StackTag, ConstantInt::get(StackTag->getType(), retagMask(AllocaNo)));
@@ -1418,15 +1264,15 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   };
 
   if (WithFrameRecord) {
-    switch (ClRecordStackHistory) {
-    case libcall: {
+    switch (Opts.hwasan_record_stack_history) {
+    case RecordStackHistoryMode::libcall: {
       // Emit a runtime call into hwasan rather than emitting instructions for
       // recording stack history.
       Value *FrameRecordInfo = getFrameRecordInfo(IRB);
       IRB.CreateCall(HwasanRecordFrameRecordFunc, {FrameRecordInfo});
       break;
     }
-    case instr: {
+    case RecordStackHistoryMode::instr: {
       ThreadLongMaybeUntagged = getThreadLongMaybeUntagged();
 
       StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
@@ -1440,7 +1286,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 8), SlotPtr);
       break;
     }
-    case none: {
+    case RecordStackHistoryMode::none: {
       llvm_unreachable(
           "A stack history recording mode should've been selected.");
     }
@@ -1543,7 +1389,7 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
       ORE.emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
       });
-    } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
+    } else if (DetectUseAfterScope && Opts.hwasan_strict_use_after_scope) {
       // SInfo.CallsReturnTwice || !isStandardLifetime
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "supportedLifetime", AI);
@@ -1581,7 +1427,7 @@ static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
   auto SkipHot = [&]() {
-    if (!ClHotPercentileCutoff.getNumOccurrences())
+    if (!Opts.hwasan_percentile_cutoff_hot)
       return false;
     auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
@@ -1591,13 +1437,14 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
       return false;
     }
     return PSI->isFunctionHotInCallGraphNthPercentile(
-        ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+        *Opts.hwasan_percentile_cutoff_hot, &F,
+        FAM.getResult<BlockFrequencyAnalysis>(F));
   };
 
   auto SkipRandom = [&]() {
-    if (!ClRandomKeepRate.getNumOccurrences())
+    if (!Opts.hwasan_random_rate)
       return false;
-    std::bernoulli_distribution D(ClRandomKeepRate);
+    std::bernoulli_distribution D(*Opts.hwasan_random_rate);
     return !D(*Rng);
   };
 
@@ -1678,9 +1525,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   assert(!ShadowBase);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
+  IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
-               /*WithFrameRecord*/ ClRecordStackHistory != none &&
+               /*WithFrameRecord*/ Opts.hwasan_record_stack_history !=
+                       RecordStackHistoryMode::none &&
                    Mapping.withFrameRecord() &&
                    !SInfo.AllocasToInstrument.empty());
 
@@ -1715,7 +1563,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     instrumentMemAccess(Operand, DTU, LI, DL);
   DTU.flush();
 
-  if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
+  if (Opts.hwasan_instrument_mem_intrinsics && !IntrinToInstrument.empty()) {
     for (auto *Inst : IntrinToInstrument)
       instrumentMemIntrinsic(Inst);
   }
@@ -1816,7 +1664,7 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasCommonLinkage())
       continue;
 
-    if (ClAllGlobals) {
+    if (Opts.hwasan_all_globals) {
       // Avoid instrumenting intrinsic global variables.
       if (GV.getSection() == "llvm.metadata")
         continue;
@@ -1916,7 +1764,8 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   }
 }
 
-void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
+void HWAddressSanitizer::ShadowMapping::init(const InstrumentationOptions &Opts,
+                                             Triple &TargetTriple,
                                              bool InstrumentWithCalls,
                                              bool CompileKernel) {
   // Start with defaults.
@@ -1934,10 +1783,11 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     WithFrameRecord = false;
   }
 
-  WithFrameRecord = optOr(ClFrameRecords, WithFrameRecord);
+  WithFrameRecord = valueOr(Opts.hwasan_with_frame_record, WithFrameRecord);
 
   // Apply the last of ClMappingOffset and ClMappingOffsetDynamic.
-  Kind = optOr(ClMappingOffsetDynamic, Kind);
+  if (ClMappingOffsetDynamic.getNumOccurrences())
+    Kind = ClMappingOffsetDynamic;
   if (ClMappingOffset.getNumOccurrences() > 0 &&
       !(ClMappingOffsetDynamic.getNumOccurrences() > 0 &&
         ClMappingOffsetDynamic.getPosition() > ClMappingOffset.getPosition())) {
