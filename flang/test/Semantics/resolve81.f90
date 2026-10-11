@@ -64,3 +64,49 @@ contains
       arg2 =3.5
     end subroutine testTypeDecl
 end module m
+
+module protected_target_declarations
+  implicit none
+  integer, target :: x
+  integer, pointer, protected_target :: p
+  type good
+    integer, protected_target, pointer :: component
+  end type
+  type bad
+    !ERROR: An entity with PROTECTED_TARGET must be a data pointer
+    integer, protected_target :: component
+  end type
+  !ERROR: An entity with PROTECTED_TARGET must be a data pointer
+  integer, protected_target :: nonpointer
+  !WARNING: Attribute 'PROTECTED_TARGET' cannot be used more than once [-Wredundant-attribute]
+  integer, pointer, protected_target, protected_target :: duplicate
+  integer, pointer :: statement1, statement2
+  protected_target statement1
+  !ERROR: PROTECTED_TARGET attribute was already specified on 'statement1'
+  protected_target :: statement1
+  !ERROR: PROTECTED_TARGET attribute was already specified on 'statement2'
+  protected_target :: statement2, statement2
+  protected_target :: missing_pointer
+  !ERROR: An entity with PROTECTED_TARGET must be a data pointer
+  integer :: missing_pointer
+  !ERROR: An entity with PROTECTED_TARGET must be a data pointer
+  procedure(callback_interface), pointer :: callback
+  protected_target callback
+contains
+  subroutine callback_interface
+  end subroutine
+  function result_name() result(r)
+    integer, pointer, protected_target :: r
+    r => x
+  end function
+  function function_name()
+    integer, pointer, protected_target :: function_name
+    function_name => x
+  end function
+  subroutine statement_first
+    protected_target :: q
+    integer, pointer :: q
+    q => x
+    nullify(q)
+  end subroutine
+end module

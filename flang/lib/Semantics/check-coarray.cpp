@@ -98,6 +98,22 @@ private:
 };
 
 template <typename T>
+static void CheckProtectedTargetDefinition(
+    SemanticsContext &context, const T &x, const char *what) {
+  if (const auto *expr{GetExpr(context, x)};
+      expr && FindProtectedTarget(*expr)) {
+    auto at{parser::FindSourceLocation(x)};
+    if (auto whyNot{WhyNotDefinable(at, context.FindScope(at),
+            {DefinabilityFlag::DoNotNoteDefinition,
+                DefinabilityFlag::AllowEventLockOrNotifyType},
+            *expr)}) {
+      context.Say(at, "%s variable is not definable"_err_en_US, what)
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
+    }
+  }
+}
+
+template <typename T>
 static void CheckTeamType(
     SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
@@ -108,6 +124,8 @@ static void CheckTeamType(
     } else if (mustBeVariable && !IsVariable(*expr)) {
       context.Say(parser::FindSourceLocation(x),
           "Team must be a variable in this context"_err_en_US);
+    } else if (mustBeVariable) {
+      CheckProtectedTargetDefinition(context, x, "TEAM");
     }
   }
 }
@@ -177,6 +195,8 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else {
+      CheckProtectedTargetDefinition(context, eventVar, "EVENT");
     }
   }
 }
@@ -363,6 +383,10 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
             "Multiple ACQUIRED_LOCK specifiers"_err_en_US);
       } else {
         gotAcquired = true;
+        CheckProtectedTargetDefinition(context_,
+            std::get<parser::Scalar<parser::Logical<parser::Variable>>>(
+                lockStat.u),
+            "ACQUIRED_LOCK");
       }
     }
   }
@@ -383,6 +407,12 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
     if (const auto *stat{std::get_if<parser::ImageSelectorSpec::Stat>(
             &imageSelectorSpec.u)}) {
       CheckTeamStat(context_, *stat);
+      CheckProtectedTargetDefinition(context_, stat->v, "Image selector STAT");
+    } else if (const auto *notify{
+                   std::get_if<parser::ImageSelectorSpec::Notify>(
+                       &imageSelectorSpec.u)}) {
+      CheckProtectedTargetDefinition(
+          context_, notify->v, "Image selector NOTIFY");
     }
   }
 }

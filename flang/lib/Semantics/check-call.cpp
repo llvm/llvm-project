@@ -67,6 +67,13 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *pointer{FindProtectedTarget(*expr)}) { // F'2028 C873
+      evaluate::AttachDeclaration(
+          messages.Say(arg.sourceLocation(),
+              "PROTECTED_TARGET actual argument requires an explicit interface"_err_en_US),
+          *pointer);
+      return;
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +406,38 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  // F'2028 C872, C874: like definability, these are checked only after a
+  // specific procedure has been selected, so they do not affect generic
+  // resolution.
+  if (scope) {
+    const Symbol *protectedTarget{FindProtectedTarget(actual)};
+    if (!protectedTarget && dummyIsPointer &&
+        evaluate::IsObjectPointer(actual)) {
+      protectedTarget = FindProtectedTarget(actual, true);
+    }
+    if (protectedTarget) {
+      if (dummyIsPointer &&
+          !dummy.attrs.test(
+              characteristics::DummyDataObject::Attr::ProtectedTarget)) {
+        evaluate::AttachDeclaration(
+            messages.Say(
+                "PROTECTED_TARGET actual argument requires PROTECTED_TARGET for pointer %s"_err_en_US,
+                dummyName),
+            *protectedTarget);
+        return;
+      } else if (!dummyIsPointer && dummy.intent != common::Intent::In &&
+          !(intrinsic && intrinsic->name == "null")) {
+        // NULL's MOLD= has INTENT(IN) like other intrinsic dummy arguments,
+        // but is characterized without it.
+        evaluate::AttachDeclaration(
+            messages.Say(
+                "PROTECTED_TARGET actual argument requires INTENT(IN) for nonpointer %s"_err_en_US,
+                dummyName),
+            *protectedTarget);
+        return;
+      }
+    }
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{

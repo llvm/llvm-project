@@ -333,6 +333,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     return; // following checks do not apply
   }
 
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) &&
+      !IsObjectPointer(&symbol)) { // F'2028 C781, C8109
+    messages_.Say(
+        "An entity with PROTECTED_TARGET must be a data pointer"_err_en_US);
+  }
+
   if (symbol.attrs().test(Attr::PROTECTED)) {
     if (symbol.owner().kind() != Scope::Kind::Module) { // C854
       messages_.Say(
@@ -529,6 +535,26 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
   for (auto ref : symbol.get<CommonBlockDetails>().objects()) {
     auto restorer{
         messages_.SetLocation(location.empty() ? ref->name() : location)};
+    if (ref->attrs().test(Attr::PROTECTED_TARGET)) { // F'2028 C867
+      evaluate::AttachDeclaration(
+          messages_.Say(
+              "PROTECTED_TARGET pointer '%s' may not appear in COMMON block /%s/"_err_en_US,
+              ref->name(), symbol.name()),
+          *ref);
+    } else if (!IsPointer(*ref)) {
+      // Treat physically contained pointer components as being in COMMON.
+      // A pointer's target is not part of the block's storage.
+      if (const Symbol *component{
+              FindUltimateComponent(*ref, [](const Symbol &x) {
+                return x.attrs().test(Attr::PROTECTED_TARGET);
+              })}) {
+        evaluate::AttachDeclaration(
+            messages_.Say(
+                "COMMON block /%s/ member '%s' has PROTECTED_TARGET component '%s'"_err_en_US,
+                symbol.name(), ref->name(), component->name()),
+            *component);
+      }
+    }
     if (isBindCCommon && ref->has<ObjectEntityDetails>()) {
       if (auto msgs{WhyNotInteroperableObject(*ref,
               /*allowInteroperableType=*/false, /*forCommonBlock=*/true)};
@@ -4176,8 +4202,11 @@ void SubprogramMatchHelper::CheckDummyArg(const Symbol &symbol1,
 void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const Symbol &symbol2, const DummyDataObject &obj1,
     const DummyDataObject &obj2) {
+  // PROTECTED_TARGET is not a characteristic (F'2028 15.3.2.2)
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
-  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2,
+                 obj1.attrs - DummyDataObject::Attr::ProtectedTarget,
+                 obj2.attrs - DummyDataObject::Attr::ProtectedTarget)) {
   } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
         "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,

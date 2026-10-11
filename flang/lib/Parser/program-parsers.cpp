@@ -232,6 +232,7 @@ TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<NamelistStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<OptionalStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<PointerStmt>{})),
+    construct<OtherSpecificationStmt>(indirect(Parser<ProtectedTargetStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<ProtectedStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<SaveStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<TargetStmt>{})),

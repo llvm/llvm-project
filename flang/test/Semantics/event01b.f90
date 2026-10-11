@@ -126,3 +126,13 @@ program test_event_post
   event post(concert, errmsg=co_indexed_character[1], stat=co_indexed_integer[1])
 
 end program test_event_post
+
+subroutine protected_target_event_post
+  use iso_fortran_env, only: event_type
+  type(event_type), pointer, protected_target :: readonly
+  type(event_type), pointer :: ordinary
+  !ERROR: EVENT variable is not definable
+  !BECAUSE: 'readonly' is a PROTECTED_TARGET pointer
+  event post(readonly)
+  event post(ordinary)
+end subroutine

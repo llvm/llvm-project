@@ -683,6 +683,12 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   context.CheckIndexVarRedefine(name_);
+  if (ultimate_->attrs().test(Attr::PROTECTED_TARGET) &&
+      !allocateInfo_.gotSource) { // F'2028 C869
+    context.Say(name_.source,
+        "A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement"_err_en_US);
+    return false;
+  }
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {

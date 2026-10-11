@@ -178,6 +178,14 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Find the pointer protecting the referenced target.  A pointer definition
+// concerns the containing object instead of the rightmost pointer's target.
+const Symbol *FindProtectedTarget(
+    const Symbol &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &, bool isPointerDefinition = false);
+const Symbol *FindProtectedTarget(
+    const SomeExpr &, bool isPointerDefinition = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

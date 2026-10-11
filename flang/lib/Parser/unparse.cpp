@@ -315,6 +315,7 @@ public:
     Word("ALLOCATABLE");
   }
   void Unparse(const Pointer &) { Word("POINTER"); }
+  void Unparse(const ProtectedTarget &) { Word("PROTECTED_TARGET"); }
   void Unparse(const Contiguous &) { Word("CONTIGUOUS"); }
   void Before(const ComponentAttrSpec &x) {
     common::visit(common::visitors{
@@ -718,6 +719,9 @@ public:
   }
   void Unparse(const ProtectedStmt &x) { // R855
     Word("PROTECTED :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const ProtectedTargetStmt &x) { // F'2028 R863
+    Word("PROTECTED_TARGET :: "), Walk(x.v, ", ");
   }
   void Unparse(const SaveStmt &x) { // R856
     Word("SAVE"), Walk(" :: ", x.v, ", ");

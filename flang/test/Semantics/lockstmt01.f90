@@ -39,3 +39,14 @@ program test_lock_stmt
   lock(lock_var, errmsg=error_message, stat=status, acquired_lock=bool)
 
 end program test_lock_stmt
+
+subroutine protected_target_acquired_lock
+  use iso_fortran_env, only: lock_type
+  type(lock_type), save :: lock_object[*]
+  logical, pointer, protected_target :: readonly
+  logical, pointer :: ordinary
+  !ERROR: ACQUIRED_LOCK variable is not definable
+  !BECAUSE: 'readonly' is a PROTECTED_TARGET pointer
+  lock(lock_object, acquired_lock=readonly)
+  lock(lock_object, acquired_lock=ordinary)
+end subroutine

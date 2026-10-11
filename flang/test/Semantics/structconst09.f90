@@ -35,3 +35,51 @@ module m
     end
   end
 end
+
+module protected_target_constructors
+  type ordinary
+    integer, pointer :: p(:)
+  end type
+  type readonly
+    integer, pointer, protected_target :: p(:)
+  end type
+  type data
+    integer :: value
+  end type
+  type node
+    integer :: array(3)
+    integer, pointer :: link(:)
+  end type
+  integer, target :: values(3)
+contains
+  function get() result(r)
+    integer, pointer, protected_target :: r(:)
+    r => values
+  end function
+  subroutine constructors(p, n)
+    integer, pointer, protected_target :: p(:)
+    type(node), pointer, protected_target :: n
+    type(ordinary) :: writable
+    type(readonly) :: protected
+    type(data) :: copied
+    protected = readonly(p)
+    protected = readonly(p(1:2))
+    protected = readonly(n%array)
+    protected = readonly(get())
+    protected = readonly(null())
+    writable = ordinary(n%link)
+    copied = data(p(1))
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'p' that is not PROTECTED_TARGET
+    writable = ordinary(p)
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'p' that is not PROTECTED_TARGET
+    writable = ordinary(p(1:2))
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'p' that is not PROTECTED_TARGET
+    writable = ordinary(n%array)
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'p' that is not PROTECTED_TARGET
+    writable = ordinary(get())
+    associate(a => n%array)
+      !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'p' that is not PROTECTED_TARGET
+      writable = ordinary(a)
+    end associate
+  end subroutine
+end module

@@ -1,4 +1,4 @@
-! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s --implicit-check-not="No intrinsic or user-defined ASSIGNMENT(=)"
 ! Test WhyNotDefinable() explanations
 
 module prot
@@ -136,3 +136,135 @@ program main
   !CHECK: error: Actual argument associated with INTENT(OUT) dummy argument 'lock=' is not definable
   call outlock(lock)
 end
+
+module protected_target_definition_contexts
+  integer, target :: target
+  type box
+    integer :: value
+    integer, pointer :: link
+  end type
+contains
+  function get() result(r)
+    integer, pointer, protected_target :: r
+    r => target
+  end function
+  subroutine definitions(p, chars, logical_pointer)
+    integer, pointer, protected_target :: p
+    character(40), pointer, protected_target :: chars
+    logical, pointer, protected_target :: logical_pointer
+    integer, allocatable :: allocated
+    integer :: status
+    character(40) :: input
+    namelist /readonly_namelist/ p
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    if (.false.) p = 1
+    !CHECK: error: Input variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    read(*,*) p
+    !CHECK: error: 'p' may not be used as a DO variable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    do p = 1, 2
+    end do
+    !CHECK: error: NAMELIST input group must not contain undefinable item 'p'
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    read(*, nml=readonly_namelist)
+    !CHECK: error: Internal file variable 'chars' is not definable
+    !CHECK: because: 'chars' is a PROTECTED_TARGET pointer
+    write(chars,*) 1
+    !CHECK: error: NEWUNIT variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    open(file='unused', newunit=p)
+    !CHECK: error: IOSTAT variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    read(1,*,iostat=p)
+    !CHECK: error: IOMSG variable 'chars' is not definable
+    !CHECK: because: 'chars' is a PROTECTED_TARGET pointer
+    read(1,*,iostat=status,iomsg=chars)
+    !CHECK: error: SIZE variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    read(1,'(A)',advance='no',size=p) input
+    !CHECK: error: EXIST variable 'logical_pointer' is not definable
+    !CHECK: because: 'logical_pointer' is a PROTECTED_TARGET pointer
+    inquire(unit=1,exist=logical_pointer)
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'chars' is a PROTECTED_TARGET pointer
+    chars(2:4) = 'abc'
+    !CHECK: error: Input variable 'chars' is not definable
+    !CHECK: because: 'chars' is a PROTECTED_TARGET pointer
+    read(*,*) chars(2:4)
+    !CHECK: error: STAT variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    allocate(allocated,stat=p)
+    !CHECK: error: ERRMSG variable 'chars' is not definable
+    !CHECK: because: 'chars' is a PROTECTED_TARGET pointer
+    deallocate(allocated,errmsg=chars)
+  end subroutine
+  subroutine function_results
+    print *, get()
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'r' is a PROTECTED_TARGET pointer
+    get() = 1
+    !CHECK: error: Input variable 'get()' is not definable
+    !CHECK: because: 'r' is a PROTECTED_TARGET pointer
+    read(*,*) get()
+    associate(a => get())
+      !CHECK: error: Left-hand side of assignment is not definable
+      !CHECK: because: 'r' is a PROTECTED_TARGET pointer
+      a = 1
+    end associate
+  end subroutine
+  subroutine iolength(p, array, object, input)
+    integer, pointer, protected_target :: p, array(:)
+    type(box), pointer, protected_target :: object
+    integer, intent(in) :: input
+    integer, pointer :: ordinary
+    integer :: length
+    !CHECK: error: IOLENGTH variable 'p' is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    inquire(iolength=p) 1
+    !CHECK: error: IOLENGTH variable 'array' is not definable
+    !CHECK: because: 'array' is a PROTECTED_TARGET pointer
+    inquire(iolength=array(1)) 1
+    !CHECK: error: IOLENGTH variable 'object' is not definable
+    !CHECK: because: 'object' is a PROTECTED_TARGET pointer
+    inquire(iolength=object%value) 1
+    associate(alias => p)
+      !CHECK: error: IOLENGTH variable 'alias' is not definable
+      !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+      inquire(iolength=alias) 1
+    end associate
+    !CHECK: error: IOLENGTH variable 'get()' is not definable
+    !CHECK: because: 'r' is a PROTECTED_TARGET pointer
+    inquire(iolength=get()) 1
+    inquire(iolength=object%link) p
+    inquire(iolength=length) p
+    inquire(iolength=ordinary) p
+    ! Preserve the existing INTENT(IN) IOLENGTH behavior.
+    inquire(iolength=input) p
+  end subroutine
+end module
+
+module protected_target_defined_assignment
+  type t
+    integer :: value
+  contains
+    procedure :: assign
+    generic :: assignment(=) => assign
+  end type
+contains
+  subroutine assign(lhs, rhs)
+    class(t), intent(out) :: lhs
+    integer, intent(in) :: rhs
+    lhs%value = rhs
+  end subroutine
+  subroutine definitions(p, ordinary)
+    type(t), pointer, protected_target :: p
+    type(t), pointer :: ordinary
+    !CHECK: error: PROTECTED_TARGET actual argument requires INTENT(IN) for nonpointer dummy argument 'lhs='
+    !CHECK: error: Left-hand side of assignment is not definable
+    !CHECK: because: 'p' is a PROTECTED_TARGET pointer
+    p = 1
+    ordinary = 1
+  end subroutine
+end module

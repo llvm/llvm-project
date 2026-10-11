@@ -91,3 +91,40 @@ subroutine s()
   !ERROR: STAT= specifier must be a scalar integer variable
   r = c[1,2,3, STAT=MASK(2), STAT=MASK(3)]
 end subroutine s
+
+subroutine protected_target_image_selector
+  use iso_fortran_env, only: notify_type
+  type t
+    integer :: stat
+    integer, pointer :: link
+  end type
+  type holder
+    integer, pointer, protected_target :: stat
+    type(notify_type), pointer, protected_target :: readonly
+    type(notify_type), pointer :: ordinary
+  end type
+  real, save :: c[*]
+  real :: r
+  integer, pointer, protected_target :: ps, stats(:)
+  type(t), pointer, protected_target :: object
+  type(holder) :: h
+  integer, pointer :: ordinary
+  !ERROR: Image selector STAT variable is not definable
+  !BECAUSE: 'ps' is a PROTECTED_TARGET pointer
+  r = c[1, stat=ps]
+  !ERROR: Image selector STAT variable is not definable
+  !BECAUSE: 'stats' is a PROTECTED_TARGET pointer
+  r = c[1, stat=stats(1)]
+  !ERROR: Image selector STAT variable is not definable
+  !BECAUSE: 'object' is a PROTECTED_TARGET pointer
+  c[1, stat=object%stat] = r
+  !ERROR: Image selector STAT variable is not definable
+  !BECAUSE: 'stat' is a PROTECTED_TARGET pointer
+  r = c[1, stat=h%stat]
+  r = c[1, stat=ordinary]
+  r = c[1, stat=object%link]
+  !ERROR: Image selector NOTIFY variable is not definable
+  !BECAUSE: 'readonly' is a PROTECTED_TARGET pointer
+  c[1, notify=h%readonly] = r
+  c[1, notify=h%ordinary] = r
+end subroutine

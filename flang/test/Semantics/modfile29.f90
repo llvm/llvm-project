@@ -6,6 +6,8 @@ module m
   private :: b
   protected :: i
   allocatable :: j
+  pointer :: p
+  protected_target :: p
 end
 
 !Expect: m.mod
@@ -14,4 +16,5 @@ end
 ! real(4),private::b
 ! integer(4),protected::i
 ! integer(4),allocatable::j
+! real(4),pointer,protected_target::p
 !end

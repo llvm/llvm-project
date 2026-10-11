@@ -130,3 +130,32 @@ module m15
   !ERROR: COMMON block /c4/ may not have the member 'x2' whose derived type 't2' has a component '%a%pp' that is ALLOCATABLE or has default initialization
   common /c4/ x2
 end
+
+subroutine protected_target_common
+  integer, pointer, protected_target :: p
+  !ERROR: PROTECTED_TARGET pointer 'p' may not appear in COMMON block /readonly_pointer/
+  common /readonly_pointer/ p
+end subroutine
+
+subroutine protected_target_component_common
+  type inner
+    sequence
+    integer, pointer, protected_target :: p
+  end type
+  type outer
+    sequence
+    type(inner) :: component
+  end type
+  type(outer) :: object
+  !ERROR: COMMON block /readonly_component/ member 'object' has PROTECTED_TARGET component 'p'
+  common /readonly_component/ object
+end subroutine
+
+subroutine ordinary_pointer_common
+  type inner
+    sequence
+    integer, pointer, protected_target :: p
+  end type
+  type(inner), pointer :: ordinary
+  common /ordinary_pointer/ ordinary
+end subroutine

@@ -182,3 +182,52 @@ contains
     !$omp declare variant (p1) match (user={condition(.false.)})
   end subroutine
 end module
+
+! PROTECTED_TARGET is not a procedure characteristic.
+subroutine protected_target_variant_dummy
+  !$omp declare variant (ordinary:protected) match (user={condition(.true.)})
+contains
+  subroutine ordinary(x)
+    integer, pointer, intent(in) :: x
+  end subroutine
+  subroutine protected(x)
+    integer, pointer, protected_target, intent(in) :: x
+  end subroutine
+end subroutine
+
+subroutine ordinary_variant_dummy
+  !$omp declare variant (protected:ordinary) match (user={condition(.true.)})
+contains
+  subroutine ordinary(x)
+    integer, pointer, intent(in) :: x
+  end subroutine
+  subroutine protected(x)
+    integer, pointer, protected_target, intent(in) :: x
+  end subroutine
+end subroutine
+
+subroutine protected_target_variant_result
+  !$omp declare variant (ordinary:protected) match (user={condition(.true.)})
+contains
+  function ordinary() result(r)
+    integer, pointer :: r
+    r => null()
+  end function
+  function protected() result(r)
+    integer, pointer, protected_target :: r
+    r => null()
+  end function
+end subroutine
+
+subroutine ordinary_variant_result
+  !$omp declare variant (protected:ordinary) match (user={condition(.true.)})
+contains
+  function ordinary() result(r)
+    integer, pointer :: r
+    r => null()
+  end function
+  function protected() result(r)
+    integer, pointer, protected_target :: r
+    r => null()
+  end function
+end subroutine

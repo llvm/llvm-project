@@ -605,6 +605,8 @@ public:
   READ_FEATURE(ProgramUnit)
   READ_FEATURE(Protected)
   READ_FEATURE(ProtectedStmt)
+  READ_FEATURE(ProtectedTarget)
+  READ_FEATURE(ProtectedTargetStmt)
   READ_FEATURE(ReadStmt)
   READ_FEATURE(RealLiteralConstant)
   READ_FEATURE(RealLiteralConstant::Real)

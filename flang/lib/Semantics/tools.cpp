@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -24,6 +25,62 @@
 #include <variant>
 
 namespace Fortran::semantics {
+
+static const Symbol *FindProtectedTarget(
+    const SymbolVector &symbols, bool isPointerDefinition) {
+  // F'2028 9.4.2p5: a pointer component's target is not a subobject of its
+  // containing object.  Its association status is, so skip only the rightmost
+  // pointer when checking a pointer definition.
+  bool isLast{true};
+  for (auto iter{symbols.rbegin()}; iter != symbols.rend(); ++iter) {
+    const Symbol &symbol{(**iter).GetUltimate()};
+    if (IsPointer(symbol)) {
+      if (!isLast || !isPointerDefinition) {
+        return symbol.attrs().test(Attr::PROTECTED_TARGET) ? &symbol : nullptr;
+      }
+    } else if (const auto *association{symbol.detailsIf<AssocEntityDetails>()};
+        association && association->expr() &&
+        evaluate::IsVariable(*association->expr())) {
+      return FindProtectedTarget(*association->expr());
+    }
+    isLast = false;
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTarget(
+    const Symbol &symbol, bool isPointerDefinition) {
+  return FindProtectedTarget(
+      evaluate::GetSymbolVector(symbol), isPointerDefinition);
+}
+
+const Symbol *FindProtectedTarget(
+    const evaluate::DataRef &dataRef, bool isPointerDefinition) {
+  return FindProtectedTarget(
+      evaluate::GetSymbolVector(dataRef), isPointerDefinition);
+}
+
+const Symbol *FindProtectedTarget(
+    const SomeExpr &expr, bool isPointerDefinition) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTarget(*dataRef, isPointerDefinition);
+  } else if (!isPointerDefinition) {
+    if (const auto *call{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *interface{call->proc().GetInterfaceSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*interface)};
+            result && result->attrs().test(Attr::PROTECTED_TARGET)) {
+          return result;
+        }
+      }
+    }
+  } else if (const auto *procedure{
+                 std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+    if (const auto *component{procedure->GetComponent()}) {
+      return FindProtectedTarget(component->base());
+    }
+  }
+  return nullptr;
+}
 
 // Find this or containing scope that matches predicate
 static const Scope *FindScopeContaining(

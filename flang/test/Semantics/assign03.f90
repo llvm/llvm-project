@@ -335,3 +335,112 @@ contains
     p=>sin ! ok
   end
 end
+
+module protected_target_procedure_characteristics
+  ! J3/26-007r1 omits PROTECTED_TARGET from the characteristics of dummy data
+  ! objects and function results (15.3.2.2, 15.3.3).
+  integer, target :: value
+  type ordinary_base
+  contains
+    procedure, nopass :: result => ordinary_result
+    procedure, nopass :: consume => ordinary_dummy
+  end type
+  type protected_base
+  contains
+    procedure, nopass :: result => protected_result
+    procedure, nopass :: consume => protected_dummy
+  end type
+  type, extends(ordinary_base) :: ordinary_overrides
+  contains
+    procedure, nopass :: result => protected_result
+    procedure, nopass :: consume => protected_dummy
+  end type
+  type, extends(protected_base) :: protected_overrides
+  contains
+    procedure, nopass :: result => ordinary_result
+    procedure, nopass :: consume => ordinary_dummy
+  end type
+contains
+  function ordinary_result() result(r)
+    integer, pointer :: r
+    r => value
+  end function
+  function protected_result() result(r)
+    integer, pointer, protected_target :: r
+    r => value
+  end function
+  subroutine ordinary_dummy(p)
+    integer, pointer, intent(in) :: p
+  end subroutine
+  subroutine protected_dummy(p)
+    integer, pointer, protected_target, intent(in) :: p
+  end subroutine
+  subroutine ordinary_callback_result(f)
+    procedure(ordinary_result) :: f
+  end subroutine
+  subroutine protected_callback_result(f)
+    procedure(protected_result) :: f
+  end subroutine
+  subroutine ordinary_callback_dummy(s)
+    procedure(ordinary_dummy) :: s
+  end subroutine
+  subroutine protected_callback_dummy(s)
+    procedure(protected_dummy) :: s
+  end subroutine
+  subroutine ordinary_nested(f)
+    procedure(ordinary_callback_result) :: f
+  end subroutine
+  subroutine protected_nested(f)
+    procedure(protected_callback_result) :: f
+  end subroutine
+  function ordinary_factory() result(f)
+    procedure(ordinary_result), pointer :: f
+    f => ordinary_result
+  end function
+  function protected_factory() result(f)
+    procedure(protected_result), pointer :: f
+    f => ordinary_result
+  end function
+  subroutine compare
+    procedure(ordinary_result), pointer :: ordinary_function
+    procedure(protected_result), pointer :: protected_function
+    procedure(ordinary_dummy), pointer :: ordinary_subroutine
+    procedure(protected_dummy), pointer :: protected_subroutine
+    procedure(protected_result), pointer :: protected_initial => ordinary_result
+    procedure(ordinary_result), pointer :: ordinary_initial => protected_result
+    integer, pointer, protected_target :: keep
+    integer, pointer :: ordinary
+    ordinary_function => ordinary_result
+    protected_function => protected_result
+    ordinary_subroutine => ordinary_dummy
+    protected_subroutine => protected_dummy
+    ordinary_function => protected_result
+    protected_function => ordinary_result
+    ordinary_subroutine => protected_dummy
+    protected_subroutine => ordinary_dummy
+    keep => protected_function()
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'ordinary' that is not PROTECTED_TARGET
+    ordinary => protected_function()
+    ! The interface of ordinary_function has no PROTECTED_TARGET result.
+    ordinary => ordinary_function()
+    ordinary = 1
+  end subroutine
+  subroutine nested_interfaces
+    procedure(ordinary_callback_result), pointer :: ordinary_result_callback
+    procedure(protected_callback_result), pointer :: protected_result_callback
+    procedure(ordinary_callback_dummy), pointer :: ordinary_dummy_callback
+    procedure(protected_callback_dummy), pointer :: protected_dummy_callback
+    procedure(ordinary_nested), pointer :: ordinary_nested_pointer
+    procedure(protected_nested), pointer :: protected_nested_pointer
+    procedure(ordinary_factory), pointer :: ordinary_factory_pointer
+    procedure(protected_factory), pointer :: protected_factory_pointer
+    ordinary_result_callback => protected_callback_result
+    protected_result_callback => ordinary_callback_result
+    protected_dummy_callback => ordinary_callback_dummy
+    ordinary_dummy_callback => protected_callback_dummy
+    protected_nested_pointer => ordinary_nested
+    ordinary_nested_pointer => protected_nested
+    protected_factory_pointer => ordinary_factory
+    ordinary_factory_pointer => protected_factory
+  end subroutine
+end module

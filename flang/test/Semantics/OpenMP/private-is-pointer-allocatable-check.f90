@@ -16,3 +16,13 @@ subroutine s
   endif
   !$omp end parallel
 end subroutine
+
+subroutine protected_target
+  integer, pointer, protected_target :: p, q
+  integer, target :: t
+
+  q => t
+  !$omp parallel private(p) firstprivate(q)
+    p=>q
+  !$omp end parallel
+end subroutine

@@ -22,6 +22,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 #include <string>
 
@@ -50,10 +51,15 @@ public:
     set_lhsType(TypeAndShape::Characterize(lhs, foldingContext_));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    // OpenMP data-sharing symbols are host-associated without attributes.
+    set_isProtectedTarget(
+        lhs.GetUltimate().attrs().test(Attr::PROTECTED_TARGET));
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
   PointerAssignmentChecker &set_isVolatile(bool);
+  PointerAssignmentChecker &set_isProtectedTarget(bool);
+  PointerAssignmentChecker &set_isArgumentAssociation(bool);
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
@@ -92,6 +98,8 @@ private:
   bool characterizedProcedure_{false};
   bool isContiguous_{false};
   bool isVolatile_{false};
+  bool isProtectedTarget_{false};
+  bool isArgumentAssociation_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
   bool isRHSPointerActualArgument_{false};
@@ -114,6 +122,18 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_isContiguous(
 PointerAssignmentChecker &PointerAssignmentChecker::set_isVolatile(
     bool isVolatile) {
   isVolatile_ = isVolatile;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isProtectedTarget(
+    bool isProtectedTarget) {
+  isProtectedTarget_ = isProtectedTarget;
+  return *this;
+}
+
+PointerAssignmentChecker &PointerAssignmentChecker::set_isArgumentAssociation(
+    bool isArgumentAssociation) {
+  isArgumentAssociation_ = isArgumentAssociation;
   return *this;
 }
 
@@ -198,6 +218,15 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
   }
+  if (!isProtectedTarget_) {
+    if (const Symbol *pointer{FindProtectedTarget(rhs)}) {
+      evaluate::AttachDeclaration(
+          Say("A PROTECTED_TARGET target may not be associated with %s that is not PROTECTED_TARGET"_err_en_US,
+              description_),
+          *pointer);
+      return false;
+    }
+  }
   if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
     return false;
   }
@@ -243,9 +272,28 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
     }
   }
-  // Warn about undefinable data targets
-  if (auto because{
-          WhyNotDefinable(foldingContext_.messages().at(), scope_, {}, rhs)}) {
+  if (isProtectedTarget_) {
+    // F'2028 C864 conflicts with 8.5.16 NOTE 1.  Follow the constraint for
+    // data-targets and initial-data-targets, not argument association.
+    // Keep ordinary-pointer diagnostics unchanged.
+    if (auto dataRef{evaluate::ExtractDataRef(rhs, true, true)};
+        dataRef && !isArgumentAssociation_) {
+      auto symbols{evaluate::GetSymbolVector(*dataRef)};
+      if (!symbols.empty()) {
+        const Symbol &base{symbols.front()};
+        if (IsProtected(base.GetUltimate()) && IsUseAssociated(base, scope_) &&
+            std::none_of(symbols.begin(), symbols.end(),
+                [](const Symbol &x) { return IsPointer(x.GetUltimate()); })) {
+          evaluate::AttachDeclaration(
+              Say("A PROTECTED_TARGET pointer may not be associated with USE-associated PROTECTED target '%s'"_err_en_US,
+                  base.name()),
+              base);
+          return false;
+        }
+      }
+    }
+  } else if (auto because{WhyNotDefinable(
+                 foldingContext_.messages().at(), scope_, {}, rhs)}) {
     if (auto *msg{Warn(common::UsageWarning::PointerToUndefinable,
             "Pointer target is not a definable variable"_warn_en_US)}) {
       msg->Attach(std::move(because->set_severity(parser::Severity::Because)));
@@ -619,6 +667,9 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
+      .set_isProtectedTarget(
+          lhs.attrs.test(DummyDataObject::Attr::ProtectedTarget))
+      .set_isArgumentAssociation(true)
       .set_isAssumedRank(isAssumedRank)
       .set_isRHSPointerActualArgument(isPointerActualArgument)
       .set_ignoreTKR(lhs.ignoreTKR)

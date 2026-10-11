@@ -5,6 +5,9 @@
 
 module protected_var
   integer, protected :: p
+  integer, protected, target :: pt
+  integer, pointer, protected_target :: ptp
+  integer, pointer, protected, protected_target :: pptp
 end module protected_var
 
 program omp_lastprivate
@@ -25,6 +28,23 @@ program omp_lastprivate
   !ERROR: Variable 'p' on the LASTPRIVATE clause is not definable
   !BECAUSE: 'p' is protected in this scope
   !$omp parallel do lastprivate(p)
+  do i = 1, 10
+    c(i) = a(i) + b(i) + k
+  end do
+  !$omp end parallel do
+
+  ! A POINTER list item is updated by pointer assignment.
+  !$omp parallel do lastprivate(ptp)
+  do i = 1, 10
+    ptp => pptp
+    !ERROR: A PROTECTED_TARGET pointer may not be associated with USE-associated PROTECTED target 'pt'
+    ptp => pt
+  end do
+  !$omp end parallel do
+
+  !ERROR: Variable 'pptp' on the LASTPRIVATE clause is not definable
+  !BECAUSE: 'pptp' is protected in this scope
+  !$omp parallel do lastprivate(pptp)
   do i = 1, 10
     c(i) = a(i) + b(i) + k
   end do
@@ -54,3 +74,21 @@ subroutine omp_lastprivate_sb(m)
   print *, c
 
 end subroutine omp_lastprivate_sb
+
+subroutine omp_lastprivate_protected_target(ip)
+  integer, pointer, protected_target, intent(in) :: ip
+  integer, pointer, protected_target :: np
+  integer :: i
+
+  !$omp parallel do lastprivate(np)
+  do i = 1, 10
+    np => ip
+  end do
+  !$omp end parallel do
+
+  !ERROR: Pointer 'ip' with the INTENT(IN) attribute may not appear in a LASTPRIVATE clause
+  !$omp parallel do lastprivate(ip)
+  do i = 1, 10
+  end do
+  !$omp end parallel do
+end subroutine omp_lastprivate_protected_target

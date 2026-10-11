@@ -270,6 +270,11 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (const Symbol *pointer{FindProtectedTarget(
+          original, flags.test(DefinabilityFlag::PointerDefinition))}) {
+    return BlameSymbol(
+        at, "'%s' is a PROTECTED_TARGET pointer"_en_US, *pointer);
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -330,6 +335,11 @@ private:
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::Expr<evaluate::SomeType> &expr) {
+  if (const Symbol *pointer{FindProtectedTarget(
+          expr, flags.test(DefinabilityFlag::PointerDefinition))}) {
+    return BlameSymbol(
+        at, "'%s' is a PROTECTED_TARGET pointer"_en_US, *pointer);
+  }
   std::optional<parser::Message> portabilityWarning;
   if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
     if (evaluate::HasVectorSubscript(expr)) {

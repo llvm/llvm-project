@@ -250,3 +250,146 @@ subroutine s2
     p => z
   end associate
 end
+
+module protected_target_assignment
+  type node
+    integer :: value, array(3)
+    character(6) :: text
+    integer, pointer :: link
+    type(node), pointer :: next
+    procedure(callback), pointer, nopass :: action
+  end type
+  integer, target, protected :: protected_value
+  integer, pointer, protected :: protected_pointer
+contains
+  subroutine assignments
+    type(node), target :: object
+    type(node), pointer, protected_target :: p, keep
+    type(node), pointer :: ordinary
+    integer, target :: values(3)
+    integer, pointer :: scalar, array(:)
+    integer, pointer, protected_target :: readonly(:), index
+    character(:), pointer :: chars
+    character(:), pointer, protected_target :: readonly_chars
+    complex, target :: z
+    complex, pointer, protected_target :: readonly_z
+    real, pointer :: realpart
+
+    p => object
+    keep => p
+    ordinary => object
+    keep => ordinary
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'ordinary' that is not PROTECTED_TARGET
+    ordinary => p
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'scalar' that is not PROTECTED_TARGET
+    scalar => p%value
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'array' that is not PROTECTED_TARGET
+    array => p%array(1:2)
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'chars' that is not PROTECTED_TARGET
+    chars => p%text(2:4)
+    readonly => p%array
+    readonly_chars => p%text(2:4)
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    p%value = 1
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    p%link => values(1)
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    p%action => callback
+    !ERROR: 'action' may not appear in NULLIFY
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    nullify(p%action)
+    !ERROR: 'next' may not appear in NULLIFY
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    nullify(p%next)
+
+    ! Targets of ordinary pointer components are not subobjects of p's target.
+    scalar => p%link
+    p%link = 1
+    p%next%value = 1
+    p%next%next => object
+    p%next%action => callback
+    nullify(p%next%next)
+    associate(a => p%array)
+      !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'array' that is not PROTECTED_TARGET
+      array => a
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+      a(1) = 1
+    end associate
+    associate(a => p%next)
+      a%value = 1
+    end associate
+    readonly_z => z
+    !ERROR: A PROTECTED_TARGET target may not be associated with pointer 'realpart' that is not PROTECTED_TARGET
+    realpart => readonly_z%re
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'readonly_z' is a PROTECTED_TARGET pointer
+    readonly_z%im = 1
+    readonly => values
+    index => values(1)
+    scalar => values(index)
+    array => values(index:)
+    values = 2
+    nullify(p, keep, readonly, index, readonly_chars, readonly_z)
+  end subroutine
+  subroutine select_type_target(p)
+    class(node), pointer, protected_target :: p
+    select type(a => p)
+    type is(node)
+      !ERROR: Left-hand side of assignment is not definable
+      !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+      a%value = 1
+      a%link = 1
+      !ERROR: The left-hand side of a pointer assignment is not definable
+      !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+      a%next => null()
+    end select
+  end subroutine
+  subroutine intent_in_pointer(p)
+    integer, pointer, protected_target, intent(in) :: p
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    p = 1
+    !ERROR: 'p' may not appear in NULLIFY
+    !BECAUSE: 'p' is an INTENT(IN) dummy argument
+    nullify(p)
+  end subroutine
+  subroutine ordinary_intent_in_pointer(p)
+    integer, pointer, intent(in) :: p
+    p = 1
+  end subroutine
+  subroutine owner
+    integer, pointer, protected_target :: p
+    p => protected_value
+    nullify(p)
+  end subroutine
+  subroutine callback
+  end subroutine
+end module
+
+subroutine protected_target_use_association
+  use protected_target_assignment, only: protected_value, protected_pointer
+  type box
+    integer, pointer, protected_target :: c
+  end type
+  integer, pointer, protected_target :: p
+  integer, pointer :: ordinary
+  type(box) :: b
+  ! Follow J3/26-007r1 C864 rather than the conflicting 8.5.16 NOTE 1.
+  !ERROR: A PROTECTED_TARGET pointer may not be associated with USE-associated PROTECTED target 'protected_value'
+  integer, pointer, protected_target :: initialized => protected_value
+  ordinary => protected_value
+  !ERROR: A PROTECTED_TARGET pointer may not be associated with USE-associated PROTECTED target 'protected_value'
+  p => protected_value
+  !ERROR: A PROTECTED_TARGET pointer may not be associated with USE-associated PROTECTED target 'protected_value'
+  b = box(protected_value)
+  p => protected_pointer
+  b = box(protected_pointer)
+  ordinary => protected_pointer
+  !ERROR: 'protected_pointer' may not appear in NULLIFY
+  !BECAUSE: 'protected_pointer' is protected in this scope
+  nullify(protected_pointer)
+end subroutine

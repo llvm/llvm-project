@@ -64,3 +64,13 @@ subroutine test
   !ERROR: Must be a scalar value, but is a rank-1 array
   FORM TEAM (team_number, team, ERRMSG=array_errvar)
 end subroutine
+
+subroutine protected_target_form_team
+  use iso_fortran_env, only: team_type
+  type(team_type), pointer, protected_target :: readonly
+  type(team_type), pointer :: ordinary
+  !ERROR: TEAM variable is not definable
+  !BECAUSE: 'readonly' is a PROTECTED_TARGET pointer
+  form team(1, readonly)
+  form team(1, ordinary)
+end subroutine

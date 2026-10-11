@@ -144,6 +144,74 @@ subroutine C948_a()
   allocate(whatever[*],SOURCE=nokt5src)
 end subroutine
 
+module protected_target_allocation
+  type node
+    integer :: value = 1
+    integer, pointer, protected_target :: readonly
+    integer, pointer :: link
+    integer, allocatable :: allocatable
+    type(node), pointer :: next
+  end type
+contains
+  subroutine allocation(p, pin, object, source)
+    integer, pointer, protected_target :: p
+    integer, pointer, protected_target :: array(:)
+    integer, pointer, protected_target, intent(in) :: pin
+    type(node), pointer, protected_target :: object
+    type(node) :: source
+    type(node), pointer, protected_target :: initialized
+    integer, pointer :: ordinary
+    integer, pointer, protected_target :: stat
+    character(40), pointer, protected_target :: message
+    !ERROR: A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement
+    allocate(p)
+    !ERROR: A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement
+    allocate(p, mold=1)
+    !ERROR: A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement
+    allocate(integer :: p)
+    !ERROR: A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement
+    allocate(initialized)
+    allocate(p, source=1)
+    !ERROR: A PROTECTED_TARGET allocate-object must have SOURCE= in its ALLOCATE statement
+    allocate(array(2))
+    allocate(array(2), source=1)
+    allocate(array, source=[1,2])
+    allocate(initialized, source=source)
+    allocate(ordinary, source=p)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'pin' is an INTENT(IN) dummy argument
+    allocate(pin, source=1)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'object' is a PROTECTED_TARGET pointer
+    allocate(object%link, source=1)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'object' is a PROTECTED_TARGET pointer
+    allocate(object%allocatable, source=1)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'object' is a PROTECTED_TARGET pointer
+    allocate(object%readonly, source=1)
+    allocate(object%next%readonly, source=1)
+    allocate(object%next%link)
+    !ERROR: Object in DEALLOCATE statement is not deallocatable
+    !BECAUSE: 'p' is a PROTECTED_TARGET pointer
+    deallocate(p)
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'object' is a PROTECTED_TARGET pointer
+    deallocate(object%link)
+    !ERROR: Object in DEALLOCATE statement is not deallocatable
+    !BECAUSE: 'readonly' is a PROTECTED_TARGET pointer
+    deallocate(object%next%readonly)
+    deallocate(object%next%link)
+    !ERROR: STAT variable 'stat' is not definable
+    !BECAUSE: 'stat' is a PROTECTED_TARGET pointer
+    allocate(ordinary, stat=stat)
+    !ERROR: ERRMSG variable 'message' is not definable
+    !BECAUSE: 'message' is a PROTECTED_TARGET pointer
+    deallocate(ordinary, errmsg=message)
+    nullify(p, initialized)
+  end subroutine
+end module
+
 
 subroutine C948_b()
   use not_iso_fortran_env !type restriction do not apply

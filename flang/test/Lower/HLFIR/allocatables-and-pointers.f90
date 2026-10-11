@@ -154,3 +154,17 @@ end subroutine
 ! CHECK:    %[[VAL_23:.*]] = arith.addi %[[VAL_22]], %[[VAL_3]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_23]] : i32
 ! CHECK:  }
+
+! A PROTECTED_TARGET pointer is lowered like any other pointer.
+subroutine passing_protected_target_pointer(x)
+  interface
+    subroutine takes_protected_target_pointer(y)
+      real, pointer, protected_target, intent(in) :: y(:)
+    end subroutine
+  end interface
+  real, pointer, protected_target :: x(:)
+  call takes_protected_target_pointer(x)
+end subroutine
+! CHECK-LABEL: func.func @_QPpassing_protected_target_pointer(
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name({{.*}}Ex") fortran_attrs<pointer>
+! CHECK:  fir.call @_QPtakes_protected_target_pointer(%[[VAL_1]]#0) {{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> ()

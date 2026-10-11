@@ -29,6 +29,17 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+- Added frontend support for the Fortran 2028 draft `PROTECTED_TARGET`
+  attribute (J3/26-007r1 8.5.16) on data pointers, including components and
+  function results. The attribute is kept in module files. Flang reports the
+  constraints of 8.5.16 as errors where the pointer or a subobject of it
+  appears: for example, the target cannot be defined through the pointer,
+  `ALLOCATE` of the pointer needs `SOURCE=`, and the pointer cannot be
+  deallocated.
+  Where C864 conflicts with 8.5.16 NOTE 1, Flang follows C864: if `x` is a
+  use-associated nonpointer `PROTECTED` object, `p => x` and initialization
+  with `x` are errors for a `PROTECTED_TARGET` pointer `p`.
+
 ## Bug Fixes
 
 - Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for
