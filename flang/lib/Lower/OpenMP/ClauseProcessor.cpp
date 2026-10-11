@@ -280,7 +280,6 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
                                    mlir::Location loc, mlir::Type iterTy,
                                    llvm::ArrayRef<IteratorRange> ranges,
                                    BodyFn &&bodyGen) {
-
   auto &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<mlir::Value> lbs, ubs, steps;
@@ -302,16 +301,11 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   mlir::Region &reg = itOp.getRegion();
   mlir::Block *body = builder.createBlock(&reg);
 
-  llvm::SmallVector<mlir::Value> ivs;
-  ivs.reserve(ranges.size());
-  for (const IteratorRange &r : ranges)
-    ivs.push_back(body->addArgument(r.lb.getType(), loc));
-
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);
-  for (size_t i = 0; i < ranges.size(); ++i) {
-    const Fortran::semantics::Symbol &ivSym = *ranges[i].ivSym;
-    mlir::Value ivVal = ivs[i];
+  for (const IteratorRange &r : ranges) {
+    const Fortran::semantics::Symbol &ivSym = *r.ivSym;
+    mlir::Value ivVal = body->addArgument(r.lb.getType(), loc);
     mlir::Type ivTy = converter.genType(ivSym);
     if (ivVal.getType() != ivTy)
       ivVal = fir::ConvertOp::create(builder, loc, ivTy, ivVal);
@@ -330,7 +324,7 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
     symMap.addVariableDefinition(ivSym, declareOp, /*force=*/true);
   }
 
-  mlir::omp::YieldOp::create(builder, loc, bodyGen(builder, loc, ivs));
+  mlir::omp::YieldOp::create(builder, loc, bodyGen());
 
   return itOp.getResult();
 }
@@ -1089,13 +1083,12 @@ bool ClauseProcessor::processAffinity(
           llvm::SmallVector<IteratorRange> objectRanges =
               getIteratorRangesForObject(object, iteratorRanges);
           if (!objectRanges.empty()) {
-            mlir::Value iterHandle = buildIteratorOp(
-                converter, clauseLocation, iterTy, objectRanges,
-                [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                    llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
-                  lower::StatementContext iterStmtCtx;
-                  return genEntry(object, iterStmtCtx);
-                });
+            mlir::Value iterHandle =
+                buildIteratorOp(converter, clauseLocation, iterTy, objectRanges,
+                                [&]() -> mlir::Value {
+                                  lower::StatementContext iterStmtCtx;
+                                  return genEntry(object, iterStmtCtx);
+                                });
             result.iterated.push_back(iterHandle);
           } else {
             result.affinityVars.push_back(genEntry(object, stmtCtx));
@@ -1519,12 +1512,12 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       if (!objectRanges.empty()) {
         mlir::Value iterHandle = buildIteratorOp(
             converter, clauseLocation, iterTy, objectRanges,
-            [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+            [&]() -> mlir::Value {
               lower::StatementContext iterStmtCtx;
               mlir::Value addr =
                   genDependVar(object, converter.getSymbolMap(), iterStmtCtx);
-              return fir::ConvertOp::create(builder, loc, ptrTy, addr);
+              return fir::ConvertOp::create(builder, clauseLocation, ptrTy,
+                                            addr);
             });
         result.dependIterated.push_back(iterHandle);
         result.dependIteratedKinds.push_back(dependTypeOperand);

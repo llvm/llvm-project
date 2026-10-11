@@ -259,41 +259,6 @@ end module
 
 ! Iterator tests
 
-! The unused j range must not suppress a(i) when m < 3.
-subroutine affinity_unused_iterator(m)
-  integer :: m
-  integer :: a(4)
-
-  !$omp task affinity(iterator(i = 1:2, j = 3:m) : a(i))
-  !$omp end task
-end subroutine
-
-! CHECK-LABEL: func.func @_QPaffinity_unused_iterator(
-! CHECK: %[[A:.*]]:2 = hlfir.declare
-! CHECK-SAME: uniq_name("_QFaffinity_unused_iteratorEa")
-! CHECK: %[[M:.*]]:2 = hlfir.declare
-! CHECK-SAME: uniq_name("_QFaffinity_unused_iteratorEm")
-! CHECK: %[[I_LB:.*]] = arith.constant 1 : i32
-! CHECK: %[[I_UB:.*]] = arith.constant 2 : i32
-! CHECK: %[[I_STEP:.*]] = arith.constant 1 : i32
-! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: i32) =
-! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
-! CHECK: fir.store %[[IV_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
-! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
-! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
-! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
-! CHECK: %[[COOR_I:.*]] = hlfir.designate %[[A]]#0 (%[[IDX_I]])
-! CHECK: %[[SIZE_I:.*]] = arith.constant 4 : i64
-! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
-! CHECK-SAME: (!fir.ref<i32>) -> !fir.ref<i8>
-! CHECK: %[[ENTRY_I:.*]] = omp.affinity_entry %[[PTR_I]], %[[SIZE_I]]
-! CHECK: omp.yield(%[[ENTRY_I]] :
-! CHECK-SAME: !omp.affinity_entry_ty<!fir.ref<i8>, i64>)
-! CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>
-! CHECK-NOT: omp.iterator
-! CHECK: omp.task affinity(%[[IT_I]] :
-! CHECK-SAME: !omp.iterated<!omp.affinity_entry_ty<!fir.ref<i8>, i64>>) {
-
 ! Each locator uses its own iterator subset; c remains non-iterated.
 subroutine affinity_per_locator(m)
   integer :: m

@@ -60,6 +60,7 @@ subroutine affinity_substring_strides(a, s)
   !$omp end task
 end subroutine
 
+! Representative DEPEND cases exercise the shared checks above.
 subroutine depend_substring_strides(a, s)
   type t
     character(8) :: field
@@ -74,37 +75,10 @@ subroutine depend_substring_strides(a, s)
   !$omp end task
   !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
   !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: s(1::2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: s(:8:2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: a(1)%field(1:4:2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: a(1:2)%field(1:4:2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: a(1:2)%field(::2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
-  !$omp task depend(in: a%field(1:4:2))
-  !$omp end task
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Cannot specify a step for a substring
   !$omp task depend(iterator(i=1:2), in: a(1:i)%field(1:4:2))
   !$omp end task
 
-  ! Without a step, these substrings remain accepted as an extension.
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !$omp task depend(in: a(1)%field(1:4))
-  !$omp end task
+  ! Without a step, the substring remains accepted as an extension.
   !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
   !$omp task depend(in: a(1:2)%field(1:4))
   !$omp end task

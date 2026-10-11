@@ -3,12 +3,11 @@
 
 ! These locators must not be rejected by the earlier-part section guard.
 
-subroutine scalar_parent(a, b, v)
+subroutine scalar_parent(a)
   type t
     integer :: field(4)
   end type
   type(t) :: a(8)
-  integer :: b(100), v(8)
   !$omp task affinity(iterator(i=1:2): a(i)%field(1))
   !$omp end task
 end
@@ -17,12 +16,11 @@ end
 ! CHECK: omp.affinity_entry
 ! CHECK: omp.task affinity
 
-subroutine final_section(a, b, v)
+subroutine final_section(a)
   type t
     integer :: field(4)
   end type
   type(t) :: a(8)
-  integer :: b(100), v(8)
   !$omp task affinity(iterator(i=1:2): a(1)%field(i:i+1))
   !$omp end task
 end
@@ -31,11 +29,7 @@ end
 ! CHECK: omp.affinity_entry
 ! CHECK: omp.task affinity
 
-subroutine ordinary_expression(a, b, v)
-  type t
-    integer :: field(4)
-  end type
-  type(t) :: a(8)
+subroutine ordinary_expression(b, v)
   integer :: b(100), v(8)
   !$omp task affinity(b(sum(v(::2))))
   !$omp end task
@@ -44,11 +38,7 @@ end
 ! CHECK: omp.affinity_entry
 ! CHECK: omp.task affinity
 
-subroutine iterator_expression(a, b, v)
-  type t
-    integer :: field(4)
-  end type
-  type(t) :: a(8)
+subroutine iterator_expression(b, v)
   integer :: b(100), v(8)
   !$omp task affinity(iterator(i=1:2): b(sum(v(::2))+i))
   !$omp end task
@@ -58,12 +48,12 @@ end
 ! CHECK: omp.affinity_entry
 ! CHECK: omp.task affinity
 
-subroutine parent_expression(a, b, v)
+subroutine parent_expression(a, v)
   type t
     integer :: field(4)
   end type
   type(t) :: a(8)
-  integer :: b(100), v(8)
+  integer :: v(8)
   !$omp task affinity(iterator(i=1:2): a(sum(v(::2)))%field(i))
   !$omp end task
 end

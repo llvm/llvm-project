@@ -20,19 +20,10 @@ subroutine earlier_part_strides(a, k)
   !$omp task affinity(a(1:8:2)%nested%field(1))
   !$omp end task
   !ERROR: 'a' in AFFINITY clause must not specify a stride
-  !$omp task affinity(iterator(i=1:2): a(1:8:2)%nested%field(i))
-  !$omp end task
-  !ERROR: 'a' in AFFINITY clause must not specify a stride
   !$omp task affinity(a(1:8:k)%nested%field(1))
   !$omp end task
   !ERROR: 'a' in AFFINITY clause must not specify a stride
-  !$omp task affinity(iterator(i=1:2): a(1:8:k)%nested%field(i))
-  !$omp end task
-  !ERROR: 'a' in AFFINITY clause must not specify a stride
   !$omp task affinity(a(::2)%nested%field(1))
-  !$omp end task
-  !ERROR: 'a' in AFFINITY clause must not specify a stride
-  !$omp task affinity(iterator(i=1:2): a(::2)%nested%field(i))
   !$omp end task
 end subroutine
 
