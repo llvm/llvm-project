@@ -818,4 +818,83 @@ TEST(Attributes, ListIntersect) {
   ASSERT_TRUE(Res->hasParamAttr(3, Attribute::ByVal));
 }
 
+TEST(Attributes, AsString) {
+  LLVMContext C;
+  Attribute Attr;
+
+  {
+    MemoryEffects ME = MemoryEffects::none();
+    for (auto Loc : MemoryEffects::targetMemLocations())
+      ME |= MemoryEffects(Loc, ModRefInfo::ModRef);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(target_mem: readwrite)", Attr.getAsString());
+  }
+  {
+    MemoryEffects ME =
+        MemoryEffects(IRMemLocation::TargetMem0, ModRefInfo::ModRef) |
+        MemoryEffects(IRMemLocation::TargetMem1, ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(target_mem0: readwrite, target_mem1: read)",
+              Attr.getAsString());
+  }
+  {
+    MemoryEffects ME = MemoryEffects::otherMemOnly(ModRefInfo::Ref);
+    for (auto Loc : MemoryEffects::targetMemLocations())
+      ME |= MemoryEffects(Loc, ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(read, argmem: none, inaccessiblemem: none, "
+              "errnomem: none)",
+              Attr.getAsString());
+  }
+  {
+    MemoryEffects ME =
+        MemoryEffects::otherMemOnly(ModRefInfo::Ref) |
+        MemoryEffects(IRMemLocation::TargetMem0, ModRefInfo::ModRef) |
+        MemoryEffects(IRMemLocation::TargetMem1, ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(read, argmem: none, inaccessiblemem: none, "
+              "errnomem: none, target_mem0: readwrite)",
+              Attr.getAsString());
+  }
+
+  {
+    MemoryEffects ME = MemoryEffects::fpcontrolOnly();
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(fpcontrol: readwrite)", Attr.getAsString());
+  }
+  {
+    MemoryEffects ME = MemoryEffects::fpcontrolOnly(ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(fpcontrol: read)", Attr.getAsString());
+  }
+  {
+    MemoryEffects ME = MemoryEffects::otherMemOnly(ModRefInfo::Ref) |
+                       MemoryEffects::fpcontrolOnly(ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(read, argmem: none, inaccessiblemem: none, "
+              "errnomem: none, target_mem: none, fpcontrol: read)",
+              Attr.getAsString());
+  }
+  {
+    MemoryEffects ME = MemoryEffects::otherMemOnly(ModRefInfo::Ref) |
+                       MemoryEffects::fpcontrolOnly(ModRefInfo::Ref) |
+                       MemoryEffects::fpstatusOnly(ModRefInfo::Ref);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(read, argmem: none, inaccessiblemem: none, "
+              "errnomem: none, target_mem: none, fpcontrol: read, "
+              "fpstatus: read)",
+              Attr.getAsString());
+  }
+  {
+    MemoryEffects ME = MemoryEffects::otherMemOnly(ModRefInfo::Mod) |
+                       MemoryEffects::fpcontrolOnly(ModRefInfo::Ref) |
+                       MemoryEffects::fpstatusOnly(ModRefInfo::ModRef);
+    Attr = Attribute::get(C, Attribute::Memory, ME.toIntValue());
+    EXPECT_EQ("memory(write, argmem: none, inaccessiblemem: none, "
+              "errnomem: none, target_mem: none, fpcontrol: read, "
+              "fpstatus: readwrite)",
+              Attr.getAsString());
+  }
+}
+
 } // end anonymous namespace
