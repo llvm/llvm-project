@@ -4055,10 +4055,14 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     if (F->isDeclaration())
       continue;
 
-    if (F->hasExactDefinition())
-      NumFnWithExactDefinition++;
-    else
+    // Like FunctionAttrs, only deduce attributes for functions with an exact
+    // definition, as the attributes of other functions cannot be derived from
+    // their body.
+    if (!F->hasExactDefinition()) {
       NumFnWithoutExactDefinition++;
+      continue;
+    }
+    NumFnWithExactDefinition++;
 
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
