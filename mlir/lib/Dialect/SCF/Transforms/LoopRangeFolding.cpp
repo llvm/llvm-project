@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPRANGEFOLDING
@@ -35,7 +36,21 @@ struct ForLoopRangeFolding
 } // namespace
 
 void ForLoopRangeFolding::runOnOperation() {
-  getOperation()->walk([&](ForOp op) {
+  llvm::SmallSetVector<ForOp, 16> worklist;
+  // Popping from the back processes nested loops before their parents.
+  getOperation()->walk<WalkOrder::PreOrder>(
+      [&](ForOp op) { worklist.insert(op); });
+
+  auto enqueueInductionVarOwner = [&](Value value, ForOp current) {
+    auto arg = dyn_cast<BlockArgument>(value);
+    if (!arg)
+      return;
+    auto loop = dyn_cast<ForOp>(arg.getOwner()->getParentOp());
+    if (loop && loop != current && loop.getInductionVar() == value)
+      worklist.insert(loop);
+  };
+
+  auto foldLoop = [&](ForOp op) {
     Value indVar = op.getInductionVar();
 
     auto canBeFolded = [&](Value value) {
@@ -64,6 +79,9 @@ void ForLoopRangeFolding::runOnOperation() {
         break;
 
       OpBuilder b(op);
+      Value oldLowerBound = op.getLowerBound();
+      Value oldUpperBound = op.getUpperBound();
+      Value oldStep = op.getStep();
       IRMapping lbMap;
       lbMap.map(indVar, op.getLowerBound());
       IRMapping ubMap;
@@ -103,11 +121,27 @@ void ForLoopRangeFolding::runOnOperation() {
         op.setStep(stepFold->getResult(0));
       }
 
+      // Revisit loops whose induction variables may have lost or gained uses.
+      for (Value value : {oldLowerBound, oldUpperBound, oldStep})
+        enqueueInductionVarOwner(value, op);
+      for (Value value : user->getOperands())
+        enqueueInductionVarOwner(value, op);
+
+      // Replacing this arithmetic result may make a nested loop foldable.
+      for (Operation *consumer : user->getUsers()) {
+        if (!isa<arith::AddIOp, arith::MulIOp>(consumer))
+          continue;
+        for (Value value : consumer->getOperands())
+          enqueueInductionVarOwner(value, op);
+      }
+
       ValueRange wrapIndvar(indVar);
       user->replaceAllUsesWith(wrapIndvar);
       user->erase();
     }
-  });
+  };
+  while (!worklist.empty())
+    foldLoop(worklist.pop_back_val());
 }
 
 std::unique_ptr<Pass> mlir::createForLoopRangeFoldingPass() {
