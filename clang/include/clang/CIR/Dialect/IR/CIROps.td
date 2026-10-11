@@ -6603,8 +6603,6 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
     The `cir.matrix.extract` operation extracts the element at the given row 
     and column indices from a matrix object.
 
-    Currently, the flatten index is a column-based index.
-
     ```
     %rowIdx = cir.const #cir.int<1> : !u64i
     %columnIdx = cir.const #cir.int<2> : !u64i
@@ -6623,6 +6621,45 @@ def CIR_MatrixExtractOp : CIR_Op<"matrix.extract", [
 
   let assemblyFormat = [{
     $matrix
+    `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
+    attr-dict `:` qualified(type($matrix))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixInsertOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixInsertOp : CIR_Op<"matrix.insert", [
+  Pure,
+  AllTypesMatch<["matrix", "result"]>,
+  TypesMatchWith<"type of 'value' matches element type of 'matrix'",
+    "matrix", "value", "mlir::cast<cir::MatrixType>($_self).getElementType()">
+]> {
+  let summary = "Insert one element into a matrix object";
+  let description = [{
+    The `cir.matrix.insert` operation returns a copy of a matrix object with
+    the element at the given row and column indices replaced by `value`.
+
+    ```
+    %rowIdx = cir.const #cir.int<1> : !u64i
+    %columnIdx = cir.const #cir.int<2> : !u64i
+    %new = cir.matrix.insert %value, %matrix[%rowIdx : !u64i] [ %columnIdx : !u64i]
+      : !cir.matrix<3 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_MatrixElementType:$value,
+    CIR_MatrixType:$matrix,
+    CIR_AnyFundamentalIntType:$rowIdx,
+    CIR_AnyFundamentalIntType:$columnIdx
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $matrix
     `[` $rowIdx `:` type($rowIdx) `]` `[` $columnIdx `:` type($columnIdx) `]`
     attr-dict `:` qualified(type($matrix))
   }];

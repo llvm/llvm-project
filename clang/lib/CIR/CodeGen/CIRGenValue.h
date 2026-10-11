@@ -168,7 +168,8 @@ class LValue {
   // this is the alignment of the whole vector)
   unsigned alignment;
   mlir::Value v;
-  mlir::Value vectorIdx;      // Index for vector subscript
+  mlir::Value vectorIdx;      // Index for vector subscript & MatrixElt row idx
+  mlir::Value matrixColIdx;   // Matrix column index for MatrixElt
   mlir::Attribute vectorElts; // ExtVector element subset: V.xyx
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
@@ -291,6 +292,34 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  Address getMatrixAddress() const {
+    assert(isMatrixElt());
+    return Address(v, elementType, getAlignment());
+  }
+
+  mlir::Value getMatrixRowIdx() const {
+    assert(isMatrixElt());
+    return vectorIdx;
+  }
+
+  mlir::Value getMatrixColumnIdx() const {
+    assert(isMatrixElt());
+    return matrixColIdx;
+  }
+
+  static LValue makeMatrixElt(Address matAddress, mlir::Value rowIdx,
+                              mlir::Value colIdx, clang::QualType t,
+                              LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = MatrixElt;
+    r.v = matAddress.getPointer();
+    r.elementType = matAddress.getElementType();
+    r.vectorIdx = rowIdx;
+    r.matrixColIdx = colIdx;
+    r.initialize(t, t.getQualifiers(), matAddress.getAlignment(), baseInfo);
     return r;
   }
 
