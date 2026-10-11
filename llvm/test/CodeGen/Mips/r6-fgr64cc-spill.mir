@@ -1,0 +1,31 @@
+# Force an FGR64CC value across an all-FPR clobber, after coalescing and before
+# greedy allocation. The class carries f64 as well as the i32 SEL.D predicate.
+# An alignment of 64 is NOT a spill size of 64: without Size = 64 this creates
+# four-byte slots and opcode-zero PHIs instead of SDC164/LDC164.
+# RUN: llc -mcpu=mips32r6 -mattr=+nan2008 -target-abi=o32 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mips-linux-gnu -mcpu=mips32r6 -mattr=+nan2008 -target-abi=o32 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mcpu=mips32r6 -mattr=+nan2008 -target-abi=o32 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
+# RUN: llc -mtriple=mips-linux-gnu -mcpu=mips32r6 -mattr=+nan2008 -target-abi=o32 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
+# CHECK: type: spill-slot, offset: 0, size: 8, alignment: 8
+# CHECK: SDC164
+# CHECK: INLINEASM
+# CHECK: LDC164
+--- |
+  target triple = "mipsel-linux-gnu"
+  define double @mipsr6_spill(double %x) { ret double %x }
+...
+---
+name: mipsr6_spill
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fgr64cc }
+liveins:
+  - { reg: '$d12_64', virtual-reg: '%0' }
+body: |
+  bb.0:
+    liveins: $d12_64
+    %0:fgr64cc = COPY $d12_64
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $d0_64, 12, implicit-def dead early-clobber $d1_64, 12, implicit-def dead early-clobber $d2_64, 12, implicit-def dead early-clobber $d3_64, 12, implicit-def dead early-clobber $d4_64, 12, implicit-def dead early-clobber $d5_64, 12, implicit-def dead early-clobber $d6_64, 12, implicit-def dead early-clobber $d7_64, 12, implicit-def dead early-clobber $d8_64, 12, implicit-def dead early-clobber $d9_64, 12, implicit-def dead early-clobber $d10_64, 12, implicit-def dead early-clobber $d11_64, 12, implicit-def dead early-clobber $d12_64, 12, implicit-def dead early-clobber $d13_64, 12, implicit-def dead early-clobber $d14_64, 12, implicit-def dead early-clobber $d15_64, 12, implicit-def dead early-clobber $d16_64, 12, implicit-def dead early-clobber $d17_64, 12, implicit-def dead early-clobber $d18_64, 12, implicit-def dead early-clobber $d19_64, 12, implicit-def dead early-clobber $d20_64, 12, implicit-def dead early-clobber $d21_64, 12, implicit-def dead early-clobber $d22_64, 12, implicit-def dead early-clobber $d23_64, 12, implicit-def dead early-clobber $d24_64, 12, implicit-def dead early-clobber $d25_64, 12, implicit-def dead early-clobber $d26_64, 12, implicit-def dead early-clobber $d27_64, 12, implicit-def dead early-clobber $d28_64, 12, implicit-def dead early-clobber $d29_64, 12, implicit-def dead early-clobber $d30_64, 12, implicit-def dead early-clobber $d31_64
+    $d0_64 = COPY %0
+    RetRA implicit killed $d0_64
+...

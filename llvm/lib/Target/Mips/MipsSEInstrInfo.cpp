@@ -145,6 +145,25 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
 
+  // R6 conditions may travel through COPYs, PHIs and spill slots before a
+  // SEL.D consumes bit zero. Looking for a nearby CMP/SEL cannot prove the
+  // origin or all uses after allocation (a COPY to another FPR is enough to
+  // defeat that search). A GPR32/FGR64 COPY transports the low word; it does
+  // not request a numeric conversion or a defined upper word.
+  if (Subtarget.hasMips32r6() && !isMicroMips) {
+    if (Mips::GPR32RegClass.contains(DestReg) &&
+        Mips::FGR64RegClass.contains(SrcReg))
+      Opc = Mips::MFC1_D64;
+    else if (Mips::FGR64RegClass.contains(DestReg) &&
+             Mips::GPR32RegClass.contains(SrcReg))
+      Opc = Mips::MTC1_D64;
+    if (Opc) {
+      BuildMI(MBB, I, DL, get(Opc), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
+    }
+  }
+
   if (Mips::GPR32RegClass.contains(DestReg)) { // Copy to CPU Reg.
     if (Mips::GPR32RegClass.contains(SrcReg)) {
       if (isMicroMips)
