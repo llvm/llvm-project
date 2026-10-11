@@ -1,21 +1,15 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -emit-cir %s -o %t.amd.cir
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o %t.amd.cir
 // RUN: FileCheck --check-prefix=CIR %s --input-file=%t.amd.cir
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -emit-llvm %s -o %t.amd-cir.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-llvm %s -o %t.amd-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,AMD %s --input-file=%t.amd-cir.ll
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip \
-// RUN:            -fcuda-is-device -emit-llvm %s -o %t.amd.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o %t.amd.ll
 // RUN: FileCheck --check-prefixes=LLVM,AMD %s --input-file=%t.amd.ll
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -emit-cir %s -o %t.spv.cir
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o %t.spv.cir
 // RUN: FileCheck --check-prefix=CIR %s --input-file=%t.spv.cir
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -emit-llvm %s -o %t.spv-cir.ll
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-llvm %s -o %t.spv-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,SPV %s --input-file=%t.spv-cir.ll
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip \
-// RUN:            -fcuda-is-device -emit-llvm %s -o %t.spv.ll
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o %t.spv.ll
 // RUN: FileCheck --check-prefixes=LLVM,SPV %s --input-file=%t.spv.ll
 
 #define __device__ __attribute__((device))
