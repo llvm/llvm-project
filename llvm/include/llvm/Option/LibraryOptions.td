@@ -22,11 +22,20 @@ class OptionsStruct<string namespace = "llvm", string prefix = ""> {
   string MemberPrefix = prefix;
 }
 
+// The builds an option exists in, as a preprocessor expression.
+class BuildCondition<code expr> {
+  code Expr = expr;
+}
+def AssertsOnly : BuildCondition<"!defined(NDEBUG)">;
+
 // The member an option sets, and the member's type and default value.
+// `let Condition = AssertsOnly in` makes the option unknown, and removes the
+// member, in other builds.
 class Field<string name, string type, code default> {
   string FieldName = name;
   string FieldType = type;
   code FieldDefault = default;
+  BuildCondition Condition = ?;
 }
 
 // The value a FlagOrEq row assigns when given without one.
