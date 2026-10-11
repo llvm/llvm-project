@@ -1109,6 +1109,10 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
   if (SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
+  unsigned AddressBW = DL.getAddressSizeInBits(AS);
+  // Make sure the address can be represented.
+  if (!isUIntN(AddressBW, AlignedAddr))
+    return nullptr;
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
       AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;

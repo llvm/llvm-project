@@ -178,8 +178,9 @@ public:
   SmallVector<LibraryOptions *, 0> Libraries;
   DenseMap<StringRef, LibraryOptions *> LibraryIndex;
   size_t NumIndexedLibraries = 0;
-  // Copies of the arguments passed to LibraryOptions::parse, whose members may
-  // refer to them. Response file expansions do not outlive parsing.
+  // Storage that library options refer to: copies of the arguments passed to
+  // LibraryOptions::parse and what it allocates. Response file expansions do
+  // not outlive parsing.
   BumpPtrAllocator LibraryArgAlloc;
 
   CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
@@ -1660,7 +1661,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
           for (unsigned J = 0; J != NumArgs; ++J)
             Args[J] = Saver.save(argv[i + J]).data();
           unsigned N = 1;
-          if (Error E = L->parse(ArrayRef(Args, NumArgs), N)) {
+          if (Error E = L->parse(ArrayRef(Args, NumArgs), N, LibraryArgAlloc)) {
             *Errs << ProgramName << ": " << toString(std::move(E)) << '\n';
             ErrorParsing = true;
           }
