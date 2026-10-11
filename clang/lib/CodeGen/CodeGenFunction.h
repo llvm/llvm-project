@@ -5562,9 +5562,12 @@ public:
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
 private:
-  // Adds a convergence_ctrl token with |ParentToken| as parent convergence
-  // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+  // Adds a convergencectrl operand bundle using the current convergence token
+  // to |Bundles| for a convergent call, if convergence tokens are in use.
+  // This must be done before the call is created, since operand bundles
+  // cannot be added to an existing call.
+  void
+  addConvergenceControlBundle(SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
