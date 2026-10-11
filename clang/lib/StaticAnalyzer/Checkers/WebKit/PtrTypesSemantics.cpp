@@ -1275,9 +1275,63 @@ public:
     return Visit(VMT->getSubExpr());
   }
 
+  // Returns true if E is known to evaluate to a smart pointer which holds
+  // nullptr, e.g. RefPtr<T>(), RefPtr<T>(nullptr), Ref<T>(HashTableEmptyValue),
+  // or a call to a function which simply returns one such as
+  // HashTraits<Ref<T>>::emptyValue(). Destructing such a smart pointer can't
+  // delete anything.
+  bool isNullSmartPtr(const Expr *E, unsigned Depth = 0) {
+    if (!E || Depth > 4)
+      return false;
+    while (true) {
+      E = E->IgnoreParenCasts();
+      if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
+        E = EWC->getSubExpr();
+      else if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+        E = MTE->getSubExpr();
+      else if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+        E = BTE->getSubExpr();
+      else
+        break;
+    }
+    if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+      auto *Ctor = CE->getConstructor();
+      if (!Ctor || !isOwnerPtr(safeGetName(Ctor->getParent())))
+        return false;
+      if (Ctor->isDefaultConstructor())
+        return true;
+      if (CE->getNumArgs() != 1)
+        return false;
+      auto *Arg = CE->getArg(0)->IgnoreParenImpCasts();
+      auto ArgType = Arg->getType();
+      if (ArgType->isNullPtrType())
+        return true;
+      if (auto *TD = ArgType->getAsTagDecl();
+          TD && safeGetName(TD) == "HashTableEmptyValueType")
+        return true;
+      if (Ctor->isCopyOrMoveConstructor())
+        return isNullSmartPtr(Arg, Depth + 1);
+      return false;
+    }
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      auto *Callee = CE->getDirectCallee();
+      if (!Callee)
+        return false;
+      if (auto *MD = dyn_cast<CXXMethodDecl>(Callee); MD && MD->isVirtual())
+        return false;
+      auto *Body = dyn_cast_or_null<CompoundStmt>(Callee->getBody());
+      if (!Body || Body->size() != 1)
+        return false;
+      auto *RS = dyn_cast<ReturnStmt>(Body->body_front());
+      return RS && isNullSmartPtr(RS->getRetValue(), Depth + 1);
+    }
+    return false;
+  }
+
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     if (auto *Temp = BTE->getTemporary()) {
-      if (!IsFunctionTrivial(Temp->getDestructor()))
+      if (!isNullSmartPtr(BTE->getSubExpr()) &&
+          !IsFunctionTrivial(Temp->getDestructor()))
         return false;
     }
     return Visit(BTE->getSubExpr());
@@ -1356,6 +1410,11 @@ public:
 
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *IVIE) {
     // An implicit value initialization is trvial.
+    return true;
+  }
+
+  bool VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    // A value initialization of a scalar type such as int() is trivial.
     return true;
   }
 
