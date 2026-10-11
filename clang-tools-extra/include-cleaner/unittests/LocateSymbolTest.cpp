@@ -132,9 +132,10 @@ TEST(LocateSymbol, Stdlib) {
         ElementsAre(*tooling::stdlib::Symbol::named("std::", "vector")));
   }
   {
-    LocateExample Test("#define assert(x)\nvoid foo() { assert(true); }");
+    LocateExample Test("#define ^assert(x)\nvoid foo() { assert(true); }");
     EXPECT_THAT(locateSymbol(Test.findMacro("assert"), Test.langOpts()),
-                ElementsAre(*tooling::stdlib::Symbol::named("", "assert")));
+                ElementsAre(*tooling::stdlib::Symbol::named("", "assert"),
+                            Test.points().front()));
   }
 }
 
@@ -156,6 +157,22 @@ TEST(LocateSymbol, CompleteSymbolHint) {
                 ElementsAre(HintedSymbol(
                     *tooling::stdlib::Symbol::named("std::", "vector"),
                     Hints::CompleteSymbol)));
+  }
+  {
+    LocateExample Test("namespace std { struct ^vector {}; }");
+    EXPECT_THAT(locateSymbol(Test.findDecl("vector"), Test.langOpts()),
+                ElementsAre(HintedSymbol(*tooling::stdlib::Symbol::named(
+                                             "std::", "vector"),
+                                         Hints::CompleteSymbol),
+                            HintedSymbol(Test.points().front(), Hints::None)));
+  }
+  {
+    LocateExample Test("#define ^assert(x)");
+    EXPECT_THAT(
+        locateSymbol(Test.findMacro("assert"), Test.langOpts()),
+        ElementsAre(HintedSymbol(*tooling::stdlib::Symbol::named("", "assert"),
+                                 Hints::CompleteSymbol),
+                    HintedSymbol(Test.points().front(), Hints::None)));
   }
   {
     // macros are always complete.
