@@ -518,9 +518,8 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
       continue;
     }
     Constant *InElt;
-    if (unsigned(Elt) >= SrcNumElts*2)
-      InElt = UndefValue::get(EltTy);
-    else if (unsigned(Elt) >= SrcNumElts) {
+    assert(unsigned(Elt) < SrcNumElts * 2 && "Invalid shuffle mask element");
+    if (unsigned(Elt) >= SrcNumElts) {
       Type *Ty = IntegerType::get(V2->getContext(), 32);
       InElt =
         ConstantExpr::getExtractElement(V2,
