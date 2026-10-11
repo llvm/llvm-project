@@ -1630,7 +1630,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
-    if (isa<PtrToIntInst>(Usr))
+    if (isa<PtrToIntInst, PtrToAddrInst>(Usr))
       return false;
     if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
