@@ -931,6 +931,8 @@ features cannot lower the translation-unit ABI level;
   constrained placeholder type (such as `C auto`) whose default argument
   contains a lambda. (#GH230539)
 
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

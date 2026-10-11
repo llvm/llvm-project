@@ -81,6 +81,7 @@ public:
   bool VisitExpr(const Expr *Node);
   bool VisitDeclRefExpr(const DeclRefExpr *DRE);
   bool VisitCXXThisExpr(const CXXThisExpr *ThisE);
+  bool VisitTemplateParameters(ArrayRef<NamedDecl *> Parameters);
   bool VisitLambdaExpr(const LambdaExpr *Lambda);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *POE);
   bool VisitCoawaitExpr(const CoawaitExpr *E);
@@ -164,13 +165,30 @@ bool CheckDefaultArgumentVisitor::VisitPseudoObjectExpr(
   return Invalid;
 }
 
+bool CheckDefaultArgumentVisitor::VisitTemplateParameters(
+    ArrayRef<NamedDecl *> Parameters) {
+  bool Invalid = false;
+  for (NamedDecl *P : Parameters) {
+    if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
+      if (NTTP->hasDefaultArgument())
+        Invalid |= Visit(NTTP->getDefaultArgument().getArgument().getAsExpr());
+    } else if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(P)) {
+      Invalid |=
+          VisitTemplateParameters(TTP->getTemplateParameters()->asArray());
+    }
+  }
+  return Invalid;
+}
+
 bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
+  bool Invalid =
+      VisitTemplateParameters(Lambda->getExplicitTemplateParameters());
+
   // [expr.prim.lambda.capture]p9
   // a lambda-expression appearing in a default argument cannot implicitly or
   // explicitly capture any local entity. Such a lambda-expression can still
   // have an init-capture if any full-expression in its initializer satisfies
   // the constraints of an expression appearing in a default argument.
-  bool Invalid = false;
   for (const LambdaCapture &LC : Lambda->captures()) {
     if (!Lambda->isInitCapture(&LC))
       return S.Diag(LC.getLocation(), diag::err_lambda_capture_default_arg);
