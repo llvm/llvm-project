@@ -259,7 +259,7 @@ defm : BoolField<"loop-flatten-widen-iv", "true",
 // LoopFuse.cpp
 defm : ValueField<"loop-fusion-peel-max-count", "uint32_t", "0",
   "Max number of iterations to be peeled from a loop, such that fusion can take place">;
-let Condition = "!defined(NDEBUG)" in
+let Condition = AssertsOnly in
 defm : BoolField<"loop-fusion-verbose-debug", "false",
   "Enable verbose debugging for Loop Fusion">;
 
@@ -364,7 +364,7 @@ defm : OptionalEnumField<"lsr-preferred-addressing-mode", "TargetTransformInfo::
 defm : ValueField<"lsr-setupcost-depth-limit", "unsigned", "7",
   "The limit on recursion depth for LSRs setup cost">;
 // Stress test IV chain generation.
-let Condition = "!defined(NDEBUG)" in
+let Condition = AssertsOnly in
 defm : BoolField<"stress-ivchain", "false",
   "Stress test LSR IV chains">;
 

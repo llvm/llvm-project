@@ -259,6 +259,13 @@ static std::string getStructOptionID(const Record &R) {
   return getSpellingIdentifier(R);
 }
 
+// The preprocessor expression of R's Condition, or "" if it has none.
+static StringRef getCondition(const Record &R) {
+  const RecordVal *V = R.getValue("Condition");
+  const auto *DI = V ? dyn_cast<DefInit>(V->getValue()) : nullptr;
+  return DI ? DI->getDef()->getValueAsString("Expr") : "";
+}
+
 namespace {
 // Wraps what is emitted during its lifetime in `#if Condition` where R has one.
 class ConditionScope {
@@ -267,7 +274,7 @@ class ConditionScope {
 
 public:
   ConditionScope(raw_ostream &OS, const Record &R)
-      : OS(OS), Condition(getOptionalString(R, "Condition")) {
+      : OS(OS), Condition(getCondition(R)) {
     if (!Condition.empty())
       OS << "#if " << Condition << '\n';
   }
@@ -686,7 +693,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
     if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Alias"));
-        DI && !getOptionalString(*DI->getDef(), "Condition").empty())
+        DI && !getCondition(*DI->getDef()).empty())
       PrintFatalError(R.getLoc(), "an alias cannot refer to an option with a "
                                   "Condition");
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
