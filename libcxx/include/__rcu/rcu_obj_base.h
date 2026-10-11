@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
 template <class _Tp, class _Dp = default_delete<_Tp>>
-class rcu_obj_base : private __rcu_node {
+class _LIBCPP_AVAILABILITY_RCU rcu_obj_base : private __rcu_node {
   static_assert(std::is_default_constructible_v<_Dp>);
   static_assert(std::is_move_assignable_v<_Dp>);
   static_assert(requires(_Tp* __ptr, _Dp __d) { __d(__ptr); }, "Deleter must be callable with an object pointer.");
