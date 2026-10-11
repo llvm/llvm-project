@@ -1769,7 +1769,7 @@ gentbl_cc_library(
     name = "AMDGPUTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    td_file = "lib/Target/AMDGPU/AMDGPUTargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1780,7 +1780,7 @@ gentbl_cc_library(
     name = "R600TargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/R600.td",
+    td_file = "lib/Target/AMDGPU/R600TargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
