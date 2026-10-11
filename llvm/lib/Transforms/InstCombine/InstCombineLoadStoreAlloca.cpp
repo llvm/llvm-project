@@ -16,6 +16,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1586,9 +1587,11 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   }
 
   // store undef, Ptr -> noop
-  // FIXME: This is technically incorrect because it might overwrite a poison
-  // value. Change to PoisonValue once #52930 is resolved.
-  if (isa<UndefValue>(Val))
+  // Non-byte-sized stores of undef (e.g. i12) are padded with zeros, so we
+  // can't remove the instruction.
+  // FIXME: It's incorrect to overwrite poison with undef
+  if (isa<PoisonValue>(Val) ||
+      (isa<UndefValue>(Val) && DL.typeSizeEqualsStoreSize(Val->getType())))
     return eraseInstFromFunction(SI);
 
   // Replace byte constants with integer constants in stores.
