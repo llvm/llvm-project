@@ -25,12 +25,12 @@ namespace support {
 
 #if TEST_STD_VER >= 26
 
-template <typename _Tp>
+template <typename Key>
 struct constexpr_hash;
 
 // we need to disable hashing for `pointer` types, since we can't cast a pointer to a fixed width integer during constant evaluation via std::bit_cast, std::memcpy or union type-aliasing
-template <class _Tp>
-struct constexpr_hash<_Tp*> {
+template <class Key>
+struct constexpr_hash<Key*> {
   constexpr_hash()                                 = delete;
   constexpr_hash(const constexpr_hash&)            = delete;
   constexpr_hash& operator=(const constexpr_hash&) = delete;
@@ -46,35 +46,35 @@ struct constexpr_hash<std::nullptr_t> {
   }
 };
 
-template <typename _Tp>
-  requires requires(_Tp t) {
-    { std::bool_constant<std::__is_unqualified_v<_Tp>>() } -> std::same_as<std::true_type>;
+template <typename Key>
+  requires requires(Key t) {
+    { std::bool_constant<std::__is_unqualified_v<Key>>() } -> std::same_as<std::true_type>;
 
     {
-      std::bool_constant< std::bool_constant<std::is_integral_v<_Tp>>() ||
-                          std::bool_constant<std::is_floating_point_v<_Tp>>() ||
-                          std::bool_constant<std::is_enum_v<_Tp>>() >()
+      std::bool_constant< std::bool_constant<std::is_integral_v<Key>>() ||
+                          std::bool_constant<std::is_floating_point_v<Key>>() ||
+                          std::bool_constant<std::is_enum_v<Key>>() >()
     } -> std::same_as<std::true_type>;
   }
-struct constexpr_hash<_Tp> {
-  [[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Tp& __v) const noexcept {
-    if constexpr (std::is_integral_v<_Tp>) {
-      if constexpr (sizeof(_Tp) <= sizeof(size_t)) {
+struct constexpr_hash<Key> {
+  [[__nodiscard__]] constexpr _LIBCPP_HIDE_FROM_ABI size_t operator()(const Key& __v) const noexcept {
+    if constexpr (std::is_integral_v<Key>) {
+      if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(__v);
       } else {
-        constexpr size_t multiple           = sizeof(_Tp) / sizeof(size_t);
+        constexpr size_t multiple           = sizeof(Key) / sizeof(size_t);
         std::array<size_t, multiple> region = std::bit_cast<std::array<size_t, multiple>>(__v);
 
         // TODO: 0, 1, 2, 3, 4
         return region[multiple - 1]; // TODO: hash-ing
       }
-    } else if constexpr (std::is_floating_point_v<_Tp>) {
+    } else if constexpr (std::is_floating_point_v<Key>) {
       if (__v == 0.0f)
 
         return 0;
-      // return __scalar_hash<_Tp>::operator()(__v);
+      // return __scalar_hash<Key>::operator()(__v);
 
-      constexpr size_t multiple         = sizeof(_Tp) / sizeof(char);
+      constexpr size_t multiple         = sizeof(Key) / sizeof(char);
       std::array<char, multiple> region = std::bit_cast<std::array<char, multiple>>(__v);
 
       // TODO: pack indexing?
@@ -88,8 +88,8 @@ struct constexpr_hash<_Tp> {
       // return region[multiple - 1]; // TODO: hash-ing
       // return 1234ULL;
 
-    } else if constexpr (std::is_enum_v<_Tp>) {
-      using type = decltype(std::to_underlying(std::declval<_Tp>()));
+    } else if constexpr (std::is_enum_v<Key>) {
+      using type = decltype(std::to_underlying(std::declval<Key>()));
       return constexpr_hash<type>()(static_cast<type>(__v));
     }
     __builtin_unreachable(); // todo: revisit
@@ -99,7 +99,7 @@ struct constexpr_hash<_Tp> {
   constexpr_hash& operator=(const constexpr_hash&) = default;
 };
 
-template <class _Tp>
+template <class Key>
 struct constexpr_hash {
   constexpr_hash()                                 = delete;
   constexpr_hash(const constexpr_hash&)            = delete;
