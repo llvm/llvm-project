@@ -2,6 +2,30 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-for-addr=true -amdgpu-anti-hints-rules=mem-addr-war %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=NOAH
 
+#
+# These tests target the WAR hazard between VMEM sources and a following VGPR
+# write. In expert scheduling mode, if the register allocator allocates the
+# same VGPR for a VMEM source and a following vdst, SIInsertWaitcnts inserts
+# S_WAIT_XCNT and S_WAITCNT_DEPCTR vm_vsrc.
+#
+# With anti-hints enabled:
+#   - Allocator chooses different registers for VMEM vgpr read and later vgpr
+#     write.
+#
+# Without anti-hints:
+#   - Allocator may choose same registers for VMEM vgpr read and later vgpr
+#     write, so xcnt and vm_vsrc waits get inserted.
+#
+# Test scenarios:
+#   - GLOBAL_LOAD address reused by a V_ADD
+#   - GLOBAL_STORE data reused by a V_ADD
+#   - BUFFER_STORE offset reused by a V_ADD
+#   - Nine stores, the first one 8 VMEMs before the V_ADD
+#   - Ten stores with a store data register read twice
+#   - V_ADD in the successor block (no change)
+#   - GLOBAL_LOAD result reusing a store data register (vm_vsrc only)
+#   - DS_WRITE source reused by a V_ADD (rule does not cover DS, no change)
+
 --- |
   define amdgpu_kernel void @addr_vaddr_valu_def() #0 { ret void }
   define amdgpu_kernel void @addr_store_vdata_not_vaddr() #0 { ret void }
@@ -15,6 +39,12 @@
   attributes #0 = { nounwind "amdgpu-agpr-alloc"="0" "frame-pointer"="none" }
 ...
 ---
+# Test: GLOBAL_LOAD_DWORD with address %0, followed by two V_ADDs
+# Both V_ADDs are anti-hinted against %0.
+# With anti-hints: %0 gets vgpr0_vgpr1, V_ADDs get vgpr2/vgpr3 (no overlap,
+# no wait)
+# Without anti-hints: %0 gets vgpr0_vgpr1, first V_ADD gets vgpr1 (overlaps!,
+# s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_vaddr_valu_def
 tracksRegLiveness: true
 body:             |
@@ -55,6 +85,12 @@ body:             |
 ...
 
 ---
+# Test: GLOBAL_STORE_DWORD followed by a V_ADD that can reuse the store data
+# The address %0 stays live to the end, so only the data %1 is anti-hinted.
+# With anti-hints: data %1 gets vgpr2, V_ADD dest %3 gets vgpr4 (no overlap,
+# no wait)
+# Without anti-hints: data %1 gets vgpr2, V_ADD dest %3 gets vgpr2 (overlaps!,
+# s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_store_vdata_not_vaddr
 tracksRegLiveness: true
 body:             |
@@ -91,6 +127,14 @@ body:             |
 ...
 
 ---
+# Test: BUFFER_STORE_DWORDX4_OFFEN followed by three V_ADDs that can reuse the
+# offset
+# The store data %1 stays live, so only the offset %4 is anti-hinted, against
+# all three V_ADD results.
+# With anti-hints: offset %4 gets vgpr16, V_ADDs get vgpr17-19 (no overlap,
+# no wait)
+# Without anti-hints: offset %4 gets vgpr16, first V_ADD gets vgpr16
+# (overlaps!, s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_xcnt
 tracksRegLiveness: true
 liveins:
@@ -143,6 +187,12 @@ body:             |
 ...
 
 ---
+# Test: nine GLOBAL_STOREs, then a V_ADD
+# %r is anti-hinted against all nine data registers %d1-%d9, including %d1 of
+# the first store, 8 VMEMs before the V_ADD.
+# With anti-hints: %d1 gets vgpr11, %r gets vgpr28 (no overlap, no wait)
+# Without anti-hints: %d1 gets vgpr11, %r gets vgpr11 (overlaps!, s_wait_xcnt 8
+# for the first store + vm_vsrc)
 name:            addr_window_overflow
 tracksRegLiveness: true
 body:             |
@@ -254,6 +304,12 @@ body:             |
 ...
 
 ---
+# Test: ten GLOBAL_STOREs where the eighth store reads %d1 again
+# %d1 is read by the first and the eighth store, so %r is anti-hinted against
+# %d1.
+# With anti-hints: %d1 gets vgpr11, %r gets vgpr30 (no overlap, no wait)
+# Without anti-hints: %d1 gets vgpr11, %r gets vgpr11 (overlaps!, s_wait_xcnt 2
+# for the eighth store + vm_vsrc 2)
 name:            addr_reread_no_refresh
 tracksRegLiveness: true
 body:             |
@@ -371,6 +427,9 @@ body:             |
 ...
 
 ---
+# Test: GLOBAL_STORE in bb.0, V_ADD in the fallthrough block bb.1
+# Both runs: data %1 gets vgpr3, V_ADD dest %3 gets vgpr3 (overlaps!,
+# s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_fallthrough_block
 tracksRegLiveness: true
 body:             |
@@ -426,6 +485,12 @@ body:             |
 ...
 
 ---
+# Test: GLOBAL_STORE followed by a GLOBAL_LOAD whose result can reuse the store
+# data
+# With anti-hints: data %1 gets vgpr4, load dest %3 gets vgpr5 (no overlap,
+# no wait)
+# Without anti-hints: data %1 gets vgpr4, load dest %3 gets vgpr4 (overlaps!,
+# vm_vsrc 0)
 name:            addr_vmem_consumer_vmvsrc
 tracksRegLiveness: true
 body:             |
@@ -461,6 +526,10 @@ body:             |
 ...
 
 ---
+# Test: DS_WRITE_B32 followed by a V_ADD that can reuse the DS data
+# DS sources are also tracked by VM_VSRC.
+# Both runs: data %1 gets vgpr1, V_ADD dest %3 gets vgpr1 (overlaps!,
+# vm_vsrc 0)
 name:            addr_ds_producer_vmvsrc
 tracksRegLiveness: true
 body:             |

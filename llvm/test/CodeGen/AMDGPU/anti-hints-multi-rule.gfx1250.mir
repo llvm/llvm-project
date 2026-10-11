@@ -2,6 +2,27 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=wmma-war-ab,trans-war,mem-addr-war %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=CHECK-NO-ANTIHINT
 
+# Test anti-hints for XDL WMMA and TRANS instructions on gfx1250, with the
+# wmma-war-ab, trans-war and mem-addr-war rules selected. A WMMA co-executes
+# with the next few VALUs and a TRANS with the next VALU. On gfx1250 the
+# compiler inserts V_NOPs when a VALU in that window writes a WMMA A/B register
+# or a TRANS source. Anti-hints help the register allocator avoid reusing these
+# source registers for the following VALU results, which removes the V_NOPs.
+# With anti-hints enabled:
+#   - VALUs in the WMMA window get registers other than A and B
+#   - The VALU right after V_EXP_F32 gets a register other than any part of
+#     its source vreg
+#   - No V_NOPs
+# Without anti-hints:
+#   - The first VALUs reuse A, or the V_EXP source
+#   - V_NOPs after the WMMA and one after the V_EXP
+# Test scenarios:
+#   - Two WMMAs with a 4-VALU window and one with a 1-VALU window, each
+#     followed by V_ADDs
+#   - V_EXP_F32 followed by V_ADDs
+#   - V_EXP_F32 with a DS_READ before the next VALU (no change)
+#   - V_EXP_F32 followed by a 64-bit V_CVT_SCALEF32_PK8_FP8_F32
+
 --- |
   define amdgpu_kernel void @test_wmma_f32_16x16x32_bf16_anti_hints() #0 { ret void }
   define amdgpu_kernel void @test_wmma_f32_16x16x64_fp8_fp8_anti_hints() #0 { ret void }
@@ -13,7 +34,10 @@
   attributes #0 = { nounwind "amdgpu-agpr-alloc"="0" "frame-pointer"="none" }
 ...
 ---
-# Test: V_WMMA_F32_16X16X32_BF16 - Pattern "0EIIEEIIV" with 4 VALU slots
+# Test: V_WMMA_F32_16X16X32_BF16 followed by eight V_ADDs
+# With anti-hints: A %0 gets vgpr0-7, V_ADDs %7-%10 get vgpr25-28 (no
+# overlap), %11 gets vgpr0 (outside the window, no V_NOP)
+# Without anti-hints: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps!, 4 V_NOPs)
 name:            test_wmma_f32_16x16x32_bf16_anti_hints
 tracksRegLiveness: true
 body:             |
@@ -71,7 +95,10 @@ body:             |
     S_ENDPGM 0, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14
 ...
 ---
-# Test: V_WMMA_F32_16X16X64_FP8_FP8 - Pattern "0EEIVV" with 1 VALU slot
+# Test: V_WMMA_F32_16X16X64_FP8_FP8 followed by two V_ADDs
+# With anti-hints: V_ADD %7 gets vgpr25 (no overlap), %8 gets vgpr0 (outside
+# the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            test_wmma_f32_16x16x64_fp8_fp8_anti_hints
 tracksRegLiveness: true
 body:             |
@@ -108,7 +135,11 @@ body:             |
     S_ENDPGM 0,implicit %6, implicit %7, implicit %8
 ...
 ---
-# Test: V_WMMA_F32_16X16X128_FP8_FP8 - Pattern "0EEIEEIIVV" with 4 VALU slots
+# Test: V_WMMA_F32_16X16X32_F16 followed by eight V_ADDs
+# The function name says 16x16x128 fp8, but the WMMA is V_WMMA_F32_16X16X32_F16.
+# With anti-hints: A %0 gets vgpr0-7, V_ADDs %7-%10 get vgpr25-28 (no
+# overlap), %11 gets vgpr0 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr0 (overlaps!, 4 V_NOPs)
 name:            test_wmma_f32_16x16x128_fp8_fp8_anti_hints
 tracksRegLiveness: true
 body:             |
@@ -167,7 +198,12 @@ body:             |
 ...
 
 ---
-# Test: V_EXP_F32_e32 - with 1 VALU slots
+# Test: V_EXP_F32 reading %0.sub0, followed by eight V_ADDs
+# V_ADD %7, the first VALU after the V_EXP, is anti-hinted against the V_EXP
+# source %0.sub0.
+# With anti-hints: %0 gets vgpr0_vgpr1, %7 gets vgpr5 (no overlap), %8 gets
+# vgpr0 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr0 (overlaps the V_EXP source!, 1 V_NOP)
 name:            test_expf32
 tracksRegLiveness: true
 body:             |
@@ -226,7 +262,13 @@ body:             |
 ...
 
 ---
-# Test: V_EXP_F32_e32 - with 1 VALU slots
+# Test: V_EXP_F32 reading %0.sub0, a DS_READ_B128, then seven V_ADDs
+# trans-war anti-hints V_ADD %8, the first VALU after the V_EXP, against the
+# V_EXP source %0 (vgpr8_vgpr9). %0 dies at the V_EXP, so vgpr8 is free for %8,
+# but vgpr0-3 (DS_READ %7) and vgpr4-5 (%6) are the only live registers before
+# it, and the allocator takes the first free one, vgpr6. %8 gets vgpr6 in both
+# cases.
+# Both runs: %0 gets vgpr8_vgpr9, DS_READ %7 gets vgpr0-3, %8 gets vgpr6
 name:            test_expf32_dsread
 tracksRegLiveness: true
 body:             |
@@ -287,6 +329,14 @@ body:             |
 ...
 
 ---
+# Test: V_EXP_F32 reading %0.sub0, then a 64-bit V_CVT_SCALEF32_PK8_FP8_F32
+# %15, then eight V_ADDs
+# %15 is the first VALU after the V_EXP, so it is anti-hinted against the V_EXP
+# source %0.sub0.
+# With anti-hints: %0 gets vgpr8_vgpr9, %15 gets vgpr12_vgpr13 (no overlap,
+# no V_NOP)
+# Without anti-hints: %0 gets vgpr8_vgpr9, %15 gets vgpr8_vgpr9 (overlaps the
+# V_EXP source!, 1 V_NOP)
 name:            test_repeat_rate_clobber
 tracksRegLiveness: true
 body:             |

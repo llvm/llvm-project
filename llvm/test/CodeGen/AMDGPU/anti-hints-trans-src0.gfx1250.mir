@@ -2,6 +2,28 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=trans-war %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=NOAH
 
+#
+# These tests target the WAR hazard on TRANS source VGPRs. If the next VALU
+# after a TRANS is not a TRANS and writes a TRANS source, the hazard
+# recognizer inserts one V_NOP before that VALU. Non-VALU instructions in
+# between do not remove the hazard. With anti-hints, the allocator prefers
+# different registers for the TRANS sources and the next VALU result.
+#
+# With anti-hints enabled:
+#   - The first VALU after the TRANS writes registers other than the registers
+#     used for the TRANS sources
+#   - No V_NOP, except in the WMMA test
+#
+# Without anti-hints:
+#   - The first VALU after the TRANS writes a TRANS source register
+#   - One V_NOP between the TRANS and that VALU
+#
+# Test scenarios:
+#   - V_EXP reading a subregister, followed by V_ADDs
+#   - V_EXP followed by a WMMA (V_NOP in both runs)
+#   - DPP V_EXP whose old operand dies, followed by a V_ADD
+#   - V_SQRT followed by a V_ADD that also reads the V_SQRT source
+
 --- |
   define amdgpu_kernel void @trans_src0_valu_def() #0 { ret void }
   define amdgpu_kernel void @trans_war_wmma_dst_not_hinted() #0 { ret void }
@@ -12,6 +34,12 @@
 ...
 
 ---
+# Test: V_EXP_F32 reading %0.sub0, followed by eight V_ADDs
+# V_ADD %7 is the first VALU after the V_EXP, so it is anti-hinted against the
+# V_EXP source %0. The later V_ADDs are not anti-hinted, and %8/%9 get
+# vgpr0/vgpr1 in both runs.
+# With anti-hints: %0 gets vgpr0_vgpr1, %7 gets vgpr5 (no overlap, no V_NOP)
+# Without anti-hints: %0 gets vgpr0_vgpr1, %7 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            trans_src0_valu_def
 tracksRegLiveness: true
 body:             |
@@ -70,6 +98,14 @@ body:             |
 ...
 
 ---
+# Test: V_EXP_F32 reading %0, followed by a WMMA
+# The WMMA is the first VALU after the V_EXP, so its result %5 is anti-hinted
+# against the V_EXP source %0. The anti-hint is one-way: only %5 avoids %0.
+# The register allocator assigns the wide WMMA result %5 before %0, so %0 has
+# no register yet and the anti-hint has nothing to avoid. %0 then gets vgpr16,
+# inside %5.
+# Both runs: %0 gets vgpr16, WMMA result %5 gets vgpr16-23 (overlaps!,
+# 1 V_NOP)
 name:            trans_war_wmma_dst_not_hinted
 tracksRegLiveness: true
 body:             |
@@ -103,6 +139,12 @@ body:             |
 ...
 
 ---
+# Test: V_EXP_F32_dpp reading old %0 and src0 %1, followed by a V_ADD
+# The DPP V_EXP reads the old value %0 as well as src0 %1, so all of its
+# sources are covered, not only src0. src0 %1 is live to the end, so the V_ADD
+# can only reuse the old-value register. V_ADD %4 is anti-hinted against %0.
+# With anti-hints: old %0 gets vgpr0, %4 gets vgpr3 (no overlap, no V_NOP)
+# Without anti-hints: old %0 gets vgpr0, %4 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            trans_war_dpp_old_not_src0
 tracksRegLiveness: true
 body:             |
@@ -132,6 +174,13 @@ body:             |
 ...
 
 ---
+# Test: V_SQRT_F32 reading %0, followed by a VALU that also reads %0
+# The first VALU after the V_SQRT is anti-hinted against the V_SQRT source %0.
+# The second VALU is not anti-hinted.
+# With anti-hints: %0 gets vgpr0, the first VALU gets vgpr1 (no overlap,
+# no V_NOP)
+# Without anti-hints: %0 gets vgpr0, the first VALU gets vgpr0 (overlaps!,
+# 1 V_NOP)
 name:            trans_coexec
 tracksRegLiveness: true
 liveins:

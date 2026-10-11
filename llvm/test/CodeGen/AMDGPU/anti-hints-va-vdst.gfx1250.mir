@@ -2,6 +2,25 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-for-va-vdst=true -amdgpu-anti-hints-rules=va-vdst-war %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=NOAH
 
+#
+# These tests target the WAR hazard between VALU sources and following DS
+# and VMEM load results. In expert scheduling mode, if the register allocator
+# allocates the same VGPR for a VALU source and a following DS or VMEM load
+# vdst, SIInsertWaitcnts inserts S_WAITCNT_DEPCTR va_vdst before the load.
+#
+# With anti-hints enabled:
+#   - Hazardous vregs get different physical registers
+#   - No va_vdst wait
+#
+# Without anti-hints:
+#   - Hazardous vregs may get the same physical registers
+#   - As a result, a va_vdst wait gets inserted
+#
+# Test scenarios:
+#   - V_ADD_U32 followed by DS_READ_B128_gfx9
+#   - V_ADD_U32 followed by BUFFER_LOAD_DWORD_OFFEN (no overlap in either run)
+#   - V_PK_ADD_F32 (64-bit sources) followed by DS_READ_B128_gfx9
+
 --- |
   define amdgpu_kernel void @test_valu_dsread_anti_hints() #0 {
   bb.0:
@@ -23,6 +42,12 @@
 
 ...
 ---
+# Test: V_ADD_U32 (VALU) followed by DS_READ_B128_gfx9
+# The 128-bit DS_READ result is allocated first and takes vgpr0-3 in both runs,
+# so the anti-hint moves the V_ADD source %0.
+# With anti-hints: %0 gets vgpr4, DS_READ result gets vgpr0-3 (no overlap)
+# Without anti-hints: %0 gets vgpr0, DS_READ result gets vgpr0-3 (overlaps!,
+# va_vdst wait before the DS_READ)
 name:            test_valu_dsread_anti_hints
 tracksRegLiveness: true
 body:             |
@@ -61,6 +86,11 @@ body:             |
     S_ENDPGM 0, implicit %3, implicit %1, implicit %2
 ...
 ---
+# Test: V_ADD_U32 (VALU) followed by BUFFER_LOAD_DWORD_OFFEN
+# %0 and the load result are anti-hinted against each other, but it does not
+# change anything: %0 dies at the second V_ADD, whose result reuses vgpr0 and
+# stays live to the end, so vgpr0 is never free for the load.
+# Both runs: %0 gets vgpr0, BUFFER_LOAD result gets vgpr2 (no overlap, no wait)
 name:            test_valu_buffer_load_anti_hints
 tracksRegLiveness: true
 body:             |
@@ -98,6 +128,13 @@ body:             |
     S_ENDPGM 0, implicit %3, implicit %1, implicit %2
 ...
 ---
+# Test: V_PK_ADD_F32 (packed VALU, two 64-bit sources) followed by
+# DS_READ_B128_gfx9
+# Both sources %0 and %1 are anti-hinted against the DS_READ result.
+# With anti-hints: V_PK_ADD sources get vgpr4-7, DS_READ result gets vgpr0-3
+# (no overlap)
+# Without anti-hints: V_PK_ADD sources get vgpr0-3, DS_READ result gets
+# vgpr0-3 (overlaps!, va_vdst wait before the DS_READ)
 name:            test_pk_add_dsread_anti_hints
 tracksRegLiveness: true
 body:             |

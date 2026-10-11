@@ -2,6 +2,21 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=swmmac-war-index %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=NOAH
 
+#
+# This test targets the WAR hazard on the SWMMAC index VGPR.
+#
+# With anti-hints enabled:
+#   - The VALUs inside the 2-VALU window write registers other than the
+#     index register
+#   - No V_NOPs
+#
+# Without anti-hints:
+#   - The first V_ADD writes the index register
+#   - 2 V_NOPs before that V_ADD
+#
+# Test scenarios:
+#   - V_SWMMAC_F32_16X16X64_BF16 followed by four V_ADDs
+
 --- |
   define amdgpu_kernel void @war_swmmac_index_src2() #0 { ret void }
 
@@ -9,6 +24,13 @@
 ...
 
 ---
+# Test: V_SWMMAC_F32_16X16X64_BF16 index %2 followed by V_ADDs
+# Only %7 and %8 fall inside the 2-VALU window, so only they are anti-hinted.
+# %9 is the third VALU, outside the window, and gets vgpr32 with anti-hints.
+# With anti-hints: index %2 gets vgpr32, %7/%8 get vgpr34/vgpr35 (no overlap,
+# no V_NOP)
+# Without anti-hints: index %2 gets vgpr32, %7 gets vgpr32 (overlaps!,
+# 2 V_NOPs)
 name:            war_swmmac_index_src2
 tracksRegLiveness: true
 body:             |

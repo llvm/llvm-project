@@ -2,6 +2,31 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-for-va-vdst=true -amdgpu-anti-hints-for-addr=true %s -o - | FileCheck %s --check-prefix=CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-expert-scheduling-mode=true -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec,si-insert-waitcnts -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefix=CHECK-NO-ANTIHINT
 
+# All anti-hint rules are enabled together. The tests cover WMMA A/B WAR and
+# TRANS WAR (V_NOPs) and VMEM address WAR (s_wait_xcnt and vm_vsrc waits). Two
+# tests have two producers of the same kind open at one instruction: two WMMAs
+# whose windows overlap, and two GLOBAL_LOADs whose addresses are both still
+# being read. The other tests have one producer at a time. With anti-hints, the
+# compiler chooses registers that avoid these hazards, so the V_NOPs and waits
+# are avoided, except where a scenario says no change.
+# With anti-hints enabled:
+#   - VALU results stay off the A/B registers of every WMMA whose window is
+#     still open
+#   - No V_NOPs, and no xcnt or vm_vsrc waits
+# Without anti-hints:
+#   - VALU results reuse WMMA A/B and GLOBAL_LOAD address registers
+#   - V_NOPs after the WMMA, vm_vsrc and xcnt waits before a write to a
+#     GLOBAL_LOAD address
+# Test scenarios:
+#   - Two WMMAs whose windows overlap (two producers open at %c3)
+#   - One WMMA with a 1-VALU window followed by three V_ADDs (one producer)
+#   - A TRANS, a V_ADD, then a WMMA (one producer at a time; only the WMMA
+#     part changes)
+#   - Two V_ADDs followed by two DS loads (no overlap and no va_vdst wait in
+#     either run)
+#   - Two GLOBAL_LOADs followed by V_ADDs that can reuse their addresses (two
+#     producers open at %c1 and %c2)
+
 --- |
   define amdgpu_kernel void @two_wmma_overlapping() #0 { ret void }
   define amdgpu_kernel void @wmma_multi_consumer_slots() #0 { ret void }
@@ -12,6 +37,15 @@
   attributes #0 = { nounwind "amdgpu-agpr-alloc"="0" "frame-pointer"="none" }
 ...
 ---
+# Test: bf16 WMMA, V_ADDs %c1 and %c2, a second bf16 WMMA, V_ADDs %c3 and %c4
+# The second WMMA reads A = %b0 (vgpr0-7) and B = %b1 (vgpr8-15), and %c3/%c4
+# are in its window, so a V_ADD result in vgpr0-15 is a WAR hazard on its A/B.
+# (%c3 is also in the first WMMA's window, whose A/B, %a0/%a1, use the same
+# vgpr0-15.)
+# With anti-hints: %c3/%c4 get vgpr34/vgpr35 (no overlap with A/B, no V_NOP)
+# Without anti-hints: %c3/%c4 get vgpr0/vgpr1 (overlap A = %b0!, 4 V_NOPs
+# before %c3)
+# %c1/%c2 get vgpr32/vgpr33 in both runs.
 name:            two_wmma_overlapping
 tracksRegLiveness: true
 body:             |
@@ -78,6 +112,11 @@ body:             |
 ...
 
 ---
+# Test: fp8 16x16x64 WMMA followed by V_ADDs %c1, %c2 and %c3
+# Only %c1 is in the window and anti-hinted; %c2 and %c3 may reuse A.
+# With anti-hints: %a0 gets vgpr0-7, %c1 gets vgpr24 (no overlap), %c2/%c3 get
+# vgpr0/vgpr1 (outside the window, no V_NOP)
+# Without anti-hints: %c1 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            wmma_multi_consumer_slots
 tracksRegLiveness: true
 body:             |
@@ -126,6 +165,13 @@ body:             |
 ...
 
 ---
+# Test: V_EXP_F32, V_ADD %c1, bf16 WMMA, V_ADDs %c2 and %c3
+# trans-war anti-hints %c1 against the V_EXP source %t0 and wmma-war-ab
+# anti-hints %c2/%c3 against A/B. %t0 stays in the incoming vgpr41, so %c1 is
+# not affected and gets vgpr25 in both runs; only the WMMA part changes.
+# With anti-hints: %a0 gets vgpr0-7, %c2/%c3 get vgpr26/vgpr27 (no overlap,
+# no V_NOP)
+# Without anti-hints: %c2 gets vgpr0 (overlaps!, 4 V_NOPs)
 name:            trans_plus_wmma_interleave
 tracksRegLiveness: true
 body:             |
@@ -181,6 +227,11 @@ body:             |
 ...
 
 ---
+# Test: two V_ADDs reading %p0/%p1, then two DS_READ_B128
+# In both runs the DS loads write registers other than the V_ADD sources
+# (vgpr10/vgpr11), so no va_vdst wait is needed and anti-hints change nothing.
+# Both runs: %p0/%p1 get vgpr10/vgpr11, %l1/%l2 get vgpr0-7 (no overlap,
+# no va_vdst wait)
 name:            vavdst_multi_producer
 tracksRegLiveness: true
 body:             |
@@ -221,6 +272,13 @@ body:             |
 ...
 
 ---
+# Test: GLOBAL_LOADs %l0 and %l1 from %a0 and %a1, then V_ADDs %c1 and %c2
+# mem-addr-war anti-hints %l1 against %a0, and %c1/%c2 against both addresses.
+# A load may still write its own address (%l0 into vgpr0, %l1 into vgpr2).
+# With anti-hints: %a0 gets vgpr0_vgpr1, %a1 gets vgpr2_vgpr3, %l1 gets
+# vgpr2, %c1/%c2 get vgpr4/vgpr5 (no overlap, no waits)
+# Without anti-hints: %l1 gets vgpr1 (overlaps %a0!, vm_vsrc 0 wait), %c1 gets
+# vgpr2 (overlaps %a1!, xcnt 0 and vm_vsrc 0 waits)
 name:            addr_multi_producer
 tracksRegLiveness: true
 body:             |

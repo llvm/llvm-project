@@ -2,6 +2,28 @@
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=wmma-waw %s -o - | FileCheck %s --check-prefixes=SAME,CHECK
 # RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -passes=amdgpu-pre-ra-optimizations,two-address-instruction,greedy,virt-reg-rewriter,post-RA-hazard-rec -amdgpu-anti-hints-rules=none %s -o - | FileCheck %s --check-prefixes=SAME,NOAH
 
+# These tests target the WAW hazard between XDL WMMA and the VALU and TRANS
+# instructions. If the register allocator allocates the same VGPR for the WMMA
+# vdst (D) and a following VALU or TRANS vdst within the window, the hazard
+# recognizer inserts V_NOPs for the rest of the window. Unlike wmma-war-ab, DS
+# and VMEM load results are not anti-hinted.
+# With anti-hints enabled:
+#   - VALU and TRANS results in the window get registers other than D
+#   - No V_NOPs, except where D is live, everything is dead, the second XDL
+#     WMMA test and the next-block test
+# Without anti-hints:
+#   - Hazardous vregs may get the same physical registers
+#   - As a result, V_NOPs get inserted
+# Test scenarios:
+#   - One test per WMMA/SWMMAC opcode family, with V_ADD and with V_EXP
+#     (TRANS) consumers
+#   - Non-XDL WMMA (no hazard, no anti-hints)
+#   - Only D dead, D live, everything dead
+#   - SWMMAC with a live index, mixed VALU/TRANS, 64-bit VALU results
+#   - COPY of D, DS and VMEM load consumers
+#   - SALU between the WMMA and the V_ADDs, window expiring
+#   - A second XDL WMMA or a non-XDL WMMA taking one slot of the window
+#   - V_ADDs in the next block
 
 --- |
   define amdgpu_kernel void @waw_valu_wmma_bf16_16x16x32() #0 { ret void }
@@ -53,6 +75,11 @@
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X32_BF16 with a dead result, followed by eight V_ADDs
+# A and B stay live, so the only dead register the V_ADDs can reuse is D.
+# With anti-hints: D %6 gets vgpr16-23, %7-%10 get vgpr25-28 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: D %6 gets vgpr16-23, %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_bf16_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -109,6 +136,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X32_F16 followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr16-23, %7-%10 get vgpr25-28 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f16_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -165,6 +196,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F16_16X16X32_F16 (128-bit f16 result) followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr16-19, %7-%10 get vgpr21-24 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f16_dst_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -221,6 +256,11 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X64_FP8_FP8 followed by eight V_ADDs
+# Only the first V_ADD is anti-hinted.
+# With anti-hints: D %6 gets vgpr16-23, %7 gets vgpr25 (no overlap), %8 gets
+# vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_valu_wmma_fp8_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -274,6 +314,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_I32_16X16X64_IU8 followed by sixteen V_ADDs
+# With anti-hints: D %6 gets vgpr16-23, %7-%14 get vgpr25-32 (no overlap),
+# %15 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 8 V_NOPs)
 name:            waw_valu_wmma_iu8_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -358,6 +402,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_FP8_FP8 (512-bit A and B) followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr32-39, %7-%10 get vgpr41-44 (no overlap),
+# %11 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_fp8_16x16x128
 tracksRegLiveness: true
 body:             |
@@ -414,6 +462,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_F8F6F4 with fp8 A and B, followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr32-39, %7-%10 get vgpr41-44 (no overlap),
+# %11 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f8f6f4_f8_f8
 tracksRegLiveness: true
 body:             |
@@ -470,6 +522,12 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_F8F6F4 with fp4 A and B, followed by eight V_ADDs
+# With both inputs f4 the window is 1 VALU, so only the first V_ADD is
+# anti-hinted.
+# With anti-hints: D %6 gets vgpr16-23, %7 gets vgpr25 (no overlap), %8 gets
+# vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_valu_wmma_f8f6f4_f4_f4
 tracksRegLiveness: true
 body:             |
@@ -523,6 +581,12 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_SCALE_F32_16X16X128_F8F6F4 followed by eight V_ADDs
+# The scale operands %2/%3 (vgpr40/vgpr41) stay live, so the V_ADDs cannot
+# take them.
+# With anti-hints: D %6 gets vgpr32-39, %7-%10 get vgpr43-46 (no overlap),
+# %11 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_scale_f8f6f4
 tracksRegLiveness: true
 body:             |
@@ -585,6 +649,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_32X16X128_F4 (512-bit result) followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr16-31, %7-%10 get vgpr41-44 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_32x16x128_f4
 tracksRegLiveness: true
 body:             |
@@ -641,6 +709,11 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F32_16X16X64_BF16 followed by four V_ADDs
+# A, B and the index %2 stay live; only D is dead.
+# With anti-hints: D %6 gets vgpr24-31, %7/%8 get vgpr34/vgpr35 (no overlap),
+# %9 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_bf16_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -686,6 +759,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F32_16X16X64_F16 followed by four V_ADDs
+# With anti-hints: D %6 gets vgpr24-31, %7/%8 get vgpr34/vgpr35 (no overlap),
+# %9 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_f16_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -731,6 +808,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F16_16X16X64_F16 (128-bit f16 result) followed by four V_ADDs
+# With anti-hints: D %6 gets vgpr24-27, %7/%8 get vgpr30/vgpr31 (no overlap),
+# %9 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_f16_dst_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -776,6 +857,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_I32_16X16X128_IU8 followed by eight V_ADDs
+# With anti-hints: D %6 gets vgpr24-31, %7-%10 get vgpr35-38 (no overlap),
+# %11 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr24 (overlaps!, 4 V_NOPs)
 name:            waw_valu_swmmac_iu8_16x16x128
 tracksRegLiveness: true
 body:             |
@@ -835,6 +920,11 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X4_F32 (not XDL) followed by eight V_ADDs
+# Non-XDL WMMAs have no co-execution window, so there are no anti-hints and no
+# V_NOPs.
+# Both runs: D %6 gets vgpr0-7, %7-%14 get vgpr0-7 (overlaps, but no hazard
+# and no V_NOP)
 name:            waw_valu_wmma_f32_16x16x4_f32
 tracksRegLiveness: true
 body:             |
@@ -871,6 +961,13 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X32_BF16 followed by eight V_EXP_F32
+# The waw_trans_* tests repeat the opcode tests with TRANS consumers. TRANS
+# instructions count as VALUs in the window, so registers and V_NOP counts
+# match the V_ADD versions.
+# With anti-hints: D %6 gets vgpr16-23, %100-%103 get vgpr25-28 (no overlap),
+# %104 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_bf16_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -927,6 +1024,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X32_F16 followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-23, %100-%103 get vgpr25-28 (no overlap),
+# %104 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f16_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -983,6 +1084,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F16_16X16X32_F16 (128-bit f16 result) followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-19, %100-%103 get vgpr21-24 (no overlap),
+# %104 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f16_dst_16x16x32
 tracksRegLiveness: true
 body:             |
@@ -1039,6 +1144,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X64_FP8_FP8 followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-23, %100 gets vgpr25 (no overlap), %101
+# gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_trans_wmma_fp8_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -1092,6 +1201,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_I32_16X16X64_IU8 followed by sixteen V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-23, %100-%107 get vgpr25-32 (no overlap),
+# %108 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 8 V_NOPs)
 name:            waw_trans_wmma_iu8_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -1176,6 +1289,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_FP8_FP8 followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr32-39, %100-%103 get vgpr41-44 (no overlap),
+# %104 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_fp8_16x16x128
 tracksRegLiveness: true
 body:             |
@@ -1232,6 +1349,11 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_F8F6F4 with fp8 A and B, followed by eight
+# V_EXP_F32
+# With anti-hints: D %6 gets vgpr32-39, %100-%103 get vgpr41-44 (no overlap),
+# %104 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f8f6f4_f8_f8
 tracksRegLiveness: true
 body:             |
@@ -1288,6 +1410,11 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X128_F8F6F4 with fp4 A and B, followed by eight
+# V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-23, %100 gets vgpr25 (no overlap), %101
+# gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_trans_wmma_f8f6f4_f4_f4
 tracksRegLiveness: true
 body:             |
@@ -1341,6 +1468,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_SCALE_F32_16X16X128_F8F6F4 followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr32-39, %100-%103 get vgpr43-46 (no overlap),
+# %104 gets vgpr32 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_scale_f8f6f4
 tracksRegLiveness: true
 body:             |
@@ -1403,6 +1534,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_32X16X128_F4 (512-bit result) followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr16-31, %100-%103 get vgpr41-44 (no overlap),
+# %104 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_32x16x128_f4
 tracksRegLiveness: true
 body:             |
@@ -1459,6 +1594,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F32_16X16X64_BF16 followed by four V_EXP_F32
+# With anti-hints: D %6 gets vgpr24-31, %100/%101 get vgpr34/vgpr35 (no
+# overlap), %102 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_bf16_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -1504,6 +1643,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F32_16X16X64_F16 followed by four V_EXP_F32
+# With anti-hints: D %6 gets vgpr24-31, %100/%101 get vgpr34/vgpr35 (no
+# overlap), %102 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_f16_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -1549,6 +1692,11 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_F16_16X16X64_F16 (128-bit f16 result) followed by four
+# V_EXP_F32
+# With anti-hints: D %6 gets vgpr24-27, %100/%101 get vgpr30/vgpr31 (no
+# overlap), %102 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_f16_dst_16x16x64
 tracksRegLiveness: true
 body:             |
@@ -1594,6 +1742,10 @@ body:             |
 ...
 
 ---
+# Test: V_SWMMAC_I32_16X16X128_IU8 followed by eight V_EXP_F32
+# With anti-hints: D %6 gets vgpr24-31, %100-%103 get vgpr35-38 (no overlap),
+# %104 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %100 gets vgpr24 (overlaps!, 4 V_NOPs)
 name:            waw_trans_swmmac_iu8_16x16x128
 tracksRegLiveness: true
 body:             |
@@ -1653,6 +1805,10 @@ body:             |
 ...
 
 ---
+# Test: V_WMMA_F32_16X16X4_F32 (not XDL) followed by eight V_EXP_F32
+# No co-execution window, so no anti-hints and no V_NOPs.
+# Both runs: D %6 gets vgpr0-7, %100-%107 get vgpr0-7 (overlaps, but no hazard
+# and no V_NOP)
 name:            waw_trans_wmma_f32_16x16x4_f32
 tracksRegLiveness: true
 body:             |
@@ -1689,6 +1845,12 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA where only D %6 is dead, followed by four V_ADDs
+# All four V_ADDs are in the window and anti-hinted; the last one gets the
+# register of %4, which dies there.
+# With anti-hints: D %6 gets vgpr16-23, %7-%9 get vgpr25-27, %10 gets vgpr24
+# (no overlap, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_dst_only_dead
 tracksRegLiveness: true
 body:             |
@@ -1733,6 +1895,10 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA where D %6 stays live and A/B die, followed by four V_ADDs
+# D is live at every V_ADD, so there are no anti-hints, and the V_ADDs reuse
+# the dead A instead (the WAR hazard; with wmma-war-ab no V_NOP is left).
+# Both runs: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps A!, 4 V_NOPs)
 name:            waw_dst_live_gated
 tracksRegLiveness: true
 body:             |
@@ -1765,6 +1931,10 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA where A, B and D are all dead, followed by four V_ADDs
+# All four V_ADDs are anti-hinted against D, but they take the dead A instead
+# in both runs (the WAR hazard; with wmma-war-ab no V_NOP is left).
+# Both runs: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps A!, 4 V_NOPs)
 name:            waw_dst_and_srcs_dead
 tracksRegLiveness: true
 body:             |
@@ -1797,6 +1967,11 @@ body:             |
 ...
 
 ---
+# Test: bf16 SWMMAC with a dead result and a live index, followed by four V_ADDs
+# The live index %2 cannot be reused, so only D matters.
+# With anti-hints: D %6 gets vgpr24-31, index %2 gets vgpr32, %7/%8 get
+# vgpr34/vgpr35 (no overlap), %9 gets vgpr24 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_swmmac_dst_index_live
 tracksRegLiveness: true
 body:             |
@@ -1842,6 +2017,12 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA followed by two V_EXP_F32 and four V_ADDs
+# TRANS and VALU both count toward the window, so the two V_EXPs and the first
+# two V_ADDs are anti-hinted.
+# With anti-hints: D %6 gets vgpr16-23, %7-%10 get vgpr25-28 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: V_EXP %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_mixed_valu_trans
 tracksRegLiveness: true
 body:             |
@@ -1892,6 +2073,12 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA, COPY %20 = %6, COPY %21 = %4, then four V_ADDs
+# %20 is a copy of D, so it is not anti-hinted, and it is coalesced into D,
+# which keeps D live to the end. With D, A and B all live, the anti-hints on
+# %21 and the first two V_ADDs change nothing.
+# Both runs: D %6 gets vgpr16-23, %21 gets vgpr25, %7-%9 get vgpr26-28, %10
+# gets vgpr24 (no overlap, no V_NOP)
 name:            waw_copy_def
 tracksRegLiveness: true
 body:             |
@@ -1923,6 +2110,11 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA followed by four 64-bit V_LSHLREV_B64
+# The 64-bit results get registers outside D in every subregister.
+# With anti-hints: D %6 gets vgpr16-23, %7-%9 get vgpr26_vgpr27 to
+# vgpr30_vgpr31, %10 gets vgpr24_vgpr25 (no overlap, no V_NOP)
+# Without anti-hints: %7 gets vgpr16_vgpr17 (overlaps!, 4 V_NOPs)
 name:            waw_wide_valu_def
 tracksRegLiveness: true
 body:             |
@@ -1967,6 +2159,11 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA followed by four DS_READ_B128
+# The WAW rule covers only VALU writes, so DS results are not anti-hinted and
+# DS writes never get V_NOPs.
+# Both runs: D %6 gets vgpr16-23, DS_READs get vgpr16-31 (overlaps, but no
+# hazard and no V_NOP)
 name:            waw_ds_def_not_hinted
 tracksRegLiveness: true
 body:             |
@@ -1995,6 +2192,10 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA followed by four GLOBAL_LOAD_DWORD
+# Same as waw_ds_def_not_hinted with VMEM loads: no anti-hints and no V_NOPs.
+# Both runs: D %6 gets vgpr16-23, loads get vgpr16-19 (overlaps, but no hazard
+# and no V_NOP)
 name:            waw_vmem_def_not_hinted
 tracksRegLiveness: true
 body:             |
@@ -2023,6 +2224,12 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA, four S_MOV_B32, then eight V_ADDs
+# SALUs do not count toward the window, so the first four V_ADDs are still
+# inside it.
+# With anti-hints: D %6 gets vgpr16-23, %7-%10 get vgpr25-28 (no overlap),
+# %11 gets vgpr16 (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs after the S_MOVs)
 name:            waw_countmask_salu_between
 tracksRegLiveness: true
 body:             |
@@ -2091,6 +2298,12 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA followed by five V_ADDs
+# Only the first four V_ADDs are anti-hinted; the fifth is outside the window
+# and may take D.
+# With anti-hints: %7-%10 get vgpr25-28, %11 gets vgpr16 (outside the window,
+# no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_window_expires
 tracksRegLiveness: true
 body:             |
@@ -2138,6 +2351,15 @@ body:             |
 ...
 
 ---
+# Test: two bf16 WMMAs back to back with dead results %6 and %16, then four
+# V_ADDs
+# The second WMMA takes one slot of the first one's window, so the first three
+# V_ADDs are anti-hinted against both results and the fourth only against %16.
+# The third V_ADD still gets %6: at 51 VGPRs in use, the 80% occupancy cutoff,
+# the register allocator stops applying anti-hints.
+# With anti-hints: %6 gets vgpr32-39, %16 gets vgpr40-47, %7/%8 get
+# vgpr49/vgpr50, %9 gets vgpr32 (overlaps %6!, 1 V_NOP)
+# Without anti-hints: %7 gets vgpr32 (overlaps %6!, 3 V_NOPs)
 name:            waw_second_wmma_flushes_family
 tracksRegLiveness: true
 body:             |
@@ -2194,6 +2416,13 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA, then a non-XDL V_WMMA_F32_16X16X4_F32, then four V_ADDs
+# The non-XDL WMMA opens no window of its own but takes one slot of the first
+# one, so only the first three V_ADDs are anti-hinted. They get the non-XDL
+# WMMA's dead result %16, which needs no V_NOP.
+# With anti-hints: %6 gets vgpr16-23, %7-%9 get vgpr24-26, %10 gets vgpr16
+# (outside the window, no V_NOP)
+# Without anti-hints: %7 gets vgpr16 (overlaps!, 3 V_NOPs)
 name:            waw_non_xdl_wmma_flushes_family
 tracksRegLiveness: true
 body:             |
@@ -2249,6 +2478,11 @@ body:             |
 ...
 
 ---
+# Test: bf16 WMMA in bb.0, V_ADDs in bb.1
+# Anti-hints are not placed across blocks, but post-RA-hazard-rec still inserts
+# V_NOPs across the branch.
+# Both runs: D %6 gets vgpr18-25, %7 gets vgpr17, %8 gets vgpr18 (overlaps!,
+# 3 V_NOPs)
 name:            waw_cross_block_no_hints
 tracksRegLiveness: true
 body:             |
