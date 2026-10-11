@@ -51,7 +51,7 @@ void f() {
   // CHECK-NEXT: landingpad
   // CHECK-NEXT:   cleanup
   // THROWEND:        br label %[[Dealloc:.+]]
-  // NOTHROWEND:      icmp ne ptr %[[#]], null
+  // NOTHROWEND:      call i1 @llvm.coro.is_in_ramp()
   // NOTHROWEND-NEXT: br i1 %[[#]], label %[[Dealloc:.+]], label
 
   Cleanup cleanup;

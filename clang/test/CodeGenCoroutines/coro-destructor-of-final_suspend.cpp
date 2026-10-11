@@ -60,8 +60,10 @@ gen maybe_throwing(bool x) {
 }
 
 // CHECK: define{{.*}}@_Z14maybe_throwingb.destroy
-// CHECK: %[[INDEX:.+]] = load i{{8|32}}, ptr %index.addr, align {{1|4}}
-// CHECK: br i1 {{%.*}}, label %{{.+}}, label %{{.+}}, !prof
+// CHECK: %[[INDEX:.+]] = load i8, ptr %index.addr, align 1
+// CHECK: %[[CMP:.+]] = icmp eq i8 %index, 2
+// CHECK: br i1 %[[CMP]], label %[[AFTERSUSPEND:.+]], label %[[CORO_FREE:.+]], !prof
+// CHECK: [[AFTERSUSPEND]]:
 // CHECK: call{{.*}}_ZN3gen12promise_type13final_awaiterD1Ev(
 // CHECK: call{{.*}}_ZdlPv
 
