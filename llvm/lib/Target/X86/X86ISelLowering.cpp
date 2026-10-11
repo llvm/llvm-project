@@ -224,7 +224,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // are Legal, f80 is custom lowered.
     if (Subtarget.is64Bit() || Subtarget.hasX87() || Subtarget.hasDQI() ||
         Subtarget.hasFP16()) {
-      setOperationAction(ISD::FP_TO_SINT,        MVT::i64, Custom);
+      setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
       setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
     }
 
@@ -240,7 +240,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
     if (Subtarget.is64Bit() || Subtarget.hasX87() || Subtarget.hasDQI() ||
         Subtarget.hasFP16()) {
-      setOperationAction(ISD::FP_TO_UINT,        MVT::i64, Custom);
+      setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
     }
 
