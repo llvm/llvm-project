@@ -177,3 +177,102 @@ define i8 @offset_agnostic(ptr %p1, ptr %p2) {
   %loadofstore = load i8, ptr %access1
   ret i8 %loadofstore
 }
+
+; A hint is about the values its operands have when it executes. Here %a and %b
+; swap between %x and %y every iteration, so %p, which holds the previous
+; iteration's %a, is this iteration's %b from the second iteration on. The store
+; through %b may change *%p, and the second load must stay.
+
+define i8 @cross_iteration_variant(ptr %x, ptr %y, i64 %n) {
+; CHECK-LABEL: @cross_iteration_variant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 7, ptr [[INIT]], align 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[INIT]], [[ENTRY]] ], [ [[A:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ODD:%.*]] = trunc i64 [[I]] to i1
+; CHECK-NEXT:    [[A]] = select i1 [[ODD]], ptr [[Y:%.*]], ptr [[X:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[ODD]], ptr [[X]], ptr [[Y]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[A]], ptr [[B]]) ]
+; CHECK-NEXT:    [[BEFORE:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[B]], align 1
+; CHECK-NEXT:    [[AFTER:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[BEFORE]], [[AFTER]]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i8 [[SUM]], [[DIFF]]
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 [[SUM_NEXT]]
+;
+entry:
+  %init = alloca i8
+  store i8 7, ptr %init
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %p = phi ptr [ %init, %entry ], [ %a, %loop ]
+  %sum = phi i8 [ 0, %entry ], [ %sum.next, %loop ]
+  %odd = trunc i64 %i to i1
+  %a = select i1 %odd, ptr %y, ptr %x
+  %b = select i1 %odd, ptr %x, ptr %y
+  call void @llvm.assume(i1 1) ["separate_storage"(ptr %a, ptr %b)]
+  %before = load i8, ptr %p
+  store i8 0, ptr %b
+  %after = load i8, ptr %p
+  %diff = sub i8 %before, %after
+  %sum.next = add i8 %sum, %diff
+  %i.next = add i64 %i, 1
+  %cond = icmp ult i64 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i8 %sum.next
+}
+
+; A hint about values that are the same in every iteration also holds across
+; iterations, so the second load can go.
+
+define i8 @cross_iteration_invariant(ptr %x, ptr %y, i64 %n) {
+; CHECK-LABEL: @cross_iteration_invariant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[X:%.*]], ptr [[Y:%.*]]) ]
+; CHECK-NEXT:    [[INIT:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 7, ptr [[INIT]], align 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[INIT]], [[ENTRY]] ], [ [[X]], [[LOOP]] ]
+; CHECK-NEXT:    store i8 0, ptr [[Y]], align 1
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  call void @llvm.assume(i1 1) ["separate_storage"(ptr %x, ptr %y)]
+  %init = alloca i8
+  store i8 7, ptr %init
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %p = phi ptr [ %init, %entry ], [ %x, %loop ]
+  %sum = phi i8 [ 0, %entry ], [ %sum.next, %loop ]
+  %before = load i8, ptr %p
+  store i8 0, ptr %y
+  %after = load i8, ptr %p
+  %diff = sub i8 %before, %after
+  %sum.next = add i8 %sum, %diff
+  %i.next = add i64 %i, 1
+  %cond = icmp ult i64 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i8 %sum.next
+}
