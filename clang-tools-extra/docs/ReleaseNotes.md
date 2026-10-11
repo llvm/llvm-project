@@ -314,6 +314,10 @@ infrastructure are described first, followed by tool-specific sections.
   {option}`ForRangeLoopClasses` to configure container classes that can be used
   as sources in range-based `for` loops.
 
+- Improved {doc}`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
+  false negatives for implicitly `noexcept(false)` move operations.
+
 - Improved {doc}`performance-prefer-single-char-overloads
   <clang-tidy/checks/performance/prefer-single-char-overloads>` check to
   avoid offering fix-its for string literals originating from macro
