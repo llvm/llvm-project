@@ -51,6 +51,7 @@
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Reflection.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -880,8 +881,9 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
-        : State(const_cast<ASTContext &>(C), S), CurrentCall(nullptr),
+    EvalInfo(const ASTContext &C, SemaProxy *SProxy, Expr::EvalStatus &S,
+             EvaluationMode Mode)
+        : State(const_cast<ASTContext &>(C), SProxy, S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
@@ -7234,6 +7236,35 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
       CopyObjectRepresentation);
 }
 
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD) {
+  // If the function is a specialization of a member function template which has
+  // been declared a friend by another class, 'FD' might be a Decl marked as an
+  // explicit specialization, which would then be classified as "not implicitly
+  // instantiable". Walking to the most recent Decl resolves this.
+  FD = FD->getMostRecentDecl();
+
+  if (FD->isDefined() || !FD->isImplicitlyInstantiable() || !FD->isConstexpr())
+    return false;
+
+  FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
+  return Pattern && Pattern->isDefined();
+}
+
+static void TryInstantiateFunctionBeforeCall(const FunctionDecl *FD,
+                                             EvalInfo &Info,
+                                             SourceLocation Loc) {
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+
+  SemaProxy *SProxy = Info.getSemaProxy();
+  if (SProxy && FunctionDefinitionCanBeLazilyInstantiated(FD) &&
+      Info.InConstantContext)
+    SProxy->instantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(FD));
+}
+
 /// Evaluate a function call.
 static bool HandleFunctionCall(SourceLocation CallLoc,
                                const FunctionDecl *Callee,
@@ -7652,6 +7683,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
 
   if (!Info.CheckCallLimit(CallRange.getBegin()))
     return false;
+
+  TryInstantiateFunctionBeforeCall(DD, Info, CallRange.getBegin());
 
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = DD->getBody(Definition);
@@ -9151,9 +9184,12 @@ public:
              CallScope.destroy();
     }
 
+    SourceLocation Loc = E->getExprLoc();
+
+    TryInstantiateFunctionBeforeCall(FD, Info, Loc);
+
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
-    SourceLocation Loc = E->getExprLoc();
 
     // Treat the object argument as `this` when evaluating defaulted
     // special menmber functions
@@ -11886,6 +11922,8 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
     return handleDefaultInitValue(T, Result);
   }
 
+  TryInstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
+
   const FunctionDecl *Definition = nullptr;
   auto Body = FD->getBody(Definition);
 
@@ -11926,6 +11964,8 @@ bool RecordExprEvaluator::VisitCXXInheritedCtorInitExpr(
   const CXXConstructorDecl *FD = E->getConstructor();
   if (FD->isInvalidDecl() || FD->getParent()->isInvalidDecl())
     return false;
+
+  TryInstantiateFunctionBeforeCall(FD, Info, E->getBeginLoc());
 
   const FunctionDecl *Definition = nullptr;
   auto Body = FD->getBody(Definition);
@@ -22177,6 +22217,28 @@ static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
   return true;
 }
 
+static bool doEvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
+                               const ASTContext &Ctx, SemaProxy *SProxy,
+                               bool InConstantContext) {
+  assert(!E->isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(E, Result.Val, Ctx, IsConst))
+    return IsConst;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
+                                  SProxy);
+    Settings.InConstantContext = InConstantContext;
+    return Ctx.getInterpContext().evaluateAsRValue(Settings, E, Result.Val);
+  }
+
+  EvalInfo Info(Ctx, SProxy, Result, EvaluationMode::IgnoreSideEffects);
+  Info.InConstantContext = InConstantContext;
+  return ::EvaluateAsRValue(E, Result, Ctx, Info);
+}
+
 /// EvaluateAsRValue - Return true if this is a constant which we can fold using
 /// any crazy technique (that has nothing to do with language standards) that
 /// we want to.  If this function returns true, it returns the folded constant
@@ -22184,23 +22246,17 @@ static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
 /// will be applied to the result.
 bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                             bool InConstantContext) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsRValue");
+  return ::doEvaluateAsRValue(this, Result, Ctx, /*SProxy=*/nullptr,
+                              InConstantContext);
+}
 
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst))
-    return IsConst;
-
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result);
-    Settings.InConstantContext = InConstantContext;
-    return Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result.Val);
-  }
-
-  EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
-  Info.InConstantContext = InConstantContext;
-  return ::EvaluateAsRValue(this, Result, Ctx, Info);
+bool Expr::EvaluateAsMandatedConstantRValue(EvalResult &Result,
+                                            const ASTContext &Ctx,
+                                            SemaProxy &SProxy) const {
+  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantRValue");
+  return ::doEvaluateAsRValue(this, Result, Ctx, &SProxy,
+                              /*InConstantContext=*/true);
 }
 
 bool Expr::EvaluateAsBooleanCondition(bool &Result, const ASTContext &Ctx,
@@ -22229,7 +22285,8 @@ bool Expr::EvaluateAsInt(EvalResult &Result, const ASTContext &Ctx,
     return IsConst;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = InConstantContext;
     if (!Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result.Val))
       return false;
@@ -22240,7 +22297,8 @@ bool Expr::EvaluateAsInt(EvalResult &Result, const ASTContext &Ctx,
     return true;
   }
 
-  EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
+                EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsInt(this, Result, Ctx, AllowSideEffects, Info);
 }
@@ -22256,7 +22314,8 @@ bool Expr::EvaluateAsFixedPoint(EvalResult &Result, const ASTContext &Ctx,
     return false;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = InConstantContext;
 
     if (!Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result.Val))
@@ -22269,7 +22328,8 @@ bool Expr::EvaluateAsFixedPoint(EvalResult &Result, const ASTContext &Ctx,
     return true;
   }
 
-  EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
+                EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsFixedPoint(this, Result, Ctx, AllowSideEffects, Info);
 }
@@ -22302,12 +22362,13 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsLValue");
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Result);
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Result,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = InConstantContext;
     return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
   }
 
-  EvalInfo Info(Ctx, Result, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result, EvaluationMode::ConstantFold);
   Info.InConstantContext = InConstantContext;
   LValue LV;
   CheckedTemporaries CheckedTemps;
@@ -22323,11 +22384,12 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   return true;
 }
 
-static bool EvaluateDestruction(const ASTContext &Ctx, APValue::LValueBase Base,
+static bool EvaluateDestruction(const ASTContext &Ctx, SemaProxy *SProxy,
+                                APValue::LValueBase Base,
                                 APValue DestroyedValue, QualType Type,
                                 SourceLocation Loc, Expr::EvalStatus &EStatus,
                                 bool IsConstantDestruction) {
-  EvalInfo Info(Ctx, EStatus,
+  EvalInfo Info(Ctx, SProxy, EStatus,
                 IsConstantDestruction ? EvaluationMode::ConstantExpression
                                       : EvaluationMode::ConstantFold);
   Info.setEvaluatingDecl(Base, DestroyedValue,
@@ -22347,38 +22409,39 @@ static bool EvaluateDestruction(const ASTContext &Ctx, APValue::LValueBase Base,
   return true;
 }
 
-bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
-                                  ConstantExprKind Kind) const {
-  assert(!isValueDependent() &&
+static bool doEvaluateConstantExpr(Expr::EvalResult &Result,
+                                   const ASTContext &Ctx, SemaProxy *SProxy,
+                                   const Expr *E, ConstantExprKind Kind) {
+  assert(!E->isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
+
   bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
+  if (FastEvaluateAsRValue(E, Result.Val, Ctx, IsConst) &&
       Result.Val.hasValue())
     return true;
 
-  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
   EvaluationMode EM = Kind == ConstantExprKind::Initializer
                           ? EvaluationMode::IgnoreSideEffects
                           : EvaluationMode::ConstantExpression;
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EM, Result, Kind);
+    interp::EvalSettings Settings(EM, Result, SProxy, Kind);
     Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val) &&
+    return Ctx.getInterpContext().evaluate(Settings, E, Result.Val) &&
            !Result.HasSideEffects;
   }
 
-  EvalInfo Info(Ctx, Result, EM);
+  EvalInfo Info(Ctx, SProxy, Result, EM);
   Info.InConstantContext = true;
 
   // The type of the object we're initializing is 'const T' for a class NTTP.
-  QualType T = getType();
+  QualType T = E->getType();
   if (Kind == ConstantExprKind::ClassTemplateArgument)
     T.addConst();
 
   // If we're evaluating a prvalue, fake up a MaterializeTemporaryExpr to
   // represent the result of the evaluation. CheckConstantExpression ensures
   // this doesn't escape.
-  MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
+  MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr *>(E), true);
   APValue::LValueBase Base(&BaseMTE);
   Info.setEvaluatingDecl(Base, Result.Val);
 
@@ -22389,14 +22452,15 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // So we need to make sure temporary objects are destroyed after having
   // evaluating the expression (per C++23 [class.temporary]/p4).
   FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy())
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, E) || Result.HasSideEffects ||
+      !Scope.destroy())
     return false;
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   if (Result.HasSideEffects ||
-      !CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+      !CheckConstantExpression(Info, E->getExprLoc(), getStorageType(Ctx, E),
                                Result.Val, Kind))
     return false;
   if (!CheckMemoryLeaks(Info))
@@ -22405,29 +22469,39 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // If this is a class template argument, it's required to have constant
   // destruction too.
   if (Kind == ConstantExprKind::ClassTemplateArgument &&
-      (!EvaluateDestruction(Ctx, Base, Result.Val, T, getBeginLoc(), Result,
-                            true) ||
+      (!EvaluateDestruction(Ctx, Info.getSemaProxy(), Base, Result.Val, T,
+                            E->getBeginLoc(), Result, true) ||
        Result.HasSideEffects)) {
     // FIXME: Prefix a note to indicate that the problem is lack of constant
     // destruction.
     return false;
   }
+
   return true;
 }
 
-bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
-                                 Expr::EvalResult &EStatus,
-                                 bool IsConstantInitialization) const {
-  assert(!isValueDependent() &&
+bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
+                                  ConstantExprKind Kind) const {
+
+  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
+  return ::doEvaluateConstantExpr(Result, Ctx, /*SProxy=*/nullptr, this, Kind);
+}
+
+bool Expr::EvaluateAsMandatedConstantExpr(EvalResult &Result,
+                                          const ASTContext &Ctx,
+                                          SemaProxy &SProxy,
+                                          ConstantExprKind Kind) const {
+  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantExpr");
+  return ::doEvaluateConstantExpr(Result, Ctx, &SProxy, this, Kind);
+}
+
+static bool doEvaluateInitializer(const ASTContext &Ctx, SemaProxy *SProxy,
+                                  const VarDecl *VD, const Expr *E,
+                                  Expr::EvalResult &EStatus,
+                                  bool IsConstantInitialization) {
+  assert(!E->isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   assert(VD && "Need a valid VarDecl");
-
-  llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
-    std::string Name;
-    llvm::raw_string_ostream OS(Name);
-    VD->printQualifiedName(OS);
-    return Name;
-  });
 
   EvaluationMode EvalMode =
       (IsConstantInitialization &&
@@ -22436,16 +22510,16 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
           : EvaluationMode::ConstantFold;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvalMode, EStatus);
+    interp::EvalSettings Settings(EvalMode, EStatus, SProxy);
     Settings.InConstantContext = IsConstantInitialization;
-    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, this,
+    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, E,
                                                         EStatus.Val);
   }
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
 
-  EvalInfo Info(Ctx, EStatus, EvalMode);
+  EvalInfo Info(Ctx, SProxy, EStatus, EvalMode);
   Info.setEvaluatingDecl(VD, EStatus.Val);
   Info.InConstantContext = IsConstantInitialization;
 
@@ -22463,7 +22537,7 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     // serialization code calls ParmVarDecl::getDefaultArg() which strips the
     // outermost FullExpr, such as ExprWithCleanups.
     FullExpressionRAII Scope(Info);
-    if (!EvaluateInPlace(EStatus.Val, Info, LVal, this,
+    if (!EvaluateInPlace(EStatus.Val, Info, LVal, E,
                          /*AllowNonLiteralTypes=*/true) ||
         EStatus.HasSideEffects)
       return false;
@@ -22475,40 +22549,68 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+
   return CheckConstantExpression(Info, DeclLoc, DeclTy, EStatus.Val,
                                  ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
 }
 
-bool VarDecl::evaluateDestruction(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
+                                 Expr::EvalResult &EStatus,
+                                 bool IsConstantInitialization) const {
+  llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    VD->printQualifiedName(OS);
+    return Name;
+  });
+
+  return ::doEvaluateInitializer(Ctx, /*SProxy=*/nullptr, VD, this, EStatus,
+                                 IsConstantInitialization);
+}
+
+bool Expr::EvaluateAsMandatedConstantInitializer(EvalResult &EStatus,
+                                                 const ASTContext &Ctx,
+                                                 SemaProxy &SProxy,
+                                                 const VarDecl *VD) const {
+  llvm::TimeTraceScope TimeScope("EvaluateAsMandatedConstantInitializer", [&] {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    VD->printQualifiedName(OS);
+    return Name;
+  });
+
+  return ::doEvaluateInitializer(Ctx, &SProxy, VD, this, EStatus,
+                                 /*IsConstantInitialization=*/true);
+}
+
+static bool doEvaluateDestruction(const VarDecl *VD, SemaProxy *SProxy,
+                                  bool IsConstantDestruction,
+                                  SmallVectorImpl<PartialDiagnosticAt> &Notes) {
+  ASTContext &Ctx = VD->getASTContext();
+
   // This function is only meaningful for records and arrays of records.
-  QualType VarTy = getType();
+  QualType VarTy = VD->getType();
   if (VarTy->isArrayType()) {
-    QualType ElemTy = getASTContext().getBaseElementType(VarTy);
+    QualType ElemTy = Ctx.getBaseElementType(VarTy);
     if (!ElemTy->isRecordType()) {
-      ensureEvaluatedStmt()->HasConstantDestruction = true;
+      VD->ensureEvaluatedStmt()->HasConstantDestruction = true;
       return true;
     }
   } else if (!VarTy->isRecordType()) {
-    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    VD->ensureEvaluatedStmt()->HasConstantDestruction = true;
     return true;
   }
 
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  // Only treat the destruction as constant destruction if we formally have
-  // constant initialization (or are usable in a constant expression).
-  bool IsConstantDestruction = hasConstantInitialization();
-  ASTContext &Ctx = getASTContext();
-
   // Make a copy of the value for the destructor to mutate, if we know it.
   // Otherwise, treat the value as default-initialized; if the destructor works
   // anyway, then the destruction is constant (and must be essentially empty).
   APValue DestroyedValue;
-  if (getEvaluatedValue())
-    DestroyedValue = *getEvaluatedValue();
+  if (VD->getEvaluatedValue())
+    DestroyedValue = *VD->getEvaluatedValue();
   else if (!handleDefaultInitValue(VarTy, DestroyedValue))
     return false;
 
@@ -22516,22 +22618,41 @@ bool VarDecl::evaluateDestruction(
     interp::EvalSettings Settings(IsConstantDestruction
                                       ? EvaluationMode::ConstantExpression
                                       : EvaluationMode::ConstantFold,
-                                  EStatus);
+                                  EStatus, SProxy);
     Settings.InConstantContext = IsConstantDestruction;
-    if (!Ctx.getInterpContext().evaluateDestruction(Settings, this,
+    if (!Ctx.getInterpContext().evaluateDestruction(Settings, VD,
                                                     std::move(DestroyedValue)))
       return false;
-    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    VD->ensureEvaluatedStmt()->HasConstantDestruction = true;
     return true;
   }
 
-  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), VarTy,
-                           getLocation(), EStatus, IsConstantDestruction) ||
+  if (!EvaluateDestruction(Ctx, SProxy, VD, std::move(DestroyedValue), VarTy,
+                           VD->getLocation(), EStatus, IsConstantDestruction) ||
       EStatus.HasSideEffects)
     return false;
 
-  ensureEvaluatedStmt()->HasConstantDestruction = true;
+  VD->ensureEvaluatedStmt()->HasConstantDestruction = true;
   return true;
+}
+
+bool VarDecl::evaluateDestruction(
+    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+  // Only treat the destruction as constant destruction if we formally have
+  // constant initialization (or are usable in a constant expression).
+  bool IsConstantDestruction = hasConstantInitialization();
+
+  return ::doEvaluateDestruction(this, /*SProxy=*/nullptr,
+                                 IsConstantDestruction, Notes);
+}
+
+bool VarDecl::evaluateConstantDestruction(
+    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
+  // Only treat the destruction as constant destruction if we formally have
+  // constant initialization (or are usable in a constant expression).
+  bool IsConstantDestruction = hasConstantInitialization();
+
+  return ::doEvaluateDestruction(this, &SProxy, IsConstantDestruction, Notes);
 }
 
 /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
@@ -22553,7 +22674,8 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   EvalResult EVResult;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     [[maybe_unused]] bool Result =
         Ctx.getInterpContext().evaluateAsRValue(Settings, this, EVResult.Val);
@@ -22563,7 +22685,8 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
     return EVResult.Val.getInt();
   }
 
-  EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
+                EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
   bool Result = ::EvaluateAsRValue(this, EVResult, Ctx, Info);
@@ -22584,7 +22707,8 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   EVResult.Diag = Diag;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     Settings.CheckingForUndefinedBehavior = true;
     [[maybe_unused]] bool Result =
@@ -22595,7 +22719,8 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
     return EVResult.Val.getInt();
   }
 
-  EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
+                EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
   Info.CheckingForUndefinedBehavior = true;
 
@@ -22618,13 +22743,15 @@ void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
     return;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
+                                  /*SProxy=*/nullptr);
     Settings.CheckingForUndefinedBehavior = true;
     (void)Ctx.getInterpContext().evaluateAsRValue(Settings, this, EVResult.Val);
     return;
   }
 
-  EvalInfo Info(Ctx, EVResult, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EVResult,
+                EvaluationMode::IgnoreSideEffects);
   Info.CheckingForUndefinedBehavior = true;
   (void)::EvaluateAsRValue(Info, this, EVResult.Val);
 }
@@ -22678,7 +22805,8 @@ static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   Expr::EvalResult EVResult;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, EVResult);
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, EVResult,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     if (!Ctx.getInterpContext().evaluateAsRValue(Settings, E, EVResult.Val) ||
         EVResult.HasSideEffects || !EVResult.Val.isInt())
@@ -22687,7 +22815,8 @@ static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   }
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                EvaluationMode::ConstantExpression);
 
   Info.InConstantContext = true;
   if (!::EvaluateAsRValue(E, EVResult, Ctx, Info) || EVResult.HasSideEffects ||
@@ -23197,8 +23326,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx,
   EvalResult ExprResult;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects,
-                                  ExprResult);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, ExprResult,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     if (!Ctx.getInterpContext().evaluateAsRValue(Settings, this,
                                                  ExprResult.Val))
@@ -23207,7 +23336,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx,
   }
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::IgnoreSideEffects);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                EvaluationMode::IgnoreSideEffects);
   Info.InConstantContext = true;
 
   if (!::EvaluateAsInt(this, ExprResult, Ctx, SE_AllowSideEffects, Info))
@@ -23242,12 +23372,14 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
   Status.ExtendedDiag = AllowRelaxedEval ? &MSRelaxedDiag : nullptr;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status,
+                                  /*SProxy=*/nullptr);
     IsConstExpr =
         Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result);
   } else {
     // Build evaluation settings.
-    EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+    EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                  EvaluationMode::ConstantExpression);
     IsConstExpr =
         ::EvaluateAsRValue(Info, this, Result) &&
         // NOTE: We don't produce a diagnostic for this, but the callers that
@@ -23276,7 +23408,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::ConstantExpressionUnevaluated,
-                                  Status);
+                                  Status, /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     if (std::optional<bool> BoolResult =
             Ctx.getInterpContext().evaluateWithSubstitution(Settings, Callee,
@@ -23287,7 +23419,8 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
     return false;
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
 
   LValue ThisVal;
@@ -23366,14 +23499,16 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
 
   // The constexpr VM attempts to compile all methods to bytecode here.
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     Settings.CheckingPotentialConstantExpression = true;
     Ctx.getInterpContext().isPotentialConstantExpr(Settings, FD);
     return Diags.empty();
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
   Info.CheckingPotentialConstantExpression = true;
 
@@ -23419,14 +23554,15 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::ConstantExpressionUnevaluated,
-                                  Status);
+                                  Status, /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     Settings.CheckingPotentialConstantExpression = true;
     Ctx.getInterpContext().isPotentialConstantExprUnevaluated(Settings, E, FD);
     return Diags.empty();
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status,
+                EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
   Info.CheckingPotentialConstantExpression = true;
 
@@ -23446,12 +23582,13 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status,
+                                  /*SProxy=*/nullptr);
     return Ctx.getInterpContext().tryEvaluateObjectSize(Settings, this, Type,
                                                         /*IsDynamic=*/false);
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
@@ -23505,13 +23642,14 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   std::string StringResult;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status,
+                                  /*SProxy=*/nullptr);
     if (!Ctx.getInterpContext().evaluateString(Settings, this, StringResult))
       return std::nullopt;
     return StringResult;
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
   if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
@@ -23521,16 +23659,17 @@ template <typename T>
 static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *SizeExpression,
                                           const Expr *PtrExpression,
-                                          ASTContext &Ctx,
+                                          ASTContext &Ctx, SemaProxy &SProxy,
                                           Expr::EvalResult &Status) {
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status,
+                                  &SProxy);
     Settings.InConstantContext = true;
     return Ctx.getInterpContext().evaluateCharRange(Settings, SizeExpression,
                                                     PtrExpression, Result);
   }
 
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, &SProxy, Status, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
 
   LValue String;
@@ -23579,27 +23718,30 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
+                                     SemaProxy &SProxy,
                                      EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, Status);
+                                       PtrExpression, Ctx, SProxy, Status);
 }
 
 bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
+                                     SemaProxy &SProxy,
                                      EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, Status);
+                                       PtrExpression, Ctx, SProxy, Status);
 }
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status,
+                                  /*SProxy=*/nullptr);
     return Ctx.getInterpContext().evaluateStrlen(Settings, this);
   }
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Status, EvaluationMode::ConstantFold);
   return EvaluateBuiltinStrLen(this, Info);
 }
 

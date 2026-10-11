@@ -32,6 +32,7 @@ class CharUnits;
 class Expr;
 class CallExpr;
 class CXXRecordDecl;
+class FunctionDecl;
 
 CharUnits GetAlignOfDynamicAlloc(const ASTContext &Ctx, QualType AllocType,
                                  DynAllocKind AllocKind);
@@ -162,5 +163,8 @@ inline bool isOpaqueConstantCall(const CallExpr *E) {
 }
 
 bool isGlobalLValue(const ValueDecl *D, const Expr *E);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif

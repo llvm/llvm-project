@@ -61,6 +61,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
@@ -18350,8 +18351,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
+  EvalProxy SProxy(*this);
   bool Folded =
-      E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
+      (getLangOpts().CPlusPlus
+           ? E->EvaluateAsMandatedConstantRValue(EvalResult, Context, SProxy)
+           : E->EvaluateAsRValue(EvalResult, Context,
+                                 /*isConstantContext=*/true)) &&
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
@@ -18664,8 +18669,9 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
     Expr::EvalResult Eval;
-    bool Res = E.get()->EvaluateAsConstantExpr(
-        Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+    EvalProxy SProxy(*this);
+    bool Res = E.get()->EvaluateAsMandatedConstantExpr(
+        Eval, getASTContext(), SProxy, ConstantExprKind::ImmediateInvocation);
     if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
@@ -18720,8 +18726,10 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
-  bool Result = CE->EvaluateAsConstantExpr(
-      Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
+  EvalProxy SProxy(SemaRef);
+  bool Result =
+      CE->EvaluateAsMandatedConstantExpr(Eval, SemaRef.getASTContext(), SProxy,
+                                         ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();

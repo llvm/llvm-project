@@ -22,7 +22,7 @@ using namespace clang::interp;
 InterpState::InterpState(const EvalSettings &Settings, Program &P,
                          InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, SourceMapper *M)
-    : State(Ctx.getASTContext(), Settings.EvalStatus), M(M),
+    : State(Ctx.getASTContext(), Settings.SProxy, Settings.EvalStatus), M(M),
       FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
@@ -36,9 +36,10 @@ InterpState::InterpState(const EvalSettings &Settings, Program &P,
 InterpState::InterpState(const EvalSettings &Settings, Program &P,
                          InterpStack &Stk, FrameAllocator &FrameAlloc,
                          Context &Ctx, const Function *Func)
-    : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr),
-      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+    : State(Ctx.getASTContext(), Settings.SProxy, Settings.EvalStatus),
+      M(nullptr), FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx),
+      BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
@@ -50,9 +51,9 @@ InterpState::InterpState(const EvalSettings &Settings, Program &P,
 InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
                          FrameAllocator &FrameAlloc, Context &Ctx,
                          SourceMapper *M)
-    : State(Ctx.getASTContext(), Status), M(M), FrameAlloc(FrameAlloc), P(P),
-      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
-      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+    : State(Ctx.getASTContext(), /*SProxy=*/nullptr, Status), M(M),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = true;
   CheckingPotentialConstantExpression = false;
