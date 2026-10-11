@@ -21541,6 +21541,8 @@ Takes one argument which must be an i1 vector, and returns a vector of the same 
 
 When the input is all zeroes, the result is all ones.
 
+If any element in the input vector is poison, the result is poison.
+
 ##### Examples:
 
 ```llvm
