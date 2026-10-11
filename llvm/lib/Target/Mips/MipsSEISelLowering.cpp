@@ -475,21 +475,6 @@ addMSAFloatType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   }
 }
 
-SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
-  if(!Subtarget.hasMips32r6())
-    return MipsTargetLowering::LowerOperation(Op, DAG);
-
-  EVT ResTy = Op->getValueType(0);
-  SDLoc DL(Op);
-
-  // Although MTC1_D64 takes an i32 and writes an f64, the upper 32 bits of the
-  // floating point register are undefined. Not really an issue as sel.d, which
-  // is produced from an FSELECT node, only looks at bit 0.
-  SDValue Tmp = DAG.getNode(MipsISD::MTC1_D64, DL, MVT::f64, Op->getOperand(0));
-  return DAG.getNode(MipsISD::FSELECT, DL, ResTy, Tmp, Op->getOperand(1),
-                     Op->getOperand(2));
-}
-
 // Lower FP16_TO_FP (the soft-promote-half representation of an f16 -> f32/f64
 // conversion).
 SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
@@ -610,9 +595,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::INTRINSIC_VOID:     return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
-  case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:
-    return lowerSELECT(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::FP16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
