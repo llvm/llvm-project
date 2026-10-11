@@ -62,12 +62,12 @@ define float @fmed3_f32_fpext_f16_k0(half %arg1, half %arg2) #1 {
 ; NO-FMED3F16-SAME: (half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; NO-FMED3F16-NEXT:    [[ARG1_EXT:%.*]] = fpext half [[ARG1]] to float
 ; NO-FMED3F16-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float [[ARG2_EXT]], float 2.000000e+00)
+; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float 2.000000e+00, float [[ARG2_EXT]])
 ; NO-FMED3F16-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_k0
 ; GFX9-SAME: (half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
-; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half [[ARG1]], half [[ARG2]], half 2.000000e+00)
+; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half [[ARG1]], half 2.000000e+00, half [[ARG2]])
 ; GFX9-NEXT:    [[MED3:%.*]] = fpext half [[MED31]] to float
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
@@ -82,12 +82,12 @@ define float @fmed3_f32_fpext_f16_k1(half %arg0, half %arg2) #1 {
 ; NO-FMED3F16-SAME: (half [[ARG0:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; NO-FMED3F16-NEXT:    [[ARG0_EXT:%.*]] = fpext half [[ARG0]] to float
 ; NO-FMED3F16-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG2_EXT]], float 2.000000e+00)
+; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float 2.000000e+00, float [[ARG2_EXT]])
 ; NO-FMED3F16-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_k1
 ; GFX9-SAME: (half [[ARG0:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
-; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half [[ARG0]], half [[ARG2]], half 2.000000e+00)
+; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half [[ARG0]], half 2.000000e+00, half [[ARG2]])
 ; GFX9-NEXT:    [[MED3:%.*]] = fpext half [[MED31]] to float
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
@@ -121,12 +121,12 @@ define float @fmed3_f32_fpext_f16_k0_k1(half %arg2) #1 {
 ; NO-FMED3F16-LABEL: define float @fmed3_f32_fpext_f16_k0_k1
 ; NO-FMED3F16-SAME: (half [[ARG2:%.*]]) #[[ATTR1]] {
 ; NO-FMED3F16-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG2_EXT]], float 0.000000e+00, float 1.600000e+01)
+; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float 0.000000e+00, float 1.600000e+01, float [[ARG2_EXT]])
 ; NO-FMED3F16-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_k0_k1
 ; GFX9-SAME: (half [[ARG2:%.*]]) #[[ATTR1]] {
-; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half [[ARG2]], half 0.000000e+00, half 1.600000e+01)
+; GFX9-NEXT:    [[MED31:%.*]] = call half @llvm.amdgcn.fmed3.f16(half 0.000000e+00, half 1.600000e+01, half [[ARG2]])
 ; GFX9-NEXT:    [[MED3:%.*]] = fpext half [[MED31]] to float
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
@@ -547,14 +547,14 @@ define float @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 
 ; NO-FMED3F16-SAME: (half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; NO-FMED3F16-NEXT:    [[ARG1_EXT:%.*]] = fpext half [[ARG1]] to float
 ; NO-FMED3F16-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float [[ARG2_EXT]], float f0x4F800000)
+; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float f0x4F800000, float [[ARG2_EXT]])
 ; NO-FMED3F16-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_unrepresentable_k0
 ; GFX9-SAME: (half [[ARG1:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[ARG1_EXT:%.*]] = fpext half [[ARG1]] to float
 ; GFX9-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float [[ARG2_EXT]], float f0x4F800000)
+; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG1_EXT]], float f0x4F800000, float [[ARG2_EXT]])
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
   %arg1.ext = fpext half %arg1 to float
@@ -568,14 +568,14 @@ define float @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 
 ; NO-FMED3F16-SAME: (half [[ARG0:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; NO-FMED3F16-NEXT:    [[ARG0_EXT:%.*]] = fpext half [[ARG0]] to float
 ; NO-FMED3F16-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG2_EXT]], float f0x4F800000)
+; NO-FMED3F16-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float f0x4F800000, float [[ARG2_EXT]])
 ; NO-FMED3F16-NEXT:    ret float [[MED3]]
 ;
 ; GFX9-LABEL: define float @fmed3_f32_fpext_f16_unrepresentable_k1
 ; GFX9-SAME: (half [[ARG0:%.*]], half [[ARG2:%.*]]) #[[ATTR1]] {
 ; GFX9-NEXT:    [[ARG0_EXT:%.*]] = fpext half [[ARG0]] to float
 ; GFX9-NEXT:    [[ARG2_EXT:%.*]] = fpext half [[ARG2]] to float
-; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float [[ARG2_EXT]], float f0x4F800000)
+; GFX9-NEXT:    [[MED3:%.*]] = call float @llvm.amdgcn.fmed3.f32(float [[ARG0_EXT]], float f0x4F800000, float [[ARG2_EXT]])
 ; GFX9-NEXT:    ret float [[MED3]]
 ;
   %arg0.ext = fpext half %arg0 to float
