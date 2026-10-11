@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LowerSwitch.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -28,6 +29,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -35,12 +37,14 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -68,13 +72,98 @@ bool IsInRanges(const IntRange &R, const std::vector<IntRange> &Ranges) {
   return I != Ranges.end() && I->Low.sle(R.Low);
 }
 
+// A case that already goes to the default, and its count.
+//
+//   switch i32 %x, label %def [
+//     i32 1, label %a
+//     i32 4, label %def   ; {Value: 4, Weight: 15}
+//   ], !prof !{!"branch_weights", i32 0, i32 20, i32 15}
+struct DefaultCase {
+  APInt Value;
+  uint64_t Weight;
+};
+
+// The one leaf that gets the whole default count.
+//
+//   %v = and i32 %x, 3
+//   switch i32 %v, label %def [
+//     i32 0, label %a
+//     i32 1, label %b
+//   ], !prof !{!"branch_weights", i32 100, i32 10, i32 20}
+//
+// lowers to:
+//
+//   %pivot = icmp slt i32 %v, 1
+//   br i1 %pivot, label %a, label %check
+// check:
+//   %case = icmp eq i32 %v, 1
+//   br i1 %case, label %b, label %def
+//
+// Only %check can reach %def, so it keeps the whole default count:
+// {Low: 1, Weight: 100}.
+struct UniqueMissLeaf {
+  ConstantInt *Low;
+  uint64_t Weight;
+};
+
+// Numeric weights for the compare tree.
+struct SwitchBranchWeights {
+  // Default count for one remaining case range. Otherwise 0.
+  uint64_t MissWeight = 0;
+  // Sorted by signed value before the tree walk.
+  SmallVector<DefaultCase, 8> DefaultCases;
+  // True when the switch weights were marked !"expected".
+  bool IsExpected = false;
+  std::optional<UniqueMissLeaf> UniqueMiss;
+};
+
+/// fitWeights() may scale large counts down to fit into uint32_t values.
+/// A non-zero weight that becomes 0 is stored as 1. A real 0 stays 0.
+static void fitAndSetBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
+                                   bool IsExpected) {
+  SmallVector<uint32_t> Fitted = fitWeights(Weights);
+  for (size_t Idx = 0; Idx < Weights.size() && Idx < Fitted.size(); ++Idx)
+    if (Weights[Idx] != 0 && Fitted[Idx] == 0)
+      Fitted[Idx] = 1;
+  setBranchWeights(I, Fitted, IsExpected);
+}
+
+/// Sum of default-case weights whose value lies in [Lo, Hi].
+/// \p Cases is sorted by signed value.
+/// Example:
+///   DefaultCases = {{2, 5}, {7, 10}, {9, 20}}
+///   sumDefaultCases(..., 7, 9) == 30
+/// because only values 7 and 9 fall in the queried range.
+static uint64_t sumDefaultCases(ArrayRef<DefaultCase> Cases, const APInt &Lo,
+                                const APInt &Hi) {
+  auto It = llvm::lower_bound(Cases, Lo,
+                              [](const DefaultCase &Case, const APInt &Value) {
+                                return Case.Value.slt(Value);
+                              });
+  uint64_t Weight = 0;
+  for (; It != Cases.end() && It->Value.sle(Hi); ++It)
+    Weight = SaturatingAdd(Weight, It->Weight);
+  return Weight;
+}
+
+/// True when KnownBits proves that V cannot occur.
+/// Example:
+///   Known = xxxx1   (bit 0 is known one)
+///   V     = xxxx0
+/// Then V conflicts with KnownBits and cannot be produced.
+static bool conflictsWithKnownBits(const APInt &V, const KnownBits &Known) {
+  return Known.Zero.intersects(V) || Known.One.intersects(~V);
+}
+
 struct CaseRange {
   ConstantInt *Low;
   ConstantInt *High;
   BasicBlock *BB;
+  uint64_t Weight;
 
-  CaseRange(ConstantInt *low, ConstantInt *high, BasicBlock *bb)
-      : Low(low), High(high), BB(bb) {}
+  CaseRange(ConstantInt *low, ConstantInt *high, BasicBlock *bb,
+            uint64_t weight = 0)
+      : Low(low), High(high), BB(bb), Weight(weight) {}
 };
 
 using CaseVector = std::vector<CaseRange>;
@@ -148,13 +237,23 @@ void FixPhis(BasicBlock *SuccBB, BasicBlock *OrigBB, BasicBlock *NewBB,
   }
 }
 
+/// Sum the weights of cases in [Begin, End).
+static uint64_t sumCaseWeights(CaseItr Begin, CaseItr End) {
+  uint64_t Weight = 0;
+  for (; Begin != End; ++Begin)
+    Weight = SaturatingAdd(Weight, Begin->Weight);
+  return Weight;
+}
+
 /// Create a new leaf block for the binary lookup tree. It checks if the
 /// switch's value == the case's value. If not, then it jumps to the default
 /// branch. At this point in the tree, the value can't be another valid case
 /// value, so the jump to the "default" branch is warranted.
 BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
                          ConstantInt *UpperBound, BasicBlock *OrigBlock,
-                         BasicBlock *Default) {
+                         BasicBlock *Default,
+                         const std::optional<SwitchBranchWeights> &Profile,
+                         bool MarkUnknown) {
   Function *F = OrigBlock->getParent();
   BasicBlock *NewLeaf = BasicBlock::Create(Val->getContext(), "LeafBlock");
   F->insert(++OrigBlock->getIterator(), NewLeaf);
@@ -192,7 +291,41 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
 
   // Make the conditional branch...
   BasicBlock *Succ = Leaf.BB;
-  CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  auto *Br = CondBrInst::Create(Comp, Succ, Default, NewLeaf);
+  if (Profile) {
+    // True edge is the matched case. The false edge starts at MissWeight:
+    // the default count when one case range remains, otherwise 0.
+    // UniqueMiss adds that count when this is the one miss leaf. Default
+    // cases in this leaf's range are added on top.
+    //
+    //   %v = and i32 %x, 3
+    //   switch i32 %v, label %def [
+    //     i32 0, label %a    ; 10
+    //     i32 1, label %b    ; 20
+    //     i32 3, label %def  ; 5
+    //   ], !prof !{!"branch_weights", i32 100, i32 10, i32 20, i32 5}
+    //
+    // Case 0 is covered, so only the compare for 1 can miss. Two case ranges
+    // remain, so value 3 stays a default case and the default count is
+    // UniqueMiss. At that leaf:
+    //   true  = 20
+    //   false = 0 + 100 + 5 = 105
+    uint64_t Miss = Profile->MissWeight;
+    if (Profile->UniqueMiss && Leaf.Low == Profile->UniqueMiss->Low)
+      Miss = SaturatingAdd(Miss, Profile->UniqueMiss->Weight);
+    if (!Profile->DefaultCases.empty())
+      Miss = SaturatingAdd(Miss, sumDefaultCases(Profile->DefaultCases,
+                                                 LowerBound->getValue(),
+                                                 UpperBound->getValue()));
+
+    fitAndSetBranchWeights(*Br, {Leaf.Weight, Miss}, Profile->IsExpected);
+  } else if (MarkUnknown) {
+    // A switch has a single default edge, but after lowering its executions
+    // may contribute to multiple comparison-tree branches. If those counts
+    // cannot be redistributed reliably, preserve the profile but mark the
+    // generated branch weights as unknown.
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
+  }
 
   // Update the PHI incoming value/block for the default.
   for (auto &I : Default->phis()) {
@@ -235,8 +368,8 @@ static ConstantInt *upperBeforePivot(ConstantInt *PivotLow,
   return LeftHigh;
 }
 
-/// One node of the balanced case tree. The split is recorded here, and
-/// SwitchConvert walks this tree to emit the branches.
+/// One node of the balanced case tree. The split is recorded here, and both
+/// the miss count and the branch builder walk this same tree.
 struct SwitchTree {
   CaseItr Begin;
   CaseItr End;
@@ -291,12 +424,33 @@ buildSwitchTree(CaseItr Begin, CaseItr End, ConstantInt *Lower,
   return Node;
 }
 
+/// Count leaves that still compare against the default.
+/// If exactly one miss leaf exists, \p OnlyLow is set to that leaf's low value.
+static void countDefaultLeaves(const SwitchTree &Node, unsigned &Misses,
+                               ConstantInt *&OnlyLow) {
+  if (!Node.Left) {
+    if (Node.Covered)
+      return;
+    // Keep OnlyLow only while this is the sole miss leaf.
+    if (++Misses == 1)
+      OnlyLow = Node.Begin->Low;
+    else
+      OnlyLow = nullptr;
+    return;
+  }
+  countDefaultLeaves(*Node.Left, Misses, OnlyLow);
+  countDefaultLeaves(*Node.Right, Misses, OnlyLow);
+}
+
 /// Convert the switch statement into a binary lookup of the case values.
 /// \p Node is the tree from buildSwitchTree. Its bounds are the values already
-/// checked by a block emitted higher in the call stack.
+/// checked by a block emitted higher in the call stack. \p Profile is set when
+/// the tree keeps a numeric !prof.
 BasicBlock *SwitchConvert(const SwitchTree &Node, Value *Val,
                           BasicBlock *Predecessor, BasicBlock *OrigBlock,
-                          BasicBlock *Default) {
+                          BasicBlock *Default,
+                          const std::optional<SwitchBranchWeights> &Profile,
+                          bool MarkUnknown) {
   assert(Node.Lower && Node.Upper && "Bounds must be initialized");
 
   if (!Node.Left) {
@@ -308,7 +462,7 @@ BasicBlock *SwitchConvert(const SwitchTree &Node, Value *Val,
       return Node.Begin->BB;
     }
     return NewLeafBlock(*Node.Begin, Val, Node.Lower, Node.Upper, OrigBlock,
-                        Default);
+                        Default, Profile, MarkUnknown);
   }
 
   // Create a new node that checks if the value is < pivot. Go to the
@@ -317,39 +471,129 @@ BasicBlock *SwitchConvert(const SwitchTree &Node, Value *Val,
   BasicBlock *NewNode = BasicBlock::Create(Val->getContext(), "NodeBlock");
   ICmpInst *Comp = new ICmpInst(ICmpInst::ICMP_SLT, Val, Node.Pivot, "Pivot");
 
-  BasicBlock *LBranch =
-      SwitchConvert(*Node.Left, Val, NewNode, OrigBlock, Default);
-  BasicBlock *RBranch =
-      SwitchConvert(*Node.Right, Val, NewNode, OrigBlock, Default);
+  BasicBlock *LBranch = SwitchConvert(*Node.Left, Val, NewNode, OrigBlock,
+                                      Default, Profile, MarkUnknown);
+  BasicBlock *RBranch = SwitchConvert(*Node.Right, Val, NewNode, OrigBlock,
+                                      Default, Profile, MarkUnknown);
 
   F->insert(++OrigBlock->getIterator(), NewNode);
   Comp->insertInto(NewNode, NewNode->end());
 
-  CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
+  auto *Br = CondBrInst::Create(Comp, LBranch, RBranch, NewNode);
+
+  if (Profile) {
+    // Each side is its case weights, plus default cases in that range, plus
+    // UniqueMiss when that side contains the miss leaf.
+    //
+    //   %v = and i32 %x, 3
+    //   switch i32 %v, label %def [
+    //     i32 0, label %a    ; 10
+    //     i32 1, label %b    ; 20
+    //     i32 3, label %def  ; 5
+    //   ], !prof !{!"branch_weights", i32 100, i32 10, i32 20, i32 5}
+    //
+    // Pivot is slt 1. Case 0 is covered, so the default count 100 and
+    // value 3 both fall on the right:
+    //   left  = 10
+    //   right = 20 + 5 + 100 = 125
+    CaseItr Mid = Node.Right->Begin;
+
+    uint64_t LWeight = sumCaseWeights(Node.Begin, Mid);
+    uint64_t RWeight = sumCaseWeights(Mid, Node.End);
+
+    if (!Profile->DefaultCases.empty()) {
+      // Add default-case counts that belong to each child's value range.
+      LWeight =
+          SaturatingAdd(LWeight, sumDefaultCases(Profile->DefaultCases,
+                                                 Node.Lower->getValue(),
+                                                 Node.LeftHigh->getValue()));
+      RWeight = SaturatingAdd(RWeight, sumDefaultCases(Profile->DefaultCases,
+                                                       Node.Pivot->getValue(),
+                                                       Node.Upper->getValue()));
+    }
+
+    if (Profile->UniqueMiss) {
+      ConstantInt *EdgeLow = Profile->UniqueMiss->Low;
+      auto ContainsEdge = [&](CaseItr B, CaseItr E) {
+        return any_of(iterator_range(B, E),
+                      [&](const CaseRange &R) { return R.Low == EdgeLow; });
+      };
+      // A UniqueMiss count belongs to exactly one child. Add it to the
+      // subtree containing the corresponding case.
+      if (ContainsEdge(Node.Begin, Mid))
+        LWeight = SaturatingAdd(LWeight, Profile->UniqueMiss->Weight);
+      else if (ContainsEdge(Mid, Node.End))
+        RWeight = SaturatingAdd(RWeight, Profile->UniqueMiss->Weight);
+    }
+
+    fitAndSetBranchWeights(*Br, {LWeight, RWeight}, Profile->IsExpected);
+  } else if (MarkUnknown) {
+    // Several miss leaves and a nonzero default, so the count is not split.
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
+  }
   return NewNode;
 }
 
-/// Transform simple list of \p SI's cases into list of CaseRange's \p Cases.
-/// \post \p Cases wouldn't contain references to \p SI's default BB.
-/// \returns Number of \p SI's cases that do not reference \p SI's default BB.
-unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
+/// Cases with the default removed, plus the weights gathered from the switch.
+struct ClusteredSwitch {
+  CaseVector Cases;
   unsigned NumSimpleCases = 0;
+  // branch_weights was present, with one count per successor.
+  bool HadWeights = false;
+  // Numeric !prof is still kept on the lowered compares. Cleared when the
+  // default count cannot be placed. HadWeights stays set.
+  bool HasProfile = false;
+  // Original default count before the tree exists. One case range stores it
+  // in Weights.MissWeight. One miss leaf moves it to UniqueMiss. Several
+  // miss leaves drop the numeric profile.
+  //
+  //   switch i32 %x, label %def [
+  //     i32 1, label %a
+  //     i32 2, label %b
+  //   ], !prof !{!"branch_weights", i32 10, i32 20, i32 30}
+  //
+  // Both leaves can miss, so this 10 is not split.
+  uint64_t DefaultWeight = 0;
+  SwitchBranchWeights Weights;
+};
+
+/// Transform simple list of \p SI's cases into list of CaseRange's.
+/// The result cases do not reference \p SI's default block.
+static ClusteredSwitch Clusterify(SwitchInst *SI) {
+  ClusteredSwitch Result;
+  SmallVector<uint64_t> Weights;
+  MDNode *ProfileData = getBranchWeightMDNode(*SI);
+  bool HaveWeights = ProfileData && isBranchWeightMD(ProfileData);
+  if (HaveWeights) {
+    extractFromBranchWeightMD64(ProfileData, Weights);
+    HaveWeights = Weights.size() == SI->getNumSuccessors();
+  }
+  Result.HadWeights = HaveWeights;
 
   // Start with "simple" cases
   for (auto Case : SI->cases()) {
-    if (Case.getCaseSuccessor() == SI->getDefaultDest())
+    if (Case.getCaseSuccessor() == SI->getDefaultDest()) {
+      // This case already targets the default. Its value picks the miss edge.
+      //
+      //   i32 4, label %def   ; DefaultCase {Value: 4, Weight: 15}
+      if (HaveWeights)
+        Result.Weights.DefaultCases.push_back(
+            {Case.getCaseValue()->getValue(),
+             Weights[Case.getSuccessorIndex()]});
       continue;
-    Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
-                              Case.getCaseSuccessor()));
-    ++NumSimpleCases;
+    }
+    uint64_t Weight = HaveWeights ? Weights[Case.getSuccessorIndex()] : 0;
+    Result.Cases.push_back(CaseRange(Case.getCaseValue(), Case.getCaseValue(),
+                                     Case.getCaseSuccessor(), Weight));
+    ++Result.NumSimpleCases;
   }
 
-  llvm::sort(Cases, CaseCmp());
+  llvm::sort(Result.Cases, CaseCmp());
 
   // Merge case into clusters
-  if (Cases.size() >= 2) {
-    CaseItr I = Cases.begin();
-    for (CaseItr J = std::next(I), E = Cases.end(); J != E; ++J) {
+  if (Result.Cases.size() >= 2) {
+    CaseItr I = Result.Cases.begin();
+    for (CaseItr J = std::next(I), E = Result.Cases.end(); J != E; ++J) {
       const APInt &nextValue = J->Low->getValue();
       const APInt &currentValue = I->High->getValue();
       BasicBlock *nextBB = J->BB;
@@ -361,15 +605,33 @@ unsigned Clusterify(CaseVector &Cases, SwitchInst *SI) {
              "Cases should be strictly ascending");
       if ((nextValue == currentValue + 1) && (currentBB == nextBB)) {
         I->High = J->High;
-        // FIXME: Combine branch weights.
+        I->Weight = SaturatingAdd(I->Weight, J->Weight);
       } else if (++I != J) {
         *I = *J;
       }
     }
-    Cases.erase(std::next(I), Cases.end());
+    Result.Cases.erase(std::next(I), Result.Cases.end());
   }
 
-  return NumSimpleCases;
+  // Weights[0] is the original default edge count.
+  if (HaveWeights && SI->defaultDestUnreachable()) {
+    // Cases that target this block cannot fire.
+    Result.Weights.DefaultCases.clear();
+    Result.HasProfile = true;
+  } else if (HaveWeights && Result.Cases.size() <= 1) {
+    // One miss edge, so it keeps the default count.
+    Result.Weights.MissWeight = Weights[0];
+    Result.HasProfile = true;
+  } else if (HaveWeights && Weights[0] == 0) {
+    // Nothing to split across the miss edges.
+    Result.HasProfile = true;
+  } else if (HaveWeights) {
+    // Hold the count until the tree shows exactly one miss leaf.
+    Result.DefaultWeight = Weights[0];
+    Result.HasProfile = true;
+  }
+
+  return Result;
 }
 
 /// Replace the specified switch instruction with a sequence of chained if-then
@@ -390,9 +652,14 @@ void ProcessSwitchInst(SwitchInst *SI,
     return;
   }
 
-  // Prepare cases vector.
-  CaseVector Cases;
-  const unsigned NumSimpleCases = Clusterify(Cases, SI);
+  ClusteredSwitch Cluster = Clusterify(SI);
+  CaseVector &Cases = Cluster.Cases;
+  bool &HasProfile = Cluster.HasProfile;
+  uint64_t &MissWeight = Cluster.Weights.MissWeight;
+  uint64_t &DefaultWeight = Cluster.DefaultWeight;
+  const bool HadWeights = Cluster.HadWeights;
+  SmallVector<DefaultCase, 8> &DefaultCases = Cluster.Weights.DefaultCases;
+  const unsigned NumSimpleCases = Cluster.NumSimpleCases;
   IntegerType *IT = cast<IntegerType>(SI->getCondition()->getType());
   const unsigned BitWidth = IT->getBitWidth();
   // Explicitly use higher precision to prevent unsigned overflow where
@@ -415,6 +682,8 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *LowerBound = nullptr;
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
+  // Known bits are filled in only when the default is reachable.
+  KnownBits Known(BitWidth);
 
   if (SI->defaultDestUnreachable()) {
     // Make the bounds tightly fitted around the case value range, because we
@@ -434,7 +703,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
     const DataLayout &DL = F->getDataLayout();
-    KnownBits Known = computeKnownBits(Val, DL, AC, SI);
+    Known = computeKnownBits(Val, DL, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =
         ConstantRange::fromKnownBits(Known, /*IsSigned=*/false);
@@ -455,9 +724,58 @@ void ProcessSwitchInst(SwitchInst *SI,
     DefaultIsUnreachableFromSwitch = (Min + (NumSimpleCases - 1) == Max);
   }
 
+  // Remove a default-targeting value the switch cannot reach. That count
+  // never lands on a miss edge.
+  //
+  // Example:
+  //
+  //   switch %v, label %def [
+  //     i32 0, label %zero
+  //     i32 1, label %one
+  //     i32 4, label %def
+  //   ], !prof !{!"branch_weights", 0, 20, 30, 15}
+  //
+  // If %v is known to be in [0, 3], value 4 is impossible, so its count (15)
+  // cannot contribute to any miss edge and is dropped.
+  //
+  // When only one case range remains:
+  //
+  //   switch %v, label %def [
+  //     i32 0, label %one
+  //     i32 4, label %def
+  //   ], !prof !{!"branch_weights", i32 7, i32 20, i32 15}
+  //
+  // the lowered compare has a single miss edge:
+  //
+  //   %cmp = icmp eq i32 %v, 0
+  //   br i1 %cmp, label %one, label %def
+  //
+  // If 4 can fire, its 15 is added to the default count 7 and DefaultCases
+  // is cleared, so the miss is 22 and is not counted again. A value outside
+  // the range is dropped.
+  if (HasProfile && !DefaultCases.empty()) {
+    auto CannotReach = [&](const DefaultCase &Case) {
+      return Case.Value.slt(LowerBound->getValue()) ||
+             Case.Value.sgt(UpperBound->getValue()) ||
+             conflictsWithKnownBits(Case.Value, Known);
+    };
+    if (Cases.size() <= 1) {
+      for (const DefaultCase &Case : DefaultCases)
+        if (!CannotReach(Case))
+          MissWeight = SaturatingAdd(MissWeight, Case.Weight);
+      // Now part of MissWeight. Later range queries must not see them.
+      DefaultCases.clear();
+    } else {
+      llvm::erase_if(DefaultCases, CannotReach);
+    }
+  }
+
   std::vector<IntRange> UnreachableRanges;
 
+  // Fold the successor with the most values into the default. Its weight
+  // moves with those cases. A dead default count stays 0.
   if (DefaultIsUnreachableFromSwitch) {
+    DefaultWeight = 0;
     DenseMap<BasicBlock *, APInt> Popularity;
     APInt MaxPop(UnsignedZero);
     BasicBlock *PopSucc = nullptr;
@@ -513,7 +831,24 @@ void ProcessSwitchInst(SwitchInst *SI,
       Default->removePredecessor(OrigBlock);
 
     // Use the most popular block as the new default, reducing the number of
-    // cases.
+    // cases. Keep each removed cluster's weight for the edge that now reaches
+    // it.
+    if (HasProfile) {
+      for (const CaseRange &R : Cases)
+        if (R.BB == PopSucc)
+          // Clusters do not overlap, and every pivot is a kept case's Low, so
+          // the whole cluster takes the same side as Low.
+          //
+          //   switch i32 %x, label %unreachable [
+          //     i32 1, label %one     ; 20, peeled
+          //     i32 2, label %two     ; 30
+          //     i32 3, label %three   ; 50
+          //   ], !prof !{!"branch_weights", i32 0, i32 20, i32 30, i32 50}
+          //
+          // Case 1 becomes DefaultCase {1, 20}. The leaf for 2 misses to
+          // %one with that 20. DefaultWeight was cleared, so 0 is not added.
+          DefaultCases.push_back({R.Low->getValue(), R.Weight});
+    }
     Default = PopSucc;
     llvm::erase_if(Cases,
                    [PopSucc](const CaseRange &R) { return R.BB == PopSucc; });
@@ -538,8 +873,45 @@ void ProcessSwitchInst(SwitchInst *SI,
 
   std::unique_ptr<SwitchTree> Tree = buildSwitchTree(
       Cases.begin(), Cases.end(), LowerBound, UpperBound, UnreachableRanges);
-  BasicBlock *SwitchBlock =
-      SwitchConvert(*Tree, Val, OrigBlock, OrigBlock, Default);
+
+  ConstantInt *MissLow = nullptr;
+  if (HasProfile && DefaultWeight != 0) {
+    unsigned Misses = 0;
+    ConstantInt *OnlyLow = nullptr;
+    countDefaultLeaves(*Tree, Misses, OnlyLow);
+    if (Misses == 1)
+      MissLow = OnlyLow;
+    else
+      // Several miss leaves would need an invented split of the default count.
+      // Keep only that profile data existed.
+      HasProfile = false;
+  }
+  // Weights existed, and a numeric !prof was not kept.
+  const bool MarkUnknown = HadWeights && !HasProfile;
+  std::optional<SwitchBranchWeights> Profile;
+  if (HasProfile) {
+    // One signed sort, after folded clusters are appended and dead cases
+    // are removed. Later range queries binary-search this order.
+    llvm::sort(DefaultCases, [](const DefaultCase &A, const DefaultCase &B) {
+      return A.Value.slt(B.Value);
+    });
+    Cluster.Weights.IsExpected = hasBranchWeightOrigin(*SI);
+    if (MissLow)
+      // DefaultWeight moves onto the one remaining miss leaf.
+      //
+      //   %v = and i32 %x, 3
+      //   switch i32 %v, label %def [
+      //     i32 0, label %a
+      //     i32 1, label %b
+      //   ], !prof !{!"branch_weights", i32 100, i32 10, i32 20}
+      //
+      // Only the compare for 1 reaches %def:
+      // UniqueMiss is {Low: 1, Weight: 100}.
+      Cluster.Weights.UniqueMiss = UniqueMissLeaf{MissLow, DefaultWeight};
+    Profile = std::move(Cluster.Weights);
+  }
+  BasicBlock *SwitchBlock = SwitchConvert(*Tree, Val, OrigBlock, OrigBlock,
+                                          Default, Profile, MarkUnknown);
 
   // We have added incoming values for newly-created predecessors in
   // NewLeafBlock(). The only meaningful work we offload to FixPhis() is to
