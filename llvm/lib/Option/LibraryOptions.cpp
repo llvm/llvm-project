@@ -24,6 +24,9 @@ void LibraryOptionsParser::forEachOption(
     unsigned Kind = T.getOptionKind(ID);
     if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
       continue;
+    // Skip options a false Condition makes unknown.
+    if (!T.getOption(ID).hasVisibilityFlag(DefaultVis))
+      continue;
     StringRef V = T.getOptionMetaVar(ID);
     std::string MetaVar;
     if (Kind == Option::SeparateOrEqClass)

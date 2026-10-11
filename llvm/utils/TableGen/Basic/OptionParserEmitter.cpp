@@ -647,7 +647,14 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
-    OS << ", " << ExtraOffset.lookup(&R);
+    // Where a Condition is false, row 0's zero visibility makes the parser
+    // treat the option as unknown.
+    StringRef Condition = getOptionalString(R, "Condition");
+    if (Condition.empty())
+      OS << ", " << ExtraOffset.lookup(&R);
+    else
+      OS << ",\n#if " << Condition << "\n      " << ExtraOffset.lookup(&R)
+         << "\n#else\n      0\n#endif\n     ";
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
     OS << ", llvm::opt::Option::"
