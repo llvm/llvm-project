@@ -309,6 +309,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   unsigned NumKernargPreloadSGPRs = 0;
+  unsigned ICachePrefetchLines = 0;
 
   unsigned MinNumAGPRs = ~0u;
 
@@ -370,6 +371,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
+    YamlIO.mapOptional("iCachePrefetchLines", MFI.ICachePrefetchLines, 0u);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
@@ -489,6 +491,11 @@ private:
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
   bool IsStackRealigned = false;
+
+  // Number of cache lines prefetched through rsrc3 INST_PREF_SIZE when
+  // explicit ICache prefetch instructions are used. A value of zero means the
+  // function does not use the explicit-prefetch scheme.
+  unsigned ICachePrefetchLines = 0;
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
@@ -1125,6 +1132,12 @@ public:
   void setIsStackRealigned(bool Realigned = true) {
     IsStackRealigned = Realigned;
   }
+
+  bool hasICachePrefetch() const { return ICachePrefetchLines != 0; }
+
+  unsigned getICachePrefetchLines() const { return ICachePrefetchLines; }
+
+  void setICachePrefetchLines(unsigned Lines) { ICachePrefetchLines = Lines; }
 
   unsigned getNumSpilledSGPRs() const {
     return NumSpilledSGPRs;

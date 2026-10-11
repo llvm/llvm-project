@@ -1087,6 +1087,14 @@ unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
   return 64;
 }
 
+unsigned getInstCacheSize(const MCSubtargetInfo &STI) {
+  if (STI.getFeatureBits().test(FeatureInstCacheSize65536))
+    return 64 * 1024;
+  if (STI.getFeatureBits().test(FeatureInstCacheSize32768))
+    return 32 * 1024;
+  return 0;
+}
+
 unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureWavefrontSize16))
     return 16;

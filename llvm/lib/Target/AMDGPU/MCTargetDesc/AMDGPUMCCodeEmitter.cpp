@@ -513,7 +513,19 @@ void AMDGPUMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
 void AMDGPUMCCodeEmitter::getSMEMOffsetEncoding(
     const MCInst &MI, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
-  auto Offset = MI.getOperand(OpNo).getImm();
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isExpr()) {
+    const MCExpr *Expr = MO.getExpr();
+    if (Expr->getKind() == MCExpr::Target) {
+      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
+      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchOffset) {
+        addFixup(Fixups, 4, Expr, AMDGPU::fixup_si_prefetch_offset);
+        Op = 0;
+        return;
+      }
+    }
+  }
+  auto Offset = MO.getImm();
   // VI only supports 20-bit unsigned offsets.
   assert(!AMDGPU::isVI(STI) || isUInt<20>(Offset));
   Op = Offset;
@@ -716,6 +728,29 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
   } else if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
     isLikeImm = true;
   } else if (MO.isExpr()) {
+    // Check for prefetch cacheline MCExpr - these need a special fixup
+    // because the expression computes a cacheline count based on code size.
+    const MCExpr *Expr = MO.getExpr();
+    if (Expr->getKind() == MCExpr::Target) {
+      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
+      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchCachelines) {
+        // Create a fixup for the prefetch sdata field. The fixup will be
+        // applied after assembly when symbol positions are known.
+        // Offset 0 means from the start of the instruction.
+        addFixup(Fixups, 0, Expr, AMDGPU::fixup_si_prefetch_sdata);
+        // Set Op to 0 as placeholder; fixup will overwrite.
+        Op = 0;
+        return;
+      }
+      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchOffset) {
+        // Create a fixup for the prefetch offset field.
+        // Offset 4 means byte 4 of the 8-byte instruction.
+        addFixup(Fixups, 4, Expr, AMDGPU::fixup_si_prefetch_offset);
+        Op = 0;
+        return;
+      }
+    }
+
     // FIXME: If this is expression is PCRel or not should not depend on what
     // the expression looks like. Given that this is just a general expression,
     // it should probably be FK_Data_4 and whatever is producing

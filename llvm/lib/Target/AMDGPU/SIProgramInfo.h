@@ -26,7 +26,9 @@ namespace llvm {
 class GCNSubtarget;
 class MCContext;
 class MCExpr;
+class MachineBasicBlock;
 class MachineFunction;
+class SIInstrInfo;
 
 /// Track resource usage for kernels / entry functions.
 struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
@@ -106,6 +108,10 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
 
   // Get function code size and cache the value.
   uint64_t getFunctionCodeSize(const MachineFunction &MF);
+
+  // Get machine basic block code size.
+  static uint64_t getMachineBasicBlockCodeSize(const MachineBasicBlock &MBB,
+                                               const SIInstrInfo &TII);
 
   /// Compute the value of the ComputePGMRsrc1 register.
   const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,
