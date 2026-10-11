@@ -6126,10 +6126,10 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v1.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v1.l, v0.h, 0xff
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-FAKE16-LABEL: clpeak_imad_pat_v2i8:
@@ -6230,10 +6230,10 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1200-SDAG-TRUE16-NEXT:    v_mad_u16 v0.l, v0.l, v1.h, v0.l
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v1.l, 8, v0.h
-; GFX1200-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX1200-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX1200-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1200-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
-; GFX1200-SDAG-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v0.h
+; GFX1200-SDAG-TRUE16-NEXT:    v_and_b16 v1.l, v0.h, 0xff
 ; GFX1200-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-SDAG-FAKE16-LABEL: clpeak_imad_pat_v2i8:
@@ -6394,7 +6394,7 @@ define <2 x i8> @clpeak_imad_pat_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_lshlrev_b16 v1.l, 8, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, 0xff bitop3:0xec
-; GFX1250-SDAG-REAL16-NEXT:    v_and_b16 v1.l, 0xff, v0.h
+; GFX1250-SDAG-REAL16-NEXT:    v_and_b16 v1.l, v0.h, 0xff
 ; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-GISEL-REAL16-LABEL: clpeak_imad_pat_v2i8:

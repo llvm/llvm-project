@@ -226,7 +226,7 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX10-NEXT:    v_and_b32_e32 v5, 0x22222222, v6
 ; GFX10-NEXT:    v_xor3_b32 v0, v1, v0, v2
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0x88888888, v4
-; GFX10-NEXT:    v_and_or_b32 v2, 0x11111111, v3, v5
+; GFX10-NEXT:    v_and_or_b32 v2, v3, 0x11111111, v5
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0x44444444, v0
 ; GFX10-NEXT:    v_or3_b32 v0, v2, v0, v1
 ; GFX10-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -280,7 +280,7 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    v_xor3_b32 v0, v1, v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x88888888, v4
-; GFX11-NEXT:    v_and_or_b32 v2, 0x11111111, v3, v5
+; GFX11-NEXT:    v_and_or_b32 v2, v3, 0x11111111, v5
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x44444444, v0
 ; GFX11-NEXT:    v_or3_b32 v0, v2, v0, v1
@@ -335,7 +335,7 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX12-NEXT:    v_xor3_b32 v0, v1, v0, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_and_b32_e32 v1, 0x88888888, v4
-; GFX12-NEXT:    v_and_or_b32 v2, 0x11111111, v3, v5
+; GFX12-NEXT:    v_and_or_b32 v2, v3, 0x11111111, v5
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x44444444, v0
 ; GFX12-NEXT:    v_or3_b32 v0, v2, v0, v1
@@ -392,7 +392,7 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1250-NEXT:    v_bitop3_b32 v1, v6, 0x88888888, v1 bitop3:0x48
 ; GFX1250-NEXT:    v_bitop3_b32 v0, v5, 0x44444444, v0 bitop3:0x48
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_and_or_b32 v2, 0x11111111, v2, v4
+; GFX1250-NEXT:    v_and_or_b32 v2, v2, 0x11111111, v4
 ; GFX1250-NEXT:    v_or3_b32 v0, v2, v0, v1
 ; GFX1250-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
