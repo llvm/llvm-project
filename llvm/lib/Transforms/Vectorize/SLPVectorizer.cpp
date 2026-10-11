@@ -36753,27 +36753,31 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
     }
   }
 
-  if (PoorThroughputSeeds.size() >= 2) {
-    SmallVector<Value *> Seeds;
-    SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
-    for (Instruction *I :
-         make_filter_range(PoorThroughputSeeds, [&](Instruction *I) {
-           return !R.isDeleted(I) &&
-                  isValidElementType(getValueType(I, SLPReVec), SLPReVec) &&
-                  !R.hasResolvedUser(I);
-         })) {
-      SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
-      Seeds.push_back(I);
-    }
-    Changed |= vectorizeSeeds(
-        Seeds,
-        [&](Value *V1, Value *V2) {
-          return SeedKeys.at(V1).less(SeedKeys.at(V2));
-        },
-        R);
-  }
+  Changed |= vectorizePoorThroughputSeeds(PoorThroughputSeeds.getArrayRef(), R);
 
   return Changed;
+}
+
+bool SLPVectorizerPass::vectorizePoorThroughputSeeds(
+    ArrayRef<Instruction *> Candidates, BoUpSLP &R) {
+  if (Candidates.size() < 2)
+    return false;
+  SmallVector<Value *> Seeds;
+  SmallDenseMap<Value *, SeedGroupKey> SeedKeys;
+  for (Instruction *I : make_filter_range(Candidates, [&](Instruction *I) {
+         return !R.isDeleted(I) &&
+                isValidElementType(getValueType(I, SLPReVec), SLPReVec) &&
+                !R.hasResolvedUser(I);
+       })) {
+    SeedKeys.try_emplace(I, getSeedGroupKey(I, *TLI));
+    Seeds.push_back(I);
+  }
+  return vectorizeSeeds(
+      Seeds,
+      [&](Value *V1, Value *V2) {
+        return SeedKeys.at(V1).less(SeedKeys.at(V2));
+      },
+      R);
 }
 
 bool SLPVectorizerPass::vectorizeSeeds(
