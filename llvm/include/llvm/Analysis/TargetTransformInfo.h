@@ -1346,6 +1346,7 @@ public:
     OK_AnyValue,               // Operand can have any value.
     OK_UniformValue,           // Operand is uniform (splat of a value).
     OK_UniformConstantValue,   // Operand is uniform constant.
+    OK_IndexVecConstantValue,  // Operand is an index vector (0, 1, ...)
     OK_NonUniformConstantValue // Operand is a non uniform constant value.
   };
 
@@ -1364,11 +1365,14 @@ public:
     OperandValueProperties Properties = OP_None;
 
     bool isConstant() const {
-      return Kind == OK_UniformConstantValue || Kind == OK_NonUniformConstantValue;
+      return Kind == OK_UniformConstantValue ||
+             Kind == OK_NonUniformConstantValue ||
+             Kind == OK_IndexVecConstantValue;
     }
     bool isUniform() const {
       return Kind == OK_UniformConstantValue || Kind == OK_UniformValue;
     }
+    bool isIndexVecConstant() const { return Kind == OK_IndexVecConstantValue; }
     bool isPowerOf2() const {
       return Properties == OP_PowerOf2;
     }
