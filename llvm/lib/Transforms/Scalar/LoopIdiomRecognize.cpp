@@ -2097,7 +2097,7 @@ public:
       const DataLayout &DL = LoopLoad->getDataLayout();
       Align OperandAlign = DL.getABITypeAlign(OperandType);
       if (LoopLoad->getAlign() < OperandAlign &&
-          SE->getMinTrailingZeros(LoadBaseEv) < Log2(OperandAlign))
+          SE->getAlign(LoadBaseEv) < OperandAlign)
         return false;
     }
 
