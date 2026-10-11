@@ -1062,6 +1062,17 @@ add_header_library(
 )
 
 add_header_library(
+  sync
+  HDRS
+    sync.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   dup
   HDRS
     dup.h
