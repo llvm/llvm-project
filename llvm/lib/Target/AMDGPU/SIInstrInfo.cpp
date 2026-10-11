@@ -2957,16 +2957,16 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
   const MachineOperand &MO0 = MI.getOperand(OpIdx0);
   const MachineOperand &MO1 = MI.getOperand(OpIdx1);
 
-  // Swap doesn't breach constant bus or literal limits
-  // It may move literal to position other than src0, this is not allowed
-  // pre-gfx10 However, most test cases need literals in Src0 for VOP
-  // FIXME: After gfx9, literal can be in place other than Src0
+  // Swap doesn't breach constant bus or literal limits, but it may move a
+  // constant out of src0. Allow that for immediates where the destination
+  // operand can hold them, e.g. VOP3 sources on targets with VOP3 literal
+  // support. Other non-register operands stay in src0.
   if (isVALU(MI, /*AllowLDSDMA=*/false)) {
     if ((int)OpIdx0 == Src0Idx && !MO0.isReg() &&
-        !isInlineConstant(MO0, OpInfo1))
+        (!MO0.isImm() || !isImmOperandLegal(MI, OpIdx1, MO0)))
       return false;
     if ((int)OpIdx1 == Src0Idx && !MO1.isReg() &&
-        !isInlineConstant(MO1, OpInfo0))
+        (!MO1.isImm() || !isImmOperandLegal(MI, OpIdx0, MO1)))
       return false;
   }
 

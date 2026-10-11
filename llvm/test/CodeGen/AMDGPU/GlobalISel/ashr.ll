@@ -38,7 +38,7 @@ define i8 @v_ashr_i8(i8 %value, i8 %amount) {
 ; GFX11-TRUE16-LABEL: v_ashr_i8:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, v1.l, 0xff
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v0.l, v1.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]

@@ -1117,7 +1117,7 @@ define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mad_i64_i32 v[0:1], s2, 0x50, v0, 0
+; GFX10-NEXT:    v_mad_i64_i32 v[0:1], s2, v0, 0x50, 0
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
@@ -1133,7 +1133,7 @@ define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, 0x50, v2, 0
+; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, v2, 0x50, 0
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1148,7 +1148,7 @@ define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX12-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-NEXT:    s_mov_b32 s2, -1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, 0x50, v0, 0
+; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, 0x50, 0
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -1166,7 +1166,7 @@ define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_i64_i32 v[0:1], 0x50, v0, 0
+; GFX1250-NEXT:    v_mad_nc_i64_i32 v[0:1], v0, 0x50, 0
 ; GFX1250-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -1179,7 +1179,7 @@ define amdgpu_kernel void @v_mul64_sext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX13-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-NEXT:    s_mov_b32 s2, -1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mad_co_i64_i32 v[0:1], null, 0x50, v0, 0
+; GFX13-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, 0x50, 0
 ; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX13-NEXT:    s_endpgm
 ;
@@ -1293,7 +1293,7 @@ define amdgpu_kernel void @v_mul64_zext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, 0x50, v0, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s2, v0, 0x50, 0
 ; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX10-NEXT:    s_endpgm
@@ -1309,7 +1309,7 @@ define amdgpu_kernel void @v_mul64_zext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, 0x50, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v2, 0x50, 0
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1324,7 +1324,7 @@ define amdgpu_kernel void @v_mul64_zext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX12-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX12-NEXT:    s_mov_b32 s2, -1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, 0x50, v0, 0
+; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 0x50, 0
 ; GFX12-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -1342,7 +1342,7 @@ define amdgpu_kernel void @v_mul64_zext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1250-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_mad_nc_u64_u32 v[0:1], 0x50, v0, 0
+; GFX1250-NEXT:    v_mad_nc_u64_u32 v[0:1], v0, 0x50, 0
 ; GFX1250-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -1355,7 +1355,7 @@ define amdgpu_kernel void @v_mul64_zext_c(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX13-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX13-NEXT:    s_mov_b32 s2, -1
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mad_co_u64_u32 v[0:1], null, 0x50, v0, 0
+; GFX13-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 0x50, 0
 ; GFX13-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX13-NEXT:    s_endpgm
 ;

@@ -148,9 +148,9 @@ define amdgpu_ps i64 @fptosi_bf16_i64_v(bfloat %a) {
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX12-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
-; GFX12-NEXT:    v_mul_f32_e64 v2, 0x2f800000, |v1|
+; GFX12-NEXT:    v_mul_f32_e64 v2, |v1|, 0x2f800000
 ; GFX12-NEXT:    v_floor_f32_e32 v2, v2
-; GFX12-NEXT:    v_fma_f32 v1, 0xcf800000, v2, |v1|
+; GFX12-NEXT:    v_fma_f32 v1, v2, 0xcf800000, |v1|
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX12-NEXT:    v_xor_b32_e32 v2, v2, v0
@@ -170,9 +170,9 @@ define amdgpu_ps i64 @fptosi_bf16_i64_v(bfloat %a) {
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX1250-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
-; GFX1250-NEXT:    v_mul_f32_e64 v2, 0x2f800000, |v1|
+; GFX1250-NEXT:    v_mul_f32_e64 v2, |v1|, 0x2f800000
 ; GFX1250-NEXT:    v_floor_f32_e32 v2, v2
-; GFX1250-NEXT:    v_fma_f32 v1, 0xcf800000, v2, |v1|
+; GFX1250-NEXT:    v_fma_f32 v1, v2, 0xcf800000, |v1|
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v4, v1
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_bitop2_b32 v3, v2, v0 bitop3:0x14
@@ -570,14 +570,14 @@ define amdgpu_ps <2 x i64> @fptosi_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX12-NEXT:    v_trunc_f32_e32 v2, v0
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX12-NEXT:    v_trunc_f32_e32 v3, v1
-; GFX12-NEXT:    v_mul_f32_e64 v4, 0x2f800000, |v2|
+; GFX12-NEXT:    v_mul_f32_e64 v4, |v2|, 0x2f800000
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
-; GFX12-NEXT:    v_mul_f32_e64 v5, 0x2f800000, |v3|
+; GFX12-NEXT:    v_mul_f32_e64 v5, |v3|, 0x2f800000
 ; GFX12-NEXT:    v_floor_f32_e32 v4, v4
 ; GFX12-NEXT:    v_floor_f32_e32 v5, v5
-; GFX12-NEXT:    v_fma_f32 v2, 0xcf800000, v4, |v2|
+; GFX12-NEXT:    v_fma_f32 v2, v4, 0xcf800000, |v2|
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v4, v4
-; GFX12-NEXT:    v_fma_f32 v3, 0xcf800000, v5, |v3|
+; GFX12-NEXT:    v_fma_f32 v3, v5, 0xcf800000, |v3|
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; GFX12-NEXT:    v_xor_b32_e32 v4, v4, v0
@@ -607,15 +607,15 @@ define amdgpu_ps <2 x i64> @fptosi_v2bf16_v2i64_v(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX1250-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX1250-NEXT:    v_trunc_f32_e32 v3, v2
-; GFX1250-NEXT:    v_mul_f32_e64 v4, 0x2f800000, |v1|
+; GFX1250-NEXT:    v_mul_f32_e64 v4, |v1|, 0x2f800000
 ; GFX1250-NEXT:    v_ashrrev_i32_e32 v2, 31, v2
-; GFX1250-NEXT:    v_mul_f32_e64 v5, 0x2f800000, |v3|
+; GFX1250-NEXT:    v_mul_f32_e64 v5, |v3|, 0x2f800000
 ; GFX1250-NEXT:    v_floor_f32_e32 v4, v4
 ; GFX1250-NEXT:    v_floor_f32_e32 v5, v5
-; GFX1250-NEXT:    v_fma_f32 v6, 0xcf800000, v4, |v1|
+; GFX1250-NEXT:    v_fma_f32 v6, v4, 0xcf800000, |v1|
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1250-NEXT:    v_fma_f32 v3, 0xcf800000, v5, |v3|
+; GFX1250-NEXT:    v_fma_f32 v3, v5, 0xcf800000, |v3|
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v7, v5
 ; GFX1250-NEXT:    v_xor_b32_e32 v5, v4, v0
@@ -1007,20 +1007,20 @@ define amdgpu_ps <3 x i64> @fptosi_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX12-NEXT:    v_trunc_f32_e32 v4, v1
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v2, 31, v2
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
-; GFX12-NEXT:    v_mul_f32_e64 v5, 0x2f800000, |v3|
+; GFX12-NEXT:    v_mul_f32_e64 v5, |v3|, 0x2f800000
 ; GFX12-NEXT:    v_trunc_f32_e32 v6, v0
-; GFX12-NEXT:    v_mul_f32_e64 v7, 0x2f800000, |v4|
+; GFX12-NEXT:    v_mul_f32_e64 v7, |v4|, 0x2f800000
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX12-NEXT:    v_floor_f32_e32 v5, v5
-; GFX12-NEXT:    v_mul_f32_e64 v8, 0x2f800000, |v6|
+; GFX12-NEXT:    v_mul_f32_e64 v8, |v6|, 0x2f800000
 ; GFX12-NEXT:    v_floor_f32_e32 v7, v7
-; GFX12-NEXT:    v_fma_f32 v3, 0xcf800000, v5, |v3|
+; GFX12-NEXT:    v_fma_f32 v3, v5, 0xcf800000, |v3|
 ; GFX12-NEXT:    v_floor_f32_e32 v8, v8
-; GFX12-NEXT:    v_fma_f32 v4, 0xcf800000, v7, |v4|
+; GFX12-NEXT:    v_fma_f32 v4, v7, 0xcf800000, |v4|
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v5, v5
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v7, v7
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v3, v3
-; GFX12-NEXT:    v_fma_f32 v6, 0xcf800000, v8, |v6|
+; GFX12-NEXT:    v_fma_f32 v6, v8, 0xcf800000, |v6|
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GFX12-NEXT:    v_xor_b32_e32 v5, v5, v2
 ; GFX12-NEXT:    v_cvt_u32_f32_e32 v8, v8
@@ -1060,19 +1060,19 @@ define amdgpu_ps <3 x i64> @fptosi_v3bf16_v3i64_v(<3 x bfloat> %a) {
 ; GFX1250-NEXT:    v_trunc_f32_e32 v7, v1
 ; GFX1250-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; GFX1250-NEXT:    v_trunc_f32_e32 v8, v3
-; GFX1250-NEXT:    v_mul_f32_e64 v5, 0x2f800000, |v6|
+; GFX1250-NEXT:    v_mul_f32_e64 v5, |v6|, 0x2f800000
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
-; GFX1250-NEXT:    v_mul_f32_e64 v9, 0x2f800000, |v7|
+; GFX1250-NEXT:    v_mul_f32_e64 v9, |v7|, 0x2f800000
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_ashrrev_i32 v4, 31, v3
-; GFX1250-NEXT:    v_mul_f32_e64 v10, 0x2f800000, |v8|
+; GFX1250-NEXT:    v_mul_f32_e64 v10, |v8|, 0x2f800000
 ; GFX1250-NEXT:    v_floor_f32_e32 v11, v5
 ; GFX1250-NEXT:    v_floor_f32_e32 v9, v9
 ; GFX1250-NEXT:    v_floor_f32_e32 v10, v10
-; GFX1250-NEXT:    v_fma_f32 v6, 0xcf800000, v11, |v6|
+; GFX1250-NEXT:    v_fma_f32 v6, v11, 0xcf800000, |v6|
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v11, v11
-; GFX1250-NEXT:    v_fma_f32 v12, 0xcf800000, v9, |v7|
+; GFX1250-NEXT:    v_fma_f32 v12, v9, 0xcf800000, |v7|
 ; GFX1250-NEXT:    v_mov_b32_e32 v5, v4
-; GFX1250-NEXT:    v_fma_f32 v8, 0xcf800000, v10, |v8|
+; GFX1250-NEXT:    v_fma_f32 v8, v10, 0xcf800000, |v8|
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v9, v9
 ; GFX1250-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GFX1250-NEXT:    v_xor_b32_e32 v7, v11, v0
