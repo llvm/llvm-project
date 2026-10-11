@@ -10,25 +10,28 @@ lldb_tablegen(TargetProperties.json -dump-json
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesJsonGen)
 
-# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbTarget
-add_lldb_library(lldbTarget
+add_lldb_library(lldbTarget NO_PLUGIN_DEPENDENCIES
   ABI.cpp
   AssertFrameRecognizer.cpp
   DynamicRegisterInfo.cpp
   CoreFileMemoryRanges.cpp
   ExecutionContext.cpp
+  FreeBSDSignals.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp
   JITLoader.cpp
   JITLoaderList.cpp
   Language.cpp
   LanguageRuntime.cpp
+  LinuxSignals.cpp
   Memory.cpp
   MemoryHistory.cpp
   MemoryRegionInfo.cpp
   MemoryRegionInfoCache.cpp
   MemoryTagMap.cpp
   ModuleCache.cpp
+  NetBSDSignals.cpp
+  OpenBSDSignals.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
   Platform.cpp
@@ -104,7 +107,6 @@ add_lldb_library(lldbTarget
     lldbSymbol
     lldbUtility
     lldbValueObject
-    lldbPluginProcessUtility
   )
 
 add_dependencies(lldbTarget

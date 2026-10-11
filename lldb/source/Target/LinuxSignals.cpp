@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LinuxSignals.h"
+#include "lldb/Target/LinuxSignals.h"
 
 // mips-linux debugging is not supported and mips uses different numbers for
 // some signals (e.g. SIGBUS) on linux, so we skip the static checks below. The

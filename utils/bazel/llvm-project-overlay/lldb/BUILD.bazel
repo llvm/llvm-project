@@ -853,7 +853,6 @@ cc_library(
         ":TargetProperties",
         ":Utility",
         "//clang:codegen",
-        "//lldb/source/Plugins:PluginProcessUtility",
         "//llvm:BinaryFormat",
         "//llvm:MC",
         "//llvm:Support",

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OpenBSDSignals.h"
+#include "lldb/Target/OpenBSDSignals.h"
 
 #ifdef __OpenBSD__
 #include <csignal>

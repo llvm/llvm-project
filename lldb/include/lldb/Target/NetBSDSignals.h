@@ -1,4 +1,4 @@
-//===-- LinuxSignals.h ------------------------------------------*- C++ -*-===//
+//===-- NetBSDSignals.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
+#ifndef LLDB_TARGET_NETBSDSIGNALS_H
+#define LLDB_TARGET_NETBSDSIGNALS_H
 
 #include "lldb/Target/UnixSignals.h"
 
 namespace lldb_private {
 
-/// Linux specific set of Unix signals.
-class LinuxSignals : public UnixSignals {
+/// NetBSD specific set of Unix signals.
+class NetBSDSignals : public UnixSignals {
 public:
-  LinuxSignals();
+  NetBSDSignals();
 
 private:
   void Reset() override;
@@ -24,4 +24,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXSIGNALS_H
+#endif // LLDB_TARGET_NETBSDSIGNALS_H

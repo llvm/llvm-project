@@ -1,4 +1,4 @@
-//===-- OpenBSDSignals.h ----------------------------------------*- C++ -*-===//
+//===-- LinuxSignals.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_OPENBSDSIGNALS_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_OPENBSDSIGNALS_H
+#ifndef LLDB_TARGET_LINUXSIGNALS_H
+#define LLDB_TARGET_LINUXSIGNALS_H
 
 #include "lldb/Target/UnixSignals.h"
 
 namespace lldb_private {
 
-/// OpenBSD specific set of Unix signals.
-class OpenBSDSignals : public UnixSignals {
+/// Linux specific set of Unix signals.
+class LinuxSignals : public UnixSignals {
 public:
-  OpenBSDSignals();
+  LinuxSignals();
 
 private:
   void Reset() override;
@@ -24,4 +24,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_OPENBSDSIGNALS_H
+#endif // LLDB_TARGET_LINUXSIGNALS_H
