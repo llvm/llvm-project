@@ -6402,80 +6402,78 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);
   }
-  if (callOrInvoke) {
+  if (callOrInvoke)
     *callOrInvoke = CI;
-    if (CGM.getCodeGenOpts().CallGraphSection) {
-      QualType CST;
-      if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
-        CST = CGM.GetCallGraphFunctionType(FD);
-      else if (TargetDecl && TargetDecl->getFunctionType())
-        CST = QualType(TargetDecl->getFunctionType(), 0);
-      else if (const auto *FPT =
-                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
-        CST = QualType(FPT, 0);
-      else if (const auto *FT =
-                   Callee.getAbstractInfo().getCalleeFunctionType())
-        CST = QualType(FT, 0);
-      else
-        llvm_unreachable(
-            "Cannot find the callee type to generate callee_type metadata.");
 
-      // Set type identifier metadata of indirect calls for call graph section.
-      if (!CST.isNull()) {
-        if (!CST->isFunctionProtoType()) {
-          // Reconstruct a prototype for unprototyped callees from the argument
-          // types passed at the call site (after default argument promotion).
-          //
-          // Basic Rationale & K&R-Style Definitions:
-          // The argument types in CallArgs have already undergone C default
-          // argument promotion (e.g., char/short -> int, float -> double).
-          // Furthermore, for a K&R-style
-          // definition (e.g., void foo(x) short x; { ... }), canonical C ABI
-          // semantics expect the promoted type (int) at the call boundary
-          // and implicitly cast down to the declared type (short) inside the
-          // function. Therefore, signature computation at K&R definition
-          // sites must also apply default argument promotion (yielding
-          // void(int), not void(short)) so definition and call sites match.
-          //
-          // Signature Strictness & Normalization:
-          // Since type identifier matching relies on exact hash equality, any
-          // tolerance for C compatibility rules must be done by normalizing
-          // types before hashing.
-          // - Standard C allows certain exceptions for unprototyped calls (and
-          //   variadic va_arg), such as differences in signedness (e.g.,
-          //   passing an int to an unsigned int parameter) or
-          //   interchangeability of enum types with their underlying integer
-          //   types.
-          // - Existing CFI normalization (e.g.,
-          //   -fsanitize-cfi-icall-experimental-normalize-integers) normalizes
-          //   types by bit-width and signedness (e.g., int vs long on LP64,
-          //   which C does not treat as compatible), but does not normalize
-          //   away signedness or enum mismatches.
-          // - In the future, whether to normalize away signedness, enums, or
-          //   integer bit-widths depends on whether call graph analysis should
-          //   err on the side of inclusion (admitting any C-valid call) or
-          //   strictness (like CFI). Any normalization applied here at the call
-          //   site must remain strictly matched with definition-site
-          //   type signature computation.
-          if (const auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
-            SmallVector<QualType, 8> ParamTypes;
-            // CallArgs already contains default-promoted argument types for
-            // unprototyped calls.
-            for (const CallArg &Arg : CallArgs)
-              ParamTypes.push_back(Arg.getType());
-            CST = CGM.ReconstructCallGraphPrototype(FNPT, ParamTypes);
-          }
+  if (CGM.getCodeGenOpts().CallGraphSection) {
+    QualType CST;
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+      CST = CGM.GetCallGraphFunctionType(FD);
+    else if (TargetDecl && TargetDecl->getFunctionType())
+      CST = QualType(TargetDecl->getFunctionType(), 0);
+    else if (const auto *FPT =
+                 Callee.getAbstractInfo().getCalleeFunctionProtoType())
+      CST = QualType(FPT, 0);
+    else if (const auto *FT = Callee.getAbstractInfo().getCalleeFunctionType())
+      CST = QualType(FT, 0);
+    else
+      llvm_unreachable(
+          "Cannot find the callee type to generate callee_type metadata.");
 
-          llvm::Metadata *MD =
-              CGM.CreateMetadataIdentifierForCallGraphType(CST);
-          StringRef TypeStr;
-          if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
-            TypeStr = MDS->getString();
-
-          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
+    // Set type identifier metadata of indirect calls for call graph section.
+    if (!CST.isNull()) {
+      if (!CST->isFunctionProtoType()) {
+        // Reconstruct a prototype for unprototyped callees from the argument
+        // types passed at the call site (after default argument promotion).
+        //
+        // Basic Rationale & K&R-Style Definitions:
+        // The argument types in CallArgs have already undergone C default
+        // argument promotion (e.g., char/short -> int, float -> double).
+        // Furthermore, for a K&R-style
+        // definition (e.g., void foo(x) short x; { ... }), canonical C ABI
+        // semantics expect the promoted type (int) at the call boundary
+        // and implicitly cast down to the declared type (short) inside the
+        // function. Therefore, signature computation at K&R definition
+        // sites must also apply default argument promotion (yielding
+        // void(int), not void(short)) so definition and call sites match.
+        //
+        // Signature Strictness & Normalization:
+        // Since type identifier matching relies on exact hash equality, any
+        // tolerance for C compatibility rules must be done by normalizing
+        // types before hashing.
+        // - Standard C allows certain exceptions for unprototyped calls (and
+        //   variadic va_arg), such as differences in signedness (e.g.,
+        //   passing an int to an unsigned int parameter) or
+        //   interchangeability of enum types with their underlying integer
+        //   types.
+        // - Existing CFI normalization (e.g.,
+        //   -fsanitize-cfi-icall-experimental-normalize-integers) normalizes
+        //   types by bit-width and signedness (e.g., int vs long on LP64,
+        //   which C does not treat as compatible), but does not normalize
+        //   away signedness or enum mismatches.
+        // - In the future, whether to normalize away signedness, enums, or
+        //   integer bit-widths depends on whether call graph analysis should
+        //   err on the side of inclusion (admitting any C-valid call) or
+        //   strictness (like CFI). Any normalization applied here at the call
+        //   site must remain strictly matched with definition-site
+        //   type signature computation.
+        if (const auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
+          SmallVector<QualType, 8> ParamTypes;
+          // CallArgs already contains default-promoted argument types for
+          // unprototyped calls.
+          for (const CallArg &Arg : CallArgs)
+            ParamTypes.push_back(Arg.getType());
+          CST = CGM.ReconstructCallGraphPrototype(FNPT, ParamTypes);
         }
-        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+
+        llvm::Metadata *MD = CGM.CreateMetadataIdentifierForCallGraphType(CST);
+        StringRef TypeStr;
+        if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
+          TypeStr = MDS->getString();
+
+        CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
       }
+      CGM.createCalleeTypeMetadataForIcall(CST, CI);
     }
   }
 
