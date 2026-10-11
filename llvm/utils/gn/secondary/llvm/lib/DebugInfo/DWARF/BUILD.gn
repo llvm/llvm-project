@@ -29,6 +29,7 @@ static_library("DWARF") {
     "DWARFDebugRnglists.cpp",
     "DWARFDie.cpp",
     "DWARFExpressionPrinter.cpp",
+    "DWARFExpressionPrinterUnit.cpp",
     "DWARFFormValue.cpp",
     "DWARFGdbIndex.cpp",
     "DWARFListTable.cpp",
