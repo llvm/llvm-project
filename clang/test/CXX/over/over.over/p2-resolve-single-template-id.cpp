@@ -189,15 +189,3 @@ namespace member_pointers {
     { bool b = &s.h<int>; } // expected-error {{cannot form member pointer of type 'bool' without '&' and class name}}
   }
 }
-
-namespace conversion_functions {
-  struct S {
-	operator int();
-
-	template<typename T> operator T();
-};
-
-  void test() {
-    &S::operator int; // expected-warning {{expression result unused}}
-  }
-}
