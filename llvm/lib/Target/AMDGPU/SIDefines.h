@@ -1368,6 +1368,7 @@ enum SyntheticAperture {
   None = 0x00000000,
 
   BARRIER = 0x00000001,
+  VGPR = 0x00000003,
 };
 } // namespace SyntheticAperture
 

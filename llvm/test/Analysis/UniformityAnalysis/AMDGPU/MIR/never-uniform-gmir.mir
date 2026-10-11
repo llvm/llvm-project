@@ -11,3 +11,18 @@ body:             |
     %0:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
     G_AMDGPU_WHOLE_WAVE_FUNC_RETURN %0(s1)
 ...
+
+# VGPR "as memory" loads read each lane's own registers, so they are not
+# uniform even with a uniform index
+---
+name:            vgpr_as_memory_load
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @vgpr_as_memory_load
+    ; CHECK: DIVERGENT: %1: %1:_(s32) = G_AMDGPU_REG_LOAD
+    ; CHECK-NOT: DIVERGENT: %2
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(s32) = G_AMDGPU_REG_LOAD %0(s32) :: (load (s32), addrspace 13)
+    %2:_(s32) = G_ADD %0, %0
+    S_ENDPGM 0
+...
