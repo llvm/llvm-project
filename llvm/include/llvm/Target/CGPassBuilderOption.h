@@ -82,7 +82,8 @@ struct CGPassBuilderOption {
   std::string FSProfileFile;
   std::string FSRemappingFile;
 
-  cl::boolOrDefault VerifyMachineCode = cl::boolOrDefault::BOU_UNSET;
+  MachineVerifierMode VerifyMachineCode = MachineVerifierMode::End;
+
   cl::boolOrDefault EnableFastISelOption = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableRegAllocFastTied = cl::boolOrDefault::BOU_UNSET;
   cl::boolOrDefault EnableGlobalISelOption = cl::boolOrDefault::BOU_UNSET;
