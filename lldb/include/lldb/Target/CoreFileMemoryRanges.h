@@ -12,6 +12,9 @@
 
 #include "llvm/ADT/AddressRanges.h"
 
+#include <cinttypes>
+#include <cmath>
+
 #ifndef LLDB_TARGET_COREFILEMEMORYRANGES_H
 #define LLDB_TARGET_COREFILEMEMORYRANGES_H
 
@@ -34,13 +37,35 @@ struct CoreFileMemoryRange {
            std::tie(rhs.range, rhs.lldb_permissions);
   }
 
+  /// Returns a human readable description of the range suitable for progress
+  /// reporting, e.g. "of 1.50MB at 0x00007ffff7d8a000".
   std::string Dump() const {
     lldb_private::StreamString stream;
-    stream << "[";
+    stream << "of ";
+    const double size = static_cast<double>(range.size());
+    constexpr double k = 1000.0;
+    constexpr double m = k * k;
+    constexpr double g = k * k * k;
+
+    auto formatSize = [&stream](double value, const char *unit) {
+      // Omit the decimals if the value rounds to a whole number.
+      const uint64_t hundredths = std::llround(value * 100);
+      if (hundredths % 100 == 0)
+        stream.Printf("%" PRIu64 "%s", hundredths / 100, unit);
+      else
+        stream.Printf("%.2f%s", value, unit);
+    };
+
+    if (size >= g)
+      formatSize(size / g, "GB");
+    else if (size >= m)
+      formatSize(size / m, "MB");
+    else if (size >= k)
+      formatSize(size / k, "KB");
+    else
+      stream.Printf("%" PRIu64 "B", range.size());
+    stream << " at 0x";
     stream.PutHex64(range.start());
-    stream << '-';
-    stream.PutHex64(range.end());
-    stream << ")";
     return stream.GetString().str();
   }
 };
