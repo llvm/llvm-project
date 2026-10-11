@@ -111,6 +111,7 @@ void GCNHazardRecognizer::Reset() {
   EmittedInstrs.clear();
   EmittedVALUInstrs.clear();
   HasPendingWMMACoexecHazard = false;
+  resetClause();
   if (isSchedulerMode())
     schedulerReset();
 }
@@ -669,10 +670,15 @@ void GCNHazardRecognizer::processBundle() {
     unsigned WaitStates = PreEmitNoopsCommon(CurrCycleInstr);
 
     if (isHazardRecognizerMode()) {
+      // fixHazards can reset CurrCycleInstr to null, so use MI from here on.
       fixHazards(CurrCycleInstr);
 
-      insertNoopsInBundle(CurrCycleInstr, TII, WaitStates);
+      insertNoopsInBundle(&*MI, TII, WaitStates);
     }
+
+    if (WaitStates)
+      resetClause();
+    updateSoftClause(*MI);
 
     // It’s unnecessary to track more than MaxLookAhead instructions. Since we
     // include the bundled MI directly after, only add a maximum of
@@ -680,7 +686,7 @@ void GCNHazardRecognizer::processBundle() {
     for (unsigned i = 0, e = std::min(WaitStates, MaxLookAhead - 1); i < e; ++i)
       EmittedInstrs.push_front(nullptr);
 
-    EmittedInstrs.push_front(CurrCycleInstr);
+    EmittedInstrs.push_front(&*MI);
     EmittedInstrs.resize(MaxLookAhead);
   }
   CurrCycleInstr = nullptr;
@@ -799,6 +805,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
 
 void GCNHazardRecognizer::EmitNoop() {
   EmittedInstrs.push_front(nullptr);
+  resetClause();
 }
 
 void GCNHazardRecognizer::AdvanceCycle() {
@@ -808,7 +815,11 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // When the scheduler detects a stall, it will call AdvanceCycle() without
   // emitting any instructions.
   if (!CurrCycleInstr) {
+    assert(isSchedulerMode() && "stall cycles only occur in scheduler mode");
     EmittedInstrs.push_front(nullptr);
+    // A stall does not really break a clause, but model it as one or the
+    // scheduler stalls on the same hazard forever.
+    resetClause();
 
     if (HasPendingWMMACoexecHazard)
       EmittedVALUInstrs.push_front(nullptr);
@@ -821,6 +832,8 @@ void GCNHazardRecognizer::AdvanceCycle() {
     processBundle();
     return;
   }
+
+  updateSoftClause(*CurrCycleInstr);
 
   unsigned NumWaitStates = TII.getNumWaitStates(*CurrCycleInstr);
   if (!NumWaitStates) {
@@ -1289,21 +1302,44 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          iterator_range<MachineInstr::const_mop_iterator> Ops,
                          BitVector &DefSet, BitVector &UseSet) {
   for (const MachineOperand &Op : Ops) {
-    if (Op.isReg())
+    if (Op.isReg() && Op.getReg().isPhysical())
       addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
   }
 }
 
-void GCNHazardRecognizer::addClauseInst(const MachineInstr &MI) const {
-  addRegsToSet(TRI, MI.operands(), ClauseDefs, ClauseUses);
+static bool anyRegUnitSet(const SIRegisterInfo &TRI, const BitVector &Units,
+                          MCRegister Reg) {
+  return any_of(TRI.regunits(Reg), [&Units](MCRegUnit Unit) {
+    return Units.test(static_cast<unsigned>(Unit));
+  });
 }
 
-static bool breaksSMEMSoftClause(MachineInstr *MI) {
-  return !SIInstrInfo::isSMRD(*MI);
+GCNHazardRecognizer::SoftClauseKind
+GCNHazardRecognizer::getSoftClauseKind(const MachineInstr &MI) {
+  if (SIInstrInfo::isSMRD(MI))
+    return SoftClauseKind::SMEM;
+  if (SIInstrInfo::isVMEM(MI))
+    return SoftClauseKind::VMEM;
+  return SoftClauseKind::None;
 }
 
-static bool breaksVMEMSoftClause(MachineInstr *MI) {
-  return !SIInstrInfo::isVMEM(*MI);
+void GCNHazardRecognizer::updateSoftClause(const MachineInstr &MI) {
+  // checkSoftClauseHazards is only reached when hasPhysRegs().
+  if (!hasPhysRegs() || !ST.isXNACKEnabled())
+    return;
+
+  // Meta instructions have no encoding, so they cannot break or extend a
+  // clause.
+  if (MI.isMetaInstruction())
+    return;
+
+  SoftClauseKind Kind = getSoftClauseKind(MI);
+  if (Kind != ClauseKind) {
+    resetClause();
+    ClauseKind = Kind;
+  }
+  if (Kind != SoftClauseKind::None)
+    addRegsToSet(TRI, MI.operands(), ClauseDefs, ClauseUses);
 }
 
 int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
@@ -1311,10 +1347,6 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
   // enabled.
   if (!ST.isXNACKEnabled())
     return 0;
-
-  bool IsSMRD = TII.isSMRD(*MEM);
-
-  resetClause();
 
   // A soft-clause is any group of consecutive SMEM instructions.  The
   // instructions in this group may return out of order and/or may be
@@ -1326,17 +1358,8 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
   // (including itself). If we encounter this situation, we need to break the
   // clause by inserting a non SMEM instruction.
 
-  for (MachineInstr *MI : EmittedInstrs) {
-    // When we hit a non-SMEM instruction then we have passed the start of the
-    // clause and we can stop.
-    if (!MI)
-      break;
-
-    if (IsSMRD ? breaksSMEMSoftClause(MI) : breaksVMEMSoftClause(MI))
-      break;
-
-    addClauseInst(*MI);
-  }
+  if (ClauseKind != getSoftClauseKind(*MEM))
+    return 0;
 
   if (ClauseDefs.none())
     return 0;
@@ -1347,11 +1370,24 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
   if (MEM->mayStore())
     return 1;
 
-  addClauseInst(*MEM);
-
   // If the set of defs and uses intersect then we cannot add this instruction
-  // to the clause, so we have a hazard.
-  return ClauseDefs.anyCommon(ClauseUses) ? 1 : 0;
+  // to the clause, so we have a hazard. Test MEM in place to avoid copying a
+  // reg-unit-sized BitVector per query.
+  if (ClauseDefs.anyCommon(ClauseUses))
+    return 1;
+
+  for (const MachineOperand &Op : MEM->operands()) {
+    if (!Op.isReg() || !Op.getReg().isPhysical())
+      continue;
+    MCRegister Reg = Op.getReg().asMCReg();
+    if (anyRegUnitSet(TRI, Op.isDef() ? ClauseUses : ClauseDefs, Reg))
+      return 1;
+    // MEM can also conflict with itself.
+    if (Op.isDef() && MEM->readsRegister(Reg, &TRI))
+      return 1;
+  }
+
+  return 0;
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) const {
