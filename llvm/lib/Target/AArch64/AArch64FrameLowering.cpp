@@ -3429,16 +3429,26 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
   } else {
     MachineInstr *UpdateInstr = nullptr;
     int64_t TotalOffset = 0;
+    // Keep the loop before any debug labels skipped below, so they remain
+    // after the tag stores as in the original instruction sequence.
+    auto LoopInsertI = InsertI;
     if (TryMergeSPUpdate) {
       // See if we can merge base register update into the STGloop.
       // This is done in AArch64LoadStoreOptimizer for "normal" stores,
       // but STGloop is way too unusual for that, and also it only
       // realistically happens in function epilogue. Also, STGloop is expanded
       // before that pass.
-      if (InsertI != MBB->end() &&
-          canMergeRegUpdate(InsertI, FrameReg, FrameRegOffset.getFixed() + Size,
+      auto UpdateI = InsertI;
+      // A debug label has no register value that could be changed by folding
+      // the SP update across it. Do not skip debug values: one may describe
+      // the SP before the update.
+      while (UpdateI != MBB->end() && UpdateI->isDebugLabel())
+        ++UpdateI;
+      if (UpdateI != MBB->end() &&
+          canMergeRegUpdate(UpdateI, FrameReg, FrameRegOffset.getFixed() + Size,
                             &TotalOffset)) {
-        UpdateInstr = &*InsertI++;
+        UpdateInstr = &*UpdateI;
+        InsertI = std::next(UpdateI);
         LLVM_DEBUG(dbgs() << "Folding SP update into loop:\n  "
                           << *UpdateInstr);
       }
@@ -3451,7 +3461,7 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
       FrameRegUpdate = TotalOffset;
       FrameRegUpdateFlags = UpdateInstr->getFlags();
     }
-    emitLoop(InsertI);
+    emitLoop(LoopInsertI);
     if (UpdateInstr)
       UpdateInstr->eraseFromParent();
   }
