@@ -2143,6 +2143,7 @@ public:
       Value *CalledOperand = CB.getCalledOperand();
       if (isNoopInlineAsm(CalledOperand, CB.getType())) {
         CurrentFrame->ResolvedCallee = nullptr;
+        CurrentFrame->CalleeRetVal = AnyValue();
         returnFromCallee();
         return;
       }
