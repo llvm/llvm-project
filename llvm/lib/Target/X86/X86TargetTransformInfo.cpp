@@ -773,6 +773,23 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::i64, { 41, 24, 2, 4 } },
   };
 
+  // On AVX2+ targets the i32 divider runs at the tier minimum, so vector
+  // division has to beat the cheapest scalar divider.
+  // clang-format off
+  static const CostKindTblEntry ScalarVarDivCostTableAVX2[] = {
+    { ISD::SDIV, MVT::i32, { 12, 22, 2, 4 } },
+    { ISD::UDIV, MVT::i32, { 12, 22, 2, 4 } },
+    { ISD::SREM, MVT::i32, { 12, 22, 2, 4 } },
+    { ISD::UREM, MVT::i32, { 12, 22, 2, 4 } },
+  };
+  // clang-format on
+
+  if (!LT.second.isVector() && !Op2Info.isConstant() && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(ScalarVarDivCostTableAVX2, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   if (!LT.second.isVector() && !Op2Info.isConstant())
     if (const auto *Entry =
             CostTableLookup(ScalarVarDivCostTable, ISD, LT.second))
@@ -988,6 +1005,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * *KindCost;
   }
 
+  // clang-format off
   static const CostKindTblEntry AVX2VarDivCostTable[] = {
     { ISD::UDIV, MVT::v16i8,  {  28 } }, // unpack+cvt+divps sequence
     { ISD::SDIV, MVT::v16i8,  {  28 } },
@@ -1005,6 +1023,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SDIV, MVT::v16i16, {  28 } },
     { ISD::UREM, MVT::v16i16, {  28 } },
     { ISD::SREM, MVT::v16i16, {  28 } },
+    { ISD::UDIV, MVT::v2i32,  {  34 } }, // xmm cvt+divpd, tier steady state
+    { ISD::SDIV, MVT::v2i32,  {  28 } },
+    { ISD::UREM, MVT::v2i32,  {  45 } },
+    { ISD::SREM, MVT::v2i32,  {  40 } },
     { ISD::UDIV, MVT::v4i32,  {  28 } }, // cvt+divpd sequence
     { ISD::SDIV, MVT::v4i32,  {  28 } },
     { ISD::UREM, MVT::v4i32,  {  28 } },
@@ -1014,6 +1036,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v8i32,  {  56 } },
     { ISD::SREM, MVT::v8i32,  {  56 } },
   };
+  // clang-format on
 
   static const CostKindTblEntry AVX2ExactVarDivCostTable[] = {
     { ISD::UDIV, MVT::v4i32,  {   9 } }, // cvt+divps sequence
@@ -1028,9 +1051,14 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   if (VarDivToFP && ST->hasAVX2()) {
     ArrayRef<CostKindTblEntry> Tbl = AVX2VarDivCostTable;
+    MVT VT = LT.second;
     if (ExactI32)
       Tbl = AVX2ExactVarDivCostTable;
-    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
+    // Two i32 elements widen to v4i32 but run the narrower XMM sequence.
+    else if (Ty->isVectorTy() && Ty->getScalarSizeInBits() == 32 &&
+             cast<FixedVectorType>(Ty)->getNumElements() == 2)
+      VT = MVT::v2i32;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, VT))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
   }

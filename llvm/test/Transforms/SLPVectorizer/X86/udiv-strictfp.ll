@@ -10,21 +10,27 @@ define i32 @udiv4_sum(ptr noalias readonly align 4 %a, ptr noalias readonly alig
 ; CHECK-SAME: ptr noalias readonly align 4 [[A:%.*]], ptr noalias readonly align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[PA0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 0
+; CHECK-NEXT:    [[LA0:%.*]] = load i32, ptr [[PA0]], align 4
 ; CHECK-NEXT:    [[PB0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PA0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PB0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[LB0:%.*]] = load i32, ptr [[PB0]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[LA0]], [[LB0]]
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[LA1:%.*]] = load i32, ptr [[PA1]], align 4
+; CHECK-NEXT:    [[PB1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
+; CHECK-NEXT:    [[LB1:%.*]] = load i32, ptr [[PB1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = udiv i32 [[LA1]], [[LB1]]
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    [[LA2:%.*]] = load i32, ptr [[PA2]], align 4
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[PA2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = udiv <2 x i32> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    [[LB2:%.*]] = load i32, ptr [[PB2]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = udiv i32 [[LA2]], [[LB2]]
+; CHECK-NEXT:    [[PA3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 3
+; CHECK-NEXT:    [[LA3:%.*]] = load i32, ptr [[PA3]], align 4
+; CHECK-NEXT:    [[PB3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 3
+; CHECK-NEXT:    [[LB3:%.*]] = load i32, ptr [[PB3]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = udiv i32 [[LA3]], [[LB3]]
 ; CHECK-NEXT:    [[S1:%.*]] = add i32 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[S2:%.*]] = add i32 [[S1]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[S3:%.*]] = add i32 [[S2]], [[TMP9]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
