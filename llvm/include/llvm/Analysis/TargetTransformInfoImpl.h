@@ -1249,11 +1249,6 @@ public:
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
 
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
-
   virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}

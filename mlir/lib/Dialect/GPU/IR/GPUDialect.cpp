@@ -2219,7 +2219,7 @@ namespace {
 /// ...  gpu.wait ... [%t, ...]  // %t can be removed.
 struct EraseRedundantGpuWaitOpPairs : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {
@@ -2249,7 +2249,7 @@ public:
 /// dependencies nor return any token.
 struct SimplifyGpuWaitOp : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {
