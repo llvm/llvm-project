@@ -29,6 +29,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_builtin_arg_out_of_range : Note<
+  "argument value %0 is outside the valid range [%1, %2]">;
 def note_constexpr_offsetof_overflow : Note<
   "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;

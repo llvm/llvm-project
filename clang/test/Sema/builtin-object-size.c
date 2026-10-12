@@ -30,6 +30,10 @@ int f3(void) {
   return OBJECT_SIZE_BUILTIN(&a, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, -1), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                           expected-note {{argument value -1 is outside the valid range [0, 3]}}
+_Static_assert(OBJECT_SIZE_BUILTIN((void *)0, 4), ""); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                                          expected-note {{argument value 4 is outside the valid range [0, 3]}}
 
 // cannot call vsnprintf with va_list on x86_64
 void f4(const char *fmt, ...) {

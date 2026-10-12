@@ -2449,13 +2449,18 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   // clear, objects are whole variables. If it is set, a closest surrounding
   // subobject is considered the object a pointer points to. The second bit
   // determines if maximum or minimum of remaining bytes is computed.
-  uint64_t Kind;
-  if (!popToUInt64(S, Call->getArg(1), Kind))
+  APSInt Kind;
+  if (!popToAPSInt(S, Call->getArg(1), Kind))
     return false;
-  assert(Kind <= 3 && "unexpected kind");
+  if (Kind < 0 || Kind > 3) {
+    S.FFDiag(Call->getArg(1), diag::note_constexpr_builtin_arg_out_of_range)
+        << Kind << 0 << 3;
+    return false;
+  }
+  unsigned KindValue = Kind.getZExtValue();
   Pointer Ptr = S.Stk.pop<Pointer>();
 
-  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr,
+  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, KindValue, Ptr,
                                               Call->getArg(0), IsDynamic)) {
     pushInteger(S, *Result, Call->getType());
     return true;
@@ -2464,7 +2469,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
     // "If there are any side effects in them, it returns (size_t) -1
     // for type 0 or 1 and (size_t) 0 for type 2 or 3."
-    pushInteger(S, Kind <= 1 ? (size_t)-1 : (size_t)0, Call->getType());
+    pushInteger(S, KindValue <= 1 ? (size_t)-1 : (size_t)0, Call->getType());
     return true;
   }
 
@@ -2476,7 +2481,8 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     return Invalid(S, OpPC);
   case EvaluationMode::ConstantExpressionUnevaluated:
     // Reduce it to a constant now.
-    pushInteger(S, ((Kind & 2u) ? (size_t)0 : (size_t)-1), Call->getType());
+    pushInteger(S, ((KindValue & 2u) ? (size_t)0 : (size_t)-1),
+                Call->getType());
     return true;
   }
 
