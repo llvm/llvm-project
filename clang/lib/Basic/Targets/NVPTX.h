@@ -147,6 +147,8 @@ public:
     GPU = StringToOffloadArch(Name);
     return !GPU.isUnknown();
   }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
