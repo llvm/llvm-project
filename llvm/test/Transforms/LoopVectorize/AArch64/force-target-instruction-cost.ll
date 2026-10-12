@@ -443,7 +443,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-LABEL: define void @interleave_group(
 ; COST1-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COST1-NEXT:  [[ITER_CHECK:.*:]]
-; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST1-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; COST1:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; COST1-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; COST1-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 5
@@ -474,7 +474,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST1:       [[VEC_EPILOG_ITER_CHECK]]:
 ; COST1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; COST1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; COST1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; COST1:       [[VEC_EPILOG_PH]]:
 ; COST1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
@@ -518,13 +518,13 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
 ; COST1-NEXT:    br i1 [[TMP23]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; COST1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; COST1-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST1-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; COST1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; COST10-LABEL: define void @interleave_group(
 ; COST10-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
 ; COST10-NEXT:  [[ITER_CHECK:.*:]]
-; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST10-NEXT:    br label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; COST10:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; COST10-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; COST10-NEXT:    [[TMP22:%.*]] = shl nuw i64 [[TMP21]], 4
@@ -548,7 +548,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST10:       [[VEC_EPILOG_ITER_CHECK]]:
 ; COST10-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; COST10-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
+; COST10-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; COST10:       [[VEC_EPILOG_PH]]:
 ; COST10-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; COST10-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
@@ -592,7 +592,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
 ; COST10-NEXT:    br i1 [[TMP20]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; COST10:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; COST10-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST10-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; COST10:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
