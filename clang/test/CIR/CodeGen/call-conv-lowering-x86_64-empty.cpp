@@ -215,9 +215,11 @@ HiWord giveHiWord(long hi) {
 
 // CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
 // LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
-// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
-// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
-// LLVM:   ret i64 %[[RVAL]]
+// LLVM:   %[[HIP:.+]] = getelementptr inbounds nuw %struct.HiWord, ptr %[[W:.+]], i32 0, i32 1
+// LLVM-NEXT:   store i64 %{{.+}}, ptr %[[HIP]], align 8
+// LLVM-NEXT:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[W]], i64 8
+// LLVM-NEXT:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM-NEXT:   ret i64 %[[RVAL]]
 
 // Caller-side coercion, on the return received and the argument passed.
 long callerHiWord(long hi) {

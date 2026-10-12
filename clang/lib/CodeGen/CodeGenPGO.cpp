@@ -50,8 +50,6 @@ void CodeGenPGO::setFuncName(StringRef Name,
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
-  // Create PGOFuncName meta data.
-  llvm::createPGOFuncNameMetadata(*Fn, FuncName);
 }
 
 /// The version of the PGO hash algorithm.

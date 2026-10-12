@@ -324,6 +324,8 @@ def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
 
 def OpVariableLengthArrayINTEL: Op<5818, (outs ID:$res), (ins TYPE:$type, ID:$length),
                   "$res = OpVariableLengthArrayINTEL $type $length">;
+def OpUntypedVariableLengthArrayINTEL: Op<6244, (outs ID:$res), (ins TYPE:$type, TYPE:$elementType, ID:$length),
+                  "$res = OpUntypedVariableLengthArrayINTEL $type $elementType $length">;
 def OpSaveMemoryINTEL: Op<5819, (outs ID:$res), (ins TYPE:$type),
                   "$res = OpSaveMemoryINTEL $type">;
 def OpRestoreMemoryINTEL: Op<5820, (outs), (ins ID:$ptr),
@@ -789,6 +791,14 @@ def OpSubgroupMatrixMultiplyAccumulateINTEL: Op<6237, (outs ID:$res),
 def OpEnqueueKernel: Op<292, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$flags, ID:$NDR, ID:$nevents, ID:$wevents,
                                               ID:$revent, ID:$invoke, ID:$param, ID:$psize, ID:$palign, variable_ops),
                   "$res = OpEnqueueKernel $type $queue $flags $NDR $nevents $wevents $revent $invoke $param $psize $palign">;
+def OpGetKernelNDrangeSubGroupCount: Op<293, (outs ID:$res), (ins TYPE:$type, ID:$NDR, ID:$invoke, ID:$param, ID:$psize, ID:$palign),
+                  "$res = OpGetKernelNDrangeSubGroupCount $type $NDR $invoke $param $psize $palign">;
+def OpGetKernelNDrangeMaxSubGroupSize: Op<294, (outs ID:$res), (ins TYPE:$type, ID:$NDR, ID:$invoke, ID:$param, ID:$psize, ID:$palign),
+                  "$res = OpGetKernelNDrangeMaxSubGroupSize $type $NDR $invoke $param $psize $palign">;
+def OpGetKernelWorkGroupSize: Op<295, (outs ID:$res), (ins TYPE:$type, ID:$invoke, ID:$param, ID:$psize, ID:$palign),
+                  "$res = OpGetKernelWorkGroupSize $type $invoke $param $psize $palign">;
+def OpGetKernelPreferredWorkGroupSizeMultiple: Op<296, (outs ID:$res), (ins TYPE:$type, ID:$invoke, ID:$param, ID:$psize, ID:$palign),
+                  "$res = OpGetKernelPreferredWorkGroupSizeMultiple $type $invoke $param $psize $palign">;
 def OpRetainEvent: Op<297, (outs), (ins ID:$event), "OpRetainEvent $event">;
 def OpReleaseEvent: Op<298, (outs), (ins ID:$event), "OpReleaseEvent $event">;
 def OpCreateUserEvent: Op<299, (outs ID:$res), (ins TYPE:$type),

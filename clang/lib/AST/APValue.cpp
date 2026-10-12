@@ -13,7 +13,6 @@
 #include "clang/AST/APValue.h"
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -21,6 +20,67 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
+
+static bool visitAPValue(const APValue &Value,
+                         llvm::function_ref<bool(const APValue &)> Visitor) {
+  if (!Visitor(Value))
+    return false;
+
+  switch (Value.getKind()) {
+  case APValue::None:
+  case APValue::Indeterminate:
+  case APValue::Int:
+  case APValue::Float:
+  case APValue::FixedPoint:
+  case APValue::ComplexInt:
+  case APValue::ComplexFloat:
+  case APValue::LValue:
+  case APValue::MemberPointer:
+  case APValue::AddrLabelDiff:
+  case APValue::Reflection:
+    return true;
+
+  case APValue::Vector:
+    for (unsigned I = 0, N = Value.getVectorLength(); I != N; ++I)
+      if (!visitAPValue(Value.getVectorElt(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Matrix:
+    for (unsigned I = 0, N = Value.getMatrixNumElements(); I != N; ++I)
+      if (!visitAPValue(Value.getMatrixElt(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Array:
+    for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I)
+      if (!visitAPValue(Value.getArrayInitializedElt(I), Visitor))
+        return false;
+    return !Value.hasArrayFiller() ||
+           visitAPValue(Value.getArrayFiller(), Visitor);
+
+  case APValue::Struct:
+    for (unsigned I = 0, N = Value.getStructNumBases(); I != N; ++I)
+      if (!visitAPValue(Value.getStructBase(I), Visitor))
+        return false;
+    for (unsigned I = 0, N = Value.getStructNumFields(); I != N; ++I)
+      if (!visitAPValue(Value.getStructField(I), Visitor))
+        return false;
+    for (unsigned I = 0, N = Value.getStructNumVirtualBases(); I != N; ++I)
+      if (!visitAPValue(Value.getStructVirtualBase(I), Visitor))
+        return false;
+    return true;
+
+  case APValue::Union:
+    return !Value.getUnionField() ||
+           visitAPValue(Value.getUnionValue(), Visitor);
+  }
+  llvm_unreachable("unknown APValue kind");
+}
+
+void APValue::visit(llvm::function_ref<bool(const APValue &)> Visitor) const {
+  visitAPValue(*this, Visitor);
+}
 
 /// The identity of a type_info object depends on the canonical unqualified
 /// type only.
@@ -372,6 +432,10 @@ APValue::APValue(const APValue &RHS)
     MakeAddrLabelDiff();
     setAddrLabelDiff(RHS.getAddrLabelDiffLHS(), RHS.getAddrLabelDiffRHS());
     break;
+  case Reflection:
+    MakeReflection(RHS.getReflectionOperandKind(),
+                   RHS.getReflectionOpaqueOperand());
+    break;
   }
 }
 
@@ -427,6 +491,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((MemberPointerData *)(char *)&Data)->~MemberPointerData();
   else if (Kind == AddrLabelDiff)
     ((AddrLabelDiffData *)(char *)&Data)->~AddrLabelDiffData();
+  else if (Kind == Reflection)
+    ((ReflectionData *)(char *)&Data)->~ReflectionData();
   Kind = None;
   AllowConstexprUnknown = false;
 }
@@ -436,6 +502,7 @@ bool APValue::needsCleanup() const {
   case None:
   case Indeterminate:
   case AddrLabelDiff:
+  case Reflection:
     return false;
   case Struct:
   case Union:
@@ -482,6 +549,37 @@ void APValue::swap(APValue &RHS) {
 static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
   for (unsigned I = 0, N = V.getBitWidth(); I < N; I += 32)
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
+}
+
+/// Unwrap reflected type for profiling
+static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
+  // TODO(Reflection)
+
+  if (isTypeAliasAsReflectionName(QT)) {
+    if (const auto *TDT = QT->getAs<TypedefType>()) {
+      ID.AddBoolean(true);
+      ID.AddPointer(TDT->getDecl()->getCanonicalDecl());
+      return;
+    }
+  }
+
+  ID.AddBoolean(false);
+  QT.getCanonicalType().Profile(ID);
+}
+
+static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
+  ID.AddInteger(static_cast<int>(V.getReflectionOperandKind()));
+  switch (V.getReflectionOperandKind()) {
+  case ReflectionKind::Null:
+    return;
+  case ReflectionKind::Type: {
+    const TypeSourceInfo *Info =
+        static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
+    profileTypeReflection(ID, Info->getType());
+    return;
+  }
+  }
+  assert(false && "unknown or unimplemented reflection entities");
 }
 
 void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
@@ -629,6 +727,9 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddInteger(isMemberPointerToDerivedMember());
     for (const CXXRecordDecl *D : getMemberPointerPath())
       ID.AddPointer(D);
+    return;
+  case Reflection:
+    profileReflection(ID, *this);
     return;
   }
 
@@ -978,6 +1079,19 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << " - ";
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
     return;
+  case APValue::Reflection:
+    switch (getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      Out << "std::meta::info{}";
+      break;
+    case ReflectionKind::Type: {
+      const auto *TInfo =
+          static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
+      Out << "^^" << TInfo->getType().stream(Policy);
+      break;
+    }
+    }
+    return;
   }
   llvm_unreachable("Unknown APValue kind!");
 }
@@ -1050,7 +1164,7 @@ bool APValue::isNullPointer() const {
   return ((const LV *)(const char *)&Data)->IsNullPtr;
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
+void APValue::setLValue(LValueBase B, CharUnits O, NoLValuePath,
                         bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1062,7 +1176,7 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
 }
 
 MutableArrayRef<APValue::LValuePathEntry>
-APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+APValue::setLValueUninit(LValueBase B, CharUnits O, unsigned Size,
                          bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
   LV &LVal = *((LV *)(char *)&Data);
@@ -1074,7 +1188,7 @@ APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
   return {LVal.getPath(), Size};
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O,
+void APValue::setLValue(LValueBase B, CharUnits O,
                         ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
                         bool IsNullPtr) {
   MutableArrayRef<APValue::LValuePathEntry> InternalPath =
@@ -1151,98 +1265,58 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
                                            LVComputationKind computation) {
   LinkageInfo LV = LinkageInfo::external();
 
-  auto MergeLV = [&](LinkageInfo MergeLV) {
-    LV.merge(MergeLV);
-    return LV.getLinkage() == Linkage::Internal;
-  };
-  auto Merge = [&](const APValue &V) {
-    return MergeLV(getLVForValue(V, computation));
-  };
+  auto MergeLV = [&](LinkageInfo MergeLV) { LV.merge(MergeLV); };
+  V.visit([&](const APValue &Value) {
+    switch (Value.getKind()) {
+    case APValue::AddrLabelDiff:
+      // Even for an inline function, it's not reasonable to treat a difference
+      // between the addresses of labels as an external value.
+      LV = LinkageInfo::internal();
+      return false;
 
-  switch (V.getKind()) {
-  case APValue::None:
-  case APValue::Indeterminate:
-  case APValue::Int:
-  case APValue::Float:
-  case APValue::FixedPoint:
-  case APValue::ComplexInt:
-  case APValue::ComplexFloat:
-  case APValue::Vector:
-  case APValue::Matrix:
-    break;
+    case APValue::LValue:
+      if (!Value.getLValueBase()) {
+        // Null or absolute address: this is external.
+      } else if (const auto *VD =
+                     Value.getLValueBase().dyn_cast<const ValueDecl *>()) {
+        MergeLV(getLVForDecl(VD, computation));
+      } else if (const auto TI =
+                     Value.getLValueBase().dyn_cast<TypeInfoLValue>()) {
+        MergeLV(getLVForType(*TI.getType(), computation));
+      } else if (const Expr *E =
+                     Value.getLValueBase().dyn_cast<const Expr *>()) {
+        // Almost all expression bases are internal. The exception is
+        // lifetime-extended temporaries.
+        // FIXME: These should be modeled as having the
+        // LifetimeExtendedTemporaryDecl itself as the base.
+        // FIXME: If we permit Objective-C object literals in template
+        // arguments, they should not imply internal linkage.
+        auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
+        if (!MTE || MTE->getStorageDuration() == SD_FullExpression)
+          LV = LinkageInfo::internal();
+        else
+          MergeLV(getLVForDecl(MTE->getExtendingDecl(), computation));
+      } else {
+        assert(Value.getLValueBase().is<DynamicAllocLValue>() &&
+               "unexpected LValueBase kind");
+        LV = LinkageInfo::internal();
+      }
+      // The lvalue path doesn't matter: pointers to all subobjects always have
+      // the same visibility as pointers to the complete object.
+      return LV.getLinkage() != Linkage::Internal;
 
-  case APValue::AddrLabelDiff:
-    // Even for an inline function, it's not reasonable to treat a difference
-    // between the addresses of labels as an external value.
-    return LinkageInfo::internal();
+    case APValue::MemberPointer:
+      if (const NamedDecl *D = Value.getMemberPointerDecl())
+        MergeLV(getLVForDecl(D, computation));
+      // Note that we could have a base-to-derived conversion here to a member
+      // of a derived class with less linkage/visibility. That's covered by the
+      // linkage and visibility of the value's type.
+      return LV.getLinkage() != Linkage::Internal;
 
-  case APValue::Struct: {
-    for (unsigned I = 0, N = V.getStructNumBases(); I != N; ++I)
-      if (Merge(V.getStructBase(I)))
-        break;
-    for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
-      if (Merge(V.getStructField(I)))
-        break;
-    for (unsigned I = 0, N = V.getStructNumVirtualBases(); I != N; ++I)
-      if (Merge(V.getStructVirtualBase(I)))
-        break;
-    break;
-  }
-
-  case APValue::Union:
-    if (V.getUnionField())
-      Merge(V.getUnionValue());
-    break;
-
-  case APValue::Array: {
-    for (unsigned I = 0, N = V.getArrayInitializedElts(); I != N; ++I)
-      if (Merge(V.getArrayInitializedElt(I)))
-        break;
-    if (V.hasArrayFiller())
-      Merge(V.getArrayFiller());
-    break;
-  }
-
-  case APValue::LValue: {
-    if (!V.getLValueBase()) {
-      // Null or absolute address: this is external.
-    } else if (const auto *VD =
-                   V.getLValueBase().dyn_cast<const ValueDecl *>()) {
-      if (VD && MergeLV(getLVForDecl(VD, computation)))
-        break;
-    } else if (const auto TI = V.getLValueBase().dyn_cast<TypeInfoLValue>()) {
-      if (MergeLV(getLVForType(*TI.getType(), computation)))
-        break;
-    } else if (const Expr *E = V.getLValueBase().dyn_cast<const Expr *>()) {
-      // Almost all expression bases are internal. The exception is
-      // lifetime-extended temporaries.
-      // FIXME: These should be modeled as having the
-      // LifetimeExtendedTemporaryDecl itself as the base.
-      // FIXME: If we permit Objective-C object literals in template arguments,
-      // they should not imply internal linkage.
-      auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
-      if (!MTE || MTE->getStorageDuration() == SD_FullExpression)
-        return LinkageInfo::internal();
-      if (MergeLV(getLVForDecl(MTE->getExtendingDecl(), computation)))
-        break;
-    } else {
-      assert(V.getLValueBase().is<DynamicAllocLValue>() &&
-             "unexpected LValueBase kind");
-      return LinkageInfo::internal();
+    default:
+      return true;
     }
-    // The lvalue path doesn't matter: pointers to all subobjects always have
-    // the same visibility as pointers to the complete object.
-    break;
-  }
-
-  case APValue::MemberPointer:
-    if (const NamedDecl *D = V.getMemberPointerDecl())
-      MergeLV(getLVForDecl(D, computation));
-    // Note that we could have a base-to-derived conversion here to a member of
-    // a derived class with less linkage/visibility. That's covered by the
-    // linkage and visibility of the value's type.
-    break;
-  }
+  });
 
   return LV;
 }

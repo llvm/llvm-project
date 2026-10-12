@@ -16,6 +16,7 @@
 #include "clang/ScalableStaticAnalysis/Analyses/TypeConstrainedPointers/TypeConstrainedPointers.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
+#include "clang/ScalableStaticAnalysis/Analyses/VirtualMethodFamily/VirtualMethodFamily.h"
 #include "clang/ScalableStaticAnalysis/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
@@ -43,11 +44,23 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 using namespace clang;
 using namespace ssaf;
 
 namespace {
+
+/// One VirtualMethodSummary, field for field, with entities spelled as letters.
+/// By convention tests use uppercase letters for method entities and lowercase
+/// ones for the slots they own, but the two are not distinguished: every letter
+/// is just an entity.
+struct MethodLayout {
+  char Method;                 ///< Entity the summary is stored under.
+  std::vector<char> Params;    ///< VirtualMethodSummary::ParamEntities.
+  std::optional<char> Ret;     ///< VirtualMethodSummary::ReturnEntity.
+  std::vector<char> Overrides; ///< VirtualMethodSummary::OverriddenMethods.
+};
 
 class UnsafeBufferReachableAnalysisTest : public TestFixture {
 protected:
@@ -85,6 +98,22 @@ protected:
     getData(LU)[UnsafeBufferUsageEntitySummary::summaryName()][Id] =
         std::make_unique<UnsafeBufferUsageEntitySummary>(
             buildUnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
+  }
+
+  /// Insert a VirtualMethodSummary keyed by the method's own EntityId.
+  void insertVirtualMethodSummary(LUSummary &LU, EntityId Id,
+                                  VirtualMethodSummary Sum) {
+    getData(LU)[VirtualMethodSummary::summaryName()][Id] =
+        std::make_unique<VirtualMethodSummary>(std::move(Sum));
+  }
+
+  /// Insert a TypeConstrainedPointersEntitySummary for an entity.
+  void insertTypeConstrainedPointersSummary(LUSummary &LU, EntityId Id,
+                                            std::set<EntityId> Entities) {
+    auto Sum = std::make_unique<TypeConstrainedPointersEntitySummary>();
+    Sum->Entities = std::move(Entities);
+    getData(LU)[TypeConstrainedPointersEntitySummary::summaryName()][Id] =
+        std::move(Sum);
   }
 
   class LetterEntityBiMap {
@@ -192,6 +221,95 @@ protected:
       Result.insert(GetNode(EPL));
 
     return Result;
+  }
+
+  /// Compute reachables for the virtual-method hierarchy described by
+  /// \p Methods, seeded with \p StarterLayout, over the pointer-flow edges in
+  /// \p EdgeLayout, and with the entities in \p Constrained being
+  /// type-constrained. Starters, edges and type constraints all belong to one
+  /// contributor, which no layout mentions.
+  std::set<Node> familyClosure(llvm::ArrayRef<MethodLayout> Methods,
+                               llvm::ArrayRef<Node> StarterLayout,
+                               llvm::ArrayRef<Edge> EdgeLayout,
+                               llvm::ArrayRef<char> Constrained,
+                               unsigned Line) {
+    constexpr char Contributor = '#';
+    auto LU = makeLUSummary();
+    auto Entities =
+        createEntities(*LU, entityDomainOf(Contributor, Methods, StarterLayout,
+                                           EdgeLayout, Constrained));
+    auto GetEPL = [&Entities](const Node &N) -> EntityPointerLevel {
+      return buildEntityPointerLevel(Entities[N.first], N.second);
+    };
+
+    auto GetIds = [&Entities](llvm::ArrayRef<char> Letters) {
+      std::vector<EntityId> Ids;
+      for (char L : Letters)
+        Ids.push_back(Entities[L]);
+      return Ids;
+    };
+    for (const MethodLayout &M : Methods) {
+      VirtualMethodSummary Sum;
+      Sum.ParamEntities = GetIds(M.Params);
+      if (M.Ret)
+        Sum.ReturnEntity = Entities[*M.Ret];
+      Sum.OverriddenMethods = GetIds(M.Overrides);
+      insertVirtualMethodSummary(*LU, Entities[M.Method], std::move(Sum));
+    }
+
+    std::vector<EPLEdge> Edges;
+    for (const auto &[F, T] : EdgeLayout)
+      Edges.push_back({GetEPL(F), GetEPL(T)});
+    std::vector<EntityPointerLevel> Starters;
+    for (const Node &N : StarterLayout)
+      Starters.push_back(GetEPL(N));
+    insertSummaries(*LU, Entities[Contributor], Edges, Starters);
+
+    std::vector<EntityId> ConstrainedIds = GetIds(Constrained);
+    insertTypeConstrainedPointersSummary(
+        *LU, Entities[Contributor],
+        {ConstrainedIds.begin(), ConstrainedIds.end()});
+
+    auto Reachables = computeReachables(std::move(LU), Line);
+    if (!Reachables)
+      return {};
+
+    std::set<Node> Result;
+    for (const EntityPointerLevel &EPL : *Reachables)
+      Result.insert({Entities[EPL.getEntity()], EPL.getPointerLevel()});
+    return Result;
+  }
+
+  std::set<Node> familyClosure(llvm::ArrayRef<MethodLayout> Methods,
+                               llvm::ArrayRef<Node> StarterLayout,
+                               unsigned Line) {
+    return familyClosure(Methods, StarterLayout, /*EdgeLayout=*/{},
+                         /*Constrained=*/{}, Line);
+  }
+
+private:
+  /// Every letter the layouts mention, plus \p Contributor, deduplicated.
+  static std::vector<char> entityDomainOf(char Contributor,
+                                          llvm::ArrayRef<MethodLayout> Methods,
+                                          llvm::ArrayRef<Node> Starters,
+                                          llvm::ArrayRef<Edge> Edges,
+                                          llvm::ArrayRef<char> Constrained) {
+    std::set<char> Domain{Contributor};
+    for (const MethodLayout &M : Methods) {
+      Domain.insert(M.Method);
+      Domain.insert(M.Params.begin(), M.Params.end());
+      Domain.insert(M.Overrides.begin(), M.Overrides.end());
+      if (M.Ret)
+        Domain.insert(*M.Ret);
+    }
+    for (const Node &N : Starters)
+      Domain.insert(N.first);
+    for (const auto &[From, To] : Edges) {
+      Domain.insert(From.first);
+      Domain.insert(To.first);
+    }
+    Domain.insert(Constrained.begin(), Constrained.end());
+    return {Domain.begin(), Domain.end()};
   }
 };
 
@@ -770,6 +888,128 @@ TEST_F(UnsafeBufferReachableAnalysisSourceTest, MultipleKeysSameEntity) {
                                       __LINE__);
   ASSERT_TRUE(Reachables);
   EXPECT_EQ(*Reachables, (std::set<Node>{{"a", 3}, {"b", 3}, {"c", 2}}));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Family-closure tests
+////////////////////////////////////////////////////////////////////////////////
+
+// Method B owns param slot p; D overrides B and owns param slot q.
+// Seeding (q,1) mirrors (p,1).
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureParamSlot) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'q', 1}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'q', 1},
+                            {'p', 1}, // Up to the overridden method.
+                        }));
+}
+
+// As above, but p and q are the methods' return slots rather than parameters.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureReturnSlot) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{}, /*Ret=*/{'p'}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{}, /*Ret=*/{'q'}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'q', 1}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'q', 1},
+                            {'p', 1}, // Up to the overridden method.
+                        }));
+}
+
+// No virtual methods at all, so no families. Closure adds nothing, so the
+// starters are all that is reachable.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureEmptyFamilyIsNoop) {
+  auto Reachables =
+      familyClosure(/* Methods */ {}, /* Starters */ {{'b', 1}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{{'b', 1}}));
+}
+
+// X and Y both override B, so all three slots share one family.
+// Seeding X propagates up to B *and* sideways to the sibling override Y.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureThreeMemberFamily) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'X', /*Params=*/{'x'}, /*Ret=*/{}, /*Overrides=*/{'B'}},
+                     {'Y', /*Params=*/{'y'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'x', 1}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'x', 1},
+                            {'p', 1}, // Up to the base.
+                            {'y', 1}, // Sideways to the sibling override.
+                        }));
+}
+
+// Family closure is level-preserving: an EPL reachable at level 3 propagates to
+// the family member at level 3 only, not to the levels below it.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosurePreservesPointerLevel) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'q', 3}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'q', 3},
+                            {'p', 3}, // Level 3 only; neither p@1 nor p@2.
+                        }));
+}
+
+// A single slot reachable at several levels propagates every one of those
+// levels onto its family members.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureMultipleLevelsSameSlot) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'q', 1}, {'q', 2}}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'q', 1},
+                            {'q', 2},
+                            {'p', 1}, // Both levels, not just one of them.
+                            {'p', 2},
+                        }));
+}
+
+// (p,1) becomes reachable only via family closure, and (p,1) -> (z,1) is a
+// flow edge. Nothing is seeded at (p,1), so only the family closure can make
+// the pointer-flow search visit it.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureFeedsBackIntoDFS) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'q', 1}},
+      /* EdgeLayout */ {{{'p', 1}, {'z', 1}}},
+      /* Constrained */ {}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'q', 1},
+                            {'p', 1}, // Up to the base.
+                            {'z', 1}, // Flow successor of the mirrored (p,1).
+                        }));
+}
+
+// X and Y both override B, whose slot p is type-constrained. Seeding X reaches
+// the sibling Y through the family, but never the constrained p (C3).
+TEST_F(UnsafeBufferReachableAnalysisTest,
+       FamilyClosureSkipsTypeConstrainedMember) {
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'X', /*Params=*/{'x'}, /*Ret=*/{}, /*Overrides=*/{'B'}},
+                     {'Y', /*Params=*/{'y'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      /* Starters */ {{'x', 1}},
+      /* EdgeLayout */ {},
+      /* Constrained */ {'p'}, __LINE__);
+
+  EXPECT_EQ(Reachables, (std::set<Node>{
+                            {'x', 1},
+                            {'y', 1}, // Sideways, even though p is excluded.
+                        }));
 }
 
 } // namespace

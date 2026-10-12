@@ -32,6 +32,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 
+#include "llvm/ADT/SetVector.h"
+
 namespace mlir {
 namespace bufferization {
 #define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTSPASS
@@ -78,24 +80,35 @@ LogicalResult mlir::bufferization::dropEquivalentBufferResults(
     ModuleOp module, DropBufferResultsOpts options) {
   IRRewriter rewriter(module.getContext());
 
-  DenseMap<func::FuncOp, DenseSet<func::CallOp>> callerMap;
+  auto canModify = [&](func::FuncOp funcOp) {
+    return funcOp->getParentOp() == module.getOperation() &&
+           !funcOp.isExternal() &&
+           (!funcOp.isPublic() || options.modifyPublicFunctions);
+  };
+
+  DenseMap<func::FuncOp, SmallVector<func::CallOp>> callerMap;
   // Collect the mapping of functions to their call sites.
   module.walk([&](func::CallOp callOp) {
     if (func::FuncOp calledFunc =
             dyn_cast_or_null<func::FuncOp>(callOp.resolveCallable())) {
-      if (calledFunc.isPublic() && !options.modifyPublicFunctions)
-        return WalkResult::advance();
-      if (!calledFunc.isExternal())
-        callerMap[calledFunc].insert(callOp);
+      if (canModify(calledFunc))
+        callerMap[calledFunc].push_back(callOp);
     }
     return WalkResult::advance();
   });
 
-  for (auto funcOp : module.getOps<func::FuncOp>()) {
-    if (funcOp.isPublic() && !options.modifyPublicFunctions)
-      continue;
-    if (funcOp.isExternal())
-      continue;
+  // Dropping a callee result can make a caller result equivalent to one of the
+  // caller's arguments. Revisit such callers until no more results can be
+  // dropped. A SetVector avoids adding the same function to the worklist more
+  // than once. Every revisit is triggered by deleting a result, so the
+  // algorithm also terminates for recursive call graphs.
+  llvm::SetVector<func::FuncOp> worklist;
+  for (auto funcOp : module.getOps<func::FuncOp>())
+    if (canModify(funcOp))
+      worklist.insert(funcOp);
+
+  while (!worklist.empty()) {
+    func::FuncOp funcOp = worklist.pop_back_val();
     SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
     if (returnOps.empty())
       continue;
@@ -128,6 +141,9 @@ LogicalResult mlir::bufferization::dropEquivalentBufferResults(
       }
     }
 
+    if (erasedResultIndices.none())
+      continue;
+
     // Update function.
     if (failed(funcOp.eraseResults(erasedResultIndices)))
       return failure();
@@ -137,7 +153,10 @@ LogicalResult mlir::bufferization::dropEquivalentBufferResults(
       returnOp.getOperandsMutable().assign(newReturnValue);
 
     // Update function calls.
-    for (func::CallOp callOp : callerMap[funcOp]) {
+    SmallVector<func::CallOp> callOps;
+    callOps.swap(callerMap[funcOp]);
+    for (func::CallOp callOp : callOps) {
+      func::FuncOp caller = callOp->getParentOfType<func::FuncOp>();
       rewriter.setInsertionPoint(callOp);
       auto newCallOp = func::CallOp::create(rewriter, callOp.getLoc(), funcOp,
                                             callOp.getOperands());
@@ -161,6 +180,9 @@ LogicalResult mlir::bufferization::dropEquivalentBufferResults(
         newResults.push_back(replacement);
       }
       rewriter.replaceOp(callOp, newResults);
+      callerMap[funcOp].push_back(newCallOp);
+      if (caller && canModify(caller))
+        worklist.insert(caller);
     }
   }
 
