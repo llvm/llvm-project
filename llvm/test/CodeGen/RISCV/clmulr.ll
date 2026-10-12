@@ -5,35 +5,101 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-M,RV64IM
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zbs -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-ZBS,RV32IMZBS
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zbs -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-ZBS,RV64IMZBS
+; RUN: llc -mtriple=riscv32 -mattr=+m,+zbc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-ZBC,RV32IMZBC
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zbc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-ZBC,RV64IMZBC
 
 define i4 @clmulr_i4(i4 %a, i4 %b) nounwind {
-; CHECK-LABEL: clmulr_i4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 15
-; CHECK-NEXT:    andi a2, a1, 2
-; CHECK-NEXT:    andi a3, a1, 1
-; CHECK-NEXT:    slli a4, a0, 1
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    seqz a3, a3
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a2, a4
-; CHECK-NEXT:    and a3, a3, a0
-; CHECK-NEXT:    slli a4, a0, 2
-; CHECK-NEXT:    andi a5, a1, 4
-; CHECK-NEXT:    seqz a5, a5
-; CHECK-NEXT:    andi a1, a1, 8
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a4, a5, a4
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    xor a2, a3, a2
-; CHECK-NEXT:    xor a0, a4, a0
-; CHECK-NEXT:    xor a0, a2, a0
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    ret
+; CHECK-I-LABEL: clmulr_i4:
+; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    andi a0, a0, 15
+; CHECK-I-NEXT:    andi a2, a1, 2
+; CHECK-I-NEXT:    andi a3, a1, 1
+; CHECK-I-NEXT:    slli a4, a0, 1
+; CHECK-I-NEXT:    seqz a2, a2
+; CHECK-I-NEXT:    seqz a3, a3
+; CHECK-I-NEXT:    addi a2, a2, -1
+; CHECK-I-NEXT:    addi a3, a3, -1
+; CHECK-I-NEXT:    and a2, a2, a4
+; CHECK-I-NEXT:    and a3, a3, a0
+; CHECK-I-NEXT:    slli a4, a0, 2
+; CHECK-I-NEXT:    andi a5, a1, 4
+; CHECK-I-NEXT:    seqz a5, a5
+; CHECK-I-NEXT:    andi a1, a1, 8
+; CHECK-I-NEXT:    addi a5, a5, -1
+; CHECK-I-NEXT:    seqz a1, a1
+; CHECK-I-NEXT:    slli a0, a0, 3
+; CHECK-I-NEXT:    addi a1, a1, -1
+; CHECK-I-NEXT:    and a4, a5, a4
+; CHECK-I-NEXT:    and a0, a1, a0
+; CHECK-I-NEXT:    xor a2, a3, a2
+; CHECK-I-NEXT:    xor a0, a4, a0
+; CHECK-I-NEXT:    xor a0, a2, a0
+; CHECK-I-NEXT:    srli a0, a0, 3
+; CHECK-I-NEXT:    ret
+;
+; CHECK-M-LABEL: clmulr_i4:
+; CHECK-M:       # %bb.0:
+; CHECK-M-NEXT:    andi a0, a0, 15
+; CHECK-M-NEXT:    andi a2, a1, 2
+; CHECK-M-NEXT:    andi a3, a1, 1
+; CHECK-M-NEXT:    slli a4, a0, 1
+; CHECK-M-NEXT:    seqz a2, a2
+; CHECK-M-NEXT:    seqz a3, a3
+; CHECK-M-NEXT:    addi a2, a2, -1
+; CHECK-M-NEXT:    addi a3, a3, -1
+; CHECK-M-NEXT:    and a2, a2, a4
+; CHECK-M-NEXT:    and a3, a3, a0
+; CHECK-M-NEXT:    slli a4, a0, 2
+; CHECK-M-NEXT:    andi a5, a1, 4
+; CHECK-M-NEXT:    seqz a5, a5
+; CHECK-M-NEXT:    andi a1, a1, 8
+; CHECK-M-NEXT:    addi a5, a5, -1
+; CHECK-M-NEXT:    seqz a1, a1
+; CHECK-M-NEXT:    slli a0, a0, 3
+; CHECK-M-NEXT:    addi a1, a1, -1
+; CHECK-M-NEXT:    and a4, a5, a4
+; CHECK-M-NEXT:    and a0, a1, a0
+; CHECK-M-NEXT:    xor a2, a3, a2
+; CHECK-M-NEXT:    xor a0, a4, a0
+; CHECK-M-NEXT:    xor a0, a2, a0
+; CHECK-M-NEXT:    srli a0, a0, 3
+; CHECK-M-NEXT:    ret
+;
+; CHECK-ZBS-LABEL: clmulr_i4:
+; CHECK-ZBS:       # %bb.0:
+; CHECK-ZBS-NEXT:    andi a0, a0, 15
+; CHECK-ZBS-NEXT:    andi a2, a1, 2
+; CHECK-ZBS-NEXT:    andi a3, a1, 1
+; CHECK-ZBS-NEXT:    slli a4, a0, 1
+; CHECK-ZBS-NEXT:    seqz a2, a2
+; CHECK-ZBS-NEXT:    seqz a3, a3
+; CHECK-ZBS-NEXT:    addi a2, a2, -1
+; CHECK-ZBS-NEXT:    addi a3, a3, -1
+; CHECK-ZBS-NEXT:    and a2, a2, a4
+; CHECK-ZBS-NEXT:    and a3, a3, a0
+; CHECK-ZBS-NEXT:    slli a4, a0, 2
+; CHECK-ZBS-NEXT:    andi a5, a1, 4
+; CHECK-ZBS-NEXT:    seqz a5, a5
+; CHECK-ZBS-NEXT:    andi a1, a1, 8
+; CHECK-ZBS-NEXT:    addi a5, a5, -1
+; CHECK-ZBS-NEXT:    seqz a1, a1
+; CHECK-ZBS-NEXT:    slli a0, a0, 3
+; CHECK-ZBS-NEXT:    addi a1, a1, -1
+; CHECK-ZBS-NEXT:    and a4, a5, a4
+; CHECK-ZBS-NEXT:    and a0, a1, a0
+; CHECK-ZBS-NEXT:    xor a2, a3, a2
+; CHECK-ZBS-NEXT:    xor a0, a4, a0
+; CHECK-ZBS-NEXT:    xor a0, a2, a0
+; CHECK-ZBS-NEXT:    srli a0, a0, 3
+; CHECK-ZBS-NEXT:    ret
+;
+; CHECK-ZBC-LABEL: clmulr_i4:
+; CHECK-ZBC:       # %bb.0:
+; CHECK-ZBC-NEXT:    andi a1, a1, 15
+; CHECK-ZBC-NEXT:    andi a0, a0, 15
+; CHECK-ZBC-NEXT:    clmul a0, a0, a1
+; CHECK-ZBC-NEXT:    srli a0, a0, 3
+; CHECK-ZBC-NEXT:    ret
   %a.ext = zext i4 %a to i8
   %b.ext = zext i4 %b to i8
   %clmul = call i8 @llvm.clmul.i8(i8 %a.ext, i8 %b.ext)
@@ -43,33 +109,97 @@ define i4 @clmulr_i4(i4 %a, i4 %b) nounwind {
 }
 
 define i4 @clmulr_i4_bitreverse(i4 %a, i4 %b) nounwind {
-; CHECK-LABEL: clmulr_i4_bitreverse:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 15
-; CHECK-NEXT:    andi a2, a1, 2
-; CHECK-NEXT:    andi a3, a1, 1
-; CHECK-NEXT:    slli a4, a0, 1
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    seqz a3, a3
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a2, a4
-; CHECK-NEXT:    and a3, a3, a0
-; CHECK-NEXT:    slli a4, a0, 2
-; CHECK-NEXT:    andi a5, a1, 4
-; CHECK-NEXT:    seqz a5, a5
-; CHECK-NEXT:    andi a1, a1, 8
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a4, a5, a4
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    xor a2, a3, a2
-; CHECK-NEXT:    xor a0, a4, a0
-; CHECK-NEXT:    xor a0, a2, a0
-; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    ret
+; CHECK-I-LABEL: clmulr_i4_bitreverse:
+; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    andi a0, a0, 15
+; CHECK-I-NEXT:    andi a2, a1, 2
+; CHECK-I-NEXT:    andi a3, a1, 1
+; CHECK-I-NEXT:    slli a4, a0, 1
+; CHECK-I-NEXT:    seqz a2, a2
+; CHECK-I-NEXT:    seqz a3, a3
+; CHECK-I-NEXT:    addi a2, a2, -1
+; CHECK-I-NEXT:    addi a3, a3, -1
+; CHECK-I-NEXT:    and a2, a2, a4
+; CHECK-I-NEXT:    and a3, a3, a0
+; CHECK-I-NEXT:    slli a4, a0, 2
+; CHECK-I-NEXT:    andi a5, a1, 4
+; CHECK-I-NEXT:    seqz a5, a5
+; CHECK-I-NEXT:    andi a1, a1, 8
+; CHECK-I-NEXT:    addi a5, a5, -1
+; CHECK-I-NEXT:    seqz a1, a1
+; CHECK-I-NEXT:    slli a0, a0, 3
+; CHECK-I-NEXT:    addi a1, a1, -1
+; CHECK-I-NEXT:    and a4, a5, a4
+; CHECK-I-NEXT:    and a0, a1, a0
+; CHECK-I-NEXT:    xor a2, a3, a2
+; CHECK-I-NEXT:    xor a0, a4, a0
+; CHECK-I-NEXT:    xor a0, a2, a0
+; CHECK-I-NEXT:    srli a0, a0, 3
+; CHECK-I-NEXT:    ret
+;
+; CHECK-M-LABEL: clmulr_i4_bitreverse:
+; CHECK-M:       # %bb.0:
+; CHECK-M-NEXT:    andi a0, a0, 15
+; CHECK-M-NEXT:    andi a2, a1, 2
+; CHECK-M-NEXT:    andi a3, a1, 1
+; CHECK-M-NEXT:    slli a4, a0, 1
+; CHECK-M-NEXT:    seqz a2, a2
+; CHECK-M-NEXT:    seqz a3, a3
+; CHECK-M-NEXT:    addi a2, a2, -1
+; CHECK-M-NEXT:    addi a3, a3, -1
+; CHECK-M-NEXT:    and a2, a2, a4
+; CHECK-M-NEXT:    and a3, a3, a0
+; CHECK-M-NEXT:    slli a4, a0, 2
+; CHECK-M-NEXT:    andi a5, a1, 4
+; CHECK-M-NEXT:    seqz a5, a5
+; CHECK-M-NEXT:    andi a1, a1, 8
+; CHECK-M-NEXT:    addi a5, a5, -1
+; CHECK-M-NEXT:    seqz a1, a1
+; CHECK-M-NEXT:    slli a0, a0, 3
+; CHECK-M-NEXT:    addi a1, a1, -1
+; CHECK-M-NEXT:    and a4, a5, a4
+; CHECK-M-NEXT:    and a0, a1, a0
+; CHECK-M-NEXT:    xor a2, a3, a2
+; CHECK-M-NEXT:    xor a0, a4, a0
+; CHECK-M-NEXT:    xor a0, a2, a0
+; CHECK-M-NEXT:    srli a0, a0, 3
+; CHECK-M-NEXT:    ret
+;
+; CHECK-ZBS-LABEL: clmulr_i4_bitreverse:
+; CHECK-ZBS:       # %bb.0:
+; CHECK-ZBS-NEXT:    andi a0, a0, 15
+; CHECK-ZBS-NEXT:    andi a2, a1, 2
+; CHECK-ZBS-NEXT:    andi a3, a1, 1
+; CHECK-ZBS-NEXT:    slli a4, a0, 1
+; CHECK-ZBS-NEXT:    seqz a2, a2
+; CHECK-ZBS-NEXT:    seqz a3, a3
+; CHECK-ZBS-NEXT:    addi a2, a2, -1
+; CHECK-ZBS-NEXT:    addi a3, a3, -1
+; CHECK-ZBS-NEXT:    and a2, a2, a4
+; CHECK-ZBS-NEXT:    and a3, a3, a0
+; CHECK-ZBS-NEXT:    slli a4, a0, 2
+; CHECK-ZBS-NEXT:    andi a5, a1, 4
+; CHECK-ZBS-NEXT:    seqz a5, a5
+; CHECK-ZBS-NEXT:    andi a1, a1, 8
+; CHECK-ZBS-NEXT:    addi a5, a5, -1
+; CHECK-ZBS-NEXT:    seqz a1, a1
+; CHECK-ZBS-NEXT:    slli a0, a0, 3
+; CHECK-ZBS-NEXT:    addi a1, a1, -1
+; CHECK-ZBS-NEXT:    and a4, a5, a4
+; CHECK-ZBS-NEXT:    and a0, a1, a0
+; CHECK-ZBS-NEXT:    xor a2, a3, a2
+; CHECK-ZBS-NEXT:    xor a0, a4, a0
+; CHECK-ZBS-NEXT:    xor a0, a2, a0
+; CHECK-ZBS-NEXT:    srli a0, a0, 3
+; CHECK-ZBS-NEXT:    ret
+;
+; CHECK-ZBC-LABEL: clmulr_i4_bitreverse:
+; CHECK-ZBC:       # %bb.0:
+; CHECK-ZBC-NEXT:    andi a1, a1, 15
+; CHECK-ZBC-NEXT:    andi a0, a0, 15
+; CHECK-ZBC-NEXT:    clmul a0, a0, a1
+; CHECK-ZBC-NEXT:    srli a0, a0, 3
+; CHECK-ZBC-NEXT:    ret
   %a.rev = call i4 @llvm.bitreverse.i4(i4 %a)
   %b.rev = call i4 @llvm.bitreverse.i4(i4 %b)
   %res.rev = call i4 @llvm.clmul.i4(i4 %a.rev, i4 %b.rev)
@@ -78,57 +208,169 @@ define i4 @clmulr_i4_bitreverse(i4 %a, i4 %b) nounwind {
 }
 
 define i8 @clmulr_i8(i8 %a, i8 %b) nounwind {
-; CHECK-LABEL: clmulr_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    andi a2, a1, 2
-; CHECK-NEXT:    andi a3, a1, 1
-; CHECK-NEXT:    seqz a2, a2
-; CHECK-NEXT:    slli a4, a0, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    seqz a3, a3
-; CHECK-NEXT:    and a2, a2, a4
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    andi a4, a1, 4
-; CHECK-NEXT:    slli a5, a0, 2
-; CHECK-NEXT:    seqz a4, a4
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    andi a6, a1, 8
-; CHECK-NEXT:    and a4, a4, a5
-; CHECK-NEXT:    seqz a5, a6
-; CHECK-NEXT:    slli a6, a0, 3
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    and a5, a5, a6
-; CHECK-NEXT:    and a3, a3, a0
-; CHECK-NEXT:    xor a2, a3, a2
-; CHECK-NEXT:    xor a4, a4, a5
-; CHECK-NEXT:    xor a2, a2, a4
-; CHECK-NEXT:    andi a3, a1, 16
-; CHECK-NEXT:    slli a4, a0, 4
-; CHECK-NEXT:    seqz a3, a3
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    andi a5, a1, 32
-; CHECK-NEXT:    and a3, a3, a4
-; CHECK-NEXT:    seqz a4, a5
-; CHECK-NEXT:    slli a5, a0, 5
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a4, a4, a5
-; CHECK-NEXT:    andi a5, a1, 64
-; CHECK-NEXT:    xor a3, a3, a4
-; CHECK-NEXT:    seqz a4, a5
-; CHECK-NEXT:    slli a5, a0, 6
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a4, a4, a5
-; CHECK-NEXT:    andi a1, a1, 128
-; CHECK-NEXT:    xor a3, a3, a4
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    slli a0, a0, 7
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    xor a2, a2, a3
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    xor a0, a2, a0
-; CHECK-NEXT:    srli a0, a0, 7
-; CHECK-NEXT:    ret
+; CHECK-I-LABEL: clmulr_i8:
+; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    zext.b a0, a0
+; CHECK-I-NEXT:    andi a2, a1, 2
+; CHECK-I-NEXT:    andi a3, a1, 1
+; CHECK-I-NEXT:    seqz a2, a2
+; CHECK-I-NEXT:    slli a4, a0, 1
+; CHECK-I-NEXT:    addi a2, a2, -1
+; CHECK-I-NEXT:    seqz a3, a3
+; CHECK-I-NEXT:    and a2, a2, a4
+; CHECK-I-NEXT:    addi a3, a3, -1
+; CHECK-I-NEXT:    andi a4, a1, 4
+; CHECK-I-NEXT:    slli a5, a0, 2
+; CHECK-I-NEXT:    seqz a4, a4
+; CHECK-I-NEXT:    addi a4, a4, -1
+; CHECK-I-NEXT:    andi a6, a1, 8
+; CHECK-I-NEXT:    and a4, a4, a5
+; CHECK-I-NEXT:    seqz a5, a6
+; CHECK-I-NEXT:    slli a6, a0, 3
+; CHECK-I-NEXT:    addi a5, a5, -1
+; CHECK-I-NEXT:    and a5, a5, a6
+; CHECK-I-NEXT:    and a3, a3, a0
+; CHECK-I-NEXT:    xor a2, a3, a2
+; CHECK-I-NEXT:    xor a4, a4, a5
+; CHECK-I-NEXT:    xor a2, a2, a4
+; CHECK-I-NEXT:    andi a3, a1, 16
+; CHECK-I-NEXT:    slli a4, a0, 4
+; CHECK-I-NEXT:    seqz a3, a3
+; CHECK-I-NEXT:    addi a3, a3, -1
+; CHECK-I-NEXT:    andi a5, a1, 32
+; CHECK-I-NEXT:    and a3, a3, a4
+; CHECK-I-NEXT:    seqz a4, a5
+; CHECK-I-NEXT:    slli a5, a0, 5
+; CHECK-I-NEXT:    addi a4, a4, -1
+; CHECK-I-NEXT:    and a4, a4, a5
+; CHECK-I-NEXT:    andi a5, a1, 64
+; CHECK-I-NEXT:    xor a3, a3, a4
+; CHECK-I-NEXT:    seqz a4, a5
+; CHECK-I-NEXT:    slli a5, a0, 6
+; CHECK-I-NEXT:    addi a4, a4, -1
+; CHECK-I-NEXT:    and a4, a4, a5
+; CHECK-I-NEXT:    andi a1, a1, 128
+; CHECK-I-NEXT:    xor a3, a3, a4
+; CHECK-I-NEXT:    seqz a1, a1
+; CHECK-I-NEXT:    slli a0, a0, 7
+; CHECK-I-NEXT:    addi a1, a1, -1
+; CHECK-I-NEXT:    xor a2, a2, a3
+; CHECK-I-NEXT:    and a0, a1, a0
+; CHECK-I-NEXT:    xor a0, a2, a0
+; CHECK-I-NEXT:    srli a0, a0, 7
+; CHECK-I-NEXT:    ret
+;
+; CHECK-M-LABEL: clmulr_i8:
+; CHECK-M:       # %bb.0:
+; CHECK-M-NEXT:    zext.b a0, a0
+; CHECK-M-NEXT:    andi a2, a1, 2
+; CHECK-M-NEXT:    andi a3, a1, 1
+; CHECK-M-NEXT:    seqz a2, a2
+; CHECK-M-NEXT:    slli a4, a0, 1
+; CHECK-M-NEXT:    addi a2, a2, -1
+; CHECK-M-NEXT:    seqz a3, a3
+; CHECK-M-NEXT:    and a2, a2, a4
+; CHECK-M-NEXT:    addi a3, a3, -1
+; CHECK-M-NEXT:    andi a4, a1, 4
+; CHECK-M-NEXT:    slli a5, a0, 2
+; CHECK-M-NEXT:    seqz a4, a4
+; CHECK-M-NEXT:    addi a4, a4, -1
+; CHECK-M-NEXT:    andi a6, a1, 8
+; CHECK-M-NEXT:    and a4, a4, a5
+; CHECK-M-NEXT:    seqz a5, a6
+; CHECK-M-NEXT:    slli a6, a0, 3
+; CHECK-M-NEXT:    addi a5, a5, -1
+; CHECK-M-NEXT:    and a5, a5, a6
+; CHECK-M-NEXT:    and a3, a3, a0
+; CHECK-M-NEXT:    xor a2, a3, a2
+; CHECK-M-NEXT:    xor a4, a4, a5
+; CHECK-M-NEXT:    xor a2, a2, a4
+; CHECK-M-NEXT:    andi a3, a1, 16
+; CHECK-M-NEXT:    slli a4, a0, 4
+; CHECK-M-NEXT:    seqz a3, a3
+; CHECK-M-NEXT:    addi a3, a3, -1
+; CHECK-M-NEXT:    andi a5, a1, 32
+; CHECK-M-NEXT:    and a3, a3, a4
+; CHECK-M-NEXT:    seqz a4, a5
+; CHECK-M-NEXT:    slli a5, a0, 5
+; CHECK-M-NEXT:    addi a4, a4, -1
+; CHECK-M-NEXT:    and a4, a4, a5
+; CHECK-M-NEXT:    andi a5, a1, 64
+; CHECK-M-NEXT:    xor a3, a3, a4
+; CHECK-M-NEXT:    seqz a4, a5
+; CHECK-M-NEXT:    slli a5, a0, 6
+; CHECK-M-NEXT:    addi a4, a4, -1
+; CHECK-M-NEXT:    and a4, a4, a5
+; CHECK-M-NEXT:    andi a1, a1, 128
+; CHECK-M-NEXT:    xor a3, a3, a4
+; CHECK-M-NEXT:    seqz a1, a1
+; CHECK-M-NEXT:    slli a0, a0, 7
+; CHECK-M-NEXT:    addi a1, a1, -1
+; CHECK-M-NEXT:    xor a2, a2, a3
+; CHECK-M-NEXT:    and a0, a1, a0
+; CHECK-M-NEXT:    xor a0, a2, a0
+; CHECK-M-NEXT:    srli a0, a0, 7
+; CHECK-M-NEXT:    ret
+;
+; CHECK-ZBS-LABEL: clmulr_i8:
+; CHECK-ZBS:       # %bb.0:
+; CHECK-ZBS-NEXT:    zext.b a0, a0
+; CHECK-ZBS-NEXT:    andi a2, a1, 2
+; CHECK-ZBS-NEXT:    andi a3, a1, 1
+; CHECK-ZBS-NEXT:    seqz a2, a2
+; CHECK-ZBS-NEXT:    slli a4, a0, 1
+; CHECK-ZBS-NEXT:    addi a2, a2, -1
+; CHECK-ZBS-NEXT:    seqz a3, a3
+; CHECK-ZBS-NEXT:    and a2, a2, a4
+; CHECK-ZBS-NEXT:    addi a3, a3, -1
+; CHECK-ZBS-NEXT:    andi a4, a1, 4
+; CHECK-ZBS-NEXT:    slli a5, a0, 2
+; CHECK-ZBS-NEXT:    seqz a4, a4
+; CHECK-ZBS-NEXT:    addi a4, a4, -1
+; CHECK-ZBS-NEXT:    andi a6, a1, 8
+; CHECK-ZBS-NEXT:    and a4, a4, a5
+; CHECK-ZBS-NEXT:    seqz a5, a6
+; CHECK-ZBS-NEXT:    slli a6, a0, 3
+; CHECK-ZBS-NEXT:    addi a5, a5, -1
+; CHECK-ZBS-NEXT:    and a5, a5, a6
+; CHECK-ZBS-NEXT:    and a3, a3, a0
+; CHECK-ZBS-NEXT:    xor a2, a3, a2
+; CHECK-ZBS-NEXT:    xor a4, a4, a5
+; CHECK-ZBS-NEXT:    xor a2, a2, a4
+; CHECK-ZBS-NEXT:    andi a3, a1, 16
+; CHECK-ZBS-NEXT:    slli a4, a0, 4
+; CHECK-ZBS-NEXT:    seqz a3, a3
+; CHECK-ZBS-NEXT:    addi a3, a3, -1
+; CHECK-ZBS-NEXT:    andi a5, a1, 32
+; CHECK-ZBS-NEXT:    and a3, a3, a4
+; CHECK-ZBS-NEXT:    seqz a4, a5
+; CHECK-ZBS-NEXT:    slli a5, a0, 5
+; CHECK-ZBS-NEXT:    addi a4, a4, -1
+; CHECK-ZBS-NEXT:    and a4, a4, a5
+; CHECK-ZBS-NEXT:    andi a5, a1, 64
+; CHECK-ZBS-NEXT:    xor a3, a3, a4
+; CHECK-ZBS-NEXT:    seqz a4, a5
+; CHECK-ZBS-NEXT:    slli a5, a0, 6
+; CHECK-ZBS-NEXT:    addi a4, a4, -1
+; CHECK-ZBS-NEXT:    and a4, a4, a5
+; CHECK-ZBS-NEXT:    andi a1, a1, 128
+; CHECK-ZBS-NEXT:    xor a3, a3, a4
+; CHECK-ZBS-NEXT:    seqz a1, a1
+; CHECK-ZBS-NEXT:    slli a0, a0, 7
+; CHECK-ZBS-NEXT:    addi a1, a1, -1
+; CHECK-ZBS-NEXT:    xor a2, a2, a3
+; CHECK-ZBS-NEXT:    and a0, a1, a0
+; CHECK-ZBS-NEXT:    xor a0, a2, a0
+; CHECK-ZBS-NEXT:    srli a0, a0, 7
+; CHECK-ZBS-NEXT:    ret
+;
+; CHECK-ZBC-LABEL: clmulr_i8:
+; CHECK-ZBC:       # %bb.0:
+; CHECK-ZBC-NEXT:    zext.b a1, a1
+; CHECK-ZBC-NEXT:    zext.b a0, a0
+; CHECK-ZBC-NEXT:    clmul a0, a0, a1
+; CHECK-ZBC-NEXT:    srli a0, a0, 7
+; CHECK-ZBC-NEXT:    ret
   %a.ext = zext i8 %a to i16
   %b.ext = zext i8 %b to i16
   %clmul = call i16 @llvm.clmul.i16(i16 %a.ext, i16 %b.ext)
@@ -605,6 +847,16 @@ define i16 @clmulr_i16(i16 %a, i16 %b) nounwind {
 ; RV64IMZBS-NEXT:    or a0, a2, a0
 ; RV64IMZBS-NEXT:    srli a0, a0, 15
 ; RV64IMZBS-NEXT:    ret
+;
+; CHECK-ZBC-LABEL: clmulr_i16:
+; CHECK-ZBC:       # %bb.0:
+; CHECK-ZBC-NEXT:    lui a2, 16
+; CHECK-ZBC-NEXT:    addi a2, a2, -1
+; CHECK-ZBC-NEXT:    and a1, a1, a2
+; CHECK-ZBC-NEXT:    and a0, a0, a2
+; CHECK-ZBC-NEXT:    clmul a0, a0, a1
+; CHECK-ZBC-NEXT:    srli a0, a0, 15
+; CHECK-ZBC-NEXT:    ret
   %a.ext = zext i16 %a to i32
   %b.ext = zext i16 %b to i32
   %clmul = call i32 @llvm.clmul.i32(i32 %a.ext, i32 %b.ext)
@@ -1585,6 +1837,19 @@ define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
 ; RV64IMZBS-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    addi sp, sp, 32
 ; RV64IMZBS-NEXT:    ret
+;
+; RV32IMZBC-LABEL: clmulr_i32:
+; RV32IMZBC:       # %bb.0:
+; RV32IMZBC-NEXT:    clmulr a0, a0, a1
+; RV32IMZBC-NEXT:    ret
+;
+; RV64IMZBC-LABEL: clmulr_i32:
+; RV64IMZBC:       # %bb.0:
+; RV64IMZBC-NEXT:    slli a1, a1, 32
+; RV64IMZBC-NEXT:    slli a0, a0, 32
+; RV64IMZBC-NEXT:    clmulr a0, a0, a1
+; RV64IMZBC-NEXT:    srli a0, a0, 32
+; RV64IMZBC-NEXT:    ret
   %a.ext = zext i32 %a to i64
   %b.ext = zext i32 %b to i64
   %clmul = call i64 @llvm.clmul.i64(i64 %a.ext, i64 %b.ext)
@@ -1596,59 +1861,177 @@ define i32 @clmulr_i32(i32 %a, i32 %b) nounwind {
 declare i8 @use(i8, i1)
 
 define void @commutative_clmulr_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
-; CHECK-LABEL: commutative_clmulr_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a1, a1
-; CHECK-NEXT:    andi a4, a0, 2
-; CHECK-NEXT:    slli a5, a1, 1
-; CHECK-NEXT:    seqz a4, a4
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    andi a6, a0, 1
-; CHECK-NEXT:    and a4, a4, a5
-; CHECK-NEXT:    seqz a5, a6
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    andi a6, a0, 4
-; CHECK-NEXT:    slli a7, a1, 2
-; CHECK-NEXT:    seqz a6, a6
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    andi t0, a0, 8
-; CHECK-NEXT:    and a6, a6, a7
-; CHECK-NEXT:    seqz a7, t0
-; CHECK-NEXT:    slli t0, a1, 3
-; CHECK-NEXT:    addi a7, a7, -1
-; CHECK-NEXT:    and a7, a7, t0
-; CHECK-NEXT:    and a5, a5, a1
-; CHECK-NEXT:    xor a4, a5, a4
-; CHECK-NEXT:    xor a5, a6, a7
-; CHECK-NEXT:    xor a4, a4, a5
-; CHECK-NEXT:    andi a5, a0, 16
-; CHECK-NEXT:    slli a6, a1, 4
-; CHECK-NEXT:    seqz a5, a5
-; CHECK-NEXT:    addi a5, a5, -1
-; CHECK-NEXT:    andi a7, a0, 32
-; CHECK-NEXT:    and a5, a5, a6
-; CHECK-NEXT:    seqz a6, a7
-; CHECK-NEXT:    slli a7, a1, 5
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    and a6, a6, a7
-; CHECK-NEXT:    andi a7, a0, 64
-; CHECK-NEXT:    xor a5, a5, a6
-; CHECK-NEXT:    seqz a6, a7
-; CHECK-NEXT:    slli a7, a1, 6
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    and a6, a6, a7
-; CHECK-NEXT:    andi a0, a0, 128
-; CHECK-NEXT:    xor a5, a5, a6
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    slli a1, a1, 7
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    xor a4, a4, a5
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    xor a0, a4, a0
-; CHECK-NEXT:    srli a0, a0, 7
-; CHECK-NEXT:    sb a0, 0(a2)
-; CHECK-NEXT:    sb a0, 0(a3)
-; CHECK-NEXT:    ret
+; CHECK-I-LABEL: commutative_clmulr_i8:
+; CHECK-I:       # %bb.0:
+; CHECK-I-NEXT:    zext.b a1, a1
+; CHECK-I-NEXT:    andi a4, a0, 2
+; CHECK-I-NEXT:    slli a5, a1, 1
+; CHECK-I-NEXT:    seqz a4, a4
+; CHECK-I-NEXT:    addi a4, a4, -1
+; CHECK-I-NEXT:    andi a6, a0, 1
+; CHECK-I-NEXT:    and a4, a4, a5
+; CHECK-I-NEXT:    seqz a5, a6
+; CHECK-I-NEXT:    addi a5, a5, -1
+; CHECK-I-NEXT:    andi a6, a0, 4
+; CHECK-I-NEXT:    slli a7, a1, 2
+; CHECK-I-NEXT:    seqz a6, a6
+; CHECK-I-NEXT:    addi a6, a6, -1
+; CHECK-I-NEXT:    andi t0, a0, 8
+; CHECK-I-NEXT:    and a6, a6, a7
+; CHECK-I-NEXT:    seqz a7, t0
+; CHECK-I-NEXT:    slli t0, a1, 3
+; CHECK-I-NEXT:    addi a7, a7, -1
+; CHECK-I-NEXT:    and a7, a7, t0
+; CHECK-I-NEXT:    and a5, a5, a1
+; CHECK-I-NEXT:    xor a4, a5, a4
+; CHECK-I-NEXT:    xor a5, a6, a7
+; CHECK-I-NEXT:    xor a4, a4, a5
+; CHECK-I-NEXT:    andi a5, a0, 16
+; CHECK-I-NEXT:    slli a6, a1, 4
+; CHECK-I-NEXT:    seqz a5, a5
+; CHECK-I-NEXT:    addi a5, a5, -1
+; CHECK-I-NEXT:    andi a7, a0, 32
+; CHECK-I-NEXT:    and a5, a5, a6
+; CHECK-I-NEXT:    seqz a6, a7
+; CHECK-I-NEXT:    slli a7, a1, 5
+; CHECK-I-NEXT:    addi a6, a6, -1
+; CHECK-I-NEXT:    and a6, a6, a7
+; CHECK-I-NEXT:    andi a7, a0, 64
+; CHECK-I-NEXT:    xor a5, a5, a6
+; CHECK-I-NEXT:    seqz a6, a7
+; CHECK-I-NEXT:    slli a7, a1, 6
+; CHECK-I-NEXT:    addi a6, a6, -1
+; CHECK-I-NEXT:    and a6, a6, a7
+; CHECK-I-NEXT:    andi a0, a0, 128
+; CHECK-I-NEXT:    xor a5, a5, a6
+; CHECK-I-NEXT:    seqz a0, a0
+; CHECK-I-NEXT:    slli a1, a1, 7
+; CHECK-I-NEXT:    addi a0, a0, -1
+; CHECK-I-NEXT:    xor a4, a4, a5
+; CHECK-I-NEXT:    and a0, a0, a1
+; CHECK-I-NEXT:    xor a0, a4, a0
+; CHECK-I-NEXT:    srli a0, a0, 7
+; CHECK-I-NEXT:    sb a0, 0(a2)
+; CHECK-I-NEXT:    sb a0, 0(a3)
+; CHECK-I-NEXT:    ret
+;
+; CHECK-M-LABEL: commutative_clmulr_i8:
+; CHECK-M:       # %bb.0:
+; CHECK-M-NEXT:    zext.b a1, a1
+; CHECK-M-NEXT:    andi a4, a0, 2
+; CHECK-M-NEXT:    slli a5, a1, 1
+; CHECK-M-NEXT:    seqz a4, a4
+; CHECK-M-NEXT:    addi a4, a4, -1
+; CHECK-M-NEXT:    andi a6, a0, 1
+; CHECK-M-NEXT:    and a4, a4, a5
+; CHECK-M-NEXT:    seqz a5, a6
+; CHECK-M-NEXT:    addi a5, a5, -1
+; CHECK-M-NEXT:    andi a6, a0, 4
+; CHECK-M-NEXT:    slli a7, a1, 2
+; CHECK-M-NEXT:    seqz a6, a6
+; CHECK-M-NEXT:    addi a6, a6, -1
+; CHECK-M-NEXT:    andi t0, a0, 8
+; CHECK-M-NEXT:    and a6, a6, a7
+; CHECK-M-NEXT:    seqz a7, t0
+; CHECK-M-NEXT:    slli t0, a1, 3
+; CHECK-M-NEXT:    addi a7, a7, -1
+; CHECK-M-NEXT:    and a7, a7, t0
+; CHECK-M-NEXT:    and a5, a5, a1
+; CHECK-M-NEXT:    xor a4, a5, a4
+; CHECK-M-NEXT:    xor a5, a6, a7
+; CHECK-M-NEXT:    xor a4, a4, a5
+; CHECK-M-NEXT:    andi a5, a0, 16
+; CHECK-M-NEXT:    slli a6, a1, 4
+; CHECK-M-NEXT:    seqz a5, a5
+; CHECK-M-NEXT:    addi a5, a5, -1
+; CHECK-M-NEXT:    andi a7, a0, 32
+; CHECK-M-NEXT:    and a5, a5, a6
+; CHECK-M-NEXT:    seqz a6, a7
+; CHECK-M-NEXT:    slli a7, a1, 5
+; CHECK-M-NEXT:    addi a6, a6, -1
+; CHECK-M-NEXT:    and a6, a6, a7
+; CHECK-M-NEXT:    andi a7, a0, 64
+; CHECK-M-NEXT:    xor a5, a5, a6
+; CHECK-M-NEXT:    seqz a6, a7
+; CHECK-M-NEXT:    slli a7, a1, 6
+; CHECK-M-NEXT:    addi a6, a6, -1
+; CHECK-M-NEXT:    and a6, a6, a7
+; CHECK-M-NEXT:    andi a0, a0, 128
+; CHECK-M-NEXT:    xor a5, a5, a6
+; CHECK-M-NEXT:    seqz a0, a0
+; CHECK-M-NEXT:    slli a1, a1, 7
+; CHECK-M-NEXT:    addi a0, a0, -1
+; CHECK-M-NEXT:    xor a4, a4, a5
+; CHECK-M-NEXT:    and a0, a0, a1
+; CHECK-M-NEXT:    xor a0, a4, a0
+; CHECK-M-NEXT:    srli a0, a0, 7
+; CHECK-M-NEXT:    sb a0, 0(a2)
+; CHECK-M-NEXT:    sb a0, 0(a3)
+; CHECK-M-NEXT:    ret
+;
+; CHECK-ZBS-LABEL: commutative_clmulr_i8:
+; CHECK-ZBS:       # %bb.0:
+; CHECK-ZBS-NEXT:    zext.b a1, a1
+; CHECK-ZBS-NEXT:    andi a4, a0, 2
+; CHECK-ZBS-NEXT:    slli a5, a1, 1
+; CHECK-ZBS-NEXT:    seqz a4, a4
+; CHECK-ZBS-NEXT:    addi a4, a4, -1
+; CHECK-ZBS-NEXT:    andi a6, a0, 1
+; CHECK-ZBS-NEXT:    and a4, a4, a5
+; CHECK-ZBS-NEXT:    seqz a5, a6
+; CHECK-ZBS-NEXT:    addi a5, a5, -1
+; CHECK-ZBS-NEXT:    andi a6, a0, 4
+; CHECK-ZBS-NEXT:    slli a7, a1, 2
+; CHECK-ZBS-NEXT:    seqz a6, a6
+; CHECK-ZBS-NEXT:    addi a6, a6, -1
+; CHECK-ZBS-NEXT:    andi t0, a0, 8
+; CHECK-ZBS-NEXT:    and a6, a6, a7
+; CHECK-ZBS-NEXT:    seqz a7, t0
+; CHECK-ZBS-NEXT:    slli t0, a1, 3
+; CHECK-ZBS-NEXT:    addi a7, a7, -1
+; CHECK-ZBS-NEXT:    and a7, a7, t0
+; CHECK-ZBS-NEXT:    and a5, a5, a1
+; CHECK-ZBS-NEXT:    xor a4, a5, a4
+; CHECK-ZBS-NEXT:    xor a5, a6, a7
+; CHECK-ZBS-NEXT:    xor a4, a4, a5
+; CHECK-ZBS-NEXT:    andi a5, a0, 16
+; CHECK-ZBS-NEXT:    slli a6, a1, 4
+; CHECK-ZBS-NEXT:    seqz a5, a5
+; CHECK-ZBS-NEXT:    addi a5, a5, -1
+; CHECK-ZBS-NEXT:    andi a7, a0, 32
+; CHECK-ZBS-NEXT:    and a5, a5, a6
+; CHECK-ZBS-NEXT:    seqz a6, a7
+; CHECK-ZBS-NEXT:    slli a7, a1, 5
+; CHECK-ZBS-NEXT:    addi a6, a6, -1
+; CHECK-ZBS-NEXT:    and a6, a6, a7
+; CHECK-ZBS-NEXT:    andi a7, a0, 64
+; CHECK-ZBS-NEXT:    xor a5, a5, a6
+; CHECK-ZBS-NEXT:    seqz a6, a7
+; CHECK-ZBS-NEXT:    slli a7, a1, 6
+; CHECK-ZBS-NEXT:    addi a6, a6, -1
+; CHECK-ZBS-NEXT:    and a6, a6, a7
+; CHECK-ZBS-NEXT:    andi a0, a0, 128
+; CHECK-ZBS-NEXT:    xor a5, a5, a6
+; CHECK-ZBS-NEXT:    seqz a0, a0
+; CHECK-ZBS-NEXT:    slli a1, a1, 7
+; CHECK-ZBS-NEXT:    addi a0, a0, -1
+; CHECK-ZBS-NEXT:    xor a4, a4, a5
+; CHECK-ZBS-NEXT:    and a0, a0, a1
+; CHECK-ZBS-NEXT:    xor a0, a4, a0
+; CHECK-ZBS-NEXT:    srli a0, a0, 7
+; CHECK-ZBS-NEXT:    sb a0, 0(a2)
+; CHECK-ZBS-NEXT:    sb a0, 0(a3)
+; CHECK-ZBS-NEXT:    ret
+;
+; CHECK-ZBC-LABEL: commutative_clmulr_i8:
+; CHECK-ZBC:       # %bb.0:
+; CHECK-ZBC-NEXT:    zext.b a0, a0
+; CHECK-ZBC-NEXT:    zext.b a1, a1
+; CHECK-ZBC-NEXT:    clmul a0, a1, a0
+; CHECK-ZBC-NEXT:    srli a0, a0, 7
+; CHECK-ZBC-NEXT:    sb a0, 0(a2)
+; CHECK-ZBC-NEXT:    sb a0, 0(a3)
+; CHECK-ZBC-NEXT:    ret
   %x.ext = zext i8 %x to i16
   %y.ext = zext i8 %y to i16
   %clmul_xy = call i16 @llvm.clmul.i16(i16 %x.ext, i16 %y.ext)
@@ -1894,6 +2277,42 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; RV64IMZBS-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    addi sp, sp, 32
 ; RV64IMZBS-NEXT:    ret
+;
+; RV32IMZBC-LABEL: mul_use_commutative_clmul_i8:
+; RV32IMZBC:       # %bb.0:
+; RV32IMZBC-NEXT:    addi sp, sp, -16
+; RV32IMZBC-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    mv s0, a3
+; RV32IMZBC-NEXT:    clmul s1, a0, a1
+; RV32IMZBC-NEXT:    sb s1, 0(a2)
+; RV32IMZBC-NEXT:    mv a0, s1
+; RV32IMZBC-NEXT:    call use
+; RV32IMZBC-NEXT:    sb s1, 0(s0)
+; RV32IMZBC-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    addi sp, sp, 16
+; RV32IMZBC-NEXT:    ret
+;
+; RV64IMZBC-LABEL: mul_use_commutative_clmul_i8:
+; RV64IMZBC:       # %bb.0:
+; RV64IMZBC-NEXT:    addi sp, sp, -32
+; RV64IMZBC-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64IMZBC-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64IMZBC-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64IMZBC-NEXT:    mv s0, a3
+; RV64IMZBC-NEXT:    clmul s1, a0, a1
+; RV64IMZBC-NEXT:    sb s1, 0(a2)
+; RV64IMZBC-NEXT:    mv a0, s1
+; RV64IMZBC-NEXT:    call use
+; RV64IMZBC-NEXT:    sb s1, 0(s0)
+; RV64IMZBC-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IMZBC-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IMZBC-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64IMZBC-NEXT:    addi sp, sp, 32
+; RV64IMZBC-NEXT:    ret
   %xy = call i8 @llvm.clmul.i8(i8 %x, i8 %y)
   %yx = call i8 @llvm.clmul.i8(i8 %y, i8 %x)
   store i8 %xy, ptr %p0
@@ -7788,6 +8207,304 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
 ; RV64IMZBS-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
 ; RV64IMZBS-NEXT:    addi sp, sp, 128
 ; RV64IMZBS-NEXT:    ret
+;
+; RV32IMZBC-LABEL: commutative_clmulr_v2i64:
+; RV32IMZBC:       # %bb.0:
+; RV32IMZBC-NEXT:    addi sp, sp, -16
+; RV32IMZBC-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
+; RV32IMZBC-NEXT:    lw a4, 4(a0)
+; RV32IMZBC-NEXT:    lui a6, 16
+; RV32IMZBC-NEXT:    lw t2, 8(a0)
+; RV32IMZBC-NEXT:    lw a5, 12(a0)
+; RV32IMZBC-NEXT:    lw t4, 0(a1)
+; RV32IMZBC-NEXT:    addi a6, a6, -256
+; RV32IMZBC-NEXT:    srli a7, a4, 8
+; RV32IMZBC-NEXT:    srli t0, a4, 24
+; RV32IMZBC-NEXT:    and t1, a4, a6
+; RV32IMZBC-NEXT:    and a7, a7, a6
+; RV32IMZBC-NEXT:    slli t1, t1, 8
+; RV32IMZBC-NEXT:    slli t3, a4, 24
+; RV32IMZBC-NEXT:    or a7, a7, t0
+; RV32IMZBC-NEXT:    or t0, t3, t1
+; RV32IMZBC-NEXT:    or a7, t0, a7
+; RV32IMZBC-NEXT:    lui t0, 61681
+; RV32IMZBC-NEXT:    srli t1, a7, 4
+; RV32IMZBC-NEXT:    addi t0, t0, -241
+; RV32IMZBC-NEXT:    and t1, t1, t0
+; RV32IMZBC-NEXT:    and a7, a7, t0
+; RV32IMZBC-NEXT:    slli a7, a7, 4
+; RV32IMZBC-NEXT:    lui t3, 209715
+; RV32IMZBC-NEXT:    or a7, t1, a7
+; RV32IMZBC-NEXT:    addi t1, t3, 819
+; RV32IMZBC-NEXT:    srli t3, a7, 2
+; RV32IMZBC-NEXT:    and a7, a7, t1
+; RV32IMZBC-NEXT:    and t3, t3, t1
+; RV32IMZBC-NEXT:    slli a7, a7, 2
+; RV32IMZBC-NEXT:    lw t5, 0(a0)
+; RV32IMZBC-NEXT:    or t6, t3, a7
+; RV32IMZBC-NEXT:    lw a7, 4(a1)
+; RV32IMZBC-NEXT:    lw t3, 8(a1)
+; RV32IMZBC-NEXT:    lw a0, 12(a1)
+; RV32IMZBC-NEXT:    srli s0, t6, 1
+; RV32IMZBC-NEXT:    lui a1, 349525
+; RV32IMZBC-NEXT:    srli s1, t4, 8
+; RV32IMZBC-NEXT:    and s1, s1, a6
+; RV32IMZBC-NEXT:    srli s2, t4, 24
+; RV32IMZBC-NEXT:    or s1, s1, s2
+; RV32IMZBC-NEXT:    and s2, t4, a6
+; RV32IMZBC-NEXT:    slli s2, s2, 8
+; RV32IMZBC-NEXT:    slli t4, t4, 24
+; RV32IMZBC-NEXT:    addi a1, a1, 1365
+; RV32IMZBC-NEXT:    or t4, t4, s2
+; RV32IMZBC-NEXT:    and s0, s0, a1
+; RV32IMZBC-NEXT:    or t4, t4, s1
+; RV32IMZBC-NEXT:    srli s1, t4, 4
+; RV32IMZBC-NEXT:    and t4, t4, t0
+; RV32IMZBC-NEXT:    and s1, s1, t0
+; RV32IMZBC-NEXT:    slli t4, t4, 4
+; RV32IMZBC-NEXT:    and t6, t6, a1
+; RV32IMZBC-NEXT:    or t4, s1, t4
+; RV32IMZBC-NEXT:    srli s1, t4, 2
+; RV32IMZBC-NEXT:    and t4, t4, t1
+; RV32IMZBC-NEXT:    and s1, s1, t1
+; RV32IMZBC-NEXT:    slli t4, t4, 2
+; RV32IMZBC-NEXT:    slli t6, t6, 1
+; RV32IMZBC-NEXT:    or s1, s1, t4
+; RV32IMZBC-NEXT:    or t4, s0, t6
+; RV32IMZBC-NEXT:    srli t6, s1, 1
+; RV32IMZBC-NEXT:    and t6, t6, a1
+; RV32IMZBC-NEXT:    srli s0, t5, 8
+; RV32IMZBC-NEXT:    and s0, s0, a6
+; RV32IMZBC-NEXT:    srli s2, t5, 24
+; RV32IMZBC-NEXT:    or s0, s0, s2
+; RV32IMZBC-NEXT:    and s2, t5, a6
+; RV32IMZBC-NEXT:    slli s2, s2, 8
+; RV32IMZBC-NEXT:    slli t5, t5, 24
+; RV32IMZBC-NEXT:    and s1, s1, a1
+; RV32IMZBC-NEXT:    or t5, t5, s2
+; RV32IMZBC-NEXT:    slli s1, s1, 1
+; RV32IMZBC-NEXT:    or t5, t5, s0
+; RV32IMZBC-NEXT:    srli s0, t5, 4
+; RV32IMZBC-NEXT:    and t5, t5, t0
+; RV32IMZBC-NEXT:    and s0, s0, t0
+; RV32IMZBC-NEXT:    slli t5, t5, 4
+; RV32IMZBC-NEXT:    or t6, t6, s1
+; RV32IMZBC-NEXT:    or t5, s0, t5
+; RV32IMZBC-NEXT:    srli s0, t5, 2
+; RV32IMZBC-NEXT:    and t5, t5, t1
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    slli t5, t5, 2
+; RV32IMZBC-NEXT:    or t5, s0, t5
+; RV32IMZBC-NEXT:    srli s0, a7, 8
+; RV32IMZBC-NEXT:    and s0, s0, a6
+; RV32IMZBC-NEXT:    srli s1, a7, 24
+; RV32IMZBC-NEXT:    or s0, s0, s1
+; RV32IMZBC-NEXT:    and s1, a7, a6
+; RV32IMZBC-NEXT:    slli s1, s1, 8
+; RV32IMZBC-NEXT:    slli s2, a7, 24
+; RV32IMZBC-NEXT:    or s1, s2, s1
+; RV32IMZBC-NEXT:    srli s2, t5, 1
+; RV32IMZBC-NEXT:    and s2, s2, a1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 4
+; RV32IMZBC-NEXT:    and s0, s0, t0
+; RV32IMZBC-NEXT:    and s1, s1, t0
+; RV32IMZBC-NEXT:    slli s0, s0, 4
+; RV32IMZBC-NEXT:    and t5, t5, a1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 2
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    and s1, s1, t1
+; RV32IMZBC-NEXT:    slli s0, s0, 2
+; RV32IMZBC-NEXT:    slli t5, t5, 1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 1
+; RV32IMZBC-NEXT:    and s0, s0, a1
+; RV32IMZBC-NEXT:    and s1, s1, a1
+; RV32IMZBC-NEXT:    slli s0, s0, 1
+; RV32IMZBC-NEXT:    or t5, s2, t5
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    clmul t6, t6, t4
+; RV32IMZBC-NEXT:    clmul t5, s0, t5
+; RV32IMZBC-NEXT:    clmulh t4, s0, t4
+; RV32IMZBC-NEXT:    xor t5, t5, t6
+; RV32IMZBC-NEXT:    xor t4, t4, t5
+; RV32IMZBC-NEXT:    srli t5, t4, 8
+; RV32IMZBC-NEXT:    and t5, t5, a6
+; RV32IMZBC-NEXT:    srli t6, t4, 24
+; RV32IMZBC-NEXT:    and s0, t4, a6
+; RV32IMZBC-NEXT:    slli t4, t4, 24
+; RV32IMZBC-NEXT:    slli s0, s0, 8
+; RV32IMZBC-NEXT:    or t5, t5, t6
+; RV32IMZBC-NEXT:    or t4, t4, s0
+; RV32IMZBC-NEXT:    or t4, t4, t5
+; RV32IMZBC-NEXT:    srli t5, t4, 4
+; RV32IMZBC-NEXT:    and t5, t5, t0
+; RV32IMZBC-NEXT:    and t4, t4, t0
+; RV32IMZBC-NEXT:    srli t6, a5, 8
+; RV32IMZBC-NEXT:    slli t4, t4, 4
+; RV32IMZBC-NEXT:    and t6, t6, a6
+; RV32IMZBC-NEXT:    srli s0, a5, 24
+; RV32IMZBC-NEXT:    and s1, a5, a6
+; RV32IMZBC-NEXT:    slli s1, s1, 8
+; RV32IMZBC-NEXT:    slli s2, a5, 24
+; RV32IMZBC-NEXT:    or t6, t6, s0
+; RV32IMZBC-NEXT:    or s0, s2, s1
+; RV32IMZBC-NEXT:    or t4, t5, t4
+; RV32IMZBC-NEXT:    or t5, s0, t6
+; RV32IMZBC-NEXT:    srli t6, t5, 4
+; RV32IMZBC-NEXT:    and t5, t5, t0
+; RV32IMZBC-NEXT:    and t6, t6, t0
+; RV32IMZBC-NEXT:    slli s0, t5, 4
+; RV32IMZBC-NEXT:    srli t5, t4, 2
+; RV32IMZBC-NEXT:    or t6, t6, s0
+; RV32IMZBC-NEXT:    srli s0, t6, 2
+; RV32IMZBC-NEXT:    and t6, t6, t1
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    slli t6, t6, 2
+; RV32IMZBC-NEXT:    or t6, s0, t6
+; RV32IMZBC-NEXT:    srli s0, t3, 8
+; RV32IMZBC-NEXT:    and s0, s0, a6
+; RV32IMZBC-NEXT:    srli s1, t3, 24
+; RV32IMZBC-NEXT:    or s0, s0, s1
+; RV32IMZBC-NEXT:    and s1, t3, a6
+; RV32IMZBC-NEXT:    slli s1, s1, 8
+; RV32IMZBC-NEXT:    slli t3, t3, 24
+; RV32IMZBC-NEXT:    srli s2, t6, 1
+; RV32IMZBC-NEXT:    or t3, t3, s1
+; RV32IMZBC-NEXT:    and s1, s2, a1
+; RV32IMZBC-NEXT:    or t3, t3, s0
+; RV32IMZBC-NEXT:    srli s0, t3, 4
+; RV32IMZBC-NEXT:    and t3, t3, t0
+; RV32IMZBC-NEXT:    and s0, s0, t0
+; RV32IMZBC-NEXT:    slli t3, t3, 4
+; RV32IMZBC-NEXT:    and t6, t6, a1
+; RV32IMZBC-NEXT:    or t3, s0, t3
+; RV32IMZBC-NEXT:    srli s0, t3, 2
+; RV32IMZBC-NEXT:    and t3, t3, t1
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    slli t3, t3, 2
+; RV32IMZBC-NEXT:    slli t6, t6, 1
+; RV32IMZBC-NEXT:    or s0, s0, t3
+; RV32IMZBC-NEXT:    or t3, s1, t6
+; RV32IMZBC-NEXT:    srli t6, s0, 1
+; RV32IMZBC-NEXT:    and t6, t6, a1
+; RV32IMZBC-NEXT:    srli s1, t2, 8
+; RV32IMZBC-NEXT:    and s1, s1, a6
+; RV32IMZBC-NEXT:    srli s2, t2, 24
+; RV32IMZBC-NEXT:    or s1, s1, s2
+; RV32IMZBC-NEXT:    and s2, t2, a6
+; RV32IMZBC-NEXT:    slli s2, s2, 8
+; RV32IMZBC-NEXT:    slli t2, t2, 24
+; RV32IMZBC-NEXT:    and s0, s0, a1
+; RV32IMZBC-NEXT:    or t2, t2, s2
+; RV32IMZBC-NEXT:    slli s0, s0, 1
+; RV32IMZBC-NEXT:    or t2, t2, s1
+; RV32IMZBC-NEXT:    srli s1, t2, 4
+; RV32IMZBC-NEXT:    and t2, t2, t0
+; RV32IMZBC-NEXT:    and s1, s1, t0
+; RV32IMZBC-NEXT:    slli t2, t2, 4
+; RV32IMZBC-NEXT:    or t6, t6, s0
+; RV32IMZBC-NEXT:    or t2, s1, t2
+; RV32IMZBC-NEXT:    srli s0, t2, 2
+; RV32IMZBC-NEXT:    and t2, t2, t1
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    slli t2, t2, 2
+; RV32IMZBC-NEXT:    or t2, s0, t2
+; RV32IMZBC-NEXT:    srli s0, a0, 8
+; RV32IMZBC-NEXT:    and s0, s0, a6
+; RV32IMZBC-NEXT:    srli s1, a0, 24
+; RV32IMZBC-NEXT:    or s0, s0, s1
+; RV32IMZBC-NEXT:    and s1, a0, a6
+; RV32IMZBC-NEXT:    slli s1, s1, 8
+; RV32IMZBC-NEXT:    slli s2, a0, 24
+; RV32IMZBC-NEXT:    or s1, s2, s1
+; RV32IMZBC-NEXT:    srli s2, t2, 1
+; RV32IMZBC-NEXT:    and s2, s2, a1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 4
+; RV32IMZBC-NEXT:    and s0, s0, t0
+; RV32IMZBC-NEXT:    and s1, s1, t0
+; RV32IMZBC-NEXT:    slli s0, s0, 4
+; RV32IMZBC-NEXT:    and t2, t2, a1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 2
+; RV32IMZBC-NEXT:    and s0, s0, t1
+; RV32IMZBC-NEXT:    and s1, s1, t1
+; RV32IMZBC-NEXT:    slli s0, s0, 2
+; RV32IMZBC-NEXT:    slli t2, t2, 1
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    srli s1, s0, 1
+; RV32IMZBC-NEXT:    and s0, s0, a1
+; RV32IMZBC-NEXT:    and s1, s1, a1
+; RV32IMZBC-NEXT:    slli s0, s0, 1
+; RV32IMZBC-NEXT:    or t2, s2, t2
+; RV32IMZBC-NEXT:    or s0, s1, s0
+; RV32IMZBC-NEXT:    clmul t6, t6, t3
+; RV32IMZBC-NEXT:    clmul t2, s0, t2
+; RV32IMZBC-NEXT:    and t5, t5, t1
+; RV32IMZBC-NEXT:    clmulh t3, s0, t3
+; RV32IMZBC-NEXT:    and t4, t4, t1
+; RV32IMZBC-NEXT:    xor t2, t2, t6
+; RV32IMZBC-NEXT:    slli t4, t4, 2
+; RV32IMZBC-NEXT:    xor t2, t3, t2
+; RV32IMZBC-NEXT:    or t3, t5, t4
+; RV32IMZBC-NEXT:    srli t4, t2, 8
+; RV32IMZBC-NEXT:    srli t5, t3, 1
+; RV32IMZBC-NEXT:    and t4, t4, a6
+; RV32IMZBC-NEXT:    srli t6, t2, 24
+; RV32IMZBC-NEXT:    and a6, t2, a6
+; RV32IMZBC-NEXT:    slli t2, t2, 24
+; RV32IMZBC-NEXT:    slli a6, a6, 8
+; RV32IMZBC-NEXT:    or t4, t4, t6
+; RV32IMZBC-NEXT:    or a6, t2, a6
+; RV32IMZBC-NEXT:    and t2, t5, a1
+; RV32IMZBC-NEXT:    or a6, a6, t4
+; RV32IMZBC-NEXT:    srli t4, a6, 4
+; RV32IMZBC-NEXT:    and a6, a6, t0
+; RV32IMZBC-NEXT:    and t0, t4, t0
+; RV32IMZBC-NEXT:    slli a6, a6, 4
+; RV32IMZBC-NEXT:    and t3, t3, a1
+; RV32IMZBC-NEXT:    or a6, t0, a6
+; RV32IMZBC-NEXT:    srli t0, a6, 2
+; RV32IMZBC-NEXT:    and a6, a6, t1
+; RV32IMZBC-NEXT:    and t0, t0, t1
+; RV32IMZBC-NEXT:    slli a6, a6, 2
+; RV32IMZBC-NEXT:    slli t3, t3, 1
+; RV32IMZBC-NEXT:    or a6, t0, a6
+; RV32IMZBC-NEXT:    or t0, t2, t3
+; RV32IMZBC-NEXT:    srli t1, a6, 1
+; RV32IMZBC-NEXT:    and t1, t1, a1
+; RV32IMZBC-NEXT:    and a1, a6, a1
+; RV32IMZBC-NEXT:    slli a1, a1, 1
+; RV32IMZBC-NEXT:    clmulr a4, a7, a4
+; RV32IMZBC-NEXT:    or a1, t1, a1
+; RV32IMZBC-NEXT:    clmulr a0, a0, a5
+; RV32IMZBC-NEXT:    sw t0, 0(a2)
+; RV32IMZBC-NEXT:    sw a4, 4(a2)
+; RV32IMZBC-NEXT:    sw a1, 8(a2)
+; RV32IMZBC-NEXT:    sw a0, 12(a2)
+; RV32IMZBC-NEXT:    sw t0, 0(a3)
+; RV32IMZBC-NEXT:    sw a4, 4(a3)
+; RV32IMZBC-NEXT:    sw a1, 8(a3)
+; RV32IMZBC-NEXT:    sw a0, 12(a3)
+; RV32IMZBC-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
+; RV32IMZBC-NEXT:    addi sp, sp, 16
+; RV32IMZBC-NEXT:    ret
+;
+; RV64IMZBC-LABEL: commutative_clmulr_v2i64:
+; RV64IMZBC:       # %bb.0:
+; RV64IMZBC-NEXT:    clmulr a0, a2, a0
+; RV64IMZBC-NEXT:    clmulr a1, a3, a1
+; RV64IMZBC-NEXT:    sd a0, 0(a4)
+; RV64IMZBC-NEXT:    sd a1, 8(a4)
+; RV64IMZBC-NEXT:    sd a0, 0(a5)
+; RV64IMZBC-NEXT:    sd a1, 8(a5)
+; RV64IMZBC-NEXT:    ret
   %x.ext = zext <2 x i64> %x to <2 x i128>
   %y.ext = zext <2 x i64> %y to <2 x i128>
   %clmul_xy = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %x.ext, <2 x i128> %y.ext)
@@ -7801,6 +8518,4 @@ define void @commutative_clmulr_v2i64(<2 x i64> %x, <2 x i64> %y, ptr %p0, ptr %
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-I: {{.*}}
-; CHECK-M: {{.*}}
-; CHECK-ZBS: {{.*}}
+; CHECK: {{.*}}

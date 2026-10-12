@@ -1807,6 +1807,8 @@ void direct_inside_try_catch_with_exception_type() {
 // LLVM:   store i32 42, ptr %[[EXN]]
 // LLVM:   invoke void @__cxa_throw(ptr %[[EXN]], ptr @_ZTIi, ptr null)
 // LLVM:           to label %[[UNREACHABLE:.*]] unwind label %[[LANDING_PAD:.*]]
+// LLVM: [[UNREACHABLE]]:
+// LLVM:   unreachable
 // LLVM: [[LANDING_PAD]]:
 // LLVM:   %[[LP:.*]] = landingpad { ptr, i32 }
 // LLVM:                   catch ptr @_ZTIi
@@ -1835,8 +1837,6 @@ void direct_inside_try_catch_with_exception_type() {
 // LLVM:   br label %[[TRY_CONT:.*]]
 // LLVM: [[TRY_CONT]]:
 // LLVM:   ret void
-// LLVM: [[UNREACHABLE]]:
-// LLVM:   unreachable
 
 // OGCG: define {{.*}} void @_Z43direct_inside_try_catch_with_exception_typev() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr

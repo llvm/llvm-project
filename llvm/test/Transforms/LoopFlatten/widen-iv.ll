@@ -981,6 +981,68 @@ i.loopdone:
   ret i32 0
 }
 
+; After widening, the backedge-taken count and the compare RHS have the same
+; type. This used to assert when trying to zero extend the backedge-taken count.
+define i32 @constBackedgeTakenCount() {
+; CHECK-LABEL: @constBackedgeTakenCount(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FLATTEN_TRIPCOUNT:%.*]] = mul i64 20, 20
+; CHECK-NEXT:    br label [[I_LOOP:%.*]]
+; CHECK:       i.loop:
+; CHECK-NEXT:    [[INDVAR1:%.*]] = phi i64 [ [[INDVAR_NEXT2:%.*]], [[J_LOOPDONE:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[J_LOOP:%.*]]
+; CHECK:       j.loop:
+; CHECK-NEXT:    call void @payload()
+; CHECK-NEXT:    br label [[J_LOOPDONE]]
+; CHECK:       j.loopdone:
+; CHECK-NEXT:    [[INDVAR_NEXT2]] = add i64 [[INDVAR1]], 1
+; CHECK-NEXT:    [[I_ATEND:%.*]] = icmp eq i64 [[INDVAR_NEXT2]], [[FLATTEN_TRIPCOUNT]]
+; CHECK-NEXT:    br i1 [[I_ATEND]], label [[I_LOOPDONE:%.*]], label [[I_LOOP]]
+; CHECK:       i.loopdone:
+; CHECK-NEXT:    ret i32 0
+;
+; DONTWIDEN-LABEL: @constBackedgeTakenCount(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    br label [[I_LOOP:%.*]]
+; DONTWIDEN:       i.loop:
+; DONTWIDEN-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[J_LOOPDONE:%.*]] ]
+; DONTWIDEN-NEXT:    br label [[J_LOOP:%.*]]
+; DONTWIDEN:       j.loop:
+; DONTWIDEN-NEXT:    [[J:%.*]] = phi i8 [ 0, [[I_LOOP]] ], [ [[J_INC:%.*]], [[J_LOOP]] ]
+; DONTWIDEN-NEXT:    call void @payload()
+; DONTWIDEN-NEXT:    [[J_INC]] = add i8 [[J]], 1
+; DONTWIDEN-NEXT:    [[J_NOTDONE:%.*]] = icmp ult i8 [[J]], 19
+; DONTWIDEN-NEXT:    br i1 [[J_NOTDONE]], label [[J_LOOP]], label [[J_LOOPDONE]]
+; DONTWIDEN:       j.loopdone:
+; DONTWIDEN-NEXT:    [[I_INC]] = add i8 [[I]], 1
+; DONTWIDEN-NEXT:    [[I_ATEND:%.*]] = icmp eq i8 [[I_INC]], 20
+; DONTWIDEN-NEXT:    br i1 [[I_ATEND]], label [[I_LOOPDONE:%.*]], label [[I_LOOP]]
+; DONTWIDEN:       i.loopdone:
+; DONTWIDEN-NEXT:    ret i32 0
+;
+entry:
+  br label %i.loop
+
+i.loop:
+  %i = phi i8 [ 0, %entry ], [ %i.inc, %j.loopdone ]
+  br label %j.loop
+
+j.loop:
+  %j = phi i8 [ 0, %i.loop ], [ %j.inc, %j.loop ]
+  call void @payload()
+  %j.inc = add i8 %j, 1
+  %j.notdone = icmp ult i8 %j, 19
+  br i1 %j.notdone, label %j.loop, label %j.loopdone
+
+j.loopdone:
+  %i.inc = add i8 %i, 1
+  %i.atend = icmp eq i8 %i.inc, 20
+  br i1 %i.atend, label %i.loopdone, label %i.loop
+
+i.loopdone:
+  ret i32 0
+}
+
 ; Same as @foo, but M is sext from i16. This used to assert because we thought
 ; this sext was from widening and try to look through it.
 define void @foo_M_sext(ptr %A, i32 %N, i16 %M) {

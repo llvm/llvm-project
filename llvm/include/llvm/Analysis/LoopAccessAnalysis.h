@@ -952,15 +952,6 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              bool ShouldCheckWrap = true,
              SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
-/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
-/// \p PSE. The \p Assume parameter indicates whether such additional run-time
-/// assumptions are allowed.
-LLVM_ABI std::optional<int64_t>
-getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp, const DominatorTree &DT,
-             const SymbolicStrideMap &StridesMap, bool Assume,
-             bool ShouldCheckWrap = true);
-
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This
 /// is a simple API that does not depend on the analysis pass.

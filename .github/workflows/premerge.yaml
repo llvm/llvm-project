@@ -168,14 +168,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
           WINDOWS_PROJECTS: ${{ env.projects_to_build }}
-          WINDOWS_CHECK_TARGETS: ${{ env.check_targets }}
+          WINDOWS_CHECK_TARGETS: ${{ env.project_check_targets }}
           WINDOWS_RUNTIMES: ${{ env.runtimes_to_build }}
           WINDOWS_RUNTIMES_CHECK_TARGETS: ${{ env.runtimes_check_targets }}
         run: |
-          bash -c "echo Building projects: ${projects_to_build}"
-          bash -c "echo Running project checks targets: ${project_check_targets}"
-          bash -c "echo Building runtimes: ${runtimes_to_build}"
-          bash -c "echo Running runtimes checks targets: ${runtimes_check_targets}"
+          bash -c "echo Building projects: $WINDOWS_PROJECTS"
+          bash -c "echo Running project checks targets: $WINDOWS_CHECK_TARGETS"
+          bash -c "echo Building runtimes: $WINDOWS_RUNTIMES"
+          bash -c "echo Running runtimes checks targets: $WINDOWS_RUNTIMES_CHECK_TARGETS"
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.

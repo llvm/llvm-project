@@ -117,7 +117,6 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  bit IsDefault = false;
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
@@ -153,8 +152,8 @@ class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
   LibcallCallingConv CallingConv = CC;
 }
 
-// A named runtime library whose Impls are made available as a unit. Impls use
-// the same dag vocabulary as SystemRuntimeLibrary.
+// A named runtime library whose Impls are made available as a unit. Impls is a
+// set of RuntimeLibcallImpls, optionally grouped with LibcallImpls.
 class LibcallLibrary<string name, dag impls,
                      RuntimeLibcallAvailability pred = AlwaysAvailable> {
   string LibraryName = name;
@@ -181,9 +180,10 @@ class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
-/// Define a complete top level set of runtime libcalls for a target.
+/// Define a complete top level set of runtime libcalls for a target. Every
+/// member of funcList must be a LibcallLibrary or LibraryRef.
 class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
-  /// Set the default calling convention assumed for RuntimeLibcallImpl members.
+  /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;

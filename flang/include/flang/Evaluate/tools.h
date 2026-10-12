@@ -1729,6 +1729,10 @@ std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &);
 // constant or structure constructor of an enumeration-type value.
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &);
 
+// Build INT(x), a default INTEGER reference to x's ordinal. The caller must
+// ensure x is of enumeration type.
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&);
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {

@@ -330,7 +330,7 @@ void WebAssemblyPassConfig::addIRPasses() {
     addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
-  addPass(createIndirectBrExpandPass());
+  addPass(createIndirectBrExpandPass(getOptLevel()));
 
   // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
   addPass(createWebAssemblyReduceToAnyAllTrueLegacyPass(
