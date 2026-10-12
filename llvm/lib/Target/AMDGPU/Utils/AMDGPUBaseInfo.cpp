@@ -145,6 +145,11 @@ unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
 }
 
+/// \returns barrier member count bit width in M0.
+unsigned getBarrierMemberCountBitWidth(unsigned VersionMajor) {
+  return VersionMajor >= 13 ? 8 : 6;
+}
+
 /// \returns VaSdst bit width
 inline unsigned getVaSdstBitWidth() { return 3; }
 
@@ -1686,6 +1691,10 @@ unsigned getAsynccntBitMask(const IsaVersion &Version) {
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
+}
+
+unsigned getBarrierMemberCountBitMask(const IsaVersion &Version) {
+  return (1 << getBarrierMemberCountBitWidth(Version.Major)) - 1;
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {

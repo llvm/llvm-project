@@ -2782,7 +2782,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxHeight = I;
           }
           NodeOrder.insert(maxHeight);
-          LLVM_DEBUG(dbgs() << maxHeight->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxHeight << " ");
           R.remove(maxHeight);
           for (const auto &OE : DDG->getOutEdges(maxHeight)) {
             SUnit *SU = OE.getDst();
@@ -2833,7 +2833,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxDepth = I;
           }
           NodeOrder.insert(maxDepth);
-          LLVM_DEBUG(dbgs() << maxDepth->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxDepth << " ");
           R.remove(maxDepth);
           if (Nodes.isExceedSU(maxDepth)) {
             Order = TopDown;
@@ -2878,7 +2878,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   LLVM_DEBUG({
     dbgs() << "Node order: ";
     for (SUnit *I : NodeOrder)
-      dbgs() << " " << I->NodeNum << " ";
+      dbgs() << " " << *I << " ";
     dbgs() << "\n";
   });
 }
@@ -2926,7 +2926,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       Schedule.computeStart(SU, &EarlyStart, &LateStart, II, this);
       LLVM_DEBUG({
         dbgs() << "\n";
-        dbgs() << "Inst (" << SU->NodeNum << ") ";
+        dbgs() << *SU << " ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
@@ -3842,9 +3842,8 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
         NumNodeOrderIssues++;
         LLVM_DEBUG(dbgs() << "Predecessor ");
       }
-      LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
-                        << " are scheduled before node " << SU->NodeNum
-                        << "\n");
+      LLVM_DEBUG(dbgs() << *Pred << " and successor " << *Succ
+                        << " are scheduled before node " << *SU << "\n");
     }
   }
 
@@ -3976,7 +3975,7 @@ void SMSchedule::print(raw_ostream &os) const {
     const_sched_iterator cycleInstrs = ScheduledInstrs.find(cycle);
     for (SUnit *CI : cycleInstrs->second) {
       os << "cycle " << cycle << " (" << stageScheduled(CI) << ") ";
-      os << "(" << CI->NodeNum << ") ";
+      os << *CI << " ";
       CI->getInstr()->print(os);
       os << "\n";
     }
@@ -4447,8 +4446,8 @@ bool SwingSchedulerDDG::isValidSchedule(const SMSchedule &Schedule) const {
     int MaxLateStart = CycleDst + Edge.getDistance() * II - Edge.getLatency();
     if (CycleSrc > MaxLateStart) {
       LLVM_DEBUG({
-        dbgs() << "Validation failed for edge from " << Src->NodeNum << " to "
-               << Dst->NodeNum << "\n";
+        dbgs() << "Validation failed for edge from " << *Src << " to " << *Dst
+               << "\n";
       });
       return false;
     }
