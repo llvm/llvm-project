@@ -602,8 +602,7 @@ InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
         Cost += 1; // zext operand to i32
     Insert = false;
   } else if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
-    // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
-    // with 2x 32-bit regs)
+    // Can be built in a single 32-bit mov
     Cost += 1;
     Insert = false;
   }
