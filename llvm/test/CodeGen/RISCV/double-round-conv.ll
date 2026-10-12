@@ -537,7 +537,6 @@ define i64 @test_trunc_si64(double %x) {
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call trunc
 ; RV32IFD-NEXT:    call __fixdfdi
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
@@ -556,7 +555,6 @@ define i64 @test_trunc_si64(double %x) {
 ; RV32IZFINXZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    .cfi_offset ra, -4
-; RV32IZFINXZDINX-NEXT:    call trunc
 ; RV32IZFINXZDINX-NEXT:    call __fixdfdi
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    .cfi_restore ra
@@ -650,7 +648,6 @@ define i64 @test_trunc_ui64(double %x) {
 ; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call trunc
 ; RV32IFD-NEXT:    call __fixunsdfdi
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    .cfi_restore ra
@@ -669,7 +666,6 @@ define i64 @test_trunc_ui64(double %x) {
 ; RV32IZFINXZDINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFINXZDINX-NEXT:    .cfi_offset ra, -4
-; RV32IZFINXZDINX-NEXT:    call trunc
 ; RV32IZFINXZDINX-NEXT:    call __fixunsdfdi
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    .cfi_restore ra

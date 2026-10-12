@@ -208,7 +208,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    v_add_i32_e32 v1, vcc, 1, v1
 ; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    v_trunc_f32_e32 v0, v0
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
@@ -226,7 +225,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; TONGA-NEXT:    s_mov_b32 s2, -1
 ; TONGA-NEXT:    v_add_u32_e32 v1, vcc, 1, v1
 ; TONGA-NEXT:    v_mul_f32_e32 v0, v1, v0
-; TONGA-NEXT:    v_trunc_f32_e32 v0, v0
 ; TONGA-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; TONGA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; TONGA-NEXT:    s_endpgm
@@ -244,14 +242,13 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; EG-LABEL: s_test_sdiv22_32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 12, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 11, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -264,7 +261,6 @@ define amdgpu_kernel void @s_test_sdiv22_32(ptr addrspace(1) %out, i32 %x, i32 %
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.X,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     FLT_TO_INT T0.X, PV.W,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
@@ -1528,7 +1524,6 @@ define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    v_add_i32_e32 v1, vcc, 1, v1
 ; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    v_trunc_f32_e32 v0, v0
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1555,7 +1550,6 @@ define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; TONGA-NEXT:    v_rcp_f32_e32 v0, v0
 ; TONGA-NEXT:    v_add_u32_e32 v1, vcc, 1, v1
 ; TONGA-NEXT:    v_mul_f32_e32 v0, v1, v0
-; TONGA-NEXT:    v_trunc_f32_e32 v0, v0
 ; TONGA-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; TONGA-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; TONGA-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1582,7 +1576,6 @@ define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1592,7 +1585,7 @@ define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 14, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 13, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1611,7 +1604,6 @@ define amdgpu_kernel void @v_sdiv_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.X,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     FLT_TO_INT * T0.W, PV.W,
 ; EG-NEXT:     BFE_INT T0.X, PV.W, 0.0, literal.x,
@@ -1658,7 +1650,6 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_rcp_f32_e32 v1, v1
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, 1, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_trunc_f32_e32 v0, v0
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 23
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1695,7 +1686,6 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_rcp_f32_e32 v1, v1
 ; TONGA-NEXT:    v_add_u32_e32 v0, vcc, 1, v0
 ; TONGA-NEXT:    v_mul_f32_e32 v0, v0, v1
-; TONGA-NEXT:    v_trunc_f32_e32 v0, v0
 ; TONGA-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; TONGA-NEXT:    v_bfe_i32 v0, v0, 0, 23
 ; TONGA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1732,7 +1722,6 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-NEXT:    v_add_u32_e32 v0, 1, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX9-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 23
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -1742,7 +1731,7 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 25, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 24, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1772,7 +1761,6 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     ADD_INT T0.W, PS, 1,
 ; EG-NEXT:     RECIP_IEEE * T0.X, T0.X,
 ; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
 ; EG-NEXT:     FLT_TO_INT * T0.W, PV.W,
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
