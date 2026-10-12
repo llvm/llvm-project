@@ -94,7 +94,7 @@ define <2 x double> @test_v2f64_fmul_fmul(<2 x double> %vec, double inreg %a) {
 ; GFX1251-GISEL:       ; %bb.0: ; %entry
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
+; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], s[0:1], 0x40240000
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
