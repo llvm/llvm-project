@@ -544,7 +544,7 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
   if (CapabilityExprMode) {
     // Handle LOCK_RETURNED, on a function or a function pointer.
     if (const auto *D = dyn_cast_or_null<NamedDecl>(CE->getCalleeDecl())) {
-      const auto *AttrD = D;
+      const NamedDecl *AttrD = D;
       if (const auto *FD = dyn_cast<FunctionDecl>(D))
         AttrD = FD->getMostRecentDecl();
       if (const auto *At = AttrD->getAttr<LockReturnedAttr>()) {

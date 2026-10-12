@@ -382,8 +382,7 @@ interface of a function, and should thus be placed on the function definition
 
 `RETURN_CAPABILITY` is an attribute on functions or methods, which declares
 that the function returns a reference to the given capability. It is used to
-annotate getter methods that return mutexes. It can also be applied to a
-function pointer (see {ref}`function-pointers`).
+annotate getter methods that return mutexes.
 
 ```c++
 class MyClass {
@@ -508,8 +507,6 @@ annotated function. See {ref}`mutexheader`, below, for example uses.
 ### GUARDED_VAR and PT_GUARDED_VAR
 
 Use of these attributes has been deprecated.
-
-(function-pointers)=
 
 ### Function Pointers
 

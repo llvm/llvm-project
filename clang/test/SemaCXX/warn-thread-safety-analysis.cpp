@@ -8377,6 +8377,8 @@ struct Guarded {
 };
 Mutex &mu_ref_impl(Guarded &g) LOCK_RETURNED(g.mu);
 Mutex *(*mu_of)(Guarded *g) LOCK_RETURNED(&g->mu);
+// As with the other attributes (see testReassignIncompatible), the initializer
+// is not checked against the attribute: the analysis trusts the declaration.
 Mutex &(&mu_ref_of)(Guarded &g) LOCK_RETURNED(g.mu) = mu_ref_impl;
 
 void testLockReturned(Guarded *g) {
