@@ -816,7 +816,19 @@ bool ArchSpec::SetTriple(llvm::StringRef triple) {
   if (ParseMachCPUDashSubtypeTriple(triple, *this))
     return true;
 
-  SetTriple(llvm::Triple(llvm::Triple::normalize(triple)));
+  llvm::Triple normalized(llvm::Triple::normalize(triple));
+  // Clang offload target IDs append the GPU and its features to a four-part
+  // triple. Rebuild the triple without that suffix and represent the GPU as its
+  // subarchitecture. For example, "amdgcn-amd-amdhsa--gfx942" becomes
+  // "amdgpu9.42-amd-amdhsa".
+  if (std::optional<llvm::AMDGPU::TargetID> target_id =
+          llvm::AMDGPU::TargetID::parseTargetIDString(triple)) {
+    llvm::Triple base(target_id->getTargetTripleString());
+    normalized = llvm::Triple(llvm::Triple::amdgpu,
+                              llvm::AMDGPU::getSubArch(target_id->getGPUKind()),
+                              base.getVendor(), base.getOS());
+  }
+  SetTriple(normalized);
   return IsValid();
 }
 

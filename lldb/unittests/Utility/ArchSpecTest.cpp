@@ -209,6 +209,24 @@ TEST_P(ArchSpecAMDGPUTest, SetTriple) {
   EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), AS.GetClangTargetCPU());
 }
 
+TEST(ArchSpecTest, SetTripleFromAMDGPUOffloadTarget) {
+  ArchSpec AS("amdgcn-amd-amdhsa--gfx942");
+  EXPECT_EQ("amdgpu9.42-amd-amdhsa", AS.GetTriple().str());
+  EXPECT_EQ(llvm::Triple::amdgpu, AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, AS.GetTriple().getSubArch());
+  EXPECT_EQ(ArchSpec::eCore_amd_gpu, AS.GetCore());
+  EXPECT_EQ("gfx942", AS.GetClangTargetCPU());
+
+  ArchSpec WithFeatures("amdgcn-amd-amdhsa--gfx90a:sramecc+:xnack-");
+  EXPECT_EQ("amdgpu9.0a-amd-amdhsa", WithFeatures.GetTriple().str());
+  EXPECT_EQ(llvm::Triple::AMDGPUSubArch90A,
+            WithFeatures.GetTriple().getSubArch());
+  EXPECT_EQ("gfx90a", WithFeatures.GetClangTargetCPU());
+
+  ArchSpec WithSubArch("amdgpu9.42-amd-amdhsa--gfx942");
+  EXPECT_EQ("amdgpu9.42-amd-amdhsa", WithSubArch.GetTriple().str());
+}
+
 // SetArchitecture() from an ELF header must resolve every AMDGPU model to the
 // right arch, vendor, OS, subarch and core.
 TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
@@ -385,8 +403,7 @@ TEST(ArchSpecTest, MergeFrom) {
     ArchSpec B("arm-unknown-none-eabi");
 
     A.MergeFrom(B);
-    EXPECT_EQ(llvm::Triple::ARMSubArch_v7em,
-              A.GetTriple().getSubArch());
+    EXPECT_EQ(llvm::Triple::ARMSubArch_v7em, A.GetTriple().getSubArch());
   }
 }
 
