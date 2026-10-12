@@ -83,7 +83,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
@@ -99,16 +99,16 @@ __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto _
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it)
+    -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
+    -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
@@ -119,11 +119,9 @@ template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT,
           class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto
-__transform(_Iterator __first,
-            _Iterator __last,
-            output_iterator<const _OutCharT&> auto __out_it,
-            _UnaryOperation __operation) -> decltype(__out_it) {
+_LIBCPP_HIDE_FROM_ABI auto __transform(
+    _Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it, _UnaryOperation __operation)
+    -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
@@ -209,7 +207,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::
 /// conversion, which means the [\a __first, \a __last) always contains elements
 /// of the type \c char.
 template <class _CharT, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __write(basic_string_view<_CharT> __str,
         output_iterator<const _CharT&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
@@ -224,7 +222,7 @@ __write(basic_string_view<_CharT> __str,
 }
 
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
@@ -238,7 +236,7 @@ __write(_Iterator __first,
 ///
 /// Calls the function above where \a __size = \a __last - \a __first.
 template <contiguous_iterator _Iterator, class _ParserCharT>
-_LIBCPP_HIDE_FROM_ABI auto
+_LIBCPP_HIDE_FROM_ABI constexpr auto
 __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
@@ -263,7 +261,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(
   if (__size >= __specs.__width_)
     return __formatter::__transform(__first, __last, std::move(__out_it), __op);
 
-  __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
+  __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__std_.__alignment_);
   __out_it                        = __formatter::__fill(std::move(__out_it), __padding.__before_, __specs.__fill_);
   __out_it                        = __formatter::__transform(__first, __last, std::move(__out_it), __op);
   return __formatter::__fill(std::move(__out_it), __padding.__after_, __specs.__fill_);

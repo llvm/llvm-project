@@ -318,9 +318,9 @@ private:
   void (*__prepare_write_)(__output_buffer<_CharT>&, size_t);
   __max_output_size* __max_output_size_;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __available() const { return __capacity_ - __size_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr size_t __available() const { return __capacity_ - __size_; }
 
-  _LIBCPP_HIDE_FROM_ABI void __prepare_write(size_t __code_units) {
+  _LIBCPP_HIDE_FROM_ABI constexpr void __prepare_write(size_t __code_units) {
     // Always have space for one additional code unit. This is a precondition of the push_back function.
     __code_units += 1;
     if (__available() < __code_units)

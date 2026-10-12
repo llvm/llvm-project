@@ -101,7 +101,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __arg_t __get_packed_type(uint64_t __types, size
 // This function is not user observable, so it can directly use the non-standard
 // types of the "variant". See __arg_t for more details.
 template <class _Visitor, class _Context>
-_LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
   case __format::__arg_t::__none:
     return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__monostate_);
@@ -285,7 +285,7 @@ class _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
 public:
   class handle;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg() noexcept : __type_{__format::__arg_t::__none} {}
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_format_arg() noexcept : __type_{__format::__arg_t::__none} {}
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __type_ != __format::__arg_t::__none; }
 
@@ -353,7 +353,7 @@ public:
   __basic_format_arg_value<_Context> __value_;
   __format::__arg_t __type_;
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_format_arg(__format::__arg_t __type,
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_format_arg(__format::__arg_t __type,
                                                   __basic_format_arg_value<_Context> __value) noexcept
       : __value_(__value), __type_(__type) {}
 };

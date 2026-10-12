@@ -93,7 +93,8 @@ public:
 #  endif
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
   out() { return std::move(__out_it_); }
-  _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void 
+  advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:
   iterator __out_it_;
