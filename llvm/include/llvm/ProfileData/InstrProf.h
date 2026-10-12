@@ -231,8 +231,8 @@ LLVM_ABI bool isGPUProfTarget(const Module &M);
 /// Please use getIRPGOObjectName for LLVM IR instrumentation. This function is
 /// for front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
-/// used the key for profile lookup. Variable \c InLTO indicates if this
-/// is called in LTO optimization passes.
+/// used the key for profile lookup. If \c InLTO is true, \c F is named as if
+/// it had external linkage. See \c getIRPGOObjectName.
 LLVM_ABI std::string
 getPGOFuncName(const Function &F, bool InLTO = false,
                uint64_t Version = INSTR_PROF_INDEX_VERSION);
@@ -246,8 +246,11 @@ getPGOFuncName(StringRef RawFuncName, GlobalValue::LinkageTypes Linkage,
                StringRef FileName, uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
 /// \return the modified name for global object \c GO suitable to be
-/// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
-/// called from LTO optimization passes.
+/// used as the key for IRPGO profile lookup. If \c InLTO is true, \c GO is
+/// named as if it had external linkage, i.e. without a file name prefix. This
+/// is needed with sample profiles, which key local functions by their plain
+/// name. In LTO post-link passes it also lets objects LTO has internalized be
+/// found without a GUID, though they normally have one.
 LLVM_ABI std::string getIRPGOObjectName(const GlobalObject &GO,
                                         bool InLTO = false);
 
@@ -614,8 +617,8 @@ public:
 
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
-  /// passes such as indirect function call promotion. Variable \c InLTO
-  /// indicates if this is called from LTO optimization passes.
+  /// passes such as indirect function call promotion. \c InLTO is passed to
+  /// \c getIRPGOObjectName.
   /// A canonical name, removing non-__uniq suffixes, is added if
   /// \c AddCanonical is true.
   /// A function imported by ThinLTO as a copy of an alias (see

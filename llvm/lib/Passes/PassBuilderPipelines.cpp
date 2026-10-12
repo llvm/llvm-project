@@ -1080,7 +1080,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // We perform early indirect call promotion here, before globalopt.
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
-      // removed.
+      // removed. IsInLTO is set even without LTO, as sample profiles key local
+      // functions by their plain name.
       MPM.addPass(
           PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
   }
