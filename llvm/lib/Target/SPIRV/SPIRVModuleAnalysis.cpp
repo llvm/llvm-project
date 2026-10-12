@@ -152,6 +152,7 @@ void SPIRVModuleAnalysisImpl::setBaseInfo(const Module &M) {
   MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
+  MAI.InstrAuxDataRecords.clear();
   MAI.Reqs.clear();
   MAI.Reqs.initAvailableCapabilities(*ST);
 
