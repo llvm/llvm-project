@@ -10,6 +10,13 @@ func.func @test_argmax(%arg0: tensor<14x19xf32>) -> tensor<14xi32> {
 }
 
 // -----
+// CHECK-LABEL: argmin
+func.func @test_argmin(%arg0: tensor<14x19xf32>) -> tensor<14xi32> {
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<14x19xf32>) -> tensor<14xi32>
+  return %0 : tensor<14xi32>
+}
+
+// -----
 // CHECK-LABEL: avg_pool2d_f32
 func.func @test_avg_pool2d_f32(%arg0: tensor<1x7x7x9xf32>) -> tensor<1x7x7x9xf32> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
@@ -140,6 +147,15 @@ func.func @test_avg_pool2d_adaptive_q8(%arg0: tensor<1x7x7x9x!quant.uniform<i8:f
 func.func @test_conv2d(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(f32) local_bound(true) : (tensor<1x4x4x4xf32>, tensor<8x1x1x4xf32>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x8xf32>
   return %0 : tensor<1x4x4x8xf32>
+}
+
+// -----
+// Allow i64 accumulators to facilitate incremental lowerings to/from TOSA.
+// CHECK-LABEL: conv2d_i64
+// CHECK: acc_type(i64)
+func.func @test_conv2d_i64(%input: tensor<1x1x1x1xi16>, %weight: tensor<1x1x1x1xi8>, %bias: tensor<1xi64>, %izp: tensor<1xi16>, %wzp: tensor<1xi8>) -> tensor<1x1x1x1xi64> {
+  %0 = tosa.conv2d %input, %weight, %bias, %izp, %wzp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(i64) : (tensor<1x1x1x1xi16>, tensor<1x1x1x1xi8>, tensor<1xi64>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x1x1x1xi64>
+  return %0 : tensor<1x1x1x1xi64>
 }
 
 // -----
@@ -1413,6 +1429,13 @@ func.func @test_argmax_f8E5M2(%arg0: tensor<12x8x16xf8E5M2>) -> tensor<12x16xi32
 }
 
 // -----
+// CHECK-LABEL: argmin_f8E5M2
+func.func @test_argmin_f8E5M2(%arg0: tensor<12x8x16xf8E5M2>) -> tensor<12x16xi32> {
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<12x8x16xf8E5M2>) -> tensor<12x16xi32>
+  return %0 : tensor<12x16xi32>
+}
+
+// -----
 // CHECK-LABEL: avg_pool2d_f8E5M2
 func.func @test_avg_pool2d_f8E5M2(%arg0: tensor<1x7x7x9xf8E5M2>) -> tensor<1x7x7x9xf8E5M2> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E5M2>}> : () -> tensor<1xf8E5M2>
@@ -1615,6 +1638,13 @@ func.func @test_scatter_f8E5M2(%arg0: tensor<13x52x3xf8E5M2>, %arg1: tensor<13x2
 // CHECK-LABEL: argmax_f8E4M3FN
 func.func @test_argmax_f8E4M3FN(%arg0: tensor<12x8x16xf8E4M3FN>) -> tensor<12x16xi32> {
   %0 = tosa.argmax %arg0 axis(1) : (tensor<12x8x16xf8E4M3FN>) -> tensor<12x16xi32>
+  return %0 : tensor<12x16xi32>
+}
+
+// -----
+// CHECK-LABEL: argmin_f8E4M3FN
+func.func @test_argmin_f8E4M3FN(%arg0: tensor<12x8x16xf8E4M3FN>) -> tensor<12x16xi32> {
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<12x8x16xf8E4M3FN>) -> tensor<12x16xi32>
   return %0 : tensor<12x16xi32>
 }
 
@@ -2068,21 +2098,21 @@ func.func @test_assert_equal_shape() {
 
 // CHECK-LABEL: test_block_scaled_const
 func.func @test_block_scaled_const() -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
-  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 1.0}>> : [[0.0 : f8E4M3FN, 1.0 : f8E4M3FN, 0.001953125 : f8E4M3FN, 0.0078125 : f8E4M3FN, 
-                                                                                                                          2.0 : f8E4M3FN, 2.25 : f8E4M3FN, 2.5 : f8E4M3FN, 2.75 : f8E4M3FN, 
-                                                                                                                          15.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 1.0}>> : [[0.0 : f8E4M3FN, 1.0 : f8E4M3FN, 0.001953125 : f8E4M3FN, 0.0078125 : f8E4M3FN,
+                                                                                                                          2.0 : f8E4M3FN, 2.25 : f8E4M3FN, 2.5 : f8E4M3FN, 2.75 : f8E4M3FN,
+                                                                                                                          15.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
                                                                                                                           0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,  
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN], 
-                                                                                                                         [0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
-                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN],
+                                                                                                                         [0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
+                                                                                                                          0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN,
                                                                                                                           0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN, 0.0 : f8E4M3FN]]>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }

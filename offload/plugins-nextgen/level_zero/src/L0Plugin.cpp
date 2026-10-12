@@ -134,8 +134,6 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 
 Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
-  if (auto Err = ContextTLSTable.deinit())
-    return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;
@@ -298,11 +296,9 @@ Error LevelZeroPluginContextTy::initAllocators() {
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
-                                                    int64_t Size,
-                                                    void * /*HostPtr*/,
-                                                    TargetAllocTy Kind,
-                                                    size_t Alignment) {
+Expected<void *> LevelZeroPluginContextTy::allocate(
+    GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
+    TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
   int32_t ResolvedKind = Kind;
   if (Kind == TARGET_ALLOC_HOST) {
@@ -327,8 +323,9 @@ Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
                           AllocOptionTy::ALLOC_OPT_NONE);
 }
 
-Error LevelZeroPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
-                                           TargetAllocTy Kind) {
+Error LevelZeroPluginContextTy::deallocate(
+    GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+    GenericProfilerTy * /*ProfilerPtr*/) {
   if (Kind == TARGET_ALLOC_HOST) {
     if (!HostAllocator)
       return Plugin::error(ErrorCode::NOT_FOUND,

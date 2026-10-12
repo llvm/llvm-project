@@ -28,9 +28,9 @@ define i64 @ashr_exact(i64 %arg0, i64 %shift_amt) {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = exact V_ASHRREV_I32_e64 killed [[COPY5]], [[COPY3]], implicit $exec
+  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = exact V_ASHRREV_I32_e64 [[COPY5]], [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 31
-  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_1:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 killed [[S_MOV_B32_]], [[COPY3]], implicit $exec
+  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_1:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 [[S_MOV_B32_]], [[COPY3]], implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ASHRREV_I32_e64_]]
   ; CHECK-NEXT:   $vgpr1 = COPY [[V_ASHRREV_I32_e64_1]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1

@@ -22,8 +22,8 @@ entry:
 
 attributes #0 = { nounwind uwtable }
 
-!2 = !{!2, !"some domain"}
-!5 = !{!5, !"some other domain"}
+!2 = !{!2, i1 false, !"some domain"}
+!5 = !{!5, i1 false, !"some other domain"}
 
 ; Two scopes (which must be self-referential to avoid being "uniqued"):
 !1 = !{!1, !2, !"a scope in dom0"}

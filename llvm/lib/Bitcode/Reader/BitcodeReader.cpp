@@ -483,7 +483,11 @@ BitcodeReaderBase::readNameFromStrtab(ArrayRef<uint64_t> Record) {
   if (!UseStrtab)
     return {"", Record};
   // Invalid reference. Let the caller complain about the record being empty.
-  if (Record[0] + Record[1] > Strtab.size())
+  // Both values are read from the file. Compare without adding them: the sum
+  // wraps for a large strtab_offset, which would pass this check and yield a
+  // StringRef pointing outside the string table.
+  if (Record.size() < 2 || Record[0] > Strtab.size() ||
+      Record[1] > Strtab.size() - Record[0])
     return {"", {}};
   return {StringRef(Strtab.data() + Record[0], Record[1]), Record.slice(2)};
 }
@@ -5247,8 +5251,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
       bool isImplicitCode = Record.size() >= 5 && Record[4];
-      uint64_t AtomGroup = Record.size() == 7 ? Record[5] : 0;
-      uint8_t AtomRank = Record.size() == 7 ? Record[6] : 0;
+      uint64_t AtomGroup = Record.size() >= 7 ? Record[5] : 0;
+      uint8_t AtomRank = Record.size() >= 7 ? Record[6] : 0;
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -5263,9 +5267,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid debug loc record");
       }
+      Metadata *IRLayers = nullptr;
+      if (Record.size() >= 8 && Record[7])
+        IRLayers = MDLoader->getMetadataFwdRefOrLoad(Record[7] - 1);
 
       LastLoc = DILocation::get(Scope->getContext(), Line, Col, Scope, IA,
-                                isImplicitCode, AtomGroup, AtomRank);
+                                isImplicitCode, AtomGroup, AtomRank, IRLayers);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;
@@ -7039,6 +7046,15 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       cast<CallInst>(I)->setAttributes(PAL);
       if (isa<DbgInfoIntrinsic>(I))
         SeenDebugIntrinsic = true;
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(I)) {
+        unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
+        if (auto *ListAsValue =
+                dyn_cast<MetadataAsValue>(Decl->getOperand(ArgNo)))
+          if (auto *List = dyn_cast<MDNode>(ListAsValue->getMetadata()))
+            Decl->setOperand(
+                ArgNo, MetadataAsValue::get(
+                           Context, MDLoader->upgradeAliasScopeList(List)));
+      }
       if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
         I->deleteValue();
         return Err;

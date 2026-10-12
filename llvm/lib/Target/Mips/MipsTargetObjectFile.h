@@ -24,7 +24,8 @@ public:
   explicit MipsTargetObjectFile(bool UseSmallSection)
       : UseSmallSection(UseSmallSection) {}
 
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
   /// Return true if this global address should be placed into small data/bss
   /// section.

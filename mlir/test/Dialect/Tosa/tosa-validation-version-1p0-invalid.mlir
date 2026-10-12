@@ -2,6 +2,36 @@
 
 // -----
 
+func.func @test_matmul_rank2(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) -> tensor<3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<3x4xf32>, tensor<4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x5xf32>
+  return %0 : tensor<3x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank4(%arg0: tensor<2x3x3x4xf32>, %arg1: tensor<2x3x4x6xf32>) -> tensor<2x3x3x6xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x3x4xf32>, tensor<2x3x4x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x3x6xf32>
+  return %0 : tensor<2x3x3x6xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank3_batch_broadcast(%arg0: tensor<2x3x4xf32>, %arg1: tensor<1x4x5xf32>) -> tensor<2x3x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<2x3x4xf32>, tensor<1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x5xf32>
+  return %0 : tensor<2x3x5xf32>
+}
+
+// -----
+
 func.func @test_matmul_fp8_mixed_precision_operands(%arg0: tensor<1x14x19xf8E4M3FN>, %arg1: tensor<1x19x28xf8E5M2>) -> tensor<1x14x28xf16> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E4M3FN>}> : () -> tensor<1xf8E4M3FN>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf8E5M2>}> : () -> tensor<1xf8E5M2>
@@ -221,6 +251,14 @@ func.func @test_dyanmic_dims(%arg0: tensor<1x8x16xi8>) {
   %0 = tosa.identity %arg0 : (tensor<1x8x16xi8>) -> tensor<?x8x16xi8>
   // expected-error@+1 {{'tosa.argmax' op failed level check: operand shape dimension cannot be dynamic when targeting TOSA specification version 1.0 or below}}
   %1 = tosa.argmax %0 axis(1) : (tensor<?x8x16xi8>) -> tensor<?x16xi32>
+  return
+}
+
+// -----
+
+func.func @test_dyanmic_dims(%arg0: tensor<1x8x16xi8>) {
+  // expected-error@+1 {{'tosa.argmin' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %1 = tosa.argmin %arg0 axis(1) : (tensor<1x8x16xi8>) -> tensor<1x16xi32>
   return
 }
 

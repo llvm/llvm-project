@@ -12,6 +12,13 @@ func.func @test_argmax(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
 }
 
 // -----
+func.func @test_argmin(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
+  // expected-error@+1 {{'tosa.argmin' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.argmin %arg0 axis(1) : (tensor<14x19xbf16>) -> tensor<14xi32>
+  return %0 : tensor<14xi32>
+}
+
+// -----
 func.func @test_avg_pool2d(%arg0: tensor<1x7x7x9xbf16>, %arg1: tensor<1xbf16>, %arg2: tensor<1xbf16>) -> tensor<1x7x7x9xbf16> {
   // expected-error@+1 {{'tosa.avg_pool2d' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.avg_pool2d %arg0, %arg1, %arg2 kernel([2, 2]) stride([1, 1]) pad([0, 1, 0, 1]) acc_type(f32) : (tensor<1x7x7x9xbf16>, tensor<1xbf16>, tensor<1xbf16>) -> tensor<1x7x7x9xbf16>

@@ -1104,8 +1104,8 @@
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q3, [sp, x5]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q9, [x27, x6]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q10, [x30, x7, lsl #4]
-# CHECK-NEXT:  3      2     0.50           *            str	q11, [x29, x3, sxtx]
-# CHECK-NEXT:  3      2     0.50           *            str	q12, [x28, xzr, sxtx]
+# CHECK-NEXT:  2      2     0.50           *            str	q11, [x29, x3, sxtx]
+# CHECK-NEXT:  2      2     0.50           *            str	q12, [x28, xzr, sxtx]
 # CHECK-NEXT:  3      2     0.50           *            str	q13, [x27, x5, sxtx #4]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q14, [x26, w6, uxtw]
 # CHECK-NEXT:  1      6     0.33    *                   ldr	q15, [x25, w7, uxtw]
@@ -1281,7 +1281,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  102.33 173.33 173.33 376.75 219.75 159.25 159.25 208.00 79.00
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  102.33 173.33 173.33 376.25 219.25 158.75 158.75 208.00 79.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -2379,8 +2379,8 @@
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q3, [sp, x5]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q9, [x27, x6]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q10, [x30, x7, lsl #4]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.50   0.50   str	q11, [x29, x3, sxtx]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.50   0.50   str	q12, [x28, xzr, sxtx]
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   str	q11, [x29, x3, sxtx]
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50   str	q12, [x28, xzr, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   0.25   0.25   0.25   0.25   0.50   0.50   str	q13, [x27, x5, sxtx #4]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q14, [x26, w6, uxtw]
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   0.33    -      -      -      -      -      -     ldr	q15, [x25, w7, uxtw]

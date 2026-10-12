@@ -48,13 +48,13 @@ body: |
 # CHECK-LABEL: name: fold_partial
 # CHECK: %0:b64 = MOV_B64_sym @g
 # CHECK: %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, @g, 0, 0, $noreg
-# CHECK: %2:b64 = MULT64rr %0, %0
+# CHECK: %2:b64 = MULT64 %0, %0
 name: fold_partial
 tracksRegLiveness: true
 body: |
   bb.0:
     %0:b64 = MOV_B64_sym @g
     %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, %0, 0, 0, $noreg :: (load (s64), addrspace 1)
-    %2:b64 = MULT64rr %0, %0
+    %2:b64 = MULT64 %0, %0
     Return
 ...
