@@ -307,6 +307,15 @@ func.func @clamp_f32_nan_ignore_not_noop(%arg0: tensor<4xf32>) -> tensor<4xf32> 
 
 // -----
 
+// CHECK-LABEL: @clamp_i8_nan_ignore_noop
+func.func @clamp_i8_nan_ignore_noop(%arg0: tensor<4xi8>) -> tensor<4xi8> {
+  // CHECK: return %arg0 : tensor<4xi8>
+  %0 = tosa.clamp %arg0 min_val(-128 : i8) max_val(127 : i8) nan_mode<IGNORE> : (tensor<4xi8>) -> tensor<4xi8>
+  return %0 : tensor<4xi8>
+}
+
+// ----
+
 // CHECK-LABEL: @clamp_boolean_is_noop
 func.func @clamp_boolean_is_noop(%arg0: tensor<4xi1>) -> tensor<4xi1> {
   // CHECK: return %arg0
