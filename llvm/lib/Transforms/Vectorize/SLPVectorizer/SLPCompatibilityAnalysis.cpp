@@ -180,15 +180,11 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
       }
       break;
     case Instruction::LShr:
-      if (ToOpcode == Instruction::UDiv) {
-        RHS = ConstantInt::get(RHSType,
-                               APInt::getOneBitSet(FromCIValueBitWidth,
-                                                   FromCIValue.getZExtValue()));
-      } else {
-        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-      }
+      assert(ToOpcode == Instruction::UDiv &&
+             "Only support LShr to UDiv conversions.");
+      RHS = ConstantInt::get(
+          RHSType,
+          APInt::getOneBitSet(FromCIValueBitWidth, FromCIValue.getZExtValue()));
       break;
     case Instruction::Mul:
       assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
@@ -203,14 +199,10 @@ SmallVector<Value *> BinOpSameOpcodeHelper::InterchangeableInfo::getOperand(
       break;
     case Instruction::UDiv:
       assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-      if (ToOpcode == Instruction::LShr) {
-        RHS = ConstantInt::get(
-            RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
-      } else {
-        assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-        RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
-                                             /*AllowRHSConstant=*/true);
-      }
+      assert(ToOpcode == Instruction::LShr &&
+             "Only support UDiv to LShr conversion");
+      RHS = ConstantInt::get(
+          RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
       break;
     case Instruction::Add:
     case Instruction::Sub:
