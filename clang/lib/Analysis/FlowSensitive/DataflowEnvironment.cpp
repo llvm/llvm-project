@@ -88,8 +88,8 @@ public:
     //   already fully represented by `AtomToVal` (though it also drops
     //   disjunctive formulas that were reduced using a branch-local atom, such
     //   as on the RHS of a short-circuit `&&` or `||`).
-    //   TODO(jvoung): We may want to retain some disjunctive formulas, but
-    //   would need to profile and see how much it helps vs how much it costs.
+    //   TODO: We may want to retain some disjunctive formulas, but would need
+    //   to profile and see how much it helps vs how much it costs.
     if (std::optional<bool> Val = getLiteralValue(F)) {
       if (!*Val) {
         HasContradiction = true;
@@ -108,7 +108,7 @@ public:
     // branch-local and discarded at a subsequent `join`, where the formula
     // itself still holds on both branches.
     bool Changed = true;
-    while (Changed && !HasContradiction) {
+    while (Changed) {
       Changed = false;
       for (const Formula *Pending : AssumedFormulas) {
         unsigned Before = AtomToVal.size();
@@ -146,9 +146,9 @@ public:
                             Environment &JoinedEnv) override {
     const auto &S1 = cast<SimpleBoolModel>(Model1);
     const auto &S2 = cast<SimpleBoolModel>(Model2);
-    if (S1.HasContradiction && !S2.HasContradiction)
+    if (S1.HasContradiction)
       return Val2;
-    if (S2.HasContradiction && !S1.HasContradiction)
+    if (S2.HasContradiction)
       return Val1;
     if (auto V1 = S1.getLiteralValue(Val1.formula());
         V1.has_value() && V1 == S2.getLiteralValue(Val2.formula()))
@@ -173,10 +173,10 @@ public:
       AssumedFormulas = SA.AssumedFormulas;
     } else {
       // Intersect the AtomToVal maps.
-      for (const auto &Entry : SA.AtomToVal) {
-        auto It = SB.AtomToVal.find(Entry.first);
-        if (It != SB.AtomToVal.end() && Entry.second == It->second)
-          AtomToVal.insert({Entry.first, Entry.second});
+      for (const auto &[A, V] : SA.AtomToVal) {
+        auto It = SB.AtomToVal.find(A);
+        if (It != SB.AtomToVal.end() && V == It->second)
+          AtomToVal.insert({A, V});
       }
 
       // Keep assumed formulas that hold on both branches: either because both
@@ -243,8 +243,6 @@ private:
       return std::nullopt;
     return It->second;
   }
-
-  void setAtomValue(Atom A, bool B) { AtomToVal[A] = B; }
 
   std::optional<bool> getLiteralValue(const Formula &F) const {
     switch (F.kind()) {
@@ -331,13 +329,9 @@ private:
       // Base case: `F` is a single atom, so assuming `F == AssumedVal` directly
       // binds this atom to `AssumedVal`, or marks the environment as having a
       // contradiction if the atom was already bound to the opposite value.
-      Atom A = F.getAtom();
-      if (std::optional<bool> Existing = getAtomValue(A)) {
-        if (*Existing != AssumedVal)
-          HasContradiction = true;
-        break;
-      }
-      setAtomValue(A, AssumedVal);
+      auto [It, Inserted] = AtomToVal.try_emplace(F.getAtom(), AssumedVal);
+      if (!Inserted && It->second != AssumedVal)
+        HasContradiction = true;
       break;
     }
     case Formula::Literal:
