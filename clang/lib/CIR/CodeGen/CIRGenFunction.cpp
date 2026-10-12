@@ -57,9 +57,19 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
 CIRGenFunction::~CIRGenFunction() {}
 
 void CIRGenFunction::setFastMathFlags(FPOptions fpFeatures) {
-  // TODO(cir): set the remaining fast-math flags.
-  assert(!cir::MissingFeatures::fastMathFlags());
   cir::FastMathFlags flags = cir::FastMathFlags::none;
+  if (fpFeatures.getAllowFPReassociate())
+    flags = flags | cir::FastMathFlags::reassoc;
+  if (fpFeatures.getNoHonorNaNs())
+    flags = flags | cir::FastMathFlags::nnan;
+  if (fpFeatures.getNoHonorInfs())
+    flags = flags | cir::FastMathFlags::ninf;
+  if (fpFeatures.getNoSignedZero())
+    flags = flags | cir::FastMathFlags::nsz;
+  if (fpFeatures.getAllowReciprocal())
+    flags = flags | cir::FastMathFlags::arcp;
+  if (fpFeatures.getAllowApproxFunc())
+    flags = flags | cir::FastMathFlags::afn;
   if (fpFeatures.allowFPContractAcrossStatement())
     flags = flags | cir::FastMathFlags::contract;
   builder.setFastMathFlags(flags);
