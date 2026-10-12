@@ -3592,7 +3592,12 @@ struct AAIntraFnReachabilityFunction final
     }
     DeadEdges.clear();
     DeadBlocks.clear();
-    return Base::updateImpl(A);
+    // Liveness does not change while the queries are updated, so queries from
+    // the same block can share the exploration.
+    SharedExplorations.emplace();
+    ChangeStatus Changed = Base::updateImpl(A);
+    SharedExplorations.reset();
+    return Changed;
   }
 
   bool isReachableImpl(Attributor &A, RQITy &RQI,
@@ -3652,6 +3657,16 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
+    if (SharedExplorations && ExclusionBlocks.empty()) {
+      const Exploration &E = getSharedExploration(FromBB, LivenessAA);
+      if (E.Successors.contains(ToBB) || (DT && isDominatedByAny(E, ToBB)))
+        return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
+                              IsTemporaryRQI);
+      DeadEdges.insert_range(E.DeadEdges);
+      return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
+                            IsTemporaryRQI);
+    }
+
     SmallPtrSet<const BasicBlock *, 16> Visited;
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
@@ -3690,6 +3705,59 @@ struct AAIntraFnReachabilityFunction final
   void trackStatistics() const override {}
 
 private:
+  /// The blocks reached from a block through assumed live edges, as explored
+  /// by isReachableImpl without an exclusion set.
+  struct Exploration {
+    /// The successors of the explored blocks through assumed live edges.
+    SmallPtrSet<const BasicBlock *, 16> Successors;
+    /// The explored blocks with an assumed live successor edge.
+    SmallPtrSet<const BasicBlock *, 16> WithLiveSuccessors;
+    /// The assumed dead edges out of the explored blocks.
+    SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
+  };
+
+  const Exploration &getSharedExploration(const BasicBlock *FromBB,
+                                          const AAIsDead *LivenessAA) {
+    auto [It, Inserted] = SharedExplorations->try_emplace(FromBB);
+    Exploration &E = It->second;
+    if (!Inserted)
+      return E;
+    SmallPtrSet<const BasicBlock *, 16> Visited;
+    SmallVector<const BasicBlock *, 16> Worklist;
+    Worklist.push_back(FromBB);
+    while (!Worklist.empty()) {
+      const BasicBlock *BB = Worklist.pop_back_val();
+      if (!Visited.insert(BB).second)
+        continue;
+      for (const BasicBlock *SuccBB : successors(BB)) {
+        if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
+          E.DeadEdges.push_back({BB, SuccBB});
+          continue;
+        }
+        E.Successors.insert(SuccBB);
+        E.WithLiveSuccessors.insert(BB);
+        Worklist.push_back(SuccBB);
+      }
+    }
+    return E;
+  }
+
+  /// Return true if a block of \p E with a live successor edge dominates
+  /// \p ToBB, which is how isReachableImpl short-circuits the exploration.
+  bool isDominatedByAny(const Exploration &E, const BasicBlock *ToBB) const {
+    // An unreachable block is dominated by every block.
+    if (!DT->isReachableFromEntry(ToBB))
+      return !E.WithLiveSuccessors.empty();
+    for (const DomTreeNode *N = DT->getNode(ToBB); N; N = N->getIDom()) {
+      if (E.WithLiveSuccessors.contains(N->getBlock()))
+        return true;
+    }
+    return false;
+  }
+
+  /// The explorations shared by the queries during an update, if any.
+  std::optional<DenseMap<const BasicBlock *, Exploration>> SharedExplorations;
+
   // Set of assumed dead blocks we used in the last query. If any changes we
   // update the state.
   DenseSet<const BasicBlock *> DeadBlocks;
