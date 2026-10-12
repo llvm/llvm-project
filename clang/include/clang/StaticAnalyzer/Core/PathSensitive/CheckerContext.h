@@ -433,33 +433,23 @@ public:
 private:
   ExplodedNode *addTransitionImpl(ProgramStateRef State, bool MarkAsSink,
                                   ExplodedNode *P, const ProgramPointTag *Tag) {
-    // The analyzer may stop exploring if it sees a state it has previously
-    // visited ("cache out"). The early return here is a defensive check to
-    // prevent accidental caching out by checker API clients. Unless there is a
-    // tag or the client checker has requested that the generated node be
-    // marked as a sink, we assume that a client requesting a transition to a
-    // state that is the same as the predecessor state has made a mistake. We
-    // return the predecessor rather than cache out.
-    //
-    // TODO: We could potentially change the return to an assertion to alert
-    // clients to their mistake, but several checkers (including
-    // DereferenceChecker, CallAndMessageChecker, and DynamicTypePropagation)
-    // rely upon the defensive behavior and would need to be updated.
-
     Changed = true;
     const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
 
-    if (!State)
-      State = getState();
     if (!P)
       P = getPredecessor();
+    // TODO: Defaulting to `getState()` (the state of `getPredecessor()`, i.e.
+    // the node passed to the constructor of `CheckerContext`) only makes sense
+    // in the common case when `P == getPredecessor()` -- otherwise this could
+    // "jump back" to an obsolete, older state.
+    if (!State)
+      State = getState();
 
     Frontier.erase(P);
     ExplodedNode *N =
         Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
 
     Frontier.insert(N);
-
     return N;
   }
 };
