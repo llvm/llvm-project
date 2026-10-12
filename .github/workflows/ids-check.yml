@@ -52,7 +52,7 @@ jobs:
           sha: 'HEAD'
 
       - if: runner.os == 'Windows'
-        uses: microsoft/setup-msbuild
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
 
       - name: Configure and build minimal LLVM for use by ids
         shell: bash
