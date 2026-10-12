@@ -101,8 +101,14 @@ public:
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
+      // GFX10 merges VMEM/FLAT loads and stores into one clause type,
+      // but CDNA5 (gfx1250) S_CLAUSE types loads and stores separately:
+      // a clause member of a different type than the first is illegal
+      // (CDNA5 ISA, S_CLAUSE). Route gfx1250 to the distinguishing
+      // branch below so loads and stores never share a clause.
       if (ST->getGeneration() == AMDGPUSubtarget::GFX10 ||
-          ST->hasGFX1250Insts()) {
+          (ST->hasGFX1250Insts() &&
+           ST->getGeneration() == AMDGPUSubtarget::GFX13)) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
