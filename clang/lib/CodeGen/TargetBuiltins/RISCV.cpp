@@ -1654,6 +1654,20 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Scalar Averaging Addition and Subtraction
+  case RISCV::BI__builtin_riscv_aadd_i32:
+    ID = Intrinsic::riscv_aadd_i32;
+    break;
+  case RISCV::BI__builtin_riscv_aaddu_u32:
+    ID = Intrinsic::riscv_aaddu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_asub_i32:
+    ID = Intrinsic::riscv_asub_i32;
+    break;
+  case RISCV::BI__builtin_riscv_asubu_u32:
+    ID = Intrinsic::riscv_asubu_u32;
+    break;
+
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
   case RISCV::BI__builtin_riscv_mulhru_u32:
