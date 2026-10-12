@@ -12,6 +12,7 @@
 #include "MCTargetDesc/MipsABIFlagsSection.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -331,12 +332,17 @@ public:
 
 // This part is for ELF object output
 class MipsTargetELFStreamer : public MipsTargetStreamer {
-  bool MicroMipsEnabled;
+  enum class ISAMode { Standard, MicroMips, Mips16 };
+  static ISAMode getISAMode(const MCSubtargetInfo &STI);
+
+  ISAMode Mode;
+  SmallVector<ISAMode, 4> ModeStack;
   const MCSubtargetInfo &STI;
   bool Pic;
 
 public:
-  bool isMicroMipsEnabled() const { return MicroMipsEnabled; }
+  bool isMicroMipsEnabled() const { return Mode == ISAMode::MicroMips; }
+  bool isMips16Enabled() const { return Mode == ISAMode::Mips16; }
   MCELFStreamer &getStreamer();
   MipsTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
@@ -355,8 +361,12 @@ public:
 
   void emitDirectiveSetMicroMips() override;
   void emitDirectiveSetNoMicroMips() override;
+  void emitDirectiveSetPush() override;
+  void emitDirectiveSetPop() override;
+  void emitDirectiveSetMips0() override;
   void setUsesMicroMips() override;
   void emitDirectiveSetMips16() override;
+  void emitDirectiveSetNoMips16() override;
 
   void emitDirectiveSetNoReorder() override;
   void emitDirectiveEnd(StringRef Name) override;

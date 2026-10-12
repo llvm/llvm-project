@@ -179,7 +179,7 @@ static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
   // insertion function's subprogram. Prefer the block's own last instruction;
   // otherwise synthesize a location from the function's subprogram.
   if (!BB->empty())
-    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+    Builder.SetCurrentDebugLocation(BB->back().getDebugLoc());
   else if (llvm::DISubprogram *FSP =
                BB->getParent() ? BB->getParent()->getSubprogram() : nullptr) {
     unsigned Line = FSP->getScopeLine() ? FSP->getScopeLine() : FSP->getLine();
@@ -4807,6 +4807,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   if (!updateToLocation(Loc))
     return InsertPointTy();
   Builder.restoreIP(CodeGenIP);
+  Builder.SetCurrentDebugLocation(Loc.DL);
   checkReductionInfos(ReductionInfos, /*IsGPU*/ true);
   LLVMContext &Ctx = M.getContext();
 
@@ -4837,14 +4838,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   AttrBldr.removeAttribute(Attribute::OptimizeNone);
   FuncAttrs = FuncAttrs.addFnAttributes(Ctx, AttrBldr);
 
-  CodeGenIP = Builder.saveIP();
   Expected<Function *> ReductionResult = createReductionFunction(
       Builder.GetInsertBlock()->getParent()->getName(), ReductionInfos, IsByRef,
       ReductionGenCBKind, FuncAttrs);
   if (!ReductionResult)
     return ReductionResult.takeError();
   Function *ReductionFunc = *ReductionResult;
-  Builder.restoreIP(CodeGenIP);
 
   // Set the grid value in the config needed for lowering later on
   if (GridValue.has_value())
@@ -4865,13 +4864,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   Type *FuncPtrTy =
       Builder.getPtrTy(M.getDataLayout().getProgramAddressSpace());
   Type *RedArrayTy = ArrayType::get(PtrTy, Size);
-  CodeGenIP = Builder.saveIP();
-  Builder.restoreIP(AllocaIP);
-  Value *ReductionListAlloca =
-      Builder.CreateAlloca(RedArrayTy, nullptr, ".omp.reduction.red_list");
-  Value *ReductionList = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReductionListAlloca, PtrTy, ReductionListAlloca->getName() + ".ascast");
-  Builder.restoreIP(CodeGenIP);
+  Value *ReductionList;
+  {
+    IRBuilder<>::InsertPointGuard IPG(Builder);
+    Builder.restoreIP(AllocaIP);
+    Value *ReductionListAlloca =
+        Builder.CreateAlloca(RedArrayTy, nullptr, ".omp.reduction.red_list");
+    ReductionList = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        ReductionListAlloca, PtrTy, ReductionListAlloca->getName() + ".ascast");
+  }
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   for (auto En : enumerate(ReductionInfos)) {
@@ -4889,7 +4890,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         Builder.CreatePointerBitCastOrAddrSpaceCast(PrivateVar, PtrTy);
     Builder.CreateStore(CastElem, ElemPtr);
   }
-  CodeGenIP = Builder.saveIP();
   Expected<Function *> SarFunc = emitShuffleAndReduceFunction(
       ReductionInfos, ReductionFunc, FuncAttrs, IsByRef);
 
@@ -4901,7 +4901,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   if (!CopyResult)
     return CopyResult.takeError();
   Function *WcFunc = *CopyResult;
-  Builder.restoreIP(CodeGenIP);
 
   Value *RL = Builder.CreatePointerBitCastOrAddrSpaceCast(ReductionList, PtrTy);
 
@@ -4958,7 +4957,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         RuntimeFunction::OMPRTL___kmpc_is_team_main_thread);
     Res = createRuntimeFunctionCall(IsMainThreadFn, {});
   } else {
-    CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
         Ctx, ReductionTypeArgs, "struct._globalized_locals_ty");
 
@@ -4976,8 +4974,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
         ReductionInfos, ReductionFunc, ReductionsBufferTy, FuncAttrs, IsByRef);
     if (!GtLRFunc)
       return GtLRFunc.takeError();
-
-    Builder.restoreIP(CodeGenIP);
 
     // The runtime's cross-team final aggregate uses the storage pointed at by
     // its reduce-list argument as per-thread scratch.  When the surrounding
@@ -4999,23 +4995,27 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Value *RuntimeRL = RL;
 
     if (!IsSPMD) {
-      CodeGenIP = Builder.saveIP();
-      Builder.restoreIP(AllocaIP);
-      // Allocate thread-local buffer for the reduction variables.
-      Value *PerThreadScratchAlloca = Builder.CreateAlloca(
-          ReductionsBufferTy, /*ArraySize=*/nullptr, ".omp.reduction.scratch");
-      Value *PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          PerThreadScratchAlloca, PtrTy,
-          PerThreadScratchAlloca->getName() + ".ascast");
-      // Allocate thread-local buffer for the pointers to the reduction
-      // variables.
-      Value *PerThreadRedListAlloca =
-          Builder.CreateAlloca(RedArrayTy, /*ArraySize=*/nullptr,
-                               ".omp.reduction.per_thread_red_list");
-      RuntimeRL = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          PerThreadRedListAlloca, PtrTy,
-          PerThreadRedListAlloca->getName() + ".ascast");
-      Builder.restoreIP(CodeGenIP);
+      Value *PerThreadScratch;
+
+      {
+        IRBuilder<>::InsertPointGuard IPG(Builder);
+        Builder.restoreIP(AllocaIP);
+        // Allocate thread-local buffer for the reduction variables.
+        Value *PerThreadScratchAlloca =
+            Builder.CreateAlloca(ReductionsBufferTy, /*ArraySize=*/nullptr,
+                                 ".omp.reduction.scratch");
+        PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            PerThreadScratchAlloca, PtrTy,
+            PerThreadScratchAlloca->getName() + ".ascast");
+        // Allocate thread-local buffer for the pointers to the reduction
+        // variables.
+        Value *PerThreadRedListAlloca =
+            Builder.CreateAlloca(RedArrayTy, /*ArraySize=*/nullptr,
+                                 ".omp.reduction.per_thread_red_list");
+        RuntimeRL = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            PerThreadRedListAlloca, PtrTy,
+            PerThreadRedListAlloca->getName() + ".ascast");
+      }
 
       // Iterate over the reduction variables and copy the team-local value to
       // the thread-local buffer.
@@ -5647,15 +5647,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
     llvm::BasicBlock *ExitBB =
         splitBB(Builder, false, "omp.outer.log.scan.exit");
     llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
-        Builder.GetInsertBlock()->getModule(),
-        (llvm::Intrinsic::ID)llvm::Intrinsic::log2, Builder.getDoubleTy());
+        Builder.getModule(), (llvm::Intrinsic::ID)llvm::Intrinsic::log2,
+        Builder.getDoubleTy());
     llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
     llvm::Value *Arg =
         Builder.CreateUIToFP(ScanRedInfo->Span, Builder.getDoubleTy());
     llvm::Value *LogVal = emitNoUnwindRuntimeCall(Builder, F, Arg, "");
     F = llvm::Intrinsic::getOrInsertDeclaration(
-        Builder.GetInsertBlock()->getModule(),
-        (llvm::Intrinsic::ID)llvm::Intrinsic::ceil, Builder.getDoubleTy());
+        Builder.getModule(), (llvm::Intrinsic::ID)llvm::Intrinsic::ceil,
+        Builder.getDoubleTy());
     LogVal = emitNoUnwindRuntimeCall(Builder, F, LogVal, "");
     LogVal = Builder.CreateFPToUI(LogVal, Builder.getInt32Ty());
     llvm::Value *NMin1 = Builder.CreateNUWSub(
@@ -6606,9 +6606,31 @@ static void workshareLoopTargetCallback(
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop,
+    bool NeedsLastIter) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
+
+  // Mirrors host runtime reporting of last iteration by in-body computation.
+  if (NeedsLastIter) {
+    Type *I32Type = Type::getInt32Ty(M.getContext());
+    Builder.restoreIP(AllocaIP);
+    AllocaInst *PLastIter =
+        Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
+    CLI->setLastIter(PLastIter);
+
+    Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
+    Builder.CreateStore(ConstantInt::get(I32Type, 0), PLastIter);
+
+    Builder.SetInsertPoint(CLI->getBody()->getFirstInsertionPt());
+    Value *TripCount = CLI->getTripCount();
+    Value *LastIter =
+        Builder.CreateSub(TripCount, ConstantInt::get(TripCount->getType(), 1));
+    Value *IsLast =
+        Builder.CreateICmpEQ(CLI->getIndVar(), LastIter, "omp.is_last_iter");
+    Builder.CreateStore(Builder.CreateZExt(IsLast, I32Type), PLastIter);
+  }
+
   IdentFlag Flag = IdentFlag(0);
   switch (LoopType) {
   case WorksharingLoopType::ForStaticLoop:
@@ -6728,10 +6750,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
-    Value *DistScheduleChunkSize) {
+    Value *DistScheduleChunkSize, bool NeedsLastIter) {
   if (Config.isTargetDevice())
     return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
-                                    NoLoop);
+                                    NoLoop, NeedsLastIter);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
@@ -10068,8 +10090,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   LLVM_DEBUG(dbgs() << "Insert block after emitKernelLaunch = \n"
                     << *(Builder.GetInsertBlock()) << "\n");
   LLVM_DEBUG(dbgs() << "Module after emitKernelLaunch = \n"
-                    << *(Builder.GetInsertBlock()->getParent()->getParent())
-                    << "\n");
+                    << *(Builder.getModule()) << "\n");
   return Builder.saveIP();
 }
 
@@ -12889,22 +12910,51 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
     T->eraseFromParent();
 
   InsertPointTy BodyIP = CLI->getBodyIP();
+  // Blocks that exist before BodyGen, other than the body and latch, are
+  // outside the loop body.
+  SmallPtrSet<BasicBlock *, 32> ExistingBlocks;
+  for (BasicBlock &Block : *F)
+    ExistingBlocks.insert(&Block);
   if (llvm::Error Err = BodyGen(BodyIP, CLI->getIndVar()))
     return Err;
 
-  // Body must either fallthrough to the latch or branch directly to it.
-  if (Instruction *BodyTerminator = CLI->getBody()->getTerminatorOrNull()) {
-    auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
-    if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
-      return make_error<StringError>(
-          "iterator bodygen must terminate the canonical body with an "
-          "unconditional branch to the loop latch",
-          inconvertibleErrorCode());
+  // The body may span several blocks. Branch its single unterminated block to
+  // the latch; otherwise some block must already branch there.
+  BasicBlock *Latch = CLI->getLatch();
+  BasicBlock *OpenBB = nullptr;
+  bool ReachesLatch = false;
+  SmallVector<BasicBlock *> Worklist{CLI->getBody()};
+  SmallPtrSet<BasicBlock *, 8> Visited{CLI->getBody()};
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!BB->hasTerminator()) {
+      if (OpenBB)
+        return make_error<StringError>(
+            "iterator bodygen must leave at most one unterminated block",
+            inconvertibleErrorCode());
+      OpenBB = BB;
+      continue;
     }
-  } else {
-    // Ensure we end the loop body by jumping to the latch.
-    Builder.SetInsertPoint(CLI->getBody());
-    Builder.CreateBr(CLI->getLatch());
+    for (BasicBlock *Succ : successors(BB)) {
+      if (Succ == Latch) {
+        ReachesLatch = true;
+        continue;
+      }
+      if (Succ != CLI->getBody() && ExistingBlocks.contains(Succ))
+        return make_error<StringError>(
+            "iterator bodygen must not branch out of the loop body",
+            inconvertibleErrorCode());
+      if (Visited.insert(Succ).second)
+        Worklist.push_back(Succ);
+    }
+  }
+
+  if (OpenBB) {
+    Builder.SetInsertPoint(OpenBB);
+    Builder.CreateBr(Latch);
+  } else if (!ReachesLatch) {
+    return make_error<StringError>("iterator bodygen must reach the loop latch",
+                                   inconvertibleErrorCode());
   }
 
   // Link After -> ContBB

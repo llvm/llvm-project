@@ -14,11 +14,14 @@ enum class AArch64MemoryHint {
   NONE = 0,
   STSHH_KEEP = 1,
   STSHH_STRM = 2,
+  STCPH = 3,
+  SHUH = 4,
+  SHUH_PH = 5,
 };
 
 template <typename Int> inline bool isValidAArch64MemoryHintValue(Int I) {
   return (Int)AArch64MemoryHint::STSHH_KEEP <= I &&
-         I <= (Int)AArch64MemoryHint::STSHH_STRM;
+         I <= (Int)AArch64MemoryHint::SHUH_PH;
 }
 
 template <typename Int> inline AArch64MemoryHint toAArch64MemoryHint(Int I) {
@@ -27,6 +30,12 @@ template <typename Int> inline AArch64MemoryHint toAArch64MemoryHint(Int I) {
     return AArch64MemoryHint::STSHH_KEEP;
   case 1:
     return AArch64MemoryHint::STSHH_STRM;
+  case 2:
+    return AArch64MemoryHint::STCPH;
+  case 3:
+    return AArch64MemoryHint::SHUH;
+  case 4:
+    return AArch64MemoryHint::SHUH_PH;
   default:
     return AArch64MemoryHint::NONE;
   }

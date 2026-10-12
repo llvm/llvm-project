@@ -312,7 +312,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
                          m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
     return false;
 
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  IRBuilder<> Builder(PhiBB->getFirstInsertionPt());
 
   if (ShVal0 == ShVal1)
     ++NumGuardedRotates;
@@ -2040,7 +2040,7 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
-  IRBuilder<> B(Ctx);
+  IRBuilder<> B(*CI->getModule());
   // We want these instructions to be recognized as inlined instructions for the
   // compare call, but we don't have a source location for the definition of
   // that function, since we're generating that code now. Because the generated

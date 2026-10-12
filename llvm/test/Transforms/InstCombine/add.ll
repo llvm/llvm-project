@@ -4445,11 +4445,11 @@ define i32 @add_reduce_sqr_sum_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
-; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
-; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB]], [[AB]]
+; CHECK-NEXT:    ret i32 [[AB_SQ]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
@@ -4482,11 +4482,11 @@ define i32 @add_reduce_sqr_sum_order2_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_order2_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
-; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
-; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB]], [[AB]]
+; CHECK-NEXT:    ret i32 [[AB_SQ]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
@@ -5329,4 +5329,72 @@ define i32 @zext_add_no_fold_symmetric(i8 %x) {
   %z = zext i8 %inner to i32
   %r = add i32 %z, -4
   ret i32 %r
+}
+
+define i8 @add_or_add(i8 %x) {
+; CHECK-LABEL: @add_or_add(
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %add = add i8 %x, 1
+  %or = or i8 %add, -2
+  %ret = add i8 %or, %add
+  ret i8 %ret
+}
+
+define i8 @add_or(i8 %x) {
+; CHECK-LABEL: @add_or(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -2
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %or = or i8 %x, -2
+  %ret = add i8 %or, %x
+  ret i8 %ret
+}
+
+define i8 @add_or_commuted(i8 %x) {
+; CHECK-LABEL: @add_or_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -2
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %or = or i8 %x, -2
+  %ret = add i8 %x, %or
+  ret i8 %ret
+}
+
+define <2 x i8> @add_or_vec(<2 x i8> %x) {
+; CHECK-LABEL: @add_or_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -2)
+; CHECK-NEXT:    ret <2 x i8> [[RET]]
+;
+  %or = or <2 x i8> %x, <i8 -2, i8 -2>
+  %ret = add <2 x i8> %or, %x
+  ret <2 x i8> %ret
+}
+
+define i8 @neg_add_or_multi_use(i8 %x) {
+; CHECK-LABEL: @neg_add_or_multi_use(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], -2
+; CHECK-NEXT:    call void @use(i8 [[OR]])
+; CHECK-NEXT:    [[RET:%.*]] = add i8 [[OR]], [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %or = or i8 %x, -2
+  call void @use(i8 %or)
+  %ret = add i8 %or, %x
+  ret i8 %ret
+}
+
+define i8 @neg_add_or(i8 %x) {
+; CHECK-LABEL: @neg_add_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[RET:%.*]] = add i8 [[OR]], [[X]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %or = or i8 %x, -4
+  %ret = add i8 %or, %x
+  ret i8 %ret
 }

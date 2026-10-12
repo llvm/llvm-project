@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -297,7 +298,7 @@ llvm::SmallVector<mlir::MemorySlot> fir::AllocaOp::getPromotableSlots() {
 
 mlir::Value fir::AllocaOp::getDefaultValue(const mlir::MemorySlot &slot,
                                            mlir::OpBuilder &builder) {
-  return fir::UndefOp::create(builder, getLoc(), slot.elemType);
+  return fir::UndefOp::create(builder, getLoc(), slot.valueType);
 }
 
 void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
@@ -7048,3 +7049,15 @@ void fir::FIROpsDialect::registerOpExternalInterfaces() {
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
+
+bool fir::isInOffloadRegion(mlir::Operation *op) {
+  for (mlir::Operation *cur = op ? op->getParentOp() : nullptr; cur;
+       cur = cur->getParentOp()) {
+    if (mlir::isa<mlir::acc::OffloadRegionOpInterface,
+                  fir::CUDAKernelOpInterface, mlir::gpu::LaunchOp,
+                  mlir::gpu::GPUFuncOp, mlir::gpu::GPUModuleOp>(cur) ||
+        mlir::acc::isSpecializedAccRoutine(cur))
+      return true;
+  }
+  return false;
+}

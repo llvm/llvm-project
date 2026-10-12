@@ -2211,24 +2211,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  // Use alloca, because malloc during signal handling deadlocks
-  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  bool suppressed;
-  // Release locks before symbolizing and outputting the report to avoid
-  // deadlocks.
-  {
-    ThreadRegistryLock l(&ctx->thread_registry);
-    new (rep) ScopedReport(ReportTypeErrnoInSignal);
-    rep->SetSigNum(sig);
-    suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
-    if (!suppressed)
-      rep->AddStack(stack, true);
-  }
-  if (!suppressed)
-    OutputReport(thr, *rep);
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
+  if (IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack))
+    return;
+  ScopedReport rep(ReportTypeErrnoInSignal);
+  rep.SetSigNum(sig);
+  rep.AddStack(stack, true);
+  OutputReport(thr, rep);
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
