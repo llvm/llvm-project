@@ -797,8 +797,13 @@ public:
   RegionInfoBase(const RegionInfoBase &) = delete;
   RegionInfoBase &operator=(const RegionInfoBase &) = delete;
 
-  static bool VerifyRegionInfo;
-  static typename RegionT::PrintStyle printStyle;
+#ifdef EXPENSIVE_CHECKS
+  static inline bool VerifyRegionInfo = true;
+#else
+  static inline bool VerifyRegionInfo = false;
+#endif
+  static inline typename RegionT::PrintStyle printStyle =
+      RegionBase<Tr>::PrintNone;
 
   void print(raw_ostream &OS) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
