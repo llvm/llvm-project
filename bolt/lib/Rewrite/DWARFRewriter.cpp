@@ -396,6 +396,41 @@ static cl::opt<bool> AlwaysConvertToRanges(
 extern cl::opt<std::string> CompDirOverride;
 } // namespace opts
 
+/// True if \p Form belongs to DWARF's address class. A DW_AT_high_pc using one
+/// of these holds the end address; any other form holds an offset from
+/// DW_AT_low_pc.
+static bool isAddressForm(dwarf::Form Form) {
+  switch (Form) {
+  case dwarf::DW_FORM_addr:
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
+  case dwarf::DW_FORM_GNU_addr_index:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// True if \p Form stores an index into .debug_addr rather than the address
+/// itself. DW_FORM_LLVM_addrx_offset is deliberately excluded: it packs an
+/// index and an offset into a single value and needs its own handling.
+static bool isIndexedAddressForm(dwarf::Form Form) {
+  switch (Form) {
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4:
+  case dwarf::DW_FORM_GNU_addr_index:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// If DW_AT_low_pc exists sets LowPC and returns true.
 static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
                      uint64_t &SectionIndex) {
@@ -406,8 +441,7 @@ static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
   dwarf::Form Form = DvalLowPc.getForm();
   bool AddrOffset = Form == dwarf::DW_FORM_LLVM_addrx_offset;
   uint64_t LowPcValue = DvalLowPc.getDIEInteger().getValue();
-  if (Form == dwarf::DW_FORM_GNU_addr_index || Form == dwarf::DW_FORM_addrx ||
-      AddrOffset) {
+  if (isIndexedAddressForm(Form) || AddrOffset) {
 
     uint32_t Index = AddrOffset ? (LowPcValue >> 32) : LowPcValue;
     std::optional<object::SectionedAddress> SA =
@@ -427,14 +461,27 @@ static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
 }
 
 /// If DW_AT_high_pc exists sets HighPC and returns true.
-static bool getHighPC(const DIE &Die, const uint64_t LowPC, uint64_t &HighPC) {
+static bool getHighPC(const DIE &Die, const DWARFUnit &DU, const uint64_t LowPC,
+                      uint64_t &HighPC) {
   DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
   if (!DvalHighPc)
     return false;
-  if (DvalHighPc.getForm() == dwarf::DW_FORM_addr)
-    HighPC = DvalHighPc.getDIEInteger().getValue();
-  else
-    HighPC = LowPC + DvalHighPc.getDIEInteger().getValue();
+  const dwarf::Form Form = DvalHighPc.getForm();
+  const uint64_t Value = DvalHighPc.getDIEInteger().getValue();
+  if (!isAddressForm(Form)) {
+    // Class constant: an offset from DW_AT_low_pc.
+    HighPC = LowPC + Value;
+    return true;
+  }
+  if (!isIndexedAddressForm(Form)) {
+    HighPC = Value;
+    return true;
+  }
+  std::optional<object::SectionedAddress> SA =
+      DU.getAddrOffsetSectionItem(Value);
+  if (!SA)
+    return false;
+  HighPC = SA->Address;
   return true;
 }
 
@@ -447,7 +494,7 @@ static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
   uint64_t TempHighPC = HighPC;
   uint64_t TempSectionIndex = SectionIndex;
   if (getLowPC(Die, DU, TempLowPC, TempSectionIndex) &&
-      getHighPC(Die, TempLowPC, TempHighPC)) {
+      getHighPC(Die, DU, TempLowPC, TempHighPC)) {
     LowPC = TempLowPC;
     HighPC = TempHighPC;
     SectionIndex = TempSectionIndex;
@@ -1151,13 +1198,28 @@ void DWARFRewriter::updateUnitDebugInfo(
       FormHighPC = HighPCVal.getForm();
     }
 
-    if (FormLowPC == dwarf::DW_FORM_addrx ||
-        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
+    // A fixed-width indexed form caps the index it can encode, and the index
+    // assigned below comes from a rebuilt .debug_addr that may hold more
+    // entries than the input's. Normalize to the ULEB-encoded form so the
+    // value always fits. DW_FORM_addrx is DWARF 5, so the GNU extension used
+    // by earlier split DWARF keeps its own form.
+    auto normalizeIndexedForm = [](dwarf::Form Form) {
+      return Form == dwarf::DW_FORM_GNU_addr_index ? Form
+                                                   : dwarf::DW_FORM_addrx;
+    };
+
+    if (isIndexedAddressForm(FormLowPC)) {
       LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
+      FormLowPC = normalizeIndexedForm(FormLowPC);
+    }
 
     // The value has to match the class of the form it is written under.
-    const uint64_t HighPCEncoded =
-        FormHighPC == dwarf::DW_FORM_addr ? HighPC : Size;
+    uint64_t HighPCEncoded = Size;
+    if (isIndexedAddressForm(FormHighPC)) {
+      HighPCEncoded = AddressWriter.getIndexFromAddress(HighPC, Unit);
+      FormHighPC = normalizeIndexedForm(FormHighPC);
+    } else if (isAddressForm(FormHighPC))
+      HighPCEncoded = HighPC;
 
     if (LowPCVal)
       DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
@@ -1249,14 +1311,18 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        // There is no output range for this DIE, so point it at address 0 and
-        // keep its original size. The stored DW_AT_high_pc is that size only
-        // for non-address forms; for DW_FORM_addr it is the end address.
+        // There is no output range for this DIE, so point it at address 0
+        // and keep its original size. The stored DW_AT_high_pc is that size
+        // only for non-address forms; for an address form it is the end
+        // address, and for an indexed one it is an address table index that
+        // cannot be resolved to a size here.
         uint64_t OriginalSize = 1;
         if (LowPCVal && HighPCVal) {
-          if (HighPCVal.getForm() != dwarf::DW_FORM_addr)
+          const dwarf::Form HighForm = HighPCVal.getForm();
+          if (!isAddressForm(HighForm))
             OriginalSize = HighPCVal.getDIEInteger().getValue();
-          else if (LowPCVal.getForm() == dwarf::DW_FORM_addr)
+          else if (HighForm == dwarf::DW_FORM_addr &&
+                   LowPCVal.getForm() == dwarf::DW_FORM_addr)
             OriginalSize = HighPCVal.getDIEInteger().getValue() -
                            LowPCVal.getDIEInteger().getValue();
         }
@@ -1330,7 +1396,7 @@ void DWARFRewriter::updateUnitDebugInfo(
           UpdatedAddress =
               Function->translateInputToOutputAddress(UpdatedAddress);
 
-        if (AttrVal.getForm() == dwarf::DW_FORM_addrx) {
+        if (isIndexedAddressForm(AttrVal.getForm())) {
           const uint32_t Index =
               AddressWriter.getIndexFromAddress(UpdatedAddress, Unit);
           DIEBldr.replaceValue(Die, AttrVal.getAttribute(), AttrVal.getForm(),
@@ -1595,8 +1661,7 @@ void DWARFRewriter::updateUnitDebugInfo(
           dwarf::Form Form = LowPCAttrInfo.getForm();
           assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
                  "DW_FORM_LLVM_addrx_offset is not supported");
-          if (Form == dwarf::DW_FORM_addrx ||
-              Form == dwarf::DW_FORM_GNU_addr_index) {
+          if (isIndexedAddressForm(Form)) {
             const uint32_t Index = AddressWriter.getIndexFromAddress(
                 NewAddress ? NewAddress : Address, Unit);
             DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),
@@ -1668,9 +1733,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
                            DIEInteger(DebugRangesOffset));
 
     if (!RangesBase) {
-      if (LowPCAttrInfo &&
-          LowPCAttrInfo.getForm() != dwarf::DW_FORM_GNU_addr_index &&
-          LowPCAttrInfo.getForm() != dwarf::DW_FORM_addrx)
+      if (LowPCAttrInfo && !isIndexedAddressForm(LowPCAttrInfo.getForm()))
         DIEBldr.replaceValue(&Die, dwarf::DW_AT_low_pc, LowPCAttrInfo.getForm(),
                              DIEInteger(0));
       return;
@@ -2465,7 +2528,7 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
   // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
   // when it's absent.
   if (IsUnitDie) {
-    if (LowForm == dwarf::DW_FORM_addrx) {
+    if (isIndexedAddressForm(LowForm)) {
       const uint32_t Index = AddressWriter.getIndexFromAddress(0, Unit);
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(Index));
