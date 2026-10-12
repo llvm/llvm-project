@@ -7484,9 +7484,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::MASK_BEFOREFIRST:
     // With a single lane, the result is true iff that lane is false.
-    if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 1 &&
-        VT.getScalarType() == MVT::i1)
-      return getNOT(DL, N1, VT);
+    if (VT.getVectorElementCount().isScalar())
+      return getLogicalNOT(DL, N1, VT);
     break;
   case ISD::VECTOR_REPEAT:
     assert(N1.getValueType().isFixedLengthVector() &&
