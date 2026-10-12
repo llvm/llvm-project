@@ -4463,8 +4463,10 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       if (TopClusterID != InvalidClusterId) {
         ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
         dbgs() << "  Top Cluster: ";
-        for (auto *N : *TopCluster)
-          dbgs() << *N << '\t';
+        for (auto *N : *TopCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
         dbgs() << '\n';
       }
     });
@@ -4478,8 +4480,10 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
       if (BotClusterID != InvalidClusterId) {
         ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
         dbgs() << "  Bot Cluster: ";
-        for (auto *N : *BotCluster)
-          dbgs() << *N << '\t';
+        for (auto *N : *BotCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
         dbgs() << '\n';
       }
     });
