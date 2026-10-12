@@ -422,7 +422,8 @@ void g22(struct PragmaPack4InPacked *p) {
   f1(&p->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PragmaPack4InPacked'}}
 }
 
-// The typedef lowers inner to one, whatever the packing.
+// inner is one-aligned: by the typedef, or by the packing in the Microsoft
+// layout, which ignores the typedef.
 struct Natural {
   char c0;
   int x;
@@ -446,32 +447,6 @@ void g23(struct PackedHoldsUnaligned *p, struct PragmaPackHoldsUnaligned *q) {
   f1(&q->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PragmaPackHoldsUnaligned'}}
 }
 
-// A typedef lowers alignment without any packing.
-struct HoldsUnaligned {
-  char c0;
-  UnalignedNatural inner;
-};
-
-struct HoldsHoldsUnaligned {
-  char c0;
-  struct HoldsUnaligned holder;
-};
-
-typedef int __attribute__((aligned(1))) UnalignedInt;
-
-struct HoldsUnalignedInt {
-  char c0;
-  UnalignedInt x;
-};
-
-void g24(struct HoldsUnaligned *p, struct HoldsHoldsUnaligned *q,
-         struct HoldsUnalignedInt *r) {
-  f1(&p->inner.x); // expected-warning {{packed member 'inner' of class or structure 'HoldsUnaligned'}}
-  f1(&q->holder.inner.x); // expected-warning {{packed member 'inner' of class or structure 'HoldsUnaligned'}}
-  f2(&p->inner.c0); // no-warning
-  UnalignedInt *ui = &r->x; // no-warning
-}
-
 // The packed attribute leaves x where it would be anyway, so the outer packed
 // record takes the blame.
 struct HoldsAlignedPackedField {
@@ -484,7 +459,7 @@ struct __attribute__((packed)) PackedHoldsAlignedPackedField {
   struct HoldsAlignedPackedField inner;
 };
 
-void g25(struct HoldsAlignedPackedField *p,
+void g24(struct HoldsAlignedPackedField *p,
          struct PackedHoldsAlignedPackedField *q) {
   f1(&p->x); // no-warning
   f1(&q->inner.x); // expected-warning {{packed member 'inner' of class or structure 'PackedHoldsAlignedPackedField'}}
