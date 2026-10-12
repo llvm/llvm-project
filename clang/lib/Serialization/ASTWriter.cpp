@@ -7385,6 +7385,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   assert(SM.getSLocEntry(FID).isFile());
   // We write no declaration table for a file we leave out, and a redirected one
   // already has its table in the module that kept its locations.
+  assert(IsSLocAffecting[FID.ID] || getRedirectedLocation(FileLoc).isValid());
   if (!IsSLocAffecting[FID.ID])
     return;
 
