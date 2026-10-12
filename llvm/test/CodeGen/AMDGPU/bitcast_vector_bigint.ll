@@ -256,7 +256,7 @@ define i12 @bitcast_v2i6_to_i12(<2 x i6> %vec) {
 ; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 63
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
-; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, 0xfff, v0.l
+; GFX12-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xfff
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: bitcast_v2i6_to_i12:

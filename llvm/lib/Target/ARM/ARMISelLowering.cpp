@@ -1440,9 +1440,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
-  setPrefLoopAlignment(Align(1ULL << Subtarget->getPreferBranchLogAlignment()));
+  setPrefLoopAlignment(
+      Align::fromLog2(Subtarget->getPreferBranchLogAlignment()));
   setPrefFunctionAlignment(
-      Align(1ULL << Subtarget->getPreferBranchLogAlignment()));
+      Align::fromLog2(Subtarget->getPreferBranchLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 
@@ -14691,10 +14692,14 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                 // Canonicalize the vector type to make instruction selection
                 // simpler.
                 EVT CanonicalVT = VT.is128BitVector() ? MVT::v4i32 : MVT::v2i32;
-                SDValue Result = DAG.getNode(ARMISD::VBSP, dl, CanonicalVT,
-                                             N0->getOperand(1),
-                                             N0->getOperand(0),
-                                             N1->getOperand(0));
+                SDValue Mask = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl,
+                                           CanonicalVT, N0->getOperand(1));
+                SDValue LHS = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl,
+                                          CanonicalVT, N0->getOperand(0));
+                SDValue RHS = DAG.getNode(ARMISD::VECTOR_REG_CAST, dl,
+                                          CanonicalVT, N1->getOperand(0));
+                SDValue Result =
+                    DAG.getNode(ARMISD::VBSP, dl, CanonicalVT, Mask, LHS, RHS);
                 return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Result);
             }
         }

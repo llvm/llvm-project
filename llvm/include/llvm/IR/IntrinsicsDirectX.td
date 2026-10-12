@@ -268,6 +268,8 @@ def int_dx_dot4add_u8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty,
 
 def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 
+def int_dx_isfinite : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_isinf : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
     [llvm_anyfloat_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],

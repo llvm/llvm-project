@@ -2346,7 +2346,8 @@ struct TestLibrary final : cl::LibraryOptions {
     Fn("library-flag", "", "A flag");
     Fn("library-int", " <int>", "");
   }
-  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed) override {
+  Error parse(ArrayRef<const char *> Argv, unsigned &Consumed,
+              BumpPtrAllocator &) override {
     Consumed = 1;
     Args.push_back(Argv[0]);
     if (StringRef(Argv[0]).ltrim('-') != "library-int")

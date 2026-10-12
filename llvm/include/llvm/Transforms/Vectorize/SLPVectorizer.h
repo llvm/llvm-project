@@ -114,6 +114,11 @@ private:
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
 
+  /// Try to vectorize the poor-throughput instructions \p Candidates as the
+  /// standalone seeds.
+  bool vectorizePoorThroughputSeeds(ArrayRef<Instruction *> Candidates,
+                                    slpvectorizer::BoUpSLP &R);
+
   /// Try to vectorize the standalone seeds \p Seeds in the groups of the
   /// compatible instructions, \p IsLessGroup orders the groups.
   bool vectorizeSeeds(SmallVectorImpl<Value *> &Seeds,

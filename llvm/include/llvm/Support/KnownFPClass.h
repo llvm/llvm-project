@@ -337,8 +337,10 @@ struct KnownFPClass {
   sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for log/log2/log10
-  LLVM_ABI static KnownFPClass
-  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+  ///
+  /// \p IsMultiUnitFPType if this is for a multi-unit floating-point type.
+  LLVM_ABI static KnownFPClass log(const KnownFPClass &Src, DenormalMode Mode,
+                                   bool IsMultiUnitFPType);
 
   /// Report known values for exp, exp2 and exp10.
   /// This function assumes that exp10(-1.0) = +0.1 and exp10(+1.0) = +10.0 are
@@ -449,27 +451,6 @@ struct KnownFPClass {
     propagateNonSNaN(LHS, RHS);
     if (LHS.isKnownNeverNaN() && RHS.isKnownNeverNaN())
       knownNot(fcNan);
-  }
-
-  // Propagate knowledge for operations whose result sign is the xor of the
-  // operand signs, such as multiply and divide. This only rules out possible
-  // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
-                        DenormalMode Mode) {
-    const bool LHSCannotHavePositiveInput =
-        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
-    const bool RHSCannotHavePositiveInput =
-        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
-    if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
-      knownNot(fcNegative);
-
-    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
-      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
-      if (!Mode.outputsMayBePositiveZero())
-        knownNot(fcPosZero);
-    }
   }
 
   /// Propagate knowledge from a source value that could be a denormal or

@@ -107,6 +107,13 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
 
+  /// Absolute paths to directories this module depends on the listing of,
+  /// including their subdirectories. When one of those listings changes, for
+  /// example as seen by comparing directory modification times, report the
+  /// path as spelled here via \c DependencyScanningService::addInvalidatedPath
+  /// on the next scan.
+  std::vector<std::string> DirectoryDeps;
+
   /// A list of module identifiers this module directly depends on, not
   /// including transitive dependencies.
   ///

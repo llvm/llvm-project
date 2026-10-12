@@ -43,12 +43,6 @@ using namespace RISCV;
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
 
-static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
-    DEBUG_TYPE "-whole-vector-register-move-valid-vtype", cl::Hidden,
-    cl::desc("Insert vsetvlis before vmvNr.vs to ensure vtype is valid and "
-             "vill is cleared"),
-    cl::init(true));
-
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -303,7 +297,7 @@ static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
 // legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
-  if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+  if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
       RISCV::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (!Info.isKnown() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
@@ -558,7 +552,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       PrefixTransparent = false;
     }
 
-    if (EnsureWholeVectorRegisterMoveValidVTYPE &&
+    if (ST->getCLOpts().insert_vsetvli_whole_vector_register_move_valid_vtype &&
         RISCV::isVectorCopy(ST->getRegisterInfo(), MI)) {
       if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);

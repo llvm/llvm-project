@@ -138,8 +138,7 @@ define half @test_fsub(half %a, half %b) #0 {
 ; CHECK-F16-FTZ-NEXT:   mov.b16        [[Z:%rs[0-9]+]], 0x0000
 ; CHECK-F16-FTZ-NEXT:   sub.rn.ftz.f16     [[R:%rs[0-9]+]], [[Z]], [[A]];
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[A32:%r[0-9]+]], [[A]]
-; CHECK-NOF16-DAG:  mov.b32        [[Z:%r[0-9]+]], 0f00000000;
-; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%r[0-9]+]], [[Z]], [[A32]];
+; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%r[0-9]+]], 0f00000000, [[A32]];
 ; CHECK-NOF16-NEXT: cvt.rn.f16.f32 [[R:%rs[0-9]+]], [[R32]]
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;

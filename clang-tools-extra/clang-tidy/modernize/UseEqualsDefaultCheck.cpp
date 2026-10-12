@@ -247,7 +247,9 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(
               // Default constructor.
               allOf(parameterCountIs(0),
-                    unless(hasAnyConstructorInitializer(isWritten())),
+                    unless(hasAnyConstructorInitializer(allOf(
+                        isWritten(), unless(withInitializer(cxxConstructExpr(
+                                         argumentCountIs(0))))))),
                     unless(isVariadic()), IsPublicOrOutOfLineUntilCPP20),
               // Copy constructor.
               allOf(isCopyConstructor(),
@@ -319,11 +321,13 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
       if (!isCopyConstructorAndCanBeDefaulted(Result.Context, Ctor))
         return;
       MemberType = 1;
-      // If there are constructor initializers, they must be removed.
-      for (const auto *Init : Ctor->inits()) {
-        RemoveInitializers.emplace_back(
-            FixItHint::CreateRemoval(Init->getSourceRange()));
-      }
+    }
+    // If there are constructor initializers, they must be removed.
+    for (const auto *Init : Ctor->inits()) {
+      if (!Init->isWritten())
+        continue;
+      RemoveInitializers.emplace_back(
+          FixItHint::CreateRemoval(Init->getSourceRange()));
     }
   } else if (isa<CXXDestructorDecl>(SpecialFunctionDecl)) {
     MemberType = 2;

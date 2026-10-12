@@ -1494,8 +1494,20 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
+  // Clang packs a fixed-length bool vector one bit per element and rounds the
+  // vector's size up to a power of two of at least a byte.
+  if (mlir::isa<cir::BoolType>(getElementType()) && !getIsScalable()) {
+    assert(!cir::MissingFeatures::hlsl());
+    return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
+  }
   return llvm::TypeSize::getFixed(
       getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t cir::VectorType::getBoolStorageWidth() const {
+  assert(mlir::isa<cir::BoolType>(getElementType()) &&
+         "only a bool vector is stored as an integer");
+  return std::max<uint64_t>(getSize(), 8);
 }
 
 uint64_t
@@ -1591,7 +1603,7 @@ llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
   return llvm::TypeSize::getFixed(
-      getRowNum() * getColumnNum() *
+      getNumRows() * getNumColumns() *
       dataLayout.getTypeSizeInBits(getElementType()));
 }
 
