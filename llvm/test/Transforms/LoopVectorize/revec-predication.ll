@@ -4,9 +4,9 @@
 ; RUN:     -force-target-supports-masked-memory-ops \
 ; RUN:     < %s | FileCheck %s
 
-define void @predicated_v4(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %limit) {
+define void @predicated_v4(ptr noalias %dst, ptr noalias %src, i64 %limit) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @predicated_v4(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[LIMIT:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[LIMIT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -21,7 +21,7 @@ define void @predicated_v4(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %limi
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -43,7 +43,7 @@ then:
 
 latch:
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
