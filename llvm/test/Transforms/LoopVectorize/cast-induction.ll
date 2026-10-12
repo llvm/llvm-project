@@ -628,3 +628,107 @@ loop:
 exit:
   ret void
 }
+
+define void @trunc_sole_user(ptr noalias %dst, i64 %n) {
+; VF4-LABEL: define void @trunc_sole_user(
+; VF4-SAME: ptr noalias [[DST:%.*]], i64 [[N:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*]]:
+; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; VF4-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], 3
+; VF4-NEXT:    [[TMP2:%.*]] = add i64 7, [[TMP1]]
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 7, i32 10, i32 13, i32 16>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; VF4-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP3]], align 4
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 12)
+; VF4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF4-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; VF4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF4:       [[SCALAR_PH]]:
+; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF4-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 7, %[[ENTRY]] ]
+; VF4-NEXT:    br label %[[LOOP:.*]]
+; VF4:       [[LOOP]]:
+; VF4-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[T:%.*]] = trunc i64 [[IV]] to i32
+; VF4-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[I]]
+; VF4-NEXT:    store i32 [[T]], ptr [[GEP]], align 4
+; VF4-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
+; VF4-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; VF4-NEXT:    [[EC:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; VF4-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+; IC2-LABEL: define void @trunc_sole_user(
+; IC2-SAME: ptr noalias [[DST:%.*]], i64 [[N:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*]]:
+; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; IC2-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], 3
+; IC2-NEXT:    [[TMP2:%.*]] = add i64 7, [[TMP1]]
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
+; IC2-NEXT:    [[TMP4:%.*]] = mul i64 [[INDEX]], 3
+; IC2-NEXT:    [[TMP5:%.*]] = add i64 7, [[TMP4]]
+; IC2-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP5]] to i32
+; IC2-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 3
+; IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP3]]
+; IC2-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4
+; IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP10]], align 4
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IC2-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; IC2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC2:       [[SCALAR_PH]]:
+; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC2-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 7, %[[ENTRY]] ]
+; IC2-NEXT:    br label %[[LOOP:.*]]
+; IC2:       [[LOOP]]:
+; IC2-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC2-NEXT:    [[T:%.*]] = trunc i64 [[IV]] to i32
+; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[I]]
+; IC2-NEXT:    store i32 [[T]], ptr [[GEP]], align 4
+; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 3
+; IC2-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; IC2-NEXT:    [[EC:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; IC2-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %iv = phi i64 [ 7, %entry ], [ %iv.next, %loop ]
+  %t = trunc i64 %iv to i32
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %i
+  store i32 %t, ptr %gep, align 4
+  %iv.next = add i64 %iv, 3
+  %i.next = add nuw nsw i64 %i, 1
+  %ec = icmp eq i64 %i.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
