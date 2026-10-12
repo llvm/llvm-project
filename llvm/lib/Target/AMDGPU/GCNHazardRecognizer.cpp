@@ -2633,10 +2633,8 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
         return true;
     }
 
-    // WAR: Trans(I) reads, VALU(MI) writes. Check every explicit def:
-    // VOPD duals carry two dests (vdstX/vdstY) and no plain vdst, so a
-    // named vdst lookup misses their WAR hazards (CDNA5 ISA Sec. 5.7.2
-    // needs cover "before its sources can be overwritten").
+    // WAR: Trans(I) reads, VALU(MI) writes (VOPD duals have two dests,
+    // no plain vdst).
     for (const MachineOperand &ValuDef : MI->explicit_operands()) {
       if (!ValuDef.isReg() || !ValuDef.isDef())
         continue;
