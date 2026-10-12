@@ -147,6 +147,12 @@ public:
   LLVM_ABI bool verify() const;
 
 private:
+  /// Recover an available address for one select arm by comparing the
+  /// translated GEP chain against available ones in decomposed form.
+  Value *findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
+                                    BasicBlock *PredBB, const DominatorTree *DT,
+                                    bool CondVal) const;
+
   Value *translateSubExpr(Value *V, BasicBlock *CurBB, BasicBlock *PredBB,
                           const DominatorTree *DT, Value *Cond = nullptr,
                           bool CondVal = false);

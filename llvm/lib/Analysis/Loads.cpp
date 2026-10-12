@@ -1018,7 +1018,8 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
                           /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 
