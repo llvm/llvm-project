@@ -1,0 +1,33 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion \
+# RUN:   -passes=machine-scheduler -debug-only=machine-scheduler \
+# RUN:   -misched-prera-direction=topdown 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,TOP
+# RUN: llc -filetype=null %s -mtriple=aarch64 -mattr=+arith-bcc-fusion \
+# RUN:   -passes=machine-scheduler -debug-only=machine-scheduler \
+# RUN:   -misched-prera-direction=bottomup 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,BOT
+
+# Fusing with the region's terminating branch puts ExitSU into the cluster.
+# The cluster dump must name it instead of printing its NodeNum.
+
+# CHECK-LABEL: fuse_with_exitsu
+# CHECK: Macro fuse: SU(0) - ExitSU /  ADDSWri - Bcc
+# TOP: Top Cluster: SU(0) ExitSU
+# BOT: Bot Cluster: SU(0) ExitSU
+---
+name: fuse_with_exitsu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w2
+    $w0 = ADDSWri $w0, 13, 0, implicit-def $nzcv
+    $w3 = ORRWri $w2, 4096
+    Bcc 0, %bb.2, implicit $nzcv
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
