@@ -1449,7 +1449,8 @@ private:
       return true;
 
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
-           Opcode == Instruction::GetElementPtr;
+           Opcode == Instruction::GetElementPtr ||
+           Opcode == Instruction::ExtractValue;
   }
 
 public:

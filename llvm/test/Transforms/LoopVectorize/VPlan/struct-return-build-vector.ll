@@ -122,7 +122,7 @@ define void @struct_return_predicated(ptr %a) {
 ; CHECK-NEXT:    pred.call.continue:
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP14:%[0-9]+]]> = phi [ ir<poison>, pred.call.continue ], [ ir<%call>.1, pred.call.if ]
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = buildstructvector vp<[[VP10]]>, vp<[[VP14]]>
-; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue vp<[[VP15]]>, ir<0> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
+; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue vp<[[VP15]]>, ir<0>
 ; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP16:%[0-9]+]]> = call llvm.masked.udiv(ir<%extract_a>, ir<%in_val>, ir<%sgt_zero>)
 ; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<0>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP17]]>
