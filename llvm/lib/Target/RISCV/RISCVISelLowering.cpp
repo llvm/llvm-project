@@ -18900,6 +18900,15 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // add (ext X), (ext Y) -> ext (add X, Y)
 // if the add can't overflow in the narrow type.
 static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
+  // Make sure all users are instructions with widening
+  // variants so the `ext` instruction moved to after this
+  // add can still be combined.
+  if (!all_of(N->users(), [](SDNode *User) {
+        unsigned UOpc = User->getOpcode();
+        return UOpc == ISD::ADD || UOpc == ISD::VECREDUCE_ADD;
+      }))
+    return SDValue();
+
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   unsigned ExtOpc = LHS.getOpcode();

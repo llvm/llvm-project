@@ -969,9 +969,7 @@ define <4 x i32> @sext_add_chain_no_acc(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <
 ; CHECK-NEXT:    vwadd.vv v12, v10, v11
 ; CHECK-NEXT:    vwadd.vv v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v10, v12
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vwadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %sa = sext <4 x i8> %a to <4 x i32>
   %sb = sext <4 x i8> %b to <4 x i32>
