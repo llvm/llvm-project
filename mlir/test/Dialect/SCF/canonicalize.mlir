@@ -2059,8 +2059,9 @@ func.func @remove_empty_forall(%in: tensor<8x8xf32>) -> tensor<8x8xf32> {
 }
 // CHECK-LABEL: @remove_empty_forall
 // CHECK-NOT:   scf.forall
+// CHECK-NOT:   arith.constant
 // CHECK:       %[[EMPTY:.*]] = tensor.empty
-// CHECK:       return %[[EMPTY]]
+// CHECK-NEXT:  return %[[EMPTY]]
 
 // -----
 
@@ -2394,4 +2395,59 @@ func.func @promote_partial_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a
     }
   }
   return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+// An unsupported combining op must prevent promotion of the entire loop.
+// Static lower bounds exercise constant materialization on the failure path.
+// CHECK-LABEL: func @promote_unsupported_combiner
+//   CHECK-NOT: arith.constant
+//       CHECK: %[[R:.*]]:2 = scf.forall
+//  CHECK-SAME: shared_outs(%[[X:.*]] = {{.*}}, %[[Y:.*]] = {{.*}})
+//  CHECK-NEXT:   scf.forall.in_parallel {
+//  CHECK-NEXT:     tensor.parallel_insert_slice {{.*}} into %[[X]]
+//  CHECK-NEXT:     "test.parallel_combining_op"(%[[Y]])
+//  CHECK-NEXT:   }
+//  CHECK-NEXT: }
+//  CHECK-NEXT: return %[[R]]#0, %[[R]]#1
+func.func @promote_unsupported_combiner(%a: tensor<2xf32>, %init_a: tensor<2xf32>, %init_b: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
+  %r:2 = scf.forall (%i) = (2) to (3) step (1)
+      shared_outs(%x = %init_a, %y = %init_b)
+      -> (tensor<2xf32>, tensor<2xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %a into %x[0] [2] [1]
+          : tensor<2xf32> into tensor<2xf32>
+      "test.parallel_combining_op"(%y) : (tensor<2xf32>) -> ()
+    }
+  }
+  return %r#0, %r#1 : tensor<2xf32>, tensor<2xf32>
+}
+
+// -----
+
+// Removing a single-iteration dimension preserves unsupported combining ops.
+// CHECK-LABEL: func @fold_single_dimension_with_unsupported_combiner
+//       CHECK: %[[C2:.*]] = arith.constant 2 : index
+//       CHECK: %[[R:.*]]:2 = scf.forall (%[[J:.*]]) in (4)
+//  CHECK-SAME: shared_outs(%[[X:.*]] = {{.*}}, %[[Y:.*]] = {{.*}})
+//  CHECK-NEXT:   %[[POS:.*]] = arith.addi %[[J]], %[[C2]] : index
+//  CHECK-NEXT:   scf.forall.in_parallel {
+//  CHECK-NEXT:     tensor.parallel_insert_slice {{.*}} into %[[X]][%[[POS]]]
+//  CHECK-NEXT:     "test.parallel_combining_op"(%[[Y]])
+//  CHECK-NEXT:   }
+//  CHECK-NEXT: }
+//  CHECK-NEXT: return %[[R]]#0, %[[R]]#1
+func.func @fold_single_dimension_with_unsupported_combiner(%a: tensor<1xf32>, %init_a: tensor<8xf32>, %init_b: tensor<8xf32>) -> (tensor<8xf32>, tensor<8xf32>) {
+  %r:2 = scf.forall (%i, %j) = (2, 0) to (3, 4) step (1, 1)
+      shared_outs(%x = %init_a, %y = %init_b)
+      -> (tensor<8xf32>, tensor<8xf32>) {
+    %pos = arith.addi %i, %j : index
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %a into %x[%pos] [1] [1]
+          : tensor<1xf32> into tensor<8xf32>
+      "test.parallel_combining_op"(%y) : (tensor<8xf32>) -> ()
+    }
+  }
+  return %r#0, %r#1 : tensor<8xf32>, tensor<8xf32>
 }

@@ -29,6 +29,7 @@ include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
+include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ValueBoundsOpInterface.td"
@@ -3082,6 +3083,23 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 }
 
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
+//===----------------------------------------------------------------------===//
+// Test ParallelCombiningOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestParallelCombiningOp : TEST_Op<"parallel_combining_op",
+    [ParallelCombiningOpInterface]> {
+  let arguments = (ins AnyRankedTensor:$dest);
+  let extraClassDeclaration = [{
+    mlir::MutableOperandRange getUpdatedDestinations() {
+      return getDestMutable();
+    }
+    mlir::Operation *getIteratingParent() {
+      return getOperation()->getParentOp()->getParentOp();
+    }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Test DestinationStyleOpInterface.

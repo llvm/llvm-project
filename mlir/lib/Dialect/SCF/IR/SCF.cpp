@@ -737,8 +737,7 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
       return failure();
   }
 
-  promote(rewriter, *this);
-  return success();
+  return promote(rewriter, *this);
 }
 
 Block::BlockArgListType ForallOp::getRegionIterArgs() {
@@ -750,9 +749,19 @@ MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
+LogicalResult mlir::scf::promote(RewriterBase &rewriter,
+                                 scf::ForallOp forallOp) {
   OpBuilder::InsertionGuard g(rewriter);
   scf::InParallelOp terminator = forallOp.getTerminator();
+
+  // Check that all combining ops can be promoted before modifying the IR,
+  // including materializing the lower bounds below.
+  for (Operation &op : terminator.getYieldingOps()) {
+    if (!isa<tensor::ParallelInsertSliceOp>(op))
+      return rewriter.notifyMatchFailure(forallOp, [&](Diagnostic &diag) {
+        diag << "unsupported parallel combining op: " << op.getName();
+      });
+  }
 
   // Replace block arguments with lower bounds (replacements for IVs) and
   // outputs.
@@ -760,21 +769,22 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   bbArgReplacements.append(forallOp.getOutputs().begin(),
                            forallOp.getOutputs().end());
 
-  // Collect insert ops in shared output order before inlining replaces the
+  // Collect combining ops in shared output order before inlining replaces the
   // output block arguments. Keep a separate list for each output.
-  SmallVector<SmallVector<tensor::ParallelInsertSliceOp, 1>> yieldingOps;
+  SmallVector<SmallVector<ParallelCombiningOpInterface, 1>> yieldingOps;
   yieldingOps.reserve(forallOp.getNumResults());
 
   for (BlockArgument outputArg : forallOp.getRegionIterArgs()) {
     auto &outputOps = yieldingOps.emplace_back();
 
     for (Operation *op : forallOp.getCombiningOps(outputArg)) {
-      auto insertOp = dyn_cast<tensor::ParallelInsertSliceOp>(op);
-      if (!insertOp || insertOp->getParentOp() != terminator.getOperation() ||
-          insertOp.getDest() != outputArg)
+      auto combiningOp = cast<ParallelCombiningOpInterface>(op);
+      // Supported tensor.parallel_insert_slice ops have a single destination.
+      if (combiningOp->getParentOp() != terminator.getOperation() ||
+          combiningOp.getUpdatedDestinations()[0].get() != outputArg)
         continue;
 
-      outputOps.push_back(insertOp);
+      outputOps.push_back(combiningOp);
     }
   }
 
@@ -786,11 +796,12 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   rewriter.setInsertionPointAfter(forallOp);
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
-  for (auto [output, insertOps] :
+  for (auto [output, combiningOps] :
        llvm::zip_equal(forallOp.getOutputs(), yieldingOps)) {
     Value result = output;
 
-    for (tensor::ParallelInsertSliceOp insertOp : insertOps) {
+    for (ParallelCombiningOpInterface combiningOp : combiningOps) {
+      auto insertOp = cast<tensor::ParallelInsertSliceOp>(combiningOp);
       result = tensor::InsertSliceOp::create(
           rewriter, forallOp.getLoc(), result.getType(), insertOp.getSource(),
           result, insertOp.getOffsets(), insertOp.getSizes(),
@@ -806,6 +817,7 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   // Erase the old terminator and the loop.
   rewriter.eraseOp(terminator);
   rewriter.eraseOp(forallOp);
+  return success();
 }
 
 LoopNest mlir::scf::buildLoopNest(
@@ -1635,7 +1647,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     // Compute new loop bounds that omit all single-iteration loop dimensions.
     SmallVector<OpFoldResult> newMixedLowerBounds, newMixedUpperBounds,
         newMixedSteps;
-    IRMapping mapping;
+    SmallVector<std::pair<Value, OpFoldResult>> singleIterationIVs;
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
@@ -1650,7 +1662,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
         // Replace the loop induction variable by the lower bound if the loop
         // performs a single iteration. Otherwise, copy the loop bounds.
         if (*numIterations == 1) {
-          mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+          singleIterationIVs.emplace_back(iv, lb);
           continue;
         }
       }
@@ -1660,16 +1672,20 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     }
 
     // All of the loop dimensions perform a single iteration. Inline loop body.
-    if (newMixedLowerBounds.empty()) {
-      promote(rewriter, op);
-      return success();
-    }
+    if (newMixedLowerBounds.empty())
+      return promote(rewriter, op);
 
     // Exit if none of the loop dimensions perform a single iteration.
     if (newMixedLowerBounds.size() == static_cast<unsigned>(op.getRank())) {
       return rewriter.notifyMatchFailure(
           op, "no dimensions have 0 or 1 iterations");
     }
+
+    // Materialize lower bounds only after all failure paths, including
+    // promotion above, so that failed rewrites leave the IR unchanged.
+    IRMapping mapping;
+    for (auto [iv, lb] : singleIterationIVs)
+      mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
 
     // Replace the loop by a lower-dimensional loop.
     ForallOp newOp;

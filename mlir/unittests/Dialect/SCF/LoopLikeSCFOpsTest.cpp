@@ -10,13 +10,20 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "gtest/gtest.h"
+
+#include "../../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../../test/lib/Dialect/Test/TestOps.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -194,4 +201,28 @@ TEST_F(SCFLoopLikeTest, testForallNormalize) {
   ASSERT_EQ(std::distance(bitcastOps.begin(), bitcastOps.end()), 1);
   arith::BitcastOp ivUser = *bitcastOps.begin();
   ASSERT_NE(ivUser.getIn(), normalizedForallOp->getInductionVar(0));
+}
+
+TEST_F(SCFLoopLikeTest, forallPromotionPropagatesFailure) {
+  context.loadDialect<tensor::TensorDialect, test::TestDialect>();
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  b.setInsertionPointToStart(module->getBody());
+  Value init =
+      tensor::EmptyOp::create(b, loc, ArrayRef<int64_t>{2}, b.getF32Type());
+  scf::ForallOp forallOp =
+      scf::ForallOp::create(b, loc, ArrayRef<OpFoldResult>{b.getIndexAttr(2)},
+                            ArrayRef<OpFoldResult>{b.getIndexAttr(3)},
+                            ArrayRef<OpFoldResult>{b.getIndexAttr(1)},
+                            ValueRange{init}, std::nullopt);
+  b.setInsertionPointToStart(&forallOp.getTerminator().getRegion().front());
+  test::TestParallelCombiningOp::create(b, loc,
+                                        forallOp.getRegionIterArgs().front());
+  ASSERT_TRUE(succeeded(verify(*module)));
+
+  OperationFingerPrint before(module.get());
+  IRRewriter rewriter(&context);
+  rewriter.setInsertionPoint(forallOp);
+  auto loopLike = cast<LoopLikeOpInterface>(forallOp.getOperation());
+  EXPECT_TRUE(failed(loopLike.promoteIfSingleIteration(rewriter)));
+  EXPECT_EQ(before, OperationFingerPrint(module.get()));
 }
