@@ -2717,7 +2717,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2727,7 +2727,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
