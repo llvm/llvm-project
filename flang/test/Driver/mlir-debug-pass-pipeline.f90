@@ -107,7 +107,7 @@ end program
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! ALL-NEXT: O0CanonicalizerPass
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

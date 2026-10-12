@@ -81,7 +81,7 @@ module {
   // Function with a dummy argument and multiple returns.
   func.func @test_dummy_arg_multi_ret(%arg0: !fir.ref<i32> {fir.bindc_name = "expected"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg1: i1 loc("debug-fake-use-multiple-returns.f90":1:1)) attributes {fir.internal_name = "_QPtest_dummy_arg_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dummy_arg_multi_retEexpected"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_dummy_arg_multi_retEexpected") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg1, ^bb1, ^bb2
   ^bb1:
@@ -93,7 +93,7 @@ module {
   // Function with a dynamically-sized array and multiple returns.
   func.func @test_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg1: index loc("debug-fake-use-multiple-returns.f90":1:1), %arg2: index loc("debug-fake-use-multiple-returns.f90":1:1), %arg3: i1 loc("debug-fake-use-multiple-returns.f90":1:1)) attributes {fir.internal_name = "_QPtest_dynamic_array_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0(%arg1) origin %arg2 dummy_scope %0 arg 1 {uniq_name = "_QFtest_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1) origin %arg2 dummy_scope %0 arg 1 uniq_name("_QFtest_dynamic_array_multi_retEarr") : (!fir.ref<!fir.array<?xi32>>, index, index, !fir.dscope) -> !fir.ref<!fir.array<?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg3, ^bb1, ^bb2
   ^bb1:
@@ -105,7 +105,7 @@ module {
   // Function with a dynamically-sized character array and multiple returns.
   func.func @test_char_array_multi_ret(%arg0: !fir.ref<!fir.char<1,?>> {fir.bindc_name = "str"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg1: index {fir.bindc_name = "n"} loc("debug-fake-use-multiple-returns.f90":1:1), %arg2: i1 loc("debug-fake-use-multiple-returns.f90":1:1)) attributes {fir.internal_name = "_QPtest_char_array_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0 typeparams %arg1 dummy_scope %0 arg 1 {uniq_name = "_QFtest_char_array_multi_retEstr"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0 typeparams %arg1 dummy_scope %0 arg 1 uniq_name("_QFtest_char_array_multi_retEstr") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg2, ^bb1, ^bb2
   ^bb1:

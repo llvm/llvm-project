@@ -100,6 +100,10 @@ struct Opcode_match {
   bool match(SDValue N) { return N->getOpcode() == Opcode; }
 };
 
+template <unsigned Opcode> struct FixedOpcode_match {
+  bool match(SDValue N) { return N->getOpcode() == Opcode; }
+};
+
 // === Patterns combinators ===
 template <typename... Preds> struct And {
   bool match(SDValue N) { return true; }
@@ -150,6 +154,10 @@ template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
 
 template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
   return m_Unless(m_AnyOf(preds...));
+}
+
+template <unsigned Opcode> inline auto m_SpecificOpc() {
+  return FixedOpcode_match<Opcode>();
 }
 
 inline Opcode_match m_SpecificOpc(unsigned Opcode) {
@@ -391,6 +399,12 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
     return false;
   }
 };
+
+template <unsigned Opcode, typename... OpndPreds>
+auto m_Node(const OpndPreds &...Preds) {
+  return m_AllOf(m_SpecificOpc<Opcode>(),
+                 Operands_match<0, OpndPreds...>(Preds...));
+}
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
@@ -692,7 +706,7 @@ struct m_SpecificMask {
 };
 
 template <typename LHS_P, typename RHS_P, typename Pred_t,
-          bool Commutable = false, bool ExcludeChain = false>
+          bool Commutable = false>
 struct MaxMin_match {
   using PredType = Pred_t;
   LHS_P LHS;
@@ -716,35 +730,29 @@ struct MaxMin_match {
              (Commutable && LHS.match(R) && RHS.match(L));
     };
 
-    if (sd_match(N, m_SpecificOpc(ISD::SELECT)) ||
-        sd_match(N, m_SpecificOpc(ISD::VSELECT))) {
-      EffectiveOperands<ExcludeChain> EO_SELECT(N);
-      assert(EO_SELECT.Size == 3);
-      SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
-      SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
-      SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
+    if (N.getOpcode() == ISD::SELECT || N.getOpcode() == ISD::VSELECT) {
+      assert(N.getNumOperands() == 3);
+      SDValue Cond = N.getOperand(0);
+      SDValue TrueValue = N.getOperand(1);
+      SDValue FalseValue = N.getOperand(2);
 
-      if (sd_match(Cond, m_SpecificOpc(ISD::SETCC))) {
-        EffectiveOperands<ExcludeChain> EO_SETCC(Cond);
-        assert(EO_SETCC.Size == 3);
-        SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
-        SDValue R = Cond->getOperand(EO_SETCC.FirstIndex + 1);
-        auto *CondNode =
-            cast<CondCodeSDNode>(Cond->getOperand(EO_SETCC.FirstIndex + 2));
-        return MatchMinMax(L, R, TrueValue, FalseValue, CondNode->get());
+      if (Cond.getOpcode() == ISD::SETCC) {
+        assert(Cond.getNumOperands() == 3);
+        SDValue L = Cond.getOperand(0);
+        SDValue R = Cond.getOperand(1);
+        ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+        return MatchMinMax(L, R, TrueValue, FalseValue, CC);
       }
     }
 
-    if (sd_match(N, m_SpecificOpc(ISD::SELECT_CC))) {
-      EffectiveOperands<ExcludeChain> EO_SELECT(N);
-      assert(EO_SELECT.Size == 5);
-      SDValue L = N->getOperand(EO_SELECT.FirstIndex);
-      SDValue R = N->getOperand(EO_SELECT.FirstIndex + 1);
-      SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 2);
-      SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 3);
-      auto *CondNode =
-          cast<CondCodeSDNode>(N->getOperand(EO_SELECT.FirstIndex + 4));
-      return MatchMinMax(L, R, TrueValue, FalseValue, CondNode->get());
+    if (N.getOpcode() == ISD::SELECT_CC) {
+      assert(N.getNumOperands() == 5);
+      SDValue L = N.getOperand(0);
+      SDValue R = N.getOperand(1);
+      SDValue TrueValue = N.getOperand(2);
+      SDValue FalseValue = N.getOperand(3);
+      ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+      return MatchMinMax(L, R, TrueValue, FalseValue, CC);
     }
 
     return false;
@@ -1172,6 +1180,11 @@ template <typename Opnd> inline auto m_SExtOrSelf(const Opnd &Op) {
 
 template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
+}
+
+/// Match a zext or sext
+template <typename Opnd> inline auto m_ZExtOrSExt(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), m_SExt(Op));
 }
 
 /// Match a aext or identity

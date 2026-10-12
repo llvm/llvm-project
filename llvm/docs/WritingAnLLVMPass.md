@@ -794,14 +794,6 @@ First thing you do is start gdb on the opt process:
 
 ```console
 $ gdb opt
-GNU gdb 5.0
-Copyright 2000 Free Software Foundation, Inc.
-GDB is free software, covered by the GNU General Public License, and you are
-welcome to change it and/or distribute copies of it under certain conditions.
-Type "show copying" to see the conditions.
-There is absolutely no warranty for GDB.  Type "show warranty" for details.
-This GDB was configured as "sparc-sun-solaris2.6"...
-(gdb)
 ```
 
 Note that {program}`opt` has a lot of debugging information in it, so it takes

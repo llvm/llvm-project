@@ -4,8 +4,8 @@
 subroutine s(r1,r2)
   use ieee_arithmetic, only: ieee_round_type, operator(==)
   type(ieee_round_type) :: r1, r2
-  ! CHECK:   %[[R1DECL:.*]]:2 = hlfir.declare %arg0 {{.*}} {uniq_name = "_QFsEr1"}
-  ! CHECK:   %[[R2DECL:.*]]:2 = hlfir.declare %arg1 {{.*}} {uniq_name = "_QFsEr2"}
+  ! CHECK:   %[[R1DECL:.*]]:2 = hlfir.declare %arg0 {{.*}} uniq_name("_QFsEr1")
+  ! CHECK:   %[[R2DECL:.*]]:2 = hlfir.declare %arg1 {{.*}} uniq_name("_QFsEr2")
   ! CHECK:   %[[V_6:[0-9]+]] = fir.coordinate_of %[[R1DECL]]#0, _QM__fortran_builtinsT__builtin_ieee_round_type.mode
   ! CHECK:   %[[V_7:[0-9]+]] = fir.coordinate_of %[[R2DECL]]#0, _QM__fortran_builtinsT__builtin_ieee_round_type.mode
   ! CHECK:   %[[V_8:[0-9]+]] = fir.load %[[V_6]] : !fir.ref<i8>

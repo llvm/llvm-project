@@ -38,7 +38,7 @@ contains
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>{{.*}}) {
 subroutine pass_pointer_scalar(i)
   integer, pointer :: i
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_pointer_scalarEi"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_pointer_scalarEi"){{.*}}
   call takes_opt_scalar(i)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
@@ -60,7 +60,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>{{.*}}) {
 subroutine pass_allocatable_scalar(i)
   integer, allocatable :: i
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_allocatable_scalarEi"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_allocatable_scalarEi"){{.*}}
   call takes_opt_scalar(i)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
@@ -82,7 +82,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>{{.*}}) {
 subroutine pass_pointer_scalar_char(c)
   character(:), pointer :: c
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_pointer_scalar_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_pointer_scalar_charEc"){{.*}}
   call takes_opt_scalar_char(c)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
@@ -106,7 +106,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>{{.*}}) {
 subroutine pass_allocatable_scalar_char(c)
   character(:), allocatable :: c
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_allocatable_scalar_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_allocatable_scalar_charEc"){{.*}}
   call takes_opt_scalar_char(c)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
@@ -138,7 +138,7 @@ end subroutine
 subroutine pass_pointer_array(i)
   real, pointer :: i(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_pointer_arrayEi"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_pointer_arrayEi"){{.*}}
   call takes_opt_explicit_shape(i)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
@@ -166,7 +166,7 @@ end subroutine
 subroutine pass_pointer_array_char(c)
   character(:), pointer :: c(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_pointer_array_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_pointer_array_charEc"){{.*}}
   call takes_opt_explicit_shape_char(c)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
@@ -201,7 +201,7 @@ subroutine forward_pointer_array()
   call takes_opt_explicit_shape(returns_pointer())
   ! CHECK: %[[RET:.*]] = fir.call @_QPreturns_pointer() {{.*}} : () -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.save_result %[[RET]] to %[[RES]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[RES]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[RES]] uniq_name(".tmp.func_result") : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
   ! CHECK: %[[ADDR_I64:.*]] = fir.convert %[[ADDR]] : (!fir.ptr<!fir.array<?xf32>>) -> i64
@@ -235,7 +235,7 @@ end subroutine
 subroutine pass_opt_assumed_shape(x)
   real, optional :: x(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_assumed_shapeEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_assumed_shapeEx"){{.*}}
   call takes_opt_explicit_shape(x)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
   ! CHECK: %[[ARG:.*]]:4 = fir.if %[[IS_PRESENT]] -> (!fir.ref<!fir.array<100xf32>>, i1, i1, !fir.box<!fir.array<?xf32>>) {
@@ -259,7 +259,7 @@ end subroutine
 subroutine pass_opt_assumed_shape_char(c)
   character(*), optional :: c(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_assumed_shape_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_assumed_shape_charEc"){{.*}}
   call takes_opt_explicit_shape_char(c)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
   ! CHECK: %[[ARG:.*]]:4 = fir.if %[[IS_PRESENT]] -> (!fir.boxchar<1>, i1, i1, !fir.box<!fir.array<?x!fir.char<1,?>>>) {
@@ -290,7 +290,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.contiguous, fir.optional}) {
 subroutine pass_opt_contiguous_assumed_shape(x)
   real, optional, contiguous :: x(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_contiguous_assumed_shapeEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_contiguous_assumed_shapeEx"){{.*}}
   call takes_opt_explicit_shape(x)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
   ! CHECK: %[[ARG:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.ref<!fir.array<100xf32>>) {
@@ -308,7 +308,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "c", fir.contiguous, fir.optional}) {
 subroutine pass_opt_contiguous_assumed_shape_char(c)
   character(*), optional, contiguous :: c(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_contiguous_assumed_shape_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_contiguous_assumed_shape_charEc"){{.*}}
   call takes_opt_explicit_shape_char(c)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
   ! CHECK: %[[ARG:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.boxchar<1>) {
@@ -334,7 +334,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>{{.*}}) {
 subroutine pass_allocatable_array(i)
   real, allocatable :: i(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_allocatable_arrayEi"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_allocatable_arrayEi"){{.*}}
   call takes_opt_explicit_shape(i)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
@@ -356,7 +356,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>{{.*}}) {
 subroutine pass_allocatable_array_char(c)
   character(:), allocatable :: c(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_allocatable_array_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_allocatable_array_charEc"){{.*}}
   call takes_opt_explicit_shape_char(c)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
@@ -380,7 +380,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "i", fir.contiguous}) {
 subroutine pass_contiguous_pointer_array(i)
   real, pointer, contiguous :: i(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_contiguous_pointer_arrayEi"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_contiguous_pointer_arrayEi"){{.*}}
   call takes_opt_explicit_shape(i)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
@@ -402,7 +402,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "c", fir.contiguous}) {
 subroutine pass_contiguous_pointer_array_char(c)
   character(:), pointer, contiguous :: c(:)
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_contiguous_pointer_array_charEc"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_contiguous_pointer_array_charEc"){{.*}}
   call takes_opt_explicit_shape_char(c)
   ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
@@ -435,7 +435,7 @@ end subroutine
 subroutine pass_opt_assumed_shape_to_intentin(x)
   real, optional :: x(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_assumed_shape_to_intentinEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_assumed_shape_to_intentinEx"){{.*}}
   call takes_opt_explicit_shape_intentin(x)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
   ! CHECK: %[[ARG:.*]]:3 = fir.if %[[IS_PRESENT]] -> (!fir.ref<!fir.array<100xf32>>, i1, i1) {
@@ -458,7 +458,7 @@ end subroutine
 subroutine pass_opt_assumed_shape_to_intentout(x)
   real, optional :: x(:)
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
-  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name = "_QMoptional_testsFpass_opt_assumed_shape_to_intentoutEx"{{.*}}
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}uniq_name("_QMoptional_testsFpass_opt_assumed_shape_to_intentoutEx"){{.*}}
   call takes_opt_explicit_shape_intentout(x)
   ! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[DECL]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
   ! CHECK: %[[ARG:.*]]:4 = fir.if %[[IS_PRESENT]] -> (!fir.ref<!fir.array<100xf32>>, i1, i1, !fir.box<!fir.array<?xf32>>) {

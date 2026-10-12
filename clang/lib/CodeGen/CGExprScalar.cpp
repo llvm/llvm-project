@@ -36,6 +36,7 @@
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -3554,12 +3555,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float. If
-      // the input isn't already half, it may be i16.
-      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
-      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
-    }
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+      value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
 
     if (value->getType()->isFloatTy())
       amt = llvm::ConstantFP::get(VMContext,
@@ -3590,12 +3588,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
-      value = Builder.CreateBitCast(value, input->getType());
-    }
 
-  // Fixed-point types.
+    // Fixed-point types.
   } else if (type->isFixedPointType()) {
     // Fixed-point types are tricky. In some cases, it isn't possible to
     // represent a 1 or a -1 in the type at all. Piggyback off of
@@ -6408,6 +6404,23 @@ EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
   return {TotalOffset, OffsetOverflows};
 }
 
+// OpenMP section maps pass `section - host_offset`. A GEP of an array-of-arrays
+// from that pointer is not inbounds of the allocation.
+static llvm::GEPNoWrapFlags
+inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
+                 llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
+  llvm::GEPNoWrapFlags NW;
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice &&
+                    SrcTy->isArrayTy() &&
+                    SrcTy->getArrayElementType()->isArrayTy() &&
+                    !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
+  if (!SectionGEP)
+    NW = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NW |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 Value *
 CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         ArrayRef<Value *> IdxList,
@@ -6415,9 +6428,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
 
-  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-  if (!SignedIndices && !IsSubtraction)
-    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  llvm::GEPNoWrapFlags NWFlags =
+      inBoundsGEPFlags(*this, Ptr, ElemTy, SignedIndices, IsSubtraction);
 
   Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
@@ -6528,10 +6540,9 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
   if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-    if (!SignedIndices && !IsSubtraction)
-      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
-
+    llvm::GEPNoWrapFlags NWFlags =
+        inBoundsGEPFlags(*this, Addr.getBasePointer(), Addr.getElementType(),
+                         SignedIndices, IsSubtraction);
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 

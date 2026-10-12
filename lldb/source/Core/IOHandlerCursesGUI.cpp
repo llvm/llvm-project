@@ -2961,7 +2961,7 @@ public:
       return "";
 
     ModuleSP module_sp = target->GetExecutableModule();
-    if (!module_sp->IsExecutable())
+    if (!module_sp)
       return "";
 
     return module_sp->GetFileSpec().GetFilename().str();
@@ -3444,6 +3444,8 @@ public:
                               /*adopt_dummy_target=*/false)
                           .GetTargetSP();
     ModuleSP executable_module = target->GetExecutableModule();
+    if (!executable_module)
+      return;
     llvm::StringRef target_settings_argv0 = target->GetArg0();
 
     if (!target_settings_argv0.empty()) {

@@ -286,6 +286,7 @@ void DebuggerThread::DebugLoop() {
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
       bool shutting_down = m_is_shutting_down;
+      HANDLE exited_process = nullptr;
       switch (dbe.dwDebugEventCode) {
       default:
         llvm_unreachable("Unhandled debug event code!");
@@ -313,8 +314,11 @@ void DebuggerThread::DebugLoop() {
             HandleExitThreadEvent(dbe.u.ExitThread, dbe.dwThreadId);
         break;
       case EXIT_PROCESS_DEBUG_EVENT:
-        continue_status =
-            HandleExitProcessEvent(dbe.u.ExitProcess, dbe.dwThreadId);
+        if (!::DuplicateHandle(::GetCurrentProcess(),
+                               m_process.GetNativeProcess().GetSystemHandle(),
+                               ::GetCurrentProcess(), &exited_process,
+                               SYNCHRONIZE, FALSE, 0))
+          exited_process = nullptr;
         should_debug = false;
         break;
       case LOAD_DLL_DEBUG_EVENT:
@@ -339,6 +343,14 @@ void DebuggerThread::DebugLoop() {
           ::GetCurrentThreadId());
 
       ::ContinueDebugEvent(dbe.dwProcessId, dbe.dwThreadId, continue_status);
+
+      if (dbe.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+        if (exited_process) {
+          ::WaitForSingleObject(exited_process, INFINITE);
+          ::CloseHandle(exited_process);
+        }
+        HandleExitProcessEvent(dbe.u.ExitProcess, dbe.dwThreadId);
+      }
 
       // We have to DebugActiveProcessStop after ContinueDebugEvent, otherwise
       // the target process will crash

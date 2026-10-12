@@ -62,7 +62,7 @@
 // CHECK:   }
 // CHECK: } else {
 // CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
-// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) uniq_name(".tmp")
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
 // CHECK:     %{{.*}} = hlfir.designate %{{.*}} (%{{.*}})
 // CHECK:     %{{.*}} = fir.load %{{.*}}
@@ -80,16 +80,16 @@
 
 func.func @_QPtestcase(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "step"}) {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtestcaseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestcaseEn") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.alloca i32 {bindc_name = "hi1", uniq_name = "_QFtestcaseEhi1"}
-  %3:2 = hlfir.declare %2 {uniq_name = "_QFtestcaseEhi1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %2 uniq_name("_QFtestcaseEhi1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %4 = fir.alloca i32 {bindc_name = "hi2", uniq_name = "_QFtestcaseEhi2"}
-  %5:2 = hlfir.declare %4 {uniq_name = "_QFtestcaseEhi2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5:2 = hlfir.declare %4 uniq_name("_QFtestcaseEhi2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %6 = fir.alloca i32 {bindc_name = "lo1", uniq_name = "_QFtestcaseElo1"}
-  %7:2 = hlfir.declare %6 {uniq_name = "_QFtestcaseElo1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %7:2 = hlfir.declare %6 uniq_name("_QFtestcaseElo1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %8 = fir.alloca i32 {bindc_name = "lo2", uniq_name = "_QFtestcaseElo2"}
-  %9:2 = hlfir.declare %8 {uniq_name = "_QFtestcaseElo2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %10:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtestcaseEstep"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %9:2 = hlfir.declare %8 uniq_name("_QFtestcaseElo2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %10:2 = hlfir.declare %arg2 dummy_scope %0 arg 3 uniq_name("_QFtestcaseEstep") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %11 = fir.load %1#0 : !fir.ref<i32>
   %12 = fir.convert %11 : (i32) -> i64
   %13 = fir.convert %12 : (i64) -> index
@@ -97,7 +97,7 @@ func.func @_QPtestcase(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}
   %14 = arith.cmpi sgt, %13, %c0 : index
   %15 = arith.select %14, %13, %c0 : index
   %16 = fir.shape %15 : (index) -> !fir.shape<1>
-  %17:2 = hlfir.declare %arg0(%16) dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFtestcaseEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %17:2 = hlfir.declare %arg0(%16) dummy_scope %0 arg 1 uniq_name("_QFtestcaseEa") fortran_attrs<intent_inout> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %c1_i32 = arith.constant 1 : i32
   hlfir.assign %c1_i32 to %7#0 : i32, !fir.ref<i32>
   %18 = fir.load %1#0 : !fir.ref<i32>

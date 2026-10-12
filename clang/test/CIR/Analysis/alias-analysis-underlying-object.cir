@@ -311,10 +311,10 @@ cir.func @get_element_of_records() {
 cir.func @base_class_addr_distinct_allocas() {
   %d1    = cir.alloca "d1" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d1"}
   %d2    = cir.alloca "d2" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d2"}
-  %base1 = cir.base_class_addr %d1 : !cir.ptr<!rec_Derived> nonnull [0]
-              -> !cir.ptr<!rec_Base> {test.ptr = "base1"}
-  %base2 = cir.base_class_addr %d2 : !cir.ptr<!rec_Derived> nonnull [0]
-              -> !cir.ptr<!rec_Base> {test.ptr = "base2"}
+  %base1 = cir.base_class_addr nonnull %d1 [0]
+              : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base> {test.ptr = "base1"}
+  %base2 = cir.base_class_addr nonnull %d2 [0]
+              : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base> {test.ptr = "base2"}
   cir.return
 }
 
@@ -338,10 +338,10 @@ cir.func @base_class_addr_distinct_allocas() {
 !rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
 cir.func @base_and_derived_class_addr(%d: !cir.ptr<!rec_Derived>)
     attributes {test.ptr = "func"} {
-  %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> nonnull [4]
-             -> !cir.ptr<!rec_Base> {test.ptr = "base"}
-  %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> nonnull [4]
-             -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
+  %base = cir.base_class_addr nonnull %d [4]
+             : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base> {test.ptr = "base"}
+  %derived = cir.derived_class_addr nonnull %base [4]
+             : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
   %first = cir.get_member %d[0] {name = "x"} {test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
   %basedata = cir.get_member %base[0] {name = "b"} {test.ptr = "basedata"}
@@ -369,10 +369,10 @@ cir.func @base_and_derived_class_addr(%d: !cir.ptr<!rec_Derived>)
 !rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
 cir.func @base_and_derived_class_maybe_null(%d: !cir.ptr<!rec_Derived>)
     attributes {test.ptr = "func"} {
-  %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> [4]
-             -> !cir.ptr<!rec_Base> {test.ptr = "base"}
-  %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> [4]
-             -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
+  %base = cir.base_class_addr %d [4]
+             : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base> {test.ptr = "base"}
+  %derived = cir.derived_class_addr %base [4]
+             : !cir.ptr<!rec_Base> -> !cir.ptr<!rec_Derived> {test.ptr = "derived"}
   %first = cir.get_member %d[0] {name = "x"} {test.ptr = "first"}
            : !cir.ptr<!rec_Derived> -> !cir.ptr<!s32i>
   %basedata = cir.get_member %base[0] {name = "b"} {test.ptr = "basedata"}

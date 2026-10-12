@@ -44,7 +44,7 @@ merge:
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %cp = catchpad within %cs1 []
+  %cp = catchpad within %cs1 [ptr null, i32 0, ptr null]
   ; CHECK: catch:
   ; CHECK: [[Reload:%[^ ]+]] = load i32, ptr [[Slot]]
   ; CHECK-NEXT: call void @h(i32 [[Reload]])
@@ -83,7 +83,7 @@ merge.inner:
   %cs1 = catchswitch within none [label %catch.inner] unwind label %merge.outer
 
 catch.inner:
-  %cpinner = catchpad within %cs1 []
+  %cpinner = catchpad within %cs1 [ptr null, i32 0, ptr null]
   ; Need just one store here because only %y is affected
   ; CHECK: catch.inner:
   %z = call i32 @g() [ "funclet"(token %cpinner) ]
@@ -103,9 +103,9 @@ merge.outer:
   %cs2 = catchswitch within none [label %catch.outer] unwind to caller
 
 catch.outer:
-  %cpouter = catchpad within %cs2 []
+  %cpouter = catchpad within %cs2 [ptr null, i32 0, ptr null]
   ; CHECK: catch.outer:
-  ; CHECK: [[CatchPad:%[^ ]+]] = catchpad within %cs2 []
+  ; CHECK: [[CatchPad:%[^ ]+]] = catchpad within %cs2 [ptr null, i32 0, ptr null]
   ; Need to load x and y from two different slots since they're both live
   ; and can have different values (if we came from catch.inner)
   ; CHECK-DAG: load i32, ptr [[Slot1]]
@@ -150,7 +150,7 @@ catchpad.inner:
    %phi.inner = phi i32 [ %l, %left ], [ %r, %right ]
    %cs1 = catchswitch within none [label %catch.inner] unwind label %catchpad.outer
 catch.inner:
-   %cp1 = catchpad within %cs1 []
+   %cp1 = catchpad within %cs1 [ptr null, i32 0, ptr null]
    catchret from %cp1 to label %join
 join:
   ; CHECK: join:
@@ -170,7 +170,7 @@ catch.outer:
    ; CHECK: catch.outer:
    ; CHECK:   [[Reload:%[^ ]+]] = load i32, ptr [[Slot]]
    ; CHECK:   call void @h(i32 [[Reload]])
-   %cp2 = catchpad within %cs2 []
+   %cp2 = catchpad within %cs2 [ptr null, i32 0, ptr null]
    call void @h(i32 %phi.outer) [ "funclet"(token %cp2) ]
    catchret from %cp2 to label %exit
 exit:
@@ -243,7 +243,7 @@ catch:
   ; CHECK:   catchpad within %cs1
   ; CHECK:   [[CatchReload:%[^ ]+]] = load i32, ptr [[CatchSlot]]
   ; CHECK:   call void @h(i32 [[CatchReload]]
-  %cp2 = catchpad within %cs1 []
+  %cp2 = catchpad within %cs1 [ptr null, i32 0, ptr null]
   call void @h(i32 %phi.catch) [ "funclet"(token %cp2) ]
   catchret from %cp2 to label %exit
 
@@ -298,8 +298,8 @@ catchpad:
   %cs1 = catchswitch within none [label %catch] unwind to caller
 catch:
   ; CHECK: catch:
-  ; CHECK-NEXT: %[[CatchPad:[^ ]+]] = catchpad within %cs1 []
-  %cp = catchpad within %cs1 []
+  ; CHECK-NEXT: %[[CatchPad:[^ ]+]] = catchpad within %cs1 [ptr null, i32 0, ptr null]
+  %cp = catchpad within %cs1 [ptr null, i32 0, ptr null]
   %b = call i1 @i() [ "funclet"(token %cp) ]
   br i1 %b, label %left, label %right
 left:

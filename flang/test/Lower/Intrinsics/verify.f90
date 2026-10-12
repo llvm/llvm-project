@@ -6,11 +6,11 @@ integer function verify_test(s1, s2)
 ! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[S1_UNBOX:.*]]:2 = fir.unboxchar %[[S1_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFverify_testEs1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFverify_testEs1") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[S2_UNBOX:.*]]:2 = fir.unboxchar %[[S2_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFverify_testEs2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 uniq_name("_QFverify_testEs2") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 <{bindc_name = "verify_test", uniq_name = "_QFverify_testEverify_test"}>
-! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] {uniq_name = "_QFverify_testEverify_test"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] uniq_name("_QFverify_testEverify_test") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[KIND:.*]] = arith.constant 4 : i32
 ! CHECK: %[[ABSENT:.*]] = fir.absent !fir.box<i1>
 ! CHECK: %[[S1_EMBOX:.*]] = fir.embox %[[S1_DECL]]#1 typeparams %[[S1_UNBOX]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
@@ -42,11 +42,11 @@ end function verify_test
 integer function verify_test2(s1, s2)
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[S1_UNBOX:.*]]:2 = fir.unboxchar %[[S1_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFverify_test2Es1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[S1_DECL:.*]]:2 = hlfir.declare %[[S1_UNBOX]]#0 typeparams %[[S1_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFverify_test2Es1") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[S2_UNBOX:.*]]:2 = fir.unboxchar %[[S2_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFverify_test2Es2"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[S2_DECL:.*]]:2 = hlfir.declare %[[S2_UNBOX]]#0 typeparams %[[S2_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 uniq_name("_QFverify_test2Es2") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[RET_VAR:.*]] = fir.alloca i32 <{bindc_name = "verify_test2", uniq_name = "_QFverify_test2Everify_test2"}>
-! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] {uniq_name = "_QFverify_test2Everify_test2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET_VAR]] uniq_name("_QFverify_test2Everify_test2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[BACK:.*]] = arith.constant true
 ! CHECK: %[[S1_PTR:.*]] = fir.convert %[[S1_DECL]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: %[[S1_LEN:.*]] = fir.convert %[[S1_UNBOX]]#1 : (index) -> i64
@@ -69,10 +69,10 @@ subroutine test_optional(string, set, back)
   character (*) :: string(:), set
   logical, optional :: back(:)
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[BACK_DECL:.*]]:2 = hlfir.declare %[[BACK_ARG]] dummy_scope %[[DSCOPE]] arg 3 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEback"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK: %[[BACK_DECL:.*]]:2 = hlfir.declare %[[BACK_ARG]] dummy_scope %[[DSCOPE]] arg 3 uniq_name("_QFtest_optionalEback") fortran_attrs<optional> : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
 ! CHECK: %[[SET_UNBOX:.*]]:2 = fir.unboxchar %[[SET_ARG]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK: %[[SET_DECL:.*]]:2 = hlfir.declare %[[SET_UNBOX]]#0 typeparams %[[SET_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 {uniq_name = "_QFtest_optionalEset"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK: %[[STRING_DECL:.*]]:2 = hlfir.declare %[[STRING_ARG]] dummy_scope %[[DSCOPE]] arg 1 {uniq_name = "_QFtest_optionalEstring"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
+! CHECK: %[[SET_DECL:.*]]:2 = hlfir.declare %[[SET_UNBOX]]#0 typeparams %[[SET_UNBOX]]#1 dummy_scope %[[DSCOPE]] arg 2 uniq_name("_QFtest_optionalEset") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[STRING_DECL:.*]]:2 = hlfir.declare %[[STRING_ARG]] dummy_scope %[[DSCOPE]] arg 1 uniq_name("_QFtest_optionalEstring") : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
   print *, verify(string, set, back)
 ! CHECK: %[[PRESENT:.*]] = fir.is_present %[[BACK_DECL]]#0 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> i1
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index

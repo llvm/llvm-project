@@ -12,6 +12,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o %t-avx.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX,LLVM-OGCG-AVX --input-file=%t-avx.ll %s
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-cir %s -o %t-avx512.cir
+// RUN: FileCheck --check-prefix=CIR-AVX512 --input-file=%t-avx512.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -fclangir -emit-llvm %s -o %t-avx512-cir.ll
 // RUN: FileCheck --check-prefixes=LLVM,LLVM-AVX512 --input-file=%t-avx512-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o %t-avx512.ll
@@ -30,6 +32,10 @@
 typedef float v4f __attribute__((vector_size(16)));
 typedef float v8f __attribute__((vector_size(32)));
 typedef float v16f __attribute__((vector_size(64)));
+
+// CIR-SSE: module {{.*}}cir.target_abi = ""
+// CIR-AVX: module {{.*}}cir.target_abi = "avx"
+// CIR-AVX512: module {{.*}}cir.target_abi = "avx512"
 
 // A 128-bit vector is at or below the native vector size at every AVX level,
 // so it always passes in a register.

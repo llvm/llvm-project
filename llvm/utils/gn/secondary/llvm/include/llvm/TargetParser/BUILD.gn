@@ -31,14 +31,14 @@ tablegen("RISCVTargetParserDef") {
 tablegen("R600TargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-amdgpu-target-def" ]
-  td_file = "//llvm/lib/Target/AMDGPU/R600.td"
+  td_file = "//llvm/lib/Target/AMDGPU/R600TargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 tablegen("AMDGPUTargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-amdgpu-target-def" ]
-  td_file = "//llvm/lib/Target/AMDGPU/AMDGPU.td"
+  td_file = "//llvm/lib/Target/AMDGPU/AMDGPUTargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 

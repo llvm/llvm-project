@@ -23,8 +23,11 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
@@ -39,6 +42,29 @@
 using namespace llvm;
 
 namespace llvm::slpvectorizer {
+
+Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
+                                const DataLayout &DL) {
+  bool ToPtr = cast<VectorType>(DstTy)->getElementType()->isPointerTy();
+  if (ToPtr == cast<VectorType>(V->getType())->getElementType()->isPointerTy())
+    return Builder.CreateBitOrPointerCast(V, DstTy);
+  if (ToPtr)
+    return Builder.CreateIntToPtr(
+        Builder.CreateBitCast(V, DL.getIntPtrType(DstTy)), DstTy);
+  return Builder.CreateBitCast(
+      Builder.CreatePtrToInt(V, DL.getIntPtrType(V->getType())), DstTy);
+}
+
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      const DataLayout &DL, bool IsReverse) {
+  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
+  if (!CI)
+    return nullptr;
+
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = CI->getValue() * ElementSize;
+  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
+}
 
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
@@ -361,6 +387,59 @@ bool isMaskedLoadCompress(
   return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
                               CostKind, AreAllUsersVectorized, ReVec, IsMasked,
                               InterleaveFactor, CompressMask, LoadVecTy);
+}
+
+bool canWidenLoadsOverUndefLanes(ArrayRef<Value *> VL, const DataLayout &DL,
+                                 ScalarEvolution &SE, AssumptionCache &AC,
+                                 const DominatorTree &DT,
+                                 const TargetLibraryInfo &TLI) {
+  if (count_if(VL, IsaPred<LoadInst>) < 2)
+    return false;
+  const auto *FirstIt = find_if(VL, IsaPred<LoadInst>);
+  const unsigned FirstLane = std::distance(VL.begin(), FirstIt);
+  auto *FirstLI = cast<LoadInst>(*FirstIt);
+  // The wide load may read the memory with a different tag.
+  if (FirstLI->getFunction()->hasFnAttribute(Attribute::SanitizeMemTag))
+    return false;
+  Type *ScalarTy = FirstLI->getType();
+  Value *Ptr0 = FirstLI->getPointerOperand();
+  LoadInst *LastLI = FirstLI;
+  for (auto [Lane, V] : enumerate(VL)) {
+    if (isa<UndefValue>(V))
+      continue;
+    auto *LI = dyn_cast<LoadInst>(V);
+    if (!LI || !LI->isSimple() || mustSuppressSpeculation(*LI))
+      return false;
+    std::optional<int64_t> Dist =
+        getPointersDiff(ScalarTy, Ptr0, ScalarTy, LI->getPointerOperand(), DL,
+                        SE, /*StrictCheck=*/true);
+    if (!Dist || *Dist != static_cast<int64_t>(Lane) - FirstLane)
+      return false;
+    if (LastLI->comesBefore(LI))
+      LastLI = LI;
+  }
+  // The wide load starts before the first load, so check the range as the one
+  // starting at the underlying object.
+  const uint64_t EltSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  const unsigned BitWidth = DL.getIndexTypeSizeInBits(Ptr0->getType());
+  APInt Offset(BitWidth, 0);
+  const Value *Base = Ptr0->stripAndAccumulateConstantOffsets(
+      DL, Offset, /*AllowNonInbounds=*/true);
+  bool Overflow = false;
+  APInt Start = Offset.ssub_ov(APInt(BitWidth, FirstLane * EltSize), Overflow);
+  if (Overflow || Start.isNegative())
+    return false;
+  APInt End = Start.sadd_ov(APInt(BitWidth, VL.size() * EltSize), Overflow);
+  return !Overflow &&
+         isDereferenceableAndAlignedPointer(
+             Base, Align(1), End, SimplifyQuery(DL, &TLI, &DT, &AC, LastLI));
+}
+
+uint64_t getVectorLoadShift(ArrayRef<Value *> Scalars) {
+  const auto *It = find_if(Scalars, IsaPred<LoadInst>);
+  auto *LI = cast<LoadInst>(*It);
+  return std::distance(Scalars.begin(), It) *
+         LI->getDataLayout().getTypeAllocSize(LI->getType()).getFixedValue();
 }
 
 /// Checks if the stores \p VL with pointers \p PointerOps can be lowered as a

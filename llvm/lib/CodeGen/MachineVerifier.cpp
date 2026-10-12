@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConvergenceVerifier.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -124,13 +123,11 @@ struct MachineVerifier {
       : PASS(pass), OS(OS ? *OS : nulls()), Banner(b),
         ReportedErrs(AbortOnError) {}
 
-  MachineVerifier(const char *b, LiveVariables *LiveVars,
-                  LiveIntervals *LiveInts, LiveStacks *LiveStks,
+  MachineVerifier(const char *b, LiveIntervals *LiveInts, LiveStacks *LiveStks,
                   SlotIndexes *Indexes, raw_ostream *OS,
                   bool AbortOnError = true)
-      : OS(OS ? *OS : nulls()), Banner(b), LiveVars(LiveVars),
-        LiveInts(LiveInts), LiveStks(LiveStks), Indexes(Indexes),
-        ReportedErrs(AbortOnError) {}
+      : OS(OS ? *OS : nulls()), Banner(b), LiveInts(LiveInts),
+        LiveStks(LiveStks), Indexes(Indexes), ReportedErrs(AbortOnError) {}
 
   /// \returns true if no problems were found.
   bool verify(const MachineFunction &MF);
@@ -250,7 +247,6 @@ struct MachineVerifier {
   }
 
   // Analysis information if available
-  LiveVariables *LiveVars = nullptr;
   LiveIntervals *LiveInts = nullptr;
   LiveStacks *LiveStks = nullptr;
   SlotIndexes *Indexes = nullptr;
@@ -355,7 +351,6 @@ struct MachineVerifier {
   void checkPHIOps(const MachineBasicBlock &MBB);
 
   void calcRegsRequired();
-  void verifyLiveVariables();
   void verifyLiveIntervals();
   void verifyLiveInterval(const LiveInterval &);
   void verifyLiveRangeValue(const LiveRange &, const VNInfo *, VirtRegOrUnit,
@@ -384,7 +379,6 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
-    AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.setPreservesAll();
@@ -429,7 +423,6 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
 void llvm::verifyMachineFunction(const std::string &Banner,
                                  const MachineFunction &MF) {
   // TODO: Use MFAM after porting below analyses.
-  // LiveVariables *LiveVars;
   // LiveIntervals *LiveInts;
   // LiveStacks *LiveStks;
   // SlotIndexes *Indexes;
@@ -450,8 +443,8 @@ bool MachineFunction::verify(MachineFunctionAnalysisManager &MFAM,
 bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
                              const char *Banner, raw_ostream *OS,
                              bool AbortOnError) const {
-  return MachineVerifier(Banner, /*LiveVars=*/nullptr, LiveInts,
-                         /*LiveStks=*/nullptr, Indexes, OS, AbortOnError)
+  return MachineVerifier(Banner, LiveInts, /*LiveStks=*/nullptr, Indexes, OS,
+                         AbortOnError)
       .verify(*this);
 }
 
@@ -500,10 +493,6 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (PASS) {
     auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
     LiveInts = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-    // We don't want to verify LiveVariables if LiveIntervals is available.
-    auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-    if (!LiveInts)
-      LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     auto *LSWrapper = PASS->getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
     LiveStks = LSWrapper ? &LSWrapper->getLS() : nullptr;
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
@@ -512,8 +501,6 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
   if (MFAM) {
     MachineFunction &Func = const_cast<MachineFunction &>(MF);
     LiveInts = MFAM->getCachedResult<LiveIntervalsAnalysis>(Func);
-    if (!LiveInts)
-      LiveVars = MFAM->getCachedResult<LiveVariablesAnalysis>(Func);
     // TODO: LiveStks = MFAM->getCachedResult<LiveStacksAnalysis>(Func);
     Indexes = MFAM->getCachedResult<SlotIndexesAnalysis>(Func);
   }
@@ -3072,16 +3059,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     if (MO->isKill())
       addRegWithSubRegs(regsKilled, Reg);
 
-    // Check that LiveVars knows this kill (unless we are inside a bundle, in
-    // which case we have already checked that LiveVars knows any kills on the
-    // bundle header instead).
-    if (LiveVars && Reg.isVirtual() && MO->isKill() &&
-        !MI->isBundledWithPred()) {
-      LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
-      if (!is_contained(VI.Kills, MI))
-        report("Kill missing from LiveVariables", MO, MONum);
-    }
-
     // Check LiveInts liveness and kill.
     if (LiveInts && !LiveInts->isNotInMIMap(*MI)) {
       SlotIndex UseIdx;
@@ -3563,8 +3540,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
     }
   }
 
-  if (LiveVars)
-    verifyLiveVariables();
   if (LiveInts)
     verifyLiveIntervals();
 
@@ -3607,32 +3582,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
           auto Result = SeenNumbers.insert((unsigned)Num);
           if (!Result.second)
             report("Instruction has a duplicated value tracking number", &MI);
-        }
-      }
-    }
-  }
-}
-
-void MachineVerifier::verifyLiveVariables() {
-  assert(LiveVars && "Don't call verifyLiveVariables without LiveVars");
-  for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
-    Register Reg = Register::index2VirtReg(I);
-    LiveVariables::VarInfo &VI = LiveVars->getVarInfo(Reg);
-    for (const auto &MBB : *MF) {
-      BBInfo &MInfo = MBBInfoMap[&MBB];
-
-      // Our vregsRequired should be identical to LiveVariables' AliveBlocks
-      if (MInfo.vregsRequired.count(Reg)) {
-        if (!VI.AliveBlocks.test(MBB.getNumber())) {
-          report("LiveVariables: Block missing from AliveBlocks", &MBB);
-          OS << "Virtual register " << printReg(Reg)
-             << " must be live through the block.\n";
-        }
-      } else {
-        if (VI.AliveBlocks.test(MBB.getNumber())) {
-          report("LiveVariables: Block should not be in AliveBlocks", &MBB);
-          OS << "Virtual register " << printReg(Reg)
-             << " is not needed live through the block.\n";
         }
       }
     }

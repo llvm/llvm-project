@@ -1007,6 +1007,10 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_fortify_source_negative_size : Warning<
+  "'%0' size argument is negative">,
+  InGroup<FortifySource>;
+
 def warn_stringop_overread
     : Warning<"'%0' reading %1 byte%s1 from a region of size %2">,
       InGroup<DiagGroup<"stringop-overread">>;
@@ -1048,6 +1052,11 @@ def warn_format_truncation_non_kprintf: Warning<
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
   "%2, but the corresponding specifier may require size %3">,
+  InGroup<FortifySource>;
+
+def warn_fortify_source_overread : Warning<
+  "'%0' will always read past the end of the source buffer; source buffer has "
+  "size %1, but the size is %2">,
   InGroup<FortifySource>;
 
 def err_function_start_invalid_type: Error<
@@ -3431,12 +3440,10 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "value of 128, 256, 512, 1024 or 2048">;
 def err_attribute_arm_sm_incompat_builtin : Error<
   "builtin can only be called from a %0 function">;
-def warn_attribute_arm_za_builtin_no_za_state : Warning<
-  "builtin call is not valid when calling from a function without active ZA state">,
-  InGroup<DiagGroup<"undefined-arm-za">>;
-def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
-  "builtin call is not valid when calling from a function without active ZT0 state">,
-  InGroup<DiagGroup<"undefined-arm-zt0">>;
+def err_attribute_arm_za_builtin_no_za_state : Error<
+  "builtin call is not valid when calling from a function without active ZA state">;
+def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
+  "builtin call is not valid when calling from a function without active ZT0 state">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -8901,7 +8908,9 @@ def warn_cdtor_function_try_handler_mem_expr : Warning<
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
 def err_throw_object_throwing_dtor : Error<
   "cannot throw object of type %0 with a potentially-throwing destructor">;
-
+def err_throw_or_catch_address_space_qualified_ptr : Error<
+  "cannot %select{throw|catch}0 %select{pointer|reference}1 with non-default address space "
+  "(type %2)">;
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
     "%0 can appear only once in a capture list">;
@@ -11357,6 +11366,11 @@ def warn_empty_defer_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
+def warn_redundant_defer : Warning<
+  "redundant use of '%0'; the deferred statement is executed immediately">,
+  InGroup<DiagGroup<"redundant-defer">>;
+def note_redundant_defer_if : Note<"did you mean to use '%0 if'?">;
+
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
 def err_va_start_outside_function : Error<
@@ -13728,6 +13742,19 @@ def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
 def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
+def err_hlsl_interpolation_conflict : Error<
+  "'nointerpolation' cannot be combined with other interpolation modifiers">;
+def err_hlsl_interpolation_position : Error<
+  "'nointerpolation' cannot be used on SV_Position">;
+def err_hlsl_interpolation_type : Error<
+  "interpolation modifiers other than 'nointerpolation' cannot be used with type %0">;
+def warn_hlsl_duplicate_interpolation : Warning<
+  "duplicate interpolation modifier %0">,
+  InGroup<DuplicateDeclSpecifier>;
+def warn_hlsl_interpolation_override : Warning<
+  "interpolation modifier '%select{centroid|sample}0' overrides "
+  "'%select{center|centroid}1'">,
+  InGroup<IgnoredAttributes>;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -13735,6 +13762,19 @@ def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
+def err_hlsl_semantic_index_out_of_range
+    : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
+def err_hlsl_semantic_zero_sized_array
+    : Error<"semantic %0 cannot be applied to a zero-sized array">;
+def err_hlsl_semantic_64bit_type
+    : Error<"semantic %0 cannot use 64-bit component types in DXIL shader inputs "
+            "or outputs (was %1)">;
+def err_hlsl_semantic_invalid_type
+    : Error<"semantic %0 must be a "
+            "%select{scalar|scalar or vector of up to %2 components}1 of "
+            "%select{16 or 32 bit integer|32 bit integer|"
+            "16 or 32 bit floating-point|16 or 32 bit unsigned integer|"
+            "32 bit unsigned integer}3 type (was %4)">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
@@ -13851,6 +13891,25 @@ def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_dxil_only: Error<"%0 is only available for the DirectX target">;
+def err_hlsl_invalid_barrier_memory_flags: Error<
+  "invalid MemoryTypeFlags for Barrier operation; expected 0, ALL_MEMORY, or "
+  "some combination of UAV_MEMORY, GROUP_SHARED_MEMORY, NODE_INPUT_MEMORY, "
+  "NODE_OUTPUT_MEMORY flags">;
+def err_hlsl_invalid_barrier_semantic_flags: Error<
+  "invalid SemanticFlags for Barrier operation; expected 0 or some "
+  "combination of GROUP_SYNC, GROUP_SCOPE, DEVICE_SCOPE flags">;
+def err_hlsl_barrier_flag_requires_group: Error<
+  "%select{GROUP_SHARED_MEMORY|GROUP_SYNC|GROUP_SCOPE}0 specified for Barrier "
+  "operation when context has no visible group">;
+def err_hlsl_barrier_resource_requires_group: Error<
+  "resource Barrier operation requires a shader stage with a visible group">;
+def err_hlsl_barrier_node_memory_requires_node: Error<
+  "NODE_INPUT_MEMORY or NODE_OUTPUT_MEMORY may only be specified for Barrier "
+  "operation in a node shader">;
+def err_hlsl_barrier_scope_requires_memory: Error<
+  "%select{GROUP_SCOPE requires a nonzero MemoryTypeFlags argument|"
+  "DEVICE_SCOPE requires UAV_MEMORY or NODE_INPUT_MEMORY in MemoryTypeFlags}0">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 def err_hlsl_invalid_rootsig_value : Error<"value must be in the range [%0, %1]">;
@@ -13905,15 +13964,21 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_variable : Warning<
+defvar UnsafeBufferVariableMsg =
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
-  "does not perform bounds checks}1">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
-def warn_unsafe_buffer_operation : Warning<
+  "does not perform bounds checks}1";
+defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
-  "unsafe buffer access|function introduces unsafe buffer manipulation|unsafe invocation of %1|"
-  "field %1 prone to unsafe buffer manipulation}0">,
+  "unsafe buffer access|function introduces unsafe buffer manipulation|"
+  "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
+  InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;

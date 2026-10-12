@@ -487,9 +487,6 @@ def warn_drv_dwarf_version_limited_by_target : Warning<
   InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
-def warn_ignoring_fdiscard_for_bitcode : Warning<
-  "ignoring -fdiscard-value-names for LLVM Bitcode">,
-  InGroup<UnusedCommandLineArgument>;
 def warn_drv_input_file_unused : Warning<
   "%0: '%1' input unused%select{ when '%3' is present|}2">,
   InGroup<UnusedCommandLineArgument>;

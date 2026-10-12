@@ -49,6 +49,25 @@ func.func @max_pool2d_adaptive(
 
 // -----
 
+// Check that canonicalization rewrites avg_pool2d_adaptive before named
+// TOSA-to-Linalg conversion.
+// CHECK-LABEL: func.func @avg_pool2d_adaptive(
+// CHECK-NOT: tosa.avg_pool2d_adaptive
+// CHECK: linalg.pooling_nhwc_sum
+func.func @avg_pool2d_adaptive(
+    %arg0: tensor<1x4x4x1xf32>) -> tensor<1x2x2x1xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad acc_type(f32) :
+    (tensor<1x4x4x1xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: rescale_doubleround
 func.func @rescale_doubleround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14xi8> {
   %0 = "tosa.const"() <{values = dense<0> : tensor<14xi32>}> : () -> tensor<14xi32>

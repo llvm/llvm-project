@@ -154,7 +154,7 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOptLevel OL,
   std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
-  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
+  if (TT.isPPC64()) {
     if (!FullFS.empty())
       FullFS = "+64bit," + FullFS;
     else
@@ -266,7 +266,7 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
                                : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
 
@@ -281,7 +281,7 @@ createPPCPostMachineScheduler(MachineSchedContext *C) {
                            : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
-    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+    DAG->addMutation(createStoreClusterDAGMutation(DAG->TII));
   if (ST.hasFusion())
     DAG->addMutation(createPowerPCMacroFusionDAGMutation());
   return DAG;

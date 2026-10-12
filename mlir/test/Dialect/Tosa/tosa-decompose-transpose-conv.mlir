@@ -128,6 +128,21 @@ func.func @transpose_conv2d_strided_quantized(%arg0: tensor<2x17x15x3xi8>, %arg1
 
 // -----
 
+// CHECK-LABEL: @transpose_conv2d_strided_int16
+func.func @transpose_conv2d_strided_int16(%arg0: tensor<1x13x33x3xi16>, %arg1: tensor<9x3x1x3xi8>, %arg2: tensor<9xi48>) -> tensor<1x29x35x9xi48> {
+  // CHECK-DAG: %[[INPUT_ZP:.+]] = tosa.const values(dense<0> : tensor<1xi16>) : () -> tensor<1xi16>
+  // CHECK-DAG: %[[WEIGHT_ZP:.+]] = tosa.const values(dense<-37> : tensor<1xi8>) : () -> tensor<1xi8>
+  // CHECK-DAG: %[[WEIGHT_PAD:.+]] = tosa.const_shape values(dense<[0, 0, 0, 1, 0, 0, 0, 0]> : tensor<8xindex>)
+  // CHECK: tosa.pad %arg1, %[[WEIGHT_PAD]], %[[WEIGHT_ZP]] : (tensor<9x3x1x3xi8>, !tosa.shape<8>, tensor<1xi8>) -> tensor<9x4x1x3xi8>
+  // CHECK: tosa.pad %arg0, %{{.+}}, %[[INPUT_ZP]] : (tensor<1x13x33x3xi16>, !tosa.shape<8>, tensor<1xi16>)
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %weight_zp = "tosa.const"() <{values = dense<-37> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp out_pad([1, 1, 1, 1]) stride([2, 1]) acc_type(i48) : (tensor<1x13x33x3xi16>, tensor<9x3x1x3xi8>, tensor<9xi48>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x29x35x9xi48>
+  return %0 : tensor<1x29x35x9xi48>
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_conv2d_strided_quantized_quant_input
 func.func @transpose_conv2d_strided_quantized_quant_input(%arg0: tensor<2x17x15x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, %arg1: tensor<5x3x5x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, %arg2: tensor<5xi32>) -> (tensor<2x35x47x5xi32>) {
   // Checks a regression. A typo in `createPadConstTensor` caused the conversion to crash

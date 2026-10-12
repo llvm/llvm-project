@@ -24,19 +24,11 @@ enum class Property {
 #undef GEN_OMP_PROPERTY_ENUMS
 };
 
-static constexpr size_t Property_enumSize =
-    llvm::to_underlying(Property::Last_) -
-    llvm::to_underlying(Property::First_) + 1;
-
 enum class Modifier {
 #define GEN_OMP_MODIFIER_ENUMS
 #include "llvm/Frontend/OpenMP/OMPDescriptors.h.inc"
 #undef GEN_OMP_MODIFIER_ENUMS
 };
-
-static constexpr size_t Modifier_enumSize =
-    llvm::to_underlying(Modifier::Last_) -
-    llvm::to_underlying(Modifier::First_) + 1;
 
 enum class ModifierSet {
 #define GEN_OMP_MODIFIER_GROUP_ENUMS
@@ -58,19 +50,15 @@ enum class ModifierSet {
   Last_ = LastSet_,
 };
 
-static constexpr size_t ModifierSet_enumSize =
-    llvm::to_underlying(ModifierSet::Last_) -
-    llvm::to_underlying(ModifierSet::First_) + 1;
-
 constexpr inline bool isModifierGroup(ModifierSet S) {
   return //
       llvm::to_underlying(ModifierSet::FirstGroup_) <= llvm::to_underlying(S) &&
       llvm::to_underlying(S) <= llvm::to_underlying(ModifierSet::LastGroup_);
 }
 
-using Properties = EnumSet<Property, Property_enumSize>;
-using Modifiers = EnumSet<Modifier, Modifier_enumSize>;
-using ModifierSets = EnumSet<ModifierSet, ModifierSet_enumSize>;
+using Properties = EnumSet<Property>;
+using Modifiers = EnumSet<Modifier>;
+using ModifierSets = EnumSet<ModifierSet>;
 
 namespace descriptor {
 namespace details {

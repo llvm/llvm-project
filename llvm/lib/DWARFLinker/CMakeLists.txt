@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMDWARFLinker
   BinaryFormat
   CodeGen
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Object
   Support
   )

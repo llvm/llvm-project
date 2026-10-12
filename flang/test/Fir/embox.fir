@@ -108,7 +108,7 @@ func.func @_QPtest_allocator1() {
   %c20 = arith.constant 20 : index
   %0 = fir.alloca !fir.array<20xi32> {bindc_name = "x", uniq_name = "_QFtest_sliceEx"}
   %1 = fir.shape %c20 : (index) -> !fir.shape<1>
-  %3 = fir.embox %0(%1) {allocator_idx = 1 : i32} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.embox %0(%1) allocator_idx(1) : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   fir.call @_QPtest_callee(%3) : (!fir.box<!fir.array<?xi32>>) -> ()
   return
 }
@@ -120,7 +120,7 @@ func.func @_QPtest_allocator2() {
   %c20 = arith.constant 20 : index
   %0 = fir.alloca !fir.array<20xi32> {bindc_name = "x", uniq_name = "_QFtest_sliceEx"}
   %1 = fir.shape %c20 : (index) -> !fir.shape<1>
-  %3 = fir.embox %0(%1) {allocator_idx = 3 : i32} : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.embox %0(%1) allocator_idx(3) : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
   fir.call @_QPtest_callee(%3) : (!fir.box<!fir.array<?xi32>>) -> ()
   return
 }

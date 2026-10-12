@@ -18,7 +18,6 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
@@ -211,13 +210,13 @@ public:
     } m_type = Type::Invalid;
     std::vector<Operand> m_children;
     lldb::addr_t m_immediate = 0;
-    ConstString m_register;
+    std::string m_register;
     bool m_negative = false;
     bool m_clobbered = false;
 
     bool IsValid() { return m_type != Type::Invalid; }
 
-    static Operand BuildRegister(ConstString &r);
+    static Operand BuildRegister(llvm::StringRef r);
     static Operand BuildImmediate(lldb::addr_t imm, bool neg);
     static Operand BuildImmediate(int64_t imm);
     static Operand BuildDereference(const Operand &ref);
@@ -281,7 +280,7 @@ MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
 std::function<bool(const Instruction::Operand &)>
 MatchRegOp(const RegisterInfo &info);
 
-std::function<bool(const Instruction::Operand &)> FetchRegOp(ConstString &reg);
+std::function<bool(const Instruction::Operand &)> FetchRegOp(std::string &reg);
 
 std::function<bool(const Instruction::Operand &)> MatchImmOp(int64_t imm);
 

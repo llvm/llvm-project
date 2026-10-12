@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -1393,21 +1394,22 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
+  // The copy analysis only needs the actual argument and the dummy
+  // characteristics, so it also drives the parameter-object temporary below
+  // in contexts that do not use the copy-in/copy-out machinery.
+  Fortran::evaluate::FoldingContext &foldingContext{
+      callContext.converter.getFoldingContext()};
+  const bool suggestCopyIn{Fortran::evaluate::ActualArgNeedsCopy(
+                               arg.entity, arg.characteristics, foldingContext,
+                               /*forCopyOut=*/false)
+                               .value_or(true)};
+  const bool suggestCopyOut{Fortran::evaluate::ActualArgNeedsCopy(
+                                arg.entity, arg.characteristics, foldingContext,
+                                /*forCopyOut=*/true)
+                                .value_or(true)};
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
-
   if (callContext.doCopyIn) {
-    Fortran::evaluate::FoldingContext &foldingContext{
-        callContext.converter.getFoldingContext()};
-
-    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
-                             arg.entity, arg.characteristics, foldingContext,
-                             /*forCopyOut=*/false)
-                             .value_or(true);
-    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
-                              arg.entity, arg.characteristics, foldingContext,
-                              /*forCopyOut=*/true)
-                              .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
@@ -1461,8 +1463,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Helpers to generate hlfir.copy_in operation and register the related
   // hlfir.copy_out creation.
   auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
-    auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
-    assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
+    assert(mlir::dyn_cast<fir::BaseBoxType>(var.getType()) &&
+           "expect non simply contiguous variables to be boxes");
     mlir::Value tempBox = builder.createTemporary(loc, var.getType());
     auto copyIn = hlfir::CopyInOp::create(builder, loc, var, tempBox,
                                           /*var_is_present=*/mlir::Value{});
@@ -1501,13 +1503,17 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (mustSetDynamicTypeToDummyType)
       entity = genSetDynamicTypeToDummyType(entity);
     if (arg.hasValueAttribute() ||
-        // Constant expressions might be lowered as variables with
-        // 'parameter' attribute. Even though the constant expressions
-        // are not definable and explicit assignments to them are not
-        // possible, we have to create a temporary copies when we pass
-        // them down the call stack because of potential compiler
-        // generated writes in copy-out.
-        isParameterObjectOrSubObject(entity)) {
+        // Named constants and constant expressions might be lowered as
+        // variables with the 'parameter' attribute.  Whether a copy is
+        // needed for argument association is decided by the copy-in/copy-out
+        // analysis like for any other object; but when a copy is needed, it
+        // must be made via a temporary rather than via the runtime copy-in
+        // machinery below, both because the entity may be a raw address
+        // (genCopyIn requires a descriptor) and because compiler-generated
+        // copy-out must never target the read-only storage of a
+        // non-definable actual argument.
+        (isParameterObjectOrSubObject(entity) &&
+         (suggestCopyIn || suggestCopyOut))) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();
@@ -3332,8 +3338,13 @@ genProcedureRef(CallContext &callContext) {
       // binding must be in place for this lowering, which is the only one of
       // the actual argument: lowering it again would duplicate any side
       // effect of its subscripts.
+      // Inside OpenACC compute constructs, keep the ordinary binding so that
+      // calls use the same mapping as other references, including any mapping
+      // or privatization on the compute construct itself. The OpenACC data
+      // legalization handles references to enclosing data constructs.
       std::optional<Fortran::lower::SymMapScope> deviceScope;
       if (!isKernelLaunch && isCUDADeviceDummy(arg.characteristics) &&
+          !Fortran::lower::isInsideOpenACCComputeConstruct(builder) &&
           Fortran::evaluate::IsVariable(*expr)) {
         deviceScope.emplace(callContext.symMap);
         if (!mapOpenACCDeviceBindings(*expr, callContext.symMap))

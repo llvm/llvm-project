@@ -380,7 +380,7 @@ ImplicitNullChecksImpl::isSuitableMemoryOp(const MachineInstr &MI,
 
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
-  auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
+  auto AM = TII->getAddrModeFromMemoryOp(MI);
   if (!AM || AM->Form != ExtAddrMode::Formula::Basic)
     return SR_Unsuitable;
   auto AddrMode = *AM;
@@ -700,7 +700,7 @@ bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
 
     // If MI re-defines the PointerReg in a way that changes the value of
     // PointerReg if it was null, then we cannot move further.
-    if (!TII->preservesZeroValueInReg(&MI, PointerReg, TRI))
+    if (!TII->preservesZeroValueInReg(&MI, PointerReg))
       return false;
     InstsSeenSoFar.push_back(&MI);
   }

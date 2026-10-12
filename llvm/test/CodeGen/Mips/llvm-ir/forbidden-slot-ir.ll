@@ -10,10 +10,10 @@ entry:
   %0 = icmp eq i32 0, 1
   br i1 %0, label %2, label %3
   ret i1 %0
-2:                                                
+2:
   ret i1 %0
-3:                                                
-  ret i1 %0
+3:
+  ret i1 true
 }
 
 define i32 @foo1() nounwind {

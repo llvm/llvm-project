@@ -34,7 +34,7 @@
 // CHECK:       %[[UNDEF:.*]] = fir.undefined !fir.dscope
 // CHECK:       %[[SHAPE:.*]] = fir.shape %[[C5]], %[[C7]] : (index, index) -> !fir.shape<2>
 // CHECK:       %[[SLICE:.*]] = fir.slice %[[C1]], %[[C5]], %[[C3]], %[[C2]], %[[C7]], %[[C2]] : (index, index, index, index, index, index) -> !fir.slice<2>
-// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg1(%[[SHAPE]]) dummy_scope %[[UNDEF]] {uniq_name = "b"} : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<5x7xi32>>
+// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg1(%[[SHAPE]]) dummy_scope %[[UNDEF]] uniq_name("b") : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<5x7xi32>>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE]](%[[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x3xi32>>
 // CHECK:       %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:       [[ADD1:%[0-9]+]] = arith.addi %[[C3]], %[[C1_0]] : index
@@ -69,7 +69,7 @@ func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.a
   %0 = fir.undefined !fir.dscope
   %shape = fir.shape %c5, %c7 : (index, index) -> !fir.shape<2>
   %slice = fir.slice %c1, %c5, %c3, %c2, %c7, %c2 : (index, index, index, index, index, index) -> !fir.slice<2>
-  %2 = fir.declare %arg1(%shape) dummy_scope %0 {uniq_name = "b"} : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<5x7xi32>>
+  %2 = fir.declare %arg1(%shape) dummy_scope %0 uniq_name("b") : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<5x7xi32>>
   %9 = fir.embox %2(%shape)[%slice] : (!fir.ref<!fir.array<5x7xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x3xi32>>
   %c1_0 = arith.constant 1 : index
   %11 = arith.addi %c3, %c1_0 : index
@@ -117,11 +117,11 @@ func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.a
 // CHECK:       %[[C5:.*]] = arith.constant 5 : index
 // CHECK:       %[[DUMMY_SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:       [[SHAPE:%[0-9]+]] = fir.shape %[[C5]], %[[C7]], %[[C7]] : (index, index, index) -> !fir.shape<3>
-// CHECK:       [[DECLARE_A:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "_QFcopyEa"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
-// CHECK:       [[DECLARE_B:%[0-9]+]] = fir.declare %arg1([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "_QFcopyEb"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
+// CHECK:       [[DECLARE_A:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] uniq_name("_QFcopyEa") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
+// CHECK:       [[DECLARE_B:%[0-9]+]] = fir.declare %arg1([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] uniq_name("_QFcopyEb") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
 // CHECK:       [[ALLOCA:%.*]] = memref.alloca() {bindc_name = "c", uniq_name = "_QFcopyEc"} : memref<7x7x5xi32>
 // CHECK:       [[REFC:%[0-9]+]] = fir.convert [[ALLOCA]] : (memref<7x7x5xi32>) -> !fir.ref<!fir.array<5x7x7xi32>>
-// CHECK:       [[DECLARE_C:%[0-9]+]] = fir.declare [[REFC]]([[SHAPE]]) {uniq_name = "_QFcopyEc"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<5x7x7xi32>>
+// CHECK:       [[DECLARE_C:%[0-9]+]] = fir.declare [[REFC]]([[SHAPE]]) uniq_name("_QFcopyEc") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<5x7x7xi32>>
 // CHECK:       [[ADDR:%[0-9]+]] = fir.address_of(@_QFcopyECm) : !fir.ref<i32>
 // CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C1]], %[[C5]], %[[C3]], %[[C2]], %[[C7]], %[[C2]], %[[C3]], %[[C7]], %[[C4]] : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE_B]]([[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<2x3x2xi32>>
@@ -160,10 +160,10 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
   %c5 = arith.constant 5 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c5, %c7, %c7 : (index, index, index) -> !fir.shape<3>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFcopyEa"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
-  %3 = fir.declare %arg1(%1) dummy_scope %0 {uniq_name = "_QFcopyEb"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFcopyEa") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
+  %3 = fir.declare %arg1(%1) dummy_scope %0 uniq_name("_QFcopyEb") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.dscope) -> !fir.ref<!fir.array<5x7x7xi32>>
   %4 = fir.alloca !fir.array<5x7x7xi32> {bindc_name = "c", uniq_name = "_QFcopyEc"}
-  %5 = fir.declare %4(%1) {uniq_name = "_QFcopyEc"} : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<5x7x7xi32>>
+  %5 = fir.declare %4(%1) uniq_name("_QFcopyEc") : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>) -> !fir.ref<!fir.array<5x7x7xi32>>
   %6 = fir.address_of(@_QFcopyECm) : !fir.ref<i32>
   %10 = fir.slice %c1, %c5, %c3, %c2, %c7, %c2, %c3, %c7, %c4 : (index, index, index, index, index, index, index, index, index) -> !fir.slice<3>
   %11 = fir.embox %3(%1) [%10] : (!fir.ref<!fir.array<5x7x7xi32>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<2x3x2xi32>>
@@ -184,7 +184,7 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
 // CHECK:       %[[C3:.*]] = arith.constant 3 : index
 // CHECK:       %[[DUMMY_SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:       [[SHAPE:%[0-9]+]] = fir.shape %[[C3]], %[[C3]] : (index, index) -> !fir.shape<2>
-// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "_QFextract_rowEmatrix"} : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
+// CHECK:       [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] uniq_name("_QFextract_rowEmatrix") : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
 // CHECK:       %[[UNDEF:.*]] = fir.undefined index
 // CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C2]], %[[UNDEF]], %[[UNDEF]], %[[C1]], %[[C3]], %[[C1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE]]([[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<3xi32>>
@@ -210,7 +210,7 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
   %c3 = arith.constant 3 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c3, %c3 : (index, index) -> !fir.shape<2>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFextract_rowEmatrix"} : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFextract_rowEmatrix") : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<3x3xi32>>
   %5 = fir.undefined index
   %6 = fir.slice %c2, %5, %5, %c1, %c3, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
   %7 = fir.embox %2(%1) [%6] : (!fir.ref<!fir.array<3x3xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<3xi32>>
@@ -233,9 +233,9 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
 // CHECK:       %[[C100:.*]] = arith.constant 100 : index
 // CHECK:       %[[DUMMY_SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:       %[[ADDR:.*]] = fir.address_of(@_QFextract_columnECn) : !fir.ref<i32>
-// CHECK:       [[DECLARE_N:%[0-9]+]] = fir.declare %[[ADDR]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:       [[DECLARE_N:%[0-9]+]] = fir.declare %[[ADDR]] uniq_name("n") fortran_attrs<parameter> : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:       [[SHAPE:%[0-9]+]] = fir.shape %[[C100]], %[[C5]] : (index, index) -> !fir.shape<2>
-// CHECK:       [[DECLARE_TMP:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] {uniq_name = "tmp"} : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
+// CHECK:       [[DECLARE_TMP:%[0-9]+]] = fir.declare %arg0([[SHAPE]]) dummy_scope %[[DUMMY_SCOPE]] uniq_name("tmp") : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
 // CHECK:       %[[UNDEF:.*]] = fir.undefined index
 // CHECK:       %[[SLICE:[0-9]+]] = fir.slice %[[C1]], %[[C100]], %[[C11]], %[[C1]], %[[UNDEF]], %[[UNDEF]] : (index, index, index, index, index, index) -> !fir.slice<2>
 // CHECK:       [[EMBOX:%[0-9]+]] = fir.embox [[DECLARE_TMP]]([[SHAPE]]) [%[[SLICE]]] : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<10xf32>>
@@ -264,9 +264,9 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
   %c100 = arith.constant 100 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QFextract_columnECn) : !fir.ref<i32>
-  %2 = fir.declare %1 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "n"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %2 = fir.declare %1 uniq_name("n") fortran_attrs<parameter> : (!fir.ref<i32>) -> !fir.ref<i32>
   %5 = fir.shape %c100, %c5 : (index, index) -> !fir.shape<2>
-  %6 = fir.declare %arg0(%5) dummy_scope %0 {uniq_name = "tmp"} : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
+  %6 = fir.declare %arg0(%5) dummy_scope %0 uniq_name("tmp") : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.dscope) -> !fir.ref<!fir.array<100x5xf32>>
   %8 = fir.undefined index
   %9 = fir.slice %c1, %c100, %c11, %c1, %8, %8 : (index, index, index, index, index, index) -> !fir.slice<2>
   %10 = fir.embox %6(%5) [%9] : (!fir.ref<!fir.array<100x5xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<10xf32>>
@@ -285,7 +285,7 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:       %[[C_NEG1:.*]] = arith.constant -1 : index
 // CHECK:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK:       [[ALLOCA:%.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>> <{bindc_name = "c", uniq_name = "_QMcodaFtrythisEc"}>
-// CHECK:       [[DECLARE:%.*]] = fir.declare [[ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcodaFtrythisEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
+// CHECK:       [[DECLARE:%.*]] = fir.declare [[ALLOCA]] uniq_name("_QMcodaFtrythisEc") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
 // CHECK:       [[LOADBOX:%.*]] = fir.load [[DECLARE]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
 // CHECK:       [[BOXADDR:%.*]] = fir.box_addr [[LOADBOX]] : (!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>) -> !fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>
 // CHECK:       [[COORD:%.*]] = fir.coordinate_of [[BOXADDR]], samples : (!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>) -> !fir.ref<!fir.array<7xf32>>
@@ -313,7 +313,7 @@ func.func @noslice() {
   %c-1 = arith.constant -1 : index
   %c0 = arith.constant 0 : index
   %7 = fir.alloca !fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>> {bindc_name = "c", uniq_name = "_QMcodaFtrythisEc"}
-  %10 = fir.declare %7 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMcodaFtrythisEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
+  %10 = fir.declare %7 uniq_name("_QMcodaFtrythisEc") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
   %27 = fir.load %10 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>>
   %28 = fir.box_addr %27 : (!fir.box<!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>>) -> !fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>
   %31 = fir.coordinate_of %28, samples : (!fir.heap<!fir.type<_QMcodaTcodaK6{samples:!fir.array<7xf32>}>>) -> !fir.ref<!fir.array<7xf32>>
@@ -339,7 +339,7 @@ func.func @noslice() {
 // CHECK: %[[DUMMY_SCOPE:[0-9]+]] = fir.dummy_scope : !fir.dscope
 // CHECK: %[[ADDR:[0-9]+]] = fir.address_of(@_QFFsECindex) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[SHAPE:[0-9]+]] = fir.shape %[[C5]] : (index) -> !fir.shape<1>
-// CHECK: %[[DECLARE:[0-9]+]] = fir.declare %[[ADDR]](%[[SHAPE]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFFsECindex"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
+// CHECK: %[[DECLARE:[0-9]+]] = fir.declare %[[ADDR]](%[[SHAPE]]) uniq_name("_QFFsECindex") fortran_attrs<parameter> : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[LOAD:[0-9]+]] = memref.load %[[ALLOCA]][] : memref<i32>
 // CHECK: %[[INDEX_CAST:[0-9]+]] = arith.index_cast %[[LOAD]] : i32 to index
 // CHECK: %[[ADD1:[0-9]+]] = arith.addi %[[INDEX_CAST]], %[[C_NEG6]] : index
@@ -369,8 +369,8 @@ func.func @array_coor_slice() attributes {fir.bindc_name = "tf4a", noinline} {
   %7 = fir.dummy_scope : !fir.dscope
   %10 = fir.address_of(@_QFFsECindex) : !fir.ref<!fir.array<5xi32>>
   %11 = fir.shape %c5 : (index) -> !fir.shape<1>
-  %12 = fir.declare %10(%11) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFFsECindex"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
-  %13 = fir.declare %3 dummy_scope %7 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFFsElower"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %12 = fir.declare %10(%11) uniq_name("_QFFsECindex") fortran_attrs<parameter> : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
+  %13 = fir.declare %3 dummy_scope %7 uniq_name("_QFFsElower") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %29 = fir.load %13 : !fir.ref<i32>
   %30 = arith.index_cast %29 : i32 to index
   %31 = arith.addi %30, %c-6 : index

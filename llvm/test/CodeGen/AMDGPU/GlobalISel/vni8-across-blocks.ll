@@ -489,8 +489,7 @@ define amdgpu_kernel void @v8i8_phi_chain(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    global_load_dwordx2 v[1:2], v3, s[10:11]
 ; GFX906-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v0
 ; GFX906-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; GFX906-NEXT:    s_and_b64 s[4:5], exec, vcc
-; GFX906-NEXT:    s_or_b64 s[0:1], s[0:1], s[4:5]
+; GFX906-NEXT:    s_or_b64 s[0:1], s[0:1], vcc
 ; GFX906-NEXT:  .LBB8_2: ; %Flow
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]

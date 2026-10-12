@@ -2439,6 +2439,80 @@ uint32x2_t test_pwsll_s_u32x2_low5(uint16x2_t rs1) {
   return __riscv_pwsll_s_u32x2(rs1, 63);
 }
 
+// CHECK-LABEL: test_pnsrl_s_u8x4:
+// RV32:        pnsrl.bs
+// RV64:        psrl.hs
+// RV64:        pncvt.wb
+uint8x4_t test_pnsrl_s_u8x4(uint16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrl_s_u16x2:
+// RV32:        pnsrl.hs
+// RV64:        psrl.ws
+// RV64:        pncvt.wh
+uint16x2_t test_pnsrl_s_u16x2(uint32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrl_s_u16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsra_s_i8x4:
+// RV32:        pnsra.bs
+// RV64:        psra.hs
+// RV64:        pncvt.wb
+int8x4_t test_pnsra_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsra_s_i16x2:
+// RV32:        pnsra.hs
+// RV64:        psra.ws
+// RV64:        pncvt.wh
+int16x2_t test_pnsra_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsra_s_i16x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i8x4:
+// RV32:        pnsrar.bs
+// RV64:        psshar.hs
+// RV64:        pncvt.wb
+int8x4_t test_pnsrar_s_i8x4(int16x4_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i8x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i16x2:
+// RV32:        pnsrar.hs
+// RV64:        psshar.ws
+// RV64:        pncvt.wh
+int16x2_t test_pnsrar_s_i16x2(int32x2_t rs1, unsigned shamt) {
+  return __riscv_pnsrar_s_i16x2(rs1, shamt);
+}
+
+// Counts that exceed the result width still use the low five bits of shamt.
+// CHECK-LABEL: test_pnsrl_s_u8x4_16:
+// RV32:        li{{[[:space:]]}}a2, 16
+// RV32-NEXT:   pnsrl.bs{{[[:space:]]}}a0, a0, a2
+// RV64:        li{{[[:space:]]}}a1, 16
+// RV64:        psrl.hs{{[[:space:]]}}a0, a0, a1
+uint8x4_t test_pnsrl_s_u8x4_16(uint16x4_t rs1) {
+  return __riscv_pnsrl_s_u8x4(rs1, 16);
+}
+
+// CHECK-LABEL: test_pnsrl_s_u16x2_31:
+// RV32:        pnsrli.h{{[[:space:]]}}a0, a0, 31
+// RV64:        psrli.w{{[[:space:]]}}a0, a0, 31
+uint16x2_t test_pnsrl_s_u16x2_31(uint32x2_t rs1) {
+  return __riscv_pnsrl_s_u16x2(rs1, 31);
+}
+
+// CHECK-LABEL: test_pnsrar_s_i8x4_16:
+// RV32:        li{{[[:space:]]}}a2, 16
+// RV32-NEXT:   pnsrar.bs{{[[:space:]]}}a0, a0, a2
+// RV64:        li{{[[:space:]]}}a1, -16
+// RV64-NEXT:   psshar.hs{{[[:space:]]}}a0, a0, a1
+int8x4_t test_pnsrar_s_i8x4_16(int16x4_t rs1) {
+  return __riscv_pnsrar_s_i8x4(rs1, 16);
+}
+
 // CHECK-LABEL: test_pwadd_i16x4:
 // RV32:        pwadd.b
 // RV64:        zip8p
@@ -2630,6 +2704,22 @@ int16x4_t test_pwmul_i16x4(int8x4_t rs1, int8x4_t rs2) {
 // RV64:        pmul.w.h01
 int32x2_t test_pwmul_i32x2(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pwmul_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pmqwacc_i32x2:
+// RV32:        pmqwacc.h{{[[:space:]]}}
+// RV64:        zip16p{{[[:space:]]}}
+// RV64:        pmqacc.w.h01{{[[:space:]]}}
+int32x2_t test_pmqwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqwacc_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pmqrwacc_i32x2:
+// RV32:        pmqrwacc.h{{[[:space:]]}}
+// RV64:        zip16p{{[[:space:]]}}
+// RV64:        pmqracc.w.h01{{[[:space:]]}}
+int32x2_t test_pmqrwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqrwacc_i32x2(rd, rs1, rs2);
 }
 
 // CHECK-LABEL: test_pwmulu_u16x4:
@@ -5530,4 +5620,138 @@ int32x2_t test_pwunzipho_i32x2(int16x4_t a) {
 // RV64:         ppaireo.h{{[[:space:]]}}
 uint32x2_t test_pwunzipho_u32x2(uint16x4_t a) {
   return __riscv_pwunzipho_u32x2(a);
+}
+
+/* Packed Slide 1 up/down (32-bit) */
+
+// CHECK-LABEL: test_pslide1up_i8x4:
+// CHECK:         slx
+int8x4_t test_pslide1up_i8x4(int8x4_t rd, int8_t rs1) {
+  return __riscv_pslide1up_i8x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_u8x4:
+// CHECK:         slx
+uint8x4_t test_pslide1up_u8x4(uint8x4_t rd, uint8_t rs1) {
+  return __riscv_pslide1up_u8x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_i16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+int16x2_t test_pslide1up_i16x2(int16x2_t rd, int16_t rs1) {
+  return __riscv_pslide1up_i16x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_u16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+uint16x2_t test_pslide1up_u16x2(uint16x2_t rd, uint16_t rs1) {
+  return __riscv_pslide1up_u16x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_i8x4:
+// RV32:         srx
+// RV64:         pack
+// RV64:         srli
+int8x4_t test_pslide1down_i8x4(int8x4_t rd, int8_t rs1) {
+  return __riscv_pslide1down_i8x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_u8x4:
+// RV32:         srx
+// RV64:         pack
+// RV64:         srli
+uint8x4_t test_pslide1down_u8x4(uint8x4_t rd, uint8_t rs1) {
+  return __riscv_pslide1down_u8x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_i16x2:
+// CHECK:         ppairoe.h
+int16x2_t test_pslide1down_i16x2(int16x2_t rd, int16_t rs1) {
+  return __riscv_pslide1down_i16x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_u16x2:
+// CHECK:         ppairoe.h
+uint16x2_t test_pslide1down_u16x2(uint16x2_t rd, uint16_t rs1) {
+  return __riscv_pslide1down_u16x2(rd, rs1);
+}
+
+/* Packed Slide 1 up/down (64-bit) */
+
+// CHECK-LABEL: test_pslide1up_i8x8:
+// CHECK:         slx
+int8x8_t test_pslide1up_i8x8(int8x8_t rd, int8_t rs1) {
+  return __riscv_pslide1up_i8x8(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_u8x8:
+// CHECK:         slx
+uint8x8_t test_pslide1up_u8x8(uint8x8_t rd, uint8_t rs1) {
+  return __riscv_pslide1up_u8x8(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_i16x4:
+// CHECK:         slx
+int16x4_t test_pslide1up_i16x4(int16x4_t rd, int16_t rs1) {
+  return __riscv_pslide1up_i16x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_u16x4:
+// CHECK:         slx
+uint16x4_t test_pslide1up_u16x4(uint16x4_t rd, uint16_t rs1) {
+  return __riscv_pslide1up_u16x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_i32x2:
+// RV32:         mv
+// RV64:         pack
+int32x2_t test_pslide1up_i32x2(int32x2_t rd, int32_t rs1) {
+  return __riscv_pslide1up_i32x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1up_u32x2:
+// RV32:         mv
+// RV64:         pack
+uint32x2_t test_pslide1up_u32x2(uint32x2_t rd, uint32_t rs1) {
+  return __riscv_pslide1up_u32x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_i8x8:
+// CHECK:         srx
+int8x8_t test_pslide1down_i8x8(int8x8_t rd, int8_t rs1) {
+  return __riscv_pslide1down_i8x8(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_u8x8:
+// CHECK:         srx
+uint8x8_t test_pslide1down_u8x8(uint8x8_t rd, uint8_t rs1) {
+  return __riscv_pslide1down_u8x8(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_i16x4:
+// CHECK:         srx
+int16x4_t test_pslide1down_i16x4(int16x4_t rd, int16_t rs1) {
+  return __riscv_pslide1down_i16x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_u16x4:
+// CHECK:         srx
+uint16x4_t test_pslide1down_u16x4(uint16x4_t rd, uint16_t rs1) {
+  return __riscv_pslide1down_u16x4(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_i32x2:
+// RV32:         mv
+// RV64:         ppairoe.w
+int32x2_t test_pslide1down_i32x2(int32x2_t rd, int32_t rs1) {
+  return __riscv_pslide1down_i32x2(rd, rs1);
+}
+
+// CHECK-LABEL: test_pslide1down_u32x2:
+// RV32:         mv
+// RV64:         ppairoe.w
+uint32x2_t test_pslide1down_u32x2(uint32x2_t rd, uint32_t rs1) {
+  return __riscv_pslide1down_u32x2(rd, rs1);
 }

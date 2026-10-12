@@ -280,6 +280,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_inlineasm_br_indirect_target)
       .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
+      .Case("cleanup-funclet-entry", MIToken::kw_cleanup_funclet_entry)
+      .Case("ehcont-target", MIToken::kw_ehcont_target)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
       .Case("floatpred", MIToken::kw_floatpred)

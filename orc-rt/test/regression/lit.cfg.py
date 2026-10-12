@@ -134,6 +134,13 @@ def run_test_tool(name, *args):
     return out
 
 
+def normalise_machine(machine):
+    arch = machine.lower()
+    return {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+    }.get(arch, arch)
+
 # Probe the compiled-in logging configuration from orc-rt-log-check and
 # expose it as lit features, so logging tests can gate on the build's backend
 # and on which levels are actually emitted:
@@ -190,7 +197,7 @@ config.substitutions.append(("%target-arch", config.target_triple.split("-")[0])
 config.substitutions.append(("%host-page-size", str(mmap.PAGESIZE)))
 
 # Add host OS and arch substitutions for host-detection tests.
-config.substitutions.append(("%host-arch", platform.machine()))
+config.substitutions.append(("%host-arch", normalise_machine(platform.machine())))
 if platform.system() == "Darwin":
     config.substitutions.append(("%host-os", "macosx"))
 else:

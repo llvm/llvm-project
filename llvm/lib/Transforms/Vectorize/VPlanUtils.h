@@ -113,8 +113,7 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
       return GetCalleeIntrinsic(
           VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
-      return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
-          ->getZExtValue();
+      return cast<VPConstantInt>(VPI->getLastOperand())->getZExtValue();
     }
   }
   return Intrinsic::not_intrinsic;

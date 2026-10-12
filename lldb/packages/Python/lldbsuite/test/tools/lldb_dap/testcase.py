@@ -52,6 +52,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.logger.setLevel(logging.DEBUG)
 
         log_path = f"{self.getLogBasenameForCurrentTest()}-testcase.log"
+        self.log_files.append(log_path)
         handler = logging.FileHandler(log_path, mode="w")
 
         # The Log name gets quite long and becomes noise. use the last log scope.
@@ -135,6 +136,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
             count = self._debug_adapter_count
             suffix = f"-{count}" if count else ""
             log_file = f"{self.getLogBasenameForCurrentTest()}-dap{suffix}.log"
+            self.log_files.append(log_file)
 
         self._debug_adapter_count += 1
         cwd = adapter_options.cwd or self.getBuildDir()

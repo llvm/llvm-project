@@ -38,7 +38,7 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
-// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], i1 false, !"The domain"}
 // CHECK-DAG: ![[SCOPE1:[0-9]+]] = distinct !{![[SCOPE1]], ![[DOMAIN]], !"The first scope"}
 // CHECK-DAG: ![[SCOPE2:[0-9]+]] = distinct !{![[SCOPE2]], ![[DOMAIN]]}
 // CHECK-DAG: ![[SCOPE3:[0-9]+]] = distinct !{![[SCOPE3]], ![[DOMAIN]]}
@@ -66,7 +66,7 @@ llvm.func @noalias_intr_only() {
 }
 
 // Check the translated metadata.
-// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], i1 false, !"The domain"}
 // CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !{![[SCOPE]], ![[DOMAIN]]}
 // CHECK-DAG: ![[SCOPES]] = !{![[SCOPE]]}
 
@@ -99,7 +99,7 @@ llvm.func @self_reference() {
 
 // Check that the translated subroutine types do not reference the access group
 // domain since both of them are created as metadata list with a null entry.
-// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]]}
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], i1 false}
 // CHECK-DAG: ![[SCOPE:[0-9]+]] = distinct !{![[SCOPE]], ![[DOMAIN]]}
 // CHECK-DAG: ![[SCOPES]] = !{![[SCOPE]]}
 // CHECK-DAG: = !DISubroutineType(types: ![[TYPES:[0-9]+]])
@@ -145,7 +145,7 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
-// CHECK-DAG: ![[DOMAIN:[0-9]+]] = !{!"domain1", !"The domain"}
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = !{!"domain1", i1 false, !"The domain"}
 // CHECK-DAG: ![[SCOPE1:[0-9]+]] = !{!"scope1", ![[DOMAIN]], !"The first scope"}
 // CHECK-DAG: ![[SCOPE2:[0-9]+]] = !{!"scope2", ![[DOMAIN]]}
 // CHECK-DAG: ![[SCOPE3:[0-9]+]] = !{!"scope3", ![[DOMAIN]]}

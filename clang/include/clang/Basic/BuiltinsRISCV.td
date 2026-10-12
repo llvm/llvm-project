@@ -329,6 +329,10 @@ def pmhacc_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, 
 def pmhaccsu_h0_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, unsigned short>)">;
 def pmhaccsu_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, unsigned short>)">;
 
+// Packed "Q-format" Multiply with Widening Accumulate
+def pmqwacc_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, short>, _Vector<2, short>)">;
+def pmqrwacc_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, short>, _Vector<2, short>)">;
+
 // Packed Multiplication with Horizontal Addition (32-bit)
 def pm4add_i8x4 : RISCVBuiltin<"int(_Vector<4, signed char>, _Vector<4, signed char>)">;
 def pm2add_i16x2 : RISCVBuiltin<"int(_Vector<2, short>, _Vector<2, short>)">;
@@ -528,6 +532,14 @@ def pwsll_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned
 def pwsll_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned short>, unsigned int)">;
 def pwsla_s_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, signed char>, unsigned int)">;
 def pwsla_s_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, short>, unsigned int)">;
+
+// Packed Narrowing Shifts
+def pnsrl_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned short>, unsigned int)">;
+def pnsrl_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned int>, unsigned int)">;
+def pnsra_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnsra_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
+def pnsrar_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, short>, unsigned int)">;
+def pnsrar_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, int>, unsigned int)">;
 
 
 // Packed Narrowing Clip Pair (32-bit)

@@ -74,6 +74,12 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
+static cl::opt<bool> UseTagRecord2(
+    "use-codeview-tagrecord2", cl::Hidden,
+    cl::desc(
+        "Use the *2 versions for tag records in CodeView (LF_CLASS2, etc.)"),
+    cl::init(false));
+
 namespace {
 class CVMCAdapter : public CodeViewRecordStreamer {
 public:
@@ -893,8 +899,13 @@ void CodeViewDebug::emitCompilerInformation() {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
   using ArchType = llvm::Triple::ArchType;
-  ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
-  if (CompilerInfoAsm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+  const Module *M = MMI->getModule();
+  ArchType Arch = M->getTargetTriple().getArch();
+  // The module flag survives LTO, and is reset to 0 if any merged module lacks
+  // it.
+  auto *HotpatchFlag =
+      mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("ms-hotpatch"));
+  if ((HotpatchFlag && HotpatchFlag->isOne()) || Arch == ArchType::thumb ||
       Arch == ArchType::aarch64) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
@@ -2205,9 +2216,9 @@ static MethodKind translateMethodKindFlags(const DISubprogram *SP,
 static TypeRecordKind getRecordKind(const DICompositeType *Ty) {
   switch (Ty->getTag()) {
   case dwarf::DW_TAG_class_type:
-    return TypeRecordKind::Class;
+    return UseTagRecord2 ? TypeRecordKind::Class2 : TypeRecordKind::Class;
   case dwarf::DW_TAG_structure_type:
-    return TypeRecordKind::Struct;
+    return UseTagRecord2 ? TypeRecordKind::Struct2 : TypeRecordKind::Struct;
   default:
     llvm_unreachable("unexpected tag");
   }
@@ -2511,7 +2522,9 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   ClassOptions CO =
       ClassOptions::ForwardReference | getCommonClassOptions(Ty);
   std::string FullName = getFullyQualifiedName(Ty);
-  UnionRecord UR(0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier());
+  TypeRecordKind Kind =
+      UseTagRecord2 ? TypeRecordKind::Union2 : TypeRecordKind::Union;
+  UnionRecord UR(Kind, 0, CO, TypeIndex(), 0, FullName, Ty->getIdentifier());
   TypeIndex FwdDeclTI = TypeTable.writeLeafType(UR);
   if (!Ty->isForwardDecl())
     DeferredCompleteTypes.push_back(Ty);
@@ -2532,7 +2545,9 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   std::string FullName = getFullyQualifiedName(Ty);
 
-  UnionRecord UR(FieldCount, CO, FieldTI, SizeInBytes, FullName,
+  TypeRecordKind Kind =
+      UseTagRecord2 ? TypeRecordKind::Union2 : TypeRecordKind::Union;
+  UnionRecord UR(Kind, FieldCount, CO, FieldTI, SizeInBytes, FullName,
                  Ty->getIdentifier());
   TypeIndex UnionTI = TypeTable.writeLeafType(UR);
 

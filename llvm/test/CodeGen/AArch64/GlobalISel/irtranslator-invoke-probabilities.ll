@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-apple-ios -global-isel -stop-after=irtranslator %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-ios -global-isel -stop-after=ir-translator %s -o - | FileCheck %s
 
 %struct.foo = type { i64, i64, %struct.pluto, %struct.pluto }
 %struct.pluto = type { %struct.wombat }

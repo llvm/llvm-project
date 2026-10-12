@@ -1346,15 +1346,14 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 
-void MipsSETargetLowering::
-getOpndList(SmallVectorImpl<SDValue> &Ops,
-            std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-            bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-            SDValue Chain) const {
+void MipsSETargetLowering::getOpndList(
+    SmallVectorImpl<SDValue> &Ops,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass, bool IsPICCall,
+    bool GlobalOrExternal, bool LocalLinkage, bool IsCallReloc,
+    CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
   Ops.push_back(Callee);
   MipsTargetLowering::getOpndList(Ops, RegsToPass, IsPICCall, GlobalOrExternal,
-                                  InternalLinkage, IsCallReloc, CLI, Callee,
+                                  LocalLinkage, IsCallReloc, CLI, Callee,
                                   Chain);
 }
 
@@ -1559,7 +1558,9 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(Op);
   SDValue Vec = Op->getOperand(1);
-  SDValue Idx = Op->getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Idx = DAG.getZExtOrTrunc(Op->getOperand(2), DL,
+                                   TLI.getVectorIdxTy(DAG.getDataLayout()));
   EVT ResTy = Op->getValueType(0);
   EVT EltTy = Vec->getValueType(0).getVectorElementType();
 
