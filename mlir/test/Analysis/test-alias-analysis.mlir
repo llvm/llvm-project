@@ -234,6 +234,37 @@ func.func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "
 
 // -----
 
+// Two addresses traced back to the same value only must alias if no view on
+// the way may have moved them away from it.
+
+// CHECK-LABEL: Testing : "view_like_offset"
+// CHECK-DAG: alloca_1#0 <-> alloca_2#0: NoAlias
+// CHECK-DAG: alloca_1#0 <-> view_1#0: MayAlias
+// CHECK-DAG: alloca_1#0 <-> view_2#0: MayAlias
+// CHECK-DAG: alloca_1#0 <-> view_3#0: NoAlias
+// CHECK-DAG: alloca_1#0 <-> zero_view#0: MustAlias
+// CHECK-DAG: alloca_2#0 <-> view_1#0: NoAlias
+// CHECK-DAG: alloca_2#0 <-> view_2#0: NoAlias
+// CHECK-DAG: alloca_2#0 <-> view_3#0: MayAlias
+// CHECK-DAG: alloca_2#0 <-> zero_view#0: NoAlias
+// CHECK-DAG: view_1#0 <-> view_2#0: MayAlias
+// CHECK-DAG: view_1#0 <-> view_3#0: NoAlias
+// CHECK-DAG: view_1#0 <-> zero_view#0: MayAlias
+// CHECK-DAG: view_2#0 <-> view_3#0: NoAlias
+// CHECK-DAG: view_2#0 <-> zero_view#0: MayAlias
+// CHECK-DAG: view_3#0 <-> zero_view#0: NoAlias
+func.func @view_like_offset() {
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<8xf32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<8xf32>
+  %2 = test.offset_view %0 {test.ptr = "view_1"} : memref<8xf32> -> memref<4xf32>
+  %3 = test.offset_view %0 {test.ptr = "view_2"} : memref<8xf32> -> memref<4xf32>
+  %4 = test.offset_view %1 {test.ptr = "view_3"} : memref<8xf32> -> memref<4xf32>
+  %5 = test.offset_view %0 zero_offset {test.ptr = "zero_view"} : memref<8xf32> -> memref<4xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "constants"
 // CHECK-DAG: alloc_1#0 <-> constant_1#0: NoAlias
 // CHECK-DAG: alloc_1#0 <-> constant_2#0: NoAlias
