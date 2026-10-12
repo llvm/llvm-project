@@ -589,7 +589,8 @@ bool DwarfExpression::addExpression(
     auto Op = ExprCursor.take();
     uint64_t OpNum = Op->getOp();
 
-    if (OpNum >= dwarf::DW_OP_reg0 && OpNum <= dwarf::DW_OP_reg31) {
+    if ((OpNum >= dwarf::DW_OP_reg0 && OpNum <= dwarf::DW_OP_reg31) ||
+        DIExpression::isLitOp(OpNum)) {
       emitOp(OpNum);
       continue;
     } else if (OpNum >= dwarf::DW_OP_breg0 && OpNum <= dwarf::DW_OP_breg31) {
@@ -714,7 +715,6 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_shl:
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
-    case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
@@ -786,7 +786,14 @@ bool DwarfExpression::addExpression(
       assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_xderef);
       break;
+    case dwarf::DW_OP_xderef_size:
+      assert(!isRegisterLocation());
+      assert(isUInt<8>(Op->getArg(0)) && "size operand does not fit in a byte");
+      emitOp(dwarf::DW_OP_xderef_size);
+      emitData1(Op->getArg(0));
+      break;
     case dwarf::DW_OP_deref_size:
+      assert(isUInt<8>(Op->getArg(0)) && "size operand does not fit in a byte");
       emitOp(dwarf::DW_OP_deref_size);
       emitData1(Op->getArg(0));
       break;

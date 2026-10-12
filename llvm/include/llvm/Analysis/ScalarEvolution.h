@@ -2608,6 +2608,9 @@ private:
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
   SCEVUnknown *FirstUnknown = nullptr;
+
+  /// OrderID to assign to the next SCEVUnknown created.
+  unsigned NextUnknownOrderID = 0;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.
