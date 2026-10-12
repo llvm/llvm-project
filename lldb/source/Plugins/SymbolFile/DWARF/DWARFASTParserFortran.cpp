@@ -103,7 +103,7 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
   DWARFAttributes attributes;
   DWARFFormValue form_value;
   Declaration decl;
-  // We use 0xFF as a sentinel value, it doesn't map to any DW_ATE attribute
+  // We use 0x00 as a sentinel value, it doesn't map to any DW_ATE attribute
   llvm::dwarf::TypeKind encoding = static_cast<llvm::dwarf::TypeKind>(0x00);
 
   switch (const dw_tag_t tag = die.Tag()) {
@@ -120,7 +120,6 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
 
           if (type_name_cstr && type_name_cstr[0] != '\0')
             type_name.SetString(llvm::StringRef(type_name_cstr).upper());
-
           else
             type_name.SetCString("UNKNOWN_FORTRAN_TYPE");
 
@@ -141,9 +140,10 @@ lldb::TypeSP DWARFASTParserFortran::ParseTypeFromDWARF(
     }
 
     compiler_type = m_ast.CreateBaseType(encoding, bit_size, type_name);
-    type_sp = dwarf->MakeType(die.GetID(), type_name, (bit_size + 7) / 8,
-                              nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID,
-                              decl, compiler_type, Type::ResolveState::Full);
+    type_sp =
+        dwarf->MakeType(die.GetID(), type_name, llvm::divideCeil(bit_size, 8),
+                        nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
+                        compiler_type, Type::ResolveState::Full);
     break;
   }
 
