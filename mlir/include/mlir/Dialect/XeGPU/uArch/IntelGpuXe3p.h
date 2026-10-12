@@ -26,12 +26,32 @@
 namespace mlir {
 namespace xegpu {
 namespace uArch {
-
 struct Xe3p : public uArch {
   Xe3p(Kind kind, llvm::ArrayRef<const Instruction *> instructionRegistry)
       : uArch(kind, instructionRegistry) {}
   int getSubgroupSize() const override { return 16; }
   unsigned getGeneralPackedFormatBitSize() const override { return 32; }
+
+  // Restrictions Xe3p places on the 2D memory region accessed by the subgroup
+  // 2D block load / store / prefetch instructions.
+  //
+  // Xe3p relaxes every one of these relative to Xe2, which requires a 64 byte
+  // aligned base address, a base width and pitch of at least 32 bytes, and a
+  // pitch that is a multiple of 16 bytes. On Xe3p the base address, width and
+  // pitch all only need to be a multiple of 4 bytes. There is no minimum size
+  // restriction on the width or the pitch, so their minimum is just that 4 byte
+  // granularity -- a zero-sized surface would be meaningless.
+  const BlockIOMemoryRestrictions &
+  getBlockIOMemoryRestrictions() const override {
+    static constexpr BlockIOMemoryRestrictions restrictions = {
+        /*baseAddressAlignmentBytes=*/4,
+        /*minBaseWidthBytes=*/4,
+        /*baseWidthAlignmentBytes=*/4,
+        /*minBasePitchBytes=*/4,
+        /*basePitchAlignmentBytes=*/4,
+    };
+    return restrictions;
+  }
 
   static bool classof(const uArch *u) {
     return u->getKind() >= Kind::Xe3p_First && u->getKind() <= Kind::Xe3p_Last;
@@ -43,32 +63,12 @@ struct Xe3p : public uArch {
 //===----------------------------------------------------------------------===//
 
 namespace detail {
-// Restrictions Xe3p places on the 2D memory region accessed by the subgroup 2D
-// block load / store / prefetch instructions.
-//
-// Xe3p relaxes every one of these relative to Xe2, which requires a 64 byte
-// aligned base address, a base width and pitch of at least 32 bytes, and a
-// pitch that is a multiple of 16 bytes. On Xe3p the base address, width and
-// pitch all only need to be a multiple of 4 bytes. There is no minimum size
-// restriction on the width or the pitch, so their minimum is just that 4 byte
-// granularity -- a zero-sized surface would be meaningless.
-inline constexpr BlockIOMemoryRestrictions kXe3pBlockIORestrictions = {
-    /*baseAddressAlignmentBytes=*/4,
-    /*minBaseWidthBytes=*/4,
-    /*baseWidthAlignmentBytes=*/4,
-    /*minBasePitchBytes=*/4,
-    /*basePitchAlignmentBytes=*/4,
-};
-
 inline llvm::ArrayRef<const Instruction *> getXe3pInstructionRegistry() {
   static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
   static const SubgroupScaledMatrixMultiplyAcc dpasMxInst{16, 32};
-  static const Subgroup2DBlockLoadInstruction loadNdInst{
-      kXe3pBlockIORestrictions};
-  static const Subgroup2DBlockStoreInstruction storeNdInst{
-      kXe3pBlockIORestrictions};
-  static const Subgroup2DBlockPrefetchInstruction prefetchNdInst{
-      kXe3pBlockIORestrictions};
+  static const Subgroup2DBlockLoadInstruction loadNdInst;
+  static const Subgroup2DBlockStoreInstruction storeNdInst;
+  static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
   static const StoreScatterInstruction storeScatterInst;
   static const LoadGatherInstruction loadGatherInst;
   static const Instruction *arr[] = {
@@ -86,7 +86,6 @@ struct CRIuArch final : public Xe3p {
     return &instance;
   }
 };
-
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir

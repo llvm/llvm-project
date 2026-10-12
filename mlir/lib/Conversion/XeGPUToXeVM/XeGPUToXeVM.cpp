@@ -34,7 +34,7 @@
 
 #include "llvm/ADT/TypeSwitch.h"
 
-#include <numeric>
+#include <string>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTXEGPUTOXEVMPASS
@@ -246,113 +246,97 @@ class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  // A descriptor is lowered before its consumers are known, so a restriction
-  // may only be enforced here if it holds for every 2D block instruction the
-  // target supports. Fold the supported instructions' restrictions into the
-  // weakest common requirement -- the smallest of the minimum sizes and the GCD
-  // of the alignments -- so that a violation means the surface is unusable by
-  // any consumer. Returns std::nullopt if the target has no 2D block
-  // instruction at all.
-  static std::optional<xegpu::uArch::BlockIOMemoryRestrictions>
-  getWeakestBlockIORestrictions(const xegpu::uArch::uArch *uArch) {
-    std::optional<xegpu::uArch::BlockIOMemoryRestrictions> weakest;
-    for (xegpu::uArch::InstructionKind kind :
-         {xegpu::uArch::InstructionKind::Subgroup2DBlockLoad,
-          xegpu::uArch::InstructionKind::Subgroup2DBlockStore,
-          xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch}) {
-      if (!uArch->isSupportedInstruction(kind))
-        continue;
-      const auto *blockIo =
-          llvm::dyn_cast<xegpu::uArch::BlockIOInstructionInterface>(
-              uArch->getInstruction(kind));
-      if (!blockIo)
-        continue;
-      const xegpu::uArch::BlockIOMemoryRestrictions &r =
-          blockIo->getMemoryRestrictions();
-      if (!weakest) {
-        weakest = r;
-        continue;
-      }
-      weakest->baseAddressAlignmentBytes = std::gcd(
-          weakest->baseAddressAlignmentBytes, r.baseAddressAlignmentBytes);
-      weakest->minBaseWidthBytes =
-          std::min(weakest->minBaseWidthBytes, r.minBaseWidthBytes);
-      weakest->baseWidthAlignmentBytes =
-          std::gcd(weakest->baseWidthAlignmentBytes, r.baseWidthAlignmentBytes);
-      weakest->minBasePitchBytes =
-          std::min(weakest->minBasePitchBytes, r.minBasePitchBytes);
-      weakest->basePitchAlignmentBytes =
-          std::gcd(weakest->basePitchAlignmentBytes, r.basePitchAlignmentBytes);
-    }
-    return weakest;
-  }
-
   // Checks the surface width and pitch against the target's 2D block memory
-  // restrictions. Only these two are enforced: both are derived from the
-  // source's static shape and strides, whereas the base address alignment is a
-  // property of the allocation that is not visible here. Dimensions that are
-  // only known at runtime are left unchecked -- guarding them inside the kernel
-  // would cost far more than it is worth.
-  LogicalResult
-  checkMemoryRestrictions(xegpu::CreateNdDescOp op, int64_t rank,
-                          ConversionPatternRewriter &rewriter) const {
+  // restrictions. Only these two are enforced: both are backed by the source's
+  // static shape and strides, whereas the base address alignment is a property
+  // of the allocation that is not visible here. The width and the pitch are
+  // checked independently, each only when it is static; a value known only at
+  // runtime is left alone, as guarding it inside the kernel would cost far more
+  // than it is worth.
+  //
+  // A violation is a dead end rather than a pattern that does not apply: the op
+  // has no other legalization path, so it is reported with an error that names
+  // the limit it misses.
+  LogicalResult checkMemoryRestrictions(xegpu::CreateNdDescOp op,
+                                        int64_t rank) const {
     const auto *uArch =
         xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     // Without a known target chip there is no uArch to check against, so the
     // descriptor must be accepted as-is.
     if (!uArch)
       return success();
-    std::optional<xegpu::uArch::BlockIOMemoryRestrictions> limits =
-        getWeakestBlockIORestrictions(uArch);
-    if (!limits)
-      return success();
+    const xegpu::uArch::BlockIOMemoryRestrictions &limits =
+        uArch->getBlockIOMemoryRestrictions();
 
-    // `getMixedSizes` / `getMixedStrides` may only be queried when the op
-    // itself carries the shape and strides, which is the same condition under
-    // which the lowering below trusts them; for a memref with dynamic shape or
-    // strides they are recovered from memref.extract_strided_metadata instead.
-    // Nothing is statically known in that case, so there is nothing to check.
-    auto memrefTy = dyn_cast<MemRefType>(op.getSource().getType());
-    if (memrefTy && !xegpu::hasStaticShapeAndStrides(memrefTy))
-      return success();
+    // Recover the width and the pitch as a number of elements. A memref source
+    // carries both in its type, and either one may be dynamic independently of
+    // the other, so they are queried separately instead of being dropped
+    // together when the source is not fully static. `getMixedSizes` /
+    // `getMixedStrides` are only consulted for an integer source, where the op
+    // itself holds the extents.
+    std::optional<int64_t> widthElems;
+    std::optional<int64_t> pitchElems;
+    if (auto memrefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
+      if (!ShapedType::isDynamic(memrefTy.getDimSize(rank - 1)))
+        widthElems = memrefTy.getDimSize(rank - 1);
+      // The source is known to be strided; the caller checked that already.
+      SmallVector<int64_t> staticStrides;
+      int64_t staticOffset;
+      if (succeeded(
+              memrefTy.getStridesAndOffset(staticStrides, staticOffset)) &&
+          !ShapedType::isDynamic(staticStrides[rank - 2]))
+        pitchElems = staticStrides[rank - 2];
+    } else {
+      widthElems = getConstantIntValue(op.getMixedSizes()[rank - 1]);
+      pitchElems = getConstantIntValue(op.getMixedStrides()[rank - 2]);
+    }
 
     unsigned elemBitSize =
         op.getType().getElementType().getIntOrFloatBitWidth();
-    // Converts a static number of elements into bytes. Returns std::nullopt if
-    // the count is dynamic, or if it does not land on a byte boundary (possible
-    // for sub-byte element types).
-    auto toBytes = [&](OpFoldResult ofr) -> std::optional<int64_t> {
-      std::optional<int64_t> elems = getConstantIntValue(ofr);
-      if (!elems || (*elems * elemBitSize) % 8 != 0)
-        return std::nullopt;
-      return *elems * elemBitSize / 8;
+    // The restrictions are expressed in bytes, but a sub-byte element type can
+    // leave the width or the pitch on a fraction of a byte, so the comparisons
+    // are done in bits. Such a size meets no byte alignment at all and is
+    // reported as a violation rather than waved through.
+    auto describe = [](int64_t bits) -> std::string {
+      if (bits % 8 == 0)
+        return llvm::formatv("{0} bytes", bits / 8).str();
+      return llvm::formatv("{0} bits", bits).str();
     };
-    auto check = [&](std::optional<int64_t> bytes, int64_t minBytes,
+    auto check = [&](std::optional<int64_t> elems, int64_t minBytes,
                      int64_t alignBytes,
                      llvm::StringRef what) -> LogicalResult {
-      if (!bytes)
+      if (!elems)
         return success();
-      if (*bytes < minBytes)
-        return rewriter.notifyMatchFailure(
-            op, llvm::formatv("Expected 2D block surface {0} to be at least "
-                              "{1} bytes on this target, got {2}.",
-                              what, minBytes, *bytes));
-      if (alignBytes > 0 && *bytes % alignBytes != 0)
-        return rewriter.notifyMatchFailure(
-            op, llvm::formatv("Expected 2D block surface {0} to be a multiple "
-                              "of {1} bytes on this target, got {2}.",
-                              what, alignBytes, *bytes));
+      int64_t bits = *elems * elemBitSize;
+      if (bits < minBytes * 8)
+        return op.emitError(llvm::formatv(
+            "2D block surface {0} must be at least {1} bytes on this "
+            "target, got {2}.",
+            what, minBytes, describe(bits)));
+      if (alignBytes > 0 && bits % (alignBytes * 8) != 0)
+        return op.emitError(llvm::formatv(
+            "2D block surface {0} must be a multiple of {1} bytes on this "
+            "target, got {2}.",
+            what, alignBytes, describe(bits)));
       return success();
     };
 
-    SmallVector<OpFoldResult> sizes = op.getMixedSizes();
-    SmallVector<OpFoldResult> strides = op.getMixedStrides();
-    if (failed(check(toBytes(sizes[rank - 1]), limits->minBaseWidthBytes,
-                     limits->baseWidthAlignmentBytes, "width")))
+    if (failed(check(widthElems, limits.minBaseWidthBytes,
+                     limits.baseWidthAlignmentBytes, "width")))
       return failure();
     // The pitch is the row stride of the innermost 2D tile.
-    return check(toBytes(strides[rank - 2]), limits->minBasePitchBytes,
-                 limits->basePitchAlignmentBytes, "pitch");
+    if (failed(check(pitchElems, limits.minBasePitchBytes,
+                     limits.basePitchAlignmentBytes, "pitch")))
+      return failure();
+    // Consecutive rows may not overlap, so the pitch has to span the full
+    // width.
+    if (widthElems && pitchElems && *pitchElems < *widthElems)
+      return op.emitError(
+          llvm::formatv("2D block surface pitch must be at least the surface "
+                        "width, got a pitch of {0} for a surface {1} wide.",
+                        describe(*pitchElems * elemBitSize),
+                        describe(*widthElems * elemBitSize)));
+    return success();
   }
 
   LogicalResult
@@ -416,7 +400,7 @@ class CreateNdDescToXeVMPattern
     // Enforce the target's 2D block memory restrictions. A rank-1 descriptor is
     // just a base address and is not consumed by a 2D block op, so it is
     // exempt.
-    if (rank >= 2 && failed(checkMemoryRestrictions(op, rank, rewriter)))
+    if (rank >= 2 && failed(checkMemoryRestrictions(op, rank)))
       return failure();
 
     Type payloadElemTy = rewriter.getI32Type();

@@ -186,10 +186,8 @@ gpu.module @create_nd_tdesc_narrow_xe3p [#xevm.target<chip = "cri">] {
 }
 
 // -----
-// A memref with dynamic shape or strides carries nothing statically checkable,
-// and its shape/strides are recovered via memref.extract_strided_metadata
-// rather than from the op, so the restriction check must skip it entirely
-// instead of querying the op's mixed sizes.
+// Neither the width nor the pitch of a fully dynamic memref is known at compile
+// time, so there is nothing to check and the descriptor lowers unguarded.
 gpu.module @create_nd_tdesc_dyn_chip [#xevm.target<chip = "pvc">] {
     // CHECK-LABEL: gpu.func @dynamic_source_with_chip
     gpu.func @dynamic_source_with_chip(%src: memref<?x?xf16>) -> vector<8xi32> {
@@ -197,6 +195,22 @@ gpu.module @create_nd_tdesc_dyn_chip [#xevm.target<chip = "pvc">] {
         // CHECK: vector.insert %{{.*}} [4] : i32 into vector<8xi32>
         %t = xegpu.create_nd_tdesc %src : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
         %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x16xf16> to vector<8xi32>
+        gpu.return %c : vector<8xi32>
+    }
+}
+
+// -----
+// The width and the pitch are checked independently of each other. Here the
+// width is static and legal while the pitch is dynamic, so only the width is
+// checked and the descriptor lowers. See failed_conversion.mlir for the mirror
+// cases, where the one static value of such a pair is the illegal one.
+gpu.module @create_nd_tdesc_dyn_pitch [#xevm.target<chip = "pvc">] {
+    // CHECK-LABEL: gpu.func @static_width_dynamic_pitch
+    gpu.func @static_width_dynamic_pitch(%src: memref<8x16xf32, strided<[?, 1]>>) -> vector<8xi32> {
+        // CHECK: memref.extract_strided_metadata
+        // CHECK: vector.insert %{{.*}} [4] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<8x16xf32, strided<[?, 1]>> -> !xegpu.tensor_desc<8x16xf32>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<8x16xf32> to vector<8xi32>
         gpu.return %c : vector<8xi32>
     }
 }
