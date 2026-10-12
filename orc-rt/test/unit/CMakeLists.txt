@@ -132,6 +132,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/sps/CallSPSCITest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
+  bedrock/sps/SessionSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
 
