@@ -45,7 +45,7 @@ The two kinds follow different naming rules, described below.
 #### Khronos Extensions
 
 KHR extensions are defined only by the Khronos Group. Their APIs are declared
-in the `sycl::khr` namespace and their feature-test macros are named
+in the `sycl::khr` namespace, and their feature-test macros are named
 `SYCL_KHR_<NAME>`.
 
 If `libsycl` adopts a KHR extension, it is implemented according to the KHR
@@ -57,7 +57,7 @@ another vendor (see below).
 `libsycl` follows the "Guidelines for portable extensions" described in
 [Chapter 6](https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#chapter.extensions)
 of the SYCL 2020 specification. These guidelines require each vendor extension
-to be named with a vendor string. For example, the extension's APIs are
+to be named with a vendor string. Specifically, the extension's APIs are
 declared in the `sycl::ext::<vendor>` namespace, its feature-test macro is
 `SYCL_EXT_<VENDOR>_<NAME>`, and any enumerators or members it adds to core SYCL
 classes (for example, aspects) are prefixed with `ext_<vendor>_`.
@@ -72,7 +72,7 @@ The vendor string tells users who defines the behavior of the feature.
 ##### Community Extensions
 
 An extension that the LLVM community designs itself uses the `llvm` vendor
-string, for example `sycl::ext::llvm::<name>` with the feature-test macro
+string, for example, `sycl::ext::llvm::<name>` with the feature-test macro
 `SYCL_EXT_LLVM_<NAME>`. The community determines what such a feature is, so its
 specification must be reviewed and committed before or together with the
 implementation.
@@ -86,8 +86,8 @@ with the feature-test macro `SYCL_EXT_ONEAPI_<NAME>`. The original vendor's
 specification defines the feature:
 
 - Any behavioral difference from that specification is a `libsycl` bug.
-- The implementation refers to the specification and to the revision of it that
-  is implemented.
+- The implementation refers to the specification and to the revision that it
+  implements.
 - The feature-test macro is defined with the value of the implemented revision
   only after that revision is fully implemented.
 - Differences that the specification does not make observable, such as
@@ -111,7 +111,7 @@ C++ attributes follow the same model. When GCC defines an attribute and Clang
 implements it with the same behavior, Clang accepts the `gnu` spelling, as in
 `struct [[gnu::packed]] S`, because GCC defines what the attribute means.
 Adding it only as `[[clang::packed]]` would leave users unsure how
-`gnu::packed` and `clang::packed` differ and would make portable code need
-more `#if` blocks. Clang uses its own `clang` namespace for attributes it
+`gnu::packed` and `clang::packed` differ and would require more `#if` blocks
+in portable code. Clang uses its own `clang` namespace for attributes it
 defines itself.
 
