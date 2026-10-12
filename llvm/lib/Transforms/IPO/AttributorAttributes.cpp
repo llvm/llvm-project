@@ -3657,9 +3657,12 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
-    if (SharedExplorations && ExclusionBlocks.empty()) {
-      const Exploration &E = getSharedExploration(FromBB, LivenessAA);
-      if (E.Successors.contains(ToBB) || (DT && isDominatedByAny(E, ToBB)))
+    if (SharedExplorations) {
+      const Exploration &E = getSharedExploration(FromBB, RQI.ExclusionSet,
+                                                  ExclusionBlocks, LivenessAA);
+      UsedExclusionSet |= E.UsedExclusionSet;
+      if (E.Successors.contains(ToBB) ||
+          (DT && ExclusionBlocks.empty() && isDominatedByAny(E, ToBB)))
         return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
                               IsTemporaryRQI);
       DeadEdges.insert_range(E.DeadEdges);
@@ -3705,8 +3708,8 @@ struct AAIntraFnReachabilityFunction final
   void trackStatistics() const override {}
 
 private:
-  /// The blocks reached from a block through assumed live edges, as explored
-  /// by isReachableImpl without an exclusion set.
+  /// The blocks reached from a block through assumed live edges and without
+  /// entering an excluded block, as explored by isReachableImpl.
   struct Exploration {
     /// The successors of the explored blocks through assumed live edges.
     SmallPtrSet<const BasicBlock *, 16> Successors;
@@ -3714,11 +3717,19 @@ private:
     SmallPtrSet<const BasicBlock *, 16> WithLiveSuccessors;
     /// The assumed dead edges out of the explored blocks.
     SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
+    /// Whether an excluded block was a successor of an explored block.
+    bool UsedExclusionSet = false;
   };
 
-  const Exploration &getSharedExploration(const BasicBlock *FromBB,
-                                          const AAIsDead *LivenessAA) {
-    auto [It, Inserted] = SharedExplorations->try_emplace(FromBB);
+  const Exploration &getSharedExploration(
+      const BasicBlock *FromBB, const AA::InstExclusionSetTy *ExclusionSet,
+      const SmallPtrSetImpl<const BasicBlock *> &ExclusionBlocks,
+      const AAIsDead *LivenessAA) {
+    // The exclusion set only matters through the blocks in this function.
+    if (ExclusionBlocks.empty())
+      ExclusionSet = nullptr;
+    auto [It, Inserted] =
+        SharedExplorations->try_emplace({FromBB, ExclusionSet});
     Exploration &E = It->second;
     if (!Inserted)
       return E;
@@ -3736,6 +3747,10 @@ private:
         }
         E.Successors.insert(SuccBB);
         E.WithLiveSuccessors.insert(BB);
+        if (ExclusionBlocks.count(SuccBB)) {
+          E.UsedExclusionSet = true;
+          continue;
+        }
         Worklist.push_back(SuccBB);
       }
     }
@@ -3756,7 +3771,10 @@ private:
   }
 
   /// The explorations shared by the queries during an update, if any.
-  std::optional<DenseMap<const BasicBlock *, Exploration>> SharedExplorations;
+  std::optional<
+      DenseMap<std::pair<const BasicBlock *, const AA::InstExclusionSetTy *>,
+               Exploration>>
+      SharedExplorations;
 
   // Set of assumed dead blocks we used in the last query. If any changes we
   // update the state.
