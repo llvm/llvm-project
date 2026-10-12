@@ -40,7 +40,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,41 +72,19 @@ using LoopVector = SmallVector<Loop *, 8>;
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
-/// Types of rules used in profitability check.
-enum class RuleTy {
-  PerLoopCacheAnalysis,
-  PerInstrOrderCost,
-  ForVectorization,
-  Ignore
-};
-
 } // end anonymous namespace
 
-// We prefer cache cost to vectorization by default.
-static cl::list<RuleTy> Profitabilities(
-    "loop-interchange-profitabilities", cl::MiscFlags::CommaSeparated,
-    cl::Hidden,
-    cl::desc("List of profitability heuristics to be used. They are applied in "
-             "the given order"),
-    cl::list_init<RuleTy>({RuleTy::PerInstrOrderCost,
-                           RuleTy::ForVectorization}),
-    cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
-                          "Prioritize loop cache cost"),
-               clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
-                          "Prioritize the IVs order of each instruction"),
-               clEnumValN(RuleTy::ForVectorization, "vectorize",
-                          "Prioritize vectorization"),
-               clEnumValN(RuleTy::Ignore, "ignore",
-                          "Ignore profitability, force interchange (does not "
-                          "work with other options)")));
+constexpr LoopInterchangeRule DefaultProfitabilities[] = {
+    LoopInterchangeRule::PerInstrOrderCost,
+    LoopInterchangeRule::ForVectorization};
 
 #ifndef NDEBUG
-static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
-  SmallSet<RuleTy, 4> Set;
-  for (RuleTy Rule : Rules) {
+static bool noDuplicateRulesAndIgnore(ArrayRef<LoopInterchangeRule> Rules) {
+  SmallSet<LoopInterchangeRule, 4> Set;
+  for (LoopInterchangeRule Rule : Rules) {
     if (!Set.insert(Rule).second)
       return false;
-    if (Rule == RuleTy::Ignore)
+    if (Rule == LoopInterchangeRule::Ignore)
       return false;
   }
   return true;
@@ -2016,8 +1993,14 @@ bool LoopInterchangeProfitability::isProfitable(
     return false;
   }
 
+  ArrayRef<LoopInterchangeRule> Profitabilities =
+      Opts.loop_interchange_profitabilities;
+  if (Profitabilities.empty())
+    Profitabilities = DefaultProfitabilities;
+
   // Return true if interchange is forced and the cost-model ignored.
-  if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
+  if (Profitabilities.size() == 1 &&
+      Profitabilities[0] == LoopInterchangeRule::Ignore)
     return true;
   assert(noDuplicateRulesAndIgnore(Profitabilities) &&
          "Duplicate rules and option 'ignore' are not allowed");
@@ -2031,22 +2014,22 @@ bool LoopInterchangeProfitability::isProfitable(
   // Likewise, if it failed to analysis the profitability then only, the last
   // rule (isProfitableForVectorization by default) will decide.
   std::optional<bool> shouldInterchange;
-  for (RuleTy RT : Profitabilities) {
+  for (LoopInterchangeRule RT : Profitabilities) {
     switch (RT) {
-    case RuleTy::PerLoopCacheAnalysis: {
+    case LoopInterchangeRule::PerLoopCacheAnalysis: {
       CacheCost *CC = CCM.getCacheCost();
       const DenseMap<const Loop *, unsigned> &CostMap = CCM.getCostMap();
       shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
       break;
     }
-    case RuleTy::PerInstrOrderCost:
+    case LoopInterchangeRule::PerInstrOrderCost:
       shouldInterchange = isProfitablePerInstrOrderCost();
       break;
-    case RuleTy::ForVectorization:
+    case LoopInterchangeRule::ForVectorization:
       shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
-    case RuleTy::Ignore:
+    case LoopInterchangeRule::Ignore:
       llvm_unreachable("Option 'ignore' is not supported with other options");
       break;
     }
