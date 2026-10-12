@@ -372,8 +372,7 @@ define dso_local void @spam() {
 ; TUNIT-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; TUNIT-NEXT:    br label [[BB16:%.*]]
 ; TUNIT:       bb16:
-; TUNIT-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP]], align 4
-; TUNIT-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP17]], 0
+; TUNIT-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
 ; TUNIT-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; TUNIT:       bb19:
 ; TUNIT-NEXT:    br label [[BB23:%.*]]
@@ -397,8 +396,7 @@ define dso_local void @spam() {
 ; CGSCC-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; CGSCC-NEXT:    br label [[BB16:%.*]]
 ; CGSCC:       bb16:
-; CGSCC-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP]], align 4
-; CGSCC-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP17]], 0
+; CGSCC-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
 ; CGSCC-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; CGSCC:       bb19:
 ; CGSCC-NEXT:    br label [[BB23:%.*]]
@@ -428,8 +426,7 @@ bb16:                                             ; preds = %bb
 
 bb19:                                             ; preds = %bb16
   %y = getelementptr inbounds i32, ptr %tmp, i64 0
-  %tmp20 = bitcast ptr %y to ptr
-  %tmp21 = load float, ptr %tmp20, align 4
+  %tmp21 = load float, ptr %y, align 4
   %tmp22 = fadd fast float %tmp21, 0.000000e+00
   br label %bb23
 

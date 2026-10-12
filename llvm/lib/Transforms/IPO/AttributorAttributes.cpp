@@ -1609,13 +1609,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (isa<AddrSpaceCastOperator>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-      if (!isa<GEPOperator>(CE)) {
-        LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
-                          << "\n");
-        return false;
-      }
-    }
     if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
