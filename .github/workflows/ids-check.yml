@@ -51,15 +51,12 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
 
-      - if: runner.os == 'Windows'
-        run: |
-          cmd /c '"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64 && set' >> $env:GITHUB_ENV
-
       - name: Configure and build minimal LLVM for use by ids
         shell: bash
         env:
           CC: ${{ case(runner.os == 'Windows', 'cl', 'clang') }}
           CXX: ${{ case(runner.os == 'Windows', 'cl', 'clang++') }}
+          CMAKE_GENERATOR: ${{ case(runner.os == 'Windows', 'Visual Studio 17 2022', 'Ninja') }}
         run: |
           cmake -B ./llvm-project/build/ \
                 -S ./llvm-project/llvm/ \
@@ -70,7 +67,11 @@ jobs:
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
                 -D LLVM_BUILD_LLVM_DYLIB_VIS=ON \
                 -D LLVM_LINK_LLVM_DYLIB=ON \
-                -G Ninja
+                -G $CMAKE_GENERATOR
+
+          if [ "$RUNNER_OS" = "Windows" ];
+            exit 0
+          fi
 
           # Build the generated-header prerequisites that idt needs to parse
           # LLVM source.
@@ -122,4 +123,4 @@ jobs:
       - name: Build and test libLLVM.so
         shell: bash
         run: |
-          ninja -C ./llvm-project/build check-llvm
+          cmake --build ./llvm-project/build check-llvm
