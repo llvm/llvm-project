@@ -4104,7 +4104,7 @@ static bool IsExternalCalledImplicitly(
 
 std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     parser::CharBlock callSite, const ProcedureDesignator &proc,
-    ActualArguments &arguments) {
+    ActualArguments &arguments, bool isDefinedAssignment) {
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
@@ -4181,19 +4181,25 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     }
     if (isStatementFunction) {
       // Statement functions have implicit interfaces, so keyword actual
-      // arguments are not allowed. They are exempt from the explicit-interface
-      // requirements of F2023 15.4.2.2.
+      // arguments and PROTECTED_TARGET actuals (F2028 C873) are not allowed.
+      // They are exempt from the explicit-interface requirements of F2023
+      // 15.4.2.2.
       parser::ContextualMessages &messages{
           context_.foldingContext().messages()};
       for (auto &arg : arguments) {
         if (arg) {
           semantics::CheckImplicitInterfaceArgKeywords(*arg, messages);
+          ok &= semantics::CheckImplicitInterfaceArgProtectedTarget(
+              *arg, messages);
         }
       }
     }
-    ok &= semantics::CheckArguments(*chars, arguments, context_,
-        context_.FindScope(callSite), treatExternalAsImplicit,
-        /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
+    if (ok) {
+      ok = semantics::CheckArguments(*chars, arguments, context_,
+          context_.FindScope(callSite), treatExternalAsImplicit,
+          /*ignoreImplicitVsExplicit=*/false, specificIntrinsic,
+          isDefinedAssignment);
+    }
   }
   if (ok && !treatExternalAsImplicit && procSymbol &&
       !(chars && chars->HasExplicitInterface())) {
@@ -4205,7 +4211,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         semantics::CheckArguments(*globalChars, arguments, context_,
             context_.FindScope(callSite), /*treatExternalAsImplicit=*/true,
             /*ignoreImplicitVsExplicit=*/false,
-            nullptr /*not specific intrinsic*/);
+            nullptr /*not specific intrinsic*/, isDefinedAssignment);
       }
     }
   }
@@ -5794,7 +5800,10 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
           "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
           DEREF(procRef->proc().GetSymbol()).name());
     }
-    context_.CheckCall(source_, procRef->proc(), procRef->arguments());
+    // F2028 15.4.3.4.3 applies argument constraints to a parenthesized
+    // RHS, even when lowering needs the unparenthesized variable.
+    context_.CheckCall(source_, procRef->proc(), procRef->arguments(),
+        /*isDefinedAssignment=*/true);
     return std::move(*procRef);
   }
   if (isDefined == Tristate::Yes) {

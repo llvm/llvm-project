@@ -178,6 +178,16 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Find the rightmost pointer part-name and return it if it has
+// PROTECTED_TARGET. For pointer definition, omit the last part-name to check
+// the containing object. By default, follow associate selectors; otherwise
+// follow only RANK DEFAULT selectors. Unless the pointer itself is being
+// defined, pointer-valued function references are checked via their result
+// symbols.
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &,
+    bool isPointerDefinition = false, bool followAssociations = true);
+const Symbol *FindProtectedTargetPointer(const SomeExpr &,
+    bool isPointerDefinition = false, bool followAssociations = true);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }

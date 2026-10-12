@@ -6184,8 +6184,17 @@ void OmpStructureChecker::CheckDefinableObjects(
     if (!IsVariableListItem(*symbol)) {
       continue;
     }
-    if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
-            DefinabilityFlags{}, *symbol)}) {
+    DefinabilityFlags flags{};
+    if (clause == llvm::omp::Clause::OMPC_lastprivate && IsPointer(*symbol) &&
+        symbol->GetUltimate().attrs().test(Attr::PROTECTED_TARGET)) {
+      if (IsIntentIn(*symbol)) {
+        continue; // CheckIntentInPointer diagnoses this case.
+      }
+      // OpenMP 5.2 5.4.5 updates a pointer list item by pointer assignment.
+      flags.set(DefinabilityFlag::PointerDefinition);
+    }
+    if (auto msg{WhyNotDefinable(
+            source, context_.FindScope(source), flags, *symbol)}) {
       context_
           .Say(source,
               "Variable '%s' on the %s clause is not definable"_err_en_US,

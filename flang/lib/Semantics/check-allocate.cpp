@@ -695,7 +695,10 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
             name_.source, subpScope, flags, *allocateObject_.typedExpr->v)}) {
       context
           .Say(name_.source,
-              "Name in ALLOCATE statement is not definable"_err_en_US)
+              ultimate_->attrs().test(Attr::PROTECTED_TARGET) &&
+                      !allocateInfo_.gotSource
+                  ? "Object in ALLOCATE statement may not be allocated"_err_en_US
+                  : "Name in ALLOCATE statement is not definable"_err_en_US)
           .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
     }

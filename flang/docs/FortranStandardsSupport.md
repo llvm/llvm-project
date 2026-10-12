@@ -22,6 +22,11 @@ There is no distinction made between support in the Parser/Semantics and the MLI
 
 Note: The two major missing features in Flang at present are coarrays and parameterized derived types (PDTs) with length type parameters.
 
+## Fortran 2028 working draft
+
+| Feature | Status | Comments |
+|---------|--------|----------|
+| PROTECTED_TARGET attribute and statement | P | Parsing, module-file persistence, and semantic checks based on J3/26-007r1. Some variable definition contexts remain unchecked, also for INTENT(IN). |
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the

@@ -443,6 +443,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
           });
       result->intent = GetIntent(symbol.attrs());
       result->ignoreTKR = GetIgnoreTKR(symbol);
+      result->isProtectedTarget = symbol.attrs().test(Attr::PROTECTED_TARGET);
       if (object) {
         result->cudaDataAttr = object->cudaDataAttr();
         if (!result->cudaDataAttr &&

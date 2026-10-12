@@ -366,8 +366,9 @@ private:
 
   std::optional<CalleeAndArguments> AnalyzeProcedureComponentRef(
       const parser::ProcComponentRef &, ActualArguments &&, bool isSubroutine);
-  std::optional<characteristics::Procedure> CheckCall(
-      parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
+  std::optional<characteristics::Procedure> CheckCall(parser::CharBlock,
+      const ProcedureDesignator &, ActualArguments &,
+      bool isDefinedAssignment = false);
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   const Symbol *ResolveForward(const Symbol &);

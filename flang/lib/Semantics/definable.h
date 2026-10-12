@@ -31,6 +31,8 @@ ENUM_CLASS(DefinabilityFlag,
     PointerDefinition, // a pointer is being defined, not its target
     AcceptAllocatable, // treat allocatable as if it were a pointer
     SourcedAllocation, // ALLOCATE(a,SOURCE=)
+    ReadOnlyPointerTarget, // target of association with a PROTECTED_TARGET
+                           // pointer
     PolymorphicOkInPure, // don't check for polymorphic type in pure subprogram
     DoNotNoteDefinition, // context does not imply definition
     AllowEventLockOrNotifyType, PotentialDeallocation,

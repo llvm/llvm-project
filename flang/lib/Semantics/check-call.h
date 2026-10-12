@@ -30,6 +30,10 @@ class SemanticsContext;
 void CheckImplicitInterfaceArgKeywords(
     const evaluate::ActualArgument &, parser::ContextualMessages &);
 
+// Check F2028 C873. Returns false if a PROTECTED_TARGET actual is diagnosed.
+bool CheckImplicitInterfaceArgProtectedTarget(
+    const evaluate::ActualArgument &, parser::ContextualMessages &);
+
 // Check constraints on actual arguments for procedures with implicit
 // interfaces.
 void CheckImplicitInterfaceArg(evaluate::ActualArgument &,
@@ -43,7 +47,8 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &,
 bool CheckArguments(const evaluate::characteristics::Procedure &,
     evaluate::ActualArguments &, SemanticsContext &, const Scope &,
     bool treatingExternalAsImplicit, bool ignoreImplicitVsExplicit,
-    const evaluate::SpecificIntrinsic *intrinsic);
+    const evaluate::SpecificIntrinsic *intrinsic,
+    bool isDefinedAssignment = false);
 
 bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
     const evaluate::ActualArguments &actuals,
@@ -58,7 +63,7 @@ parser::Messages CheckExplicitInterface(
     const evaluate::characteristics::Procedure &, evaluate::ActualArguments &,
     SemanticsContext &, const Scope *, const evaluate::SpecificIntrinsic *,
     bool allowActualArgumentConversions, bool extentErrors,
-    bool ignoreImplicitVsExplicit);
+    bool ignoreImplicitVsExplicit, bool isDefinedAssignment = false);
 
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,

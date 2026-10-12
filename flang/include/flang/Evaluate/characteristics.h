@@ -262,6 +262,8 @@ struct DummyDataObject {
   Attrs attrs;
   common::IgnoreTKRSet ignoreTKR;
   std::optional<common::CUDADataAttr> cudaDataAttr;
+  // Needed for argument checks, but not a characteristic in F2028 15.3.2.2.
+  bool isProtectedTarget{false};
 };
 
 // 15.3.2.3

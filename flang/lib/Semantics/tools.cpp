@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -438,6 +439,93 @@ const evaluate::Assignment *GetAssignment(
     const parser::PointerAssignmentStmt &x) {
   return x.typedAssignment ? common::GetPtrFromOptional(x.typedAssignment->v)
                            : nullptr;
+}
+
+namespace {
+struct ProtectedTargetSymbolVector
+    : public evaluate::Traverse<ProtectedTargetSymbolVector, SymbolVector> {
+  using Result = SymbolVector;
+  using Base = evaluate::Traverse<ProtectedTargetSymbolVector, Result>;
+  using Base::operator();
+  explicit ProtectedTargetSymbolVector(bool followAssociations)
+      : Base{*this}, followAssociations_{followAssociations} {}
+  Result Default() { return {}; }
+  Result Combine(Result &&a, Result &&b) {
+    a.insert(a.end(), b.begin(), b.end());
+    return std::move(a);
+  }
+  Result operator()(const Symbol &symbol) const {
+    const auto *assoc{symbol.GetUltimate().detailsIf<AssocEntityDetails>()};
+    // RANK DEFAULT has the selector's attributes (F2028 11.1.12.3p2).
+    if (followAssociations_ || (assoc && assoc->IsAssumedRank())) {
+      if (const auto *selector{evaluate::GetVariableSelector(symbol)}) {
+        return (*this)(*selector);
+      }
+    }
+    return {symbol};
+  }
+  Result operator()(const evaluate::Component &component) const {
+    Result result{(*this)(component.base())};
+    result.emplace_back(component.GetLastSymbol());
+    return result;
+  }
+  Result operator()(const evaluate::ArrayRef &array) const {
+    return (*this)(array.base());
+  }
+  Result operator()(const evaluate::Substring &substring) const {
+    if (const auto *dataRef{
+            std::get_if<evaluate::DataRef>(&substring.parent())}) {
+      return (*this)(*dataRef);
+    }
+    return {};
+  }
+  Result operator()(const evaluate::CoarrayRef &coarray) const {
+    return (*this)(coarray.base());
+  }
+
+private:
+  bool followAssociations_;
+};
+} // namespace
+
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &dataRef,
+    bool isPointerDefinition, bool followAssociations) {
+  auto symbols{ProtectedTargetSymbolVector{followAssociations}(dataRef)};
+  if (isPointerDefinition && !symbols.empty()) {
+    symbols.pop_back();
+  }
+  for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+    const Symbol &symbol{(**it).GetUltimate()};
+    if (IsPointer(symbol)) {
+      return symbol.attrs().test(Attr::PROTECTED_TARGET) ? &**it : nullptr;
+    }
+    if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()};
+        followAssociations && assoc && assoc->expr()) {
+      if (const Symbol *pointer{FindProtectedTargetPointer(*assoc->expr())}) {
+        return pointer;
+      }
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const SomeExpr &expr, bool isPointerDefinition, bool followAssociations) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(
+        *dataRef, isPointerDefinition, followAssociations);
+  }
+  if (!isPointerDefinition) {
+    if (const auto *call{evaluate::UnwrapProcedureRef(expr)}) {
+      if (const Symbol *procedure{call->proc().GetSymbol()}) {
+        if (const Symbol *result{FindFunctionResult(*procedure)};
+            result && result->attrs().test(Attr::PROTECTED_TARGET)) {
+          return result;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 const Symbol *FindInterface(const Symbol &symbol) {

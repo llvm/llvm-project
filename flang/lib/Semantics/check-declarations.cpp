@@ -329,6 +329,16 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckValue(symbol, derived);
   }
 
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) &&
+      (&symbol == &symbol.GetUltimate() ||
+          !symbol.GetUltimate().attrs().test(Attr::PROTECTED_TARGET)) &&
+      (!IsPointer(symbol) ||
+          !symbol.GetUltimate().has<ObjectEntityDetails>())) {
+    // F2028 C781, C8109, and 8.5.16p1
+    messages_.Say(
+        "The PROTECTED_TARGET attribute may apply only to a data pointer"_err_en_US);
+  }
+
   if (isDone) {
     return; // following checks do not apply
   }
@@ -346,6 +356,11 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A PROTECTED entity may not be in a common block"_err_en_US);
     }
+  }
+  if (symbol.attrs().test(Attr::PROTECTED_TARGET) && IsPointer(symbol) &&
+      FindCommonBlockContaining(symbol)) { // F2028 C867
+    messages_.Say(
+        "A PROTECTED_TARGET pointer may not be in a common block"_err_en_US);
   }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);

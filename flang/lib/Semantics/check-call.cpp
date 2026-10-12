@@ -38,6 +38,22 @@ void CheckImplicitInterfaceArgKeywords(
   }
 }
 
+bool CheckImplicitInterfaceArgProtectedTarget(
+    const evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
+  auto restorer{
+      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *pointer{FindProtectedTargetPointer(
+            *expr, false, /*followAssociations=*/false)}) { // F2028 C873
+      evaluate::SayWithDeclaration(messages, *pointer,
+          "PROTECTED_TARGET pointer '%s' or its subobject may not be passed to a procedure with an implicit interface"_err_en_US,
+          pointer->name());
+      return false;
+    }
+  }
+  return true;
+}
+
 void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     parser::ContextualMessages &messages, SemanticsContext &context) {
   CheckImplicitInterfaceArgKeywords(arg, messages);
@@ -66,6 +82,7 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     messages.Say(
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
+  CheckImplicitInterfaceArgProtectedTarget(arg, messages);
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
@@ -389,7 +406,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool allowActualArgumentConversions, bool extentErrors,
     const characteristics::Procedure &procedure,
     const evaluate::ActualArgument &arg,
-    const characteristics::DummyArgument &dummyArg) {
+    const characteristics::DummyArgument &dummyArg,
+    bool isDefinedAssignmentRHS) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -399,6 +417,26 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  bool badProtectedTarget{false};
+  // A null scope suppresses these constraints during generic resolution.
+  if (const Symbol *pointer{scope && !isDefinedAssignmentRHS
+              ? FindProtectedTargetPointer(
+                    actual, false, /*followAssociations=*/false)
+              : nullptr}) {
+    if (dummyIsPointer && !dummy.isProtectedTarget) { // F2028 C872
+      evaluate::SayWithDeclaration(messages, *pointer,
+          "POINTER %s must have PROTECTED_TARGET to accept PROTECTED_TARGET pointer '%s' or its subobject"_err_en_US,
+          dummyName, pointer->name());
+      badProtectedTarget = true;
+    } else if (!dummyIsPointer && dummy.intent != common::Intent::In &&
+        !(intrinsic && dummy.intent == common::Intent::Default)) {
+      // F2028 C874; an intrinsic's default intent is IN (17.2.1p3).
+      evaluate::SayWithDeclaration(messages, *pointer,
+          "Nonpointer %s must have INTENT(IN) to accept PROTECTED_TARGET pointer '%s' or its subobject"_err_en_US,
+          dummyName, pointer->name());
+      badProtectedTarget = true;
+    }
+  }
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{
@@ -829,7 +867,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
-  if (scope) {
+  if (scope && !badProtectedTarget) {
     std::optional<parser::MessageFixedText> undefinableMessage;
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {
@@ -1040,7 +1078,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // 15.5.2.7 -- dummy is POINTER
   if (dummyIsPointer) {
     if (actualIsPointer || dummy.intent == common::Intent::In) {
-      if (scope) {
+      if (scope && !badProtectedTarget) {
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
             /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
@@ -1638,7 +1676,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::Procedure &proc, SemanticsContext &context,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
-    bool ignoreImplicitVsExplicit) {
+    bool ignoreImplicitVsExplicit, bool isDefinedAssignmentRHS) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   auto &messages{foldingContext.messages()};
   std::string dummyName{"dummy argument"};
@@ -1671,7 +1709,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                   CheckExplicitDataArg(object, dummyName, expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
                       allowActualArgumentConversions, extentErrors, proc, arg,
-                      dummy);
+                      dummy, isDefinedAssignmentRHS);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(expr)) {
                   // ok
@@ -2575,7 +2613,7 @@ parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, SemanticsContext &context,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
-    bool ignoreImplicitVsExplicit) {
+    bool ignoreImplicitVsExplicit, bool isDefinedAssignment) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::Messages buffer;
@@ -2590,7 +2628,7 @@ parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
     if (actual) {
       CheckExplicitInterfaceArg(*actual, dummy, proc, context, scope, intrinsic,
           allowActualArgumentConversions, extentErrors,
-          ignoreImplicitVsExplicit);
+          ignoreImplicitVsExplicit, isDefinedAssignment && index == 2);
     } else if (!dummy.IsOptional()) {
       if (dummy.name.empty()) {
         messages.Say(
@@ -2736,8 +2774,8 @@ bool CheckWindowsIntrinsic(
 bool CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, SemanticsContext &context,
     const Scope &scope, bool treatingExternalAsImplicit,
-    bool ignoreImplicitVsExplicit,
-    const evaluate::SpecificIntrinsic *intrinsic) {
+    bool ignoreImplicitVsExplicit, const evaluate::SpecificIntrinsic *intrinsic,
+    bool isDefinedAssignment) {
   bool explicitInterface{proc.HasExplicitInterface()};
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
@@ -2763,7 +2801,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
   if (explicitInterface) {
     auto explicitBuffer{CheckExplicitInterface(proc, actuals, context, &scope,
         intrinsic, allowArgumentConversions,
-        /*extentErrors=*/true, ignoreImplicitVsExplicit)};
+        /*extentErrors=*/true, ignoreImplicitVsExplicit, isDefinedAssignment)};
     if (!explicitBuffer.empty()) {
       if (treatingExternalAsImplicit && explicitBuffer.AnyFatalError()) {
         // Combine all messages into one warning

@@ -78,7 +78,9 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                 // pointer/allocatable
                 context_
                     .Say(source,
-                        "Name in DEALLOCATE statement is not definable"_err_en_US)
+                        symbol->attrs().test(Attr::PROTECTED_TARGET)
+                            ? "Object in DEALLOCATE statement is not deallocatable"_err_en_US
+                            : "Name in DEALLOCATE statement is not definable"_err_en_US)
                     .Attach(std::move(
                         whyNot->set_severity(parser::Severity::Because)));
               } else if (auto whyNot{WhyNotDefinable(source,
@@ -116,7 +118,9 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                                *expr)}) {
                   context_
                       .Say(source,
-                          "Name in DEALLOCATE statement is not definable"_err_en_US)
+                          symbol->attrs().test(Attr::PROTECTED_TARGET)
+                              ? "Object in DEALLOCATE statement is not deallocatable"_err_en_US
+                              : "Name in DEALLOCATE statement is not definable"_err_en_US)
                       .Attach(std::move(
                           whyNot->set_severity(parser::Severity::Because)));
                 } else if (auto whyNot{WhyNotDefinable(source,

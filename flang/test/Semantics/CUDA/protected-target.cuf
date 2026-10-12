@@ -1,0 +1,24 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module protected_target_device_assignment
+  type :: item
+    real :: values(2)
+  end type
+  interface assignment(=)
+    module procedure copy_device
+  end interface
+contains
+  subroutine copy_device(lhs, rhs)
+    type(item), intent(out) :: lhs
+    real, device, intent(in) :: rhs(2)
+    lhs%values = rhs
+  end subroutine
+  subroutine assignments(readonly, writable, lhs)
+    real, device, pointer, protected_target :: readonly(:)
+    real, device, pointer :: writable(:)
+    type(item) :: lhs
+    ! A PROTECTED_TARGET DEVICE pointer RHS is valid with an INTENT(IN) dummy.
+    lhs = readonly
+    lhs = writable
+  end subroutine
+end module
