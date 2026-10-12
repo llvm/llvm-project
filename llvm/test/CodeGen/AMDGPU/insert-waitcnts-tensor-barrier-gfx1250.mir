@@ -1,11 +1,8 @@
 # RUN: llc -mtriple=amdgpu12.00 -run-pass si-insert-waitcnts -o - %s | FileCheck %s -check-prefix=GFX1200
 # RUN: llc -mtriple=amdgpu12.50 -run-pass si-insert-waitcnts -o - %s | FileCheck %s -check-prefix=GFX1250
 
-# The all-zero wait emitted at workgroup barriers covers every counter
-# except ASYNC and TENSOR. Tensor-memory transfers write LDS
-# asynchronously, so arrivals and resumption with incomplete transfers
-# would expose other waves to stale LDS data. Barriers must therefore
-# drain TENSORcnt conservatively on GFX1250 (CDNA5 ISA).
+# Barriers do not drain TENSORcnt (CDNA5 ISA), so gfx1250 barrier starts
+# and S_BARRIER_WAIT must drain it when the function uses tensor transfers.
 
 ---
 name:            tensor_before_full_barrier
