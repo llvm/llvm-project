@@ -8818,17 +8818,17 @@ void SIInstrInfo::moveToVALUImpl(
       NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
                      .addImm(0) // src0_modifiers
                      .add(Inst.getOperand(1))
-                     .addImm(0)                // clamp
-                     .addImm(0)                // omod
-                     .addImm(0)                // op_sel
-                     .add(Inst.getOperand(2))  // round
+                     .addImm(0)               // clamp
+                     .addImm(0)               // omod
+                     .addImm(0)               // op_sel
+                     .add(Inst.getOperand(2)) // round
                      .setMIFlags(Inst.getFlags());
     } else {
       NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
                      .add(Inst.getOperand(1))
                      .add(Inst.getOperand(2))
-                     .setMIFlags(Inst.getFlags());;
+                     .setMIFlags(Inst.getFlags());
     }
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
 
