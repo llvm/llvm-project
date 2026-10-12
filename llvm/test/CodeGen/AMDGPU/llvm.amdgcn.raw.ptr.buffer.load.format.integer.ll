@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel -mtriple=amdgcn -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | FileCheck %s
 
 ; Only the first offending declaration is reported, so do not pin the type.
 ; CHECK: error: intrinsic return type (overload type 0) expected any fp or fp vector
