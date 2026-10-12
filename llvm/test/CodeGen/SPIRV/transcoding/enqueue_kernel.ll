@@ -124,6 +124,13 @@
 ; CHECK-DAG: %[[#InvokeKernel4]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal1]]
 ; CHECK-DAG: %[[#InvokeKernel5]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtrLocal3]]
 ; CHECK-DAG: %[[#InvokeKernel6]] = OpFunction %[[#typeVoid]] {{Pure|None}} %[[#typeFnVoidPtr]]
+
+; CHECK-LABEL: ; -- Begin function kernel_queries
+; CHECK: %[[#]] = OpGetKernelWorkGroupSize %[[#typeInt32]] %[[#QueryKernelPtr:]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelPreferredWorkGroupSizeMultiple %[[#typeInt32]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelNDrangeSubGroupCount %[[#typeInt32]] %[[#]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpGetKernelNDrangeMaxSubGroupSize %[[#typeInt32]] %[[#]] %[[#QueryKernelPtr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK-NOT: _impl
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 target triple = "spirv64-unknown-unknown"
 
@@ -274,6 +281,39 @@ define internal spir_func void @__device_side_enqueue_block_invoke_6(ptr addrspa
 }
 
 define internal spir_kernel void @__device_side_enqueue_block_invoke_6_kernel(ptr addrspace(4) %0) {
+  ret void
+}
+
+
+@__block_literal_global.3 = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 16, i32 8, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke to ptr addrspace(4)) }, align 8
+
+define spir_kernel void @kernel_queries(ptr addrspace(1) align 4 %out) {
+entry:
+  %nd = alloca %struct.ndrange_t, align 8
+  %wgs = call spir_func i32 @__get_kernel_work_group_size_impl(ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  store i32 %wgs, ptr addrspace(1) %out, align 4
+  %pwgsm = call spir_func i32 @__get_kernel_preferred_work_group_size_multiple_impl(ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p1 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 1
+  store i32 %pwgsm, ptr addrspace(1) %p1, align 4
+  %sgc = call spir_func i32 @__get_kernel_sub_group_count_for_ndrange_impl(ptr %nd, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 2
+  store i32 %sgc, ptr addrspace(1) %p2, align 4
+  %msgs = call spir_func i32 @__get_kernel_max_sub_group_size_for_ndrange_impl(ptr %nd, ptr addrspace(4) addrspacecast (ptr @__kernel_queries_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.3 to ptr addrspace(4)))
+  %p3 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 3
+  store i32 %msgs, ptr addrspace(1) %p3, align 4
+  ret void
+}
+
+declare spir_func i32 @__get_kernel_work_group_size_impl(ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_preferred_work_group_size_multiple_impl(ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_sub_group_count_for_ndrange_impl(ptr, ptr addrspace(4), ptr addrspace(4))
+declare spir_func i32 @__get_kernel_max_sub_group_size_for_ndrange_impl(ptr, ptr addrspace(4), ptr addrspace(4))
+
+define internal spir_func void @__kernel_queries_block_invoke(ptr addrspace(4) %.block_descriptor) {
+  ret void
+}
+
+define internal spir_kernel void @__kernel_queries_block_invoke_kernel(ptr addrspace(4) %0) {
   ret void
 }
 

@@ -282,28 +282,6 @@ define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
   ret float %u
 }
 
-declare i32 @quux(ptr byval(i32))
-define i32 @mismatched_byval(ptr %x) {
-; CHECK-LABEL: mismatched_byval:
-; CHECK:         .functype mismatched_byval (i32) -> (i32)
-; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push1=, __stack_pointer
-; CHECK-NEXT:    i32.const $push2=, 16
-; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
-; CHECK-NEXT:    local.tee $push7=, $1=, $pop8
-; CHECK-NEXT:    global.set __stack_pointer, $pop7
-; CHECK-NEXT:    i32.load $push0=, 0($0)
-; CHECK-NEXT:    i32.store 12($1), $pop0
-; CHECK-NEXT:    i32.const $push3=, 16
-; CHECK-NEXT:    i32.add $push4=, $1, $pop3
-; CHECK-NEXT:    global.set __stack_pointer, $pop4
-; CHECK-NEXT:    i32.const $push5=, 12
-; CHECK-NEXT:    i32.add $push6=, $1, $pop5
-; CHECK-NEXT:    return_call quux, $pop6
-  %v = tail call i32 @quux(ptr byval(i32) %x)
-  ret i32 %v
-}
-
 declare i32 @var(...)
 define i32 @varargs(i32 %x) {
 ; CHECK-LABEL: varargs:
@@ -389,6 +367,53 @@ define i1 @mismatched_return_trunc() {
 }
 
 ; Stack-allocated arguments inhibit tail calls
+
+declare i32 @quux(ptr byval(i32))
+define i32 @mismatched_byval(ptr %x) {
+; CHECK-LABEL: mismatched_byval:
+; CHECK:         .functype mismatched_byval (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push1=, __stack_pointer
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push7=, $1=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.load $push0=, 0($0)
+; CHECK-NEXT:    i32.store 12($1), $pop0
+; CHECK-NEXT:    i32.const $push5=, 12
+; CHECK-NEXT:    i32.add $push6=, $1, $pop5
+; CHECK-NEXT:    call $0=, quux, $pop6
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.add $push4=, $1, $pop3
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    return $0
+  %v = tail call i32 @quux(ptr byval(i32) %x)
+  ret i32 %v
+}
+
+; Forwarding the caller's own byval argument, as a C++ thunk does: the copy
+; still lands in this frame, so it is not a tail call either.
+define i32 @forward_byval(ptr byval(i32) %x) {
+; CHECK-LABEL: forward_byval:
+; CHECK:         .functype forward_byval (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push1=, __stack_pointer
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop1, $pop2
+; CHECK-NEXT:    local.tee $push7=, $1=, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    i32.load $push0=, 0($0)
+; CHECK-NEXT:    i32.store 12($1), $pop0
+; CHECK-NEXT:    i32.const $push5=, 12
+; CHECK-NEXT:    i32.add $push6=, $1, $pop5
+; CHECK-NEXT:    call $0=, quux, $pop6
+; CHECK-NEXT:    i32.const $push3=, 16
+; CHECK-NEXT:    i32.add $push4=, $1, $pop3
+; CHECK-NEXT:    global.set __stack_pointer, $pop4
+; CHECK-NEXT:    return $0
+  %v = tail call i32 @quux(ptr byval(i32) %x)
+  ret i32 %v
+}
 
 define i32 @stack_arg(ptr %x) {
 ; SLOW-LABEL: stack_arg:

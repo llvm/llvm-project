@@ -294,10 +294,9 @@ define <4 x half> @fminnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v2
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -306,10 +305,9 @@ define <4 x half> @fminnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -344,16 +342,15 @@ define <8 x half> @fminnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v0, v0, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v1, v1, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v2, v2, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-SDAG-NEXT:    v_pk_min_f16 v3, v3, v4
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -362,16 +359,15 @@ define <8 x half> @fminnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v0, v0, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v1, v1, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v2, v2, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_pk_min_f16 v3, v3, v4
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -414,10 +410,9 @@ define <4 x half> @fmaxnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v2
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -426,10 +421,9 @@ define <4 x half> @fmaxnum_v4f16_neg(<4 x half> %first, <4 x half> %second) {
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v3, v3 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -464,16 +458,15 @@ define <8 x half> @fmaxnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v0, v0, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v1, v1, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v4, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-SDAG-NEXT:    v_pk_max_f16 v3, v3, v4
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -482,16 +475,15 @@ define <8 x half> @fmaxnum_v8f16_neg(<8 x half> %first, <8 x half> %second) {
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v4, v4 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v0, v0, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v5, v5 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v1, v1, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v6, v6 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v2, v2, v4
+; GFX950-GISEL-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v4, v7, v7 neg_lo:[1,1] neg_hi:[1,1]
-; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_pk_max_f16 v3, v3, v4
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -53,6 +53,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
     llvm.return
   }
+
+  llvm.func @target_wsloop_linear(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
+      %loop_ub = llvm.mlir.constant(9 : i32) : i32
+      %loop_lb = llvm.mlir.constant(0 : i32) : i32
+      %loop_step = llvm.mlir.constant(1 : i32) : i32
+      omp.wsloop linear(%arg0 : !llvm.ptr = %loop_step : i32) linear_var_types([i32]) {
+        omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+          omp.yield
+        }
+      }
+    llvm.return
+  }
 }
 
 // CHECK-LABEL: define hidden void @target_wsloop(
@@ -104,3 +116,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: define internal void @[[ZERO_TRIP_BODY]](
 // CHECK-NOT: @__kmpc{{.*}}barrier
 // CHECK:   ret void
+
+// CHECK: define hidden void @target_wsloop_linear(ptr %{{.*}})
+// CHECK:   store i32 0, ptr{{.*}} %p.lastiter
+// CHECK:   call void @__kmpc_for_static_loop_4u
+// CHECK:   call void @__kmpc_barrier(
+
+// CHECK: define internal void @target_wsloop_linear
+// CHECK:   %omp.is_last_iter  = icmp eq
+// CHECK:   store{{.*}}_p.lastiter

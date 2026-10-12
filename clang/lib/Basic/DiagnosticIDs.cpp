@@ -36,39 +36,7 @@ struct StaticDiagInfoRec;
 #include "clang/Basic/DiagnosticStableIDs.inc"
 #undef GET_DIAG_STABLE_ID_ARRAYS
 
-// Store the descriptions in a separate table to avoid pointers that need to
-// be relocated, and also decrease the amount of data needed on 64-bit
-// platforms. See "How To Write Shared Libraries" by Ulrich Drepper.
-struct StaticDiagInfoDescriptionStringTable {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  char ENUM##_desc[sizeof(DESC)];
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
-const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  DESC,
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
-
 extern const StaticDiagInfoRec StaticDiagInfo[];
-
-// Stored separately from StaticDiagInfoRec to pack better.  Otherwise,
-// StaticDiagInfoRec would have extra padding on 64-bit platforms.
-const uint32_t StaticDiagInfoDescriptionOffsets[] = {
-#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
-             LEGACY_STABLE_IDS)                                                \
-  offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
-#include "clang/Basic/AllDiagnosticKinds.inc"
-#undef DIAG
-};
 
 const uint32_t StaticDiagInfoStableIDOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
@@ -115,21 +83,23 @@ struct StaticDiagInfoRec {
   uint16_t WarnShowInSystemMacro : 1;
 
   LLVM_PREFERRED_TYPE(diag::Group)
-  uint16_t OptionGroupIndex : 15;
+  uint16_t OptionGroupIndex : 14;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
 
-  uint16_t DescriptionLen;
+  uint16_t DescriptionOffsetLow : 16;
+  uint16_t DescriptionOffsetHigh : 4;
+  uint16_t DescriptionLen : 12;
 
   unsigned getOptionGroupIndex() const {
     return OptionGroupIndex;
   }
 
   StringRef getDescription() const {
-    size_t MyIndex = this - &StaticDiagInfo[0];
-    uint32_t StringOffset = StaticDiagInfoDescriptionOffsets[MyIndex];
-    const char* Table = reinterpret_cast<const char*>(&StaticDiagInfoDescriptions);
-    return StringRef(&Table[StringOffset], DescriptionLen);
+    uint32_t Offset =
+        DescriptionOffsetLow | (uint32_t(DescriptionOffsetHigh) << 16);
+    return StringRef(StaticDiagInfoDescriptionsStorage + Offset,
+                     DescriptionLen);
   }
 
   StringRef getStableID() const {
@@ -159,6 +129,9 @@ struct StaticDiagInfoRec {
     return DiagID < RHS.DiagID;
   }
 };
+static_assert(sizeof(StaticDiagInfoRec) == 10);
+static_assert(static_cast<unsigned>(diag::Group::NUM_GROUPS) < (1U << 14),
+              "too many diagnostic groups for StaticDiagInfoRec");
 
 #define STRINGIFY_NAME(NAME) #NAME
 #define VALIDATE_DIAG_SIZE(NAME)                                               \
@@ -203,7 +176,9 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
       SHOWINSYSHEADER,                                                         \
       SHOWINSYSMACRO,                                                          \
       GROUP,                                                                   \
-	    DEFERRABLE,                                                              \
+      DEFERRABLE,                                                              \
+      uint16_t(DIAG_DESC_OFFSET_##ENUM),                                       \
+      uint16_t(DIAG_DESC_OFFSET_##ENUM >> 16),                                 \
       STR_SIZE(DESC, uint16_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
@@ -541,103 +516,131 @@ DiagnosticIDs::getDiagnosticLevel(unsigned DiagID, SourceLocation Loc,
 diag::Severity
 DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
                                      const DiagnosticsEngine &Diag) const {
-  bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
-  assert(getDiagClass(DiagID) != CLASS_NOTE);
+  return getDiagnosticListHighestSeverity({DiagID}, Loc, Diag);
+}
 
-  // Specific non-error diagnostics may be mapped to various levels from ignored
-  // to error.  Errors can only be mapped to fatal.
-  diag::Severity Result = diag::Severity::Fatal;
-
-  // Get the mapping information, or compute it lazily.
+diag::Severity DiagnosticIDs::getDiagnosticListHighestSeverity(
+    llvm::ArrayRef<diag::kind> DiagIDs, SourceLocation Loc,
+    const DiagnosticsEngine &Diag) const {
   DiagnosticsEngine::DiagState *State = Diag.GetDiagStateForLoc(Loc);
-  DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
-  // TODO: Can a null severity really get here?
-  if (Mapping.getSeverity() != diag::Severity())
-    Result = Mapping.getSeverity();
+  auto checkSingleDiag = [&](diag::kind DiagID) -> diag::Severity {
+    bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
+    assert(getDiagClass(DiagID) != CLASS_NOTE);
 
-  // Upgrade ignored diagnostics if -Weverything is enabled.
-  if (State->EnableAllWarnings && Result == diag::Severity::Ignored &&
-      !Mapping.isUser() &&
-      (IsCustomDiag || getDiagClass(DiagID) != CLASS_REMARK))
-    Result = diag::Severity::Warning;
+    // Specific non-error diagnostics may be mapped to various levels from
+    // ignored to error.  Errors can only be mapped to fatal.
+    diag::Severity Result = diag::Severity::Fatal;
 
-  // Ignore -pedantic diagnostics inside __extension__ blocks.
-  // (The diagnostics controlled by -pedantic are the extension diagnostics
-  // that are not enabled by default.)
-  bool EnabledByDefault = false;
-  bool IsExtensionDiag = isExtensionDiag(DiagID, EnabledByDefault);
-  if (Diag.AllExtensionsSilenced && IsExtensionDiag && !EnabledByDefault)
-    return diag::Severity::Ignored;
+    // Get the mapping information, or compute it lazily.
+    DiagnosticMapping Mapping = State->getOrAddMapping((diag::kind)DiagID);
 
-  // For extension diagnostics that haven't been explicitly mapped, check if we
-  // should upgrade the diagnostic. Skip if the user explicitly suppressed it
-  // (e.g. -Wno-foo).
-  if (IsExtensionDiag &&
-      !(Mapping.isUser() && Result == diag::Severity::Ignored)) {
-    if (Mapping.hasNoWarningAsError())
-      Result = std::max(Result,
-                        std::min(State->ExtBehavior, diag::Severity::Warning));
-    else
-      Result = std::max(Result, State->ExtBehavior);
-  }
+    // TODO: Can a null severity really get here?
+    if (Mapping.getSeverity() != diag::Severity())
+      Result = Mapping.getSeverity();
 
-  // At this point, ignored errors can no longer be upgraded.
-  if (Result == diag::Severity::Ignored)
-    return Result;
+    // Upgrade ignored diagnostics if -Weverything is enabled.
+    if (State->EnableAllWarnings && Result == diag::Severity::Ignored &&
+        !Mapping.isUser() &&
+        (IsCustomDiag || getDiagClass(DiagID) != CLASS_REMARK))
+      Result = diag::Severity::Warning;
 
-  // Honor -w: this disables all messages which are not Error/Fatal by
-  // default (disregarding attempts to upgrade severity from Warning to Error),
-  // as well as disabling all messages which are currently mapped to Warning
-  // (whether by default or downgraded from Error via e.g. -Wno-error or #pragma
-  // diagnostic.)
-  // FIXME: Should -w be ignored for custom warnings without a group?
-  if (State->IgnoreAllWarnings) {
-    if ((!IsCustomDiag || CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
-        (Result == diag::Severity::Warning ||
-         (Result >= diag::Severity::Error &&
-          !isDefaultMappingAsError((diag::kind)DiagID))))
+    // Ignore -pedantic diagnostics inside __extension__ blocks.
+    // (The diagnostics controlled by -pedantic are the extension diagnostics
+    // that are not enabled by default.)
+    bool EnabledByDefault = false;
+    bool IsExtensionDiag = isExtensionDiag(DiagID, EnabledByDefault);
+    if (Diag.AllExtensionsSilenced && IsExtensionDiag && !EnabledByDefault)
       return diag::Severity::Ignored;
-  }
 
-  // If -Werror is enabled, map warnings to errors unless explicitly disabled.
-  if (Result == diag::Severity::Warning) {
-    if (State->WarningsAsErrors && !Mapping.hasNoWarningAsError())
+    // For extension diagnostics that haven't been explicitly mapped, check if
+    // we should upgrade the diagnostic. Skip if the user explicitly
+    // suppressed it (e.g. -Wno-foo).
+    if (IsExtensionDiag &&
+        !(Mapping.isUser() && Result == diag::Severity::Ignored)) {
+      if (Mapping.hasNoWarningAsError())
+        Result = std::max(
+            Result, std::min(State->ExtBehavior, diag::Severity::Warning));
+      else
+        Result = std::max(Result, State->ExtBehavior);
+    }
+
+    // At this point, ignored errors can no longer be upgraded.
+    if (Result == diag::Severity::Ignored)
+      return Result;
+
+    // Honor -w: this disables all messages which are not Error/Fatal by
+    // default (disregarding attempts to upgrade severity from Warning to
+    // Error), as well as disabling all messages which are currently mapped to
+    // Warning (whether by default or downgraded from Error via e.g.
+    // -Wno-error or #pragma diagnostic.)
+    // FIXME: Should -w be ignored for custom warnings without a group?
+    if (State->IgnoreAllWarnings) {
+      if ((!IsCustomDiag ||
+           CustomDiagInfo->getDescription(DiagID).GetGroup()) &&
+          (Result == diag::Severity::Warning ||
+           (Result >= diag::Severity::Error &&
+            !isDefaultMappingAsError((diag::kind)DiagID))))
+        return diag::Severity::Ignored;
+    }
+
+    // If -Werror is enabled, map warnings to errors unless explicitly
+    // disabled.
+    if (Result == diag::Severity::Warning) {
+      if (State->WarningsAsErrors && !Mapping.hasNoWarningAsError())
+        Result = diag::Severity::Error;
+    }
+
+    // If -Wfatal-errors is enabled, map errors to fatal unless explicitly
+    // disabled.
+    if (Result == diag::Severity::Error) {
+      if (State->ErrorsAsFatal && !Mapping.hasNoErrorAsFatal())
+        Result = diag::Severity::Fatal;
+    }
+
+    // If explicitly requested, map fatal errors to errors.
+    if (Result == diag::Severity::Fatal &&
+        DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
       Result = diag::Severity::Error;
-  }
 
-  // If -Wfatal-errors is enabled, map errors to fatal unless explicitly
-  // disabled.
-  if (Result == diag::Severity::Error) {
-    if (State->ErrorsAsFatal && !Mapping.hasNoErrorAsFatal())
-      Result = diag::Severity::Fatal;
-  }
+    // Rest of the mappings are only applicable for diagnostics associated
+    // with a SourceLocation, bail out early for others.
+    if (!Diag.hasSourceManager())
+      return Result;
 
-  // If explicitly requested, map fatal errors to errors.
-  if (Result == diag::Severity::Fatal &&
-      DiagID != diag::fatal_too_many_errors && Diag.FatalsAsError)
-    Result = diag::Severity::Error;
+    // We check both the location-specific state and the ForceSystemWarnings
+    // override. In some cases (like template instantiations from system
+    // modules), the location-specific state might have suppression enabled,
+    // but the engine might have an override (e.g.
+    // AllowWarningInSystemHeaders) to show the warning.
+    if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
+        shouldSuppressAsSystemWarning(DiagID, Loc, Diag)) {
+      return diag::Severity::Ignored;
+    }
 
-  // Rest of the mappings are only applicable for diagnostics associated with a
-  // SourceLocation, bail out early for others.
-  if (!Diag.hasSourceManager())
+    // Clang-diagnostics pragmas always take precedence over suppression
+    // mapping.
+    if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
+      return diag::Severity::Ignored;
+
     return Result;
+  };
 
-  // We check both the location-specific state and the ForceSystemWarnings
-  // override. In some cases (like template instantiations from system modules),
-  // the location-specific state might have suppression enabled, but the
-  // engine might have an override (e.g. AllowWarningInSystemHeaders) to show
-  // the warning.
-  if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
-      shouldSuppressAsSystemWarning(DiagID, Loc, Diag)) {
-    return diag::Severity::Ignored;
+  diag::Severity CompositeResult = diag::Severity::Ignored;
+  for (diag::kind DiagID : DiagIDs) {
+    CompositeResult = std::max(CompositeResult, checkSingleDiag(DiagID));
+
+    // If we already hit 'fatal', we can't get any higher! So just return that.
+    // We could potentially short-cut this by taking a parameter for "return
+    // first greater than", but since our uses of this are fairly small, and
+    // that only optimizes for the "we are about to do something expensive
+    // anyway" variant (that is, when everything is NOT ignored), it doesn't
+    // seem particularly valuable.
+    if (CompositeResult == diag::Severity::Fatal)
+      break;
   }
 
-  // Clang-diagnostics pragmas always take precedence over suppression mapping.
-  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
-    return diag::Severity::Ignored;
-
-  return Result;
+  return CompositeResult;
 }
 
 bool DiagnosticIDs::shouldSuppressAsSystemWarning(

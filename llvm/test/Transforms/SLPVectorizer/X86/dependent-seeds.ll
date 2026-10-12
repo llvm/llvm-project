@@ -25,3 +25,111 @@ define { float, float, float } @test(float %x0, float %x1, float %x2, float %x3)
   %r2 = insertvalue { float, float, float } %r1, float %q3, 2
   ret { float, float, float } %r2
 }
+
+; The seeds of the second level depend on the first level ones, which are taken
+; first. They are vectorized next, fed by the vectorized first level.
+define double @second_level_seeds(ptr noalias %x, ptr noalias %y, ptr noalias %m) {
+; CHECK-LABEL: define double @second_level_seeds(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], ptr noalias [[M:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    store double [[TMP5]], ptr [[M]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[M]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = fadd double [[TMP6]], [[L]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %y0 = load double, ptr %y, align 8
+  %x0 = load double, ptr %x, align 8
+  %s0 = fadd double %y0, %x0
+  %t0 = fadd fast double %s0, 1.000000e+00
+  store double %t0, ptr %m, align 8
+  %y.1 = getelementptr i8, ptr %y, i64 8
+  %y1 = load double, ptr %y.1, align 8
+  %x.1 = getelementptr i8, ptr %x, i64 8
+  %x1 = load double, ptr %x.1, align 8
+  %s1 = fadd double %y1, %x1
+  %t1 = fadd fast double %s1, 1.000000e+00
+  %l = load double, ptr %m, align 8
+  %r = fadd double %t1, %l
+  ret double %r
+}
+
+; Revisiting the seeds of the second level does not shift the windows of the
+; first level, all pairs of the first level are vectorized.
+define void @second_level_seeds_keep_windows(ptr noalias %a, ptr noalias %b, ptr %c, ptr %d) {
+; CHECK-LABEL: define void @second_level_seeds_keep_windows(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    [[T0:%.*]] = fadd double [[TMP4]], [[C0]]
+; CHECK-NEXT:    store double [[T0]], ptr [[D]], align 8
+; CHECK-NEXT:    [[PC1:%.*]] = getelementptr i8, ptr [[C]], i64 8
+; CHECK-NEXT:    [[C1:%.*]] = load double, ptr [[PC1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; CHECK-NEXT:    [[T1:%.*]] = fadd double [[TMP5]], [[C1]]
+; CHECK-NEXT:    [[PD1:%.*]] = getelementptr i8, ptr [[D]], i64 8
+; CHECK-NEXT:    store double [[T1]], ptr [[PD1]], align 8
+; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[PC2:%.*]] = getelementptr i8, ptr [[C]], i64 16
+; CHECK-NEXT:    [[C2:%.*]] = load double, ptr [[PC2]], align 8
+; CHECK-NEXT:    [[PD2:%.*]] = getelementptr i8, ptr [[D]], i64 16
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[PA2]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[PB2]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
+; CHECK-NEXT:    [[T2:%.*]] = fadd double [[TMP9]], [[C2]]
+; CHECK-NEXT:    store double [[T2]], ptr [[PD2]], align 8
+; CHECK-NEXT:    [[PC3:%.*]] = getelementptr i8, ptr [[C]], i64 24
+; CHECK-NEXT:    [[C3:%.*]] = load double, ptr [[PC3]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP8]], i64 1
+; CHECK-NEXT:    [[T3:%.*]] = fadd double [[TMP10]], [[C3]]
+; CHECK-NEXT:    [[PD3:%.*]] = getelementptr i8, ptr [[D]], i64 24
+; CHECK-NEXT:    store double [[T3]], ptr [[PD3]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, ptr %a, align 8
+  %b0 = load double, ptr %b, align 8
+  %s0 = fadd double %a0, %b0
+  %c0 = load double, ptr %c, align 8
+  %t0 = fadd double %s0, %c0
+  store double %t0, ptr %d, align 8
+  %pa1 = getelementptr i8, ptr %a, i64 8
+  %a1 = load double, ptr %pa1, align 8
+  %pb1 = getelementptr i8, ptr %b, i64 8
+  %b1 = load double, ptr %pb1, align 8
+  %s1 = fadd double %a1, %b1
+  %pc1 = getelementptr i8, ptr %c, i64 8
+  %c1 = load double, ptr %pc1, align 8
+  %t1 = fadd double %s1, %c1
+  %pd1 = getelementptr i8, ptr %d, i64 8
+  store double %t1, ptr %pd1, align 8
+  %pa2 = getelementptr i8, ptr %a, i64 16
+  %a2 = load double, ptr %pa2, align 8
+  %pb2 = getelementptr i8, ptr %b, i64 16
+  %b2 = load double, ptr %pb2, align 8
+  %s2 = fadd double %a2, %b2
+  %pc2 = getelementptr i8, ptr %c, i64 16
+  %c2 = load double, ptr %pc2, align 8
+  %t2 = fadd double %s2, %c2
+  %pd2 = getelementptr i8, ptr %d, i64 16
+  store double %t2, ptr %pd2, align 8
+  %pa3 = getelementptr i8, ptr %a, i64 24
+  %a3 = load double, ptr %pa3, align 8
+  %pb3 = getelementptr i8, ptr %b, i64 24
+  %b3 = load double, ptr %pb3, align 8
+  %s3 = fadd double %a3, %b3
+  %pc3 = getelementptr i8, ptr %c, i64 24
+  %c3 = load double, ptr %pc3, align 8
+  %t3 = fadd double %s3, %c3
+  %pd3 = getelementptr i8, ptr %d, i64 24
+  store double %t3, ptr %pd3, align 8
+  ret void
+}

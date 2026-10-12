@@ -25,6 +25,7 @@ void populateIRAttributes(nb::module_ &m);
 void populateIRInterfaces(nb::module_ &m);
 void populateIRTypes(nb::module_ &m);
 void populateIRCore(nb::module_ &m);
+void populateIRRemarks(nb::module_ &m);
 void populateRoot(nb::module_ &m);
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
@@ -41,6 +42,8 @@ NB_MODULE(_mlir, m) {
   populateRoot(m);
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
+  // The remark enums are default arguments of the Context bindings.
+  populateIRRemarks(irModule);
   populateIRCore(irModule);
   populateIRAffine(irModule);
   populateIRAttributes(irModule);

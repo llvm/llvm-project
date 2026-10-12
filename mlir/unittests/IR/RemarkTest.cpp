@@ -793,4 +793,41 @@ TEST(Remark, TestRemarkLinking) {
   EXPECT_THAT(errOut, HasSubstr("vectorized loop"));
 }
 
+TEST(Remark, TestNestedLocation) {
+  MLIRContext context;
+  Location fileLoc = FileLineColLoc::get(&context, "test.mlir", 42, 7);
+  Location otherLoc = FileLineColLoc::get(&context, "other.mlir", 9, 3);
+  Location nameLoc = NameLoc::get(StringAttr::get(&context, "name"), fileLoc);
+  Location fusedLoc = FusedLoc::get(&context, {nameLoc, otherLoc});
+  Location callSiteLoc = CallSiteLoc::get(nameLoc, otherLoc);
+
+  std::pair<const char *, Location> cases[] = {{"NameLoc", nameLoc},
+                                               {"FusedLoc", fusedLoc},
+                                               {"CallSiteLoc", callSiteLoc}};
+  for (auto [kind, loc] : cases) {
+    SCOPED_TRACE(kind);
+    remark::detail::OptRemarkPass remark(loc, remark::RemarkOpts::name("R"));
+
+    llvm::remarks::Remark llvmRemark = remark.generateRemark();
+    ASSERT_TRUE(llvmRemark.Loc.has_value());
+    EXPECT_EQ(llvmRemark.Loc->SourceFilePath, "test.mlir");
+    EXPECT_EQ(llvmRemark.Loc->SourceLine, 42u);
+    EXPECT_EQ(llvmRemark.Loc->SourceColumn, 7u);
+
+    std::string printed;
+    llvm::raw_string_ostream os(printed);
+    remark.print(os, /*printLocation=*/true);
+    EXPECT_THAT(printed, HasSubstr(" @\"test.mlir\":42:7"));
+  }
+
+  // Without a file location inside, the remark has no source location.
+  remark::detail::OptRemarkPass remark(
+      NameLoc::get(StringAttr::get(&context, "name")),
+      remark::RemarkOpts::name("R"));
+  EXPECT_EQ(remark.generateRemark().Loc->SourceFilePath, "<unknown file>");
+  std::string printed;
+  llvm::raw_string_ostream os(printed);
+  remark.print(os, /*printLocation=*/true);
+  EXPECT_THAT(printed, Not(HasSubstr(" @")));
+}
 } // namespace

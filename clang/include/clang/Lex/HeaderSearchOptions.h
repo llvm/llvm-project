@@ -225,6 +225,11 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesForceValidateUserHeaders : 1;
 
+  /// Whether to treat an implicitly built module as out of date when a
+  /// directory it depends on the listing of changed after it was built.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesValidateDirectoryDependencies : 1;
+
   // Whether the content of input files should be hashed and used to
   // validate consistency.
   LLVM_PREFERRED_TYPE(bool)
@@ -300,6 +305,7 @@ public:
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),
+        ModulesValidateDirectoryDependencies(false),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),

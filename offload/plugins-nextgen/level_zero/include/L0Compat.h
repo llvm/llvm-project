@@ -25,6 +25,10 @@ API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendLaunchKernelWithArguments,
                     const void *pNext, ze_event_handle_t hSignalEvent,
                     uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents)
 
+API_HELPER_OPTIONAL(ze_result_t, zexKernelGetArgumentSize,
+                    ze_kernel_handle_t hKernel, uint32_t argIndex,
+                    uint32_t *pArgSize)
+
 API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendHostFunction,
                     ze_command_list_handle_t hCommandList,
                     void *pfnHostFunction, void *pUserData, void *pReserved,

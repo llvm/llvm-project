@@ -7,7 +7,7 @@ subroutine test_as_simple_elemental(n)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_as_simple_elemental(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_as_simple_elementalEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFtest_as_simple_elementalEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -42,9 +42,9 @@ end subroutine
 ! CHECK-SAME:                                            %[[VAL_1:.*]]: !fir.ref<i64> {fir.bindc_name = "ub"},
 ! CHECK-SAME:                                            %[[VAL_2:.*]]: !fir.ref<i64> {fir.bindc_name = "stride"}) {
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalElb"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalEstride"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFtest_as_strided_elementalEub"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} uniq_name("_QFtest_as_strided_elementalElb") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} uniq_name("_QFtest_as_strided_elementalEstride") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} uniq_name("_QFtest_as_strided_elementalEub") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_7]], %[[VAL_8]] : i64
@@ -89,7 +89,7 @@ subroutine test_as_elemental_with_pure_call(n)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_as_elemental_with_pure_call(
 ! CHECK-SAME:                                                   %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_as_elemental_with_pure_callEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFtest_as_elemental_with_pure_callEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -137,10 +137,10 @@ end subroutine
 ! CHECK:           %[[VAL_36:.*]] = hlfir.elemental %{{.*}} typeparams %{{.*}} unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
 ! CHECK:             %[[VAL_48:.*]] = hlfir.as_expr %{{.*}} move %{{.*}} : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
 ! CHECK:             %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_48]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
-! CHECK:             %[[VAL_64:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,2>>, index) -> (!fir.heap<!fir.char<1,2>>, !fir.heap<!fir.char<1,2>>)
+! CHECK:             %[[VAL_64:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp.intrinsic_result") : (!fir.heap<!fir.char<1,2>>, index) -> (!fir.heap<!fir.char<1,2>>, !fir.heap<!fir.char<1,2>>)
 ! CHECK:             %[[VAL_66:.*]] = hlfir.as_expr %[[VAL_64]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,2>>, i1) -> !hlfir.expr<!fir.char<1,2>>
 ! CHECK:             %[[VAL_68:.*]]:3 = hlfir.associate %[[VAL_66]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
-! CHECK:             %[[VAL_81:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,4>>, index) -> (!fir.heap<!fir.char<1,4>>, !fir.heap<!fir.char<1,4>>)
+! CHECK:             %[[VAL_81:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp.intrinsic_result") : (!fir.heap<!fir.char<1,4>>, index) -> (!fir.heap<!fir.char<1,4>>, !fir.heap<!fir.char<1,4>>)
 ! CHECK:             %[[VAL_83:.*]] = hlfir.as_expr %[[VAL_81]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,4>>, i1) -> !hlfir.expr<!fir.char<1,4>>
 ! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
 ! CHECK:             hlfir.end_associate %[[VAL_68]]#1, %[[VAL_68]]#2 : !fir.ref<!fir.char<1,2>>, i1

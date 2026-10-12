@@ -12,7 +12,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
     %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c4_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %5 = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-    %6 = fircg.ext_embox %5(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+    %6 = fircg.ext_embox %5(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.store %6 to %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %8 = fir.load %3 : !fir.ref<!fir.box<none>>
     return
@@ -77,7 +77,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %5 = fir.call @_FortranACUFAllocDescriptor(%3, %4, %c14_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %6 = fir.convert %5 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %7 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %8 = fircg.ext_embox %7(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %8 = fircg.ext_embox %7(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.store %8 to %6 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
     %9 = fir.address_of(@_QQclX64756D6D792E6D6C697200) : !fir.ref<!fir.char<1,11>>
     %c20_i32 = arith.constant 20 : i32
@@ -87,7 +87,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %12 = fir.call @_FortranACUFAllocDescriptor(%10, %11, %c20_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %13 = fir.convert %12 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %14 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-    %15 = fircg.ext_embox %14(%c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+    %15 = fircg.ext_embox %14(%c0) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
     fir.store %15 to %13 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %16 = fir.convert %6 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
     %17 = fir.convert %c1 : (index) -> i64
@@ -145,7 +145,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %3 = fir.call @_FortranACUFAllocDescriptor(%1, %2, %c11_i32) : (i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>>
     %4 = fir.convert %3 : (!fir.ref<!fir.box<none>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %5 = fir.zero_bits !fir.heap<!fir.array<?x?xi32>>
-    %6 = fircg.ext_embox %5(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    %6 = fircg.ext_embox %5(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xi32>>>
     fir.store %6 to %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %7 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
     %8 = fir.box_addr %7 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
@@ -233,7 +233,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   }
   func.func @_QQmain() attributes {fir.bindc_name = "P", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+mmx", "+sse", "+sse2", "+cx8", "+x87", "+fxsr"]>} {
@@ -250,7 +250,7 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
     fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     }
     gpu.func @_QMm1Psub2(%arg0: !fir.box<!fir.array<?x?xf32>>) kernel {
@@ -268,14 +268,14 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   }
   gpu.module @cuda_device_mod {
     fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     }
     func.func @_QQxxx() {
@@ -477,7 +477,7 @@ module attributes {gpu.container_module} {
   fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
     %c0 = arith.constant 0 : index
     %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
   }
   func.func @_QQmain() {
@@ -492,7 +492,7 @@ module attributes {gpu.container_module} {
     fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
       %c0 = arith.constant 0 : index
       %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
-      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      %1 = fircg.ext_embox %0(%c0, %c0) allocator_idx(2) : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
       fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
     }
   }
@@ -520,7 +520,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     %2 = fir.convert %0 : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
     %3 = fir.call @_FortranACUFMemAlloc(%1, %c1_i32, %2, %c29_i32) {cuf.data_attr = #cuf.cuda<managed>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
     %4 = fir.convert %3 : (!fir.llvm_ptr<i8>) -> !fir.ref<!fir.array<6x!fir.logical<4>>>
-    %5 = fircg.ext_declare %4(%c6) {uniq_name = "_QFtesti4Elma"} : (!fir.ref<!fir.array<6x!fir.logical<4>>>, index) -> !fir.ref<!fir.array<6x!fir.logical<4>>>
+    %5 = fircg.ext_declare %4(%c6) uniq_name("_QFtesti4Elma") : (!fir.ref<!fir.array<6x!fir.logical<4>>>, index) -> !fir.ref<!fir.array<6x!fir.logical<4>>>
     %6 = fircg.ext_embox %5(%c6) : (!fir.ref<!fir.array<6x!fir.logical<4>>>, index) -> !fir.box<!fir.array<6x!fir.logical<4>>>
     fir.call @_QPcallee(%6) : (!fir.box<!fir.array<6x!fir.logical<4>>>) -> ()
     return

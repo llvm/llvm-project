@@ -665,6 +665,8 @@ public:
 
   LLVMContext &getContext() const { return F.getContext(); }
 
+  Module &getModule() const { return *F.getParent(); }
+
   /// Test if values of the given type are analyzable within the SCEV
   /// framework. This primarily includes integer types, and it can optionally
   /// include pointer types if the ScalarEvolution class has access to
@@ -1523,9 +1525,6 @@ public:
   /// Return true if elements that makes up the given SCEV properly dominate
   /// the specified basic block.
   LLVM_ABI bool properlyDominates(const SCEV *S, const BasicBlock *BB);
-
-  /// Test whether the given SCEV has Op as a direct or indirect operand.
-  LLVM_ABI bool hasOperand(const SCEV *S, const SCEV *Op) const;
 
   /// Return the size of an element read or written by Inst.
   LLVM_ABI const SCEV *getElementSize(Instruction *Inst);
