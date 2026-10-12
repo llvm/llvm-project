@@ -417,49 +417,35 @@ endif()
 include(LLVMLibCCheckMPFR)
 include(LLVMLibCCheckMPC)
 
+# Linting is opt in.  Naming a clang-tidy binary with LLVM_LIBC_CLANG_TIDY
+# turns it on as well.  Once linting is requested, every problem below stops
+# the configure: an empty libc-lint target that always succeeds would hide a
+# misconfiguration behind a green build.
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
+  set(LIBC_CLANG_TIDY_EXPLICIT TRUE)
+else()
+  set(LIBC_CLANG_TIDY_EXPLICIT FALSE)
 endif()
 
 if(LLVM_LIBC_ENABLE_LINTING)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(LLVM_LIBC_ENABLE_LINTING OFF)
-    message(WARNING "C++ compiler is not clang++, linting with be disabled.")
-  else()
-    if(NOT LLVM_LIBC_CLANG_TIDY)
-      find_program(LLVM_LIBC_CLANG_TIDY NAMES clang-tidy)
-    endif()
+    message(FATAL_ERROR "
+      Linting needs clang++ as the C++ compiler so that clang-tidy can replay
+      the compile commands, but the configured compiler is
+      ${CMAKE_CXX_COMPILER_ID}.
 
-    if(LLVM_LIBC_CLANG_TIDY)
-      # Check clang-tidy major version.
-      execute_process(COMMAND ${LLVM_LIBC_CLANG_TIDY} "--version"
-        OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
-        ERROR_VARIABLE CLANG_TIDY_ERROR
-        RESULT_VARIABLE CLANG_TIDY_RESULT)
+      To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+      (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+  endif()
 
-      if(CLANG_TIDY_RESULT AND NOT CLANG_TIDY_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
-          output : '${CLANG_TIDY_OUTPUT}'
-          error  : '${CLANG_TIDY_ERROR}'
-          result : '${CLANG_TIDY_RESULT}'
-          ")
-      endif()
-      string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
-      string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
-        "${CMAKE_CXX_COMPILER_VERSION}")
-
-      if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
-        set(LLVM_LIBC_ENABLE_LINTING OFF)
-        message(WARNING "
-          'clang-tidy' (version ${CLANG_TIDY_VERSION}) is not the same as
-          'clang' (version ${CLANG_MAJOR_VERSION}).  Linting will
-          be disabled.
-
-          The path to the clang-tidy binary can be set manually by passing
-          -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
-      endif()
-      add_custom_target(libc-lint)
-    else()
+  if(NOT LIBC_CLANG_TIDY_EXPLICIT)
+    # Discover into a separate cache entry so that LLVM_LIBC_CLANG_TIDY keeps
+    # meaning "chosen by the user" on later reconfigures.  A bootstrapping
+    # build picks up the clang-tidy that was built next to the compiler.
+    find_program(LIBC_CLANG_TIDY_DISCOVERED NAMES clang-tidy
+      HINTS ${LLVM_TOOLS_BINARY_DIR})
+    if(NOT LIBC_CLANG_TIDY_DISCOVERED)
       message(FATAL_ERROR "
         Linting is enabled but 'clang-tidy' is not found!
 
@@ -469,7 +455,57 @@ if(LLVM_LIBC_ENABLE_LINTING)
         To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
         (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
     endif()
+    set(LLVM_LIBC_CLANG_TIDY "${LIBC_CLANG_TIDY_DISCOVERED}")
   endif()
+
+  execute_process(COMMAND "${LLVM_LIBC_CLANG_TIDY}" --version
+    OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
+    ERROR_VARIABLE CLANG_TIDY_ERROR
+    RESULT_VARIABLE CLANG_TIDY_RESULT)
+  if(NOT CLANG_TIDY_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
+      output : '${CLANG_TIDY_OUTPUT}'
+      error  : '${CLANG_TIDY_ERROR}'
+      result : '${CLANG_TIDY_RESULT}'
+      ")
+  endif()
+
+  # clang-tidy carries its own clang front end.  A different major version
+  # than the compiler means different builtins, resource headers and warning
+  # flags, which shows up as spurious diagnostics rather than as a clear
+  # failure, so the majors have to agree unless the user chose the binary.
+  if(NOT CLANG_TIDY_OUTPUT MATCHES "LLVM version ([0-9]+)")
+    message(FATAL_ERROR "
+      Could not read a version from '${LLVM_LIBC_CLANG_TIDY} --version':
+      ${CLANG_TIDY_OUTPUT}")
+  endif()
+  set(CLANG_TIDY_VERSION ${CMAKE_MATCH_1})
+  string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
+    "${CMAKE_CXX_COMPILER_VERSION}")
+
+  if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
+    if(LIBC_CLANG_TIDY_EXPLICIT)
+      message(WARNING "
+        'clang-tidy' (version ${CLANG_TIDY_VERSION}) is not the same as
+        'clang' (version ${CLANG_MAJOR_VERSION}).  Using
+        ${LLVM_LIBC_CLANG_TIDY} anyway because LLVM_LIBC_CLANG_TIDY was set
+        explicitly.  Expect spurious diagnostics where the two versions
+        disagree.")
+    else()
+      message(FATAL_ERROR "
+        'clang-tidy' (version ${CLANG_TIDY_VERSION}, found at
+        ${LLVM_LIBC_CLANG_TIDY}) is not the same as 'clang' (version
+        ${CLANG_MAJOR_VERSION}).
+
+        Pass -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake to select a
+        matching clang-tidy, or to use this one regardless.
+
+        To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+        (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+    endif()
+  endif()
+
+  add_custom_target(libc-lint)
 endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)

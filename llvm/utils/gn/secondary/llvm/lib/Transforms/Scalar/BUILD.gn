@@ -1,9 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("ScalarOptions") {
+  visibility = [ ":Scalar" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("Scalar") {
   output_name = "LLVMScalarOpts"
   deps = [
+    ":ScalarOptions",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/AggressiveInstCombine",
     "//llvm/lib/Transforms/InstCombine",
@@ -82,6 +91,7 @@ static_library("Scalar") {
     "SCCP.cpp",
     "SROA.cpp",
     "Scalar.cpp",
+    "ScalarOptions.cpp",
     "ScalarizeMaskedMemIntrin.cpp",
     "Scalarizer.cpp",
     "SeparateConstOffsetFromGEP.cpp",

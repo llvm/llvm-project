@@ -225,7 +225,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
       return nullptr;
 
-    LLVM_DEBUG(dbgs() << "Unfolding SU # " << SU->NodeNum << "\n");
+    LLVM_DEBUG(dbgs() << "Unfolding " << *SU << "\n");
     assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
     N = NewNodes[1];
@@ -331,7 +331,7 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
     SU = NewSU;
   }
 
-  LLVM_DEBUG(dbgs() << "Duplicating SU # " << SU->NodeNum << "\n");
+  LLVM_DEBUG(dbgs() << "Duplicating " << *SU << "\n");
   NewSU = Clone(SU);
 
   // New SUnit has the exact same predecessors.
@@ -570,14 +570,14 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
           // Issue copies, these can be expensive cross register class copies.
           SmallVector<SUnit*, 2> Copies;
           InsertCopiesAndMoveSuccs(LRDef, Reg, DestRC, RC, Copies);
-          LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << TrySU->NodeNum
-                            << " to SU #" << Copies.front()->NodeNum << "\n");
+          LLVM_DEBUG(dbgs() << "Adding an edge from " << *TrySU << " to "
+                            << *Copies.front() << "\n");
           AddPred(TrySU, SDep(Copies.front(), SDep::Artificial));
           NewDef = Copies.back();
         }
 
-        LLVM_DEBUG(dbgs() << "Adding an edge from SU # " << NewDef->NodeNum
-                          << " to SU #" << TrySU->NodeNum << "\n");
+        LLVM_DEBUG(dbgs() << "Adding an edge from " << *NewDef << " to "
+                          << *TrySU << "\n");
         LiveRegDefs[Reg] = NewDef;
         AddPred(NewDef, SDep(TrySU, SDep::Artificial));
         TrySU->isAvailable = false;

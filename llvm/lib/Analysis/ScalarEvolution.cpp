@@ -4185,6 +4185,7 @@ bool ScalarEvolution::canReuseInstruction(
   SmallPtrSet<Value *, 8> Visited;
   Worklist.push_back(I);
   unsigned NumVisitedInsts = 0;
+  const unsigned InstLimit = std::max<unsigned>(16, S->getExpressionSize());
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
     if (!Visited.insert(V).second)
@@ -4196,7 +4197,7 @@ bool ScalarEvolution::canReuseInstruction(
       continue;
 
     // Avoid walking large instruction graphs.
-    if (++NumVisitedInsts > 16)
+    if (++NumVisitedInsts > InstLimit)
       return false;
 
     auto *I = dyn_cast<Instruction>(V);

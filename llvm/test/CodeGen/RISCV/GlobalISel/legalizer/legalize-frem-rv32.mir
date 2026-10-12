@@ -14,7 +14,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s32)
@@ -44,7 +44,7 @@ body:             |
     ; CHECK-NEXT: $x11 = COPY [[COPY1]](s32)
     ; CHECK-NEXT: $x12 = COPY [[COPY2]](s32)
     ; CHECK-NEXT: $x13 = COPY [[COPY3]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmod, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmod, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY $x11
@@ -79,7 +79,7 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[FPEXT]](s32)
     ; CHECK-NEXT: $x11 = COPY [[FPEXT1]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY2]](s32)
@@ -109,13 +109,13 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[UV]](s32)
     ; CHECK-NEXT: $x11 = COPY [[UV2]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: $x10 = COPY [[UV1]](s32)
     ; CHECK-NEXT: $x11 = COPY [[UV3]](s32)
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) &fmodf, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
