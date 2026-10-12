@@ -51,8 +51,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   }
 
   getActionDefinitionsBuilder(G_BITCAST)
-      .legalForCartesianProduct({s32})
-      .legalForCartesianProduct({s64});
+      .legalFor({{s32, s32}})
+      .legalFor(ST.hasFPRegs(), {{s64, s64}})
+      .maxScalar(!ST.hasFPRegs(), 0, i32);
 
   getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{s64, s32}});
   getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
