@@ -73,6 +73,8 @@ public:
 
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
 
+  void addPreEmitPass2(PassManagerWrapper &PMW) override;
+
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
@@ -187,6 +189,10 @@ Error SPIRVCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   return Error::success();
+}
+
+void SPIRVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(SPIRVPrepareModuleAnalysisPass(), PMW);
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
