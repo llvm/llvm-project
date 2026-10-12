@@ -1235,6 +1235,16 @@ static bool isBFloat16Type(SPIRVTypeInst TypeDef) {
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
 }
 
+// Registers created after isel (e.g. by MachineCSE) may lack registry entries.
+// Fall back to the defining instruction's result type.
+static SPIRVTypeInst getRegType(Register Reg, const MachineFunction &MF,
+                                const SPIRVGlobalRegistry *GR) {
+  if (SPIRVTypeInst Ty = GR->getSPIRVTypeForVReg(Reg, &MF))
+    return Ty;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  return MRI.getVRegDef(MRI.getVRegDef(Reg)->getOperand(1).getReg());
+}
+
 // Add requirements for handling atomic float instructions
 #define ATOM_FLT_REQ_EXT_MSG(ExtName)                                          \
   "The atomic float instruction requires the following SPIR-V "                \
@@ -1517,8 +1527,8 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
-  SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-      MI.getOperand(2).getReg(), MI.getMF());
+  SPIRVTypeInst TypeDef = getRegType(MI.getOperand(2).getReg(), *MI.getMF(),
+                                     ST.getSPIRVGlobalRegistry());
   assert(TypeDef && "Unexpected type instruction for dot input");
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
@@ -1848,8 +1858,8 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVTypeInst TypeDef;
     if (Op == SPIRV::OpAtomicStore) {
       assert(MI.getOperand(3).isReg());
-      TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-          MI.getOperand(3).getReg(), MI.getMF());
+      TypeDef = getRegType(MI.getOperand(3).getReg(), *MI.getMF(),
+                           ST.getSPIRVGlobalRegistry());
       assert(TypeDef && "Unexpected type instruction for OpAtomicStore");
     } else {
       assert(MI.getOperand(1).isReg() && "Unexpected operand in atomic");
@@ -2396,7 +2406,8 @@ void addInstrRequirements(const MachineInstr &MI,
                          "OpConvertHandleToSampledImageINTEL",
                          false);
     }
-    SPIRVTypeInst SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
+    SPIRVTypeInst SpvTy =
+        getRegType(MI.getOperand(2).getReg(), *MI.getMF(), GR);
     unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
     if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
         !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
@@ -2666,8 +2677,8 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-        MI.getOperand(2).getReg(), MI.getMF());
+    SPIRVTypeInst TypeDef = getRegType(MI.getOperand(2).getReg(), *MI.getMF(),
+                                       ST.getSPIRVGlobalRegistry());
     assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
@@ -2938,25 +2949,14 @@ static bool handleMIFlagDecoration(
     if (FPFastMathDefaultInfoVec.empty())
       return Changed;
 
-    // There are three types of instructions that can use fast math flags:
-    // 1. Arithmetic instructions (FAdd, FMul, FSub, FDiv, FRem, etc.)
-    // 2. Relational instructions (FCmp, FOrd, FUnord, etc.)
-    // 3. Extended instructions (ExtInst)
-    // For arithmetic instructions, the floating point type can be in the
-    // result type or in the operands, but they all must be the same.
-    // For the relational and logical instructions, the floating point type
-    // can only be in the operands 1 and 2, not the result type. Also, the
-    // operands must have the same type. For the extended instructions, the
-    // floating point type can be in the result type or in the operands. It's
-    // unclear if the operands and the result type must be the same. Let's
-    // assume they must be. Therefore, for 1. and 2., we can check the first
-    // operand type, and for 3. we can check the result type.
-    assert(I.getNumOperands() >= 3 && "Expected at least 3 operands");
-    Register ResReg = I.getOpcode() == SPIRV::OpExtInst
-                          ? I.getOperand(1).getReg()
-                          : I.getOperand(2).getReg();
-    SPIRVTypeInst ResType = GR->getSPIRVTypeForVReg(ResReg, I.getMF());
-    const Type *Ty = GR->getTypeForSPIRVType(ResType);
+    // Use the first operand's FP type for arithmetic and comparisons,
+    // and the result type for calls and extended instructions.
+    SPIRVTypeInst FPType =
+        I.getOpcode() == SPIRV::OpExtInst ||
+                I.getOpcode() == SPIRV::OpFunctionCall
+            ? I.getMF()->getRegInfo().getVRegDef(I.getOperand(1).getReg())
+            : getRegType(I.getOperand(2).getReg(), *I.getMF(), GR);
+    const Type *Ty = GR->getTypeForSPIRVType(FPType);
     Ty = Ty->isVectorTy() ? cast<VectorType>(Ty)->getElementType() : Ty;
 
     // Match instruction type with the FPFastMathDefaultInfoVec.
