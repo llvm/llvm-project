@@ -929,6 +929,13 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputDebugSourceAndStrings(*M);
   // 7b. Debug: all OpName and all OpMemberName.
   outputModuleSection(SPIRV::MB_DebugNames);
+  for (const auto &[Reg, Name] : MAI->MBBNames) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpName);
+    Inst.addOperand(MCOperand::createReg(Reg));
+    addStringImm(Name, Inst);
+    outputMCInst(Inst);
+  }
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
   // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.

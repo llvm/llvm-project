@@ -297,6 +297,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *, 4> VPOperands;
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
+      if (auto *EVI = dyn_cast<ExtractValueInst>(Inst))
+        for (unsigned Idx : EVI->indices())
+          VPOperands.push_back(Plan->getConstantInt(32, Idx));
       NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
                                       VPIRFlags(*Inst), MD, Inst->getDebugLoc(),
                                       "", Inst->getType());
@@ -1970,6 +1973,14 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     if (!match(SelectR,
                m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
         !MatchBlend(SelectR))
+      return false;
+
+    // Bail out if PhiR has users other than the find-last select/blend and the
+    // header mask select, e.g. nested blends. Then the data operand may be PhiR
+    // on some paths and Cond does not determine the lanes to update.
+    if (any_of(PhiR->users(), [&](VPUser *U) {
+          return U != SelectR && U != BackedgeSelect->getDefiningRecipe();
+        }))
       return false;
 
     assert(Cond != HeaderMask && "Cond must not be HeaderMask");

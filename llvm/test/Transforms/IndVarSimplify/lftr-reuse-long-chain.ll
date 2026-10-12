@@ -94,23 +94,14 @@ define void @sum_9_zext(i8 %x0, i8 %x1, i8 %x2, i8 %x3, i8 %x4, i8 %x5, i8 %x6, 
 ; CHECK-NEXT:    [[WIDE:%.*]] = zext i32 [[SUM]] to i64
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    call void @use(i64 [[WIDE]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Z8]], [[Z7]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], [[Z6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[Z5]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], [[Z4]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], [[Z3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[Z2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[Z1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[Z0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = zext nneg i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[WIDE]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

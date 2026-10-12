@@ -38,6 +38,7 @@ class Constant;
 class DataLayout;
 class Instruction;
 class IRBuilderBase;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -58,6 +59,14 @@ bool isConstant(Value *V);
 /// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
+/// \returns True if \p V is an integer binary operator, which gives an undef
+/// result for the undef operands: neither a shift nor a division.
+bool isUndefTolerantBinOp(const Value *V);
+
+/// \returns the load operand of the undef tolerant binary operator \p V, if
+/// any.
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V);
 
 /// \returns the opcode of the combines emitted for a reassociated node:
 /// subtract chains regroup their positive and negative operand columns with
@@ -337,6 +346,11 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         const DataLayout &DL, Value *&TrueBase,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);
+
+/// Returns the alignment of the shared base pointer of a blended load for
+/// the loads \p VL.
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.

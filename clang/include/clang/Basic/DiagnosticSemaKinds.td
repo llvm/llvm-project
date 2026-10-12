@@ -3440,12 +3440,10 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "value of 128, 256, 512, 1024 or 2048">;
 def err_attribute_arm_sm_incompat_builtin : Error<
   "builtin can only be called from a %0 function">;
-def warn_attribute_arm_za_builtin_no_za_state : Warning<
-  "builtin call is not valid when calling from a function without active ZA state">,
-  InGroup<DiagGroup<"undefined-arm-za">>;
-def warn_attribute_arm_zt0_builtin_no_zt0_state : Warning<
-  "builtin call is not valid when calling from a function without active ZT0 state">,
-  InGroup<DiagGroup<"undefined-arm-zt0">>;
+def err_attribute_arm_za_builtin_no_za_state : Error<
+  "builtin call is not valid when calling from a function without active ZA state">;
+def err_attribute_arm_zt0_builtin_no_zt0_state : Error<
+  "builtin call is not valid when calling from a function without active ZT0 state">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
@@ -3470,6 +3468,11 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_harden_pac_ret_requires_pac_ret: Warning<
+  "'harden-pac-ret' attribute requires 'branch-protection=pac-ret'; 'target' attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def err_invalid_harden_pac_ret_spec : Error<
+  "invalid or misspelled pac-ret hardening specification '%0'">;
 def err_attribute_invalid_atomic_argument : Error<
   "invalid argument '%0' to atomic attribute; valid options are: "
   "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "

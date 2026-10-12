@@ -49,25 +49,6 @@ STATISTIC(NumVRegSpilled,
 STATISTIC(NumVRegReloaded,
           "Number of registers within vector register groups reloaded");
 
-static cl::opt<bool> PreferWholeRegisterMove(
-    "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
-    cl::desc("Prefer whole register move for vector registers."));
-
-static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
-    "riscv-force-machine-combiner-strategy", cl::Hidden,
-    cl::desc("Force machine combiner to use a specific strategy for machine "
-             "trace metrics evaluation."),
-    cl::init(MachineTraceStrategy::TS_NumStrategies),
-    cl::values(clEnumValN(MachineTraceStrategy::TS_Local, "local",
-                          "Local strategy."),
-               clEnumValN(MachineTraceStrategy::TS_MinInstrCount, "min-instr",
-                          "MinInstrCount strategy.")));
-
-static cl::opt<bool> OutlinerEnableRegSave(
-    "riscv-outliner-regsave", cl::init(true), cl::Hidden,
-    cl::desc("Enable RegSave strategy in machine outliner (save X5 to a "
-             "temporary register when X5 is live across outlined calls)."));
-
 namespace llvm::RISCVVPseudosTable {
 
 using namespace RISCV;
@@ -262,7 +243,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
                                    MachineBasicBlock::const_iterator MBBI,
                                    MachineBasicBlock::const_iterator &DefMBBI,
                                    RISCVVType::VLMUL LMul) {
-  if (PreferWholeRegisterMove)
+  if (STI.getCLOpts().prefer_whole_register_move)
     return false;
 
   assert(MBBI->getOpcode() == TargetOpcode::COPY &&
@@ -2317,7 +2298,9 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 }
 
 MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
-  if (ForceMachineCombinerStrategy.getNumOccurrences() == 0) {
+  std::optional<MachineTraceStrategy> Forced =
+      STI.getCLOpts().force_machine_combiner_strategy;
+  if (!Forced) {
     // The option is unused. Choose Local strategy only for in-order cores. When
     // scheduling model is unspecified, use MinInstrCount strategy as more
     // generic one.
@@ -2327,7 +2310,7 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
                : MachineTraceStrategy::TS_Local;
   }
   // The strategy was forced by the option.
-  return ForceMachineCombinerStrategy;
+  return *Forced;
 }
 
 void RISCVInstrInfo::finalizeInsInstrs(
@@ -3903,7 +3886,7 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (OutlinerEnableRegSave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;
@@ -3971,7 +3954,7 @@ RISCVInstrInfo::getOutliningCandidateInfo(
   if (MOCI != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
 
-  if (OutlinerEnableRegSave && MOCI == MachineOutlinerDefault) {
+  if (STI.getCLOpts().outliner_regsave && MOCI == MachineOutlinerDefault) {
     // Set per-candidate overhead based on X5 availability
     for (auto &C : RepeatedSequenceLocs) {
 

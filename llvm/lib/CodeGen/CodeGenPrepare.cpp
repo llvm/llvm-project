@@ -5201,7 +5201,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
 
       if (Opts.cgp_split_large_offset_gep && isa<GetElementPtrInst>(AddrInst) &&
           TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-          ConstantOffset > 0) {
+          ConstantOffset != 0) {
         // Record GEPs with non-zero offsets as candidates for splitting in
         // the event that the offset cannot fit into the r+i addressing mode.
         // Simple and common case that only one GEP is used in calculating the

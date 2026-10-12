@@ -940,3 +940,25 @@ define <2 x i64> @vwaddu_v2i64_of_v2i16(ptr %x, ptr %y) {
   %e = add <2 x i64> %c, %d
   ret <2 x i64> %e
 }
+
+define <16 x i32> @vwadd_sext_chain_v16i8_v16i32(<16 x i32> %acc, <16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
+; CHECK-LABEL: vwadd_sext_chain_v16i8_v16i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vwadd.vv v16, v14, v15
+; CHECK-NEXT:    vwadd.vv v18, v12, v13
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vwadd.vv v12, v18, v16
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v12, v8
+; CHECK-NEXT:    ret
+  %sa = sext <16 x i8> %a to <16 x i32>
+  %sb = sext <16 x i8> %b to <16 x i32>
+  %sc = sext <16 x i8> %c to <16 x i32>
+  %sd = sext <16 x i8> %d to <16 x i32>
+  %s0 = add <16 x i32> %acc, %sa
+  %s1 = add <16 x i32> %s0, %sb
+  %s2 = add <16 x i32> %s1, %sc
+  %s3 = add <16 x i32> %s2, %sd
+  ret <16 x i32> %s3
+}

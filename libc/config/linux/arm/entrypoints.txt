@@ -280,6 +280,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
+    libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -299,6 +300,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setuid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.sync
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate

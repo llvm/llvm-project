@@ -947,18 +947,40 @@ public:
     return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
   }
 
+  /// Compares \p lhs and \p rhs element-wise.  Each result element is a
+  /// signed integer of the operand element's bit width.  That is not the
+  /// result an FP80 element needs, so an FP80 compare names its result type
+  /// with the overload below.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
                                  mlir::Value lhs, mlir::Value rhs) {
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
-    IntType integralTy =
-        getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
-    VectorType integralVecTy =
-        cir::VectorType::get(integralTy, vecCast.getSize());
+    mlir::Type elemTy = vecCast.getElementType();
+    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
+             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
+                 &llvm::APFloat::x87DoubleExtended()) &&
+           "an FP80 vector compare must name its result type");
+    IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
+    return createVecCompare(loc,
+                            cir::VectorType::get(integralTy, vecCast.getSize()),
+                            kind, lhs, rhs);
+  }
+
+  /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
+  /// must be a vector of integers or bools with as many elements as \p lhs.
+  /// The result element width can then differ from the operand element's
+  /// bit width, as for FP80, whose result elements are 128 bits.
+  cir::VecCmpOp createVecCompare(mlir::Location loc, VectorType resultTy,
+                                 cir::CmpOpKind kind, mlir::Value lhs,
+                                 mlir::Value rhs) {
+    assert(mlir::cast<VectorType>(lhs.getType()).getSize() ==
+               resultTy.getSize() &&
+           cir::isIntOrBoolType(resultTy.getElementType()) &&
+           "vector compare result must be an int or bool vector of the "
+           "operand length");
     cir::FenvAttr fenv;
     if (cir::isFPOrVectorOfFPType(lhs.getType()))
       fenv = getConstrainedFPAttr();
-    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs,
-                                 fenv);
+    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {

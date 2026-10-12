@@ -1603,10 +1603,6 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   MaybeAlign Alignment(Op.getConstantOperandVal(2));
   EVT VT = Node->getValueType(0);
 
-  // Chain the dynamic stack allocation so that it doesn't modify the stack
-  // pointer when other instructions are using the stack.
-  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
-
   const TargetFrameLowering &TFI = *Subtarget->getFrameLowering();
   Align StackAlign = TFI.getStackAlign();
   bool NeedsAlign = Alignment.valueOrOne() > StackAlign;
@@ -1643,9 +1639,6 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
     Result = DAG.getNode(ISD::AND, DL, VT, Result,
                          DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT));
   }
-  //  Chain = Result.getValue(1);
-  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
-
   SDValue Ops[2] = {Result, Chain};
   return DAG.getMergeValues(Ops, DL);
 }
