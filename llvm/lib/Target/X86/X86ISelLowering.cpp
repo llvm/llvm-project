@@ -23289,7 +23289,6 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
   MVT OpVT = N0.getSimpleValueType();
-  dl(Op);
   assert((OpVT == MVT::f32 || OpVT == MVT::f64) &&
          "Unexpected type for FGETSIGN");
 
