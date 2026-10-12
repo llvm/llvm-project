@@ -73,9 +73,7 @@ jobs:
                 -D LLVM_BUILD_LLVM_DYLIB_VIS=ON \
                 -D LLVM_LINK_LLVM_DYLIB=ON \
                 -G Ninja
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            exit 0
-          fi
+
           # Build the generated-header prerequisites that idt needs to parse
           # LLVM source.
           BUILD_DIR=./llvm-project/build
