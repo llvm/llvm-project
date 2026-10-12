@@ -218,11 +218,10 @@ public:
   }
 
   CharSourceRange getNoteRange(const tooling::DiagnosticMessage &Note) {
-    if (!Note.Ranges.empty())
-      return getRange(Note.Ranges.front());
     const SourceLocation Loc = getLocation(Note.FilePath, Note.FileOffset);
     if (Loc.isInvalid())
-      return {};
+      return Note.Ranges.empty() ? CharSourceRange()
+                                 : getRange(Note.Ranges.front());
     return getOffsetRange(SourceMgr, Loc);
   }
 
@@ -265,8 +264,10 @@ public:
     SarifResult Result =
         SarifResult::create(RuleIndex)
             .setDiagnosticMessage(Error.Message.Message)
-            .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel))
-            .addLocations(getResultRanges(Error, Loc));
+            .setDiagnosticLevel(getSarifResultLevel(EffectiveLevel));
+    Result =
+        (Loc.isValid() ? Result.addLocations(getOffsetRange(SourceMgr, Loc))
+                       : Result.addLocations(getResultRanges(Error)));
 
     if (!Error.EnabledDiagnosticAliases.empty())
       Result = Result.addProperty(
@@ -281,6 +282,7 @@ public:
       SarifWriter->appendResult(Result);
   }
 
+    // SARIF regions need a character range: use 1 char at Loc, or 0 at EOF.
   CharSourceRange getOffsetRange(SourceManager &SM, SourceLocation Loc) {
     const std::pair<FileID, unsigned> &DecomposedLoc = SM.getDecomposedLoc(Loc);
     const FileID FileId = DecomposedLoc.first;
@@ -289,20 +291,11 @@ public:
         Loc, Loc.getLocWithOffset(Offset < SM.getFileIDSize(FileId) ? 1 : 0));
   }
 
-  SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error,
-                                                  SourceLocation Loc) {
+  SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error) {
     SmallVector<CharSourceRange, 4> Ranges;
     Ranges.reserve(Error.Message.Ranges.size());
     for (const FileByteRange &FBR : Error.Message.Ranges)
       Ranges.push_back(getRange(FBR));
-
-    if (Ranges.empty() && Loc.isValid()) {
-      // Some Clang-Tidy diagnostics are issued with a single location (not a
-      // range). For these, we create a range of length 1 at the diagnostic
-      // location. As, SARIF results require a character range for each
-      // location, for EOF we create a zero-length range.
-      Ranges.push_back(getOffsetRange(SourceMgr, Loc));
-    }
     return Ranges;
   }
 
