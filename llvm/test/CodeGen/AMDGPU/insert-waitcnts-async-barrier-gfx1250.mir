@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=amdgpu12.00 -run-pass si-insert-waitcnts -o - %s | FileCheck %s -check-prefix=GFX1200
+# RUN: llc -mtriple=amdgpu12.50 -run-pass si-insert-waitcnts -o - %s | FileCheck %s -check-prefix=GFX1250
+
+# GFX1250 frontends emit direct s_wait_asynccnt instead of asyncmark
+# markers, so outstanding async LDS transfers are invisible to the
+# waitcnt score brackets. Barriers must therefore drain ASYNCcnt
+# conservatively: arrivals and resumption with incomplete transfers
+# would expose other waves to stale LDS data, and barriers do not
+# drain async themselves (CDNA5 ISA).
+
+---
+name:            async_before_full_barrier
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250-LABEL: name: async_before_full_barrier
+    ; GFX1250: GLOBAL_LOAD_ASYNC_TO_LDS_B32
+    ; GFX1250: S_WAIT_ASYNCCNT 0
+    ; GFX1250: S_BARRIER
+
+    ; GFX1200-LABEL: name: async_before_full_barrier
+    ; GFX1200: GLOBAL_LOAD_ASYNC_TO_LDS_B32
+    ; GFX1200-NOT: S_WAIT_ASYNCCNT
+    ; GFX1200: S_BARRIER
+
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    S_BARRIER
+...
+
+---
+name:            async_before_split_barrier
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250-LABEL: name: async_before_split_barrier
+    ; GFX1250: GLOBAL_LOAD_ASYNC_TO_LDS_B32
+    ; GFX1250: S_WAIT_ASYNCCNT 0
+    ; GFX1250: S_BARRIER_SIGNAL_IMM -1
+    ; GFX1250: S_WAIT_ASYNCCNT 0
+    ; GFX1250: S_BARRIER_WAIT -1
+
+    ; GFX1200-LABEL: name: async_before_split_barrier
+    ; GFX1200: GLOBAL_LOAD_ASYNC_TO_LDS_B32
+    ; GFX1200-NOT: S_WAIT_ASYNCCNT
+    ; GFX1200: S_BARRIER_WAIT -1
+
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    S_BARRIER_SIGNAL_IMM -1
+    S_BARRIER_WAIT -1
+...
+
+---
+name:            no_async_no_drain
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; GFX1250-LABEL: name: no_async_no_drain
+    ; GFX1250: V_ADD_F32_e32
+    ; GFX1250-NOT: S_WAIT_ASYNCCNT
+    ; GFX1250: S_BARRIER
+
+    ; GFX1200-LABEL: name: no_async_no_drain
+    ; GFX1200: V_ADD_F32_e32
+    ; GFX1200-NOT: S_WAIT_ASYNCCNT
+    ; GFX1200: S_BARRIER
+
+    $vgpr2 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
+    S_BARRIER
+...

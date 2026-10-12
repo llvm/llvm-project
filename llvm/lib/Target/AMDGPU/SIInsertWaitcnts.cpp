@@ -388,6 +388,11 @@ public:
   AMDGPU::InstCounterType SmemAccessCounter;
   AMDGPU::InstCounterType MaxCounter;
   bool IsExpertMode = false;
+  // Whether the function issues async LDS transfers. GFX1250 frontends
+  // emit direct s_wait_asynccnt instead of asyncmark markers, so such
+  // transfers are invisible to the score brackets; barriers must drain
+  // ASYNCcnt conservatively (see generateWaitcntInstBefore).
+  bool FuncUsesAsyncCnt = false;
   const bool TgSplit;
 
   SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
@@ -2626,6 +2631,17 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
 
+  // GFX1250 uses direct s_wait_asynccnt (no asyncmark tracking), so
+  // outstanding async LDS transfers are invisible above. Drain ASYNCcnt
+  // at workgroup barriers: arrivals and resumption with incomplete
+  // transfers would expose other waves to stale LDS data, and barriers
+  // do not drain async themselves (CDNA5 ISA). Set after
+  // simplifyWaitcnt, which would otherwise strip the untracked counter.
+  if (FuncUsesAsyncCnt && ST.hasGFX1250Insts() &&
+      ST.getGeneration() != AMDGPUSubtarget::GFX13 &&
+      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
+    Wait.set(AMDGPU::ASYNC_CNT, 0);
+
   if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
@@ -3503,6 +3519,12 @@ bool SIInsertWaitcnts::run() {
   }
 
   SmemAccessCounter = getCounterFromEvent(HWEvents::SMEM_ACCESS);
+
+  FuncUsesAsyncCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
+    return llvm::any_of(MBB, [](const MachineInstr &MI) {
+      return SIInstrInfo::usesASYNC_CNT(MI) && !MI.isMetaInstruction();
+    });
+  });
 
   bool Modified = false;
 
