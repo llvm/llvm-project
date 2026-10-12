@@ -26,11 +26,14 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-// Without AVX, `roundss` and `roundsd` are 2-operand instructions that preserve
-// the upper bits of the destination XMM register. Because only lane 0 of
-// `_mm_round_ss(xmm, xmm, 8)` / `_mm_round_sd(xmm, xmm, 8)` is used, the
-// compiler may ignore the first operand and allocate a different destination
-// register, creating a false dependency on its previous value. Using inline
+// The legacy SSE4.1 `roundss` and `roundsd` are 2-operand instructions that
+// preserve the upper bits of the destination XMM register (unlike AVX's
+// 3-operand `vroundss` and `vroundsd`, where `_mm_round_ss(xmm, xmm, ...)`
+// explicitly passes `xmm` as the source for the upper bits). Without AVX,
+// because only lane 0 of `_mm_round_ss` / `_mm_round_sd` is used, the compiler
+// may allocate a different destination register than the source register,
+// creating a false dependency on the destination register's previous value
+// (see https://github.com/llvm/llvm-project/issues/230589). Using inline
 // assembly with `"+x"(x)` forces identical source and destination registers
 // without the extra lane-zeroing instructions required by `_mm_round_ps` /
 // `_mm_round_pd`.
@@ -41,7 +44,8 @@ LIBC_INLINE float nearest_integer(float x) {
       _mm_round_ss(xmm, xmm, _MM_ROUND_NEAREST | _MM_FROUND_NO_EXC); // NOLINT
   return ymm[0];
 #else
-  LIBC_INLINE_ASM("roundss $0x8, %0, %0" : "+x"(x));
+  LIBC_INLINE_ASM("roundss %1, %0, %0" : "+x"(x) : "i"(_MM_ROUND_NEAREST |
+                                                       _MM_FROUND_NO_EXC));
   return x;
 #endif
 }
@@ -53,7 +57,8 @@ LIBC_INLINE double nearest_integer(double x) {
       _mm_round_sd(xmm, xmm, _MM_ROUND_NEAREST | _MM_FROUND_NO_EXC); // NOLINT
   return ymm[0];
 #else
-  LIBC_INLINE_ASM("roundsd $0x8, %0, %0" : "+x"(x));
+  LIBC_INLINE_ASM("roundsd %1, %0, %0" : "+x"(x) : "i"(_MM_ROUND_NEAREST |
+                                                       _MM_FROUND_NO_EXC));
   return x;
 #endif
 }
