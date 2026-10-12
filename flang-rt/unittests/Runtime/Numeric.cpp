@@ -273,6 +273,9 @@ TEST(Numeric, FPowI) {
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{0.5}, Int<4>{-1}), Real<4>{2});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-3}, Int<4>{3}), Real<4>{-27});
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{-2}, Int<4>{-3}), Real<4>{-0.125});
+  EXPECT_EQ(RTNAME(FPow4i)(Real<4>{3}, Int<4>{-2}), Real<4>{1} / Real<4>{9});
+  EXPECT_EQ(
+      RTNAME(FPow4i)(Real<4>{7}, Int<4>{-5}), Real<4>{1} / Real<4>{16807});
   EXPECT_EQ(
       RTNAME(FPow4i)(Real<4>{2}, Int<4>{-133}), std::ldexp(Real<4>{1}, -133));
   EXPECT_EQ(RTNAME(FPow4i)(Real<4>{2}, std::numeric_limits<Int<4>>::min()),
