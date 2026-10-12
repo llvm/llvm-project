@@ -133,6 +133,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNIterativeScheduler.cpp
   GCNMinRegStrategy.cpp
   GCNNSAReassign.cpp
+  GCNPreRAAntiHints.cpp
   GCNPreRAOptimizations.cpp
   GCNPreRALongBranchReg.cpp
   GCNRegPressure.cpp

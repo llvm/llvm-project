@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
-#define _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#ifndef _LIBCPP___CONCEPTS_PRIMARY_TEMPLATE_H
+#define _LIBCPP___CONCEPTS_PRIMARY_TEMPLATE_H
 
 #include <__config>
 #include <__type_traits/is_same.h>
@@ -30,4 +30,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_PRIMARY_TEMPLATE_H
+#endif // _LIBCPP___CONCEPTS_PRIMARY_TEMPLATE_H

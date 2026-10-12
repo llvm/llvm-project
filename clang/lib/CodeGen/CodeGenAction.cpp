@@ -617,9 +617,8 @@ void CodeGenAction::ExecuteAction() {
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
     return;
 
-  // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
-  // true here because the valued names are needed for reading textual IR.
-  Ctx.setDiscardValueNames(false);
+  // Textual IR needs value names while parsing; discard new names afterwards.
+  Ctx.setDiscardValueNames(CodeGenOpts.DiscardValueNames);
   Ctx.setDiagnosticHandler(Result.createDiagnosticHandler());
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);

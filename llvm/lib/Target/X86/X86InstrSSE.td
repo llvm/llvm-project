@@ -7140,8 +7140,8 @@ let Constraints = "$src = $dst" in {
 def EXTRQI : Ii8<0x78, MRMXr, (outs VR128:$dst),
                  (ins VR128:$src, u8imm:$len, u8imm:$idx),
                  "extrq\t{$idx, $len, $src|$src, $len, $idx}",
-                 [(set VR128:$dst, (X86extrqi VR128:$src, timm:$len,
-                                    timm:$idx))]>,
+                 [(set VR128:$dst,
+                   (v2i64 (X86extrqi VR128:$src, timm:$len, timm:$idx)))]>,
                  TB, PD, Sched<[SchedWriteVecALU.XMM]>;
 def EXTRQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src, VR128:$mask),
@@ -7153,8 +7153,9 @@ def EXTRQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
 def INSERTQI : Ii8<0x78, MRMSrcReg, (outs VR128:$dst),
                    (ins VR128:$src, VR128:$src2, u8imm:$len, u8imm:$idx),
                    "insertq\t{$idx, $len, $src2, $src|$src, $src2, $len, $idx}",
-                   [(set VR128:$dst, (X86insertqi VR128:$src, VR128:$src2,
-                                      timm:$len, timm:$idx))]>,
+                   [(set VR128:$dst,
+                     (v2i64 (X86insertqi VR128:$src,VR128:$src2, timm:$len,
+                                         timm:$idx)))]>,
                    TB, XD, Sched<[SchedWriteVecALU.XMM]>;
 def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  (ins VR128:$src, VR128:$mask),
@@ -7164,6 +7165,16 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
                  TB, XD, Sched<[SchedWriteVecALU.XMM]>;
 }
 } // ExeDomain = SSEPackedInt
+
+def : Pat<(v16i8 (X86extrqi VR128:$src, timm:$len, timm:$idx)),
+          (EXTRQI VR128:$src, timm:$len, timm:$idx)>;
+def : Pat<(v8i16 (X86extrqi VR128:$src, timm:$len, timm:$idx)),
+          (EXTRQI VR128:$src, timm:$len, timm:$idx)>;
+
+def : Pat<(v16i8 (X86insertqi VR128:$src,VR128:$src2, timm:$len, timm:$idx)),
+          (INSERTQI VR128:$src,VR128:$src2, timm:$len, timm:$idx)>;
+def : Pat<(v8i16 (X86insertqi VR128:$src,VR128:$src2, timm:$len, timm:$idx)),
+          (INSERTQI VR128:$src,VR128:$src2, timm:$len, timm:$idx)>;
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions

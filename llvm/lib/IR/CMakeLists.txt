@@ -80,6 +80,7 @@ add_llvm_component_library(LLVMCore
   VectorTypeUtils.cpp
   Verifier.cpp
   VerifierAMDGPU.cpp
+  VerifierNVVM.cpp
   VFABIDemangler.cpp
   RuntimeLibcalls.cpp
 

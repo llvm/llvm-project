@@ -355,12 +355,11 @@ static bool isMips16HardFloatLibcall(StringRef Name) {
                        *ParsedLibcalls.begin());
 }
 
-void Mips16TargetLowering::
-getOpndList(SmallVectorImpl<SDValue> &Ops,
-            std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
-            bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-            bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-            SDValue Chain) const {
+void Mips16TargetLowering::getOpndList(
+    SmallVectorImpl<SDValue> &Ops,
+    std::deque<std::pair<unsigned, SDValue>> &RegsToPass, bool IsPICCall,
+    bool GlobalOrExternal, bool LocalLinkage, bool IsCallReloc,
+    CallLoweringInfo &CLI, SDValue Callee, SDValue Chain) const {
   SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   MipsFunctionInfo *FuncInfo = MF.getInfo<MipsFunctionInfo>();
@@ -443,7 +442,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
   Ops.push_back(JumpTarget);
 
   MipsTargetLowering::getOpndList(Ops, RegsToPass, IsPICCall, GlobalOrExternal,
-                                  InternalLinkage, IsCallReloc, CLI, Callee,
+                                  LocalLinkage, IsCallReloc, CLI, Callee,
                                   Chain);
 }
 

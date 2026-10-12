@@ -1855,7 +1855,7 @@ void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
                                             const VarDecl *VD) {
   // Register C++ VTable to OpenMP Offload Entry if it's a new
   // CXXRecordDecl.
-  if (CXXRecord && CXXRecord->isDynamicClass() &&
+  if (CXXRecord && CXXRecord->hasDefinition() && CXXRecord->isDynamicClass() &&
       !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
     auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
     if (Res.second) {

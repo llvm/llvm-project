@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
@@ -36,7 +37,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -53,9 +53,6 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
-
-static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
-                                        cl::init(false));
 
 namespace {
 struct RISCVOperand;
@@ -335,7 +332,7 @@ public:
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
-    if (AddBuildAttributes)
+    if (RISCVMCOptions::Global.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 
@@ -3768,7 +3765,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   if (STI->hasFeature(RISCV::Feature32Bit) &&
-      STI->hasFeature(RISCV::FeatureVendorXqcili))
+      STI->hasFeature(RISCV::FeatureVendorXqcili) &&
+      !ParserOptions.IsPicEnabled)
     emitToStreamer(
         Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
   else

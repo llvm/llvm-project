@@ -30,9 +30,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -1165,7 +1165,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           cgm.getOrCreateStaticVarDecl(*vd, cgm.getCIRLinkageVarDefinition(vd));
       mlir::Value getGlobVal = builder.createGetGlobal(var);
       auto getGlob = getGlobVal.getDefiningOp<cir::GetGlobalOp>();
-      getGlob.setStaticLocal(var.getStaticLocalGuard().has_value());
+      getGlob.setStaticLocal(var.getDynamicInitGuard().has_value());
       getGlob.setTls(vd->getTLSKind() != VarDecl::TLS_None);
       addr = Address(cgm.castGlobalToDeclAddrSpace(getGlob, *vd),
                      convertTypeForMem(vd->getType()),
@@ -1989,45 +1989,32 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     if (!referenceTemporaryDtor)
       return;
 
-    // Classic codegen calls registerGlobalDtor here, passing either the
-    // destructor or a generated array-destroy helper. CIR instead emits the
-    // destruction into the dtor region of whatever destroys the variable that
-    // extended the temporary: the cir.global's own region at namespace scope,
-    // and the enclosing cir.local_init's for a function-local static, which the
-    // verifier requires to be destroyed in-function under its guard.
     CIRGenModule &cgm = cgf.cgm;
     auto globalOp =
         mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
 
-    mlir::Region *dtorRegion = cgf.curStaticVarDtorRegion;
-    assert(dtorRegion && "temporary extended outside a static initializer");
-
     CIRGenBuilderTy &builder = cgm.getBuilder();
-    mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Location loc = cgm.getLoc(m->getSourceRange());
-
-    // Temporaries are destroyed in reverse order of construction, so each one
-    // goes in front of those registered before it.
-    if (dtorRegion->empty()) {
-      builder.setInsertionPointToStart(builder.createBlock(dtorRegion));
-      cir::YieldOp::create(builder, loc);
-    }
-    builder.setInsertionPointToStart(&dtorRegion->front());
+    auto registerOp = cir::RegisterExitDtorOp::create(
+        builder, loc, globalOp.getSymNameAttr().getValue());
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(
+        builder.createBlock(&registerOp.getBody()));
 
     mlir::Value tempAddr = builder.createGetGlobal(globalOp);
-
     if (e->getType()->isArrayType()) {
-      // emitDestroy will produce a cir.array.dtor here. LoweringPrepare's
-      // getOrCreateDtorFunc recognizes the non-trivial dtor region and
-      // hoists it into a __cxx_global_array_dtor helper.
       Address addr{tempAddr, cgf.convertTypeForMem(e->getType()),
                    referenceTemporary.getAlignment()};
       cgf.emitDestroy(addr, e->getType(), CIRGenFunction::destroyCXXObject);
     } else {
       GlobalDecl gd(referenceTemporaryDtor, Dtor_Complete);
       cir::FuncOp dtorFn = cgm.getAddrAndTypeOfCXXStructor(gd).second;
-      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr});
+      // Make sure the call and the callee agree on calling convention.
+      builder.createCallOp(loc, dtorFn, mlir::ValueRange{tempAddr},
+                           /*attrs=*/{}, /*argAttrs=*/{}, /*resAttrs=*/{},
+                           dtorFn.getCallingConv());
     }
+    cir::YieldOp::create(builder, loc);
     break;
   }
 
@@ -2601,19 +2588,14 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e,
   LValue lv = emitLValue(e);
   Address addr = lv.getAddress();
 
-  // If the array type was an incomplete type, we need to make sure
-  // the decay ends up being the right type.
-  auto lvalueAddrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
-
   if (e->getType()->isVariableArrayType())
     return addr;
 
-  [[maybe_unused]] auto pointeeTy =
-      mlir::cast<cir::ArrayType>(lvalueAddrTy.getPointee());
-
-  [[maybe_unused]] mlir::Type arrayTy = convertType(e->getType());
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
+  mlir::Type arrayTy = convertType(e->getType());
   assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
-  assert(pointeeTy == arrayTy);
+  addr = addr.withElementType(builder, arrayTy);
 
   // The result of this decay conversion points to an array element within the
   // base lvalue. However, since TBAA currently does not support representing
@@ -2951,6 +2933,15 @@ Address CIRGenFunction::maybeCastStackAddressSpace(
   if (!destAddrSpace)
     destAddrSpace = cir::toCIRAddressSpaceAttr(
         getMLIRContext(), cgm.getLangTempAllocaAddressSpace());
+
+  // Resolve the default address space through getTargetAddressSpace, as
+  // classic CodeGen does and as CIRGenTypes::getPointerAddressSpace does for
+  // default pointer types. This is only non-zero for targets where the default
+  // address space is not 0 (e.g. generic for SYCL device code).
+  if (!cir::normalizeDefaultAddressSpace(destAddrSpace))
+    if (unsigned targetAS = getContext().getTargetAddressSpace(LangAS::Default))
+      destAddrSpace =
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 
   mlir::ptr::MemorySpaceAttrInterface srcAddrSpace = getCIRAllocaAddressSpace();
   // Alloca always returns a pointer in alloca address space, which may

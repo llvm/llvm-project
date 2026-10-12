@@ -513,7 +513,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
                                        this->getNextNode());
 
   // Save DebugLoc of split point before invalidating iterator.
-  DebugLoc Loc = I->getStableDebugLoc();
+  DebugLoc Loc = I->getDebugLoc();
   if (Loc)
     Loc = Loc->getWithoutAtom();
 

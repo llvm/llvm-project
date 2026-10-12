@@ -2465,6 +2465,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   bool ImplicitCode = false;
   uint64_t AtomGroup = 0;
   uint64_t AtomRank = 0;
+  MDNode *IRLayers = nullptr;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2562,6 +2563,16 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "irlayers") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (parseMDNode(IRLayers))
+            return error("expected metadata node");
+          if (!isa<DILayerLocList>(IRLayers))
+            return error("expected DILayerLocList node");
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2577,7 +2588,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank, IRLayers);
   return false;
 }
 
