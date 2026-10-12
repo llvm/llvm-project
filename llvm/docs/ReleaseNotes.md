@@ -182,9 +182,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Windows installer
 
-* The project has migrated to MSI installers. Previous installations of LLVM,
-  prior (and including) 23.1.0, must be manually uninstalled first, before
-  installing this new release.
+* LLVM versions 23.1.3 and earlier may appear as separate side-by-side
+  installations, even though they share a single installation on disk. Users
+  who want a clean installation may uninstall the existing installations
+  before installing this release.
 
 ### Changes to TableGen
 
