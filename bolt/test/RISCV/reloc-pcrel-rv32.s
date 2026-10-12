@@ -18,10 +18,10 @@ d:
 // CHECK: Binary Function "_start" after building cfg {
 _start:
   nop // Here to not make the _start and .Ltmp0 symbols coincide
-// CHECK: auipc t0, %pcrel_hi(d) # Label: [[HI_LABEL:.Ltmp[0-9]+]]
+// CHECK: auipc t0, %pcrel_hi(d) # Offset: 2 # Label: [[HI_LABEL:.Ltmp[0-9]+]]
 // CHECK-NEXT: lw t0, %pcrel_lo([[HI_LABEL]])(t0)
   lw t0, d
-// CHECK: auipc t1, %pcrel_hi(d) # Label: [[SECOND_HI:.Ltmp[0-9]+]]
+// CHECK: auipc t1, %pcrel_hi(d) # Offset: 10 # Label: [[SECOND_HI:.Ltmp[0-9]+]]
 // CHECK-NEXT: sw t0, %pcrel_lo([[SECOND_HI]])(t1)
   sw t0, d, t1
   ret

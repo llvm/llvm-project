@@ -394,6 +394,18 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 
 namespace {
 
+static bool isMarkerSymbol(const BinaryContext &BC, uint8_t ELFType,
+                           uint64_t Size, StringRef Name) {
+  return BC.getMarkerType(ELFType, Size, Name) != MarkerSymType::NONE;
+}
+
+static bool isRetainedLocalSymbol(const BinaryContext &BC, uint8_t ELFType,
+                                  uint8_t Binding, uint64_t Size,
+                                  StringRef Name) {
+  return ELFType == ELF::STT_NOTYPE && Binding == ELF::STB_LOCAL && Size == 0 &&
+         !isMarkerSymbol(BC, ELFType, Size, Name);
+}
+
 static Error reportDecompressionError(StringRef SectionName, Error E) {
   return createStringError("failed to decompress section '" + SectionName +
                            "': " + toString(std::move(E)));
@@ -2377,12 +2389,20 @@ void RewriteInstance::adjustFunctionBoundaries(
       if (!Function.isSymbolValidInScope(Symbol, SymbolSize))
         break;
 
-      // Skip basic block labels. This happens on RISC-V with linker relaxation
-      // enabled because every branch needs a relocation and corresponding
-      // symbol. We don't want to add such symbols as entry points.
+      // Do not add internal basic block labels as entry points. This happens on
+      // RISC-V with linker relaxation enabled because every branch needs a
+      // relocation and corresponding symbol. Record retained labels so their
+      // output addresses can be updated precisely.
       const auto InternalSymbolPrefix = BC->AsmInfo->getInternalSymbolPrefix();
+      const StringRef SymbolName = cantFail(Symbol.getName());
       if (!InternalSymbolPrefix.empty() &&
-          cantFail(Symbol.getName()).starts_with(InternalSymbolPrefix)) {
+          SymbolName.starts_with(InternalSymbolPrefix)) {
+        const ELFSymbolRef ELFSymbol(Symbol);
+        if (isRetainedLocalSymbol(*BC, ELFSymbol.getELFType(),
+                                  ELFSymbol.getBinding(), SymbolSize,
+                                  SymbolName))
+          Function.addRetainedLocalSymbolOffset(SymbolAddress -
+                                                Function.getAddress());
         ++NextSymRefI;
         continue;
       }
@@ -5928,15 +5948,9 @@ void RewriteInstance::updateELFSymbolTable(
       // it marks a secondary entry point.
       // Also look up local NOTYPE symbols inside functions so we can
       // update their addresses to reflect the output layout.
-      // Skip AArch64/RISC-V marker symbols ($d, $x) inside functions —
-      // BOLT generates its own via addExtraSymbols.
-      auto IsMarkerSymbol = [&]() {
-        return BC->getMarkerType(Symbol.getType(), Symbol.st_size,
-                                 *SymbolName) != MarkerSymType::NONE;
-      };
-      const bool IsLocalLabel = Symbol.getType() == ELF::STT_NOTYPE &&
-                                Symbol.getBinding() == ELF::STB_LOCAL &&
-                                Symbol.st_size == 0 && !IsMarkerSymbol();
+      const bool IsLocalLabel =
+          isRetainedLocalSymbol(*BC, Symbol.getType(), Symbol.getBinding(),
+                                Symbol.st_size, *SymbolName);
       Function =
           (Symbol.getType() == ELF::STT_FUNC || IsLocalLabel)
               ? BC->getBinaryFunctionContainingAddress(Symbol.st_value,
@@ -6007,7 +6021,8 @@ void RewriteInstance::updateELFSymbolTable(
 
         // Drop AArch64/RISC-V marker symbols ($d, $x) inside functions —
         // BOLT generates its own via addExtraSymbols.
-        if (IsMarkerSymbol() &&
+        if (isMarkerSymbol(*BC, Symbol.getType(), Symbol.st_size,
+                           *SymbolName) &&
             BC->getBinaryFunctionContainingAddress(Symbol.st_value,
                                                    /*CheckPastEnd=*/false,
                                                    /*UseMaxSize=*/true)) {

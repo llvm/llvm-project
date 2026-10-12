@@ -1305,7 +1305,8 @@ bool BinaryFunction::keepOffsetForInstruction(const MCInst &Inst,
   if (MIB.isCall(Inst) || MIB.isBranch(Inst) || MIB.isReturn(Inst) ||
       MIB.isPrefix(Inst) || MIB.isIndirectBranch(Inst))
     return true;
-  return isDebugScopeBoundaryOffset(Offset);
+  return isDebugScopeBoundaryOffset(Offset) ||
+         RetainedLocalSymbolOffsets.test(Offset);
 }
 
 Error BinaryFunction::disassemble() {
@@ -1529,8 +1530,9 @@ add_instruction:
     addInstruction(Offset, std::move(Instruction));
   }
 
-  // Scope-boundary markers are only consulted while assigning offsets above.
+  // Input offsets are only consulted while assigning annotations above.
   DebugScopeBoundaryOffsets.clear();
+  RetainedLocalSymbolOffsets.clear();
 
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
@@ -3235,8 +3237,8 @@ bool BinaryFunction::finalizeCFIState() {
 }
 
 bool BinaryFunction::requiresPreciseAddressMap() const {
-  return opts::UpdateDebugSections || opts::EnableBAT || hasSDTMarker() ||
-         hasPseudoProbe();
+  return needsRetainedLocalSymbolAddressMap() || opts::UpdateDebugSections ||
+         opts::EnableBAT || hasSDTMarker() || hasPseudoProbe();
 }
 
 bool BinaryFunction::requiresAddressMap() const {

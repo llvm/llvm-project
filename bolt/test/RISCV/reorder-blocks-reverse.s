@@ -25,12 +25,13 @@ _start:
   .size _start,.-_start
 
 // CHECK: {{.*}}00 <_start>:
-// CHECK-NEXT:   {{.*}}00:       beq t0, t1, {{.*}} <_start+0x10>
-// CHECK-NEXT:   {{.*}}04:       j {{.*}} <_start+0x16>
-// CHECK-NEXT:   {{.*}}08:       ret
-// CHECK-NEXT:   {{.*}}0a:       li a0, 0x6
-// CHECK-NEXT:   {{.*}}0c:       j {{.*}} <_start+0x8>
+// CHECK-NEXT:   {{.*}}00:       beq t0, t1, {{.*}} <[[L0:.Ltmp[0-9]+]]>
+// CHECK-NEXT:   {{.*}}04:       j {{.*}} <[[L0]]+0x6>
+// CHECK:        {{.*}}08:       ret
+// CHECK:        {{.*}}0a:       li a0, 0x6
+// CHECK-NEXT:   {{.*}}0c:       j {{.*}}08 <{{(\.Ltmp[0-9]+|_start\+0x8)}}>
+// CHECK: {{.*}}10 <[[L0]]>:
 // CHECK-NEXT:   {{.*}}10:       li a0, 0x5
-// CHECK-NEXT:   {{.*}}12:       j {{.*}} <_start+0x8>
-// CHECK-NEXT:   {{.*}}16:       beq t0, t2, {{.*}} <_start+0xa>
-// CHECK-NEXT:   {{.*}}1a:       j {{.*}} <_start+0x10>
+// CHECK-NEXT:   {{.*}}12:       j {{.*}}08 <{{(\.Ltmp[0-9]+|_start\+0x8)}}>
+// CHECK-NEXT:   {{.*}}16:       beq t0, t2, {{.*}}0a <{{(\.Ltmp[0-9]+|_start\+0xa)}}>
+// CHECK-NEXT:   {{.*}}1a:       j {{.*}} <[[L0]]>

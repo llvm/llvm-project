@@ -309,11 +309,20 @@ private:
   /// function is done.
   SparseBitVector<> DebugScopeBoundaryOffsets;
 
+  /// Offsets of retained local symbols that are not represented as secondary
+  /// function entries. Populated before disassembly and cleared once
+  /// disassembly is done.
+  SparseBitVector<> RetainedLocalSymbolOffsets;
+
   /// A set of local and global symbols corresponding to secondary entry points.
   /// Each additional function entry point has a corresponding entry in the map.
   /// The key is a local symbol corresponding to a basic block and the value
   /// is a global symbol corresponding to an external entry point.
   DenseMap<const MCSymbol *, MCSymbol *> SecondaryEntryPoints;
+
+  /// True if retained non-entry local symbols require precise input-to-output
+  /// address mappings after disassembly.
+  bool NeedsRetainedLocalSymbolAddressMap{false};
 
   /// False if the function is too complex to reconstruct its control
   /// flow graph.
@@ -1408,7 +1417,8 @@ public:
   /// \p Inst located at function-relative \p Offset. Offsets are kept for
   /// control-flow instructions (profile matching) and for instructions that
   /// begin/end a DWARF lexical scope (needed to translate scope ranges
-  /// precisely; see DebugScopeBoundaryOffsets).
+  /// precisely; see DebugScopeBoundaryOffsets), or have a retained local
+  /// symbol at their address.
   bool keepOffsetForInstruction(const MCInst &Inst, uint32_t Offset);
 
   /// Return the name of the section this function originated from.
@@ -1493,6 +1503,17 @@ public:
 
   /// Return true if the function has more than one entry point.
   bool isMultiEntry() const { return !SecondaryEntryPoints.empty(); }
+
+  /// Return true if retained local symbols require precise address mappings.
+  bool needsRetainedLocalSymbolAddressMap() const {
+    return NeedsRetainedLocalSymbolAddressMap;
+  }
+
+  /// Record the function-relative \p Offset of a retained local symbol.
+  void addRetainedLocalSymbolOffset(uint32_t Offset) {
+    NeedsRetainedLocalSymbolAddressMap = true;
+    RetainedLocalSymbolOffsets.set(Offset);
+  }
 
   /// Return true if the function might have a profile available externally,
   /// but not yet populated into the function.
@@ -2517,9 +2538,9 @@ public:
   bool requiresAddressMap() const;
 
   /// Return true if this function needs an address-translation table after
-  /// its code emission, or to update any metadata accurately (debug info,
-  /// SDT probes). This is gated since it incurs extra cost for the linker
-  /// to keep track of more addresses.
+  /// its code emission, or to update symbols and metadata accurately (local
+  /// symbols, debug info, SDT probes). This is gated since it incurs extra cost
+  /// for the linker to keep track of more addresses.
   bool requiresPreciseAddressMap() const;
 
   /// Adjust branch instructions to match the CFG.
