@@ -5338,9 +5338,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
-          return SelectInst::Create(
+          // If the and/or is logical, we can propagate branch weights from that
+          // select. Otherwise, we cannot infer the branch weights in the
+          // general case.
+          Instruction *MDFrom = nullptr;
+          if (auto *NestedSI = dyn_cast<SelectInst>(SI.getCondition()))
+            if (NestedSI->getCondition() == A)
+              MDFrom = NestedSI;
+          SelectInst *NewSI = SelectInst::Create(
               A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
-              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+              ProfcheckDisableMetadataFixes ? nullptr : MDFrom);
+          if (!MDFrom)
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE, &F);
+          return NewSI;
         }
     }
 
