@@ -24,7 +24,7 @@ enum class AllocOptionTy : int32_t {
 };
 
 // Level Zero debug types
-constexpr const char *OLDT_ZeDispather = "ZeDispatcher";
+constexpr const char *OLDT_ZeDispatcher = "ZeDispatcher";
 
 namespace llvm::omp::target::plugin {
 
