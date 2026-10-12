@@ -1039,6 +1039,7 @@ class HexFloat final {
   void initialize(const fltSemantics *);
   void assign(const HexFloat &);
   void copySignificand(const HexFloat &);
+  void allocSignificand();
   void freeSignificand();
   LLVM_ABI static unsigned int
   getNumPrecisionBits(const fltSemantics *semantics);

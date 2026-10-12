@@ -125,10 +125,12 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     false};
 
 constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
+    "Float8E5M3FNU",
     16,
     -14,
     4,
     8,
+    2,
     fltNonfiniteBehavior::NanOnly,
     fltNanEncoding::AllOnes,
     true,
@@ -147,6 +149,7 @@ constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
     -16382,
     64,
     80,
+    2,
     fltNonfiniteBehavior::IEEE754,
     fltNanEncoding::IEEE,
     true,
@@ -306,7 +309,7 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
 bool APFloatBase::isRepresentableBy(const fltSemantics &A,
                                     const fltSemantics &B) {
   return A.maxExponent <= B.maxExponent && A.minExponent >= B.minExponent &&
-         A.precision <= B.precision;
+         A.precision <= B.precision && A.radix == B.radix;
 }
 
 bool APFloatBase::isLosslesslyConvertibleTo(const fltSemantics &From,
@@ -6088,11 +6091,15 @@ void HexFloat::freeSignificand() {
     delete[] significandParts.many;
 }
 
-void HexFloat::initialize(const fltSemantics *ourSemantics) {
-  semantics = ourSemantics;
+void HexFloat::allocSignificand() {
   const auto count = getPartCount();
   if (count > 1)
     significandParts.many = new integerPart[count];
+}
+
+void HexFloat::initialize(const fltSemantics *ourSemantics) {
+  semantics = ourSemantics;
+  allocSignificand();
   makeZero(/*IsNegative=*/false);
 }
 
@@ -7074,7 +7081,9 @@ opStatus HexFloat::convert(const fltSemantics &toSemantics,
       significand = significand.trunc(to_bits_precision);
     }
     // finally, update the semantics
+    freeSignificand();
     semantics = &toSemantics;
+    allocSignificand();
     assert(significand.getBitWidth() == getNumPrecisionBits());
     setSignificand(significand);
   } else {
