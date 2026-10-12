@@ -52,8 +52,14 @@ public:
   std::optional<llvm::CodeModel::Model> CM = std::nullopt;
   /// An optional external IncrementalExecutor
   std::unique_ptr<IncrementalExecutor> IE;
+  /// mllvm args from the frontend; on wasm these are re-applied after each
+  /// lldMain call because lld resets all cl options for test-isolation
+  /// purposes.
+  std::vector<std::string> LLVMArgs;
+#ifndef __EMSCRIPTEN__
   /// An optional external orc jit builder
   std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+#endif
   /// A default callback that can be used in the IncrementalCompilerBuilder to
   /// retrieve the path to the orc runtime.
   std::function<llvm::Error(const driver::Compilation &)>

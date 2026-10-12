@@ -1017,9 +1017,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (PhysRegCalleeOperand) {
         bool Scalable = false;
         const MachineOperand *BaseOp = nullptr;
-        const TargetRegisterInfo &TRI =
-            *Asm->MF->getSubtarget().getRegisterInfo();
-        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable, &TRI)) {
+        if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, Scalable)) {
           if (BaseOp && BaseOp->isReg() && !Scalable)
             CallTarget = MachineLocation(BaseOp->getReg(), /*Indirect*/ true);
         }

@@ -2020,6 +2020,31 @@ func.func @negative_store_to_load_tensor(%arg0 : tensor<4x4xf32>,
 
 // -----
 
+// Same as @store_to_load_tensor, but the read is under vector.mask: its
+// masked-off lanes get the padding value, so it must not fold to the stored
+// vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_region_masked_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   return %[[R]] : vector<1x4xf32>
+func.func @negative_store_to_load_tensor_region_masked_read(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> vector<1x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v1, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    tensor<4x4xf32>, vector<1x4xf32> } : vector<1x4xi1> -> vector<1x4xf32>
+  return %0 : vector<1x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_to_load_tensor_broadcast
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>, %[[V0:.*]]: vector<4x2xf32>)
 //       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<4x2xf32> to vector<6x4x2xf32>
@@ -2034,6 +2059,27 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
   %0 = vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
   permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
     tensor<4x4xf32>, vector<4x2x6xf32>
+  return %0 : vector<4x2x6xf32>
+}
+
+// -----
+
+// Same as above, but the read is under vector.mask: its masked-off lanes get
+// the padding value, so it must not become a broadcast of the stored vector.
+// CHECK-LABEL: func @negative_store_to_load_tensor_broadcast_region_masked
+//       CHECK:   vector.transfer_write
+//       CHECK:   %[[R:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//   CHECK-NOT:   vector.broadcast
+//       CHECK:   return %[[R]] : vector<4x2x6xf32>
+func.func @negative_store_to_load_tensor_broadcast_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<4x2xf32>, %mask : vector<4x2xi1>) -> vector<4x2x6xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0, %c0] {in_bounds = [true, true]} :
+    vector<4x2xf32>, tensor<4x4xf32>
+  %0 = vector.mask %mask { vector.transfer_read %w0[%c0, %c0], %cf0 {in_bounds = [true, true, true],
+  permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
+    tensor<4x4xf32>, vector<4x2x6xf32> } : vector<4x2xi1> -> vector<4x2x6xf32>
   return %0 : vector<4x2x6xf32>
 }
 
@@ -2225,6 +2271,32 @@ func.func @negative_dead_store_tensor(%arg0 : tensor<4x4xf32>,
   %x = arith.addf %0, %0 : vector<1x4xf32>
   %w2 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
+  return %w2 : tensor<4x4xf32>
+}
+
+// -----
+
+// Same as @dead_store_tensor, but the last write is under vector.mask: it does
+// not overwrite the masked-off lanes, so the first write must be kept.
+// CHECK-LABEL: func @negative_dead_store_tensor_region_masked
+//   CHECK-DAG:      %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:      %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:      %[[C2:.*]] = arith.constant 2 : index
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   vector.transfer_write {{.*}}, {{.*}}[%[[C2]], %[[C0]]
+//       CHECK:   %[[VTW:.*]] = vector.mask %{{.*}} { vector.transfer_write {{.*}}, {{.*}}[%[[C1]], %[[C0]]
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func.func @negative_dead_store_tensor_region_masked(%arg0 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %mask : vector<1x4xi1>) -> tensor<4x4xf32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w1 = vector.transfer_write %v0, %w0[%c2, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %w2 = vector.mask %mask { vector.transfer_write %v1, %w1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, tensor<4x4xf32> } : vector<1x4xi1> -> tensor<4x4xf32>
   return %w2 : tensor<4x4xf32>
 }
 

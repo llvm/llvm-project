@@ -943,7 +943,7 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
 
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-    const VPDominatorTree &VPDT,
+    OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -1003,8 +1003,12 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
+  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT)) {
+    reportVectorizationFailure(
+        "Failed to sink or hoist user of first-order recurrence",
+        "CannotSinkHoistFORUser", ORE, &OrigLoop);
     return false;
+  }
 
   // Skip renaming resume phi recipes, if any header phi has been removed.
   if (range_size(HeaderVPBB->phis()) !=
@@ -1968,6 +1972,14 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
         !MatchBlend(SelectR))
       return false;
 
+    // Bail out if PhiR has users other than the find-last select/blend and the
+    // header mask select, e.g. nested blends. Then the data operand may be PhiR
+    // on some paths and Cond does not determine the lanes to update.
+    if (any_of(PhiR->users(), [&](VPUser *U) {
+          return U != SelectR && U != BackedgeSelect->getDefiningRecipe();
+        }))
+      return false;
+
     assert(Cond != HeaderMask && "Cond must not be HeaderMask");
 
     // Find final reduction computation and replace it with an
@@ -2052,8 +2064,16 @@ static bool handleFirstArgMinOrMax(
   if (Ty != WideIV->getScalarType())
     return false;
 
-  auto *FindIVSelectR = cast<VPSingleDefRecipe>(
-      FindLastIVPhiR->getBackedgeValue()->getDefiningRecipe());
+  VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
+  auto *BackedgeVal = FindLastIVPhiR->getBackedgeValue();
+  auto *FindIVSelectVal = BackedgeVal;
+  if (HeaderMask && !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
+                                                 m_VPValue(FindIVSelectVal),
+                                                 m_Specific(FindLastIVPhiR))))
+    return false;
+  auto *FindIVSelectR =
+      cast<VPSingleDefRecipe>(FindIVSelectVal->getDefiningRecipe());
+
   assert(
       match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
       "backedge value must be a select");
@@ -2183,32 +2203,56 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     // MinOrMaxPhiR has users outside the reduction cycle in the loop. Check if
     // the only other user is a FindLastIV reduction. MinOrMaxPhiR must have
-    // exactly 2 users:
+    // exactly 2 users if not tailfolded:
     // 1) the min/max operation of the reduction cycle, and
     // 2) the compare of a FindLastIV reduction cycle. This compare must match
     // the min/max operation - comparing MinOrMaxPhiR with the operand of the
     // min/max operation, and be used only by the select of the FindLastIV
     // reduction cycle.
+    // There is an additional user if the tail was folded:
+    // 3) the select operation of the vector.latch block. This select uses the
+    // original MinOrMaxPhiR if the mask is zero.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
-    auto *MinOrMaxOp =
+    auto *MinOrMaxBackedgeR =
         dyn_cast<VPRecipeWithIRFlags>(MinOrMaxPhiR->getBackedgeValue());
-    if (!MinOrMaxOp)
+    if (!MinOrMaxBackedgeR)
       return false;
 
-    // Check that MinOrMaxOp is a VPWidenIntrinsicRecipe or VPReplicateRecipe
-    // with an intrinsic that matches the reduction kind.
+    // If the tail was folded then the backedge won't be the
+    // reduction-intrinsic but the select in the vector.latch block that wraps
+    // the reduction-intrinsic.
+    auto *MinOrMaxOp = MinOrMaxBackedgeR;
+    VPValue *HeaderMask = Plan.getVectorLoopRegion()->getHeaderMask();
+    VPValue *MinOrMaxTailfold;
+    if (HeaderMask) {
+      if (!match(MinOrMaxBackedgeR, m_SelectLike(m_Specific(HeaderMask),
+                                                 m_VPValue(MinOrMaxTailfold),
+                                                 m_Specific(MinOrMaxPhiR))))
+        return false;
+
+      MinOrMaxOp = dyn_cast<VPRecipeWithIRFlags>(MinOrMaxTailfold);
+      if (!MinOrMaxOp)
+        return false;
+    }
+
+    // Check that MinOrMaxOp is a VPWidenIntrinsicRecipe or
+    // VPReplicateRecipe with an intrinsic that matches the reduction kind.
     Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
     if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
-    // MinOrMaxOp must have 2 users: 1) MinOrMaxPhiR and 2)
+    // Tailfolded MinOrMaxOp should only feed into the predicated
+    // select MinOrMaxBackedgeR.
+    assert((!HeaderMask || MinOrMaxOp->getNumUsers() == 1) &&
+           "Tailfolded MinOrMaxOp must have exactly 1 user");
+    // MinOrMaxBackedgeR must have 2 users: 1) MinOrMaxPhiR and 2)
     // ComputeReductionResult.
-    assert(MinOrMaxOp->getNumUsers() == 2 &&
-           "MinOrMaxOp must have exactly 2 users");
+    assert(MinOrMaxBackedgeR->getNumUsers() == 2 &&
+           "MinOrMaxBackedgeR must have exactly 2 users");
     // MinOrMaxOp must combine MinOrMaxPhiR directly with the new element;
     // reject multi-step min/max chains (e.g. max(l, max(k, phi))), which
     // this transform does not handle.
@@ -2232,20 +2276,23 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     if (MinOrMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
-    // MinOrMaxPhiR must have exactly 2 users:
+    // MinOrMaxPhiR must have exactly 2 users if not tailfolded:
     // * MinOrMaxOp,
     // * Cmp (that's part of a FindLastIV chain).
-    if (MinOrMaxPhiR->getNumUsers() != 2)
+    // Also an additional third user if it is tailfolded:
+    // * Predicated HEADER-MASK select in the vector.latch block.
+    if (MinOrMaxPhiR->getNumUsers() != (HeaderMask ? 3 : 2))
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
-    assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxOp");
+        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxBackedgeR);
+    assert(MinOrMaxResult &&
+           "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
     VPValue *IVOp, *FindIV;
-    if (!Sel || Sel->getNumUsers() != 2 ||
+    if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
         !match(Sel,
                m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
       return false;

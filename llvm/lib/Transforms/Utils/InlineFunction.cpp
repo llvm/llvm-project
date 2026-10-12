@@ -985,9 +985,13 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
     if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
       continue;
     // Fill missing only: never overwrite a more specific token the wrapper
-    // already set on an internal allocation.
-    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
-      continue;
+    // already set on an internal allocation. An unknown type (empty type name
+    // with function name) is not more specific.
+    if (MDNode *MD = ClonedCall->getMetadata(LLVMContext::MD_alloc_token)) {
+      if (MD->getNumOperands() != 3 ||
+          !cast<MDString>(MD->getOperand(0))->getString().empty())
+        continue;
+    }
     ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
   }
 }
@@ -2280,7 +2284,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
     bool InsertRetainCall = IsRetainRV;
-    IRBuilder<> Builder(RI->getContext());
+    IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
     // autoreleaseRV call or an unannotated call.

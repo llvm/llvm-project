@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::Not;
 using ::testing::StartsWith;
@@ -56,9 +57,6 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(
       apply("#define RETURN_IF_ERROR(x) if (x) return\nRETU^RN_IF_ERROR(4);"),
       StartsWith("unavailable"));
-
-  FileName = "a.c";
-  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
@@ -1042,6 +1040,175 @@ TEST_F(ExtractFunctionTest, VolatileScalar) {
       ]]
     })cpp"),
               HasSubstr("extracted(const volatile int &V)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowUnmodifiedScalar) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      int i;
+      void foo() {
+         int j = 0;
+         [[i = j;]]
+    })cpp"),
+              HasSubstr("extracted(int j)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
+  // C has no references: a mutated capture becomes a real pointer
+  // parameter instead, with the call site taking its address and the
+  // body dereferencing it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int j;
+         [[j = 0;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+                    HasSubstr("extracted(&j)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
+  // Same, but for an unmutated non-scalar capture: the parameter becomes
+  // a pointer to const, and every member access on it is rewritten too.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      int i;
+      void foo() {
+         struct pair p;
+         p.v1 = 0;
+         [[i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(const struct pair * p)"),
+                    HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileStructMixedUses) {
+  // The same capture can appear both as a member-access base (rewritten
+  // to "->") and as a plain use (wrapped in "(*...)") within a single
+  // extraction; each occurrence is rewritten independently.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      void use(struct pair);
+      int i;
+      void foo() {
+         struct pair p;
+         [[use(p); i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("use((*p));"), HasSubstr("i = p->v1;")));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMacroDot) {
+  // The identifier itself need not be a macro expansion for the
+  // member-access ".", immediately following it, to be one -- that dot
+  // is a separate token with its own location, which also needs
+  // checking before relying on it to splice in "->".
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      #define DOT .
+      struct pair { int v1; int v2; };
+      void foo() {
+         struct pair p;
+         [[p DOT v1 = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
+  // Unlike other non-scalar types, an array decays to a pointer on its
+  // own wherever it's used, so it needs neither an address-of at the
+  // call site nor a dereference-rewrite of its uses in the body. The
+  // parameter's own type must be decayed too, though: leaving it as an
+  // array type would print as the uncompilable "int[5] arr" (there's no
+  // special-cased array declarator syntax, unlike C++'s reference case).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[arr[0] = 1;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+                    HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticFunctionStaysStatic) {
+  // A free function's own `static` (internal linkage) must carry over to
+  // an extracted sibling, or that sibling would default to external
+  // linkage instead.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticForwardDeclaredFunctionStaysStatic) {
+  // Same as above, but the definition itself omits `static` (legal in C:
+  // once a prior declaration gives the function internal linkage, a
+  // later one doesn't need to repeat it, and still has it). Checking
+  // only the current declaration's storage class would miss this.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo();
+      void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArraySizeof) {
+  // Decaying the array to a pointer parameter would silently change the
+  // meaning of a `sizeof` on it (pointer size instead of array size), so
+  // this is refused rather than risk miscompiling it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = sizeof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayAlignof) {
+  // Same hazard as sizeof, and the same UnaryExprOrTypeTraitExpr AST
+  // node: alignof(int) and alignof(int *) aren't guaranteed to match
+  // (and commonly don't, e.g. 4 vs 8 on a typical 64-bit target).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = __alignof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
+  // Same hazard again, but via a completely different AST node
+  // (TypeOfExprType, reached through the VarDecl's TypeLoc, not through
+  // any Stmt a plain expression visitor would see): typeof(arr) would
+  // resolve to the decayed pointer type instead of the array type.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[__typeof__(arr) copy;]]
+    })cpp"),
+            "fail: Too complex to extract.");
 }
 
 } // namespace

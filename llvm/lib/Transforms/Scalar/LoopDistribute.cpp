@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopDistribute.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -82,35 +82,6 @@ static const char *const LLVMLoopDistributeFollowupSequential =
 static const char *const LLVMLoopDistributeFollowupFallback =
     "llvm.loop.distribute.followup_fallback";
 /// @}
-
-static cl::opt<bool>
-    LDistVerify("loop-distribute-verify", cl::Hidden,
-                cl::desc("Turn on DominatorTree and LoopInfo verification "
-                         "after Loop Distribution"),
-                cl::init(false));
-
-static cl::opt<bool> DistributeNonIfConvertible(
-    "loop-distribute-non-if-convertible", cl::Hidden,
-    cl::desc("Whether to distribute into a loop that may not be "
-             "if-convertible by the loop vectorizer"),
-    cl::init(false));
-
-static cl::opt<unsigned> DistributeSCEVCheckThreshold(
-    "loop-distribute-scev-check-threshold", cl::init(8), cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed for Loop "
-             "Distribution"));
-
-static cl::opt<unsigned> PragmaDistributeSCEVCheckThreshold(
-    "loop-distribute-scev-check-threshold-with-pragma", cl::init(128),
-    cl::Hidden,
-    cl::desc("The maximum number of SCEV checks allowed for Loop "
-             "Distribution for loop marked with #pragma clang loop "
-             "distribute(enable)"));
-
-static cl::opt<bool> EnableLoopDistribute(
-    "enable-loop-distribute", cl::Hidden,
-    cl::desc("Enable the new, experimental LoopDistribution Pass"),
-    cl::init(false));
 
 static const char *DistributedMetaData = "llvm.loop.isdistributed";
 
@@ -331,9 +302,9 @@ public:
   }
 
   /// Merges the partitions according to various heuristics.
-  void mergeBeforePopulating() {
+  void mergeBeforePopulating(const ScalarOptions &Opts) {
     mergeAdjacentNonCyclic();
-    if (!DistributeNonIfConvertible)
+    if (!Opts.loop_distribute_non_if_convertible)
       mergeNonIfConvertible();
   }
 
@@ -650,10 +621,11 @@ private:
 /// The actual class performing the per-loop work.
 class LoopDistributeForLoop {
 public:
-  LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI, DominatorTree *DT,
-                        ScalarEvolution *SE, LoopAccessInfoManager &LAIs,
+  LoopDistributeForLoop(const ScalarOptions &Opts, Loop *L, Function *F,
+                        LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE,
+                        LoopAccessInfoManager &LAIs,
                         OptimizationRemarkEmitter *ORE)
-      : L(L), F(F), LI(LI), DT(DT), SE(SE), LAIs(LAIs), ORE(ORE) {
+      : Opts(Opts), L(L), F(F), LI(LI), DT(DT), SE(SE), LAIs(LAIs), ORE(ORE) {
     setForced();
   }
 
@@ -747,7 +719,7 @@ public:
 
     // Run the merge heuristics: Merge non-cyclic adjacent partitions since we
     // should be able to vectorize these together.
-    Partitions.mergeBeforePopulating();
+    Partitions.mergeBeforePopulating(Opts);
     LLVM_DEBUG(dbgs() << "LDist: Merged partitions:\n" << Partitions);
     if (Partitions.getSize() < 2)
       return fail("CantIsolateUnsafeDeps",
@@ -775,9 +747,10 @@ public:
                   "may not insert runtime check with convergent operation");
     }
 
-    if (Pred.getComplexity() > (IsForced.value_or(false)
-                                    ? PragmaDistributeSCEVCheckThreshold
-                                    : DistributeSCEVCheckThreshold))
+    if (Pred.getComplexity() >
+        (IsForced.value_or(false)
+             ? Opts.loop_distribute_scev_check_threshold_with_pragma
+             : Opts.loop_distribute_scev_check_threshold))
       return fail("TooManySCEVRuntimeChecks",
                   "too many SCEV run-time checks needed.\n");
 
@@ -844,7 +817,7 @@ public:
     LLVM_DEBUG(dbgs() << "LDist: After removing unused Instrs:\n");
     LLVM_DEBUG(Partitions.printBlocks(dbgs()));
 
-    if (LDistVerify) {
+    if (Opts.loop_distribute_verify) {
       LI->verify();
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
     }
@@ -947,6 +920,7 @@ private:
       IsForced = false;
   }
 
+  const ScalarOptions &Opts;
   Loop *L;
   Function *F;
 
@@ -984,9 +958,10 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
         Worklist.push_back(L);
 
   // Now walk the identified inner loops.
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool Changed = false;
   for (Loop *L : Worklist) {
-    LoopDistributeForLoop LDL(L, &F, LI, DT, SE, LAIs, ORE);
+    LoopDistributeForLoop LDL(Opts, L, &F, LI, DT, SE, LAIs, ORE);
 
     // Do not reprocess loops we already distributed
     if (getOptionalBoolLoopAttribute(L, DistributedMetaData).value_or(false)) {
@@ -997,7 +972,7 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
 
     // If distribution was forced for the specific loop to be
     // enabled/disabled, follow that.  Otherwise use the global flag.
-    if (LDL.isForced().value_or(EnableLoopDistribute))
+    if (LDL.isForced().value_or(Opts.enable_loop_distribute))
       Changed |= LDL.processLoop();
   }
 

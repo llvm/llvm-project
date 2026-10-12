@@ -9,7 +9,7 @@
 from . import availability
 from . import carveouts
 from . import compiler
-from . import gdb
+from . import debugger
 from . import hardening
 from . import libcxx_macros
 from . import localization
@@ -25,7 +25,7 @@ DEFAULT_FEATURES += libcxx_macros.features
 DEFAULT_FEATURES += carveouts.features
 DEFAULT_FEATURES += platform.features
 DEFAULT_FEATURES += localization.features
-DEFAULT_FEATURES += gdb.features
+DEFAULT_FEATURES += debugger.features
 DEFAULT_FEATURES += misc.features
 DEFAULT_FEATURES += availability.features
 DEFAULT_FEATURES += hardening.features # this depends on availability, misc and libc++ macro features

@@ -39,6 +39,7 @@ namespace llvm {
 class AddrLabelMap;
 class AsmPrinterHandler;
 class BasicBlock;
+class BasicBlockSectionsProfileReader;
 class BlockAddress;
 class Constant;
 class ConstantArray;
@@ -56,7 +57,10 @@ class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
 class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineBlockHashInfoResult;
 class MachineConstantPoolValue;
+class MachineBranchProbabilityInfo;
 class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
@@ -180,6 +184,12 @@ public:
   std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
   std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
   std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
+  std::function<MachineBranchProbabilityInfo *(MachineFunction &)> GetMBPI;
+  std::function<MachineBlockFrequencyInfo *(MachineFunction &)> GetMBFI;
+  std::function<MachineBlockHashInfoResult *(MachineFunction &)> GetMBHI;
+  /// Returns the basic block sections profile reader if available, nullptr
+  /// otherwise.
+  std::function<BasicBlockSectionsProfileReader *(MachineFunction &)> GetBBSPR;
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;

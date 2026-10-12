@@ -24,17 +24,18 @@ void LibraryOptionsParser::forEachOption(
     unsigned Kind = T.getOptionKind(ID);
     if (Kind != Option::FlagOrEqClass && Kind != Option::SeparateOrEqClass)
       continue;
+    StringRef V = T.getOptionMetaVar(ID);
     std::string MetaVar;
-    if (Kind == Option::SeparateOrEqClass) {
-      StringRef V = T.getOptionMetaVar(ID);
+    if (Kind == Option::SeparateOrEqClass)
       MetaVar = ("=" + (V.empty() ? StringRef("<value>") : V)).str();
-    }
+    else if (!V.empty())
+      MetaVar = ("[=" + V + "]").str();
     Fn(T.getOptionName(ID), MetaVar, T.getOptionHelpText(ID));
   }
 }
 
 Error LibraryOptionsParser::parse(ArrayRef<const char *> Args,
-                                  unsigned &Consumed) {
+                                  unsigned &Consumed, BumpPtrAllocator &Alloc) {
   InputArgList List(Args.begin(), Args.end());
   Consumed = 0;
   std::unique_ptr<Arg> A = Table().ParseOneArg(List, Consumed);
@@ -44,7 +45,7 @@ Error LibraryOptionsParser::parse(ArrayRef<const char *> Args,
                              "' requires an argument");
   if (A->getOption().getKind() == Option::UnknownClass)
     return createStringError("unknown argument '" + Twine(Args[0]) + "'");
-  if (!Apply(*A))
+  if (!Apply(*A, Alloc))
     return createStringError("invalid value '" + Twine(A->getValue()) +
                              "' in '" + A->getAsString(List) + "'");
   return Error::success();
