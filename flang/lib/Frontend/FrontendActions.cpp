@@ -1108,7 +1108,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested. In this case, don't run the passes. This mimics the behavior of
   // clang.
-  if (llvm::PrintPipelinePasses) {
+  if (pb.getPrintPipelinePasses()) {
     mpm.printPipeline(llvm::outs(), [&pic](llvm::StringRef className) {
       auto passName = pic.getPassNameForClassName(className);
       return passName.empty() ? className : passName;

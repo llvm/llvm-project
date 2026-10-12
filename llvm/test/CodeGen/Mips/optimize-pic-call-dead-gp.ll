@@ -19,7 +19,7 @@ define i32 @two_tls_calls() {
   ; MIPS32-NEXT:   $a0 = COPY [[ADDiu]]
   ; MIPS32-NEXT:   $gp = COPY [[ADDu]]
   ; MIPS32-NEXT:   $t9 = COPY [[LW]]
-  ; MIPS32-NEXT:   JALRPseudo killed $t9, csr_o32, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0, implicit $gp, implicit-def $sp, implicit-def $v0
+  ; MIPS32-NEXT:   JALRPseudo $t9, csr_o32, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0, implicit $gp, implicit-def $sp, implicit-def $v0
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
   ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $v0
   ; MIPS32-NEXT:   [[LW1:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (dereferenceable load (s32) from @tls_gd)
@@ -29,12 +29,12 @@ define i32 @two_tls_calls() {
   ; MIPS32-NEXT:   $a0 = COPY [[ADDiu1]]
   ; MIPS32-NEXT:   dead $gp = COPY [[ADDu]]
   ; MIPS32-NEXT:   $t9 = COPY [[LW2]]
-  ; MIPS32-NEXT:   JALRPseudo killed $t9, csr_o32, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0, implicit-def $sp, implicit-def $v0
+  ; MIPS32-NEXT:   JALRPseudo $t9, csr_o32, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0, implicit-def $sp, implicit-def $v0
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
   ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $v0
   ; MIPS32-NEXT:   [[LUi:%[0-9]+]]:gpr32 = LUi target-flags(mips-dtprel-hi) @tls_ld
-  ; MIPS32-NEXT:   [[ADDu1:%[0-9]+]]:gpr32 = ADDu killed [[LUi]], [[COPY1]]
-  ; MIPS32-NEXT:   [[LW3:%[0-9]+]]:gpr32 = LW killed [[ADDu1]], target-flags(mips-dtprel-lo) @tls_ld :: (dereferenceable load (s32) from @tls_ld)
+  ; MIPS32-NEXT:   [[ADDu1:%[0-9]+]]:gpr32 = ADDu [[LUi]], [[COPY1]]
+  ; MIPS32-NEXT:   [[LW3:%[0-9]+]]:gpr32 = LW [[ADDu1]], target-flags(mips-dtprel-lo) @tls_ld :: (dereferenceable load (s32) from @tls_ld)
   ; MIPS32-NEXT:   [[ADDu2:%[0-9]+]]:gpr32 = ADDu [[LW1]], [[LW3]]
   ; MIPS32-NEXT:   $v0 = COPY [[ADDu2]]
   ; MIPS32-NEXT:   RetRA implicit $v0
@@ -52,7 +52,7 @@ define i32 @two_tls_calls() {
   ; MIPS64-NEXT:   $a0_64 = COPY [[DADDiu1]]
   ; MIPS64-NEXT:   $gp_64 = COPY [[DADDiu]]
   ; MIPS64-NEXT:   $t9_64 = COPY [[LD]]
-  ; MIPS64-NEXT:   JALR64Pseudo killed $t9_64, csr_n64, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+  ; MIPS64-NEXT:   JALR64Pseudo $t9_64, csr_n64, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
   ; MIPS64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; MIPS64-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $v0_64
   ; MIPS64-NEXT:   [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (dereferenceable load (s32) from @tls_gd)
@@ -62,13 +62,13 @@ define i32 @two_tls_calls() {
   ; MIPS64-NEXT:   $a0_64 = COPY [[DADDiu2]]
   ; MIPS64-NEXT:   dead $gp_64 = COPY [[DADDiu]]
   ; MIPS64-NEXT:   $t9_64 = COPY [[LD1]]
-  ; MIPS64-NEXT:   JALR64Pseudo killed $t9_64, csr_n64, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64
+  ; MIPS64-NEXT:   JALR64Pseudo $t9_64, csr_n64, target-flags(mips-jalr) <mcsymbol __tls_get_addr>, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64
   ; MIPS64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; MIPS64-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $v0_64
   ; MIPS64-NEXT:   [[LUi64_1:%[0-9]+]]:gpr64 = LUi64 target-flags(mips-dtprel-hi) @tls_ld
-  ; MIPS64-NEXT:   [[DADDu1:%[0-9]+]]:gpr64 = DADDu killed [[LUi64_1]], [[COPY1]]
-  ; MIPS64-NEXT:   [[LW1:%[0-9]+]]:gpr32 = LW killed [[DADDu1]], target-flags(mips-dtprel-lo) @tls_ld :: (dereferenceable load (s32) from @tls_ld)
-  ; MIPS64-NEXT:   [[ADDu:%[0-9]+]]:gpr32 = ADDu killed [[LW]], killed [[LW1]]
+  ; MIPS64-NEXT:   [[DADDu1:%[0-9]+]]:gpr64 = DADDu [[LUi64_1]], [[COPY1]]
+  ; MIPS64-NEXT:   [[LW1:%[0-9]+]]:gpr32 = LW [[DADDu1]], target-flags(mips-dtprel-lo) @tls_ld :: (dereferenceable load (s32) from @tls_ld)
+  ; MIPS64-NEXT:   [[ADDu:%[0-9]+]]:gpr32 = ADDu [[LW]], [[LW1]]
   ; MIPS64-NEXT:   $v0 = COPY [[ADDu]]
   ; MIPS64-NEXT:   RetRA implicit $v0
   %a = load i32, ptr @tls_gd

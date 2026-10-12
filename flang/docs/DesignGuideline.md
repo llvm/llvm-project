@@ -26,17 +26,18 @@ If several solutions can be considered, it is best to briefly describe the
 alternate solutions in 2) and why they were not retained.
 
 The design document should be added to the `docs` folder as a markdown document,
-ideally using the name of the feature as the document name. Its approval on
-Phabricator is the pre-requisite to submitting patches implementing new
-features.
+ideally using the name of the feature as the document name. Submit it as a
+pull request to [LLVM on GitHub](https://github.com/llvm/llvm-project). Approval
+of the design document is the prerequisite to submitting pull requests
+implementing new features.
 
 An RFC on flang https://discourse.llvm.org can first be made as one sees fit,
 but this document should still be produced to summarize, organize, and formalize
 the discussions. If a related discourse RFC was made it is a good idea to give a
 link to it in the document for future reference. If no RFC was made before
 sending the design document for review, it is highly encouraged to make a small
-announcement on https://discourse.llvm.org with a link to the Phabricator
-design document review.
+announcement on https://discourse.llvm.org with a link to the design document
+pull request.
 
 The Testing Plan should briefly describe what aspects will be tested with LLVM
 unit test tools (see

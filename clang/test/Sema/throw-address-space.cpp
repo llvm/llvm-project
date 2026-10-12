@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fcxx-exceptions -fexceptions -fms-extensions -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -fcxx-exceptions -fexceptions -fms-extensions -verify %s
 
 // Test for issue (https://github.com/llvm/llvm-project/issues/222931).
 // Reject throwing/catching pointers and references whose pointee/referred type

@@ -1575,7 +1575,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   // LLVM doesn't support alignments larger than (1 << MaxAlignmentExponent).
   TrailZ = std::min(TrailZ, +Value::MaxAlignmentExponent);
 
-  Align Alignment = Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+  Align Alignment = Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
 
   if (PrefAlign && *PrefAlign > Alignment)
     Alignment = std::max(Alignment, tryEnforceAlignment(V, *PrefAlign, DL));

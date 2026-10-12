@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
+#include "InstrumentationOptions.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +32,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -61,75 +61,6 @@ STATISTIC(
     NumInstrumentedNonFTMemcpyStores,
     "Number of instrumented non floating-point stores with memcpy semantics");
 STATISTIC(NumInstrumentedFCmp, "Number of instrumented fcmps");
-
-// Using smaller shadow types types can help improve speed. For example, `dlq`
-// is 3x slower to 5x faster in opt mode and 2-6x faster in dbg mode compared to
-// `dqq`.
-static cl::opt<std::string> ClShadowMapping(
-    "nsan-shadow-type-mapping", cl::init("dqq"),
-    cl::desc("One shadow type id for each of `float`, `double`, `long double`. "
-             "`d`,`l`,`q`,`e` mean double, x86_fp80, fp128 (quad) and "
-             "ppc_fp128 (extended double) respectively. The default is to "
-             "shadow `float` as `double`, and `double` and `x86_fp80` as "
-             "`fp128`"),
-    cl::Hidden);
-
-static cl::opt<bool>
-    ClInstrumentFCmp("nsan-instrument-fcmp", cl::init(true),
-                     cl::desc("Instrument floating-point comparisons"),
-                     cl::Hidden);
-
-static cl::opt<std::string> ClCheckFunctionsFilter(
-    "check-functions-filter",
-    cl::desc("Only emit checks for arguments of functions "
-             "whose names match the given regular expression"),
-    cl::value_desc("regex"));
-
-static cl::opt<bool> ClTruncateFCmpEq(
-    "nsan-truncate-fcmp-eq", cl::init(true),
-    cl::desc(
-        "This flag controls the behaviour of fcmp equality comparisons."
-        "For equality comparisons such as `x == 0.0f`, we can perform the "
-        "shadow check in the shadow (`x_shadow == 0.0) == (x == 0.0f)`) or app "
-        " domain (`(trunc(x_shadow) == 0.0f) == (x == 0.0f)`). This helps "
-        "catch the case when `x_shadow` is accurate enough (and therefore "
-        "close enough to zero) so that `trunc(x_shadow)` is zero even though "
-        "both `x` and `x_shadow` are not"),
-    cl::Hidden);
-
-// When there is external, uninstrumented code writing to memory, the shadow
-// memory can get out of sync with the application memory. Enabling this flag
-// emits consistency checks for loads to catch this situation.
-// When everything is instrumented, this is not strictly necessary because any
-// load should have a corresponding store, but can help debug cases when the
-// framework did a bad job at tracking shadow memory modifications by failing on
-// load rather than store.
-// TODO: provide a way to resume computations from the FT value when the load
-// is inconsistent. This ensures that further computations are not polluted.
-static cl::opt<bool> ClCheckLoads("nsan-check-loads",
-                                  cl::desc("Check floating-point load"),
-                                  cl::Hidden);
-
-static cl::opt<bool> ClCheckStores("nsan-check-stores", cl::init(true),
-                                   cl::desc("Check floating-point stores"),
-                                   cl::Hidden);
-
-static cl::opt<bool> ClCheckRet("nsan-check-ret", cl::init(true),
-                                cl::desc("Check floating-point return values"),
-                                cl::Hidden);
-
-// LLVM may store constant floats as bitcasted ints.
-// It's not really necessary to shadow such stores,
-// if the shadow value is unknown the framework will re-extend it on load
-// anyway. Moreover, because of size collisions (e.g. bf16 vs f16) it is
-// impossible to determine the floating-point type based on the size.
-// However, for debugging purposes it can be useful to model such stores.
-static cl::opt<bool> ClPropagateNonFTConstStoresAsFT(
-    "nsan-propagate-non-ft-const-stores-as-ft",
-    cl::desc(
-        "Propagate non floating-point const stores as floating point values."
-        "For debugging purposes only"),
-    cl::Hidden);
 
 constexpr StringLiteral kNsanModuleCtorName("nsan.module_ctor");
 constexpr StringLiteral kNsanInitName("__nsan_init");
@@ -257,15 +188,18 @@ static const char *typeNameFromFTValueType(FTValueType VT) {
 // (see -nsan-shadow-mapping flag).
 class MappingConfig {
 public:
-  explicit MappingConfig(LLVMContext &C) : Context(C) {
-    if (ClShadowMapping.size() != 3)
-      report_fatal_error("Invalid nsan mapping: " + Twine(ClShadowMapping));
+  MappingConfig(const InstrumentationOptions &Opts, LLVMContext &C)
+      : Context(C) {
+    if (Opts.nsan_shadow_type_mapping.size() != 3)
+      report_fatal_error("Invalid nsan mapping: " +
+                         Twine(Opts.nsan_shadow_type_mapping));
     unsigned ShadowTypeSizeBits[kNumValueTypes];
     for (int VT = 0; VT < kNumValueTypes; ++VT) {
-      auto Config = ShadowTypeConfig::fromNsanTypeId(ClShadowMapping[VT]);
+      auto Config =
+          ShadowTypeConfig::fromNsanTypeId(Opts.nsan_shadow_type_mapping[VT]);
       if (!Config)
         report_fatal_error("Failed to get ShadowTypeConfig for " +
-                           Twine(ClShadowMapping[VT]));
+                           Twine(Opts.nsan_shadow_type_mapping[VT]));
       const unsigned AppTypeSize =
           typeFromFTValueType(static_cast<FTValueType>(VT), Context)
               ->getScalarSizeInBits();
@@ -548,7 +482,7 @@ FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[0]; }
 /// constructors for the module.
 class NumericalStabilitySanitizer {
 public:
-  NumericalStabilitySanitizer(Module &M);
+  NumericalStabilitySanitizer(const InstrumentationOptions &Opts, Module &M);
   bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
 
 private:
@@ -595,6 +529,7 @@ private:
   void propagateNonFTStore(StoreInst &Store, Type *VT,
                            const ValueToShadowMap &Map);
 
+  const InstrumentationOptions &Opts;
   const DataLayout &DL;
   LLVMContext &Context;
   MappingConfig Config;
@@ -634,7 +569,7 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-  NumericalStabilitySanitizer Nsan(M);
+  NumericalStabilitySanitizer Nsan(InstrumentationOptions::Global, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)
     Nsan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
@@ -650,8 +585,10 @@ static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
   });
 }
 
-NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
-    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context),
+NumericalStabilitySanitizer::NumericalStabilitySanitizer(
+    const InstrumentationOptions &Opts, Module &M)
+    : Opts(Opts), DL(M.getDataLayout()), Context(M.getContext()),
+      Config(Opts, Context),
       NsanCopyFns(M, {"__nsan_copy_4", "__nsan_copy_8", "__nsan_copy_16"},
                   "__nsan_copy_values", /*NumArgs=*/3),
       NsanSetUnknownFns(M,
@@ -717,8 +654,8 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
   NsanShadowArgsPtr =
       createThreadLocalGV("__nsan_shadow_args_ptr", M, NsanShadowArgsType);
 
-  if (!ClCheckFunctionsFilter.empty()) {
-    Regex R = Regex(ClCheckFunctionsFilter);
+  if (!Opts.check_functions_filter.empty()) {
+    Regex R = Regex(Opts.check_functions_filter);
     std::string RegexError;
     assert(R.isValid(RegexError));
     CheckFunctionsFilter = std::move(R);
@@ -995,7 +932,7 @@ Value *NumericalStabilitySanitizer::emitCheck(Value *V, Value *ShadowV,
 // values.
 void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
                                                 const ValueToShadowMap &Map) {
-  if (!ClInstrumentFCmp)
+  if (!Opts.nsan_instrument_fcmp)
     return;
 
   Function *F = FCmp.getFunction();
@@ -1021,8 +958,8 @@ void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
   FCmpBuilder.SetCurrentDebugLocation(FCmp.getDebugLoc());
   Value *ShadowLHS = Map.getShadow(LHS);
   Value *ShadowRHS = Map.getShadow(RHS);
-  // See comment on ClTruncateFCmpEq.
-  if (FCmp.isEquality() && ClTruncateFCmpEq) {
+  // See the help text of -nsan-truncate-fcmp-eq.
+  if (FCmp.isEquality() && Opts.nsan_truncate_fcmp_eq) {
     Type *Ty = ShadowLHS->getType();
     ShadowLHS = FCmpBuilder.CreateFPExt(
         FCmpBuilder.CreateFPTrunc(ShadowLHS, LHS->getType()), Ty);
@@ -1166,7 +1103,7 @@ Value *NumericalStabilitySanitizer::handleLoad(LoadInst &Load, Type *VT,
   ShadowLoadBBBuilder.SetCurrentDebugLocation(Load.getDebugLoc());
   Value *ShadowLoad = ShadowLoadBBBuilder.CreateAlignedLoad(
       ExtendedVT, ShadowPtr, Align(1), Load.isVolatile());
-  if (ClCheckLoads) {
+  if (Opts.nsan_check_loads) {
     ShadowLoad = emitCheck(&Load, ShadowLoad, ShadowLoadBBBuilder,
                            CheckLoc::makeLoad(Load.getPointerOperand()));
   }
@@ -1803,7 +1740,7 @@ void NumericalStabilitySanitizer::propagateFTStore(
   if (!Store.getParent()->getParent()->hasOptNone()) {
     // Only check stores when optimizing, because non-optimized code generates
     // too many stores to the stack, creating false positives.
-    if (ClCheckStores) {
+    if (Opts.nsan_check_stores) {
       StoredShadow = emitCheck(StoredValue, StoredShadow, Builder,
                                CheckLoc::makeStore(Store.getPointerOperand()));
       ++NumInstrumentedFTStores;
@@ -1875,8 +1812,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     ++NumInstrumentedNonFTMemcpyStores;
     return;
   }
-  // ClPropagateNonFTConstStoresAsFT is by default false.
-  if (Constant *C; ClPropagateNonFTConstStoresAsFT &&
+  if (Constant *C; Opts.nsan_propagate_non_ft_const_stores_as_ft &&
                    (C = dyn_cast<Constant>(StoredValue))) {
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
@@ -1948,7 +1884,7 @@ void NumericalStabilitySanitizer::propagateShadowValues(
   }
 
   if (auto *RetInst = dyn_cast<ReturnInst>(&Inst)) {
-    if (!ClCheckRet)
+    if (!Opts.nsan_check_ret)
       return;
 
     Value *RV = RetInst->getReturnValue();

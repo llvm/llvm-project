@@ -4,10 +4,10 @@ define double @sifdb(i8 %x) #0 {
 entry:
 ; CHECK-LABEL: name: sifdb
 ; CHECK: [[MOVSX32rm8_:%[0-9]+]]:gr32 = MOVSX32rm8 %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s8) from %fixed-stack.0, align 16)
-; CHECK: [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr killed [[MOVSX32rm8_]]
-; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, killed [[CVTSI2SDrr]] :: (store (s64) into %stack.0, align 4)
+; CHECK: [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr [[MOVSX32rm8_]]
+; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, [[CVTSI2SDrr]] :: (store (s64) into %stack.0, align 4)
 ; CHECK: [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0, align 4)
-; CHECK: RET 0, killed [[LD_Fp64m80_]]
+; CHECK: RET 0, [[LD_Fp64m80_]]
   %result = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret double %result
 }
@@ -16,10 +16,10 @@ define double @sifdw(i16 %x) #0 {
 entry:
 ; CHECK-LABEL: name: sifdw
 ; CHECK: [[MOVSX32rm16_:%[0-9]+]]:gr32 = MOVSX32rm16 %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s16) from %fixed-stack.0, align 16)
-; CHECK: [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr killed [[MOVSX32rm16_]]
-; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, killed [[CVTSI2SDrr]] :: (store (s64) into %stack.0, align 4)
+; CHECK: [[CVTSI2SDrr:%[0-9]+]]:fr64 = CVTSI2SDrr [[MOVSX32rm16_]]
+; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, [[CVTSI2SDrr]] :: (store (s64) into %stack.0, align 4)
 ; CHECK: [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0, align 4)
-; CHECK: RET 0, killed [[LD_Fp64m80_]]
+; CHECK: RET 0, [[LD_Fp64m80_]]
   %result = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret double %result
 }
@@ -33,8 +33,8 @@ entry:
 ; CHECK: [[FsFLD0SD:%[0-9]+]]:fr64 = FsFLD0SD
 ; CHECK: JCC_1
 ; CHECK: [[PHI:%[0-9]+]]:fr64 = PHI [[FsFLD0SD]], {{.*}}, [[MOVSDrm_alt1]], {{.*}}
-; CHECK: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[MOVSDrm_alt]], killed [[PHI]], implicit $mxcsr
-; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, killed [[SUBSDrr]] :: (store (s64) into %stack.0)
+; CHECK: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[MOVSDrm_alt]], [[PHI]], implicit $mxcsr
+; CHECK: MOVSDmr %stack.0, 1, $noreg, 0, $noreg, [[SUBSDrr]] :: (store (s64) into %stack.0)
 ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
 ; CHECK: [[LD_Fp64m80:%[0-9]+]]:rfp80 = LD_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %stack.0)
 ; CHECK: FNSTCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (store (s16) into %stack.1)
@@ -45,7 +45,7 @@ entry:
 ; CHECK: FLDCW16m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.2)
 ; CHECK: IST_Fp64m80 %stack.0, 1, $noreg, 0, $noreg, [[LD_Fp64m80]], implicit-def $fpsw, implicit $fpcw
 ; CHECK: FLDCW16m %stack.1, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit-def $fpcw :: (load (s16) from %stack.1)
-; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
 ; CHECK: [[SHL32ri:%[0-9]+]]:gr32 = SHL32ri [[MOVZX32rr8_]], 31, implicit-def dead $eflags
 ; CHECK: [[XOR32rm:%[0-9]+]]:gr32 = XOR32rm [[SHL32ri]], %stack.0, 1, $noreg, 4, $noreg, implicit-def dead $eflags :: (load (s32) from %stack.0 + 4)
 ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0, align 8)
@@ -60,7 +60,7 @@ define i8 @f20s8(double %x) #0 {
 entry:
 ; CHECK-LABEL: name: f20s8
 ; CHECK: [[CVTTSD2SIrm:%[0-9]+]]:gr32 = CVTTSD2SIrm %fixed-stack.0, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load (s64) from %fixed-stack.0, align 16)
-; CHECK: [[COPY:%[0-9]+]]:gr32_abcd = COPY killed [[CVTTSD2SIrm]]
+; CHECK: [[COPY:%[0-9]+]]:gr32_abcd = COPY [[CVTTSD2SIrm]]
 ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
 ; CHECK: $al = COPY [[COPY1]]
 ; CHECK: RET 0, $al
@@ -89,11 +89,11 @@ entry:
 ; CHECK: JCC_1
 ; CHECK: [[PHI:%[0-9]+]]:fr64 = PHI [[MOVSDrm_alt1]], {{.*}}, [[FsFLD0SD]], {{.*}}
 ; CHECK: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 6, implicit $eflags
-; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
+; CHECK: [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 [[SETCCr]]
 ; CHECK: [[SHL32ri:%[0-9]+]]:gr32 = SHL32ri [[MOVZX32rr8_]], 31, implicit-def dead $eflags
-; CHECK: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[MOVSDrm_alt]], killed [[PHI]], implicit $mxcsr
-; CHECK: [[CVTTSD2SIrr:%[0-9]+]]:gr32 = CVTTSD2SIrr killed [[SUBSDrr]], implicit $mxcsr
-; CHECK: [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[CVTTSD2SIrr]], killed [[SHL32ri]], implicit-def dead $eflags
+; CHECK: [[SUBSDrr:%[0-9]+]]:fr64 = SUBSDrr [[MOVSDrm_alt]], [[PHI]], implicit $mxcsr
+; CHECK: [[CVTTSD2SIrr:%[0-9]+]]:gr32 = CVTTSD2SIrr [[SUBSDrr]], implicit $mxcsr
+; CHECK: [[XOR32rr:%[0-9]+]]:gr32 = XOR32rr [[CVTTSD2SIrr]], [[SHL32ri]], implicit-def dead $eflags
 ; CHECK: $eax = COPY [[XOR32rr]]
 ; CHECK: RET 0, $eax
   %result = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict") #0
@@ -113,8 +113,8 @@ entry:
 ; CHECK: [[A:%[0-9]+]]:fr64 = MOVSDrm_alt %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.3, align 16)
 ; CHECK: [[DIV0:%[0-9]+]]:fr64 = DIVSDrr [[A]], [[B]], implicit $mxcsr
 ; CHECK: [[DIV1:%[0-9]+]]:fr64 = nofpexcept DIVSDrr [[A]], [[B]], implicit $mxcsr
-; CHECK: MOVSDmr killed [[X]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.x, align 4)
-; CHECK: MOVSDmr killed [[Y]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.y, align 4)
+; CHECK: MOVSDmr [[X]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.x, align 4)
+; CHECK: MOVSDmr [[Y]], 1, $noreg, 0, $noreg, [[DIV1]] :: (store (s64) into %ir.y, align 4)
 ; CHECK: RET 0
   %div = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   %div1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -137,8 +137,8 @@ entry:
 ; CHECK: [[A:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 16)
 ; CHECK: [[CVT0:%[0-9]+]]:fr64 = CVTSI2SDrr [[A]]
 ; CHECK: [[CVT1:%[0-9]+]]:fr64 = nofpexcept CVTSI2SDrr [[A]]
-; CHECK: MOVSDmr killed [[X]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.x, align 4)
-; CHECK: MOVSDmr killed [[Y]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.y, align 4)
+; CHECK: MOVSDmr [[X]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.x, align 4)
+; CHECK: MOVSDmr [[Y]], 1, $noreg, 0, $noreg, [[CVT1]] :: (store (s64) into %ir.y, align 4)
 ; CHECK: RET 0
   %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   %result1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0

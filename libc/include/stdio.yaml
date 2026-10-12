@@ -30,6 +30,10 @@ macros:
     macro_header: stdio-macros.h
   - macro_name: TMP_MAX
     macro_header: stdio-macros.h
+  - macro_name: FILENAME_MAX
+    macro_header: stdio-macros.h
+  - macro_name: FOPEN_MAX
+    macro_header: stdio-macros.h
 types:
   - type_name: rsize_t
   - type_name: size_t

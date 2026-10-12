@@ -34,7 +34,7 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 
 // The merged libc function carries the full core.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_malloc, // malloc
@@ -51,7 +51,7 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 
 // The isolated SPIRV libc is its own function with only memset/memcpy, no malloc.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_SPIRVLibc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_SPIRVLibc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   if (TT.isSPIRV()) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_memcpy, // memcpy
@@ -71,4 +71,4 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 // CHECK-LABEL: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
 // CHECK: if (TT.isSPIRV()) {
 // CHECK: if (isLibraryAvailable("libc"))
-// CHECK-NEXT: setAvailableLibFuncs_SPIRVLibc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+// CHECK-NEXT: setAvailableLibFuncs_SPIRVLibc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);

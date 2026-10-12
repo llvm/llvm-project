@@ -51,7 +51,6 @@
 #include <optional>
 
 using namespace llvm;
-using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
 // https://llvm.org/docs/CommandGuide/llvm-profdata.html has documentations
 // on each subcommand.
@@ -146,12 +145,9 @@ static cl::opt<ProfCorrelatorKind> BIDFetcherProfileCorrelate(
     "correlate",
     cl::desc("Use debug-info or binary correlation to correlate profiles with "
              "build id fetcher"),
-    cl::init(InstrProfCorrelator::NONE),
-    cl::values(clEnumValN(InstrProfCorrelator::NONE, "",
-                          "No profile correlation"),
-               clEnumValN(InstrProfCorrelator::DEBUG_INFO, "debug-info",
+    cl::values(clEnumValN(ProfCorrelatorKind::DebugInfo, "debug-info",
                           "Use debug info to correlate"),
-               clEnumValN(InstrProfCorrelator::BINARY, "binary",
+               clEnumValN(ProfCorrelatorKind::Binary, "binary",
                           "Use binary to correlate")));
 static cl::opt<std::string> FuncNameFilter(
     "function",
@@ -348,8 +344,7 @@ static cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version3),
-    cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
-               clEnumValN(memprof::Version3, "3", "version 3"),
+    cl::values(clEnumValN(memprof::Version3, "3", "version 3"),
                clEnumValN(memprof::Version4, "4", "version 4")));
 
 static cl::opt<bool> MemProfFullSchema(
@@ -758,11 +753,11 @@ static void overlapInput(const std::string &BaseFilename,
 }
 
 /// Load an input into a writer context.
-static Error
-loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
-          const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
-          WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
-          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
+static Error loadInput(
+    const WeightedFile &Input, SymbolRemapper *Remapper,
+    const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
+    WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
+    std::optional<ProfCorrelatorKind> BIDFetcherCorrelatorKind = std::nullopt) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -861,11 +856,9 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
   };
 
-  const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
-                                                ? *BIDFetcherCorrelatorKind
-                                                : ProfCorrelatorKind::NONE;
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator,
-                                             BIDFetcher, CorrelatorKind, Warn);
+  auto ReaderOrErr =
+      InstrProfReader::create(Input.Filename, *FS, Correlator, BIDFetcher,
+                              BIDFetcherCorrelatorKind, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -1058,39 +1051,39 @@ static Error mergeInstrProfile(const WeightedFileVector &Inputs,
         "or -debug-file-directory");
   }
   std::string CorrelateFilename;
-  ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
+  std::optional<ProfCorrelatorKind> CorrelateKind;
   if (!DebugInfoFilename.empty()) {
     CorrelateFilename = DebugInfoFilename;
-    CorrelateKind = ProfCorrelatorKind::DEBUG_INFO;
+    CorrelateKind = ProfCorrelatorKind::DebugInfo;
   } else if (!BinaryFilename.empty()) {
     CorrelateFilename = BinaryFilename;
-    CorrelateKind = ProfCorrelatorKind::BINARY;
+    CorrelateKind = ProfCorrelatorKind::Binary;
   }
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (CorrelateKind != InstrProfCorrelator::NONE) {
-    if (auto Err = InstrProfCorrelator::get(CorrelateFilename, CorrelateKind)
+  if (CorrelateKind) {
+    if (auto Err = InstrProfCorrelator::get(CorrelateFilename, *CorrelateKind)
                        .moveInto(Correlator))
       return makeError(std::move(Err), CorrelateFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       return makeError(std::move(Err), CorrelateFilename);
   }
 
-  ProfCorrelatorKind BIDFetcherCorrelateKind = ProfCorrelatorKind::NONE;
+  std::optional<ProfCorrelatorKind> BIDFetcherCorrelateKind;
   std::unique_ptr<object::BuildIDFetcher> BIDFetcher;
   if (DebugInfod) {
     llvm::HTTPClient::initialize();
     BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
-    if (!BIDFetcherProfileCorrelate)
+    if (!BIDFetcherProfileCorrelate.getNumOccurrences())
       return makeError("Expected --correlate when --debuginfod is provided");
     BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
   } else if (!DebugFileDirectory.empty()) {
     BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
-    if (!BIDFetcherProfileCorrelate)
+    if (!BIDFetcherProfileCorrelate.getNumOccurrences())
       return makeError("Expected --correlate when --debug-file-directory "
                        "is provided");
     BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
-  } else if (BIDFetcherProfileCorrelate) {
+  } else if (BIDFetcherProfileCorrelate.getNumOccurrences()) {
     return makeError("Expected --debuginfod or --debug-file-directory when "
                      "--correlate is provided");
   }
@@ -1114,7 +1107,7 @@ static Error mergeInstrProfile(const WeightedFileVector &Inputs,
     for (const auto &Input : Inputs)
       if (Error E = loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                               Contexts[0].get(), BIDFetcher.get(),
-                              &BIDFetcherCorrelateKind))
+                              BIDFetcherCorrelateKind))
         return E;
   } else {
     Error FatalError = Error::success();
@@ -1146,7 +1139,7 @@ static Error mergeInstrProfile(const WeightedFileVector &Inputs,
       if (hasFatalError())
         break;
       Async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
-            Contexts[Ctx].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
+            Contexts[Ctx].get(), BIDFetcher.get(), BIDFetcherCorrelateKind);
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -3518,7 +3511,7 @@ static Error showDebugInfoCorrelation(const std::string &Filename,
     return makeError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (auto Err =
-          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+          InstrProfCorrelator::get(Filename, ProfCorrelatorKind::DebugInfo)
               .moveInto(Correlator))
     return makeError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {

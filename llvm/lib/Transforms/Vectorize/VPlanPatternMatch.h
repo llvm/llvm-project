@@ -17,6 +17,7 @@
 
 #include "VPlan.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <utility>
 
@@ -214,6 +215,9 @@ inline match_bind<VPInstruction> m_VPInstruction(VPInstruction *&V) {
   return V;
 }
 
+template <typename T>
+using hasOpcode_t = decltype(std::declval<T &>().getOpcode()); // NOLINT
+
 template <typename Ops_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
 struct Recipe_match {
@@ -289,16 +293,9 @@ private:
   template <typename RecipeTy>
   static bool matchRecipeAndOpcode(const VPRecipeBase *R) {
     auto *DefR = dyn_cast<RecipeTy>(R);
-    // Check for recipes that do not have opcodes.
-    if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
-                  std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
-                  std::is_same_v<RecipeTy, VPVectorEndPointerRecipe> ||
-                  std::is_same_v<RecipeTy, VPVectorPointerRecipe> ||
-                  std::is_same_v<RecipeTy, VPWidenLoadRecipe> ||
-                  std::is_same_v<RecipeTy, VPWidenStoreRecipe>)
-      return DefR;
-    else
+    if constexpr (Opcode && is_detected<hasOpcode_t, RecipeTy>::value)
       return DefR && DefR->getOpcode() == Opcode;
+    return DefR;
   }
 
   /// Helper to check if predicate \p P holds on all tuple elements in Ops using

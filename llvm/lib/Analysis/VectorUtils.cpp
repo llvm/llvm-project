@@ -1589,7 +1589,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+                     /*ShouldCheckWrap=*/true)
             .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "

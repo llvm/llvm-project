@@ -259,6 +259,46 @@ static std::string getStructOptionID(const Record &R) {
   return getSpellingIdentifier(R);
 }
 
+// The preprocessor expression of R's Condition, or "" if it has none.
+static StringRef getCondition(const Record &R) {
+  const RecordVal *V = R.getValue("Condition");
+  const auto *DI = V ? dyn_cast<DefInit>(V->getValue()) : nullptr;
+  return DI ? DI->getDef()->getValueAsString("Expr") : "";
+}
+
+namespace {
+// Wraps what is emitted during its lifetime in `#if Condition` where R has one.
+class ConditionScope {
+  raw_ostream &OS;
+  StringRef Condition;
+
+public:
+  ConditionScope(raw_ostream &OS, const Record &R)
+      : OS(OS), Condition(getCondition(R)) {
+    if (!Condition.empty())
+      OS << "#if " << Condition << '\n';
+  }
+  ~ConditionScope() {
+    if (!Condition.empty())
+      OS << "#endif\n";
+  }
+};
+} // namespace
+
+// Emits the OPT_ IDs of an OptionsStruct, which its table rows name.
+static void emitStructOptionIDs(ArrayRef<const Record *> Groups,
+                                ArrayRef<const Record *> Opts,
+                                raw_ostream &OS) {
+  OS << "namespace {\nenum ID : unsigned {\n  OPT_INVALID = 0,\n";
+  for (const Record *R : Groups)
+    OS << "  OPT_" << getOptionName(*R) << ",\n";
+  for (const Record *R : Opts) {
+    ConditionScope CS(OS, *R);
+    OS << "  OPT_" << getStructOptionID(*R) << ",\n";
+  }
+  OS << "};\n} // namespace\n\n";
+}
+
 // Emits the struct an OptionsStruct def declares: its declaration under
 // OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the global instance, the
 // option table, and apply(), which sets the member an argument names.
@@ -283,8 +323,9 @@ static void emitOptionsStruct(const Record &Struct,
       PrintFatalError(R->getLoc(),
                       "a member is set by a FlagOrEq or SeparateOrEq");
     StringRef Type = R->getValueAsString("FieldType");
-    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault")
-      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool member");
+    if (Kind == "FlagOrEq" && Type != "bool" && Type != "llvm::BoolOrDefault" &&
+        !R->getValue("BareValue"))
+      PrintFatalError(R->getLoc(), "a FlagOrEq sets a bool or has a BareValue");
     Fields.push_back(R);
   }
   // Members in declaration order.
@@ -307,8 +348,10 @@ static void emitOptionsStruct(const Record &Struct,
 
   StringRef Name = Struct.getName();
   OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
-  OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n";
+  OS << "#include \"llvm/Support/Allocator.h\"\n\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
         "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
@@ -316,34 +359,36 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
     OS << "  using StringRef = llvm::StringRef;\n";
-  for (const Member &M : Members)
+  for (auto [R, M] : llvm::zip_equal(ByID, Members)) {
+    ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
+  }
   OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
   OS << "  static " << Name << " Global;\n\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
-  OS << "  /// Sets the member that \\p A names. Returns false if the value is "
-        "invalid.\n";
-  OS << "  bool apply(const llvm::opt::Arg &A);\n";
+  OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
+        "Alloc.\n  /// Returns false if the value is invalid.\n";
+  OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
+        "&Alloc);\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
   std::string Qualified = (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
   OS << Qualified << " " << Qualified << "::Global;\n\n";
-  OS << "namespace {\nenum ID : unsigned {\n  OPT_INVALID = 0,\n";
-  for (const Record *R : Groups)
-    OS << "  OPT_" << getOptionName(*R) << ",\n";
-  for (const Record *R : Opts)
-    OS << "  OPT_" << getStructOptionID(*R) << ",\n";
-  OS << "};\n} // namespace\n\n";
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
   OS << "  return T;\n}\n\n";
-  OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
+  OS << "bool " << Qualified
+     << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";
   OS << "  switch (A.getOption().getID()) {\n";
   for (const Record *R : Fields) {
+    ConditionScope CS(OS, *R);
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R, Prefix);
+    if (R->getValue("BareValue"))
+      OS << "    if (!A.getNumValues()) { " << Member << " = "
+         << R->getValueAsString("BareValue") << "; return true; }\n";
     if (!isa<UnsetInit>(R->getValueInit("NormalizedValues"))) {
       SmallVector<StringRef> Values;
       R->getValueAsString("Values").split(Values, ',');
@@ -352,11 +397,14 @@ static void emitOptionsStruct(const Record &Struct,
       if (Values.size() != Enumerators.size())
         PrintFatalError(R->getLoc(), "an EnumField needs one enumerator per "
                                      "value");
-      OS << "    {\n      llvm::StringRef V = A.getValue();\n";
+      // The generic lambda sets a scalar, a std::optional, or a list element.
+      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+         << ", Alloc, [](llvm::StringRef V, auto &X) {\n";
       for (auto [Value, Enumerator] : llvm::zip_equal(Values, Enumerators))
-        OS << "      if (V == \"" << Value << "\") {\n        " << Member
-           << " = " << Enumerator << ";\n        return true;\n      }\n";
-      OS << "      return false;\n    }\n";
+        OS << "      if (V == \"" << Value
+           << "\") {\n        X = " << Enumerator
+           << ";\n        return true;\n      }\n";
+      OS << "      return false;\n    });\n";
       continue;
     }
     // A FlagOrEq without a value means =true.
@@ -365,7 +413,7 @@ static void emitOptionsStruct(const Record &Struct,
             ? "A.getNumValues() ? A.getValue() : \"true\""
             : "A.getValue()";
     OS << "    return llvm::opt::parseArgValue(" << Value << ", " << Member
-       << ");\n";
+       << ", Alloc);\n";
   }
   OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
   OS << "#endif // OPTIONS_STRUCT_DEFS\n";
@@ -466,10 +514,16 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OptionID.try_emplace(&R, OptionID.size() + 1);
   for (const Record &R : llvm::make_pointee_range(Opts))
     OptionID.try_emplace(&R, OptionID.size() + 1);
-  auto GetRefID = [&](const Record &R, StringRef Field) {
-    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit(Field)))
-      return OptionID.lookup(DI->getDef());
-    return 0u;
+  // An OptionsStruct's rows name the IDs, since a false Condition omits a row
+  // and shifts the IDs after it.
+  auto GetRefID = [&](const Record &R, StringRef Field) -> std::string {
+    const auto *DI = dyn_cast<DefInit>(R.getValueInit(Field));
+    if (!DI)
+      return "0";
+    const Record *Ref = DI->getDef();
+    if (Structs.empty())
+      return utostr(OptionID.lookup(Ref));
+    return "OPT_" + getStructOptionID(*Ref);
   };
 
   OS << "/////////\n";
@@ -478,6 +532,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << (Structs.empty()
              ? "#ifdef OPTTABLE_CODE\n"
              : "#if defined(OPTTABLE_CODE) || defined(OPTIONS_STRUCT_DEFS)\n");
+  if (!Structs.empty())
+    emitStructOptionIDs(Groups, Opts, OS);
   // A function rather than an object: the object needs dynamic relocations.
   OS << "static llvm::opt::OptTable::Tables optionTables() {\n";
   // An OptionsStruct's .cpp has no using-directive for llvm::opt.
@@ -630,11 +686,16 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
        << ", 0, 0, 0, llvm::opt::Option::GroupClass},\n";
   }
   for (const Record &R : llvm::make_pointee_range(Opts)) {
+    ConditionScope CS(OS, R);
     OS << "    {";
     writeStrTableOffset(OS, Table, getOptionPrefixedName(R),
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
+    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Alias"));
+        DI && !getCondition(*DI->getDef()).empty())
+      PrintFatalError(R.getLoc(), "an alias cannot refer to an option with a "
+                                  "Condition");
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
     OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
@@ -803,6 +864,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<const Record *> OptsWithMarshalling;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
+    ConditionScope CS(OS, R);
     // Start a single option entry.
     OS << "OPTION(";
     WriteOptRecordFields(OS, R);

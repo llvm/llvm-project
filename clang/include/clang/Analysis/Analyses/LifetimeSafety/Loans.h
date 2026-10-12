@@ -82,11 +82,11 @@ public:
   PlaceholderBase(const CXXMethodDecl *MD) : ParamOrMethod(MD) {}
 
   const ParmVarDecl *getParmVarDecl() const {
-    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
+    return dyn_cast<const ParmVarDecl *>(ParamOrMethod);
   }
 
   const CXXMethodDecl *getImplicitThisParent() const {
-    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
+    return dyn_cast<const CXXMethodDecl *>(ParamOrMethod);
   }
 
   using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
