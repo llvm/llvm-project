@@ -263,6 +263,23 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
   ret <2 x i32> %res
 }
 
+define i32 @ctpop_add_trunc(i64 %a, i64 %b) {
+; CHECK-LABEL: @ctpop_add_trunc(
+; CHECK-NEXT:    [[CTPOP1:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[A:%.*]])
+; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw i64 [[CTPOP1]] to i32
+; CHECK-NEXT:    [[CTPOP2:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[T2:%.*]] = trunc nuw nsw i64 [[CTPOP2]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %ctpop1 = call i64 @llvm.ctpop.i64(i64 %a)
+  %t1 = trunc i64 %ctpop1 to i32
+  %ctpop2 = call i64 @llvm.ctpop.i64(i64 %b)
+  %t2 = trunc i64 %ctpop2 to i32
+  %res = add i32 %t1, %t2
+  ret i32 %res
+}
+
 define i8 @ctpop_rotate_left(i8 %a, i8 %amt)  {
 ; CHECK-LABEL: @ctpop_rotate_left(
 ; CHECK-NEXT:    [[RES:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[A:%.*]])
