@@ -162,7 +162,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<std::string> UseCtxProfile;
-extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
@@ -175,9 +174,9 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopUnrolling = true;
   LoopInterchange = Opts.enable_loopinterchange;
   LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
-  LicmMssaOptCap = SetLicmMssaOptCap;
-  LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
+  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll();
+  LicmMssaOptCap = getLicmMssaOptCap();
+  LicmMssaNoAccForPromotionCap = getLicmMssaNoAccForPromotionCap();
   CallGraphProfile = true;
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
@@ -1118,11 +1117,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse = !UseCtxProfile.empty() && isThinLTOPreLink(Phase);
 
   assert((Opts.instrument_cold_function_only_path.empty() ||
-          PGOInstrumentColdFunctionOnly) &&
+          isPGOInstrumentColdFunctionOnly()) &&
          "--instrument-cold-function-only-path is provided but "
          "--pgo-instrument-cold-function-only is not enabled");
   const bool IsColdFuncOnlyInstrGen =
-      PGOInstrumentColdFunctionOnly && IsPGOPreLink &&
+      isPGOInstrumentColdFunctionOnly() && IsPGOPreLink &&
       !Opts.instrument_cold_function_only_path.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
@@ -1520,7 +1519,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
-  // TODO: move this furter up so that it can be optimized by GVN, etc.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
   if (Opts.enable_mergeicmps)
     OptimizePM.addPass(MergeICmpsPass());
   OptimizePM.addPass(ExpandMemCmpPass());
@@ -2205,6 +2204,12 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // passes to avoid re-sinking, but before SimplifyCFG because it can allow
   // flattening of blocks.
   LateFPM.addPass(DivRemPairsPass());
+
+  // Merge adjacent icmps into memcmp, then expand memcmp to loads/compares.
+  // TODO: move this further up so that it can be optimized by GVN, etc.
+  if (Opts.enable_mergeicmps)
+    LateFPM.addPass(MergeICmpsPass());
+  LateFPM.addPass(ExpandMemCmpPass());
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()

@@ -1,3 +1,5 @@
+set(LLVM_LINK_COMPONENTS)
+
 if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
   llvm_add_library(
       ClangdFeatureModuleExample
@@ -18,11 +20,6 @@ foreach(target ClangdFeatureModuleExample ClangdStandaloneTweakExample)
       "${CLANG_TOOLS_SOURCE_DIR}/clangd"
       "${CMAKE_CURRENT_BINARY_DIR}/../.."
     )
-    if(CLANG_PLUGIN_SUPPORT AND (WIN32 OR CYGWIN))
-      set(LLVM_LINK_COMPONENTS
-        Support
-      )
-    endif()
   endif()
 endforeach()
 

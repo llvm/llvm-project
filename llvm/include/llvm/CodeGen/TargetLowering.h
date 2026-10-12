@@ -365,6 +365,8 @@ public:
 
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
+    LLVM_ABI ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr);
+
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
@@ -1014,11 +1016,11 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
-  /// Return the ValueType for comparison libcalls. Comparison libcalls include
-  /// floating point comparison calls, and Ordered/Unordered check calls on
-  /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  /// Return the integer type returned by comparison libcalls. Comparison
+  /// libcalls include floating point comparison calls, and Ordered/Unordered
+  /// check calls on floating point numbers.
+  virtual IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const {
+    return Type::getInt32Ty(Ctx);
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
