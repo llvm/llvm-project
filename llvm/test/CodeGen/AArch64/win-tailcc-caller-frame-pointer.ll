@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=aarch64-windows | FileCheck %s
-; RUN: llc < %s -mtriple=aarch64-windows -O0 -fast-isel | FileCheck %s
-; RUN: llc < %s -mtriple=aarch64-windows -global-isel -global-isel-abort=1 | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows -O0 -fast-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-windows -global-isel -global-isel-abort=1 %s -o - | FileCheck %s
 
 ; A callee using tailcc/swifttailcc may tail call something that needs more
 ; stack argument space, which leaves SP lower than the caller's unwind info
