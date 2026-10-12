@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFFORLOOPRANGEFOLDING
@@ -109,15 +108,15 @@ struct ForLoopRangeFolding
 } // namespace
 
 void ForLoopRangeFolding::runOnOperation() {
-  SmallVector<Operation *> loops;
-  getOperation()->walk<WalkOrder::PreOrder>(
-      [&](ForOp op) { loops.push_back(op); });
   RewritePatternSet patterns(&getContext());
   patterns.add<ForLoopRangeFoldingPattern>(&getContext());
   GreedyRewriteConfig config;
   config.setStrictness(GreedyRewriteStrictness::ExistingOps)
-      .enableFolding(false);
-  if (failed(applyOpPatternsGreedily(loops, std::move(patterns), config)))
+      .enableFolding(false)
+      .enableConstantCSE(false)
+      .setRegionSimplificationLevel(GreedySimplifyRegionLevel::Disabled);
+  if (failed(
+          applyPatternsGreedily(getOperation(), std::move(patterns), config)))
     signalPassFailure();
 }
 
