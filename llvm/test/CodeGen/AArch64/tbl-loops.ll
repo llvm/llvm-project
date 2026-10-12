@@ -1701,8 +1701,10 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-LABEL: loop3_intrinsic:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w2, #1
-; CHECK-NEXT:    b.lt .LBB5_6
+; CHECK-NEXT:    b.lt .LBB5_7
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB5_3
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
@@ -1712,7 +1714,7 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    add x9, x1, x9, lsl #2
 ; CHECK-NEXT:    cmp x10, x1
 ; CHECK-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-NEXT:    b.ls .LBB5_7
+; CHECK-NEXT:    b.ls .LBB5_8
 ; CHECK-NEXT:  .LBB5_3:
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x8, x1
@@ -1748,9 +1750,11 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    stur b3, [x9, #2]
 ; CHECK-NEXT:    add x9, x9, #3
 ; CHECK-NEXT:    b.ne .LBB5_5
-; CHECK-NEXT:  .LBB5_6: // %for.cond.cleanup
+; CHECK-NEXT:  .LBB5_6:
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:  .LBB5_7: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_7: // %vector.ph
+; CHECK-NEXT:  .LBB5_8: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    adrp x12, .LCPI5_0
@@ -1758,13 +1762,14 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI5_0]
 ; CHECK-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-NEXT:    and x12, x11, #0x1fffffffc
+; CHECK-NEXT:    add x12, sp, #8
+; CHECK-NEXT:    and x13, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x9, lsl #2
 ; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:  .LBB5_8: // %vector.body
+; CHECK-NEXT:  .LBB5_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-NEXT:    subs x12, x12, #4
+; CHECK-NEXT:    subs x13, x13, #4
 ; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
@@ -1783,13 +1788,16 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    xtn v5.4h, v3.4s
 ; CHECK-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-NEXT:    xtn v7.4h, v2.4s
-; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
+; CHECK-NEXT:    st3 { v5.4h, v6.4h, v7.4h }, [x12]
+; CHECK-NEXT:    ldp d3, d4, [sp, #16]
+; CHECK-NEXT:    ldr d2, [sp, #8]
+; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b }, v1.16b
 ; CHECK-NEXT:    mov s3, v2.s[2]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    str s3, [x0, #8]
 ; CHECK-NEXT:    add x0, x0, #12
-; CHECK-NEXT:    b.ne .LBB5_8
-; CHECK-NEXT:  // %bb.9: // %middle.block
+; CHECK-NEXT:    b.ne .LBB5_9
+; CHECK-NEXT:  // %bb.10: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
 ; CHECK-NEXT:    b.ne .LBB5_4
 ; CHECK-NEXT:    b .LBB5_6
@@ -1797,8 +1805,10 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-LABEL: loop3_intrinsic:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subs w8, w2, #1
-; CHECK-GI-NEXT:    b.lt .LBB5_6
+; CHECK-GI-NEXT:    b.lt .LBB5_7
 ; CHECK-GI-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-GI-NEXT:    sub sp, sp, #32
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    cmp w8, #2
 ; CHECK-GI-NEXT:    b.ls .LBB5_3
 ; CHECK-GI-NEXT:  // %bb.2: // %vector.memcheck
@@ -1808,7 +1818,7 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    add x9, x1, x9, lsl #2
 ; CHECK-GI-NEXT:    cmp x10, x1
 ; CHECK-GI-NEXT:    ccmp x9, x0, #0, hi
-; CHECK-GI-NEXT:    b.ls .LBB5_7
+; CHECK-GI-NEXT:    b.ls .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w10, wzr
 ; CHECK-GI-NEXT:    mov x8, x1
@@ -1844,9 +1854,11 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    stur b3, [x9, #2]
 ; CHECK-GI-NEXT:    add x9, x9, #3
 ; CHECK-GI-NEXT:    b.ne .LBB5_5
-; CHECK-GI-NEXT:  .LBB5_6: // %for.cond.cleanup
+; CHECK-GI-NEXT:  .LBB5_6:
+; CHECK-GI-NEXT:    add sp, sp, #32
+; CHECK-GI-NEXT:  .LBB5_7: // %for.cond.cleanup
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB5_7: // %vector.ph
+; CHECK-GI-NEXT:  .LBB5_8: // %vector.ph
 ; CHECK-GI-NEXT:    add x11, x8, #1
 ; CHECK-GI-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-GI-NEXT:    adrp x12, .LCPI5_0
@@ -1854,13 +1866,14 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    dup v0.4s, w8
 ; CHECK-GI-NEXT:    ldr q1, [x12, :lo12:.LCPI5_0]
 ; CHECK-GI-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-GI-NEXT:    and x12, x11, #0x1fffffffc
+; CHECK-GI-NEXT:    add x12, sp, #8
+; CHECK-GI-NEXT:    and x13, x11, #0x1fffffffc
 ; CHECK-GI-NEXT:    add x8, x1, x9, lsl #2
 ; CHECK-GI-NEXT:    add x9, x0, x9
-; CHECK-GI-NEXT:  .LBB5_8: // %vector.body
+; CHECK-GI-NEXT:  .LBB5_9: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-GI-NEXT:    subs x12, x12, #4
+; CHECK-GI-NEXT:    subs x13, x13, #4
 ; CHECK-GI-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
 ; CHECK-GI-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
@@ -1879,13 +1892,16 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    xtn v5.4h, v3.4s
 ; CHECK-GI-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-GI-NEXT:    xtn v7.4h, v2.4s
-; CHECK-GI-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
+; CHECK-GI-NEXT:    st3 { v5.4h, v6.4h, v7.4h }, [x12]
+; CHECK-GI-NEXT:    ldp d3, d4, [sp, #16]
+; CHECK-GI-NEXT:    ldr d2, [sp, #8]
+; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b }, v1.16b
 ; CHECK-GI-NEXT:    mov s3, v2.s[2]
 ; CHECK-GI-NEXT:    str d2, [x0]
 ; CHECK-GI-NEXT:    str s3, [x0, #8]
 ; CHECK-GI-NEXT:    add x0, x0, #12
-; CHECK-GI-NEXT:    b.ne .LBB5_8
-; CHECK-GI-NEXT:  // %bb.9: // %middle.block
+; CHECK-GI-NEXT:    b.ne .LBB5_9
+; CHECK-GI-NEXT:  // %bb.10: // %middle.block
 ; CHECK-GI-NEXT:    cmp x11, x10
 ; CHECK-GI-NEXT:    b.ne .LBB5_4
 ; CHECK-GI-NEXT:    b .LBB5_6
