@@ -595,21 +595,27 @@ struct AACalleeToCallSite : public BaseType {
   }
 };
 
-/// Helper function to accumulate uses.
+/// Helper function to accumulate uses. The uses of \p Val are visited first,
+/// followed by the transitive uses in \p Uses, which are added to as they are
+/// found.
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInContext(AAType &AA, Attributor &A,
                                 MustBeExecutedContextExplorer &Explorer,
-                                const Instruction *CtxI,
+                                const Instruction *CtxI, const Value &Val,
                                 SetVector<const Use *> &Uses,
                                 StateType &State) {
-  for (unsigned u = 0; u < Uses.size(); ++u) {
-    const Use *U = Uses[u];
+  auto FollowUse = [&](const Use *U) {
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
       bool Found = Explorer.isInContextOf(UserI, CtxI);
-      if (Found && AA.followUseInMBEC(A, U, UserI, State))
+      // The uses of Val itself are visited anyway.
+      if (Found && AA.followUseInMBEC(A, U, UserI, State) && UserI != &Val)
         Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
-  }
+  };
+  for (const Use &U : Val.uses())
+    FollowUse(&U);
+  for (unsigned u = 0; u < Uses.size(); ++u)
+    FollowUse(Uses[u]);
 }
 
 /// Use the must-be-executed-context around \p I to add information into \p S.
@@ -633,12 +639,9 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   if (!Explorer)
     return;
 
-  // Container for (transitive) uses of the associated value.
+  // Container for the transitive uses of the associated value.
   SetVector<const Use *> Uses;
-  for (const Use &U : Val.uses())
-    Uses.insert(&U);
-
-  followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Uses, S);
+  followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Val, Uses, S);
 
   if (S.isAtFixpoint())
     return;
@@ -694,7 +697,8 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
       StateType ChildState;
 
       size_t BeforeSize = Uses.size();
-      followUsesInContext(AA, A, *Explorer, &BB->front(), Uses, ChildState);
+      followUsesInContext(AA, A, *Explorer, &BB->front(), Val, Uses,
+                          ChildState);
 
       // Erase uses which only appear in the child.
       for (auto It = Uses.begin() + BeforeSize; It != Uses.end();)
