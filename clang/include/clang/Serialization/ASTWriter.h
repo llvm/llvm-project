@@ -550,10 +550,6 @@ private:
   /// entry \c I corresponds to \c NonAffectingRanges[I].
   std::vector<int64_t> NonAffectingRedirectAdjustments;
 
-  /// Whether the control block has been written. Import locations in the
-  /// control block must remain local.
-  bool ControlBlockWritten = false;
-
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
@@ -584,6 +580,11 @@ private:
   /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
   /// input files.
   SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+
+  /// Returns \p Loc adjusted for non-affecting input files, but never
+  /// redirected at a copy in a loaded module file. For values a reader
+  /// resolves against this module file rather than in the global source space.
+  SourceLocation getAdjustedLocalLocation(SourceLocation Loc) const;
   /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
   /// files.
   SourceRange getAdjustedRange(SourceRange Range) const;
@@ -787,6 +788,9 @@ public:
   /// Emit a source location, delta encoded against \p Chain.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          SourceLocationEncoding::Chain &Chain);
+
+  /// Emit a source location that stays local to this module file.
+  void AddLocalSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding

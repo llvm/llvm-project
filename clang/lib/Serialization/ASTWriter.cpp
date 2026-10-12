@@ -1601,7 +1601,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
       Record.push_back(IMPORT);
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
-      AddSourceLocation(M.ImportLoc, Record);
+      // The reader resolves this against the importing module file, so it
+      // has to stay local to it.
+      AddLocalSourceLocation(M.ImportLoc, Record);
       AddStringBlob(M.ModuleName, Record, Blob);
       Record.push_back(M.StandardCXXModule);
 
@@ -1800,10 +1802,6 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   WriteInputFiles(SourceMgr);
   Stream.ExitBlock();
-
-  // Import locations in the control block must remain local, so start
-  // rewriting only after it has been written.
-  ControlBlockWritten = true;
 }
 
 namespace  {
@@ -6934,11 +6932,16 @@ SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid())
     return Loc;
   // Redirect locations in omitted files before adjusting local offsets.
+  if (SourceLocation Redirected = getRedirectedLocation(Loc);
+      Redirected.isValid())
+    return Redirected;
+  return getAdjustedLocalLocation(Loc);
+}
+
+SourceLocation ASTWriter::getAdjustedLocalLocation(SourceLocation Loc) const {
+  if (Loc.isInvalid())
+    return Loc;
   // getAdjustment() is also used for values that are not source locations.
-  if (ControlBlockWritten)
-    if (SourceLocation Redirected = getRedirectedLocation(Loc);
-        Redirected.isValid())
-      return Redirected;
   return Loc.getLocWithOffset(-getAdjustment(Loc.getOffset()));
 }
 
@@ -7035,6 +7038,12 @@ ASTWriter::EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
+  Record.push_back(getRawSourceLocationEncoding(Loc));
+}
+
+void ASTWriter::AddLocalSourceLocation(SourceLocation Loc,
+                                       RecordDataImpl &Record) {
+  Loc = getAdjustedLocalLocation(Loc);
   Record.push_back(getRawSourceLocationEncoding(Loc));
 }
 
