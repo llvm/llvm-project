@@ -67,6 +67,57 @@ zero:
   ret i64 64
 }
 
+; Testing bit zero only requires the input to be nonzero.
+define i64 @test_bit_zero(i64 %x) {
+; CHECK-LABEL: define i64 @test_bit_zero(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label %[[ZERO:.*]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.cttz.i64(i64 [[TMP0]], i1 true)
+; CHECK-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[X_CURR:%.*]] = lshr i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[X_NEXT:%.*]] = lshr i64 [[X_CURR]], 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LOOP_IV:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[LOOP_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP3:%.*]], %[[LOOP]] ], [ [[X]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[COUNT:%.*]] = phi i64 [ [[COUNT_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP3]] = lshr i64 [[TMP2]], 1
+; CHECK-NEXT:    [[COUNT_NEXT]] = add i64 [[COUNT]], 1
+; CHECK-NEXT:    [[BIT:%.*]] = and i64 [[TMP2]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp eq i64 [[BIT]], 0
+; CHECK-NEXT:    [[LOOP_IV_NEXT]] = add nuw nsw i64 [[LOOP_IV]], 1
+; CHECK-NEXT:    [[LOOP_IVCHECK:%.*]] = icmp eq i64 [[LOOP_IV_NEXT]], [[LOOP_TRIPCOUNT]]
+; CHECK-NEXT:    br i1 [[LOOP_IVCHECK]], label %[[DONE:.*]], label %[[LOOP]]
+; CHECK:       [[DONE]]:
+; CHECK-NEXT:    [[COUNT_LCSSA:%.*]] = phi i64 [ [[COUNT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[COUNT_LCSSA]]
+; CHECK:       [[ZERO]]:
+; CHECK-NEXT:    ret i64 64
+;
+entry:
+  %is.zero = icmp eq i64 %x, 0
+  br i1 %is.zero, label %zero, label %loop
+
+loop:
+  %x.curr = phi i64 [ %x, %entry ], [ %x.next, %loop ]
+  %count = phi i64 [ 0, %entry ], [ %count.next, %loop ]
+  %x.next = lshr i64 %x.curr, 1
+  %count.next = add i64 %count, 1
+  %bit = and i64 %x.curr, 1
+  %continue = icmp eq i64 %bit, 0
+  br i1 %continue, label %loop, label %done
+
+done:
+  ret i64 %count
+
+zero:
+  ret i64 64
+}
+
 ; Without the nonzero precondition, the loop does not terminate for x = 0.
 define i64 @may_loop_forever(i64 %x) {
 ; CHECK-LABEL: define i64 @may_loop_forever(
