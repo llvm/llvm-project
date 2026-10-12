@@ -5,7 +5,7 @@ define void @guards_on_incoming_values(i8 %choose, i8 range(i8 1, 0) %a, i8 rang
 ; CHECK-LABEL: 'guards_on_incoming_values'
 ; CHECK-NEXT:  Determining loop execution counts for: @guards_on_incoming_values
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %end)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 14
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 11
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %end)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -40,7 +40,7 @@ define void @guards_on_incoming_expressions(i8 %choose, i8 range(i8 1, 0) %a) {
 ; CHECK-LABEL: 'guards_on_incoming_expressions'
 ; CHECK-NEXT:  Determining loop execution counts for: @guards_on_incoming_expressions
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax %end))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 14
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 11
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax %end))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -76,7 +76,7 @@ define void @guard_on_vscale() vscale_range(1,16) {
 ; CHECK-LABEL: 'guard_on_vscale'
 ; CHECK-NEXT:  Determining loop execution counts for: @guard_on_vscale
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (16 * vscale)<nuw><nsw>)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 255
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 111
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (16 * vscale)<nuw><nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 16
 ;
