@@ -79,8 +79,8 @@ class BinOpSameOpcodeHelper {
   /// integer opcodes) or a ConstantFP (for FAdd/FSub).
   /// The second return value represents the operand position. We check the
   /// right-hand side first (1). If the right hand side is not a constant and
-  /// the instruction is neither Sub, FSub, Shl, AShr, LShr, nor UDiv we then check the
-  /// left hand side (0).
+  /// the instruction is neither Sub, FSub, Shl, AShr, LShr, nor UDiv we then
+  /// check the left hand side (0).
   static std::pair<Constant *, unsigned>
   isBinOpWithConstant(const Instruction *I);
   struct InterchangeableInfo {
