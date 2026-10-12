@@ -15627,8 +15627,8 @@ namespace {
     bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E);
     bool VisitCXXConstructExpr(const CXXConstructExpr *E,
-                               const LValue &Subobject, APValue *Value,
-                               QualType Type);
+                               const LValue &Subobject,
+                               APValue *Value, QualType Type);
     bool VisitStringLiteral(const StringLiteral *E,
                             QualType AllocType = QualType()) {
       expandStringLiteral(Info, E, Result, AllocType);
