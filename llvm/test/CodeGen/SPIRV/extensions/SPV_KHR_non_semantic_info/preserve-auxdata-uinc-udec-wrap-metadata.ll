@@ -2,26 +2,17 @@
 ; is preserved as AuxData InstructionMetadata on the call result.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
+; RUN:   -mtriple=spirv64-amd-amdhsa -spirv-preserve-auxdata %s -o - \
+; RUN:   -filetype=obj | spirv-val %}
 
-; AMD triples preserve it without -spirv-preserve-auxdata.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
-
-; The old UserSemantic decoration encoding is no longer emitted.
+; AMD triples preserve it without -spirv-preserve-auxdata. The old UserSemantic
+; decoration encoding is no longer emitted.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - \
-; RUN:   | FileCheck %s --check-prefix=NOUS
-; NOUS-NOT: UserSemantic
-
+; RUN:   | FileCheck %s --implicit-check-not=UserSemantic
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
-; RUN:   -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_non_semantic_info \
-; RUN:   %s -o - -filetype=obj | spirv-val %}
-
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
-; RUN:   -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
-; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
+; RUN:   -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
