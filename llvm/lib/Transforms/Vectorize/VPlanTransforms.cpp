@@ -6372,6 +6372,15 @@ void VPlanTransforms::convertToStridedAccesses(
     }
 
   VPValue *I32VF = nullptr;
+  auto GetI32VF = [&I32VF, &Plan]() {
+    if (!I32VF) {
+      VPBuilder Builder(Plan.getVectorPreheader());
+      I32VF = Builder.createScalarZExtOrTrunc(
+          &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
+          DebugLoc::getUnknown());
+    }
+    return I32VF;
+  };
   auto &DL = Plan.getDataLayout();
   // Transform interleave access into multiple strided accesses.
   InterleaveGroups.remove_if([&](const auto *IG) {
@@ -6418,14 +6427,6 @@ void VPlanTransforms::convertToStridedAccesses(
       return false;
 
     // TODO: legacy cost invalid?
-    // Get VF as i32 for the vector length operand.
-    if (!I32VF) {
-      VPBuilder Builder(Plan.getVectorPreheader());
-      I32VF = Builder.createScalarZExtOrTrunc(
-          &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
-          DebugLoc::getUnknown());
-    }
-
     // Get stride from the factor of group
     VPValue *Addr = StartMemR->getAddr();
     Type *IndexTy = DL.getIndexType(Addr->getScalarType());
@@ -6458,7 +6459,7 @@ void VPlanTransforms::convertToStridedAccesses(
         StoredValue = StoreR->getStoredValue();
         Ops.push_back(StoredValue);
       }
-      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
+      Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
 
       auto *StridedR = Builder.createWidenMemIntrinsic(
           IntrinID, Ops,
@@ -6536,14 +6537,6 @@ void VPlanTransforms::convertToStridedAccesses(
       for (ElementCount VF : Range)
         Ctx.invalidateWideningDecision(&MemR->getIngredient(), VF);
 
-      // Get VF as i32 for the vector length operand.
-      if (!I32VF) {
-        VPBuilder Builder(Plan.getVectorPreheader());
-        I32VF = Builder.createScalarZExtOrTrunc(
-            &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
-            DebugLoc::getUnknown());
-      }
-
       VPBuilder Builder(&R);
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
@@ -6576,7 +6569,7 @@ void VPlanTransforms::convertToStridedAccesses(
       SmallVector<VPValue *, 5> Ops;
       if (StoredValue)
         Ops.push_back(StoredValue);
-      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
+      Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
 
       auto *StridedR = Builder.createWidenMemIntrinsic(
           IntrinID, Ops,
