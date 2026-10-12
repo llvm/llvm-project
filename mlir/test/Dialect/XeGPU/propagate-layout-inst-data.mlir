@@ -838,15 +838,40 @@ gpu.module @test {
 // CHECK-LABEL: func.func @reduction_sole_consumer(
 // CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>} : vector<8x16xf32>
 // CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, dims = [1]>} [1] : vector<8x16xf32> to vector<8xf32>
-func.func @reduction_sole_consumer(%src: memref<8x16xf32>, %red: memref<128xf32>) {
+func.func @reduction_sole_consumer(%src: vector<8x16xf32>, %red: memref<128xf32>) {
   %cst = arith.constant dense<0.0> : vector<8xf32>
   %mask = arith.constant dense<true> : vector<8xi1>
   %offset = vector.step : vector<8xindex>
-  %ts = xegpu.create_nd_tdesc %src : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
-  %x = xegpu.load_nd %ts[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
-  %e = math.exp %x : vector<8x16xf32>
+  %e = math.exp %src : vector<8x16xf32>
   %sum = vector.multi_reduction <add>, %e, %cst [1] : vector<8x16xf32> to vector<8xf32>
   xegpu.store %sum, %red[%offset], %mask : vector<8xf32>, memref<128xf32>, vector<8xindex>, vector<8xi1>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @reduction_equal_layout_promotion(
+// CHECK: %[[EXP:.*]] = math.exp %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>} : vector<8x16xf32>
+// CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} [0] : vector<8x16xf32> to vector<16xf32>
+// CHECK: xegpu.convert_layout %[[EXP]] <{input_layout = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, target_layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf32>
+// CHECK: vector.multi_reduction <add>, %[[EXP]], %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>, dims = [1]>} [1] : vector<8x16xf32> to vector<8xf32>
+func.func @reduction_equal_layout_promotion(%src: vector<8x16xf32>, %red0: memref<128xf32>, %red1: memref<128xf32>) {
+  %zero0 = arith.constant dense<0.0> : vector<16xf32>
+  %zero1 = arith.constant dense<0.0> : vector<8xf32>
+  %mask0 = arith.constant dense<true> : vector<16xi1>
+  %mask1 = arith.constant dense<true> : vector<8xi1>
+  %offset0 = vector.step : vector<16xindex>
+  %offset1 = vector.step : vector<8xindex>
+  %exp = math.exp %src : vector<8x16xf32>
+  %sum0 = vector.multi_reduction <add>, %exp, %zero0 [0] : vector<8x16xf32> to vector<16xf32>
+  xegpu.store %sum0, %red0[%offset0], %mask0 : vector<16xf32>, memref<128xf32>, vector<16xindex>, vector<16xi1>
+  %converted = xegpu.convert_layout %exp
+    <{input_layout = #xegpu.layout<inst_data = [8, 2], lane_layout = [8, 2], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}>
+    : vector<8x16xf32>
+  %sum1 = vector.multi_reduction <add>, %exp, %zero1 [1] : vector<8x16xf32> to vector<8xf32>
+  xegpu.store %sum1, %red1[%offset1], %mask1 : vector<8xf32>, memref<128xf32>, vector<8xindex>, vector<8xi1>
   return
 }
 }

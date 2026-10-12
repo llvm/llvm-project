@@ -71,14 +71,14 @@ namespace {
 /// of distribution layout that XeGPU dialect supports. Purpose of this analysis
 /// to propagate some unique distribution layout for each value in the program
 /// starting from a set of anchor operations (like DPAS, StoreNd, etc.). Note
-/// that analysis will reach a fixed point when all values are reached some
-/// layout and, analysis does not try to modify any already assigned layouts.
+/// that analysis will reach a fixed point when all values have a layout and
+/// no higher-priority demands change the assigned layouts.
 ///
 /// Given this, LayoutInfo  satisifies the following properties:
 ///  1) A LayoutInfo value can be in one of two states - `assigned` or `not
 ///  assigned`.
 ///  2) Two LayoutInfo values are equal if they are both not assigned, or both
-///  assigned with the same layout.
+///  assigned with the same layout and demand priority.
 ///  3) The meet operator works as follows:
 ///     - If only one side is assigned, return that side.
 ///     - If both sides are assigned and exactly one is `derived`, return the
@@ -92,9 +92,10 @@ namespace {
 /// `LayoutInfoPropagation::currentProgramOrder`). During this backward analysis
 /// a value can be demanded by several users; keeping the nearest one tends to
 /// preserve a consumer's layout as far up the def chain as possible, minimizing
-/// layout conversions. This is a hint, not an optimum. `programOrder` is never
-/// propagated up the chain - each visited op stamps its own index - so it is
-/// excluded from `operator==`.
+/// layout conversions. This is a hint, not an optimum. Layout-preserving
+/// operations propagate the demand unchanged, while operations that infer a
+/// new layout stamp their own index. Demand priority participates in equality
+/// so that an equal-layout update can affect subsequent conflicts.
 
 struct LayoutInfo {
 private:
@@ -124,16 +125,17 @@ public:
              bool derived = false)
       : storage(layout), programOrder(programOrder), derived(derived) {}
 
-  // Equality by assignment state and, when both assigned, by the layout:
+  // Equality by assignment state, layout, and demand priority:
   //  - one assigned, the other not -> not equal;
   //  - both unassigned             -> equal;
-  //  - both assigned               -> equal iff the layouts match.
+  //  - both assigned               -> equal iff layouts and priorities match.
   bool operator==(const LayoutInfo &other) const {
     if (isAssigned() != other.isAssigned())
       return false;
     if (!isAssigned())
       return true;
-    return storage.isEqualTo(other.storage);
+    return derived == other.derived && programOrder == other.programOrder &&
+           storage.isEqualTo(other.storage);
   }
 
   static LayoutInfo meet(const LayoutInfo &lhs, const LayoutInfo &rhs);
@@ -245,13 +247,8 @@ private:
   int64_t getProgramOrder(Operation *op);
 
   int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
-  LayoutInfo makeLayoutInfo(const xegpu::DistributeLayoutAttr &layout) {
-    return LayoutInfo(layout, currentProgramOrder);
-  }
-  // For demands the consumer derived for its own convenience; see
-  // LayoutInfo::derived.
   LayoutInfo makeLayoutInfo(const xegpu::DistributeLayoutAttr &layout,
-                            bool derived) {
+                            bool derived = false) {
     return LayoutInfo(layout, currentProgramOrder, derived);
   }
 
