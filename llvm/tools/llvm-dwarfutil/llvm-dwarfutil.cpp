@@ -20,6 +20,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -132,6 +133,29 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
           formatv("unknown build-accelerator value: '{0}'", S).str().c_str());
   }
 
+  if (opt::Arg *Compression = Args.getLastArg(OPT_compress_debug_sections)) {
+    StringRef S = Compression->getValue();
+
+    if (S == "none")
+      Options.CompressionType = DebugCompressionType::None;
+    else if (S == "zlib")
+      Options.CompressionType = DebugCompressionType::Zlib;
+    else if (S == "zstd")
+      Options.CompressionType = DebugCompressionType::Zstd;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown compress-debug-sections value: '{0}'", S)
+              .str()
+              .c_str());
+
+    if (*Options.CompressionType != DebugCompressionType::None) {
+      if (const char *Reason = compression::getReasonIfUnsupported(
+              compression::formatFor(*Options.CompressionType)))
+        return createStringError(std::errc::invalid_argument, Reason);
+    }
+  }
+
   if (Options.Verbose) {
     if (Options.NumThreads != 1 && Args.hasArg(OPT_threads))
       warning("--num-threads set to 1 because verbose mode is specified");
@@ -238,6 +262,104 @@ protected:
   uint64_t current_pos() const override { return OS.tell(); }
 };
 
+// Returns the compression type for the linked debug sections. Unless it is
+// specified explicitly, the linked debug sections are compressed using the
+// same format as the input debug sections.
+static Expected<DebugCompressionType>
+getLinkedDebugInfoCompressionType(const Options &Opts, ObjectFile &InputFile) {
+  if (Opts.CompressionType)
+    return *Opts.CompressionType;
+
+  for (SectionRef Sec : InputFile.sections()) {
+    if (!Sec.isCompressed())
+      continue;
+
+    Expected<StringRef> SecName = Sec.getName();
+    if (!SecName)
+      return SecName.takeError();
+
+    if (!isDebugSection(*SecName))
+      continue;
+
+    Expected<StringRef> SecData = Sec.getContents();
+    if (!SecData)
+      return SecData.takeError();
+
+    // ch_type is the first field of both Elf32_Chdr and Elf64_Chdr.
+    if (SecData->size() < sizeof(ELF::Elf32_Word))
+      continue;
+
+    uint32_t ChType = InputFile.isLittleEndian()
+                          ? support::endian::read32le(SecData->data())
+                          : support::endian::read32be(SecData->data());
+
+    DebugCompressionType CompressionType;
+    switch (ChType) {
+    case ELF::ELFCOMPRESS_ZLIB:
+      CompressionType = DebugCompressionType::Zlib;
+      break;
+    case ELF::ELFCOMPRESS_ZSTD:
+      CompressionType = DebugCompressionType::Zstd;
+      break;
+    default:
+      continue;
+    }
+
+    if (compression::getReasonIfUnsupported(
+            compression::formatFor(CompressionType)))
+      continue;
+
+    return CompressionType;
+  }
+
+  return DebugCompressionType::None;
+}
+
+// Sets objcopy options to (de)compress the debug sections copied from the
+// input file. If the compression type is not specified explicitly, the debug
+// sections are copied as is.
+static void setCompressionConfig(objcopy::ConfigManager &Config,
+                                 const Options &Opts) {
+  if (!Opts.CompressionType)
+    return;
+
+  if (*Opts.CompressionType == DebugCompressionType::None)
+    Config.Common.DecompressDebugSections = true;
+  else
+    Config.Common.CompressionType = *Opts.CompressionType;
+}
+
+// Executes objcopy on the input file and compresses the output debug sections
+// using the specified compression type.
+static Error executeObjcopyAndCompress(const objcopy::ConfigManager &Config,
+                                       ObjectFile &InputFile,
+                                       DebugCompressionType CompressionType,
+                                       raw_ostream &OutFile) {
+  if (CompressionType == DebugCompressionType::None)
+    return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+
+  // objcopy compresses debug sections before adding new sections, thus the
+  // linked debug sections added by Config.AddSection would be left
+  // uncompressed. Compress them by running objcopy on the intermediate result.
+  SmallString<0> Buffer;
+  raw_svector_ostream BufferStream(Buffer);
+  if (Error Err =
+          objcopy::executeObjcopyOnBinary(Config, InputFile, BufferStream))
+    return Err;
+
+  Expected<std::unique_ptr<ObjectFile>> Obj = ObjectFile::createObjectFile(
+      MemoryBufferRef(Buffer, Config.Common.OutputFilename));
+  if (!Obj)
+    return Obj.takeError();
+
+  objcopy::ConfigManager CompressConfig;
+  CompressConfig.Common.InputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.OutputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.CompressionType = CompressionType;
+
+  return objcopy::executeObjcopyOnBinary(CompressConfig, **Obj, OutFile);
+}
+
 static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
                                                 ObjectFile &InputFile) {
   objcopy::ConfigManager Config;
@@ -245,6 +367,7 @@ static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = OutputFilename;
   Config.Common.OnlyKeepDebug = true;
+  setCompressionConfig(Config, Opts);
   uint32_t WrittenFileCRC32 = 0;
 
   if (Error Err = writeToOutput(
@@ -345,7 +468,8 @@ static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
 
 static Expected<uint32_t>
 saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
-                            DebugInfoBits LinkedDebugInfoBits) {
+                            DebugInfoBits LinkedDebugInfoBits,
+                            DebugCompressionType CompressionType) {
   objcopy::ConfigManager Config;
   std::string OutputFilename = Opts.getSeparateDebugFileName();
   Config.Common.InputFilename = Opts.InputFileName;
@@ -362,8 +486,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
 
-            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
-                                                            CRCBuffer))
+            if (Error Err = executeObjcopyAndCompress(
+                    Config, InputFile, CompressionType, CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -376,7 +500,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
 
 static Error saveSingleLinkedDebugInfo(const Options &Opts,
                                        ObjectFile &InputFile,
-                                       DebugInfoBits LinkedDebugInfoBits) {
+                                       DebugInfoBits LinkedDebugInfoBits,
+                                       DebugCompressionType CompressionType) {
   objcopy::ConfigManager Config;
 
   Config.Common.InputFilename = Opts.InputFileName;
@@ -388,7 +513,8 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+            return executeObjcopyAndCompress(Config, InputFile, CompressionType,
+                                             OutFile);
           }))
     return Err;
 
@@ -397,10 +523,15 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
 static Error saveLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
                                  DebugInfoBits LinkedDebugInfoBits) {
+  Expected<DebugCompressionType> CompressionType =
+      getLinkedDebugInfoCompressionType(Opts, InputFile);
+  if (!CompressionType)
+    return CompressionType.takeError();
+
   if (Opts.BuildSeparateDebugFile) {
     Expected<uint32_t> SeparateDebugFileCRC32OrErr =
-        saveSeparateLinkedDebugInfo(Opts, InputFile,
-                                    std::move(LinkedDebugInfoBits));
+        saveSeparateLinkedDebugInfo(
+            Opts, InputFile, std::move(LinkedDebugInfoBits), *CompressionType);
     if (!SeparateDebugFileCRC32OrErr)
       return SeparateDebugFileCRC32OrErr.takeError();
 
@@ -408,8 +539,8 @@ static Error saveLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
             saveNonDebugInfo(Opts, InputFile, *SeparateDebugFileCRC32OrErr))
       return Err;
   } else {
-    if (Error Err = saveSingleLinkedDebugInfo(Opts, InputFile,
-                                              std::move(LinkedDebugInfoBits)))
+    if (Error Err = saveSingleLinkedDebugInfo(
+            Opts, InputFile, std::move(LinkedDebugInfoBits), *CompressionType))
       return Err;
   }
 
@@ -421,6 +552,7 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 
   Config.Common.InputFilename = Opts.InputFileName;
   Config.Common.OutputFilename = Opts.OutputFileName;
+  setCompressionConfig(Config, Opts);
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {

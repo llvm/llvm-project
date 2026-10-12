@@ -1,0 +1,9 @@
+## This test checks the error message displayed if zlib compression
+## is requested, but LLVM is built without zlib.
+
+# UNSUPPORTED: zlib
+
+# RUN: not llvm-dwarfutil --compress-debug-sections=zlib - - 2>&1 | FileCheck %s
+# RUN: not llvm-dwarfutil --compress-debug-sections - - 2>&1 | FileCheck %s
+
+# CHECK: error: LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
