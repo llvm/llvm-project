@@ -2603,7 +2603,6 @@ public:
       return InTy->getElementCount().getKnownScalarFactor(
                  AccTy->getElementCount()) *
              thisT()->getArithmeticInstrCost(Opcode, AccTy, CostKind);
-      break;
     }
     case Intrinsic::experimental_vector_match: {
       auto *SearchTy = cast<VectorType>(ICA.getArgTypes()[0]);
