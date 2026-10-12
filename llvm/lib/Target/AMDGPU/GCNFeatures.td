@@ -231,7 +231,7 @@ defm Minimum3Maximum3PKF16 : AMDGPUSubtargetFeature<"minimum3-maximum3-pkf16",
   "Has v_pk_minimum3_f16 and v_pk_maximum3_f16 instructions"
 >;
 
-def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
+def FeatureSupportsXNACK : AMDGPUGenericAnyFeature<"xnack-support",
   "SupportsXNACK",
   "true",
   "Hardware supports XNACK",
