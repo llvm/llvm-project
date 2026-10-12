@@ -49,6 +49,12 @@ subroutine test_only_rename()
   print *, local_a, local_b, c, local_x, local_y
 end subroutine
 
+! Test 5: An empty ONLY list must not become a whole-module import.
+subroutine test_empty_only()
+  use mod1, only:
+  implicit none
+end subroutine
+
 ! WITH_DEBUG-LABEL: func.func @_QQmain()
 ! WITH_DEBUG-DAG: fir.use_stmt "mod1" only_symbols{{\[}}[@_QMmod1Eb, @_QMmod1Ec]]
 ! WITH_DEBUG-DAG: fir.use_stmt "mod2" renames{{\[}}[#fir.use_rename<"renamed_y", @_QMmod2Ey>]]
@@ -74,7 +80,16 @@ end subroutine
 
 ! WITH_DEBUG-LABEL: func.func @_QPtest_only_rename()
 ! WITH_DEBUG-DAG: fir.use_stmt "mod1" only_symbols{{\[}}[@_QMmod1Ec]] renames{{\[}}[#fir.use_rename<"local_b", @_QMmod1Eb>, #fir.use_rename<"local_a", @_QMmod1Ea>]] hasOnlyWithRenames true
-! WITH_DEBUG-DAG: fir.use_stmt "mod2" renames{{\[}}[#fir.use_rename<"local_x", @_QMmod2Ex>, #fir.use_rename<"local_y", @_QMmod2Ey>]] hasOnlyWithRenames true
+! WITH_DEBUG-DAG: fir.use_stmt "mod2" only_symbols{{\[\[\]\]}} renames{{\[}}[#fir.use_rename<"local_x", @_QMmod2Ex>, #fir.use_rename<"local_y", @_QMmod2Ey>]] hasOnlyWithRenames true
 
 ! NO_DEBUG-LABEL: func.func @_QPtest_only_rename()
+! NO_DEBUG-NOT: fir.use_stmt
+
+! WITH_DEBUG-LABEL: func.func @_QPtest_empty_only()
+! WITH_DEBUG: fir.use_stmt "mod1" only_symbols{{\[\[\]\]}}
+! WITH_DEBUG-NOT: fir.address_of
+! WITH_DEBUG-NOT: hlfir.declare
+! WITH_DEBUG: return
+
+! NO_DEBUG-LABEL: func.func @_QPtest_empty_only()
 ! NO_DEBUG-NOT: fir.use_stmt

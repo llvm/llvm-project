@@ -3040,6 +3040,7 @@ def fir_UseStmtOp
     - The module being used (via module_name string)
     - Symbol references to symbols imported via the ONLY clause (if present)
     - Symbol renames (local_name and symbol reference)
+    - Descriptions of imported COMMON block members
 
     Examples:
     ```
@@ -3060,12 +3061,14 @@ def fir_UseStmtOp
 
   let arguments = (ins StrAttr:$module_name,
       OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
+      OptionalAttr<ArrayAttr>:$common_block_members,
       DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
+    (`common_block_members` `[` $common_block_members^ `]`)?
     (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
@@ -3097,9 +3100,11 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     Records the Fortran `USE` statements that appear in a module's specification
     part for debug metadata.
 
-    The region holds one `fir.use_stmt` per `USE`, in program order. This
-    operation has no runtime effect. It is emitted only when full debug
-    information is requested.
+    The region holds one `fir.use_stmt` per `USE`, in program order. The
+    operation also records the module's own COMMON block members so they remain
+    visible through host association without requiring fir.declare operations in
+    every module procedure. This operation has no runtime effect. It is emitted
+    only when full debug information is requested.
 
     A submodule is not a first class entity in FIR, and its name is not
     qualified, so its ancestry is recorded here. `ancestor_module` names the
@@ -3111,11 +3116,13 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
 
   let arguments = (ins StrAttr:$module_name,
                        OptionalAttr<StrAttr>:$ancestor_module,
-                       OptionalAttr<StrAttr>:$parent_module);
+                       OptionalAttr<StrAttr>:$parent_module,
+                       OptionalAttr<ArrayAttr>:$common_block_members);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
     $module_name (`in` $ancestor_module^)? (`parent` $parent_module^)?
+    (`common_block_members` `[` $common_block_members^ `]`)?
     attr-dict-with-keyword $uses
   }];
 }

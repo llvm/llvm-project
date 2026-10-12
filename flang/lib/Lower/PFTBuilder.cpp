@@ -251,6 +251,7 @@ public:
             std::get_if<std::list<parser::Only>>(&useStmt.u)}) {
       // USE mod, ONLY: list
       Fortran::semantics::PreservedUseStmt stmt{moduleName};
+      stmt.hasOnlyClause = true;
 
       for (const auto &only : *onlyList) {
         Fortran::common::visit(

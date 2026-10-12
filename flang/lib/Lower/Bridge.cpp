@@ -223,6 +223,53 @@ static mlir::FlatSymbolRefAttr gatherComponentInit(
   return mlir::FlatSymbolRefAttr::get(mlirContext, name);
 }
 
+/// Describe \p sym on a USE statement if it is a COMMON block member. The
+/// debug entry of such a symbol is built from the COMMON block storage and the
+/// member offset, so it does not require the symbol to be instantiated.
+static void addCommonBlockMemberAttr(
+    Fortran::lower::AbstractConverter &converter, mlir::MLIRContext *context,
+    llvm::SmallVectorImpl<mlir::Attribute> &attrs,
+    const Fortran::semantics::Symbol &sym, llvm::StringRef localName,
+    llvm::StringRef mangledName) {
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  const Fortran::semantics::Symbol *common =
+      Fortran::semantics::FindCommonBlockContaining(ultimate);
+  if (!common)
+    return;
+  // A COMMON object and an EQUIVALENCE alias of it can both reach here.
+  for (mlir::Attribute existing : attrs) {
+    auto member = mlir::cast<fir::UseCommonBlockMemberAttr>(existing);
+    if (member.getName().getValue() == localName &&
+        member.getLinkageName().getValue() == mangledName)
+      return;
+  }
+  attrs.push_back(fir::UseCommonBlockMemberAttr::get(
+      context, mlir::StringAttr::get(context, localName),
+      mlir::StringAttr::get(context, mangledName),
+      mlir::FlatSymbolRefAttr::get(context, converter.mangleName(*common)),
+      converter.genType(ultimate), ultimate.offset()));
+}
+
+/// Symbols placed in a COMMON block by EQUIVALENCE are not in the COMMON
+/// statement's object list, but they occupy that block's storage. Visit those
+/// symbols so each one is described at its offset in the block.
+template <typename AddSymbolFn>
+static void
+forEachEquivalencedCommonSymbol(const Fortran::semantics::Symbol &common,
+                                AddSymbolFn &&addSymbol) {
+  const Fortran::semantics::Symbol &ultimateCommon = common.GetUltimate();
+  for (const Fortran::semantics::EquivalenceSet &set :
+       ultimateCommon.owner().equivalenceSets()) {
+    for (const Fortran::semantics::EquivalenceObject &object : set) {
+      const Fortran::semantics::Symbol *block =
+          Fortran::semantics::FindCommonBlockContaining(
+              object.symbol.GetUltimate());
+      if (block && &block->GetUltimate() == &ultimateCommon)
+        addSymbol(object.symbol);
+    }
+  }
+}
+
 /// Emit a single fir.use_stmt from preserved frontend USE metadata.
 static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
                           mlir::OpBuilder &builder, mlir::Location loc,
@@ -232,62 +279,105 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr moduleNameAttr =
       mlir::StringAttr::get(context, stmt.moduleName);
 
-  // Helper function to get mangled name for a symbol
-  auto getMangledName = [&](const std::string &localName) -> std::string {
+  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
+  llvm::SmallVector<mlir::Attribute> renameAttrs;
+  llvm::SmallVector<mlir::Attribute> commonBlockMemberAttrs;
+
+  // Helper function to find a symbol and get its mangled name.
+  auto getMangledName = [&](const std::string &localName)
+      -> std::pair<const Fortran::semantics::Symbol *, std::string> {
     Fortran::parser::CharBlock charBlock{localName.data(), localName.size()};
     const auto *sym = lookupScope.FindSymbol(charBlock);
     if (!sym)
-      return "";
+      return {nullptr, ""};
 
     const auto &ultimateSym = sym->GetUltimate();
 
     // Skip cases which can cause mangleName to fail.
     if (ultimateSym.has<Fortran::semantics::DerivedTypeDetails>())
-      return "";
+      return {nullptr, ""};
 
     if (ultimateSym.has<Fortran::semantics::UseErrorDetails>())
-      return "";
+      return {nullptr, ""};
 
     if (const auto *generic =
             ultimateSym.detailsIf<Fortran::semantics::GenericDetails>()) {
       if (!generic->specific())
-        return "";
+        return {nullptr, ""};
     }
 
-    return converter.mangleName(ultimateSym);
+    return {sym, converter.mangleName(ultimateSym)};
   };
 
-  llvm::SmallVector<mlir::Attribute> onlySymbolAttrs;
-  llvm::SmallVector<mlir::Attribute> renameAttrs;
-
   for (const auto &name : stmt.onlyNames) {
-    std::string mangledName = getMangledName(name);
-    if (!mangledName.empty())
+    auto [sym, mangledName] = getMangledName(name);
+    if (!mangledName.empty()) {
       onlySymbolAttrs.push_back(
           mlir::FlatSymbolRefAttr::get(context, mangledName));
+      addCommonBlockMemberAttr(converter, context, commonBlockMemberAttrs, *sym,
+                               name, mangledName);
+    }
   }
 
   for (const auto &local : stmt.renames) {
-    std::string mangledName = getMangledName(local);
+    auto [sym, mangledName] = getMangledName(local);
     if (!mangledName.empty()) {
       auto localAttr = mlir::StringAttr::get(context, local);
       auto symbolRef = mlir::FlatSymbolRefAttr::get(context, mangledName);
       renameAttrs.push_back(
           fir::UseRenameAttr::get(context, localAttr, symbolRef));
+      addCommonBlockMemberAttr(converter, context, commonBlockMemberAttrs, *sym,
+                               local, mangledName);
     }
   }
 
+  // Without an ONLY clause, the COMMON block members of the module are all
+  // imported without being named in the USE statement, so they have to be
+  // collected from the COMMON blocks the scope gained by USE association.
+  // EQUIVALENCE aliases are not COMMON objects, but they are imported too.
+  auto addImportedCommonObject = [&](const Fortran::semantics::Symbol &object) {
+    const Fortran::semantics::Symbol *sym =
+        lookupScope.FindSymbol(object.name());
+    if (!sym || &sym->GetUltimate() != &object.GetUltimate())
+      return;
+    const auto *useDetails = sym->detailsIf<Fortran::semantics::UseDetails>();
+    if (!useDetails)
+      return;
+    const Fortran::semantics::Scope &useOwner = useDetails->symbol().owner();
+    if (!useOwner.IsModule() || !useOwner.symbol() ||
+        toStringRef(useOwner.symbol()->name()) != stmt.moduleName)
+      return;
+    addCommonBlockMemberAttr(converter, context, commonBlockMemberAttrs, *sym,
+                             toStringRef(sym->name()),
+                             converter.mangleName(sym->GetUltimate()));
+  };
+  if (!stmt.hasOnlyClause)
+    for (const auto &commonIter : lookupScope.commonBlockUses()) {
+      const Fortran::semantics::Symbol &common = commonIter.second.get();
+      for (const auto &object :
+           common.GetUltimate()
+               .get<Fortran::semantics::CommonBlockDetails>()
+               .objects())
+        addImportedCommonObject(object.get());
+      forEachEquivalencedCommonSymbol(common, addImportedCommonObject);
+    }
+
   mlir::ArrayAttr onlySymbolsAttr =
-      onlySymbolAttrs.empty() ? mlir::ArrayAttr()
-                              : mlir::ArrayAttr::get(context, onlySymbolAttrs);
+      stmt.hasOnlyClause ? mlir::ArrayAttr::get(context, onlySymbolAttrs)
+                         : mlir::ArrayAttr();
   mlir::ArrayAttr renamesAttr =
       renameAttrs.empty() ? mlir::ArrayAttr()
                           : mlir::ArrayAttr::get(context, renameAttrs);
+  mlir::ArrayAttr commonBlockMembersAttr =
+      commonBlockMemberAttrs.empty()
+          ? mlir::ArrayAttr()
+          : mlir::ArrayAttr::get(context, commonBlockMemberAttrs);
   mlir::BoolAttr hasOnlyWithRenamesAttr =
       mlir::BoolAttr::get(context, stmt.hasOnlyWithRenames);
 
   fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                         renamesAttr, hasOnlyWithRenamesAttr);
+                         renamesAttr, commonBlockMembersAttr,
+                         hasOnlyWithRenamesAttr);
 }
 
 /// Emit fir.module_debug_imports for USE statements in a module. The operation
@@ -326,10 +416,29 @@ emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
           builder.getContext(), parent->symbol()->name().ToString());
   }
 
+  llvm::SmallVector<mlir::Attribute> commonBlockMemberAttrs;
+  mlir::MLIRContext *context = builder.getContext();
+  for (const auto &commonIter : modScope.commonBlocks()) {
+    const Fortran::semantics::Symbol &common = commonIter.second.get();
+    for (const auto &object :
+         common.get<Fortran::semantics::CommonBlockDetails>().objects())
+      addCommonBlockMemberAttr(converter, context, commonBlockMemberAttrs,
+                               object.get(), toStringRef(object->name()),
+                               converter.mangleName(object->GetUltimate()));
+    forEachEquivalencedCommonSymbol(
+        common, [&](const Fortran::semantics::Symbol &object) {
+          addCommonBlockMemberAttr(converter, context, commonBlockMemberAttrs,
+                                   object, toStringRef(object.name()),
+                                   converter.mangleName(object.GetUltimate()));
+        });
+  }
+  mlir::ArrayAttr commonBlockMembersAttr =
+      commonBlockMemberAttrs.empty()
+          ? mlir::ArrayAttr()
+          : mlir::ArrayAttr::get(context, commonBlockMemberAttrs);
   auto op = fir::ModuleDebugImportsOp::create(
-      builder, loc,
-      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()),
-      ancestorNameAttr, parentNameAttr);
+      builder, loc, mlir::StringAttr::get(context, modSym->name().ToString()),
+      ancestorNameAttr, parentNameAttr, commonBlockMembersAttr);
   mlir::Region &region = op.getUses();
   mlir::Block *block = new mlir::Block();
   region.push_back(block);

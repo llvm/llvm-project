@@ -139,6 +139,12 @@ private:
                                mlir::LLVM::DIScopeAttr scopeAttr,
                                fir::DebugTypeGenerator &typeGen,
                                mlir::SymbolTable *symbolTable);
+  void handleCommonBlockMembers(std::optional<mlir::ArrayAttr> members,
+                                mlir::Location loc,
+                                mlir::LLVM::DIFileAttr fileAttr,
+                                mlir::LLVM::DIScopeAttr scopeAttr,
+                                fir::DebugTypeGenerator &typeGen,
+                                mlir::SymbolTable *symbolTable);
   std::optional<mlir::LLVM::DIModuleAttr>
   getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
                             mlir::LLVM::DIFileAttr fileAttr,
@@ -358,6 +364,16 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
       commonName, fir::getFileAttrFromLoc(global.getLoc(), fileAttr), scopeAttr,
       line);
 
+  auto &globalExprs = globalToGlobalExprsMap[global];
+  if (llvm::any_of(globalExprs, [&](mlir::Attribute attr) {
+        auto globalExpr =
+            mlir::cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(attr);
+        mlir::LLVM::DIGlobalVariableAttr var = globalExpr.getVar();
+        return var.getScope() == commonBlock && var.getLinkageName() &&
+               var.getLinkageName().getValue() == declOp.getUniqName();
+      }))
+    return true;
+
   mlir::LLVM::DITypeAttr diType = typeGen.convertType(
       fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
 
@@ -379,9 +395,52 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       global.getContext(), gvAttr, expr);
-  globalToGlobalExprsMap[global].push_back(dbgExpr);
+  globalExprs.push_back(dbgExpr);
 
   return true;
+}
+
+void AddDebugInfoPass::handleCommonBlockMembers(
+    std::optional<mlir::ArrayAttr> members, mlir::Location loc,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scopeAttr,
+    fir::DebugTypeGenerator &typeGen, mlir::SymbolTable *symbolTable) {
+  if (!members)
+    return;
+
+  mlir::MLIRContext *context = &getContext();
+  for (mlir::Attribute attr : *members) {
+    auto member = mlir::cast<fir::UseCommonBlockMemberAttr>(attr);
+    fir::GlobalOp global =
+        symbolTable->lookup<fir::GlobalOp>(member.getCommonBlock().getValue());
+    if (!global)
+      continue;
+
+    llvm::StringRef commonName = member.getCommonBlock().getValue();
+    if (commonName != Fortran::common::blankCommonObjectName &&
+        !commonName.empty() && commonName.back() == '_')
+      commonName = commonName.drop_back();
+    mlir::LLVM::DICommonBlockAttr commonBlock = getOrCreateCommonBlockAttr(
+        commonName, fileAttr, scopeAttr, fir::getLineFromLoc(loc));
+    mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+        member.getFortranType(), fileAttr, scopeAttr, nullptr);
+    auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
+        context, commonBlock, member.getName(), member.getLinkageName(),
+        fileAttr, fir::getLineFromLoc(loc), diType,
+        /*isLocalToUnit=*/false, /*isDefinition=*/true, /*alignInBits=*/0);
+
+    mlir::LLVM::DIExpressionAttr expr;
+    if (uint64_t offset = member.getOffset()) {
+      llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops{
+          mlir::LLVM::DIExpressionElemAttr::get(
+              context, llvm::dwarf::DW_OP_plus_uconst, offset)};
+      expr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+    }
+    auto dbgExpr =
+        mlir::LLVM::DIGlobalVariableExpressionAttr::get(context, gvAttr, expr);
+    auto &globalExprs = globalToGlobalExprsMap[global];
+    if (!llvm::is_contained(globalExprs, dbgExpr))
+      globalExprs.push_back(dbgExpr);
+  }
 }
 
 // Create fake uses for compiler-generated internal variables that represent
@@ -957,6 +1016,25 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
   addTargetOpDISP(retainedNodes);
+
+  funcOp.walk([&](fir::UseStmtOp useOp) {
+    handleCommonBlockMembers(useOp.getCommonBlockMembers(), useOp.getLoc(),
+                             fileAttr, spAttr, typeGen, symbolTable);
+  });
+  if (!result.second.modules.empty())
+    if (auto iter =
+            moduleDebugImportsByName.find(result.second.modules.front());
+        iter != moduleDebugImportsByName.end()) {
+      handleCommonBlockMembers(iter->second.getCommonBlockMembers(),
+                               iter->second.getLoc(), fileAttr, spAttr, typeGen,
+                               symbolTable);
+      if (!iter->second.getUses().empty())
+        for (fir::UseStmtOp useOp :
+             iter->second.getUses().front().getOps<fir::UseStmtOp>())
+          handleCommonBlockMembers(useOp.getCommonBlockMembers(),
+                                   useOp.getLoc(), fileAttr, spAttr, typeGen,
+                                   symbolTable);
+    }
 
   // Find the first dummy_scope definition. This is the one of the current
   // function. The other ones may come from inlined calls. The variables inside
