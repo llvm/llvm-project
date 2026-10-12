@@ -74,6 +74,36 @@ AS1 D *to_derived(AS1 B *b) { return static_cast<AS1 D *>(b); }
 // OGCG: %[[DERIVED:.*]] = getelementptr inbounds i8, ptr addrspace(1) %{{.*}}, i64 -4
 // OGCG: phi ptr addrspace(1) [ %[[DERIVED]], %{{.*}} ], [ null, %{{.*}} ]
 
+#define AS3 __attribute__((address_space(3)))
+
+AS3 B *to_base_as3(AS3 D *d) { return d; }
+
+// CIR-LABEL: cir.func {{.*}}@_Z11to_base_as3PU3AS31D
+// CIR: cir.base_class_addr %{{.*}} [4] : !cir.ptr<!rec_D, target_address_space(3)> -> !cir.ptr<!rec_B, target_address_space(3)>
+
+// LLVM-LABEL: define {{.*}}@_Z11to_base_as3PU3AS31D
+// LLVM: %[[ISNULL:.*]] = icmp eq ptr addrspace(3) %[[D:.*]], null
+// LLVM: %[[BASE:.*]] = getelementptr i8, ptr addrspace(3) %[[D]], i32 4
+// LLVM: select i1 %[[ISNULL]], ptr addrspace(3) %[[D]], ptr addrspace(3) %[[BASE]]
+
+// OGCG-LABEL: define {{.*}}@_Z11to_base_as3PU3AS31D
+// OGCG: %[[BASE:.*]] = getelementptr inbounds i8, ptr addrspace(3) %{{.*}}, i64 4
+// OGCG: phi ptr addrspace(3) [ %[[BASE]], %{{.*}} ], [ null, %{{.*}} ]
+
+AS3 D *to_derived_as3(AS3 B *b) { return static_cast<AS3 D *>(b); }
+
+// CIR-LABEL: cir.func {{.*}}@_Z14to_derived_as3PU3AS31B
+// CIR: cir.derived_class_addr %{{.*}} [4] : !cir.ptr<!rec_B, target_address_space(3)> -> !cir.ptr<!rec_D, target_address_space(3)>
+
+// LLVM-LABEL: define {{.*}}@_Z14to_derived_as3PU3AS31B
+// LLVM: %[[ISNULL:.*]] = icmp eq ptr addrspace(3) %[[B:.*]], null
+// LLVM: %[[DERIVED:.*]] = getelementptr inbounds i8, ptr addrspace(3) %[[B]], i32 -4
+// LLVM: select i1 %[[ISNULL]], ptr addrspace(3) %[[B]], ptr addrspace(3) %[[DERIVED]]
+
+// OGCG-LABEL: define {{.*}}@_Z14to_derived_as3PU3AS31B
+// OGCG: %[[DERIVED:.*]] = getelementptr inbounds i8, ptr addrspace(3) %{{.*}}, i64 -4
+// OGCG: phi ptr addrspace(3) [ %[[DERIVED]], %{{.*}} ], [ null, %{{.*}} ]
+
 #ifdef VBASE
 struct V { int v; };
 struct W : virtual V { int w; };
