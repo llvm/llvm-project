@@ -587,7 +587,7 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
     libc.src.__support.macros.config
     libc.src.stdlib.exit
   )
-  if(LIBC_CONF_EXIT_FLUSH_STREAMS AND TARGET libc.src.stdio.fflush_internal)
+  if("libc.src.stdio.fflush" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     libc_add_definition(exit_test_copts "LIBC_COPT_EXIT_FLUSH_STREAMS")
     list(APPEND exit_test_deps
       libc.hdr.types.FILE
