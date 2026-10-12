@@ -20,6 +20,11 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::unittest::cas;
 
+/// \returns the name of the entry 'v1.<hash>.<Suffix>' of a unified cache.
+static std::string dbName(StringRef HashName, StringRef Suffix) {
+  return (Twine("v1.") + HashName + "." + Suffix).str();
+}
+
 /// Visits all the files of a directory recursively and returns the sum of their
 /// sizes.
 static Expected<size_t> countFileSizes(StringRef Path) {
@@ -183,7 +188,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheTest) {
   ASSERT_THAT_ERROR(countFileSizes(Temp.path()).moveInto(DirSizeBefore),
                     Succeeded());
 
-  ASSERT_THAT_ERROR(UnifiedOnDiskCache::collectGarbage(Temp.path()),
+  ASSERT_THAT_ERROR(UnifiedOnDiskCache::collectGarbage(Temp.path(), HashName),
                     Succeeded());
 
   std::optional<size_t> DirSizeAfter;
@@ -291,14 +296,15 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
     SCOPED_TRACE(Force ? "Force" : "NoForce");
     unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
     createCAS(Temp.path());
-    ASSERT_FALSE(sys::fs::remove(Temp.path("v1.1/data.v1")));
+    ASSERT_FALSE(
+        sys::fs::remove(Temp.path(dbName(HashName, "1") + "/data.v1")));
 
     auto Counts = runConcurrently([&]() -> Expected<ValidationResult> {
       Expected<ValidationResult> Result = validate(Temp.path(), Force);
       if (Result)
         return Result;
       consumeError(Result.takeError());
-      return UnifiedOnDiskCache::recover(Temp.path());
+      return UnifiedOnDiskCache::recover(Temp.path(), HashName);
     });
     EXPECT_EQ(Counts[ValidationResult::Recovered], 1u);
     EXPECT_EQ(Counts[ValidationResult::Recovered] +
@@ -319,8 +325,9 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
                       Succeeded());
     EXPECT_EQ(Result, BootTimeKnown ? ValidationResult::Skipped
                                     : ValidationResult::Valid);
-    ASSERT_THAT_ERROR(UnifiedOnDiskCache::recover(Temp.path()).moveInto(Result),
-                      Succeeded());
+    ASSERT_THAT_ERROR(
+        UnifiedOnDiskCache::recover(Temp.path(), HashName).moveInto(Result),
+        Succeeded());
     EXPECT_EQ(Result, ValidationResult::Skipped);
   }
 }
@@ -347,7 +354,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheBootTimeMoved) {
                                                 /*CheckHash=*/true, HashFn,
                                                 /*ForceValidation=*/false);
   };
-  std::string ValidationPath(Temp.path("v1.validation"));
+  std::string ValidationPath(Temp.path(dbName(HashName, "validation")));
   auto readBootTime = [&]() -> uint64_t {
     auto Buf = MemoryBuffer::getFile(ValidationPath);
     EXPECT_TRUE(bool(Buf));
@@ -406,7 +413,8 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {
       ASSERT_THAT_ERROR(store(UniDB->getGraphDB(), "1", {}).moveInto(ID),
                         Succeeded());
     }
-    ASSERT_FALSE(sys::fs::remove(Temp.path("v1.1/data.v1")));
+    ASSERT_FALSE(
+        sys::fs::remove(Temp.path(dbName(HashName, "1") + "/data.v1")));
     EXPECT_THAT_EXPECTED(
         UnifiedOnDiskCache::validateIfNeeded(Temp.path(), HashName, HashSize,
                                              /*CheckHash=*/true, HashFn,
@@ -414,11 +422,36 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheRepeatedRecovery) {
         Failed());
 
     std::optional<ValidationResult> Result;
-    ASSERT_THAT_ERROR(UnifiedOnDiskCache::recover(Temp.path()).moveInto(Result),
-                      Succeeded());
+    ASSERT_THAT_ERROR(
+        UnifiedOnDiskCache::recover(Temp.path(), HashName).moveInto(Result),
+        Succeeded());
     EXPECT_EQ(Result, ValidationResult::Recovered);
-    EXPECT_TRUE(
-        sys::fs::exists(Temp.path("corrupt." + std::to_string(I) + ".v1.1")));
-    EXPECT_FALSE(sys::fs::exists(Temp.path("v1.1")));
+    EXPECT_TRUE(sys::fs::exists(Temp.path("corrupt." + std::to_string(I) + "." +
+                                          dbName(HashName, "1"))));
+    EXPECT_FALSE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
   }
+}
+
+TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheSharedPathDifferentHash) {
+  StringRef HashName = GetParam().HashName;
+  size_t HashSize = GetParam().HashSize;
+  std::string OtherHashName = (HashName + "-other").str();
+
+  unittest::TempDir Temp("ondisk-unified", /*Unique=*/true);
+  for (StringRef Name : {HashName, StringRef(OtherHashName)}) {
+    std::unique_ptr<UnifiedOnDiskCache> UniDB;
+    ASSERT_THAT_ERROR(UnifiedOnDiskCache::open(Temp.path(),
+                                               /*SizeLimit=*/std::nullopt, Name,
+                                               HashSize)
+                          .moveInto(UniDB),
+                      Succeeded());
+  }
+  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
+  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(OtherHashName, "1"))));
+
+  // Garbage collection only considers the directories of its own hash name.
+  ASSERT_THAT_ERROR(UnifiedOnDiskCache::collectGarbage(Temp.path(), HashName),
+                    Succeeded());
+  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(HashName, "1"))));
+  EXPECT_TRUE(sys::fs::exists(Temp.path(dbName(OtherHashName, "1"))));
 }

@@ -46,7 +46,7 @@ RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --fcas-plugin-option bogus=1 --validate-if-needed 2>&1 \
 RUN:   | FileCheck %s --check-prefix=BAD-OPTION
 
-RUN: rm %t/cas/v1.1/data.v1
+RUN: rm %t/cas/v1.SHA1.1/data.v1
 RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} --validate
 RUN: not llvm-cas --cas %t/cas --fcas-plugin-path %{cas_plugin} \
 RUN:   --validate-if-needed --force 2>&1 | FileCheck %s --check-prefix=INVALID
@@ -73,5 +73,5 @@ SKIPPED: validation skipped
 BAD-OPTION: llvm-cas: validate-if-needed: unknown option: bogus
 INVALID: llvm-cas: validate-if-needed:
 RECOVERED: recovered from invalid data
-CORRUPT-DIR: corrupt.0.v1.1
+CORRUPT-DIR: corrupt.0.v1.SHA1.1
 NOT-FOUND: result not found

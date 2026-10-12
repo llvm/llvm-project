@@ -108,10 +108,13 @@ public:
   /// skipped.
   ///
   /// \param Path directory for the on-disk database.
+  /// \param HashName Identifier name for the hashing algorithm of the data to
+  /// recover. Data using other hashing algorithms is left untouched.
   ///
   /// \returns \c Recovered if the data has been cleared, \c Skipped if
   /// recovery is not needed, or an \c Error if recovery cannot be performed.
-  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path);
+  LLVM_ABI static Expected<ValidationResult> recover(StringRef Path,
+                                                     StringRef HashName);
 
   /// Validate the action cache only.
   LLVM_ABI Error validateActionCache() const;
@@ -142,8 +145,8 @@ public:
   /// \p collectGarbage call.
   bool needsGarbageCollection() const { return NeedsGarbageCollection; }
 
-  /// Remove any unused data from the directory at \p Path. If there are no such
-  /// data the operation is a no-op.
+  /// Remove any unused data of the hashing algorithm \p HashName from the
+  /// directory at \p Path. If there are no such data the operation is a no-op.
   ///
   /// This can be called concurrently, regardless of whether there is an open
   /// \p UnifiedOnDiskCache instance or not; it has no effect on readers/writers
@@ -152,7 +155,8 @@ public:
   /// It is recommended that garbage-collection is triggered concurrently in the
   /// background, so that it has minimal effect on the workload of the process.
   LLVM_ABI static Error
-  collectGarbage(StringRef Path, ondisk::OnDiskCASLogger *Logger = nullptr);
+  collectGarbage(StringRef Path, StringRef HashName,
+                 ondisk::OnDiskCASLogger *Logger = nullptr);
 
   /// Remove unused data from the current UnifiedOnDiskCache.
   LLVM_ABI Error collectGarbage();
@@ -177,6 +181,7 @@ private:
   uint64_t getPrimaryStorageSize() const;
 
   std::string RootPath;
+  std::string HashName;
   std::atomic<uint64_t> SizeLimit;
 
   int LockFD = -1;

@@ -40,7 +40,8 @@ cas::validateOnDiskUnifiedCASDatabasesIfNeeded(StringRef Path, bool CheckHash,
 Expected<ValidationResult>
 cas::recoverOnDiskUnifiedCASDatabases(StringRef Path) {
 #if LLVM_ENABLE_ONDISK_CAS
-  return ondisk::UnifiedOnDiskCache::recover(Path);
+  return ondisk::UnifiedOnDiskCache::recover(
+      Path, builtin::BuiltinCASContext::getHashName());
 #else
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 #endif
