@@ -207,28 +207,25 @@ TEST_F(DeserializationTest, FunctionParameterAttributeUnknownValue) {
   expectDiagnostic("invalid FunctionParameterAttribute code: 100");
 }
 
-TEST_F(DeserializationTest, FunctionReturnAttributeUnsupported) {
+TEST_F(DeserializationTest, FunctionReturnAttributeOnVoid) {
   addHeader();
   auto fnID = nextID++;
   addInstruction(
       spirv::Opcode::OpDecorate,
       {fnID, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr),
        static_cast<uint32_t>(spirv::FunctionParameterAttribute::Zext)});
-  auto intType = addIntType(32);
-  auto zeroID = nextID++;
-  addInstruction(spirv::Opcode::OpConstant, {intType, zeroID, 0});
-  auto fnType = addFunctionType(intType, {});
+  auto voidType = addVoidType();
+  auto fnType = addFunctionType(voidType, {});
   addInstruction(spirv::Opcode::OpFunction,
-                 {intType, fnID,
+                 {voidType, fnID,
                   static_cast<uint32_t>(spirv::FunctionControl::None), fnType});
   addInstruction(spirv::Opcode::OpLabel, {nextID++});
-  addInstruction(spirv::Opcode::OpReturnValue, {zeroID});
+  addInstruction(spirv::Opcode::OpReturn, {});
   addFunctionEnd();
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic(
-      "FuncParamAttr decoration on result <id> 1 is not supported: "
-      "expected OpFunctionParameter");
+      "FuncParamAttr decoration requires a non-void function result");
 }
 
 TEST_F(DeserializationTest, FunctionParameterAttributeOnGlobalUnsupported) {
@@ -249,7 +246,7 @@ TEST_F(DeserializationTest, FunctionParameterAttributeOnGlobalUnsupported) {
   ASSERT_FALSE(deserialize());
   expectDiagnostic(
       "FuncParamAttr decoration on result <id> 1 is not supported: "
-      "expected OpFunctionParameter");
+      "expected OpFunctionParameter or OpFunction");
 }
 
 TEST_F(DeserializationTest, FunctionParameterAttributeUnknownTarget) {
@@ -262,7 +259,7 @@ TEST_F(DeserializationTest, FunctionParameterAttributeUnknownTarget) {
   ASSERT_FALSE(deserialize());
   expectDiagnostic(
       "FuncParamAttr decoration on result <id> 42 is not supported: "
-      "expected OpFunctionParameter");
+      "expected OpFunctionParameter or OpFunction");
 }
 
 class UnsupportedParameterDecorationTest

@@ -706,9 +706,9 @@ private:
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
 
-  // FuncParamAttr decorations awaiting an OpFunctionParameter. Keeping them
-  // separate prevents unsupported targets from acquiring discardable attributes
-  // that would be silently dropped during serialization.
+  // FuncParamAttr decorations awaiting an OpFunctionParameter or OpFunction.
+  // Keeping them separate prevents unsupported targets from acquiring
+  // discardable attributes that would be silently dropped during serialization.
   DenseMap<uint32_t, ArrayAttr> functionParameterAttrs;
 
   // Decoration entries from OpDecorateId whose operand <id>s must be resolved

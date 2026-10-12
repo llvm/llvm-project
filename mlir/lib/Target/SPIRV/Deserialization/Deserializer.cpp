@@ -108,7 +108,7 @@ LogicalResult spirv::Deserializer::deserialize() {
   if (!functionParameterAttrs.empty())
     return emitError(unknownLoc, "FuncParamAttr decoration on result <id> ")
            << functionParameterAttrs.begin()->first
-           << " is not supported: expected OpFunctionParameter";
+           << " is not supported: expected OpFunctionParameter or OpFunction";
 
   attachVCETriple();
 
@@ -510,9 +510,10 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
     uint32_t argID, SmallVectorImpl<Attribute> &argAttrs, size_t argIndex) {
   spirv::DecorationAttr foundDecorationAttr;
   NamedAttrList attributes;
-  if (auto attrs = functionParameterAttrs.lookup(argID)) {
-    attributes.set("spirv.func_param_attr", attrs);
-    functionParameterAttrs.erase(argID);
+  if (auto it = functionParameterAttrs.find(argID);
+      it != functionParameterAttrs.end()) {
+    attributes.set("spirv.func_param_attr", it->second);
+    functionParameterAttrs.erase(it);
   }
   for (NamedAttribute decAttr : decorations[argID]) {
     if (decAttr.getName() == "alignment") {
@@ -612,6 +613,15 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = spirv::FuncOp::create(opBuilder, unknownLoc, fnName,
                                       functionType, fnControl.value());
+  if (auto it = functionParameterAttrs.find(fnID);
+      it != functionParameterAttrs.end()) {
+    if (functionType.getNumResults() == 0)
+      return emitError(unknownLoc,
+                       "FuncParamAttr decoration requires a non-void function "
+                       "result");
+    funcOp.setResultAttr(0, "spirv.func_param_attr", it->second);
+    functionParameterAttrs.erase(it);
+  }
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {

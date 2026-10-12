@@ -323,6 +323,13 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   operands.push_back(fnTypeID);
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
 
+  if (!resultTypes.empty()) {
+    if (Attribute attr = op.getResultAttr(0, "spirv.func_param_attr"))
+      if (failed(processDecorationAttr(op.getLoc(), funcID,
+                                       Decoration::FuncParamAttr, attr)))
+        return failure();
+  }
+
   // Add function name.
   if (failed(processName(funcID, op.getName()))) {
     return failure();

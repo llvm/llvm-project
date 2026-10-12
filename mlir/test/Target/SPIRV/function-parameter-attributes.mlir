@@ -36,6 +36,44 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Lin
 
 // -----
 
+// Return attributes decorate the OpFunction result id, not a parameter id.
+// Preserve them on both definitions and declarations.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage, Int8, Int16], []> {
+  // CHECK-LABEL: spirv.func @return_zext(
+  // CHECK-SAME: i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]}
+  // CHECK-SAME: -> (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]})
+  spirv.func @return_zext(%v: i8 {
+      spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]}) ->
+      (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]}) "None" {
+    spirv.ReturnValue %v : i8
+  }
+
+  // CHECK-LABEL: spirv.func @return_sext(
+  // CHECK-SAME: -> (i16 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]})
+  spirv.func @return_sext(%v: i16) ->
+      (i16 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]}) "None" {
+    spirv.ReturnValue %v : i16
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage, Int8, Int16], []> {
+  // CHECK-DAG: spirv.func @external_zext() -> (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]})
+  spirv.func @external_zext() ->
+      (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]}) "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<linkage_name = "external_zext", linkage_type = <Import>>
+  }
+
+  // CHECK-DAG: spirv.func @external_sext() -> (i16 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]})
+  spirv.func @external_sext() ->
+      (i16 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Sext>]}) "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<linkage_name = "external_sext", linkage_type = <Import>>
+  }
+}
+
+// -----
+
 // Alignment alone must not be rejected as an unsupported argument decoration.
 // Its literal is unsigned: the high bit must not be lost in either direction.
 // The signless i32 attribute prints the same bits using a signed spelling.
