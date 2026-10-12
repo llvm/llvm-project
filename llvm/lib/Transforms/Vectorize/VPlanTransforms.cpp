@@ -2912,14 +2912,11 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::createInterleaveGroups(
-    VPlan &Plan,
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
-        &InterleaveGroups,
-    const bool &EpilogueAllowed) {
-  if (InterleaveGroups.empty())
-    return;
-
+/// Build a map from each VPWidenMemoryRecipe's underlying IR instruction to
+/// the recipe itself, for all VPWidenMemoryRecipes in \p Plan's vector loop
+/// region.
+static DenseMap<Instruction *, VPWidenMemoryRecipe *>
+collectIRMemberToRecipe(VPlan &Plan) {
   DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
@@ -2930,6 +2927,19 @@ void VPlanTransforms::createInterleaveGroups(
       auto *MemR = cast<VPWidenMemoryRecipe>(&R);
       IRMemberToRecipe[&MemR->getIngredient()] = MemR;
     }
+  return IRMemberToRecipe;
+}
+
+void VPlanTransforms::createInterleaveGroups(
+    VPlan &Plan,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups,
+    const bool &EpilogueAllowed) {
+  if (InterleaveGroups.empty())
+    return;
+
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe =
+      collectIRMemberToRecipe(Plan);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -6250,17 +6260,8 @@ void VPlanTransforms::convertToStridedAccesses(
   if (Plan.hasScalarVFOnly())
     return;
 
-  // Build IR to Recipe
-  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
-           Plan.getVectorLoopRegion()->getEntryBasicBlock())))
-    for (VPRecipeBase &R : make_filter_range(*VPBB, [](VPRecipeBase &R) {
-           return isa<VPWidenMemoryRecipe>(&R);
-         })) {
-      auto *MemR = cast<VPWidenMemoryRecipe>(&R);
-      IRMemberToRecipe[&MemR->getIngredient()] = MemR;
-    }
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe =
+      collectIRMemberToRecipe(Plan);
 
   VPValue *I32VF = nullptr;
   auto GetI32VF = [&I32VF, &Plan]() {
