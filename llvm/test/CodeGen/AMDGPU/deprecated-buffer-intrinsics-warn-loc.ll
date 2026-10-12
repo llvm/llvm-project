@@ -2,7 +2,7 @@
 ; deprecation warning reports it, so a user of a large module has somewhere to
 ; go. The diagnostic is still emitted once per intrinsic, not once per call.
 
-; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null %s 2>&1 | \
+; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | \
 ; RUN:   FileCheck --implicit-check-not=warning: %s
 
 ; Reported against the first call that has a location, not the one without, and

@@ -1,21 +1,18 @@
 ; Buffer intrinsics that take their resource as a <4 x i32> are deprecated.
 ; Check that codegen warns once per intrinsic and names the replacement.
 ;
-; The --implicit-check-not=warning: ensure we don't have extra warnings.
+; The --implicit-check-not=warning: ensures we don't have extra warnings.
 
-; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null %s 2>&1 | \
+; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null < %s 2>&1 | \
 ; RUN:   FileCheck --implicit-check-not=warning: %s
-
 ; RUN: llc -mtriple=amdgpu9.00-amd-mesa3d -filetype=null \
-; RUN:   -amdgpu-warn-deprecated-buffer-intrinsics=0 %s 2>&1 | \
+; RUN:   -amdgpu-warn-deprecated-buffer-intrinsics=0 < %s 2>&1 | \
 ; RUN:   FileCheck -check-prefix=OFF --allow-empty --implicit-check-not=warning: %s
 
 ; CHECK: warning: 'llvm.amdgcn.raw.buffer.atomic.add' is deprecated and will be removed in a future LLVM release; use 'llvm.amdgcn.raw.ptr.buffer.atomic.add' with a 'ptr addrspace(8)' resource created by 'llvm.amdgcn.make.buffer.rsrc' instead
 ; CHECK: warning: 'llvm.amdgcn.raw.buffer.load' is deprecated {{.*}} use 'llvm.amdgcn.raw.ptr.buffer.load' {{.*}}
 ; CHECK: warning: 'llvm.amdgcn.raw.tbuffer.load' is deprecated {{.*}} use 'llvm.amdgcn.raw.ptr.tbuffer.load' {{.*}}
-
 ; CHECK: warning: 'llvm.amdgcn.s.buffer.load' is deprecated {{.*}} use 'llvm.amdgcn.ptr.s.buffer.load' {{.*}}
-
 ; CHECK: warning: 'llvm.amdgcn.struct.buffer.store' is deprecated {{.*}} use 'llvm.amdgcn.struct.ptr.buffer.store' {{.*}}
 
 ; OFF-NOT: {{.}}
