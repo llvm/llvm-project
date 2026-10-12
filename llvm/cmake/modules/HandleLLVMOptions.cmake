@@ -1496,7 +1496,7 @@ endif()
 # is enabled.
 set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
 set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-if(LLVM_ENABLE_CCACHE)
+if(LLVM_CCACHE_BUILD)
   if(NOT CMAKE_HOST_WIN32)
     set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
