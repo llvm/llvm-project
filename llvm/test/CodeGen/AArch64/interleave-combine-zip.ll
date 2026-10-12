@@ -4,9 +4,7 @@
 define <vscale x 8 x bfloat> @interleave2_lo_halves_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: interleave2_lo_halves_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    trn1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %x = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %a, i64 0)
   %y = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %b, i64 0)
@@ -17,11 +15,7 @@ define <vscale x 8 x bfloat> @interleave2_lo_halves_nxv8bf16(<vscale x 8 x bfloa
 define <vscale x 4 x i32> @interleave2_lo_halves_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: interleave2_lo_halves_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.vector.extract(<vscale x 4 x i32> %a, i64 0)
   %y = call <vscale x 2 x i32> @llvm.vector.extract(<vscale x 4 x i32> %b, i64 0)
@@ -32,9 +26,7 @@ define <vscale x 4 x i32> @interleave2_lo_halves_nxv4i32(<vscale x 4 x i32> %a, 
 define <vscale x 4 x float> @interleave2_lo_halves_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: interleave2_lo_halves_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    trn1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vector.extract(<vscale x 4 x float> %a, i64 0)
   %y = call <vscale x 2 x float> @llvm.vector.extract(<vscale x 4 x float> %b, i64 0)
@@ -45,9 +37,7 @@ define <vscale x 4 x float> @interleave2_lo_halves_nxv4f32(<vscale x 4 x float> 
 define <vscale x 4 x float> @interleave2_hi_halves_nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: interleave2_hi_halves_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z0.d, z0.s
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    trn1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    zip2 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %x = call <vscale x 2 x float> @llvm.vector.extract(<vscale x 4 x float> %a, i64 2)
   %y = call <vscale x 2 x float> @llvm.vector.extract(<vscale x 4 x float> %b, i64 2)
@@ -58,36 +48,7 @@ define <vscale x 4 x float> @interleave2_hi_halves_nxv4f32(<vscale x 4 x float> 
 define <vscale x 2 x double> @interleave2_hi_halves_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: interleave2_hi_halves_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-5
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x28, 0x1e, 0x22 // sp + 16 + 40 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    cnth x9
-; CHECK-NEXT:    addvl x10, sp, #4
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    str z0, [sp, #4, mul vl]
-; CHECK-NEXT:    add x10, x10, x9
-; CHECK-NEXT:    whilelo p0.d, xzr, x8
-; CHECK-NEXT:    addvl x8, sp, #3
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x10]
-; CHECK-NEXT:    str z1, [sp, #3, mul vl]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; CHECK-NEXT:    addvl x8, sp, #1
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    str z0, [sp, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
-; CHECK-NEXT:    ldr z0, [sp]
-; CHECK-NEXT:    addvl sp, sp, #5
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    zip2 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %x = call <vscale x 1 x double> @llvm.vector.extract(<vscale x 2 x double> %a, i64 1)
   %y = call <vscale x 1 x double> @llvm.vector.extract(<vscale x 2 x double> %b, i64 1)
@@ -98,9 +59,8 @@ define <vscale x 2 x double> @interleave2_hi_halves_nxv2f64(<vscale x 2 x double
 define <vscale x 4 x bfloat> @interleave2_lo_halves_extract_lo_nxv4bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: interleave2_lo_halves_extract_lo_nxv4bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %x = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %a, i64 0)
   %y = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %b, i64 0)
@@ -204,9 +164,7 @@ define <4 x float> @interleave2_lo_halves_v4f32(<4 x float> %a, <4 x float> %b) 
 define <8 x bfloat> @interleave2_hi_halves_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-LABEL: interleave2_hi_halves_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d0, v0.d[1]
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip2 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %ah = call <4 x bfloat> @llvm.vector.extract(<8 x bfloat> %a, i64 4)
   %bh = call <4 x bfloat> @llvm.vector.extract(<8 x bfloat> %b, i64 4)
@@ -228,9 +186,7 @@ define <2 x double> @interleave2_hi_halves_v2f64(<2 x double> %a, <2 x double> %
 define <16 x i8> @interleave2_lo_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: interleave2_lo_halves_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d0, v0.d[1]
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    zip2 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %al = call <8 x i8> @llvm.vector.extract(<16 x i8> %a, i64 8)
   %bl = call <8 x i8> @llvm.vector.extract(<16 x i8> %b, i64 8)
