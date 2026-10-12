@@ -571,7 +571,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
     }
 
     if (StoreBlocks.empty()) {
-      LLVM_DEBUG(dbgs() << "Skipping " << printReg(Slot, &TRI)
+      LLVM_DEBUG(dbgs() << "Skipping " << printReg(LI->reg(), &TRI)
                         << ": no reachable stores\n");
       continue;
     }
@@ -599,14 +599,14 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
                  isLoadJointlyDominatedByStores(*MI, *LI, StoreFreeReachable);
         })) {
       LLVM_DEBUG(
-          dbgs() << "Skipping " << printReg(Slot, &TRI)
+          dbgs() << "Skipping " << printReg(LI->reg(), &TRI)
                  << ": some reachable load not jointly dominated by stores\n");
       continue;
     }
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
 
-    LLVM_DEBUG(dbgs() << "Trying to eliminate " << printReg(Slot, &TRI)
+    LLVM_DEBUG(dbgs() << "Trying to eliminate " << printReg(LI->reg(), &TRI)
                       << " by reassigning\n");
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);

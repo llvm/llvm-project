@@ -2296,11 +2296,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // equality or hashing.
     auto C = vputils::getOpcodeOrIntrinsicID(Def);
 
-    // The issue with (Insert|Extract)Value is that the index of the
-    // insert/extract is not a proper operand in LLVM IR, and hence also not in
-    // VPlan. Allocas must not be merged, as each creates a distinct allocation.
+    // The issue with InsertValue is that the index of the insert is not a
+    // proper operand in LLVM IR, and hence also not in VPlan. Allocas must not
+    // be merged, as each creates a distinct allocation.
     if (!C || (!C->first && (C->second == Instruction::InsertValue ||
-                             C->second == Instruction::ExtractValue ||
                              C->second == Instruction::Alloca)))
       return false;
 
@@ -3795,6 +3794,24 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   return nullptr;
 }
 
+using ExtendKind = TTI::PartialReductionExtendKind;
+
+static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
+  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
+}
+
+/// Returns true if the narrow \p Mul in ext(mul(ext(A), ext(B))) or
+/// ext(mul(ext(A), C)) cannot wrap.
+static bool canFoldOuterExtendIntoMul(ExtendKind ExtKind, VPWidenRecipe *Mul,
+                                      Type *LHSSrcTy, Type *RHSSrcTy) {
+  if (Mul->getScalarType()->getScalarSizeInBits() >=
+      LHSSrcTy->getScalarSizeInBits() + RHSSrcTy->getScalarSizeInBits())
+    return true;
+  if (ExtKind == ExtendKind::PR_ZeroExtend)
+    return Mul->hasNoUnsignedWrap();
+  return ExtKind == ExtendKind::PR_SignExtend && Mul->hasNoSignedWrap();
+}
+
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial
 /// and valid. The created VPExpressionRecipe must be decomposed to its
@@ -4299,7 +4316,12 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
   return false;
 }
 
-static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
+/// Returns true if the wide recipes in \p Ops and their operand trees can be
+/// narrowed. \p FirstMembersOf maps each in-loop value to the first member
+/// list it was seen in, across all store groups.
+static bool
+canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable,
+             DenseMap<VPValue *, SmallVector<VPValue *>> &FirstMembersOf) {
   SmallVector<VPValue *> Ops0;
   auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
@@ -4316,12 +4338,24 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
       return false;
   }
 
+  // The first member is narrowed in place using the other members' operands.
+  // Bail out if a value is the first member of one list and also part of a
+  // different list.
+  for (VPValue *V : Ops) {
+    if (V->isDefinedOutsideLoopRegions())
+      continue;
+    auto [It, Inserted] = FirstMembersOf.try_emplace(V, Ops);
+    if (!Inserted && (It->second.front() == V || V == WideMember0) &&
+        !equal(It->second, Ops))
+      return false;
+  }
+
   for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
     SmallVector<VPValue *> OpsI;
     for (VPValue *Op : Ops)
       OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
 
-    if (canNarrowOps(OpsI, IsScalable))
+    if (canNarrowOps(OpsI, IsScalable, FirstMembersOf))
       continue;
 
     if (any_of(enumerate(OpsI), [WideMember0, Idx, IsScalable](const auto &P) {
@@ -4486,6 +4520,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
          "unexpected branch-on-count");
 
   SmallVector<VPInterleaveRecipe *> StoreGroups;
+  DenseMap<VPValue *, SmallVector<VPValue *>> FirstMembersOf;
   std::optional<ElementCount> VFToOptimize;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
@@ -4558,10 +4593,10 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
       continue;
     }
 
-    // Check if all values feeding InterleaveR are matching wide recipes, which
-    // operands that can be narrowed.
+    // Check if all values feeding InterleaveR are matching wide recipes whose
+    // operands can be narrowed, without conflicting uses across groups.
     if (!canNarrowOps(InterleaveR->getStoredValues(),
-                      VFToOptimize->isScalable()))
+                      VFToOptimize->isScalable(), FirstMembersOf))
       return nullptr;
     StoreGroups.push_back(InterleaveR);
   }
@@ -5023,7 +5058,6 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
 namespace {
 
-using ExtendKind = TTI::PartialReductionExtendKind;
 struct ReductionExtend {
   Type *SrcType = nullptr;
   ExtendKind Kind = ExtendKind::PR_None;
@@ -5138,10 +5172,12 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
-    if (!Mul->hasOneUse() ||
-        (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
-        MulLHS->getOpcode() != MulRHS->getOpcode())
-      return Op;
+    assert(Mul->hasOneUse() && Ext->getOpcode() == MulLHS->getOpcode() &&
+           MulLHS->getOpcode() == MulRHS->getOpcode() &&
+           canFoldOuterExtendIntoMul(getPartialReductionExtendKind(Ext), Mul,
+                                     MulLHS->getOperand(0)->getScalarType(),
+                                     MulRHS->getOperand(0)->getScalarType()) &&
+           "Expected the outer extend to be foldable");
     VPBuilder Builder(Mul);
     auto *NewLHS = Builder.createWidenCast(
         MulLHS->getOpcode(), MulLHS->getOperand(0), Ext->getScalarType());
@@ -5359,10 +5395,6 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
       CostCtx.CostKind, Flags);
 }
 
-static ExtendKind getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
-  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
-}
-
 /// Checks if \p Op (which is an operand of \p UpdateR) is an extended reduction
 /// operand. This is an operand where the source of the value (e.g. a load) has
 /// been extended (sext, zext, or fpext) before it is used in the reduction.
@@ -5472,6 +5504,13 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
     RHSInputType = RHSCast->getOperand(0)->getScalarType();
     RHSExtendKind = getPartialReductionExtendKind(RHSCast);
   }
+
+  // The outer extend can only be treated as extending the operands of the mul
+  // if the narrow mul cannot wrap.
+  if (OuterExtKind && MulOp->getOpcode() == Instruction::Mul &&
+      !canFoldOuterExtendIntoMul(*OuterExtKind, MulOp, LHSInputType,
+                                 RHSInputType))
+    return std::nullopt;
 
   return ExtendedReductionOperand{
       MulOp, {LHSInputType, LHSExtendKind}, {RHSInputType, RHSExtendKind}};

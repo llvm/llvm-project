@@ -141,14 +141,7 @@ struct PluginManager {
   void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
 
   /// Returns the number of plugins that are active.
-  int getNumActivePlugins() const {
-    int count = 0;
-    for (auto &R : plugins())
-      if (R.is_initialized())
-        ++count;
-
-    return count;
-  }
+  int getNumActivePlugins() const;
 
 private:
   bool RTLsLoaded = false;
