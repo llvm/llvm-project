@@ -33,7 +33,8 @@ UnwindLLDB::UnwindLLDB(Thread &thread)
     size_t count = args.GetArgumentCount();
     for (size_t i = 0; i < count; i++) {
       const char *func_name = args.GetArgumentAtIndex(i);
-      m_user_supplied_trap_handler_functions.push_back(ConstString(func_name));
+      m_user_supplied_trap_handler_functions.push_back(
+          llvm::StringRef(func_name).str());
     }
   }
 }

@@ -31,9 +31,11 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
 #include "PluginInterface.h"
 
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
@@ -89,8 +91,10 @@ struct DeviceTy {
   int32_t DeviceID;
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
+  ol_device_handle_t DeviceHandle;
 
-  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
+  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
+           ol_device_handle_t DeviceHandle);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
@@ -147,6 +151,15 @@ struct DeviceTy {
   // operations if necessary for the device.
   int32_t dataFence(AsyncInfoTy &AsyncInfo);
 
+  /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
+  /// with \p Size bytes, returning the device-accessible pointer.
+  llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
+                                        bool LockMemory = true);
+
+  /// Unregister (and, if \p UnlockMemory, page-unlock) a host buffer
+  /// previously registered via registerMemory.
+  llvm::Error unregisterMemory(void *HstPtr, bool UnlockMemory = true);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
@@ -170,9 +183,6 @@ struct DeviceTy {
   /// succeeds/fails. Must be called multiple times until AsyncInfo is
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
-
-  /// Calls the corresponding print device info function in the plugin.
-  bool printDeviceInfo();
 
   /// Event related interfaces.
   /// {
@@ -211,18 +221,16 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Return the unique identifier of the device.
+  llvm::StringRef getUid() const { return Uid; }
+
   /// Get information from the device.
   template <typename T> T getInfo(DeviceInfo Info) const {
-    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
-
-    auto EntryOpt = DevInfo.get(Info);
-    if (!EntryOpt)
-      return 0;
-
-    auto Entry = *EntryOpt;
-    if (!std::holds_alternative<T>(Entry->Value))
+    T Value{};
+    if (olGetDeviceInfo(DeviceHandle, static_cast<ol_device_info_t>(Info),
+                        sizeof(Value), &Value))
       return T{};
-    return std::get<T>(Entry->Value);
+    return Value;
   }
 
   /// Record the launch-geometry properties for the kernel at \p KernelPtr,
@@ -240,6 +248,9 @@ struct DeviceTy {
   }
 
 private:
+  /// Unique identifier of the device.
+  llvm::SmallString<32> Uid;
+
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
@@ -254,6 +265,12 @@ private:
 
   /// Flag to indicate pending images (true after construction).
   bool HasPendingImages = true;
+
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers = false;
+
+  /// Indicate whether failures when locking mapped buffers should be ignored.
+  bool IgnoreLockMappedFailures = true;
 };
 
 #endif

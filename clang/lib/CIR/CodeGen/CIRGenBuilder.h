@@ -539,7 +539,8 @@ public:
     if (destType == addr.getElementType())
       return addr;
 
-    auto ptrTy = getPointerTo(destType);
+    auto srcPtrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+    auto ptrTy = getPointerTo(destType, srcPtrTy.getAddrSpace());
     return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
                    addr.getAlignment());
   }
@@ -825,12 +826,69 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
+                                         mlir::Value matrix, mlir::Value rowIdx,
+                                         mlir::Value columnIdx) {
+    return cir::MatrixInsertOp::create(*this, loc, value, matrix, rowIdx,
+                                       columnIdx);
+  }
+
+  cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
+                                                           mlir::Type resultTy,
+                                                           mlir::Value value,
+                                                           mlir::Value stride,
+                                                           bool isVolatile) {
+    return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
+                                                stride, isVolatile);
+  }
+
+  /// Multiply an MxK matrix by a KxN matrix, producing an MxN matrix.
+  cir::MatrixMultiplyOp createMatrixMultiply(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto lhsTy = mlir::cast<cir::MatrixType>(lhs.getType());
+    auto rhsTy = mlir::cast<cir::MatrixType>(rhs.getType());
+    auto resultTy = cir::MatrixType::get(
+        lhsTy.getElementType(), lhsTy.getNumRows(), rhsTy.getNumColumns());
+    return cir::MatrixMultiplyOp::create(*this, loc, resultTy, lhs, rhs);
+  }
+
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
-    auto resultTy = cir::MatrixType::get(
-        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    auto resultTy =
+        cir::MatrixType::get(inputTy.getElementType(), inputTy.getNumColumns(),
+                             inputTy.getNumRows());
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
+  }
+
+  cir::MatrixColumnMajorStoreOp createMatrixColumnMajorStore(mlir::Location loc,
+                                                             mlir::Value matrix,
+                                                             mlir::Value data,
+                                                             mlir::Value stride,
+                                                             bool isVolatile) {
+    return cir::MatrixColumnMajorStoreOp::create(*this, loc, matrix, data,
+                                                 stride, isVolatile);
+  }
+
+  std::pair<mlir::Value, mlir::Value>
+  splatMatrixOpOperandsIfNecessary(mlir::Location loc, mlir::Value lhs,
+                                   mlir::Value rhs) {
+    assert(mlir::isa<cir::MatrixType>(lhs.getType()) ||
+           mlir::isa<cir::MatrixType>(rhs.getType()));
+
+    if (!mlir::isa<cir::MatrixType>(lhs.getType()))
+      lhs = cir::VecSplatOp::create(*this, loc, rhs.getType(), lhs);
+    else if (!mlir::isa<cir::MatrixType>(rhs.getType()))
+      rhs = cir::VecSplatOp::create(*this, loc, lhs.getType(), rhs);
+
+    return {lhs, rhs};
   }
 
   template <typename... Operands>

@@ -30,6 +30,8 @@ define i32 @test_select() {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:3 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:4 SizeLat:6 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:8 SizeLat:12 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:24 Lat:16 SizeLat:24 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:48 Lat:32 SizeLat:48 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE4-LABEL: 'test_select'
@@ -49,6 +51,8 @@ define i32 @test_select() {
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; SSE4-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; SSE4-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'test_select'
@@ -68,6 +72,8 @@ define i32 @test_select() {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; AVX1-NEXT:  Cost Model: Found costs of 3 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; AVX1-NEXT:  Cost Model: Found costs of 6 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:12 SizeLat:8 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:8 Lat:24 SizeLat:16 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'test_select'
@@ -87,6 +93,8 @@ define i32 @test_select() {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'test_select'
@@ -106,6 +114,8 @@ define i32 @test_select() {
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:2 SizeLat:4 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; AVX512F-NEXT:  Cost Model: Found costs of 12 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'test_select'
@@ -125,6 +135,8 @@ define i32 @test_select() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; AVX512BW-NEXT:  Cost Model: Found costs of 16 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SLM-LABEL: 'test_select'
@@ -144,6 +156,8 @@ define i32 @test_select() {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:3 for: %V16I8 = select <16 x i1> undef, <16 x i8> undef, <16 x i8> undef
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:8 SizeLat:6 for: %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:16 SizeLat:12 for: %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
+; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:8 Lat:32 SizeLat:24 for: %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:16 Lat:64 SizeLat:48 for: %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %I64 = select i1 undef, i64 undef, i64 undef
@@ -166,6 +180,8 @@ define i32 @test_select() {
   %V32I8 = select <32 x i1> undef, <32 x i8> undef, <32 x i8> undef
   %V64I8 = select <64 x i1> undef, <64 x i8> undef, <64 x i8> undef
 
+  %ME_V16I64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+  %ME_V32I64 = select <32 x i1> poison, <32 x i64> poison, <32 x i64> poison
   ret i32 undef
 }
 
@@ -179,6 +195,8 @@ define i32 @test_select_fp() {
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:2 SizeLat:3 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:4 SizeLat:6 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:8 SizeLat:12 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:24 Lat:16 SizeLat:24 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:48 Lat:32 SizeLat:48 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SSE4-LABEL: 'test_select_fp'
@@ -190,6 +208,8 @@ define i32 @test_select_fp() {
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; SSE4-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; SSE4-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
 ; SSE4-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX1-LABEL: 'test_select_fp'
@@ -201,6 +221,8 @@ define i32 @test_select_fp() {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:2 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:2 Lat:6 SizeLat:4 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; AVX1-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:4 Lat:12 SizeLat:8 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:8 Lat:24 SizeLat:16 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX2-LABEL: 'test_select_fp'
@@ -212,18 +234,35 @@ define i32 @test_select_fp() {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
-; AVX512-LABEL: 'test_select_fp'
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %F64 = select i1 undef, double undef, double undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V4F64 = select <4 x i1> undef, <4 x double> undef, <4 x double> undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V8F64 = select <8 x i1> undef, <8 x double> undef, <8 x double> undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %F32 = select i1 undef, float undef, float undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
-; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
-; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; AVX512F-LABEL: 'test_select_fp'
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %F64 = select i1 undef, double undef, double undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V4F64 = select <4 x i1> undef, <4 x double> undef, <4 x double> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V8F64 = select <8 x i1> undef, <8 x double> undef, <8 x double> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %F32 = select i1 undef, float undef, float undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; AVX512F-NEXT:  Cost Model: Found costs of 12 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; AVX512BW-LABEL: 'test_select_fp'
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %F64 = select i1 undef, double undef, double undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V2F64 = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V4F64 = select <4 x i1> undef, <4 x double> undef, <4 x double> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V8F64 = select <8 x i1> undef, <8 x double> undef, <8 x double> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %F32 = select i1 undef, float undef, float undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; AVX512BW-NEXT:  Cost Model: Found costs of 16 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; SLM-LABEL: 'test_select_fp'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %F64 = select i1 undef, double undef, double undef
@@ -234,6 +273,8 @@ define i32 @test_select_fp() {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:3 for: %V4F32 = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:8 SizeLat:6 for: %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
 ; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:16 SizeLat:12 for: %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
+; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:8 Lat:32 SizeLat:24 for: %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:16 Lat:64 SizeLat:48 for: %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %F64 = select i1 undef, double undef, double undef
@@ -246,6 +287,8 @@ define i32 @test_select_fp() {
   %V8F32 = select <8 x i1> undef, <8 x float> undef, <8 x float> undef
   %V16F32 = select <16 x i1> undef, <16 x float> undef, <16 x float> undef
 
+  %ME_V16F64 = select <16 x i1> poison, <16 x double> poison, <16 x double> poison
+  %ME_V32F64 = select <32 x i1> poison, <32 x double> poison, <32 x double> poison
   ret i32 undef
 }
 

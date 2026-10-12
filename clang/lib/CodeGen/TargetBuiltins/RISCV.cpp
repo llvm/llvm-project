@@ -1211,6 +1211,23 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
     break;
 
+  // Packed Narrowing Shifts
+  case RISCV::BI__builtin_riscv_pnsrl_s_u8x4:
+  case RISCV::BI__builtin_riscv_pnsrl_s_u16x2:
+    ID = Intrinsic::riscv_pnsrl;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnsra_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnsra_s_i16x2:
+    ID = Intrinsic::riscv_pnsra;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  case RISCV::BI__builtin_riscv_pnsrar_s_i8x4:
+  case RISCV::BI__builtin_riscv_pnsrar_s_i16x2:
+    ID = Intrinsic::riscv_pnsrar;
+    IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+
   // Packed Averaging Addition and Subtraction
   case RISCV::BI__builtin_riscv_paadd_i8x4:
   case RISCV::BI__builtin_riscv_paadd_i16x2:
@@ -1636,6 +1653,20 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     IntrinsicTypes = {ResultType};
     break;
   }
+
+  // Scalar Averaging Addition and Subtraction
+  case RISCV::BI__builtin_riscv_aadd_i32:
+    ID = Intrinsic::riscv_aadd_i32;
+    break;
+  case RISCV::BI__builtin_riscv_aaddu_u32:
+    ID = Intrinsic::riscv_aaddu_u32;
+    break;
+  case RISCV::BI__builtin_riscv_asub_i32:
+    ID = Intrinsic::riscv_asub_i32;
+    break;
+  case RISCV::BI__builtin_riscv_asubu_u32:
+    ID = Intrinsic::riscv_asubu_u32;
+    break;
 
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulhr_i32:
