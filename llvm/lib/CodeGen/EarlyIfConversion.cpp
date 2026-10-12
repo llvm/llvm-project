@@ -1252,8 +1252,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   const BranchProbability ColdProb =
       std::min(MBPI.getEdgeProbability(IfConv.Head, IfConv.TBB),
                MBPI.getEdgeProbability(IfConv.Head, IfConv.FBB));
-  const unsigned ColdEdgePercent =
-      std::min(ColdEdgeThreshold.getValue(), 100U);
+  const unsigned ColdEdgePercent = std::min(ColdEdgeThreshold.getValue(), 100U);
   const bool StronglyBiased =
       ColdProb < BranchProbability(ColdEdgePercent, 100);
   if (StronglyBiased) {
