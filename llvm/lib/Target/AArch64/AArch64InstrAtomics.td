@@ -453,10 +453,7 @@ let Size = 8, isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1,
 
 class atomic_hint_fetch<PatFrag Base, code Pred>
   : PatFrag<(ops node:$ptr, node:$val),
-            (Base node:$ptr, node:$val), Pred> {
-  // TODO: Change once mem.cache_hint supported in GISel
-  let GISelPredicateCode = [{ return false; }];
-}
+            (Base node:$ptr, node:$val), Pred>;
 
 // Pass the LSE opcode as an immediate so all operations and orderings can use
 // the same two fetch pseudos.
