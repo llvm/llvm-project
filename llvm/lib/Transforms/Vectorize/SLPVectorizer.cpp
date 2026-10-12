@@ -323,11 +323,6 @@ public:
   /// favor of runtime alias checks for the current vectorization attempt.
   void setTryRuntimeAliasChecks(bool V) { TryRuntimeAliasChecks = V; }
 
-  /// Resets the runtime alias check data.
-  void resetRuntimeAliasCheckState() {
-    Candidate.resetRuntimeAliasCheckState();
-  }
-
   /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
@@ -3559,15 +3554,6 @@ private:
     DenseSet<unsigned> ExtraBitWidthNodes;
 
   public:
-    /// Resets the runtime alias check data.
-    void resetRuntimeAliasCheckState() {
-      HasRuntimeCheckableBlockers = false;
-      HasNonCheckableMemBlocker = false;
-      RTChecksFinalized = false;
-      RTChecks.clear();
-      RTOrigBodyOrder.clear();
-    }
-
     TreeEntry &getRootNode() {
       assert(!VectorizableTree.empty() &&
              "No graph to get the first node from");
@@ -7225,11 +7211,12 @@ void BoUpSLP::reorderTopToBottom() {
   DenseMap<const TreeEntry *, SmallVector<OrdersType, 1>>
       ExternalUserReorderMap;
   // TODO: Reordering of struct types is not supported.
-  if (any_of(Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-        return TE->State == TreeEntry::Vectorize &&
-               isa<StructType>(
-                   getValueType(TE->Scalars.front(), Opts.slp_revec));
-      }))
+  if (any_of(Candidate.VectorizableTree,
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               return TE->State == TreeEntry::Vectorize &&
+                      isa<StructType>(
+                          getValueType(TE->Scalars.front(), Opts.slp_revec));
+             }))
     return;
   // Compute IgnoreReorder once - it depends only on UserIgnoreList and
   // getRootNode(), which do not change during this loop.
@@ -13565,14 +13552,15 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
   if (!Opts.slp_vectorize_poor_throughput || TreeCost >= -getCostThreshold())
     return false;
   PoorThroughputOpCache Cache;
-  return any_of(Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
-    const TreeEntry &TE = *Ptr;
-    return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
-           !TransformedToGatherNodes.contains(&TE) &&
-           TE.State != TreeEntry::CombinedVectorize &&
-           isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI, Cache,
-                              CostKind);
-  });
+  return any_of(
+      Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
+        const TreeEntry &TE = *Ptr;
+        return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
+               !TransformedToGatherNodes.contains(&TE) &&
+               TE.State != TreeEntry::CombinedVectorize &&
+               isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI, Cache,
+                                  CostKind);
+      });
 }
 
 bool BoUpSLP::collectGatherUserOps(
@@ -17308,7 +17296,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       VecOpcode = Instruction::UIToFP;
     }
     const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
-                            SrcIt != Candidate.MinBWs.end() && SrcIt->second.second;
+                            SrcIt != Candidate.MinBWs.end() &&
+                            SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -17867,7 +17856,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
             IsMasked, InterleaveFactor, CompressMask, LoadVecTy);
         Candidate.CompressEntryToData.try_emplace(E, CompressMask, LoadVecTy,
-                                        InterleaveFactor, IsMasked);
+                                                  InterleaveFactor, IsMasked);
         Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
@@ -18351,9 +18340,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // If we are revectorizing reduction, it may result in same reduction pattern
   // with shuffles as leaves of the reduction. Prevent SLP from revectorizing
   // that shuffle pattern.
-  if (Opts.slp_revec && ForReduction && Candidate.VectorizableTree.size() == 3 &&
+  if (Opts.slp_revec && ForReduction &&
+      Candidate.VectorizableTree.size() == 3 &&
       Candidate.VectorizableTree[0]->State == TreeEntry::Vectorize &&
-      Candidate.VectorizableTree[0]->getOpcode() == Instruction::ShuffleVector &&
+      Candidate.VectorizableTree[0]->getOpcode() ==
+          Instruction::ShuffleVector &&
       Candidate.VectorizableTree[1]->isGather() &&
       isSplat(Candidate.VectorizableTree[1]->Scalars) &&
       Candidate.VectorizableTree[2]->isGather() &&
@@ -18410,9 +18401,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
         return true;
     }
     if (TreeSize <= Opts.slp_min_tree_size &&
-        all_of(Candidate.VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
-          return TE->isGather() || TE->State == TreeEntry::SplitVectorize;
-        }))
+        all_of(Candidate.VectorizableTree,
+               [](const std::unique_ptr<TreeEntry> &TE) {
+                 return TE->isGather() ||
+                        TE->State == TreeEntry::SplitVectorize;
+               }))
       return true;
     if (TreeSize == 1 && getCostThreshold() < 0 && FrontHasState &&
         FrontOpcode == Instruction::ExtractElement &&
@@ -20222,16 +20215,19 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // the budget so a kept subtree cannot reject the main tree. The gate mirrors
   // the veto conditions.
   const bool ApplyInstCountVeto =
-      (!Candidate.SplatGatheredScalarsRoots.empty() || !GatheredLoadsNodes.empty()) &&
+      (!Candidate.SplatGatheredScalarsRoots.empty() ||
+       !GatheredLoadsNodes.empty()) &&
       CostKind != TTI::TCK_CodeSize && Opts.slp_inst_count_check &&
-      TTI->preferSLPInstCountCheck() && Candidate.getRootNode().getVectorFactor() == 2 &&
+      TTI->preferSLPInstCountCheck() &&
+      Candidate.getRootNode().getVectorFactor() == 2 &&
       getCostThreshold() == 0 &&
       (!Opts.slp_revec ||
        !isa<VectorType>(getRootNodeScalars().front()->getType()));
   const Loop *InstCountLoop = nullptr;
   if (ApplyInstCountVeto && Opts.slp_cost_loop_trip_count != 0 &&
       Candidate.getRootNode().hasState())
-    InstCountLoop = LI->getLoopFor(Candidate.getRootNode().getMainOp()->getParent());
+    InstCountLoop =
+        LI->getLoopFor(Candidate.getRootNode().getMainOp()->getParent());
   auto TrimAuxSubtreesForInstCount = [&](InstructionCost &Cost,
                                          bool UseCurrentNodeCosts) {
     if (!ApplyInstCountVeto || bypassesInstCountCheck(Cost))
@@ -20512,15 +20508,18 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // FIXME: remove this as soon as correct fractional model is landed for all
   // targets.
   if (CostKind != TTI::TCK_CodeSize && Opts.slp_inst_count_check &&
-      TTI->preferSLPInstCountCheck() && Candidate.getRootNode().getVectorFactor() == 2 &&
+      TTI->preferSLPInstCountCheck() &&
+      Candidate.getRootNode().getVectorFactor() == 2 &&
       getCostThreshold() == 0 &&
       (!Opts.slp_revec ||
        !isa<VectorType>(getRootNodeScalars().front()->getType()))) {
     // Loop containing the tree root; null for flat code or disabled
     // loop-aware modeling. Shared by both calls below.
     const Loop *TreeLoop = nullptr;
-    if (Opts.slp_cost_loop_trip_count != 0 && Candidate.getRootNode().hasState())
-      TreeLoop = LI->getLoopFor(Candidate.getRootNode().getMainOp()->getParent());
+    if (Opts.slp_cost_loop_trip_count != 0 &&
+        Candidate.getRootNode().hasState())
+      TreeLoop =
+          LI->getLoopFor(Candidate.getRootNode().getMainOp()->getParent());
     uint64_t NumScalar = getNumScalarInsts(TreeLoop);
     uint64_t NumVector = getNumVectorInsts(TreeLoop);
     // In loops, the extracts are not scaled by the trip count and just break
@@ -24752,8 +24751,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
-      } else if (VecOpcode == Instruction::UIToFP && SrcIt != Candidate.MinBWs.end() &&
-                 SrcIt->second.second) {
+      } else if (VecOpcode == Instruction::UIToFP &&
+                 SrcIt != Candidate.MinBWs.end() && SrcIt->second.second) {
         auto *OrigSrcVectorTy =
             getWidenedType(CI->getSrcTy(), E->Scalars.size());
         InVec = Builder.CreateSExt(InVec, OrigSrcVectorTy);
@@ -27642,7 +27641,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             !doesNotNeedToBeScheduled(I))
           return false;
         return any_of(
-            SLP->Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            SLP->Candidate.VectorizableTree,
+            [&](const std::unique_ptr<TreeEntry> &TE) {
               return TE.get() != EI.UserTE && !TE->isGather() &&
                      TE->hasCopyableElements() && TE->isCopyableElement(I) &&
                      TE->getMainOp()->getParent() == I->getParent() &&
@@ -29943,7 +29943,6 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
                                            unsigned Idx, unsigned MinVF,
                                            unsigned &Size) {
   Size = 0;
-  R.resetRuntimeAliasCheckState();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
