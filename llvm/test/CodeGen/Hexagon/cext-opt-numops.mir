@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
-# RUN: llc -mtriple=hexagon -run-pass mir-strip-debug,hexagon-cext-opt,mir-strip-debug %s -o %t.nodbg
-# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt,mir-strip-debug %s -o %t.withdbg
+# RUN: llc -mtriple=hexagon -mir-strip-debugify-only=0 -run-pass mir-strip-debug,hexagon-cext-opt,mir-strip-debug %s -o %t.nodbg
+# RUN: llc -mtriple=hexagon -mir-strip-debugify-only=0 -run-pass hexagon-cext-opt,mir-strip-debug %s -o %t.withdbg
 # RUN: diff %t.nodbg %t.withdbg
 
 # An incorrect assertion was triggered on this code, while attempting to
