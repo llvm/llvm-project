@@ -1731,7 +1731,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // `16 % A`.
 static Align getStringPieceAlignment(const CStringInputSection &isec,
                                      const StringPiece &piece) {
-  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
+  return llvm::Align::fromLog2(llvm::countr_zero(isec.align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
