@@ -3095,6 +3095,10 @@ public:
     return true;
   }
 
+  /// Return true if SimplifySetCC may rewrite X < C as X <= C-1 when C is
+  /// not a legal compare immediate but C-1 is.
+  virtual bool shouldRewriteLTToLE(EVT OpVT) const { return false; }
+
   /// Return true if the specified immediate is legal add immediate, that is the
   /// target has add instructions which can add a register with the immediate
   /// without having to materialize the immediate into a register.

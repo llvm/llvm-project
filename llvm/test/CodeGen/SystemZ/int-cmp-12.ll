@@ -56,8 +56,8 @@ define double @f4(double %a, double %b, i64 %i1) {
 ; Check the next value up, which can use a shifted comparison
 define double @f5(double %a, double %b, i64 %i1) {
 ; CHECK-LABEL: f5:
-; CHECK: srlg [[REG:%r[0-5]]], %r2, 32
-; CHECK: cgije [[REG]], 0
+; CHECK: clgfi %r2, 4294967295
+; CHECK: jle
 ; CHECK: ldr %f0, %f2
 ; CHECK: br %r14
   %cond = icmp ult i64 %i1, 4294967296

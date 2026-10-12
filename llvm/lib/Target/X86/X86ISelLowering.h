@@ -464,6 +464,8 @@ namespace llvm {
     /// the immediate into a register.
     bool isLegalICmpImmediate(int64_t Imm) const override;
 
+    bool shouldRewriteLTToLE(EVT OpVT) const override { return true; }
+
     /// Return true if the specified immediate is legal
     /// add immediate, that is the target has add instructions which can
     /// add a register and the immediate without having to materialize

@@ -5454,10 +5454,12 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               DAG.getConstant(MinVal, dl, N0.getValueType()),
                               ISD::SETEQ);
       }
-      // X < C --> X <= (C-1) when C is not a legal compare immediate but C-1
-      // is. The gate excludes C == INT_MIN (signed) and C == 0 (unsigned),
-      // where C-1 would wrap.
-      if (!VT.isVector() && OpVT.isSimple() && C1.getBitWidth() <= 64 &&
+      // Rewrite X < C as X <= C-1 (signed) or X <u C as X <=u C-1 (unsigned),
+      // when C is not a legal compare immediate but C-1 is, and the target
+      // opts in via shouldRewriteLTToLE. The gate excludes signed INT_MIN and
+      // unsigned 0, where C-1 would wrap around.
+      if (!VT.isVector() && OpVT.isSimple() && shouldRewriteLTToLE(OpVT) &&
+          C1.getBitWidth() <= 64 &&
           (Cond == ISD::SETLT || Cond == ISD::SETULT) &&
           !(Cond == ISD::SETLT && C1.isMinSignedValue()) &&
           !(Cond == ISD::SETULT && C1.isZero())) {
