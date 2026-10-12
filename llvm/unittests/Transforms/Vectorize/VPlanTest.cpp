@@ -2273,7 +2273,8 @@ TEST_F(VPRecipeTest, VPWidenCompressStoreExpandLoadIntr) {
                                        Int64, Align(8));
 
   VPWidenMemIntrinsicRecipe CompressStore(Intrinsic::masked_compressstore,
-                                          {Value, Addr, Mask}, Int64, Align(8));
+                                          {Value, Addr, Mask},
+                                          Type::getVoidTy(C), Align(8));
 
   auto VF = ElementCount::getFixed(4);
   for (VPWidenMemIntrinsicRecipe *Intr : {&ExpandLoad, &CompressStore}) {

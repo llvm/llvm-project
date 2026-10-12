@@ -224,11 +224,11 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
 
 std::optional<unsigned>
 llvm::getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID) {
-  if (auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(ID))
-    return PtrPos;
   switch (ID) {
+  case Intrinsic::experimental_vp_strided_store:
   case Intrinsic::masked_compressstore:
     return 1;
+  case Intrinsic::experimental_vp_strided_load:
   case Intrinsic::masked_expandload:
     return 0;
   default:
@@ -238,11 +238,10 @@ llvm::getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID) {
 
 std::optional<unsigned>
 llvm::getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID) {
-  if (auto DataPos = VPIntrinsic::getMemoryDataParamPos(ID))
-    return DataPos;
   switch (ID) {
-  case Intrinsic::masked_expandload:
-    return 2;
+  case Intrinsic::experimental_vp_strided_store:
+  case Intrinsic::masked_compressstore:
+    return 0;
   default:
     return std::nullopt;
   }
