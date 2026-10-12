@@ -31,14 +31,11 @@ static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
 namespace {
 // Shared state for the pattern match and IR transformation.
 struct MLUCandidate {
-  // The target determines native shapes and supported data types for operands
-  // and the accumulator, and corresponds to one of the nanokernel patterns.
-  //
-  // For example, x86::MLUTarget::AMX_INT8 instructs this pattern to tile and
-  // unroll the contraction in such a way that the VectorContractToAMXDotProduct
-  // pattern can be applied (which then will lower the smaller contraction(s) to
-  // sequences of x86.amx.tile_{load,muli,store} operations).
-  x86::MLUTarget target;
+  // The CPU feature flag to target with the transformation, in the spelling
+  // used by llvm/include/llvm/TargetParser/X86TargetParser.def, e.g.
+  // "amx-bf16". Determines native shapes and supported data types for operands
+  // and the accumulator.
+  StringRef target;
 
   // Anchor operation.
   vector::ContractionOp contract;
@@ -332,7 +329,7 @@ static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
 static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
                                          PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
-  x86::MLUTarget target = candidate.target;
+  StringRef target = candidate.target;
 
   Type accElemType = candidate.accType.getElementType();
   Type inpElemType = candidate.lhsType.getElementType();
@@ -348,12 +345,10 @@ static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
   int64_t regTileM, regTileN, regTileK;
   int64_t nativeM, nativeN, nativeK, vnni;
 
-  switch (target) {
-  case x86::MLUTarget::AMX_BF16:
-  case x86::MLUTarget::AMX_INT8: {
-    if (!((target == x86::MLUTarget::AMX_BF16 && inpElemType.isBF16() &&
+  if (target.starts_with("amx")) {
+    if (!((target == "amx-bf16" && inpElemType.isBF16() &&
            accElemType.isF32()) ||
-          (target == x86::MLUTarget::AMX_INT8 && inpElemType.isInteger(8) &&
+          (target == "amx-int8" && inpElemType.isInteger(8) &&
            accElemType.isInteger(32))))
       return rewriter.notifyMatchFailure(
           contract, "unsupported combination of input and accumulator types");
@@ -388,8 +383,8 @@ static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
       regTileN = 2 * nativeN;
       regTileK = nativeK;
     }
-    break;
-  }
+  } else {
+    return rewriter.notifyMatchFailure(contract, "unsupported target");
   }
 
   candidate.accRegTileType = VectorType::get({regTileM, regTileN}, accElemType);
@@ -809,10 +804,10 @@ namespace {
 // transforming it in place.
 struct VectorContractMultiLevelUnroll
     : public OpRewritePattern<vector::ContractionOp> {
-  VectorContractMultiLevelUnroll(MLIRContext *context, x86::MLUTarget target,
+  VectorContractMultiLevelUnroll(MLIRContext *context, StringRef target,
                                  PatternBenefit benefit = 1)
       : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        target(target) {}
+        target(target.str()) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp contract,
                                 PatternRewriter &rewriter) const override {
@@ -840,12 +835,12 @@ struct VectorContractMultiLevelUnroll
   }
 
 private:
-  x86::MLUTarget target;
+  std::string target;
 };
 } // namespace
 
 void x86::populateVectorContractMultiLevelUnrollPatterns(
-    RewritePatternSet &patterns, MLUTarget target) {
+    RewritePatternSet &patterns, StringRef target) {
   patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(), target);
   vector::UnrollVectorOptions options;
   options.setFilterConstraint(hasNativeShapeAttr);
