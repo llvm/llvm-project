@@ -23,8 +23,8 @@ namespace llvm {
 #ifndef NDEBUG
 static cl::opt<bool> EventTrackerPrintAll(
     "amdgpu-event-tracker-print-all", cl::init(false),
-    cl::desc("When using -debug, print the full set of live events every time "
-             "an event is added or removed"));
+    cl::desc("When using -debug, print the updated timeline every time a "
+             "record is added or removed"));
 #endif
 
 namespace AMDGPU {
@@ -102,27 +102,25 @@ void EventTracker::record(MachineInstr &MI, SingleHWEvent Event) {
     ++CD.Count;
 
     // NB: There is an intentional tradeoff here. We could avoid this loop by
-    // instead storing a timestamp in each record, and having a
-    // constantly-increasing clock to infer the height (clock-timestamp is
-    // height). However, it'd:
-    //  - Complexify fetching the height (`EventTrackerRecord` cannot answer
-    //  it
-    //    on its own anymore and we need a separate query/wrapper).
-    //  - Make merge of incoming records a bit more annoying (we'd need to
-    //    rebase the `clock`).
-    //  - Potentially demand (much) more space in EventTrackerRecord to store
+    // instead storing a timestamp in each record, and having a monotonically
+    // increasing clock to infer the height (clock - timestamp = height).
+    // However, it would:
+    //  - Complicate fetching the height (`EventTrackerRecord` could no longer
+    //    answer it on its own, and we would need a separate query/wrapper).
+    //  - Make merging incoming records more annoying (we would need to rebase
+    //    the clock).
+    //  - Potentially require (much) more space in EventTrackerRecord to store
     //    bigger numbers.
     //
-    // All in all, I think this small loop is fine for now, but we can still
-    // change the system if we have data backed up by profiling to
-    // justify the change.
+    // All in all, this small loop is fine for now, but we can revisit it if
+    // profiling data justifies the change.
     for (auto &Live : CD.Timeline)
       Live.setHeight(Live.getHeight() + 1);
 
-    // NOTE: We do not merge with a previous record that has the same (MI+Kind),
-    // unlike in recordIncomings. We are okay with having 2 separate records
-    // with the same identity (MI+Kind), if one is carried over from a backedge
-    // and one is from a more recent iteration.
+    // NOTE: Unlike recordIncomings, we do not merge with a previous record that
+    // has the same identity (MI+Kind). Having two such records is fine: one is
+    // carried over from a backedge and the other is from a more recent
+    // iteration.
     CD.Timeline.push_back(Rec);
 
 #ifndef NDEBUG
@@ -145,7 +143,7 @@ void EventTracker::drain(InstCounterType T, unsigned N) {
   LLVM_DEBUG(dbgs() << "[EventTracker] Drain " << getInstCounterName(T)
                     << " at " << N << '\n');
 
-  // Fast path for clearing the counter
+  // Fast path for clearing the counter.
   if (N == 0) {
     CD.Timeline.clear();
     CD.Count = 0;
@@ -206,13 +204,13 @@ void EventTracker::verify() const {
       print(dbgs(), C);
     };
 
-    // Check some basic invariants
-    //  - Height of a record cannot exceed the value of the counter
-    //  - We cannot have two records with same "identity" at the same height.
-    //    e.g. We can't have 2 VMEM_READ_ACCESS at the same instruction at
-    //    the same height. This is because `recordIncomings` merges based on
-    //    identity, and unless there is a bug, `record` should increment all
-    //    pre-existing records when a new one is inserted.
+    // Check some basic invariants:
+    //  - The height of a record cannot exceed the value of the counter.
+    //  - We cannot have two records with the same identity at the same height,
+    //    e.g. two VMEM_READ_ACCESS records for the same instruction at the
+    //    same height. `recordIncomings` merges based on identity, and `record`
+    //    increments the height of all pre-existing records before inserting a
+    //    new one.
     DenseSet<std::pair<hash_code, unsigned>> RecIdentityCheck;
     for (const EventTrackerRecord &E : C.Timeline) {
       if (E.getHeight() > C.Count) {
@@ -233,7 +231,7 @@ void EventTracker::verify() const {
       }
     }
 
-    // Check live records are sorted
+    // Check that the timeline is sorted.
     if (!is_sorted(C.Timeline, compareRecords)) {
       OnError();
       llvm_unreachable("live records are not sorted!");
@@ -272,7 +270,7 @@ LLVM_DUMP_METHOD void EventTracker::dump() const {
 
 bool EventTracker::compareRecords(const EventTrackerRecord &A,
                                   const EventTrackerRecord &B) {
-  // Different height
+  // Different height.
   if (A.getHeight() != B.getHeight())
     return A.getHeight() > B.getHeight();
 
@@ -287,8 +285,8 @@ bool EventTracker::compareRecords(const EventTrackerRecord &A,
   if (AMI == BMI)
     return false;
 
-  // Same height/kind but MIs are in different BBs:
-  // The one in the earlier BB comes first.
+  // Same height/kind but MIs are in different MBBs: the one in the MBB with the
+  // lower number comes first.
   const MachineBasicBlock *Bbb = BMI->getParent();
   const MachineBasicBlock *Abb = AMI->getParent();
   if (Abb != Bbb)
@@ -314,7 +312,7 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
     }
   });
 
-  /// Iterate over all counters that are available to us.
+  // Iterate over all counters that are available to us.
   for (CounterData &CData : Counters) {
     assert(CData.Timeline.empty());
 
@@ -323,13 +321,13 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
     for (EventTracker *Pred : Preds) {
       auto &PredCData = Pred->Counters[CData.CI->CounterT];
 
-      // Merge domain for the count value:
+      // The merged count is the max across predecessors.
       CData.Count = std::max(CData.Count, PredCData.Count);
 
       for (EventTrackerRecord &PredEntry : PredCData.Timeline) {
-        // At a join, we collapse records from all predecessors with the same
-        // MI+Kind to a single entry with the Height of the entry being the
-        // minimum across predecessors.
+        // At a join, collapse records from all predecessors with the same
+        // identity (MI+Kind) into a single record whose height is the minimum
+        // across predecessors.
         hash_code Identity = PredEntry.getIdentity();
         auto It = Acc.find(Identity);
         if (It != Acc.end()) {
@@ -343,7 +341,7 @@ void EventTracker::recordIncomings(ArrayRef<EventTracker *> Preds) {
     auto AccVals = Acc.values();
     CData.Timeline.append(AccVals.begin(), AccVals.end());
 
-    // Sort records by Height (descending) for consistent iteration.
+    // Sort records by descending height for consistent iteration.
     stable_sort(CData.Timeline, compareRecords);
   }
 
