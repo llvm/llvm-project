@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements offloading to CUDA devices.
+
+// This file implements offloading to devices.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,14 +25,24 @@
 
 namespace clang {
 
-IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
+IncrementalDeviceParser::IncrementalDeviceParser(
     CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
     IncrementalAction *DeviceAct,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
     : IncrementalParser(DeviceInstance, DeviceAct, Err, PTUs), VFS(FS),
       CodeGenOpts(HostInstance.getCodeGenOpts()),
-      TargetOpts(DeviceInstance.getTargetOpts()) {
+      TargetOpts(DeviceInstance.getTargetOpts()) {}
+
+IncrementalDeviceParser::~IncrementalDeviceParser() {}
+
+IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
+    CompilerInstance &DeviceInstance, CompilerInstance &HostInstance,
+    IncrementalAction *DeviceAct,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
+    llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
+                              PTUs) {
   if (Err)
     return;
   StringRef Arch = TargetOpts.CPU;
@@ -154,6 +165,14 @@ llvm::Error IncrementalCUDADeviceParser::GenerateFatbinary() {
   FatbinContent.clear();
 
   return llvm::Error::success();
+}
+
+llvm::Error IncrementalCUDADeviceParser::GenerateOffloadBinary() {
+  llvm::Expected<llvm::StringRef> PTX = GeneratePTX();
+  if (!PTX)
+    return PTX.takeError();
+
+  return GenerateFatbinary();
 }
 
 IncrementalCUDADeviceParser::~IncrementalCUDADeviceParser() {}

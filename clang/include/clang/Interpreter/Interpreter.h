@@ -44,7 +44,7 @@ class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
 class IncrementalParser;
-class IncrementalCUDADeviceParser;
+class IncrementalDeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
@@ -106,7 +106,7 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+  std::unique_ptr<IncrementalDeviceParser> DeviceParser;
 
   // An optional action for CUDA offloading
   std::unique_ptr<IncrementalAction> DeviceAct;
