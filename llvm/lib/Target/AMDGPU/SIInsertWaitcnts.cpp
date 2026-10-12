@@ -388,6 +388,10 @@ public:
   AMDGPU::InstCounterType SmemAccessCounter;
   AMDGPU::InstCounterType MaxCounter;
   bool IsExpertMode = false;
+  // Whether the function issues tensor-memory transfers. Like ASYNCcnt,
+  // TENSORcnt is excluded from the all-zero barrier wait, so barriers
+  // must drain it conservatively (see generateWaitcntInstBefore).
+  bool FuncUsesTensorCnt = false;
   const bool TgSplit;
 
   SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
@@ -2626,6 +2630,14 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
 
+  // Same barrier gap as ASYNCcnt for TENSORcnt: tensor-memory transfers
+  // write LDS asynchronously, barriers do not drain them (CDNA5 ISA),
+  // and the all-zero barrier wait excludes TENSOR_CNT.
+  if (FuncUsesTensorCnt && ST.hasGFX1250Insts() &&
+      ST.getGeneration() != AMDGPUSubtarget::GFX13 &&
+      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
+    Wait.set(AMDGPU::TENSOR_CNT, 0);
+
   if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
@@ -3503,6 +3515,12 @@ bool SIInsertWaitcnts::run() {
   }
 
   SmemAccessCounter = getCounterFromEvent(HWEvents::SMEM_ACCESS);
+
+  FuncUsesTensorCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
+    return llvm::any_of(MBB, [](const MachineInstr &MI) {
+      return SIInstrInfo::usesTENSOR_CNT(MI) && !MI.isMetaInstruction();
+    });
+  });
 
   bool Modified = false;
 
