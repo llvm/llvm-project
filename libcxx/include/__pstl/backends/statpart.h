@@ -121,17 +121,18 @@ private:
 
   template <class _Iter>
   friend optional<__iterator_partitions<_Iter>>
-  __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t) noexcept;
+  __partition(_Iter, _Iter, __partitioning_result&, size_t, size_t, size_t, size_t) noexcept;
 };
 
 template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>>
-__partition(_ForwardIterator __first,
-            _ForwardIterator __last,
-            __partitioning_result& __result,
-            size_t __min_partition_size = 1,
-            size_t __prefix_to_skip     = 0,
-            size_t __suffix_to_skip     = 0) noexcept {
+_LIBCPP_HIDE_FROM_ABI optional<__iterator_partitions<_ForwardIterator>> __partition(
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    __partitioning_result& __result,
+    size_t __min_partition_size = 1,
+    size_t __prefix_to_skip     = 0,
+    size_t __suffix_to_skip     = 0,
+    size_t __workers_count      = thread::hardware_concurrency()) noexcept {
   // forward iteratos to be supported later
   static_assert(__has_random_access_iterator_category_or_concept<_ForwardIterator>::value);
   // TODO: assert( __min_partition_size > 0 )?
@@ -143,7 +144,6 @@ __partition(_ForwardIterator __first,
   }
 
   size_t __effective_count = __count - __prefix_to_skip - __suffix_to_skip;
-  size_t __workers_count   = thread::hardware_concurrency();
   size_t __max_partitions  = __workers_count * __max_partitions_per_cpu;
   size_t __partition_count = std::min(__max_partitions, __effective_count / __min_partition_size);
 
@@ -155,10 +155,11 @@ __partition(_ForwardIterator __first,
 
   __iterator_partitions<_ForwardIterator> __p;
   __p.__base_             = __first + __prefix_to_skip;
-  __p.__count_            = __count;
-  __p.__partition_size_   = __count / __partition_count;
-  __p.__remainder_        = __count % __partition_count;
+  __p.__count_            = __effective_count;
+  __p.__partition_size_   = __effective_count / __partition_count;
+  __p.__remainder_        = __effective_count % __partition_count;
   __p.__partitions_count_ = __partition_count;
+  __result                = __partitioning_result::__ok;
   return __p;
 }
 
