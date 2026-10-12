@@ -18897,80 +18897,29 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getSignedConstant(CB, DL, VT));
 }
 
-// add (ext (add (ext X), (ext Y))),
-//     (ext (add (ext U), (ext V)))
-//   -> ext (add (add (ext X), (ext Y)), (add (ext U), (ext V)))
-static SDValue combineExtAddOfExtAdds(SDNode *N, SelectionDAG &DAG) {
-  auto IsAddOfExts = [](SDValue Add, std::optional<unsigned> &ExtOpc,
-                        bool RequireOneUseAdd =
-                            true) -> std::pair<SDValue, SDValue> {
-    if (Add.getOpcode() != ISD::ADD)
-      return {SDValue(), SDValue()};
-
-    if (RequireOneUseAdd && !Add.hasOneUse())
-      return {SDValue(), SDValue()};
-
-    SDValue LHSExt = Add.getOperand(0);
-    SDValue RHSExt = Add.getOperand(1);
-    if (ExtOpc) {
-      if (LHSExt.getOpcode() != *ExtOpc)
-        return {SDValue(), SDValue()};
-    } else {
-      unsigned LHSOpc = LHSExt.getOpcode();
-      if (LHSOpc != ISD::SIGN_EXTEND && LHSOpc != ISD::ZERO_EXTEND)
-        return {SDValue(), SDValue()};
-      ExtOpc = LHSOpc;
-    }
-
-    if (RHSExt.getOpcode() != *ExtOpc)
-      return {SDValue(), SDValue()};
-
-    if (!LHSExt.hasOneUse() || !RHSExt.hasOneUse())
-      return {SDValue(), SDValue()};
-
-    return {LHSExt, RHSExt};
-  };
-
-  std::optional<unsigned> ExtOpc;
-  auto [LHSExt, RHSExt] =
-      IsAddOfExts(SDValue(N, 0), ExtOpc, /*RequireOneUseAdd=*/false);
-
-  if (!LHSExt || !RHSExt)
+// add (ext X), (ext Y) -> ext (add X, Y)
+// if the add can't overflow in the narrow type.
+static SDValue combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG) {
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned ExtOpc = LHS.getOpcode();
+  if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
+      RHS.getOpcode() != ExtOpc || !LHS.hasOneUse() || !RHS.hasOneUse())
     return SDValue();
 
-  SDValue LHSAdd = LHSExt.getOperand(0);
-  SDValue RHSAdd = RHSExt.getOperand(0);
-  auto [LHSAddExt0, LHSAddExt1] = IsAddOfExts(LHSAdd, ExtOpc);
-  if (!LHSAddExt0 || !LHSAddExt1)
-    return SDValue();
-  auto [RHSAddExt0, RHSAddExt1] = IsAddOfExts(RHSAdd, ExtOpc);
-  if (!RHSAddExt0 || !RHSAddExt1)
+  SDValue LHSSrc = LHS.getOperand(0);
+  SDValue RHSSrc = RHS.getOperand(0);
+  if (LHSSrc.getValueType() != RHSSrc.getValueType() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(LHSSrc.getValueType()))
     return SDValue();
 
-  // The entire reduction tree must be symetrical with respect
-  // to value types.
-  EVT NarrowVT = LHSAddExt0.getOperand(0).getValueType();
-  if (NarrowVT != LHSAddExt1.getOperand(0).getValueType() ||
-      NarrowVT != RHSAddExt0.getOperand(0).getValueType() ||
-      NarrowVT != RHSAddExt1.getOperand(0).getValueType() ||
-      LHSAdd.getValueType() != RHSAdd.getValueType() ||
-      LHSExt.getValueType() != RHSExt.getValueType() ||
-      LHSExt.getValueType() != N->getValueType(0) || !NarrowVT.isInteger())
-    return SDValue();
-
-  // An addition had the ability to increase the number of non-sign bits
-  // by one. If the original extension widens the data by at least two bits,
-  // then it the second layer of addition will not overflow.
-  EVT SrcVT = LHSAdd.getValueType();
-  unsigned NarrowBits = NarrowVT.getScalarSizeInBits();
-  unsigned SrcBits = SrcVT.getScalarSizeInBits();
-  if (SrcBits < NarrowBits + 2 ||
-      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+  if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
     return SDValue();
 
   SDLoc DL(N);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, SrcVT, LHSAdd, RHSAdd);
-  return DAG.getNode(*ExtOpc, DL, N->getValueType(0), Add);
+  SDValue Add =
+      DAG.getNode(ISD::ADD, DL, LHSSrc.getValueType(), LHSSrc, RHSSrc);
+  return DAG.getNode(ExtOpc, DL, N->getValueType(0), Add);
 }
 
 // add (zext, zext) -> zext (add (zext, zext))
@@ -19413,7 +19362,7 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
     return V;
-  if (SDValue V = combineExtAddOfExtAdds(N, DAG))
+  if (SDValue V = combineAddOfExtsAlreadyExtended(N, DAG))
     return V;
   if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
