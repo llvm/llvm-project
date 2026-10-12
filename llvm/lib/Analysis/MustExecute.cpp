@@ -765,29 +765,36 @@ MustBeExecutedContextExplorer::getBackwardNextBlock(const BasicBlock *BB) {
   return It->second;
 }
 
-const MustBeExecutedContextExplorer::ForwardContextTy &
+const MustBeExecutedContextExplorer::BlockContext &
 MustBeExecutedContextExplorer::getForwardContext(const BasicBlock *BB) {
   auto &Context = ForwardContextMap[BB];
   if (!Context) {
-    Context = std::make_unique<ForwardContextTy>();
+    Context = std::make_unique<BlockContext>();
+    Context->Contains.resize(BB->getParent()->getMaxBlockNumber());
     for (const BasicBlock *CurBB = getForwardNextBlock(BB); CurBB;) {
-      const Instruction *Stop = getForwardStop(&CurBB->front());
-      if (!Context->try_emplace(CurBB, Stop).second)
+      if (Context->contains(CurBB))
         break;
-      CurBB = Stop ? nullptr : getForwardNextBlock(CurBB);
+      Context->Blocks.push_back(CurBB);
+      Context->Contains.set(CurBB->getNumber());
+      Context->LastStop = getForwardStop(&CurBB->front());
+      CurBB = Context->LastStop ? nullptr : getForwardNextBlock(CurBB);
     }
   }
   return *Context;
 }
 
-const MustBeExecutedContextExplorer::BackwardContextTy &
+const MustBeExecutedContextExplorer::BlockContext &
 MustBeExecutedContextExplorer::getBackwardContext(const BasicBlock *BB) {
   auto &Context = BackwardContextMap[BB];
   if (!Context) {
-    Context = std::make_unique<BackwardContextTy>();
+    Context = std::make_unique<BlockContext>();
+    Context->Contains.resize(BB->getParent()->getMaxBlockNumber());
     for (const BasicBlock *CurBB = getBackwardNextBlock(BB);
-         CurBB && Context->insert(CurBB);)
-      CurBB = getBackwardNextBlock(CurBB);
+         CurBB && !Context->contains(CurBB);
+         CurBB = getBackwardNextBlock(CurBB)) {
+      Context->Blocks.push_back(CurBB);
+      Context->Contains.set(CurBB->getNumber());
+    }
   }
   return *Context;
 }
@@ -822,10 +829,10 @@ bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
     const Instruction *Stop = LastForwardStop;
     if (IBB == PPBB && PP->comesBefore(I) && (!Stop || !Stop->comesBefore(I)))
       return true;
-    if (LastForwardContext) {
-      auto It = LastForwardContext->find(IBB);
-      if (It != LastForwardContext->end() &&
-          (!It->second || !It->second->comesBefore(I)))
+    if (LastForwardContext && LastForwardContext->contains(IBB)) {
+      const Instruction *LastStop = LastForwardContext->LastStop;
+      if (!LastStop || IBB != LastStop->getParent() ||
+          !LastStop->comesBefore(I))
         return true;
     }
   }
@@ -858,13 +865,13 @@ bool MustBeExecutedContextExplorer::checkForAllTerminatorsInContext(
   if (!ExploreInterBlock)
     return true;
   if (ExploreCFGForward && !getForwardStop(PP)) {
-    for (const auto &[BB, Stop] : getForwardContext(PPBB)) {
+    for (const BasicBlock *BB : getForwardContext(PPBB).Blocks) {
       if (!CheckBlock(BB))
         return false;
     }
   }
   if (ExploreCFGBackward) {
-    for (const BasicBlock *BB : getBackwardContext(PPBB)) {
+    for (const BasicBlock *BB : getBackwardContext(PPBB).Blocks) {
       if (!CheckBlock(BB))
         return false;
     }

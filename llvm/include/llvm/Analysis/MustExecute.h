@@ -23,9 +23,9 @@
 #ifndef LLVM_ANALYSIS_MUSTEXECUTE_H
 #define LLVM_ANALYSIS_MUSTEXECUTE_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
@@ -534,30 +534,39 @@ private:
   DenseMap<const BasicBlock *, SmallVector<const Instruction *, 2>>
       NonTransferringMap;
 
-  /// Map from blocks to the blocks in the forward context after their
-  /// terminator. Each block maps to the last instruction in the context, or
-  /// null if all of its instructions are in the context.
-  using ForwardContextTy = MapVector<const BasicBlock *, const Instruction *>;
-  DenseMap<const BasicBlock *, std::unique_ptr<ForwardContextTy>>
-      ForwardContextMap;
+  /// The blocks in a forward or backward context, in the order they are
+  /// explored. All instructions of these blocks are in the context, except
+  /// that a forward context ends at LastStop in its last block, if set.
+  struct BlockContext {
+    SmallVector<const BasicBlock *, 8> Blocks;
+    /// The blocks by their number, to look them up quickly.
+    BitVector Contains;
+    const Instruction *LastStop = nullptr;
 
-  /// Map from blocks to the blocks in the backward context before their first
-  /// instruction. All instructions of these blocks are in the context.
-  using BackwardContextTy = SmallSetVector<const BasicBlock *, 8>;
-  DenseMap<const BasicBlock *, std::unique_ptr<BackwardContextTy>>
+    bool contains(const BasicBlock *BB) const {
+      unsigned Number = BB->getNumber();
+      return Number < Contains.size() && Contains.test(Number);
+    }
+  };
+
+  /// Map from blocks to the forward context after their terminator.
+  DenseMap<const BasicBlock *, std::unique_ptr<BlockContext>> ForwardContextMap;
+
+  /// Map from blocks to the backward context before their first instruction.
+  DenseMap<const BasicBlock *, std::unique_ptr<BlockContext>>
       BackwardContextMap;
 
   /// The last program point queried by isInContextOf and its summaries.
   const Instruction *LastPP = nullptr;
   const Instruction *LastForwardStop = nullptr;
-  const ForwardContextTy *LastForwardContext = nullptr;
-  const BackwardContextTy *LastBackwardContext = nullptr;
+  const BlockContext *LastForwardContext = nullptr;
+  const BlockContext *LastBackwardContext = nullptr;
 
   /// Return the forward context after the terminator of \p BB.
-  const ForwardContextTy &getForwardContext(const BasicBlock *BB);
+  const BlockContext &getForwardContext(const BasicBlock *BB);
 
   /// Return the backward context before the first instruction of \p BB.
-  const BackwardContextTy &getBackwardContext(const BasicBlock *BB);
+  const BlockContext &getBackwardContext(const BasicBlock *BB);
 
   /// A unique end iterator.
   MustBeExecutedIterator EndIterator;
