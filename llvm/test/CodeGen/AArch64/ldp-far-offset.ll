@@ -290,6 +290,112 @@ exit:
   ret void
 }
 
+; The preceding SUBXri that defines the pair's base register can be folded
+; with the base-adjust ADDXri: sub x8, x0, #4096 + add x9, x8, #3696 merges
+; into sub x8, x0, #400, saving one instruction.
+define void @ldp_far_offset_merge_sub(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_sub:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[TMP:[0-9]+]], x0, #400
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[TMP]]]
+; ENABLED-NEXT:    str w[[R0]]
+; ENABLED-NEXT:    str w[[R1]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_sub:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  store volatile i32 %v0, ptr poison
+  store volatile i32 %v1, ptr poison
+  ret void
+}
+
+; The preceding ADDXri can also be folded: add x8, x0, #96 + add x9, x8, #4000
+; merges into add x8, x0, #4096 (lsl #12).
+define void @ldp_far_offset_merge_add(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_add:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    add x[[TMP:[0-9]+]], x0, #1, lsl #12 // =4096
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[TMP]]]
+; ENABLED-NEXT:    str w[[R0]]
+; ENABLED-NEXT:    str w[[R1]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_add:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 96
+  %g0 = getelementptr i8, ptr %base, i64 4000
+  %g1 = getelementptr i8, ptr %base, i64 4004
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  store volatile i32 %v0, ptr poison
+  store volatile i32 %v1, ptr poison
+  ret void
+}
+
+; When the preceding SUBXri and the base-adjust cancel out exactly, the def
+; instruction is removed entirely and the pair uses the original source.
+define void @ldp_far_offset_merge_zero(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_zero:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x0]
+; ENABLED-NEXT:    str w[[R0]]
+; ENABLED-NEXT:    str w[[R1]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_zero:
+; DISABLED:       // %bb.0:
+; DISABLED:        ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 4096
+  %g1 = getelementptr i8, ptr %base, i64 4100
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  store volatile i32 %v0, ptr poison
+  store volatile i32 %v1, ptr poison
+  ret void
+}
+
+; The base register is also read by a third load (outside the pair), so the
+; fold is blocked: rewriting the SUBXri would change the base for that load.
+define void @ldp_far_offset_merge_blocked_extra_use(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_blocked_extra_use:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[BASE:[0-9]+]], x0, #1, lsl #12 // =4096
+; ENABLED-NEXT:    add x[[ADJ:[0-9]+]], x[[BASE]], #3696
+; ENABLED-NEXT:    ldr w[[R2:[0-9]+]], [x[[BASE]], #3800]
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[ADJ]]]
+; ENABLED-NEXT:    str w[[R0]]
+; ENABLED-NEXT:    str w[[R1]]
+; ENABLED-NEXT:    str w[[R2]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_blocked_extra_use:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  %g2 = getelementptr i8, ptr %base, i64 3800
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  %v2 = load i32, ptr %g2
+  store volatile i32 %v0, ptr poison
+  store volatile i32 %v1, ptr poison
+  store volatile i32 %v2, ptr poison
+  ret void
+}
+
 ; A third load reads the base register BETWEEN the two paired loads. The
 ; pair must not be formed: base-adjust forces MergeForward=false, which
 ; moves PairedMI's register write ahead of the interleaved load. If
@@ -324,6 +430,37 @@ define void @ldp_far_offset_merge_blocked_interleaved(ptr %p) {
   ret void
 }
 
+; After the pair, an instruction reads the low 32 bits of the base register
+; (w8 = sub-register of x8). The pair's destinations (w9, w10) do NOT alias
+; x8, so w8 still holds the changed base value after the pair — not a loaded
+; value. The fold must be blocked, otherwise the post-pair read gets the
+; changed base instead of the original.
+define i32 @ldp_far_offset_merge_blocked_subreg_after(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_blocked_subreg_after:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[BASE:[0-9]+]], x0, #1, lsl #12 // =4096
+; ENABLED-NEXT:    add x[[ADJ:[0-9]+]], x[[BASE]], #3696
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[ADJ]]]
+; ENABLED-NEXT:    add w[[R0]], w[[R0]], w[[R1]]
+; ENABLED-NEXT:    add w0, w[[R0]], w[[BASE]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_blocked_subreg_after:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  %baseint = ptrtoint ptr %base to i64
+  %trunc = trunc i64 %baseint to i32
+  %s = add i32 %v0, %v1
+  %s2 = add i32 %s, %trunc
+  ret i32 %s2
+}
+
 ; The base-adjust def is not immediately before the first paired instruction
 ; (an extra volatile load of the same base sits between the SUBXri and the
 ; first paired LDR, breaking adjacency), so tryMergeBaseAdjust cannot fold
@@ -352,6 +489,34 @@ define void @ldp_far_offset_merge_blocked_non_adjacent(ptr %p) {
   %v1 = load i32, ptr %g1
   store volatile i32 %v0, ptr poison
   store volatile i32 %v0b, ptr poison
+  store volatile i32 %v1, ptr poison
+  ret void
+}
+
+; When the combined constant from folding the preceding ADDXri with the
+; base-adjust offset cannot be encoded as a single ADDXri/SUBXri (low 12
+; bits are non-zero), the fold splits it: the 4096-aligned part goes into
+; the rewritten def (shift=12), and the remainder is absorbed by the
+; pair's own 7-bit signed scaled immediate. No scratch register is needed.
+define void @ldp_far_offset_merge_residual(ptr %p) {
+; ENABLED-LABEL: ldp_far_offset_merge_residual:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    add x[[TMP:[0-9]+]], x0, #4, lsl #12 // =16384
+; ENABLED-NEXT:    ldp w[[R0:[0-9]+]], w[[R1:[0-9]+]], [x[[TMP]], #4]
+; ENABLED-NEXT:    str w[[R0]]
+; ENABLED-NEXT:    str w[[R1]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: ldp_far_offset_merge_residual:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 4096
+  %g0 = getelementptr i8, ptr %base, i64 12292
+  %g1 = getelementptr i8, ptr %base, i64 12296
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  store volatile i32 %v0, ptr poison
   store volatile i32 %v1, ptr poison
   ret void
 }

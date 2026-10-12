@@ -217,6 +217,17 @@ struct AArch64LoadStoreOpt {
                    MachineBasicBlock::iterator Paired,
                    const LdStPairFlags &Flags);
 
+  // Try to fold the base-adjust ADDXri with the instruction immediately
+  // preceding the first paired instruction, if that instruction is a plain
+  // ADDXri/SUBXri defining the pair's base register. Returns the register to
+  // use as the pair's base, or NoRegister if the fold is not possible. On
+  // success, ResidualScaled is set to the scaled offset the pair should use
+  // (may be non-zero when the combined constant is split between the
+  // rewritten def and the pair's own immediate field).
+  Register tryMergeBaseAdjust(MachineInstr &FirstMI, MachineInstr &PairedMI,
+                              MCPhysReg BaseReg, int64_t ByteOffset,
+                              int MemScale, int64_t &ResidualScaled);
+
   // Promote the load that reads directly from the address stored to.
   MachineBasicBlock::iterator
   promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
@@ -1087,6 +1098,169 @@ static void addDebugSubstitutionsToTable(MachineFunction *MF,
                                    {InstrNumToSet, OperandNo});
 }
 
+Register AArch64LoadStoreOpt::tryMergeBaseAdjust(MachineInstr &FirstMI,
+                                                 MachineInstr &PairedMI,
+                                                 MCPhysReg BaseReg,
+                                                 int64_t ByteOffset,
+                                                 int MemScale,
+                                                 int64_t &ResidualScaled) {
+  ResidualScaled = 0;
+  MachineBasicBlock *MBB = FirstMI.getParent();
+
+  // Only consider the instruction immediately preceding FirstMI (ignoring
+  // debug/pseudo-probe instructions). This keeps the scan O(1) and avoids
+  // the complexity of bounding a backward walk across arbitrary code. All
+  // observed CGP-rebased patterns produce the ADDXri/SUBXri def directly
+  // before the first load/store of the pair; if it's not adjacent, the fold
+  // is simply skipped (falling back to a separate ADDXri).
+  if (FirstMI.getIterator() == MBB->instr_begin())
+    return AArch64::NoRegister;
+  MachineInstr *DefMI = &*prev_nodbg(FirstMI.getIterator(), MBB->instr_begin());
+
+  unsigned Opc = DefMI->getOpcode();
+  if (Opc != AArch64::ADDXri && Opc != AArch64::SUBXri)
+    return AArch64::NoRegister;
+  if (!DefMI->getOperand(2).isImm())
+    return AArch64::NoRegister;
+
+  unsigned Shift = AArch64_AM::getShiftValue(DefMI->getOperand(3).getImm());
+  if (Shift != 0 && Shift != 12)
+    return AArch64::NoRegister;
+
+  // The defining instruction's destination must be exactly BaseReg (not an
+  // aliasing sub/super-register), matching the convention in
+  // isMatchingUpdateInsn.
+  if (DefMI->getOperand(0).getReg() != BaseReg)
+    return AArch64::NoRegister;
+
+  Register SrcReg = DefMI->getOperand(1).getReg();
+
+  // Do not touch prologue/epilogue instructions. Rewriting them would
+  // change the stack frame and corrupt CFI/unwind info.
+  if (DefMI->getFlag(MachineInstr::FrameSetup) ||
+      DefMI->getFlag(MachineInstr::FrameDestroy))
+    return AArch64::NoRegister;
+
+  // Reject reserved registers (SP, FP when used, X18 on some targets, ...).
+  // Using MRI.isReserved covers all subtarget-specific reserved registers
+  // without hardcoding register names.
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  if (MRI.isReserved(BaseReg) || MRI.isReserved(SrcReg))
+    return AArch64::NoRegister;
+
+  // After the pair, a load destination may alias BaseReg (e.g. LDP that writes
+  // the low half of the base). If so, post-pair reads of sub-registers see
+  // the loaded value, not the changed base, so Zone 2 (below) can be skipped.
+  // For store pairs (no register def), this never applies.
+  bool PairWritesBaseReg = false;
+  for (const MachineOperand &MOP : FirstMI.operands())
+    if (MOP.isReg() && MOP.isDef() && MOP.getReg() &&
+        TRI->regsOverlap(MOP.getReg(), BaseReg)) {
+      PairWritesBaseReg = true;
+      break;
+    }
+  if (!PairWritesBaseReg)
+    for (const MachineOperand &MOP : PairedMI.operands())
+      if (MOP.isReg() && MOP.isDef() && MOP.getReg() &&
+          TRI->regsOverlap(MOP.getReg(), BaseReg)) {
+        PairWritesBaseReg = true;
+        break;
+      }
+
+  // Returns false if [Begin, End) contains a non-undef read of BaseReg
+  // (or an alias when Exact is false), or any call instruction.
+  auto CheckRange = [&](MachineBasicBlock::instr_iterator Begin,
+                        MachineBasicBlock::instr_iterator End,
+                        bool Exact) -> bool {
+    for (MachineBasicBlock::instr_iterator It = Begin; It != End; ++It) {
+      MachineInstr &MI = *It;
+      if (&MI == &FirstMI || &MI == &PairedMI)
+        continue;
+      if (MI.isCall())
+        return false;
+      for (const MachineOperand &MOP : MI.operands()) {
+        if (!MOP.isReg() || MOP.isDebug() || !MOP.getReg() || MOP.isDef() ||
+            MOP.isUndef())
+          continue;
+        if (Exact) {
+          if (MOP.getReg() == BaseReg)
+            return false;
+        } else {
+          if (TRI->regsOverlap(MOP.getReg(), BaseReg))
+            return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // Zone 1: between FirstMI and PairedMI (exclusive). Any read of BaseReg or
+  // an aliasing sub-register blocks the fold, since the fold changes the
+  // value those reads would see.
+  if (!CheckRange(std::next(FirstMI.getIterator()), PairedMI.getIterator(),
+                  /*Exact=*/false))
+    return AArch64::NoRegister;
+
+  // Zone 2: after PairedMI. Only needed when the pair does not itself write
+  // a register overlapping BaseReg; if it does, post-pair reads of aliasing
+  // sub-registers observe the loaded value, not the changed base.
+  if (!PairWritesBaseReg) {
+    MachineInstr *AfterPair = PairedMI.getNextNode();
+    if (AfterPair &&
+        !CheckRange(AfterPair->getIterator(), MBB->instr_end(),
+                    /*Exact=*/false))
+      return AArch64::NoRegister;
+  }
+
+  // Compute the merged offset (byte offset from SrcReg to the pair start).
+  int64_t DefImm = (int64_t)DefMI->getOperand(2).getImm() << Shift;
+  int64_t CombinedOffset;
+  if (Opc == AArch64::ADDXri)
+    CombinedOffset = DefImm + ByteOffset;
+  else
+    CombinedOffset = ByteOffset - DefImm;
+
+  int64_t AbsCombined =
+      CombinedOffset >= 0 ? CombinedOffset : -CombinedOffset;
+
+  if (!canEncodeAddXriImm(AbsCombined)) {
+    int64_t EncodableBase, Residual;
+    if (!trySplitForPair(CombinedOffset, MemScale, EncodableBase, Residual))
+      return AArch64::NoRegister;
+    CombinedOffset = EncodableBase;
+    AbsCombined = CombinedOffset >= 0 ? CombinedOffset : -CombinedOffset;
+    ResidualScaled = Residual;
+  }
+
+  if (CombinedOffset == 0) {
+    // No instruction needed: use SrcReg directly. Verify SrcReg is not
+    // modified between DefMI and PairedMI.
+    for (MachineInstr &MI : instructionsWithoutDebug(
+             DefMI->getNextNode()->getIterator(), MBB->instr_end())) {
+      if (&MI == &FirstMI || &MI == &PairedMI)
+        break;
+      if (MI.isCall() || MI.modifiesRegister(SrcReg, TRI))
+        return AArch64::NoRegister;
+    }
+    DefMI->eraseFromParent();
+    return SrcReg;
+  }
+
+  // Rewrite DefMI in place: build a new instruction and erase the old one.
+  unsigned NewOpc = CombinedOffset > 0 ? AArch64::ADDXri : AArch64::SUBXri;
+  unsigned NewShift = AbsCombined <= 0xFFF ? 0 : 12;
+  int64_t NewImm = NewShift == 12 ? AbsCombined >> 12 : AbsCombined;
+
+  DebugLoc DL = DefMI->getDebugLoc();
+  MachineBasicBlock::iterator InsertPos = DefMI->getIterator();
+  BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc), BaseReg)
+      .addReg(SrcReg)
+      .addImm(NewImm)
+      .addImm(NewShift);
+  DefMI->eraseFromParent();
+  return BaseReg;
+}
+
 MachineBasicBlock::iterator
 AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
                                       MachineBasicBlock::iterator Paired,
@@ -1217,41 +1391,52 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     int64_t ByteOffset = Flags.getBaseAdjustByteOffset();
     Register BaseReg = AArch64InstrInfo::getLdStBaseOp(*I).getReg();
 
-    // Emit a standalone ADDXri to adjust the base. ByteOffset is guaranteed
-    // to be a valid base-adjust offset by findMatchingInsn/tryToPairLdStInst,
-    // but it may be a *split* offset (not directly encodable as a single
-    // ADDXri immediate): in that case, split it — the 4096-aligned part goes
-    // into the ADDXri, and the remainder is absorbed by the pair's own
-    // immediate via FoldResidualScaled. Without this, truncating ByteOffset
-    // to a 12-bit immediate would silently drop the low bits and produce a
-    // wrong address.
+    // Try to fold the base-adjust with the instruction immediately preceding
+    // the first paired instruction, if it is a plain ADDXri/SUBXri defining
+    // BaseReg. If successful, the def is rewritten (or removed) and no new
+    // ADDXri is needed.
     int MemScale = getBaseAdjustMemScale(TII, *I);
-    int64_t EncodableBase = ByteOffset;
-    if (!canEncodeAddXriImm(ByteOffset)) {
-      int64_t Residual;
-      bool Ok = trySplitForPair(ByteOffset, MemScale,
-                                EncodableBase, Residual);
-      (void)Ok;
-      assert(Ok && "ByteOffset not encodable and split failed; "
-                   "findMatchingInsn should have rejected this");
-      FoldResidualScaled = Residual;
-    }
-    unsigned Imm12, Shift;
-    if (EncodableBase <= 0xFFF) {
-      Imm12 = EncodableBase;
-      Shift = 0;
+    Register MergedReg = tryMergeBaseAdjust(*I, *Paired, BaseReg, ByteOffset,
+                                            MemScale, FoldResidualScaled);
+    if (MergedReg != AArch64::NoRegister) {
+      AdjustBaseReg = MergedReg;
     } else {
-      Imm12 = EncodableBase >> 12;
-      Shift = 12;
+      // tryMergeBaseAdjust failed to fold a preceding ADDXri/SUBXri, so emit
+      // a standalone ADDXri to adjust the base. ByteOffset is guaranteed to
+      // be a valid base-adjust offset by findMatchingInsn/tryToPairLdStInst,
+      // but it may be a *split* offset (not directly encodable as a single
+      // ADDXri immediate): in that case, split it the same way the fold path
+      // does — the 4096-aligned part goes into the ADDXri, and the remainder
+      // is absorbed by the pair's own immediate via FoldResidualScaled.
+      // Without this, truncating ByteOffset to a 12-bit immediate would
+      // silently drop the low bits and produce a wrong address.
+      int64_t EncodableBase = ByteOffset;
+      if (!canEncodeAddXriImm(ByteOffset)) {
+        int64_t Residual;
+        bool Ok = trySplitForPair(ByteOffset, MemScale,
+                                  EncodableBase, Residual);
+        (void)Ok;
+        assert(Ok && "ByteOffset not encodable and split failed; "
+                     "findMatchingInsn should have rejected this");
+        FoldResidualScaled = Residual;
+      }
+      unsigned Imm12, Shift;
+      if (EncodableBase <= 0xFFF) {
+        Imm12 = EncodableBase;
+        Shift = 0;
+      } else {
+        Imm12 = EncodableBase >> 12;
+        Shift = 12;
+      }
+      MachineBasicBlock *AdjMBB = I->getParent();
+      DebugLoc AdjDL = I->getDebugLoc();
+      BuildMI(*AdjMBB, I, AdjDL, TII->get(AArch64::ADDXri))
+          .addDef(Scratch)
+          .addUse(BaseReg)
+          .addImm(Imm12)
+          .addImm(Shift);
+      AdjustBaseReg = Scratch;
     }
-    MachineBasicBlock *AdjMBB = I->getParent();
-    DebugLoc AdjDL = I->getDebugLoc();
-    BuildMI(*AdjMBB, I, AdjDL, TII->get(AArch64::ADDXri))
-        .addDef(Scratch)
-        .addUse(BaseReg)
-        .addImm(Imm12)
-        .addImm(Shift);
-    AdjustBaseReg = Scratch;
     MergeForward = false;
   }
 
