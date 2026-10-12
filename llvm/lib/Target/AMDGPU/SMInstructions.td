@@ -832,6 +832,9 @@ class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
   return static_cast<const SITargetLowering *>(getTargetLowering())
       ->isUniformLoad(cast<LoadSDNode>(N));
 }]> {
+  let IsLoad = 1;
+  let AddressSpaces = LoadAddress_global.AddrSpaces;
+
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;

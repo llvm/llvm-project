@@ -30,7 +30,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -1795,7 +1794,14 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
 }
 
 SDValue VectorLegalizer::ExpandMASK_BEFOREFIRST(SDNode *N) {
-  return TLI.expandMaskBeforeFirst(N, DAG);
+  // Expand to (get_active_lane_mask 0, (cttz_elts x))
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+  SDValue CttzElts =
+      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT, N->getOperand(0));
+  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
+                     DAG.getConstant(0, DL, VecIdxVT), CttzElts);
 }
 
 SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {

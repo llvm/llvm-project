@@ -3056,7 +3056,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
 };
 
 struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(FFT2dOp fft2d,
                                 PatternRewriter &rewriter) const override {
