@@ -63,3 +63,17 @@ subroutine valid_part_refs(a, b, v)
   !$omp task affinity(iterator(i=1:2): a(sum(v(::2)))%field(i))
   !$omp end task
 end subroutine
+
+! Unresolved components must be diagnosed, not crash the section checks.
+subroutine unresolved_component(a)
+  type t
+    integer :: f
+  end type
+  type(t) :: a
+  !ERROR: Component 'missing' not found in derived type 't'
+  !$omp task affinity(a%missing(::2)%f)
+  !$omp end task
+  !ERROR: Component 'missing' not found in derived type 't'
+  !$omp task affinity(a%missing(1:2))
+  !$omp end task
+end subroutine

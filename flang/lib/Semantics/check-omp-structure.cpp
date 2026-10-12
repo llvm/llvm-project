@@ -6016,6 +6016,9 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
 void OmpStructureChecker::CheckArraySection(
     const parser::ArrayElement &arrayElement, const parser::Name &name,
     const llvm::omp::Clause clause) {
+  if (!name.symbol) {
+    return;
+  }
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Sometimes substring operations are incorrectly parsed as array accesses.
   // Detect this by looking for array accesses on character variables which are
@@ -6133,7 +6136,7 @@ void OmpStructureChecker::CheckArraySectionStrides(
             const auto &arrayElement{x.value()};
             const auto &name{GetLastName(arrayElement.Base())};
             // Scalar character substrings can be parsed as ArrayElement.
-            if (name.symbol->Rank() > 0 &&
+            if (name.symbol && name.symbol->Rank() > 0 &&
                 llvm::any_of(arrayElement.Subscripts(), [](const auto &s) {
                   const auto *triplet{
                       std::get_if<parser::SubscriptTriplet>(&s.u)};

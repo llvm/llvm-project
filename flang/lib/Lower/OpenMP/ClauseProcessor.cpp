@@ -1052,6 +1052,10 @@ bool ClauseProcessor::processAffinity(
             continue;
           if (evaluate::HasVectorSubscript(*object.ref()))
             TODO(clauseLocation, "vector subscript in AFFINITY clause");
+          if (evaluate::ExtractSubstring(*object.ref()))
+            TODO(clauseLocation, "substring in AFFINITY clause");
+          if (evaluate::ExtractComplexPart(*object.ref()))
+            TODO(clauseLocation, "complex part in AFFINITY clause");
           if (auto dataRef = evaluate::ExtractDataRef(*object.ref()))
             if (hasArrayParent(*dataRef))
               TODO(clauseLocation, "array-valued parent in AFFINITY clause");
