@@ -257,8 +257,7 @@ public:
       const StringRef Name = Error.DiagnosticName;
       SarifRule Rule = SarifRule::create().setRuleId(Name).setName(Name);
       Rule = addDiagnosticLevelToRule(Rule, EffectiveLevel);
-      if (SarifWriter)
-        RuleIndex = SarifWriter->createRule(Rule);
+      RuleIndex = SarifWriter->createRule(Rule);
     }
 
     SarifResult Result =
@@ -278,11 +277,10 @@ public:
     else
       for (const tooling::DiagnosticMessage &Note : Error.Notes)
         Result = Result.addRelatedLocations(getNoteRange(Note), Note.Message);
-    if (SarifWriter)
-      SarifWriter->appendResult(Result);
+    SarifWriter->appendResult(Result);
   }
 
-    // SARIF regions need a character range: use 1 char at Loc, or 0 at EOF.
+  // SARIF regions need a character range: use 1 char at Loc, or 0 at EOF.
   CharSourceRange getOffsetRange(SourceManager &SM, SourceLocation Loc) {
     const std::pair<FileID, unsigned> &DecomposedLoc = SM.getDecomposedLoc(Loc);
     const FileID FileId = DecomposedLoc.first;
@@ -376,7 +374,7 @@ private:
   }
 
   void finalizeSarif() {
-    if (SarifWriter && !SarifExportPath.empty()) {
+    if (SarifWriter) {
       std::error_code EC;
       llvm::raw_fd_ostream SarifOS(SarifExportPath, EC, llvm::sys::fs::OF_Text);
       if (EC) {

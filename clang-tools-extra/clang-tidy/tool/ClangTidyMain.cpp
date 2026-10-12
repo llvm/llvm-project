@@ -745,6 +745,18 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  if (!SarifExport.empty()) {
+    std::error_code EC;
+    {
+      llvm::raw_fd_ostream Probe(SarifExport, EC, llvm::sys::fs::OF_Append);
+    }
+    if (EC) {
+      llvm::errs() << "Error opening SARIF export file: " << EC.message()
+                   << '\n';
+      return 1;
+    }
+  }
+
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
