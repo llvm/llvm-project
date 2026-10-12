@@ -40,6 +40,7 @@ class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
+class SCEVAddRecExpr;
 class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
@@ -710,7 +711,7 @@ hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 /// for the pointers are placed in \p CompressedPtrs. Returns true if all
 /// users of the conditional induction are in-loop loads/stores.
 LLVM_ABI bool collectCompressedPtrs(
-    DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE);
 
 } // end namespace llvm
