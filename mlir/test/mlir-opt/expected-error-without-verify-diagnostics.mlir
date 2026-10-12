@@ -2,7 +2,7 @@
 
 // RUN: mlir-opt %s 2>&1 | FileCheck %s
 
-// CHECK-NOT: expected error "an error that is never produced" was not produced
+// CHECK-NOT: expected error
 
 // expected-error @unknown {{an error that is never produced}}
 module {}
