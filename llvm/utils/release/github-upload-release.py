@@ -238,6 +238,7 @@ $ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <p
         draft=True, tag=tag, name=name, message=message, prerelease=prerelease
     )
 
+
 # The repo.get_release function does not work for draft releases, so we need to
 # fetch all the releases and manually search for the one that we want.
 def get_release(repo, release):
