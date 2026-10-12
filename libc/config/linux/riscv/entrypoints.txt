@@ -504,6 +504,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
+    libc.src.unistd.lchown
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
