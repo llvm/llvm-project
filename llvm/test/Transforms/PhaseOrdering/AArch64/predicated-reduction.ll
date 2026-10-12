@@ -43,12 +43,12 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select ninf <4 x i1> [[TMP8]], <4 x double> [[TMP6]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select ninf <4 x i1> [[TMP9]], <4 x double> [[TMP7]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI17]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI18]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI17]], <4 x double> [[TMP12]])
+; CHECK-NEXT:    [[TMP15]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI18]], <4 x double> [[TMP13]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = select ninf <4 x i1> [[TMP8]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP17:%.*]] = select ninf <4 x i1> [[TMP9]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI]], <4 x double> [[TMP16]])
+; CHECK-NEXT:    [[TMP19]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI16]], <4 x double> [[TMP17]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -231,12 +231,12 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x double> [[TMP11]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select ninf <4 x i1> [[TMP12]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP17:%.*]] = select ninf <4 x i1> [[TMP13]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI32]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI33]], [[TMP17]]
+; CHECK-NEXT:    [[TMP18]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI32]], <4 x double> [[TMP16]])
+; CHECK-NEXT:    [[TMP19]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI33]], <4 x double> [[TMP17]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = select ninf <4 x i1> [[TMP12]], <4 x double> [[TMP14]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP21:%.*]] = select ninf <4 x i1> [[TMP13]], <4 x double> [[TMP15]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP22]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI31]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI]], <4 x double> [[TMP20]])
+; CHECK-NEXT:    [[TMP23]] = tail call reassoc arcp contract afn <4 x double> @llvm.vector.partial.reduce.fadd.v4f64.v4f64(<4 x double> [[VEC_PHI31]], <4 x double> [[TMP21]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

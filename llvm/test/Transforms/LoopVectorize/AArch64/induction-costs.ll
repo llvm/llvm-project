@@ -34,10 +34,10 @@ define i32 @multi_exit_iv_uniform(i32 %a, i64 %N, ptr %dst) {
 ; CHECK-NEXT:    store <4 x i64> [[TMP3]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[TMP3]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[TMP3]], ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP6]] = add <4 x i32> [[VEC_PHI]], splat (i32 -1)
-; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[VEC_PHI1]], splat (i32 -1)
-; CHECK-NEXT:    [[TMP10]] = add <4 x i32> [[VEC_PHI2]], splat (i32 -1)
-; CHECK-NEXT:    [[TMP11]] = add <4 x i32> [[VEC_PHI3]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP6]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[TMP7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI1]], <4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[TMP10]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI2]], <4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[TMP11]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI3]], <4 x i32> splat (i32 -1))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
