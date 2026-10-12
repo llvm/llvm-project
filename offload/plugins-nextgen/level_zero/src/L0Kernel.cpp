@@ -184,7 +184,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                       << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
-  if(LaunchArgs.DynCGroupMem == 0) {
+  if (LaunchArgs.DynCGroupMem == 0) {
     if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
       return Plugin::error(
           ErrorCode::INVALID_ARGUMENT,
@@ -197,10 +197,15 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
       return Plugin::error(
           ErrorCode::INVALID_ARGUMENT,
           "Number of arguments (%u) does not match the number of arguments "
-          "expected by the kernel (%u). Level Zero plugin requires that kernels using "
-          "shared local memory, have last argument in `__local` address space and "
-          "the argument is ommited in kernel submission, because Level Zero plugin "
-          "will append it based on `DynSharedMemory` property.", // We should reference manpage here
+          "expected by the kernel (%u). Level Zero plugin requires that "
+          "kernels using "
+          "shared local memory, have last argument in `__local` address space "
+          "and "
+          "the argument is ommited in kernel submission, because Level Zero "
+          "plugin "
+          "will append it based on `DynSharedMemory` property.", // We should
+                                                                 // reference
+                                                                 // manpage here
           LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
   }
 

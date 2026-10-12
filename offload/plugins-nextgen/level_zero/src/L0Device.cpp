@@ -202,7 +202,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
 
   MaxBlockSharedMemSize = ComputeProperties.maxSharedLocalMemory;
 
-  if (auto Err = MemAllocator.initDevicePools(*this, Options, L0Context.getZeContext()))
+  if (auto Err = MemAllocator.initDevicePools(*this, Options,
+                                              L0Context.getZeContext()))
     return Err;
   L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();
