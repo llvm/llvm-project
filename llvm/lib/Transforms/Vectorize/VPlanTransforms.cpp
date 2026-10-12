@@ -624,17 +624,16 @@ static void addReplicateRegions(VPlan &Plan) {
 
 bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
+
+  // Collect single-successor chains in the loop region.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    // Don't fold the blocks in the skeleton of the Plan into their single
-    // predecessors for now.
-    // TODO: Remove restriction once more of the skeleton is modeled in VPlan.
+           vp_depth_first_deep(LoopRegion->getEntry()))) {
     if (!VPBB->getParent())
       continue;
-    auto *PredVPBB =
-        dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (!PredVPBB || PredVPBB->getNumSuccessors() != 1 ||
-        isa<VPIRBasicBlock>(PredVPBB))
+    VPBlockBase *PredBlock = VPBB->getSinglePredecessor();
+    if (!isa_and_nonnull<VPBasicBlock>(PredBlock) ||
+        !PredBlock->getSingleSuccessor())
       continue;
     WorkList.push_back(VPBB);
   }
