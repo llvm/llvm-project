@@ -336,6 +336,9 @@ private:
 protected:
   uint8_t Opc; // Used by UnOpInit, BinOpInit, and TernOpInit
 
+  /// Set if resolveReferences returns this value unchanged with any resolver.
+  bool TriviallyResolved;
+
 private:
   virtual void anchor();
 
@@ -343,11 +346,22 @@ public:
   /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
+  /// Return true if \p K is a value kind that cannot contain references.
+  static bool isLeafKind(InitKind K) {
+    return K == IK_BitInit || K == IK_DefInit || K == IK_IntInit ||
+           K == IK_StringInit || K == IK_UnsetInit;
+  }
+
+  /// Return true if resolveReferences returns this value unchanged with any
+  /// resolver. This is a cheap, conservative subset of isConcrete().
+  bool isTriviallyResolved() const { return TriviallyResolved; }
+
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const;
 
 protected:
-  explicit Init(InitKind K, uint8_t Opc = 0) : Kind(K), Opc(Opc) {}
+  explicit Init(InitKind K, uint8_t Opc = 0)
+      : Kind(K), Opc(Opc), TriviallyResolved(isLeafKind(K)) {}
 
 public:
   Init(const Init &) = delete;
@@ -503,7 +517,9 @@ private:
 
 protected:
   explicit ArgumentInit(const Init *Value, ArgAuxType Aux)
-      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {
+    TriviallyResolved = Value->isTriviallyResolved();
+  }
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
