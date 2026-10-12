@@ -239,8 +239,9 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
   if (!mi_match(InsMI->getOperand(3).getReg(), MRI, m_ZeroInt()))
     return false;
 
-  MatchInfo = ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR, MI.getOperand(0).getReg(),
-                                  {InsMI->getOperand(2).getReg()});
+  MatchInfo =
+      ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR, MI.getOperand(0).getReg(),
+                          {InsMI->getOperand(2).getReg()});
   return true;
 }
 
@@ -262,8 +263,8 @@ bool matchDupFromBuildVector(int Lane, MachineInstr &MI,
   if (!BuildVecMI)
     return false;
   Register Reg = BuildVecMI->getOperand(Lane + 1).getReg();
-  MatchInfo =
-      ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR, MI.getOperand(0).getReg(), {Reg});
+  MatchInfo = ShuffleVectorPseudo(AArch64::G_SPLAT_VECTOR,
+                                  MI.getOperand(0).getReg(), {Reg});
   return true;
 }
 
@@ -480,12 +481,16 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                   int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
-  MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Splat = getVectorSplat(*MI, MRI);
-  if (!Splat || Splat->isReg())
-    return false;
-  Cnt = Splat->getCst();
   int64_t ElementBits = Ty.getScalarSizeInBits();
+  assert(ElementBits <= 64 && "expected <= 64bit shift type");
+  MachineInstr *MI = MRI.getVRegDef(Reg);
+  std::optional<Register> Splat = getVectorSplat(*MI, MRI);
+  if (!Splat)
+    return false;
+  std::optional<APInt> C = getIConstantVRegVal(*Splat, MRI);
+  if (!C)
+    return false;
+  Cnt = C->getSExtValue();
   return Cnt >= 1 && Cnt <= ElementBits;
 }
 

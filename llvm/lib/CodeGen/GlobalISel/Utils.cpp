@@ -1443,25 +1443,19 @@ bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
   return isBuildVectorConstantSplat(MI, MRI, -1, AllowUndef);
 }
 
-std::optional<RegOrConstant>
-llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+std::optional<Register> llvm::getVectorSplat(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI) {
   unsigned Opc = MI.getOpcode();
-  if (Opc == TargetOpcode::G_SPLAT_VECTOR) {
-    Register Reg = MI.getOperand(1).getReg();
-    if (auto C = getIConstantVRegSExtVal(Reg, MRI))
-      return RegOrConstant(*C);
-    return RegOrConstant(Reg);
-  }
+  if (Opc == TargetOpcode::G_SPLAT_VECTOR)
+    return MI.getOperand(1).getReg();
 
   if (!isBuildVectorOp(Opc))
     return std::nullopt;
-  if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
-    return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
   if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
-  return RegOrConstant(Reg);
+  return Reg;
 }
 
 static bool isConstantScalar(const MachineInstr &MI,

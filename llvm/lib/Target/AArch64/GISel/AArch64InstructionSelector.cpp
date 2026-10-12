@@ -1765,48 +1765,27 @@ bool AArch64InstructionSelector::selectCompareBranch(
 
 /// Returns the element immediate value of a vector shift operand if found.
 /// This needs to detect a splat-like operation, e.g. a G_BUILD_VECTOR.
-static std::optional<int64_t> getVectorShiftImm(Register Reg,
-                                                MachineRegisterInfo &MRI) {
+static std::optional<APInt> getVectorShiftImm(Register Reg,
+                                              MachineRegisterInfo &MRI) {
   assert(MRI.getType(Reg).isVector() && "Expected a *vector* shift operand");
   MachineInstr *OpMI = MRI.getVRegDef(Reg);
-  auto Splat = getVectorSplat(*OpMI, MRI);
-  if (!Splat || Splat->isReg())
+  std::optional<Register> Splat = getVectorSplat(*OpMI, MRI);
+  if (!Splat)
     return std::nullopt;
-  return Splat->getCst();
+  return getIConstantVRegVal(*Splat, MRI);
 }
 
 /// Matches and returns the shift immediate value for a SHL instruction given
 /// a shift operand.
-static std::optional<int64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
-                                              MachineRegisterInfo &MRI) {
-  std::optional<int64_t> ShiftImm = getVectorShiftImm(Reg, MRI);
+static std::optional<uint64_t> getVectorSHLImm(LLT SrcTy, Register Reg,
+                                               MachineRegisterInfo &MRI) {
+  std::optional<APInt> ShiftImm = getVectorShiftImm(Reg, MRI);
   if (!ShiftImm)
     return std::nullopt;
   // Check the immediate is in range for a SHL.
-  int64_t Imm = *ShiftImm;
-  if (Imm < 0)
+  uint64_t Imm = ShiftImm->getZExtValue();
+  if (Imm >= SrcTy.getElementType().getSizeInBits())
     return std::nullopt;
-  switch (SrcTy.getElementType().getSizeInBits()) {
-  default:
-    LLVM_DEBUG(dbgs() << "Unhandled element type for vector shift");
-    return std::nullopt;
-  case 8:
-    if (Imm > 7)
-      return std::nullopt;
-    break;
-  case 16:
-    if (Imm > 15)
-      return std::nullopt;
-    break;
-  case 32:
-    if (Imm > 31)
-      return std::nullopt;
-    break;
-  case 64:
-    if (Imm > 63)
-      return std::nullopt;
-    break;
-  }
   return Imm;
 }
 
@@ -1823,7 +1802,7 @@ bool AArch64InstructionSelector::selectVectorSHL(MachineInstr &I,
 
   // Check if we have a vector of constants on RHS that we can select as the
   // immediate form.
-  std::optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
+  std::optional<uint64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
 
   unsigned Opc = 0;
   if (Ty == LLT::fixed_vector(2, 64)) {
