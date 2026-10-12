@@ -526,7 +526,7 @@ const Init *BitsInit::resolveReferences(Resolver &R) const {
     return this;
 
   bool Changed = false;
-  SmallVector<const Init *, 16> NewBits(getNumBits());
+  SmallVector<const Init *, 128> NewBits(getNumBits());
 
   const Init *CachedBitVarRef = nullptr;
   const Init *CachedBitVarResolved = nullptr;
