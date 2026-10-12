@@ -1022,7 +1022,8 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_CTLS: {
     Register Reg = MI.getOperand(1).getReg();
-    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
+    unsigned MinRedundantSignBits =
+        computeNumSignBits(Reg, DemandedElts, Depth + 1) - 1;
 
     unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
 
@@ -1750,16 +1751,25 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
-    if (InterestedSrcs & fcPosFinite)
-      InterestedSrcs |= fcPosFinite;
+
+    // Negative round ups towards zero produce negative zero.
     if (InterestedSrcs & fcNegFinite)
       InterestedSrcs |= fcNegFinite;
+
+    // Negative subnormals may flush to positive zero.
+    if (InterestedSrcs & fcPosFinite)
+      InterestedSrcs |= fcPosFinite | fcNegSubnormal;
+
     computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
 
-    // TODO: handle multi unit FPTypes once LLT FPInfo lands
-    bool IsTrunc = Opcode == TargetOpcode::G_INTRINSIC_TRUNC;
-    Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
-                                          /*IsMultiUnitFPType=*/false);
+    LLT Ty = MRI.getType(Val).getScalarType();
+    const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
+    DenormalMode Mode = MF->getDenormalMode(FltSem);
+    const bool IsMultiUnitFPType = &FltSem == &APFloat::PPCDoubleDouble();
+
+    const bool IsTrunc = Opcode == TargetOpcode::G_INTRINSIC_TRUNC;
+    Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc, IsMultiUnitFPType,
+                                          Mode);
     break;
   }
   case TargetOpcode::G_FEXP:
@@ -1806,7 +1816,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
     DenormalMode Mode = MF->getDenormalMode(FltSem);
-    Known = KnownFPClass::log(KnownSrc, Mode);
+    bool IsMultiUnitFPType = &FltSem == &APFloat::PPCDoubleDouble();
+    Known = KnownFPClass::log(KnownSrc, Mode, IsMultiUnitFPType);
     break;
   }
   case TargetOpcode::G_FPOW: {

@@ -14,7 +14,7 @@
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
 #include "OffloadPrint.hpp"
-#include "PluginManager.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 

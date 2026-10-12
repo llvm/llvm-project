@@ -84,7 +84,7 @@ define bfloat @scalar_add_non_inlineable_const(bfloat %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, 0x42c8, v0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 0x42c8
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fadd bfloat %x, 100.0
   ret bfloat %r
@@ -95,7 +95,7 @@ define bfloat @scalar_mul_non_inlineable_const(bfloat %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_mul_bf16 v0, 0x4348, v0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, 0x4348
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fmul bfloat %x, 200.0
   ret bfloat %r
@@ -106,7 +106,7 @@ define bfloat @scalar_sub_non_inlineable_const(bfloat %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, 0xc2c8, v0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 0xc2c8
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fsub bfloat %x, 100.0
   ret bfloat %r
@@ -139,7 +139,7 @@ define bfloat @scalar_max_non_inlineable_const(bfloat %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, 0x4348, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, 0x4348
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = call bfloat @llvm.maxnum.bf16(bfloat %x, bfloat 200.0)
   ret bfloat %r
@@ -150,7 +150,7 @@ define bfloat @scalar_min_non_inlineable_const(bfloat %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_min_num_bf16 v0, 0x42c8, v0
+; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, 0x42c8
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = call bfloat @llvm.minnum.bf16(bfloat %x, bfloat 100.0)
   ret bfloat %r
@@ -183,7 +183,7 @@ define <2 x bfloat> @packed_add_non_splat_1(<2 x bfloat> %x) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, 0x3f800000, v0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 0x3f800000
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = fadd <2 x bfloat> %x, <bfloat 0.0, bfloat 1.0>
   ret <2 x bfloat> %r

@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -180,8 +181,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU, bool IsTop) {
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "Packet[" << TotalPackets << "]:\n");
   for (unsigned i = 0, e = Packet.size(); i != e; ++i) {
-    LLVM_DEBUG(dbgs() << "\t[" << i << "] SU(");
-    LLVM_DEBUG(dbgs() << Packet[i]->NodeNum << ")\t");
+    LLVM_DEBUG(dbgs() << "\t[" << i << "] " << *Packet[i] << "\t");
     LLVM_DEBUG(Packet[i]->getInstr()->dump());
   }
 #endif
@@ -528,9 +528,9 @@ void ConvergingVLIWScheduler::readyQueueVerboseDump(
     TempTracker.getMaxPressureDelta((*I)->getInstr(), RPDelta,
                                     DAG->getRegionCriticalPSets(),
                                     DAG->getRegPressure().MaxSetPressure);
-    std::stringstream dbgstr;
-    dbgstr << "SU(" << std::setw(3) << (*I)->NodeNum << ")";
-    dbgs() << dbgstr.str();
+    std::string SUStr;
+    raw_string_ostream(SUStr) << **I;
+    dbgs() << left_justify(SUStr, 7);
     SchedulingCost(Q, *I, Candidate, RPDelta, true);
     dbgs() << "\t";
     (*I)->getInstr()->dump();
