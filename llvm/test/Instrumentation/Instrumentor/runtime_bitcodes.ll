@@ -1,5 +1,6 @@
 ; This test checks that Instrumentor links multiple runtime bitcode modules.
 ; The callback runtime uses state from the preceding runtime module.
+; RUN: rm -rf %t && mkdir -p %t && cd %t
 ; RUN: llvm-as %S/runtimes/runtime_bitcodes_state_rt.ll -o runtime_bitcodes_state_rt.bc
 ; RUN: llvm-as %S/runtimes/runtime_bitcodes_callbacks_rt.ll -o runtime_bitcodes_callbacks_rt.bc
 ; RUN: opt < %s -passes=instrumentor -instrumentor-read-config-files=%S/runtime_bitcodes_config.json -S | FileCheck %s
