@@ -3812,6 +3812,8 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     // lets foldBitcastShuffle sink the bitcast back into a shuffle(bitcast),
     // which foldShuffleToIdentity then re-matches as the same superfluous
     // identity - an infinite loop between the two folds.
+    // TODO: we should fix algorithms in foldBitcastShuffle and
+    // foldShuffleToIdentity instead of workaround the problem in worklist.
     if (isa<BitCastInst>(I) && isa<Instruction>(Ops[Idx]))
       WorkList.remove(cast<Instruction>(Ops[Idx]));
   }
