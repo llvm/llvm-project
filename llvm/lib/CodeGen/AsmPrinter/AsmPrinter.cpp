@@ -3030,7 +3030,7 @@ bool AsmPrinter::doFinalization(Module &M) {
       auto *Data = cast<MDString>(Op->getOperand(3));
 
       if (MCSection *Section = TLOF.getNamedSection(
-              SectionName->getString(), SectionKind::getReadOnly())) {
+              SectionName->getString(), SectionKind::getMetadata())) {
         OutStreamer->pushSection();
         OutStreamer->switchSection(Section);
         OutStreamer->emitValueToAlignment(Align(AlignCI->getZExtValue()));

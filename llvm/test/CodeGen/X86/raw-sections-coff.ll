@@ -4,9 +4,9 @@
 ; CHECK:      Name: clangast
 ; CHECK:      RawDataSize:
 ; CHECK:      Characteristics [
-; CHECK-DAG:    IMAGE_SCN_CNT_INITIALIZED_DATA
-; CHECK-DAG:    IMAGE_SCN_MEM_READ
-; CHECK:      ]
+; CHECK-NEXT:   IMAGE_SCN_ALIGN_8BYTES
+; CHECK-NEXT:   IMAGE_SCN_MEM_DISCARDABLE
+; CHECK-NEXT: ]
 
 !0 = !{!"clangast", i32 8, i32 0, !"\de\ad\be\ef"}
 !llvm.raw.sections = !{!0}

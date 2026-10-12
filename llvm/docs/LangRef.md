@@ -9957,9 +9957,9 @@ following fields:
 - **alignment**: The byte alignment of the section data. Must be a power-of-two.
 - **flags**: A bitmask describing the properties of the section. Each target
   maps this onto format-appropriate section flags. The value `0` specifies that
-  the section is present in the object file and contains read-only data loaded
-  into memory. Other values are reserved for future use and are currently
-  rejected by the verifier.
+  the section is present in the object file but is not loaded into memory.
+  Other values are reserved for future use and are currently rejected by the
+  verifier.
 - **raw data**: The binary contents of the section.
 
 Example:
