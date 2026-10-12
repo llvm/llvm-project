@@ -281,6 +281,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lchown
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS

@@ -23,3 +23,6 @@ breaks asan-debug build
 breaks smoke/pfspecifier
 [Offload][omp] Get Plugin active count and Device UID through liboffload (#230109)
 ---
+needs merge help
+[DebugInfo] Accept DW_OP_xderef_size and DW_OP_lit1..DW_OP_lit31. (#227839)
+---
