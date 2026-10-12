@@ -79,6 +79,12 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> AVGPRBanking(
+    "amdgpu-avgpr-banking", cl::Hidden,
+    cl::desc("Distribute AVGPR pressure across the ArchVGPR and AGPR banks "
+             "instead of charging all of it to ArchVGPR"),
+    cl::init(true));
+
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -147,6 +153,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
   AGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
+
+  ArchVGPRBankLimit = VGPRExcessLimit;
+  UnifiedVGPRExcessLimit = ST.hasGFX90AInsts() ? ST.getMaxNumVGPRs(*MF) : 0;
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
@@ -247,6 +256,13 @@ static bool canUsePressureDiffs(const SUnit &SU) {
   return true;
 }
 
+std::pair<unsigned, unsigned>
+GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
+  if (!AVGPRBanking)
+    return {RP.getArchVGPRNum(), RP.getAGPRNum()};
+  return RP.getBankedVGPRNum(ArchVGPRBankLimit);
+}
+
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
     std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
@@ -275,10 +291,12 @@ void GCNSchedStrategy::getRegisterPressures(
     TempUpwardTracker.recede(*MI);
     NewPressure = TempUpwardTracker.getPressure();
   }
+  auto [ArchNum, AccNum] = getBankedPressure(NewPressure);
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
-      NewPressure.getArchVGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
+  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
+  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
+  CandUnifiedVGPRPressure =
+      NewPressure.getVGPRNum(/*UnifiedVGPRFile=*/UnifiedVGPRExcessLimit > 0);
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -397,6 +415,16 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     Cand.RPDelta.Excess.setUnitInc(NewSGPRPressure - SGPRExcessLimit);
   }
 
+  // Banking caps each bank at its own limit, so a candidate can overflow the
+  // combined file without tripping either of the checks above.
+  if (AVGPRBanking && UnifiedVGPRExcessLimit &&
+      CandUnifiedVGPRPressure >= UnifiedVGPRExcessLimit) {
+    HasHighPressure = true;
+    Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
+    Cand.RPDelta.Excess.setUnitInc(CandUnifiedVGPRPressure -
+                                   UnifiedVGPRExcessLimit);
+  }
+
   // Register pressure is considered 'CRITICAL' if it is approaching a value
   // that would reduce the wave occupancy for the execution unit.  When
   // register pressure is 'CRITICAL', increasing SGPR, VGPR, and AGPR
@@ -483,8 +511,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure = T->getPressure().getArchVGPRNum();
-      AGPRPressure = T->getPressure().getAGPRNum();
+      std::tie(VGPRPressure, AGPRPressure) =
+          getBankedPressure(T->getPressure());
     }
   }
   LLVM_DEBUG(dbgs() << "Available Q:\n");
@@ -2030,9 +2058,16 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
+  unsigned ArchVGPRsAfter = PressureAfter.getArchVGPRNum();
+  unsigned AGPRsAfter = PressureAfter.getAGPRNum();
+  // Distribute against MaxArchVGPRs, the limit tested below, rather than the
+  // strategy's occupancy-derived ArchVGPRBankLimit.
+  if (AVGPRBanking)
+    std::tie(ArchVGPRsAfter, AGPRsAfter) =
+        PressureAfter.getBankedVGPRNum(MaxArchVGPRs);
+
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
-      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
+      ArchVGPRsAfter > MaxArchVGPRs || AGPRsAfter > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
