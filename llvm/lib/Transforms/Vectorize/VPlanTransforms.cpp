@@ -6283,6 +6283,33 @@ void VPlanTransforms::convertToStridedAccesses(
     return {cast<VPWidenLoadRecipe>(R)->getScalarType(),
             Intrinsic::experimental_vp_strided_load};
   };
+  // Replace \p MemR's recipe (a VPWidenStoreRecipe or VPWidenLoadRecipe) with
+  // a strided-load/store intrinsic recipe using \p NewPtr as the vector
+  // pointer and \p StrideInBytes as the stride operand.
+  auto ReplaceWithStridedAccess =
+      [&](VPBuilder &Builder, VPWidenMemoryRecipe *MemR, VPValue *NewPtr,
+          VPValue *StrideInBytes, Type *DataTy, Intrinsic::ID IntrinID) {
+        VPRecipeBase *R = MemR->getAsRecipe();
+        VPValue *StoredValue = nullptr;
+        if (IntrinID == Intrinsic::experimental_vp_strided_store)
+          StoredValue = cast<VPWidenStoreRecipe>(R)->getStoredValue();
+
+        VPValue *Mask = MemR->getMask();
+        if (!Mask)
+          Mask = Plan.getTrue();
+        SmallVector<VPValue *, 5> Ops;
+        if (StoredValue)
+          Ops.push_back(StoredValue);
+        Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
+
+        auto *StridedR = Builder.createWidenMemIntrinsic(
+            IntrinID, Ops,
+            StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy,
+            MemR->getAlign(), *MemR, R->getDebugLoc());
+        if (!StoredValue)
+          cast<VPWidenLoadRecipe>(R)->replaceAllUsesWith(StridedR);
+        R->eraseFromParent();
+      };
   // Transform interleave access into multiple strided accesses.
   InterleaveGroups.remove_if([&](const auto *IG) {
     auto It =
@@ -6342,24 +6369,8 @@ void VPlanTransforms::convertToStridedAccesses(
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
           vputils::getGEPFlagsForPtr(BasePtr), R->getDebugLoc());
 
-      VPValue *Mask = MemR->getMask();
-      if (!Mask)
-        Mask = Plan.getTrue();
-      SmallVector<VPValue *, 5> Ops;
-      VPValue *StoredValue = nullptr;
-      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(R)) {
-        StoredValue = StoreR->getStoredValue();
-        Ops.push_back(StoredValue);
-      }
-      Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
-
-      auto *StridedR = Builder.createWidenMemIntrinsic(
-          IntrinID, Ops,
-          StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy,
-          MemR->getAlign(), *MemR, R->getDebugLoc());
-      if (!StoredValue)
-        cast<VPWidenLoadRecipe>(R)->replaceAllUsesWith(StridedR);
-      R->eraseFromParent();
+      ReplaceWithStridedAccess(Builder, MemR, NewPtr, StrideInBytes, DataTy,
+                               IntrinID);
     }
     return true;
   });
@@ -6395,9 +6406,6 @@ void VPlanTransforms::convertToStridedAccesses(
         continue;
 
       auto [DataTy, IntrinID] = GetDataTyAndIntrinID(&R);
-      VPValue *StoredValue = nullptr;
-      if (IntrinID == Intrinsic::experimental_vp_strided_store)
-        StoredValue = cast<VPWidenStoreRecipe>(&R)->getStoredValue();
 
       Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
@@ -6447,21 +6455,8 @@ void VPlanTransforms::convertToStridedAccesses(
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
           R.getDebugLoc());
 
-      VPValue *Mask = MemR->getMask();
-      if (!Mask)
-        Mask = Plan.getTrue();
-      SmallVector<VPValue *, 5> Ops;
-      if (StoredValue)
-        Ops.push_back(StoredValue);
-      Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
-
-      auto *StridedR = Builder.createWidenMemIntrinsic(
-          IntrinID, Ops,
-          StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy, Alignment,
-          *MemR, R.getDebugLoc());
-      if (!StoredValue)
-        cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
-      R.eraseFromParent();
+      ReplaceWithStridedAccess(Builder, MemR, NewPtr, StrideInBytes, DataTy,
+                               IntrinID);
     }
   }
 }
