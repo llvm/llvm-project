@@ -285,7 +285,7 @@ define i32 @zext_i8_mul_nsw_nuw_i12_zext_i32(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw <16 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <16 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
