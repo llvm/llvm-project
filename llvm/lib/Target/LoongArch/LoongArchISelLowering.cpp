@@ -7096,6 +7096,42 @@ static bool checkValueWidth(SDValue V, ISD::LoadExtType &ExtType) {
   return false;
 }
 
+// Fold a lane-mask extraction that is only compared against zero into one of
+// all-lane check instructions, which write the results into fcc register, so
+// BCEQZ could use it directly.
+//
+//   (VMSKLTZ X) != 0  ->  VSETNEZ.V X
+//   (VMSKLTZ X) == 0  ->  VSETEQZ.V X
+//
+// This is valid when X is the result of a vector compare instruction,
+// so each lane of X has to be all-ones or all-zeros.
+static SDValue foldVMskZeroTest(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                const SDLoc &DL, SelectionDAG &DAG,
+                                const LoongArchSubtarget &Subtarget) {
+  if (CC != ISD::SETEQ && CC != ISD::SETNE)
+    return SDValue();
+  if (!isNullConstant(RHS))
+    return SDValue();
+
+  unsigned MskOpc = LHS.getOpcode();
+  if (MskOpc != LoongArchISD::VMSKLTZ && MskOpc != LoongArchISD::XVMSKLTZ)
+    return SDValue();
+  // Keeping the mask alive for another user would defeat the purpose.
+  if (!LHS.hasOneUse())
+    return SDValue();
+
+  SDValue Src = LHS.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  // Make sure every lane is all-ones or all-zeros.
+  if (!SrcVT.isVector() ||
+      DAG.ComputeNumSignBits(Src) != SrcVT.getScalarSizeInBits())
+    return SDValue();
+
+  return DAG.getNode(CC == ISD::SETNE ? LoongArchISD::VANYNONZERO
+                                      : LoongArchISD::VALLZERO,
+                     DL, Subtarget.getGRLenVT(), Src);
+}
+
 // Eliminate redundant truncation and zero-extension nodes.
 // * Case 1:
 //  +------------+ +------------+ +------------+
@@ -7159,6 +7195,11 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const LoongArchSubtarget &Subtarget) {
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  if (N->getValueType(0) == Subtarget.getGRLenVT())
+    if (SDValue V = foldVMskZeroTest(N->getOperand(0), N->getOperand(1), CC,
+                                     SDLoc(N), DAG, Subtarget))
+      return V;
 
   SDNode *AndNode = N->getOperand(0).getNode();
   if (AndNode->getOpcode() != ISD::AND)
@@ -7473,6 +7514,14 @@ static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(2);
   SDValue CC = N->getOperand(3);
   SDLoc DL(N);
+
+  // CC was folded into V, so always return ISD::SETNE is fine.
+  if (SDValue V = foldVMskZeroTest(LHS, RHS, cast<CondCodeSDNode>(CC)->get(),
+                                   DL, DAG, Subtarget))
+    return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
+                       N->getOperand(0), V,
+                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()),
+                       DAG.getCondCode(ISD::SETNE), N->getOperand(4));
 
   if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
     return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
@@ -8366,7 +8415,7 @@ static SDValue ExtendSrcToDst(SDNode *N, SelectionDAG &DAG, unsigned ExtendOp) {
     return SDValue();
 
   MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
-  MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+  EVT WidenSrcVT = EVT::getVectorVT(*DAG.getContext(), WidenEltVT, DstElts);
 
   SDValue Extend = DAG.getNode(ExtendOp, DL, WidenSrcVT, Src);
   return DAG.getNode(N->getOpcode(), DL, VT, Extend);
@@ -9275,8 +9324,8 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
     Register Tmp = MRI.createVirtualRegister(RC);
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
     BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
-        .addReg(Tmp, RegState::Kill)
-        .addReg(Tmp, RegState::Kill);
+        .addReg(Tmp)
+        .addReg(Tmp);
   } else {
     BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
   }
@@ -9288,19 +9337,19 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
         .addReg(Msk)
         .addImm(0);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(4);
     BuildMI(*BB, MI, DL,
             TII->get(Subtarget.is64Bit() ? LoongArch::BSTRINS_D
                                          : LoongArch::BSTRINS_W),
             Dst)
-        .addReg(Lo, RegState::Kill)
-        .addReg(Hi, RegState::Kill)
+        .addReg(Lo)
+        .addReg(Hi)
         .addImm(256 / EleBits - 1)
         .addImm(128 / EleBits);
   } else {
     BuildMI(*BB, MI, DL, TII->get(LoongArch::VPICKVE2GR_HU), Dst)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(0);
   }
 
@@ -9346,7 +9395,7 @@ emitBuildPairF64Pseudo(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FR_W_64), TmpReg)
       .addReg(LoReg, getKillRegState(MI.getOperand(1).isKill()));
   BuildMI(*BB, MI, DL, TII.get(LoongArch::MOVGR2FRH_W), DstReg)
-      .addReg(TmpReg, RegState::Kill)
+      .addReg(TmpReg)
       .addReg(HiReg, getKillRegState(MI.getOperand(2).isKill()));
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -11857,6 +11906,12 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   switch (Opc) {
   default:
     break;
+  case LoongArchISD::VANYNONZERO:
+  case LoongArchISD::VALLZERO: {
+    // MOVCF2GR zero-extend the i1 cond to GPR.
+    Known.Zero.setBitsFrom(1);
+    break;
+  }
   case LoongArchISD::VPICK_ZEXT_ELT: {
     assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
     EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();

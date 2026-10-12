@@ -743,6 +743,7 @@ if config.target_os == "Linux" and not config.android:
         for required in [
             (2, 19),
             (2, 27),
+            (2, 28),
             (2, 30),
             (2, 33),
             (2, 34),

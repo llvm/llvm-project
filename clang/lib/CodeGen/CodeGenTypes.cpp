@@ -492,6 +492,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::PointerType::getUnqual(getLLVMContext());
       break;
 
+    case BuiltinType::MetaInfo:
+      // FIXME(Reflection): once consteval-only types are supported,
+      // make this an llvm_unreachable instead because reflection
+      // should not reach here
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 64);
+      break;
+
     case BuiltinType::UInt128:
     case BuiltinType::Int128:
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
@@ -594,6 +601,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
       ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+      break;
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 32);
       break;
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \

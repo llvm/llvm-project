@@ -96,6 +96,13 @@ jobs:
           repository: llvm/llvm-test-suite
           path: llvm-test-suite
           persist-credentials: false
+      - name: Checkout FFmpeg
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: FFmpeg/FFmpeg
+          ref: db69d06eeeab4f46da15030a80d539efb4503ca8 # n7.1.1
+          path: llvm-test-suite/test-suite-externals/ffmpeg
+          persist-credentials: false
       - name: Setup environment variables
         run: |
           echo "HEAD_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV

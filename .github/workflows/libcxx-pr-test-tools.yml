@@ -42,6 +42,11 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0 # some tools need full git history
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       - name: Set up Python dependencies
         shell: bash
