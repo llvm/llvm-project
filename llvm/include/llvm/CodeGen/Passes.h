@@ -150,8 +150,7 @@ LLVM_ABI extern char &MachineRegionInfoPassID;
 /// EdgeBundles analysis - Bundle machine CFG edges.
 LLVM_ABI extern char &EdgeBundlesWrapperLegacyID;
 
-/// LiveVariables pass - This pass computes the set of blocks in which each
-/// variable is life and sets machine operand kill flags.
+/// LiveVariables pass - This pass sets dead flags on register definitions.
 LLVM_ABI extern char &LiveVariablesID;
 
 /// PHIElimination - This pass eliminates machine instruction PHI nodes

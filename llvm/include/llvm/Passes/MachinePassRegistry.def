@@ -119,7 +119,6 @@ MACHINE_FUNCTION_PASS("print<gisel-value-tracking>",
 MACHINE_FUNCTION_PASS("print<livedebugvars>", LiveDebugVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-stacks>", LiveStacksPrinterPass(errs()))
-MACHINE_FUNCTION_PASS("print<live-vars>", LiveVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-block-hash>",

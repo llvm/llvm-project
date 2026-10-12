@@ -252,13 +252,19 @@ createBBClusterInfoForFunction(MachineFunction &MF,
 // Additionally, if exception handling landing pads end up in more than one
 // clusters, they are moved into a single "Exception" section. Eventually,
 // clusters are ordered in increasing order of their IDs, with the "Exception"
-// and "Cold" succeeding all other clusters.
+// and "Cold" succeeding all other clusters. With -function-splitting=none, all
+// basic blocks stay in the default section instead.
 // FuncClusterInfo represents the cluster information for basic blocks. It
 // maps from BBID of basic blocks to their cluster information.
 static void
 assignSections(MachineFunction &MF,
                const DenseMap<UniqueBBID, BBClusterInfo> &FuncClusterInfo) {
   assert(MF.hasBBSections() && "BB Sections is not set for function.");
+  // With function splitting disabled, the profile only decides the layout and
+  // the function is emitted as a single section.
+  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::List &&
+      MF.getTarget().Options.FunctionSplitting == FunctionSplittingMode::None)
+    return;
   // This variable stores the section ID of the cluster containing eh_pads (if
   // all eh_pads are one cluster). If more than one cluster contain eh_pads, we
   // set it equal to ExceptionSectionID.
@@ -443,9 +449,10 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
     if (&X == &EntryBB || &Y == &EntryBB)
       return &X == &EntryBB;
     // If the two basic blocks are in the same section, the order is decided by
-    // their position within the section. Basic blocks which are not in any
-    // cluster (those which are not safe to split) come after all the profiled
-    // basic blocks of the section, in their original order.
+    // their cluster and their position within the cluster. A section holds more
+    // than one cluster only with -function-splitting=none. Basic blocks which
+    // are not in any cluster come after all the profiled basic blocks of the
+    // section, in their original order.
     if (XSectionID.Type == MBBSectionID::SectionType::Default) {
       auto XI = FuncClusterInfo.find(*X.getBBID());
       auto YI = FuncClusterInfo.find(*Y.getBBID());
@@ -454,7 +461,8 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
       if (XInCluster != YInCluster)
         return XInCluster;
       if (XInCluster)
-        return XI->second.PositionInCluster < YI->second.PositionInCluster;
+        return std::tie(XI->second.ClusterID, XI->second.PositionInCluster) <
+               std::tie(YI->second.ClusterID, YI->second.PositionInCluster);
     }
     return X.getNumber() < Y.getNumber();
   };

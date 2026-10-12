@@ -1567,7 +1567,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   if (WritingModule && !WritingModule->getDirectoryDependencies().empty()) {
     Record.clear();
-    ArrayRef<std::string> Dirs = WritingModule->getDirectoryDependencies();
+    // Sort so that dependencies are reported in a stable order.
+    SmallVector<StringRef> Dirs(WritingModule->getDirectoryDependencies());
+    llvm::sort(Dirs);
     Record.push_back(Dirs.size());
     for (StringRef Dir : Dirs)
       AddPath(Dir, Record);

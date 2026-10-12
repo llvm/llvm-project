@@ -57,7 +57,6 @@ enum class FunctionSplittingMode {
                   // which have a basic block sections profile. Such functions
                   // are still laid out using the profile, but are emitted as a
                   // single contiguous section.
-                  // NOTE: Not implemented yet.
   BBSectionsOnly, // Split only functions that have a basic block sections
                   // profile. Functions without one are not split, even if
                   // they have PGO/SamplePGO data. This is the default, and
