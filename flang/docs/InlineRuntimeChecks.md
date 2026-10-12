@@ -53,7 +53,7 @@ silently disappears. Three consequences:
    out-of-bounds read or write instead of an error.
 3. **Some checks the standard requires are missing on every path.** For
    example, the inline ALLOCATE/DEALLOCATE of intrinsic-type allocatables
-   does not check the allocation status (F2018 9.7.1.3, 9.7.3.2, 9.7.4).
+   does not check the allocation status (F2023 9.7.1.3, 9.7.3.2, 9.7.4).
 
 The few inline checks that exist today (MOD/MODULO `P==0`, NEAREST `S==0`,
 STORAGE_SIZE, the realloc-with-scalar-RHS case) use `fir.if` plus
@@ -426,7 +426,7 @@ Notes on A1:
   passes the runtime and gives a wrong result in element order. The inline
   loop nest would access out of bounds, so the assert must compare
   **per-dimension** extents. That is stricter than the runtime, and it is
-  exactly F2018 10.2.1.2 conformance. The message then also names the
+  exactly F2023 10.2.1.2 conformance. The message then also names the
   dimension (see the A1 example in section 5.4).
 
 #### Reductions, MATMUL, DOT_PRODUCT
@@ -513,7 +513,7 @@ equivalent to `lb <= i <= lb + ext - 1` and false when `ext == 0`.
 | C3 | `bounds` | Vector subscript elements | `inb(v(k), lb, ext)` | `X2H` `createVectorSubscriptElementAddrOp`, after the element load (`:995-1003`) | Loaded subscript | O(n). A MINVAL/MAXVAL pre-check is cheaper but loses the index in the message. |
 | C4 | `bounds` | Substring `s(lo:hi)` | `hi < lo \|\| (lo >= 1 && hi <= len)` | `X2H` `gen(Substring)`, before the length is replaced (`:549-555`) | `lo`, `hi` | Must be done before `ConvertToFIR`, which drops `hi`. |
 | C5 | `bounds` | Character dummy length | As required by F2023 15.5.2.5: `passedLen >= declaredLen` for scalars of default or C character kind, equality for assumed-shape and assumed-rank dummies and other kinds, no check for sequence-associated arrays | `flang/lib/Lower/ConvertVariable.cpp`, dummy mapping (non-box `:3129-3142`, box `:2898-2939`) | Dummy base address | Skip bare-reference dummies (no length) and absent OPTIONAL. |
-| C6 | `pointer` | POINTER dereference | `!null(box_addr(load p))` | Context-aware call sites, **not** inside `hlfir::derefPointersAndAllocatables`: `X2H` `visit(SymbolRef)` (`:648-653`), the pointer-component paths (`:808-809`, `:889`), and `flang/lib/Lower/ConvertCall.cpp` for a non-optional, non-pointer dummy (`:1497-1498`) | Loaded box or base address | Several callers of `derefPointersAndAllocatables` dereference a possibly null box on purpose (a disassociated actual passed to an OPTIONAL dummy counts as absent, F2018 15.5.2.12). |
+| C6 | `pointer` | POINTER dereference | `!null(box_addr(load p))` | Context-aware call sites, **not** inside `hlfir::derefPointersAndAllocatables`: `X2H` `visit(SymbolRef)` (`:648-653`), the pointer-component paths (`:808-809`, `:889`), and `flang/lib/Lower/ConvertCall.cpp` for a non-optional, non-pointer dummy (`:1497-1498`) | Loaded box or base address | Several callers of `derefPointersAndAllocatables` dereference a possibly null box on purpose (a disassociated actual passed to an OPTIONAL dummy counts as absent, F2023 15.5.2.13 p1). |
 | C7 | `pointer` | ALLOCATABLE dereference | same as C6 | same sites | same | Exempt realloc assignment, `ALLOCATED`, `MOVE_ALLOC`, and actuals passed to ALLOCATABLE or OPTIONAL dummies. A zero-size allocation has a non-null address, so "allocated" means "non-null". |
 | C8 | `pointer` | Use of an absent OPTIONAL dummy | `fir.is_present %x` | Part references (`X2H` `visit(SymbolRef)`), value uses, actuals passed to non-optional dummies (`ConvertCall.cpp`, `genIsPresentIfArgMaybeAbsent`) | Declare result at the use site | Guard per use, not once at entry (uses under `if (present(x))` are legal). Exempt `PRESENT` and forwarding to OPTIONAL dummies. |
 | C9 | `do` | Zero step in DO, DO CONCURRENT, FORALL, and array-constructor and I/O implied-DOs | `step != 0` | Where lowering computes the step, e.g. `flang/lib/Lower/Bridge.cpp` for DO (`:3094-3099`) | Step value | A zero step currently divides by zero in the trip-count computation (SIGFPE at every optimization level). Section triplets are covered by C2. |
