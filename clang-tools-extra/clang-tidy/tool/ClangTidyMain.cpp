@@ -641,6 +641,13 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  if (!SarifExport.empty() && SarifExport == ExportFixes) {
+    llvm::errs() << "Error: --sarif-export and --export-fixes cannot write to "
+                    "the same output '"
+                 << SarifExport << "'.\n";
+    return 1;
+  }
+
   const llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS =
       createBaseFS();
   if (!BaseFS)
