@@ -23,7 +23,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY killed $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
-    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
+    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV32rm]]
     ; CHECK-NEXT: dead [[COPY2:%[0-9]+]]:gr32 = IMUL32rr [[COPY2]], [[COPY1]], implicit-def dead $eflags
     ; CHECK-NEXT: dead $rax = SUBREG_TO_REG killed [[COPY1]], %subreg.sub_32bit
@@ -56,7 +56,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY killed $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
-    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
+    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV32rm]]
     ; CHECK-NEXT: dead [[COPY2:%[0-9]+]]:gr32 = IMUL32rr [[COPY2]], [[COPY1]], implicit-def dead $eflags
     ; CHECK-NEXT: dead [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[COPY1]], %subreg.sub_32bit
@@ -87,7 +87,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY killed $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
-    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
+    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV32rm]]
     ; CHECK-NEXT: dead [[COPY2:%[0-9]+]]:gr32 = IMUL32rr [[COPY2]], [[COPY1]], implicit-def dead $eflags
     ; CHECK-NEXT: dead $eax = COPY killed [[COPY1]]
@@ -119,7 +119,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY killed $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY killed $esi
-    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
+    ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 4, $noreg :: (load (s32) from `ptr undef`)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr32 = COPY [[MOV32rm]]
     ; CHECK-NEXT: dead [[COPY2:%[0-9]+]]:gr32 = IMUL32rr [[COPY2]], [[COPY1]], implicit-def dead $eflags
     ; CHECK-NEXT: dead [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY1]]

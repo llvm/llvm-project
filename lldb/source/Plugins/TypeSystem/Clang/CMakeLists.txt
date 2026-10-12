@@ -16,6 +16,7 @@ add_lldb_library(lldbPluginTypeSystemClang PLUGIN
   CLANG_LIBS
     clangAST
     clangBasic
+    clangDriver
     clangFrontend
     clangSema
     clangSerialization

@@ -78,3 +78,74 @@ body:             |
     $vgpr0_vgpr1 = COPY %8(<2 x s32>)
 
 ...
+
+---
+name: add_nullptr_inttoptr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; G_INTTOPTR(0) is not a G_CONSTANT base, so the G_PTR_ADD stays.
+    ; CHECK-LABEL: name: add_nullptr_inttoptr
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[C]]
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[INTTOPTR]], [[COPY]](s32)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[PTR_ADD]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[PTRTOINT]](s32)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(p3) = G_INTTOPTR %1
+    %3:_(p3) = G_PTR_ADD %2, %0(s32)
+    %4:_(s32) = G_PTRTOINT %3(p3)
+    $vgpr0 = COPY %4(s32)
+
+...
+
+---
+name: store_via_inttoptr_null
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; G_PTR_ADD(G_INTTOPTR(0), x) is not folded to G_INTTOPTR(x).
+    ; CHECK-LABEL: name: store_via_inttoptr_null
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BASE:%[0-9]+]]:_(p3) = G_INTTOPTR [[C0]]
+    ; CHECK-NEXT: [[PTR:%[0-9]+]]:_(p3) = G_PTR_ADD [[BASE]], [[OFF]](s32)
+    ; CHECK-NEXT: G_STORE [[OFF]](s32), [[PTR]](p3) :: (store (s32), addrspace 3)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(p3) = G_INTTOPTR %1
+    %3:_(p3) = G_PTR_ADD %2, %0(s32)
+    G_STORE %0(s32), %3(p3) :: (store (s32), addrspace 3)
+
+...
+
+---
+name: store_via_constant_null
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; (ptr_add (G_CONSTANT 0), x) folds to G_INTTOPTR(x).
+    ; CHECK-LABEL: name: store_via_constant_null
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[OFF:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[PTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[OFF]]
+    ; CHECK-NEXT: G_STORE [[OFF]](s32), [[PTR]](p3) :: (store (s32), addrspace 3)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(p3) = G_CONSTANT i32 0
+    %2:_(p3) = G_PTR_ADD %1, %0(s32)
+    G_STORE %0(s32), %2(p3) :: (store (s32), addrspace 3)
+
+...

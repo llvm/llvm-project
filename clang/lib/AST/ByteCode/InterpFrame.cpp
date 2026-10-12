@@ -279,6 +279,11 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   if (Func && !funcHasUsableBody(Func) && Caller)
     return Caller->getSource(getRetOpPC());
 
+  // If we have a frame for an invalid function, check the caller.
+  // This happens for the fake function frame we create in TrivialCopy.
+  if (Func && !Func->isValid())
+    return Caller->getSource(getRetOpPC());
+
   // Similarly, if the resulting source location is invalid anyway,
   // point to the caller instead.
   SourceInfo Result = Func->getSource(PC);

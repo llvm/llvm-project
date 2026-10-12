@@ -101,6 +101,15 @@ template <typename... ArgsTy>
                                     ArgsTy... Args);
 } // namespace Plugin
 
+/// Decide whether an operation must be synchronized eagerly because the
+/// force-synchronization escape hatch (OFFLOAD_FORCE_SYNC_OPS) is enabled. Only
+/// external async info objects are affected; local ones are always synchronized
+/// on finalization. A pending error suppresses synchronization.
+inline bool shouldForceSync(bool ForceSyncOps, bool IsLocalAsyncInfo,
+                            bool HasQueue, bool HasError) {
+  return ForceSyncOps && !IsLocalAsyncInfo && HasQueue && !HasError;
+}
+
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
 /// an internal one and will synchronize the current thread with the pending
@@ -985,30 +994,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Unlock a previously locked host buffer starting at \p HstPtr.
   virtual Error dataUnlockImpl(void *HstPtr) = 0;
 
-  /// Mark the host buffer with address \p HstPtr and \p Size bytes as a mapped
-  /// buffer. This means that libomptarget created a new mapping of that host
-  /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
-  /// as source/destination of memory transfers. We can use this information to
-  /// lock the host buffer and optimize its memory transfers.
-  Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
-    if (!Err && !IgnoreLockMappedFailures)
-      return Err.takeError();
-    return Plugin::success();
-  }
-
-  /// Mark the host buffer with address \p HstPtr as unmapped. This means that
-  /// libomptarget removed an existing mapping. If the plugin locked the buffer
-  /// in notifyDataMapped, this function should unlock it.
-  Error notifyDataUnmapped(void *HstPtr) {
-    auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
-    if (IgnoreLockMappedFailures) {
-      consumeError(std::move(Err));
-      return Plugin::success();
-    }
-    return Err;
-  }
-
   /// Check whether the host buffer with address \p HstPtr is pinned by the
   /// underlying vendor-specific runtime (if any). Retrieve the host pointer,
   /// the device accessible pointer and the size of the original pinned buffer.
@@ -1141,7 +1126,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
-  uint32_t getDebugKind() const { return OMPX_DebugKind; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get a device-specific timestamp in nanoseconds, used by the profiler
@@ -1313,6 +1297,13 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// Environment flag that forces every device operation to be synchronized,
+  /// draining the queue after each operation. Debugging escape hatch.
+  BoolEnvar OF_ForceSyncOps = BoolEnvar("OFFLOAD_FORCE_BLOCKING", false);
+
+  /// Return whether all device operations should be forced synchronous.
+  bool forceSyncOps() const { return OF_ForceSyncOps; }
+
   /// Array of images loaded into the device. Images are automatically
   /// deallocated by the allocator.
   llvm::SmallVector<DeviceImageTy *> LoadedImages;
@@ -1334,13 +1325,7 @@ private:
     return false;
   }
 
-  /// Environment variables defined by the OpenMP standard.
-  Int32Envar OMP_TeamLimit;
-  Int32Envar OMP_NumTeams;
-  Int32Envar OMP_TeamsThreadLimit;
-
   /// Environment variables defined by the LLVM OpenMP implementation.
-  Int32Envar OMPX_DebugKind;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
@@ -1352,12 +1337,6 @@ private:
 
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
-
-  /// Indicate whether mapped host buffers should be locked automatically.
-  bool LockMappedBuffers;
-
-  /// Indicate whether failures when locking mapped buffers should be ignored.
-  bool IgnoreLockMappedFailures;
 
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
@@ -1619,19 +1598,6 @@ public:
   /// Deallocates memory on the given device.
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
                       GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Locks / pins host memory using the plugin runtime.
-  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                    void **LockedPtr);
-
-  /// Unlocks / unpins host memory using the plugin runtime.
-  int32_t data_unlock(int32_t DeviceId, void *Ptr);
-
-  /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
-
-  /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
 
   /// Copy data to the given device.
   int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,

@@ -231,6 +231,8 @@ protected:
 
 public:
   Context(LLVMContext &LLVMCtx);
+  Context(const Context &) = delete;
+  Context &operator=(const Context &) = delete;
   virtual ~Context();
   /// Clears function-level state.
   void clear();

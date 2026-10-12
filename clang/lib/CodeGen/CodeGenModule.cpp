@@ -48,7 +48,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
@@ -1413,6 +1412,11 @@ void CodeGenModule::Release() {
     // Note if we are compiling with /kernel.
     getModule().addModuleFlag(llvm::Module::Warning, "ms-kernel", 1);
   }
+  if (CodeGenOpts.HotPatch) {
+    // Note if we are compiling with /hotpatch. Min ensures that LTO only keeps
+    // it if every module was compiled with /hotpatch.
+    getModule().addModuleFlag(llvm::Module::Min, "ms-hotpatch", 1);
+  }
   if (CodeGenOpts.OptimizationLevel > 0 && CodeGenOpts.StrictVTablePointers) {
     // We don't support LTO with 2 with different StrictVTablePointers
     // FIXME: we could support it by stripping all the information introduced
@@ -1709,6 +1713,14 @@ void CodeGenModule::Release() {
           llvm::Module::Error, "ptrauth-init-fini-address-discrimination",
           LangOpts.PointerAuthCalls && LangOpts.PointerAuthInitFini &&
               LangOpts.PointerAuthInitFiniAddressDiscrimination);
+    }
+
+    if (LangOpts.hasSignReturnAddressHardening()) {
+      TargetInfo::BranchProtectionInfo BPI(LangOpts);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "sign-return-address-harden",
+          llvm::MDString::get(getLLVMContext(),
+                              BPI.getSignReturnAddressHardeningStr()));
     }
 
     if (getTriple().isOSLinux()) {
@@ -3302,7 +3314,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
     ExplicitAlignment = llvm::Align(alignment);
   else if (LangOpts.FunctionAlignment)
-    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
+    ExplicitAlignment = llvm::Align::fromLog2(LangOpts.FunctionAlignment);
 
   if (ExplicitAlignment) {
     F->setAlignment(ExplicitAlignment);

@@ -200,7 +200,7 @@ function(_get_compile_options_from_config output_var)
   if(LIBC_COPT_HARDENING_MODE)
     libc_add_definition(config_options "LIBC_COPT_HARDENING_MODE=${LIBC_COPT_HARDENING_MODE}")
   endif()
-  
+
   if(LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()

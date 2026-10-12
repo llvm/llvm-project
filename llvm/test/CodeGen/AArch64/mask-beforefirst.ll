@@ -95,3 +95,12 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   ret <2 x i1> %x
 }
+
+define <1 x i1> @v1i1(<1 x i1> %m) {
+; CHECK-LABEL: v1i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor w0, w0, #0x1
+; CHECK-NEXT:    ret
+  %x = call <1 x i1> @llvm.mask.beforefirst(<1 x i1> %m)
+  ret <1 x i1> %x
+}

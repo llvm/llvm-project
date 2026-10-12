@@ -64,11 +64,6 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                     CheckSubobjectKind CSK);
 
-/// Checks if the dowcast using the given offset is possible with the given
-/// pointer.
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset);
-
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -2105,8 +2100,8 @@ bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType);
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())

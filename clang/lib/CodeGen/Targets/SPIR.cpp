@@ -11,7 +11,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 
@@ -588,10 +588,8 @@ void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
     RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
   if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
     RMW->setMetadata("amdgpu.no.remote.memory", Empty);
-  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
-      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
-      RMW->getType()->isFloatTy())
-    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, *RMW);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

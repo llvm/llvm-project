@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFuse.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -57,7 +58,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -98,18 +98,6 @@ STATISTIC(OnlySecondCandidateIsGuarded,
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
-
-static cl::opt<uint32_t> FusionPeelMaxCount(
-    "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
-    cl::desc("Max number of iterations to be peeled from a loop, such that "
-             "fusion can take place"));
-
-#ifndef NDEBUG
-static cl::opt<bool>
-    VerboseFusionDebugging("loop-fusion-verbose-debug",
-                           cl::desc("Enable verbose debugging for Loop Fusion"),
-                           cl::Hidden, cl::init(false));
-#endif
 
 namespace {
 /// This class is used to represent a candidate for loop fusion. When it is
@@ -548,6 +536,8 @@ private:
 
 struct LoopFuser {
 private:
+  const ScalarOptions &Opts;
+
   // Sets of control flow equivalent fusion candidates for a given nest level.
   FusionCandidateCollection FusionCandidates;
 
@@ -564,19 +554,19 @@ private:
   const TargetTransformInfo &TTI;
 
 public:
-  LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI,
-            ScalarEvolution &SE, PostDominatorTree &PDT,
+  LoopFuser(const ScalarOptions &Opts, LoopInfo &LI, DominatorTree &DT,
+            DependenceInfo &DI, ScalarEvolution &SE, PostDominatorTree &PDT,
             OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
             const TargetTransformInfo &TTI)
-      : LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy), LI(LI),
-        DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
+      : Opts(Opts), LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy),
+        LI(LI), DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
 
   /// This is the main entry point for loop fusion. It will traverse the
   /// specified function and collect candidate loops to fuse, starting at the
   /// outermost nesting level and working inwards.
   bool fuseLoops(Function &F) {
 #ifndef NDEBUG
-    if (VerboseFusionDebugging) {
+    if (Opts.loop_fusion_verbose_debug) {
       LI.print(dbgs());
     }
 #endif
@@ -597,7 +587,7 @@ public:
         if (LV.size() == 1)
           continue;
 #ifndef NDEBUG
-        if (VerboseFusionDebugging) {
+        if (Opts.loop_fusion_verbose_debug) {
           LLVM_DEBUG({
             dbgs() << "  Visit loop set (#" << LV.size() << "):\n";
             printLoopVector(LV);
@@ -656,7 +646,7 @@ private:
           FoundAdjacent = true;
           NumFusionCandidates++;
 #ifndef NDEBUG
-          if (VerboseFusionDebugging)
+          if (Opts.loop_fusion_verbose_debug)
             LLVM_DEBUG(dbgs() << "Adding " << CurrCand
                               << " to existing candidate list\n");
 #endif
@@ -666,7 +656,7 @@ private:
       if (!FoundAdjacent) {
         // No list was found. Create a new list and add to FusionCandidates
 #ifndef NDEBUG
-        if (VerboseFusionDebugging)
+        if (Opts.loop_fusion_verbose_debug)
           LLVM_DEBUG(dbgs() << "Adding " << CurrCand << " to new list\n");
 #endif
         FusionCandidateList NewCandList;
@@ -847,9 +837,9 @@ private:
         // the first loop has a larger trip count. In this case it is possible
         // that the first loop is peeled to expose the fusion opportunity.
         // Peeling the second loop is not currently supported.
-        bool WillPeel =
-            FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
-            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount);
+        bool WillPeel = FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
+                        *TCDifference <= static_cast<int64_t>(
+                                             Opts.loop_fusion_peel_max_count);
 
         if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
@@ -1189,7 +1179,7 @@ private:
                               const FusionCandidate &FC1, Instruction &I0,
                               Instruction &I1) {
 #ifndef NDEBUG
-    if (VerboseFusionDebugging) {
+    if (Opts.loop_fusion_verbose_debug) {
       LLVM_DEBUG(dbgs() << "Check dep: " << I0 << " vs " << I1 << "\n");
     }
 #endif
@@ -1205,7 +1195,7 @@ private:
         return true;
     }
 #ifndef NDEBUG
-    if (VerboseFusionDebugging) {
+    if (Opts.loop_fusion_verbose_debug) {
       LLVM_DEBUG(dbgs() << "DA res: "; DepResult->dump(dbgs());
                  dbgs() << " [#l: " << DepResult->getLevels() << "][Ordered: "
                         << (DepResult->isOrdered() ? "true" : "false")
@@ -1368,7 +1358,7 @@ private:
     NumHoistedInsts += HoistInsts.size();
     NumSunkInsts += SinkInsts.size();
 
-    LLVM_DEBUG(if (VerboseFusionDebugging) {
+    LLVM_DEBUG(if (Opts.loop_fusion_verbose_debug) {
       if (!HoistInsts.empty())
         dbgs() << "Hoisting: \n";
       for (Instruction *I : HoistInsts)
@@ -1936,7 +1926,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
+  LoopFuser LF(ScalarOptions::Global, LI, DT, DI, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();

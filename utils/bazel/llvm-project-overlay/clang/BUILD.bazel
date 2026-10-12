@@ -663,6 +663,7 @@ td_library(
     includes = ["include"],
     deps = [
         "//mlir:BuiltinDialectTdFiles",
+        "//mlir:BytecodeTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
         "//mlir:InferTypeOpInterfaceTdFiles",
@@ -700,6 +701,19 @@ gentbl_cc_library(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRDialectBytecodeIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIRDialectBytecode.cpp.inc": [
+            "-gen-bytecode",
+            "-bytecode-dialect=CIR",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIRDialectBytecode.td",
     deps = [":CIRTdFiles"],
 )
 
@@ -2133,6 +2147,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:Demangle",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -3074,7 +3089,10 @@ cc_library(
 cc_library(
     name = "cir_dialect",
     srcs = glob(
-        ["lib/CIR/Dialect/IR/*.cpp"],
+        [
+            "lib/CIR/Dialect/IR/*.cpp",
+            "lib/CIR/Dialect/IR/*.h",
+        ],
         exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
     ),
     hdrs = glob([
@@ -3083,6 +3101,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":MLIRCIRDialectBytecodeIncGen",
         ":MLIRCIREnumsGen",
         ":MLIRCIRLoopOpInterfaceIncGen",
         ":MLIRCIROpInterfacesIncGen",
@@ -3412,6 +3431,7 @@ cc_library(
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",
+        "//mlir:BytecodeWriter",
         "//mlir:IR",
         "//mlir:Parser",
         "//mlir:Pass",

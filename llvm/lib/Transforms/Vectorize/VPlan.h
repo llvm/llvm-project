@@ -610,14 +610,6 @@ LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
 class LLVM_ABI_FOR_TEST VPSingleDefRecipe : public VPRecipeBase,
                                             public VPSingleDefValue {
 public:
-  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this) {}
-
-  VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Value *UV,
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV) {}
-
   VPSingleDefRecipe(VPRecipeTy SC, ArrayRef<VPValue *> Operands, Type *ResultTy,
                     Value *UV = nullptr, DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(SC, Operands, DL), VPSingleDefValue(this, UV, ResultTy) {}
@@ -952,17 +944,9 @@ public:
           GEPNoWrapFlags::fromRaw(GEPFlagsStorage));
       break;
     case OperationType::FPMathOp:
-    case OperationType::FCmp: {
-      const FastMathFlagsTy &F = getFMFsRef();
-      I.setHasAllowReassoc(F.AllowReassoc);
-      I.setHasNoNaNs(F.NoNaNs);
-      I.setHasNoInfs(F.NoInfs);
-      I.setHasNoSignedZeros(F.NoSignedZeros);
-      I.setHasAllowReciprocal(F.AllowReciprocal);
-      I.setHasAllowContract(F.AllowContract);
-      I.setHasApproxFunc(F.ApproxFunc);
+    case OperationType::FCmp:
+      I.copyFastMathFlags(getFastMathFlagsOrNone());
       break;
-    }
     case OperationType::NonNegOp:
       I.setNonNeg(NonNegFlags.NonNeg);
       break;
@@ -1114,11 +1098,6 @@ static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
 struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
-  VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
-                      const VPIRFlags &Flags,
-                      DebugLoc DL = DebugLoc::getUnknown())
-      : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
-
   VPRecipeWithIRFlags(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
                       Type *ResultTy, const VPIRFlags &Flags,
                       DebugLoc DL = DebugLoc::getUnknown())
@@ -1470,7 +1449,8 @@ private:
       return true;
 
     return Instruction::isCast(Opcode) || Opcode == Instruction::PHI ||
-           Opcode == Instruction::GetElementPtr;
+           Opcode == Instruction::GetElementPtr ||
+           Opcode == Instruction::ExtractValue;
   }
 
 public:
@@ -1586,7 +1566,8 @@ public:
 
   /// Returns true if the recipe only uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
-    return isSingleScalar() || usesFirstLaneOnly(Op);
+    return isSingleScalar() || getOpcode() == VPInstruction::PtrAdd ||
+           usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
@@ -2069,7 +2050,8 @@ protected:
 };
 
 /// A recipe for widening vector memory intrinsics.
-class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
+class LLVM_ABI_FOR_TEST VPWidenMemIntrinsicRecipe final
+    : public VPWidenIntrinsicRecipe {
   /// Alignment information for this memory access.
   Align Alignment;
 
@@ -2082,9 +2064,12 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
-            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
-           "Unexpected intrinsic");
+    assert(getVectorMemoryIntrinsicPointerArgIdx(VectorIntrinsicID) &&
+           getVectorIntrinsicMaskArgIdx(VectorIntrinsicID) &&
+           "Expected a masked vector load/store intrinsic");
+    assert((!Ty->isVoidTy() ||
+            getVectorStoreIntrinsicDataArgIdx(VectorIntrinsicID)) &&
+           "Expected data argument for store intrinsic");
   }
 
   ~VPWidenMemIntrinsicRecipe() override = default;
@@ -2099,6 +2084,15 @@ public:
 
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
+
+  /// Returns the address operand index of the VPWidenMemIntrinsicRecipe.
+  unsigned getAddrOpIdx() const;
+
+  /// Returns the mask of a predicated VPWidenMemIntrinsicRecipe.
+  VPValue *getMask() const;
+
+  /// Returns the data type of the memory access at \p VF.
+  Type *getAccessType(ElementCount VF) const;
 
   /// Helper function for computing the cost of vector memory intrinsic.
   static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
