@@ -59,8 +59,9 @@ TEST(FakeStack, FlagsOffset) {
 }
 
 #if !defined(_WIN32)  // FIXME: Fails due to OOM on Windows.
-// Flaky on AArch64 Linux. See https://github.com/llvm/llvm-project/issues/231115.
-#if !(defined(__linux__) && defined(__aarch64__))
+// Flaky on AArch64 Linux. See
+// https://github.com/llvm/llvm-project/issues/231115.
+#  if !(defined(__linux__) && defined(__aarch64__))
 TEST(FakeStack, CreateDestroy) {
   for (int i = 0; i < 1000; i++) {
     for (uptr stack_size_log = 20; stack_size_log <= 22; stack_size_log++) {
