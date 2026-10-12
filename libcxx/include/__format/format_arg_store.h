@@ -169,8 +169,7 @@ consteval __arg_t __determine_arg_t() {
 // Modeled after template<class T> explicit basic_format_arg(T& v) noexcept;
 // [format.arg]/4-6
 template <class _Context, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr basic_format_arg<_Context> 
-__create_format_arg(_Tp& __value) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
   using _Dp               = remove_const_t<_Tp>;
   constexpr __arg_t __arg = __format::__determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");

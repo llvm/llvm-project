@@ -253,7 +253,7 @@ public:
 
   // These constructors contain the exact storage type used. If adjustments are
   // required, these will be done in __create_format_arg.
-  // 
+  //
   // P3391R2: make_format_args and the basic_format_arg constructors constexpr for every argument type.
   // An argument is stored even when the format string never uses it, e.g. std::format("{}", 42, 3.0).
   // Only formatting floating-point and pointer values remains non-constant as the paper defines it.
@@ -273,11 +273,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(float __value) noexcept : __float_(__value) {}
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(double __value) noexcept : __double_(__value) {}
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(long double __value) noexcept : __long_double_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(const _CharT* __value) noexcept : __const_char_type_ptr_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(const _CharT* __value) noexcept
+      : __const_char_type_ptr_(__value) {}
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
       : __string_view_(__value) {}
   _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
-  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(__handle&& __value) noexcept : __handle_(std::move(__value)) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __basic_format_arg_value(__handle&& __value) noexcept
+      : __handle_(std::move(__value)) {}
 };
 
 template <class _Context>
@@ -353,8 +355,8 @@ public:
   __basic_format_arg_value<_Context> __value_;
   __format::__arg_t __type_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_format_arg(__format::__arg_t __type,
-                                                  __basic_format_arg_value<_Context> __value) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_format_arg(
+      __format::__arg_t __type, __basic_format_arg_value<_Context> __value) noexcept
       : __value_(__value), __type_(__type) {}
 };
 
