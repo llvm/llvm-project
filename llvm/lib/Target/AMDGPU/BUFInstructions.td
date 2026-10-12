@@ -1306,16 +1306,11 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let True16Predicate = NotUseRealTrue16Insts in {
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_aext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_zext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_nonext_16_global>;
-}
-
 let True16Predicate = UseRealTrue16Insts in {
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_aext_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_zext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SHORT_D16_t16", i16, atomic_load_nonext_16_global>;
+foreach vt = Reg16Types.types in
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SHORT_D16_t16", vt, atomic_load_global>;
 }
 
 let SubtargetPredicate = isNotGFX940Plus in
@@ -2239,9 +2234,7 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
 }
 let SubtargetPredicate = isGFX6GFX7 in {
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i32, atomic_store_8_global>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_BYTE_ADDR64, BUFFER_STORE_BYTE_OFFSET, i16, atomic_store_8_global>;
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i32, atomic_store_16_global>;
-defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_SHORT_ADDR64, BUFFER_STORE_SHORT_OFFSET, i16, atomic_store_16_global>;
 } // End Predicates = isGFX6GFX7
 
 

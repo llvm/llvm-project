@@ -659,6 +659,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::bf16, Promote);
     AddPromotedToType(ISD::STORE, MVT::bf16, MVT::i16);
 
+    if (!Subtarget->useRealTrue16Insts()) {
+      for (MVT VT : {MVT::i16, MVT::f16, MVT::bf16}) {
+        setOperationAction({ISD::ATOMIC_LOAD, ISD::ATOMIC_STORE}, VT, Promote);
+        AddPromotedToType(ISD::ATOMIC_LOAD, VT, MVT::i32);
+        AddPromotedToType(ISD::ATOMIC_STORE, VT, MVT::i32);
+      }
+    }
+
     // F16 - VOP1 Actions.
     setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND, ISD::FCOS,
                         ISD::FSIN, ISD::FROUND},
