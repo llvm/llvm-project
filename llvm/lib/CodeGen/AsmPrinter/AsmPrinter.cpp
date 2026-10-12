@@ -3027,7 +3027,6 @@ bool AsmPrinter::doFinalization(Module &M) {
     for (const MDNode *Op : RawSections->operands()) {
       auto *SectionName = cast<MDString>(Op->getOperand(0));
       auto *AlignCI = mdconst::extract<ConstantInt>(Op->getOperand(1));
-      auto *FlagsCI = mdconst::extract<ConstantInt>(Op->getOperand(2));
       auto *Data = cast<MDString>(Op->getOperand(3));
 
       if (MCSection *Section = TLOF.getNamedSection(
