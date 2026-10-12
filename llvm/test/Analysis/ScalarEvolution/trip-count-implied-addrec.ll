@@ -452,7 +452,7 @@ define void @ult_guarded_rhs(i16 %n) {;
 ; CHECK-LABEL: 'ult_guarded_rhs'
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_guarded_rhs
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (1 umax %n))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -2
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 254
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (1 umax %n))
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
