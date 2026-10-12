@@ -956,17 +956,11 @@ bool AArch64FrameLowering::canUseAsPrologue(
   return true;
 }
 
-bool AArch64FrameLowering::needsWinCFI(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
-}
-
 bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
     const MachineFunction &MF) const {
   // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR
   //        and SEH_EpilogEnd instructions in the correct order.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;
@@ -1684,6 +1678,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
   const AArch64InstrInfo *TII =
       MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   bool IsWindows = isTargetWindows(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   unsigned StackHazardSize = getStackHazardSize(MF);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1787,7 +1782,6 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       ByteOffset += StackFillDir * StackHazardSize;
     LastReg = RPI.Reg1;
 
-    bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
@@ -1979,7 +1973,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   auto &TLI = *Subtarget.getTargetLowering();
   const AArch64InstrInfo &TII = *Subtarget.getInstrInfo();
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
@@ -2200,7 +2194,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
 
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
