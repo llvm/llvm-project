@@ -67,7 +67,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
-  initializeMipsSetMachineRegisterFlagsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile>
@@ -230,7 +229,6 @@ bool MipsPassConfig::addInstSelector() {
 
 void MipsPassConfig::addPreRegAlloc() {
   addPass(createMipsOptimizePICCallPass());
-  addPass(createMipsSetMachineRegisterFlagsPass());
 }
 
 TargetTransformInfo

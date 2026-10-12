@@ -1769,7 +1769,7 @@ gentbl_cc_library(
     name = "AMDGPUTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    td_file = "lib/Target/AMDGPU/AMDGPUTargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1780,7 +1780,7 @@ gentbl_cc_library(
     name = "R600TargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/AMDGPU/R600.td",
+    td_file = "lib/Target/AMDGPU/R600TargetParserDef.td",
     deps = [
         ":AMDGPUTargetTdFiles",
         ":CommonTargetTdFiles",
@@ -1942,6 +1942,17 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "InstrumentationOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/Instrumentation",
+    tbl_outs = {
+        "lib/Transforms/Instrumentation/InstrumentationOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/Instrumentation/InstrumentationOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "Instrumentation",
     srcs = glob([
@@ -1959,7 +1970,9 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOffloading",
+        ":InstrumentationOptionsTableGen",
         ":MC",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -2093,6 +2106,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Instrumentation",
         ":ProfileData",
         ":Support",
         ":TargetParser",

@@ -18,8 +18,9 @@
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
-void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void MipsTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                      const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   SmallDataSection = getContext().getELFSection(
       ".sdata", ELF::SHT_PROGBITS,

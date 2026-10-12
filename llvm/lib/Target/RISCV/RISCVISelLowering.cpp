@@ -12390,6 +12390,21 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVScalarAveragingOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar averaging intrinsic");
+  case Intrinsic::riscv_aadd_i32:
+    return ISD::AVGFLOORS;
+  case Intrinsic::riscv_aaddu_u32:
+    return ISD::AVGFLOORU;
+  case Intrinsic::riscv_asub_i32:
+    return RISCVISD::ASUB;
+  case Intrinsic::riscv_asubu_u32:
+    return RISCVISD::ASUBU;
+  }
+}
+
 static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
@@ -13253,10 +13268,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pusati: {
     bool IsSigned = IntNo == Intrinsic::riscv_psati;
     unsigned Opc = IsSigned ? RISCVISD::SATI : RISCVISD::USATI;
-    // psati's width counts the sign bit, RISCVISD::SATI's immediate does not.
-    unsigned Width = Op.getConstantOperandVal(2) - (IsSigned ? 1 : 0);
-    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
-                       DAG.getTargetConstant(Width, DL, XLenVT));
+    return DAG.getNode(
+        Opc, DL, Op.getValueType(), Op.getOperand(1),
+        DAG.getTargetConstant(Op.getConstantOperandVal(2), DL, XLenVT));
   }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
@@ -13343,6 +13357,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_aadd_i32:
+  case Intrinsic::riscv_aaddu_u32:
+  case Intrinsic::riscv_asub_i32:
+  case Intrinsic::riscv_asubu_u32: {
+    // RV32 selects the scalar P instructions directly. RV64 goes via
+    // ReplaceNodeResults.
+    unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
@@ -17974,6 +17997,24 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_aadd_i32:
+    case Intrinsic::riscv_aaddu_u32:
+    case Intrinsic::riscv_asub_i32:
+    case Intrinsic::riscv_asubu_u32: {
+      // RV64 has no scalar averaging instructions; reuse the packed .w
+      // family on the low words, whose element 0 is the scalar result.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarAveragingOpcode(IntNo);
+      SDValue Rs1 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs2 =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rs1, Rs2);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_mulhr_i32:
@@ -24580,8 +24621,8 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
-// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C.
-// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C.
+// Fold (smax (smin X, (1 << C) - 1), -(1 << C)) -> riscv_sati X, C+1.
+// Fold (smin (smax X, -(1 << C)), (1 << C) - 1) -> riscv_sati X, C+1.
 // Fold (smax (smin X, (1 << C) - 1), 0) -> riscv_usati X, C.
 // Fold (smin (smax X, 0, (1 << C) - 1) -> riscv_usati X, C.
 static SDValue combineMinMaxToSat(SDNode *N,
@@ -24623,7 +24664,7 @@ static SDValue combineMinMaxToSat(SDNode *N,
   SDLoc DL(N);
   if (MinC == ~MaxC)
     return DAG.getNode(RISCVISD::SATI, DL, VT, Input,
-                       DAG.getTargetConstant(MinC.countr_one(), DL, VT));
+                       DAG.getTargetConstant(MinC.countr_one() + 1, DL, VT));
   if (MaxC == 0)
     return DAG.getNode(RISCVISD::USATI, DL, VT, Input,
                        DAG.getTargetConstant(MinC.countr_one(), DL, VT));
@@ -26820,7 +26861,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     return 33;
   case RISCVISD::SATI: {
     unsigned Width = Op.getConstantOperandVal(1);
-    return Op.getScalarValueSizeInBits() - Width;
+    return Op.getScalarValueSizeInBits() - Width + 1;
   }
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the

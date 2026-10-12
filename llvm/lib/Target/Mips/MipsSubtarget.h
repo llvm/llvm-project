@@ -425,6 +425,6 @@ public:
   const RegisterBankInfo *getRegBankInfo() const override;
   InstructionSelector *getInstructionSelector() const override;
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif
