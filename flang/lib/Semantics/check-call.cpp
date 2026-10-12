@@ -67,6 +67,12 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (FindProtectedTargetPointer(
+            *expr, context.foldingContext())) { // F2028 C873
+      messages.Say(
+          "PROTECTED_TARGET actual argument '%s' requires an explicit interface"_err_en_US,
+          expr->AsFortran());
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -830,6 +836,33 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Definability checking
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
+    if (const auto *protectedTarget{intrinsic
+                ? nullptr
+                : FindProtectedTargetPointer(actual, foldingContext)}) {
+      if (dummyIsPointer && !actualIsPointer &&
+          dummy.intent != common::Intent::In &&
+          dummy.ignoreTKR.test(common::IgnoreTKR::Pointer) &&
+          !dummy.attrs.test(
+              characteristics::DummyDataObject::Attr::ProtectedTarget)) {
+        // F2028 C872 when IGNORE_TKR(P) suppresses the pointer-actual
+        // requirement.
+        messages.Say(IsProcedure(*protectedTarget)
+                ? "The PROTECTED_TARGET result of '%s' or a subobject may not be associated with %s without PROTECTED_TARGET"_err_en_US
+                : "PROTECTED_TARGET pointer '%s' or a subobject may not be associated with %s without PROTECTED_TARGET"_err_en_US,
+            protectedTarget->name(), dummyName);
+      } else if (!dummyIsPointer && dummy.intent == common::Intent::Default) {
+        // F2028 C873-C874
+        if (procedure.isStmtFunction) {
+          messages.Say(
+              "PROTECTED_TARGET actual argument '%s' requires an explicit interface"_err_en_US,
+              actual.AsFortran());
+        } else {
+          messages.Say(
+              "Nonpointer %s associated with PROTECTED_TARGET actual argument '%s' must have INTENT(IN)"_err_en_US,
+              dummyName, actual.AsFortran());
+        }
+      }
+    }
     std::optional<parser::MessageFixedText> undefinableMessage;
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
     if (dummy.intent == common::Intent::InOut) {
@@ -1043,7 +1076,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (scope) {
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
-            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
+            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer,
+            /*isIntrinsic=*/intrinsic != nullptr);
       }
     } else if (!actualIsPointer &&
         !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {

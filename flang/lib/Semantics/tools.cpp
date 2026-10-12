@@ -25,6 +25,60 @@
 
 namespace Fortran::semantics {
 
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &dataRef,
+    evaluate::FoldingContext &context, bool isPointerDefinition,
+    bool followAssociations) {
+  for (const evaluate::DataRef *ref{&dataRef}; ref;) {
+    if (const auto *coarray{std::get_if<evaluate::CoarrayRef>(&ref->u)}) {
+      ref = &coarray->base();
+      continue;
+    }
+    const auto *component{std::get_if<evaluate::Component>(&ref->u)};
+    if (const auto *array{std::get_if<evaluate::ArrayRef>(&ref->u)}) {
+      component = array->base().UnwrapComponent();
+    }
+    const Symbol &symbol{ref->GetLastSymbol()};
+    const Symbol &ultimate{symbol.GetUltimate()};
+    ref = component ? &component->base() : nullptr;
+    if (isPointerDefinition) {
+      isPointerDefinition = false;
+      continue;
+    }
+    if (const auto *assoc{ultimate.detailsIf<AssocEntityDetails>()};
+        followAssociations && assoc && assoc->expr() &&
+        evaluate::IsVariable(*assoc->expr())) {
+      return FindProtectedTargetPointer(
+          *assoc->expr(), context, followAssociations);
+    }
+    if (IsPointer(ultimate)) {
+      // F2028 9.4.2 p5: another pointer's target is not a subobject,
+      // but its association status is; skip the final pointer above
+      // when checking its pointer association status.
+      return ultimate.attrs().test(Attr::PROTECTED_TARGET) ? &symbol : nullptr;
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(const SomeExpr &expr,
+    evaluate::FoldingContext &context, bool followAssociations) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointer(
+        *dataRef, context, /*isPointerDefinition=*/false, followAssociations);
+  }
+  if (const auto *ref{evaluate::UnwrapProcedureRef(expr)}) {
+    if (auto proc{evaluate::characteristics::Procedure::Characterize(
+            ref->proc(), context, /*emitError=*/false)}) {
+      if (proc->functionResult &&
+          proc->functionResult->attrs.test(evaluate::characteristics::
+                  FunctionResult::Attr::ProtectedTarget)) {
+        return ref->proc().GetSymbol();
+      }
+    }
+  }
+  return nullptr;
+}
+
 // Find this or containing scope that matches predicate
 static const Scope *FindScopeContaining(
     const Scope &start, std::function<bool(const Scope &)> predicate) {

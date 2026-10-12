@@ -29,6 +29,11 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
+- Added front-end support for the Fortran 2028 draft `PROTECTED_TARGET`
+  attribute on data pointers and pointer components, preventing target
+  definition through the pointer and limiting pointer and argument association.
+  Allocation requires `SOURCE=`; deallocation is prohibited.
+
 ## Bug Fixes
 
 - Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for

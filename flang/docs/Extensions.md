@@ -788,6 +788,25 @@ The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ET
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
+* For `PROTECTED_TARGET` pointers, Flang follows J3/26-007r1 C864 over the
+  conflicting 8.5.16 NOTE 1: a use-associated nonpointer `PROTECTED` object
+  cannot be a target in pointer assignment, structure constructors, initial
+  data targets or argument association (15.5.2.8 p2).
+  Ordinary pointers retain the optional `-Wpointer-to-undefinable` warning.
+
+* When `obj` is a `PROTECTED_TARGET` pointer and `link` is an ordinary pointer
+  component, of J3/26-007r1 C870-C874, Flang applies only C872 to `obj%link`,
+  as an actual argument for a pointer dummy.  In a data-target or structure
+  constructor, `obj%link` is dereferenced (8.5.10 NOTE 3, 9.4.2 p5).
+  Changing its pointer association is still a definition of the protected
+  target.  Flang follows `ASSOCIATE`, `SELECT TYPE` and `SELECT RANK` names
+  to their selectors when checking definability (20.6.7(11)) and C864,
+  but not for C870-C874, so an ordinary pointer can be associated with a
+  protected target through such a name.
+  Intrinsic procedures are exempt from C872-C874;
+  definition through their `INTENT(OUT)` or `INTENT(INOUT)` arguments is
+  still diagnosed.
+
 * When an inner procedure of a subprogram uses the value or an attribute
   of an undeclared name in a specification expression and that name does
   not appear in the host, it is not clear in the standard whether that

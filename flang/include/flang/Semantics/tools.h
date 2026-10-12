@@ -178,6 +178,15 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+// Returns the PROTECTED_TARGET pointer whose target or subobject is designated,
+// or the function symbol for a PROTECTED_TARGET pointer result.
+// In a pointer definition context, the final pointer is not dereferenced.
+// Associate names are followed only when checking definability.
+const Symbol *FindProtectedTargetPointer(const evaluate::DataRef &,
+    evaluate::FoldingContext &, bool isPointerDefinition = false,
+    bool followAssociations = false);
+const Symbol *FindProtectedTargetPointer(const SomeExpr &,
+    evaluate::FoldingContext &, bool followAssociations = false);
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
