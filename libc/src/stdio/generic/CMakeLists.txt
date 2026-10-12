@@ -96,11 +96,11 @@ add_generic_entrypoint_object(
 
 # since this isn't an entrypoint we need to do these checks manually.
 if(NOT TARGET libc.src.stdio.${LIBC_TARGET_OS}.fflush_internal AND
-   TARGET libc.src.__support.File.file AND
-   TARGET libc.src.__support.File.platform_file AND
-   "libc.src.stdio.stdin" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
-   "libc.src.stdio.stdout" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
-   "libc.src.stdio.stderr" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+  TARGET libc.src.__support.File.file AND
+  TARGET libc.src.__support.File.platform_file AND
+  "libc.src.stdio.stdin" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stdout" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS AND
+  "libc.src.stdio.stderr" IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
   add_object_library(
     fflush_internal
     SRCS
