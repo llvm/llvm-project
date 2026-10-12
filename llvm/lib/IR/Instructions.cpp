@@ -639,7 +639,8 @@ bool CallBase::hasReadingOperandBundles() const {
   return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
                                      LLVMContext::OB_kcfi,
                                      LLVMContext::OB_convergencectrl,
-                                     LLVMContext::OB_deactivation_symbol}) &&
+                                     LLVMContext::OB_deactivation_symbol,
+                                     LLVMContext::OB_atomicity}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -648,8 +649,27 @@ bool CallBase::hasClobberingOperandBundles() const {
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
               LLVMContext::OB_convergencectrl,
-              LLVMContext::OB_deactivation_symbol}) &&
+              LLVMContext::OB_deactivation_symbol,
+              LLVMContext::OB_atomicity}) &&
          getIntrinsicID() != Intrinsic::assume;
+}
+
+std::optional<AtomicityBundleInfo> CallBase::getAtomicityBundleInfo() const {
+  std::optional<OperandBundleUse> Bundle =
+      getOperandBundle(LLVMContext::OB_atomicity);
+  if (!Bundle)
+    return std::nullopt;
+
+  // The Verifier guarantees the shape of the bundle.
+  assert(Bundle->Inputs.size() == 2 && "malformed \"atomicity\" bundle");
+  auto GetString = [](const Value *V) {
+    return cast<MDString>(cast<MetadataAsValue>(V)->getMetadata())->getString();
+  };
+  std::optional<AtomicOrdering> Order =
+      parseAtomicOrdering(GetString(Bundle->Inputs[0]));
+  assert(Order && "malformed \"atomicity\" bundle ordering");
+  return AtomicityBundleInfo{*Order, getContext().getOrInsertSyncScopeID(
+                                         GetString(Bundle->Inputs[1]))};
 }
 
 MemoryEffects CallBase::getMemoryEffects() const {

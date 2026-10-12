@@ -17,7 +17,9 @@
 #ifndef LLVM_SUPPORT_ATOMICORDERING_H
 #define LLVM_SUPPORT_ATOMICORDERING_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstddef>
+#include <optional>
 
 namespace llvm {
 
@@ -84,6 +86,18 @@ inline const char *toIRString(AtomicOrdering ao) {
                                  "consume",    "acquire",   "release",
                                  "acq_rel",    "seq_cst"};
   return names[static_cast<size_t>(ao)];
+}
+
+/// Inverse of toIRString. "not_atomic" is rejected: it is the absence of an
+/// ordering, not an IR keyword. Returns std::nullopt if Str names none.
+inline std::optional<AtomicOrdering> parseAtomicOrdering(StringRef Str) {
+  for (size_t I = static_cast<size_t>(AtomicOrdering::Unordered);
+       I <= static_cast<size_t>(AtomicOrdering::SequentiallyConsistent); ++I) {
+    if (isValidAtomicOrdering(I) &&
+        Str == toIRString(static_cast<AtomicOrdering>(I)))
+      return static_cast<AtomicOrdering>(I);
+  }
+  return std::nullopt;
 }
 
 /// Returns true if ao is stronger than other as defined by the AtomicOrdering
