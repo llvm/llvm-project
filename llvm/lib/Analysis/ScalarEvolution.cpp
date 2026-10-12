@@ -179,11 +179,6 @@ static cl::opt<unsigned> AddOpsInlineThreshold(
     cl::desc("Threshold for inlining addition operands into a SCEV"),
     cl::init(500));
 
-static cl::opt<unsigned> MaxSCEVCompareDepth(
-    "scalar-evolution-max-scev-compare-depth", cl::Hidden,
-    cl::desc("Maximum depth of recursive SCEV complexity comparisons"),
-    cl::init(32));
-
 static cl::opt<unsigned> MaxSCEVOperationsImplicationDepth(
     "scalar-evolution-max-scev-operations-implication-depth", cl::Hidden,
     cl::desc("Maximum depth of recursive SCEV operations implication analysis"),
@@ -646,23 +641,20 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 
 // Return negative, zero, or positive, if LHS is less than, equal to, or greater
 // than RHS, respectively. A three-way result allows recursive comparisons to be
-// more efficient.
-// If the max analysis depth was reached, return std::nullopt, assuming we do
-// not know if they are equivalent for sure.
-static std::optional<int>
-CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
-                      const SCEV *RHS, DominatorTree &DT, unsigned Depth = 0) {
+// more efficient. The result is a total order.
+static int CompareSCEVComplexity(const LoopInfo *const LI, SCEVUse LHS,
+                                 SCEVUse RHS, DominatorTree &DT) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
   if (LHS == RHS)
     return 0;
+
+  if (LHS.getPointer() == RHS.getPointer())
+    return (int)LHS.getUseNoWrapFlags() - (int)RHS.getUseNoWrapFlags();
 
   // Primarily, sort the SCEVs by their getSCEVType().
   SCEVTypes LType = LHS->getSCEVType(), RType = RHS->getSCEVType();
   if (LType != RType)
     return (int)LType - (int)RType;
-
-  if (Depth > MaxSCEVCompareDepth)
-    return std::nullopt;
 
   // Aside from the getSCEVType() ordering, the particular ordering
   // isn't very important except that it's beneficial to be consistent,
@@ -672,9 +664,10 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
     const SCEVUnknown *LU = cast<SCEVUnknown>(LHS);
     const SCEVUnknown *RU = cast<SCEVUnknown>(RHS);
 
-    int X =
-        CompareValueComplexity(LI, LU->getValue(), RU->getValue(), Depth + 1);
-    return X;
+    if (int X = CompareValueComplexity(LI, LU->getValue(), RU->getValue(),
+                                       /*Depth=*/0))
+      return X;
+    return LU->getOrderID() < RU->getOrderID() ? -1 : 1;
   }
 
   case scConstant: {
@@ -739,11 +732,16 @@ CompareSCEVComplexity(const LoopInfo *const LI, const SCEV *LHS,
 
     for (unsigned i = 0; i != LNumOps; ++i) {
       auto X = CompareSCEVComplexity(LI, LOps[i].getPointer(),
-                                     ROps[i].getPointer(), DT, Depth + 1);
+                                     ROps[i].getPointer(), DT);
       if (X != 0)
         return X;
     }
-    return 0;
+
+    assert(isa<SCEVCastExpr>(LHS) && "distinct SCEVs compare equal");
+    unsigned LBitWidth = cast<IntegerType>(LHS->getType())->getBitWidth();
+    unsigned RBitWidth = cast<IntegerType>(RHS->getType())->getBitWidth();
+    assert(LBitWidth != RBitWidth && "distinct SCEVs compare equal");
+    return (int)LBitWidth - (int)RBitWidth;
   }
 
   case scCouldNotCompute:
@@ -767,8 +765,7 @@ static void GroupByComplexity(SmallVectorImpl<SCEVUse> &Ops, LoopInfo *LI,
 
   // Whether LHS has provably less complexity than RHS.
   auto IsLessComplex = [&](SCEVUse LHS, SCEVUse RHS) {
-    auto Complexity = CompareSCEVComplexity(LI, LHS, RHS, DT);
-    return Complexity && *Complexity < 0;
+    return CompareSCEVComplexity(LI, LHS, RHS, DT) < 0;
   };
   if (Ops.size() == 2) {
     // This is the common case, which also happens to be trivially simple.
@@ -779,29 +776,7 @@ static void GroupByComplexity(SmallVectorImpl<SCEVUse> &Ops, LoopInfo *LI,
     return;
   }
 
-  // Do the rough sort by complexity.
-  llvm::stable_sort(
-      Ops, [&](SCEVUse LHS, SCEVUse RHS) { return IsLessComplex(LHS, RHS); });
-
-  // Now that we are sorted by complexity, group elements of the same
-  // complexity.  Note that this is, at worst, N^2, but the vector is likely to
-  // be extremely short in practice.  Note that we take this approach because we
-  // do not want to depend on the addresses of the objects we are grouping.
-  for (unsigned i = 0, e = Ops.size(); i != e-2; ++i) {
-    const SCEV *S = Ops[i];
-    unsigned Complexity = S->getSCEVType();
-
-    // If there are any objects of the same complexity and same value as this
-    // one, group them.
-    for (unsigned j = i+1; j != e && Ops[j]->getSCEVType() == Complexity; ++j) {
-      if (Ops[j] == S) { // Found a duplicate.
-        // Move it to immediately after i'th element.
-        std::swap(Ops[i+1], Ops[j]);
-        ++i;   // no need to rescan it.
-        if (i == e-2) return;  // Done!
-      }
-    }
-  }
+  llvm::sort(Ops, IsLessComplex);
 }
 
 /// Returns true if \p Ops contains a huge SCEV (the subtree of S contains at
@@ -4427,7 +4402,7 @@ const SCEV *ScalarEvolution::getUnknown(Value *V) {
     return S;
   }
   SCEV *S = new (SCEVAllocator) SCEVUnknown(ID.Intern(SCEVAllocator), V, this,
-                                            FirstUnknown);
+                                            FirstUnknown, NextUnknownOrderID++);
   FirstUnknown = cast<SCEVUnknown>(S);
   UniqueSCEVs.insert(S, Token);
   S->computeAndSetCanonical(*this);
@@ -14093,7 +14068,8 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       ConstantSCEVs(std::move(Arg.ConstantSCEVs)),
       LoopUsers(std::move(Arg.LoopUsers)),
       PredicatedSCEVRewrites(std::move(Arg.PredicatedSCEVRewrites)),
-      FirstUnknown(Arg.FirstUnknown) {
+      FirstUnknown(Arg.FirstUnknown),
+      NextUnknownOrderID(Arg.NextUnknownOrderID) {
   Arg.FirstUnknown = nullptr;
 }
 

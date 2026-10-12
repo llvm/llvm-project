@@ -8,7 +8,7 @@ define i1 @test(i64 %v) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[V]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> <i64 poison, i64 poison, i64 0, i64 0>, i64 [[V]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> <i64 7, i64 undef, i64 0, i64 0>, i64 [[V]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> <i64 7, i64 poison, i64 0, i64 0>, i64 [[V]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 0, i32 3, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP0]], i64 0
