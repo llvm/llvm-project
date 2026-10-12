@@ -53485,17 +53485,18 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // SETCC only produces 0 or 1, so AND only observes the low bit of the NOT.
-  // Fold the inversion even if demanded bits changed XOR with 1 into NOT.
+  // Fold NOT(SETCC) into the opposite condition when AND only observes bit 0.
+  // The other operand must clear the upper bits set by NOT but not by SETCC.
   // Require one use of the NOT to avoid duplicating the inverted condition.
-  SDValue SetCC, OtherSetCC;
+  SDValue SetCC, Other;
   if (sd_match(N, m_And(m_OneUse(m_Not(
                             m_Value(SetCC, m_SpecificOpc<X86ISD::SETCC>()))),
-                        m_Value(OtherSetCC, m_SpecificOpc<X86ISD::SETCC>())))) {
+                        m_Value(Other))) &&
+      DAG.MaskedValueIsZero(Other, ~APInt(VT.getScalarSizeInBits(), 1))) {
     auto CC = static_cast<X86::CondCode>(SetCC.getConstantOperandVal(0));
     SDValue Inverted = getSETCC(X86::GetOppositeBranchCondition(CC),
                                 SetCC.getOperand(1), dl, DAG);
-    return DAG.getNode(ISD::AND, dl, VT, OtherSetCC, Inverted);
+    return DAG.getNode(ISD::AND, dl, VT, Other, Inverted);
   }
 
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
