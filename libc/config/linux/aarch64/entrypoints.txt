@@ -486,6 +486,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.isatty
     libc.src.unistd.link
     libc.src.unistd.linkat
+    libc.src.unistd.lockf
     libc.src.unistd.lseek
     libc.src.unistd.nice
     libc.src.unistd.pathconf
