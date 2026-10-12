@@ -223,7 +223,6 @@ define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspa
 ; GCN-LABEL: fma_vector_vector_scalar_lo_neg_scalar_hi:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GCN-NEXT:    s_mov_b32 s0, 0x8000
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
@@ -233,8 +232,8 @@ define amdgpu_kernel void @fma_vector_vector_scalar_lo_neg_scalar_hi(ptr addrspa
 ; GCN-NEXT:    ds_read_u16 v3, v1
 ; GCN-NEXT:    ds_read_u16 v1, v1 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_sdwa v1, v1, s0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GCN-NEXT:    v_or_b32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GCN-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
+; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
 ; GCN-NEXT:    v_pk_fma_f16 v0, v2, v0, v1
 ; GCN-NEXT:    global_store_dword v4, v0, s[4:5]
 ; GCN-NEXT:    s_endpgm

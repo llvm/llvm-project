@@ -5119,7 +5119,6 @@ define amdgpu_kernel void @local_zextload_i16_to_i64(ptr addrspace(3) %out, ptr 
 ; GFX9-NEXT:    ds_read_u16 v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -5244,7 +5243,6 @@ define amdgpu_kernel void @local_zextload_v1i16_to_v1i64(ptr addrspace(3) %out, 
 ; GFX9-NEXT:    ds_read_u16 v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
