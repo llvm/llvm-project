@@ -506,12 +506,8 @@ define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
 
 define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_shifted(
-; CHECK-NEXT:    [[LO:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[C0:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[LO]])
-; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X]], 4
-; CHECK-NEXT:    [[HI:%.*]] = and i32 [[S]], 15
-; CHECK-NEXT:    [[C1:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[HI]])
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[C0]], [[C1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lo = and i32 %x, 15
@@ -522,6 +518,8 @@ define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
   %r = add i32 %c0, %c1
   ret i32 %r
 }
+
+; TODO: We can combine these two ctpops through the truncs
 
 define i32 @ctpop_add_no_common_bits_shifted_trunc(i64 %x) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_trunc(
@@ -548,16 +546,8 @@ define i32 @ctpop_add_no_common_bits_shifted_trunc(i64 %x) {
 
 define i32 @ctpop_add_no_common_bits_shifted_chain(i32 %x) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_chain(
-; CHECK-NEXT:    [[LO:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[C0:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[LO]])
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[X]], 4
-; CHECK-NEXT:    [[MID:%.*]] = and i32 [[S1]], 15
-; CHECK-NEXT:    [[C1:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[MID]])
-; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[X]], 8
-; CHECK-NEXT:    [[HI:%.*]] = and i32 [[S2]], 15
-; CHECK-NEXT:    [[C2:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[HI]])
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[C0]], [[C1]]
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[A]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 4095
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 13) i32 @llvm.ctpop.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lo = and i32 %x, 15
