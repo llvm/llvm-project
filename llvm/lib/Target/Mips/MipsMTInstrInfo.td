@@ -109,9 +109,17 @@ let hasSideEffects = 1, isNotDuplicable = 1,
 //===----------------------------------------------------------------------===//
 // MIPS MT Pseudo Instructions - used to support mtfr & mttr aliases.
 //===----------------------------------------------------------------------===//
-def MFTC0 : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins COP0Opnd:$rt,
-                                                        uimm3:$sel),
-                              "mftc0 $rd, $rt, $sel">, ASE_MT;
+// Convert COP0 operands to the generic MFTR/MTTR operands during matching.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def MFTC0 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins COP0Opnd:$cop0),
+                                "mftc0 $rt, $cop0">, ASE_MT {
+    let AsmMatchConverter = "ConvertMFTC0Operands";
+  }
+  def MTTC0 : MipsAsmPseudoInst<(outs COP0Opnd:$cop0), (ins GPR32Opnd:$rt),
+                                "mttc0 $rt, $cop0">, ASE_MT {
+    let AsmMatchConverter = "ConvertMTTC0Operands";
+  }
+}
 
 def MFTGPR : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rt,
                                                           uimm3:$sel),
@@ -138,10 +146,6 @@ def MFTHC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32Opnd:$ft),
 def CFTC1 : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins FGR32CCOpnd:$ft),
                               "cftc1 $rt, $ft">, ASE_MT;
 
-
-def MTTC0 : MipsAsmPseudoInst<(outs COP0Opnd:$rd), (ins GPR32Opnd:$rt,
-                                                        uimm3:$sel),
-                              "mttc0 $rt, $rd, $sel">, ASE_MT;
 
 def MTTGPR : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins GPR32Opnd:$rd),
                                "mttgpr $rd, $rt">, ASE_MT;
@@ -182,17 +186,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   def : MipsInstAlias<"yield $rs", (YIELD ZERO, GPR32Opnd:$rs), 1>, ASE_MT;
 
-  def : MipsInstAlias<"mftc0 $rd, $rt", (MFTC0 GPR32Opnd:$rd, COP0Opnd:$rt, 0),
-                      1>, ASE_MT;
-
   def : MipsInstAlias<"mftlo $rt", (MFTLO GPR32Opnd:$rt, AC0), 1>, ASE_MT;
 
   def : MipsInstAlias<"mfthi $rt", (MFTHI GPR32Opnd:$rt, AC0), 1>, ASE_MT;
 
   def : MipsInstAlias<"mftacx $rt", (MFTACX GPR32Opnd:$rt, AC0), 1>, ASE_MT;
-
-  def : MipsInstAlias<"mttc0 $rd, $rt", (MTTC0 COP0Opnd:$rt, GPR32Opnd:$rd, 0),
-                      1>, ASE_MT;
 
   def : MipsInstAlias<"mttlo $rt", (MTTLO AC0, GPR32Opnd:$rt), 1>, ASE_MT;
 

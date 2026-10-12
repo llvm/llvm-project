@@ -580,15 +580,15 @@ class TLBINVMM<string opstr> :
 
 class MfCop0MM<string opstr, RegisterOperand DstRC,
                RegisterOperand SrcRC> :
-  InstSE<(outs DstRC:$rt), (ins SrcRC:$rs, uimm3:$sel),
-          !strconcat(opstr, "\t$rt, $rs, $sel"), [], FrmR> {
+  InstSE<(outs DstRC:$rt), (ins SrcRC:$cop0),
+          !strconcat(opstr, "\t$rt, $cop0"), [], FrmR> {
   let BaseOpcode = opstr;
 }
 
 class MtCop0MM<string opstr, RegisterOperand DstRC,
                RegisterOperand SrcRC> :
-  InstSE<(outs DstRC:$rs), (ins SrcRC:$rt, uimm3:$sel),
-          !strconcat(opstr, "\t$rt, $rs, $sel"), [], FrmR> {
+  InstSE<(outs DstRC:$cop0), (ins SrcRC:$rt),
+          !strconcat(opstr, "\t$rt, $cop0"), [], FrmR> {
   let BaseOpcode = opstr;
 }
 
@@ -1056,9 +1056,9 @@ let DecoderNamespace = "MicroMips" in {
   def PAUSE_MM : MMRel, Barrier<"pause">, BARRIER_FM_MM<0x5>,
                  ISA_MICROMIPS;
 
-  def MFC0_MM : MFC3OP<"mfc0", GPR32Opnd, COP0Opnd>,
+  def MFC0_MM : MFC0OP<"mfc0", GPR32Opnd, COP0Opnd>,
                 MFC0_FM_MM<0x0fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
-  def MTC0_MM : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>,
+  def MTC0_MM : MTC0OP<"mtc0", COP0Opnd, GPR32Opnd>,
                 MFC0_FM_MM<0x2fc>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
   def TLBP_MM : MMRel, TLB<"tlbp">, COP0_TLB_FM_MM<0x0d>,
@@ -1297,12 +1297,6 @@ class UncondBranchMMPseudo<string opstr> :
 def B_MM_Pseudo : UncondBranchMMPseudo<"b">, ISA_MICROMIPS;
 
 let EncodingPredicates = [InMicroMips] in {
-  def : MipsInstAlias<"mfc0 $rt, $rd",
-                      (MFC0_MM GPR32Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-        ISA_MICROMIPS32_NOT_MIPS32R6;
-  def : MipsInstAlias<"mtc0 $rt, $rd",
-                      (MTC0_MM COP0Opnd:$rd, GPR32Opnd:$rt, 0), 0>,
-        ISA_MICROMIPS32_NOT_MIPS32R6;
   def SDIV_MM_Pseudo : MultDivPseudo<SDIV_MM, ACC64, GPR32Opnd, MipsDivRem,
                                      0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def UDIV_MM_Pseudo : MultDivPseudo<UDIV_MM, ACC64, GPR32Opnd, MipsDivRemU,
@@ -1420,18 +1414,6 @@ def : MipsInstAlias<"rdhwr $rt, $rs",
       ISA_MICROMIPS32_NOT_MIPS32R6;
 
 def : MipsInstAlias<"hypcall", (HYPCALL_MM 0), 1>,
-                    ISA_MICROMIPS32R5, ASE_VIRT;
-def : MipsInstAlias<"mfgc0 $rt, $rs",
-                    (MFGC0_MM GPR32Opnd:$rt, COP0Opnd:$rs, 0), 0>,
-                    ISA_MICROMIPS32R5, ASE_VIRT;
-def : MipsInstAlias<"mfhgc0 $rt, $rs",
-                    (MFHGC0_MM GPR32Opnd:$rt, COP0Opnd:$rs, 0), 0>,
-                    ISA_MICROMIPS32R5, ASE_VIRT;
-def : MipsInstAlias<"mtgc0 $rt, $rs",
-                    (MTGC0_MM COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
-                    ISA_MICROMIPS32R5, ASE_VIRT;
-def : MipsInstAlias<"mthgc0 $rt, $rs",
-                    (MTHGC0_MM COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
                     ISA_MICROMIPS32R5, ASE_VIRT;
 def : MipsInstAlias<"sw $rt, $offset",
                     (SWSP_MM GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset), 1>,

@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=mips -mcpu=mips32r2 -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=mips -mcpu=mips32r2 -start-after=xray-instrumentation -verify-machineinstrs -show-mc-encoding %s -o - | FileCheck %s --check-prefix=ASM
+
+# Selectors distinguish physical registers even when REG is the same. Each
+# transfer has one COP0 register operand and no separate selector immediate.
+---
+name:            cop0_registers
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $cop016, $cop016_1
+
+    ; MIR:      $v0 = MFC0 $cop016
+    ; MIR-NEXT: $v1 = MFC0 $cop016_1
+    ; MIR-NEXT: $cop016_1 = MTC0 $v0
+    ; MIR-NEXT: $cop016 = MTC0 $v1
+    ; ASM: mfc0 $2, $16, 0            # encoding: [0x40,0x02,0x80,0x00]
+    ; ASM: mfc0 $3, $16, 1            # encoding: [0x40,0x03,0x80,0x01]
+    ; ASM: mtc0 $2, $16, 1            # encoding: [0x40,0x82,0x80,0x01]
+    ; ASM: mtc0 $3, $16, 0            # encoding: [0x40,0x83,0x80,0x00]
+    $v0 = MFC0 $cop016
+    $v1 = MFC0 $cop016_1
+    $cop016_1 = MTC0 $v0
+    $cop016 = MTC0 $v1
+
+...

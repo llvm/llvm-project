@@ -11,7 +11,7 @@
   mfgc0 0                 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
   mfgc0 $4                # CHECK: :[[@LINE]]:3: error: too few operands for instruction
   mfgc0 0, $4             # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-  mfgc0 0, $4, $5         # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+  mfgc0 0, $4, $5         # CHECK: :[[@LINE]]:16: error: expected 3-bit unsigned immediate
   mfgc0 $4, 0, $5         # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
   mfgc0 $4, $5, 8         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mfgc0 $4, $5, -1        # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
@@ -20,7 +20,7 @@
   mtgc0 0                 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
   mtgc0 $4                # CHECK: :[[@LINE]]:3: error: too few operands for instruction
   mtgc0 0, $4             # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
-  mtgc0 0, $4, $5         # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+  mtgc0 0, $4, $5         # CHECK: :[[@LINE]]:16: error: expected 3-bit unsigned immediate
   mtgc0 $4, 0, $5         # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
   mtgc0 $4, $5, 8         # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mtgc0 $4, $5, -1        # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
@@ -29,7 +29,7 @@
   mfhgc0 0                # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
   mfhgc0 $4               # CHECK: :[[@LINE]]:3: error: too few operands for instruction
   mfhgc0 0, $4            # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
-  mfhgc0 0, $4, $5        # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+  mfhgc0 0, $4, $5        # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mfhgc0 $4, 0, $5        # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
   mfhgc0 $4, $5, 8        # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
   mfhgc0 $4, $5, -1       # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
@@ -38,7 +38,7 @@
   mthgc0 0                # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
   mthgc0 $4               # CHECK: :[[@LINE]]:3: error: too few operands for instruction
   mthgc0 0, $4            # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
-  mthgc0 0, $4, $5        # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+  mthgc0 0, $4, $5        # CHECK: :[[@LINE]]:17: error: expected 3-bit unsigned immediate
   mthgc0 $4, 0, $5        # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
   mthgc0 $4, $5, 8        # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate
   mthgc0 $4, $5, -1       # CHECK: :[[@LINE]]:18: error: expected 3-bit unsigned immediate

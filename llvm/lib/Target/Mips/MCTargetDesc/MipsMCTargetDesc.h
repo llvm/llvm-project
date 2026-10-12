@@ -60,6 +60,14 @@ std::unique_ptr<MCObjectTargetWriter> createMipsWinCOFFObjectWriter();
 namespace MIPS_MC {
 void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 
+/// COP0 hardware encodings reserve five bits each for REG and SEL.
+constexpr unsigned encodeCOP0Register(unsigned Reg, unsigned Sel) {
+  return (Reg << 5) | Sel;
+}
+constexpr unsigned getCOP0RegNum(unsigned Encoding) { return Encoding >> 5; }
+constexpr unsigned getCOP0Sel(unsigned Encoding) { return Encoding & 31; }
+MCRegister getCOP0Register(const MCRegisterInfo &MRI, unsigned Encoding);
+
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
 
 /// Match a symbolic name in RegClassID, or return an invalid register.
