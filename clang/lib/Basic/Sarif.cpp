@@ -303,7 +303,11 @@ void SarifDocumentWriter::endRun() {
   SmallVector<std::pair<StringRef, SarifArtifact>, 0> Vec;
   for (const auto &[K, V] : CurrentArtifacts)
     Vec.emplace_back(K, V);
-  llvm::sort(Vec, llvm::less_first());
+  // artifactLocation.index refers to the position in this array.
+  llvm::sort(Vec, [](const std::pair<StringRef, SarifArtifact> &L,
+                     const std::pair<StringRef, SarifArtifact> &R) {
+    return L.second.Location.Index < R.second.Location.Index;
+  });
   for (const auto &[_, A] : Vec) {
     json::Object Loc{{"uri", A.Location.URI}};
     if (A.Location.Index.has_value()) {
@@ -424,10 +428,12 @@ void SarifDocumentWriter::appendResult(const SarifResult &Result) {
 
   json::Array ReLocs;
   for (const auto &[Range, Message] : Result.RelatedLocations) {
-    json::Object Loc = createLocation(createPhysicalLocation(Range), Message);
-    if (!Loc.empty())
+    json::Value Loc = createLocation(createPhysicalLocation(Range), Message);
+    if (!Loc.getAsObject()->empty() && !llvm::is_contained(ReLocs, Loc)) {
       ReLocs.emplace_back(std::move(Loc));
+    }
   }
+
   if (!ReLocs.empty())
     Ret["relatedLocations"] = std::move(ReLocs);
 

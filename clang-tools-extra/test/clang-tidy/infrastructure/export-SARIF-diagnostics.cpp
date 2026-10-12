@@ -135,7 +135,7 @@ struct Foo {
 //CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
-//CHECK-SARIF-NEXT:                   "endColumn": 9,
+//CHECK-SARIF-NEXT:                   "endColumn": 8,
 //CHECK-SARIF-NEXT:                   "endLine": 3,
 //CHECK-SARIF-NEXT:                   "startColumn": 7,
 //CHECK-SARIF-NEXT:                   "startLine": 3

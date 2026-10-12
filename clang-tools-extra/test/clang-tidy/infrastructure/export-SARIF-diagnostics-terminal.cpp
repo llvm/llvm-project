@@ -122,7 +122,7 @@ struct Foo {
 //CHECK-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-NEXT:                 },
 //CHECK-NEXT:                 "region": {
-//CHECK-NEXT:                   "endColumn": 9,
+//CHECK-NEXT:                   "endColumn": 8,
 //CHECK-NEXT:                   "endLine": 3,
 //CHECK-NEXT:                   "startColumn": 7,
 //CHECK-NEXT:                   "startLine": 3

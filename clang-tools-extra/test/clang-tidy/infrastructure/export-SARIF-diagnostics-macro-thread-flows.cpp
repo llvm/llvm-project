@@ -49,9 +49,9 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 22,
+//CHECK-SARIF-NEXT:                             "endColumn": 19,
 //CHECK-SARIF-NEXT:                             "endLine": 1,
-//CHECK-SARIF-NEXT:                             "startColumn": 21,
+//CHECK-SARIF-NEXT:                             "startColumn": 18,
 //CHECK-SARIF-NEXT:                             "startLine": 1
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
@@ -69,7 +69,7 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 19,
+//CHECK-SARIF-NEXT:                             "endColumn": 12,
 //CHECK-SARIF-NEXT:                             "endLine": 3,
 //CHECK-SARIF-NEXT:                             "startColumn": 11,
 //CHECK-SARIF-NEXT:                             "startLine": 3
@@ -89,9 +89,9 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 43,
+//CHECK-SARIF-NEXT:                             "endColumn": 35,
 //CHECK-SARIF-NEXT:                             "endLine": 3,
-//CHECK-SARIF-NEXT:                             "startColumn": 40,
+//CHECK-SARIF-NEXT:                             "startColumn": 34,
 //CHECK-SARIF-NEXT:                             "startLine": 3
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
@@ -109,9 +109,9 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 22,
+//CHECK-SARIF-NEXT:                             "endColumn": 19,
 //CHECK-SARIF-NEXT:                             "endLine": 1,
-//CHECK-SARIF-NEXT:                             "startColumn": 21,
+//CHECK-SARIF-NEXT:                             "startColumn": 18,
 //CHECK-SARIF-NEXT:                             "startLine": 1
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
@@ -131,9 +131,9 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
-//CHECK-SARIF-NEXT:                   "endColumn": 43,
+//CHECK-SARIF-NEXT:                   "endColumn": 35,
 //CHECK-SARIF-NEXT:                   "endLine": 3,
-//CHECK-SARIF-NEXT:                   "startColumn": 40,
+//CHECK-SARIF-NEXT:                   "startColumn": 34,
 //CHECK-SARIF-NEXT:                   "startLine": 3
 //CHECK-SARIF-NEXT:                 }
 //CHECK-SARIF-NEXT:               }
