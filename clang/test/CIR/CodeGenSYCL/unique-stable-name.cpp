@@ -3,10 +3,10 @@
 // RUN: FileCheck %s --check-prefix=CIR-HOST --input-file=%t.cir
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-host \
 // RUN:   -Wno-unevaluated-expression -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck %s --check-prefix=LLVM-HOST --input-file=%t-cir.ll
+// RUN: FileCheck %s --check-prefixes=LLVM-HOST,CIR-LLVM-HOST --input-file=%t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-host \
 // RUN:   -Wno-unevaluated-expression -emit-llvm %s -o %t.ll
-// RUN: FileCheck %s --check-prefix=OGCG-HOST --input-file=%t.ll
+// RUN: FileCheck %s --check-prefixes=LLVM-HOST,OGCG-HOST --input-file=%t.ll
 // RUN: %clang_cc1 -triple spir64-unknown-unknown \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -fsycl-is-device \
 // RUN:   -Wno-unevaluated-expression -fclangir -emit-cir %s -o %t-dev.cir
@@ -14,11 +14,11 @@
 // RUN: %clang_cc1 -triple spir64-unknown-unknown \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -fsycl-is-device \
 // RUN:   -Wno-unevaluated-expression -fclangir -emit-llvm %s -o %t-dev-cir.ll
-// RUN: FileCheck %s --check-prefix=LLVM-DEV --input-file=%t-dev-cir.ll
+// RUN: FileCheck %s --check-prefixes=LLVM-DEV,CIR-LLVM-DEV --input-file=%t-dev-cir.ll
 // RUN: %clang_cc1 -triple spir64-unknown-unknown \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -fsycl-is-device \
 // RUN:   -Wno-unevaluated-expression -emit-llvm %s -o %t-dev.ll
-// RUN: FileCheck %s --check-prefix=OGCG-DEV --input-file=%t-dev.ll
+// RUN: FileCheck %s --check-prefixes=LLVM-DEV,OGCG-DEV --input-file=%t-dev.ll
 
 // __builtin_sycl_unique_stable_name evaluated at run time emits a private
 // "__usn_str" global in the global constant address space, cast to the type
@@ -45,13 +45,13 @@ const char *global_name = __builtin_sycl_unique_stable_name(int);
 // CIR-HOST: cir.global "private" constant cir_private dso_local @[[TPL_INT:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
 // CIR-HOST: cir.global "private" constant cir_private dso_local @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSZ9host_onlyvEUlvE_" : !cir.array<!s8i x 22>, trailing_zeros> : !cir.array<!s8i x 23> align(1)
 
-// LLVM-HOST: @[[GLOBAL_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
-// LLVM-HOST: @global_name = global ptr @[[GLOBAL_STR]], align 8
-// LLVM-HOST: @[[LAMBDA:__usn_str]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
-// LLVM-HOST: @[[INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
-// LLVM-HOST: @[[CONSTEXPR_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSl\00", align 1
-// LLVM-HOST: @[[TPL_INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
-// LLVM-HOST: @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
+// CIR-LLVM-HOST: @[[GLOBAL_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @global_name = global ptr @[[GLOBAL_STR]], align 8
+// CIR-LLVM-HOST: @[[LAMBDA:__usn_str]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
+// CIR-LLVM-HOST: @[[INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @[[CONSTEXPR_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSl\00", align 1
+// CIR-LLVM-HOST: @[[TPL_INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
 
 // OGCG-HOST: @[[GLOBAL_STR:[^ ]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
 // OGCG-HOST: @global_name = global ptr @[[GLOBAL_STR]], align 8
@@ -64,8 +64,8 @@ const char *global_name = __builtin_sycl_unique_stable_name(int);
 // CIR-DEV: cir.global "private" constant cir_private dso_local target_address_space(1) @[[KERNEL_LAMBDA:__usn_str]] = #cir.const_array<"_ZTSZZ4mainENKUlvE_clEvEUlvE_" : !cir.array<!s8i x 29>, trailing_zeros> : !cir.array<!s8i x 30> align(1)
 // CIR-DEV: cir.global "private" constant cir_private dso_local target_address_space(1) @[[KERNEL_CONSTEXPR:[^ ]+]] = #cir.const_array<"_ZTSc" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
 
-// LLVM-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
-// LLVM-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1
+// CIR-LLVM-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
+// CIR-LLVM-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1
 
 // OGCG-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private unnamed_addr addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
 // OGCG-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private unnamed_addr addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1
@@ -104,11 +104,6 @@ void host_only() {
 // LLVM-HOST:   call void @_Z3usePKc(ptr noundef @[[INT]])
 // LLVM-HOST:   store ptr @[[CONSTEXPR_STR]], ptr %{{.*}}, align 8
 
-// OGCG-HOST-LABEL: define dso_local void @_Z9host_onlyv()
-// OGCG-HOST:   call void @_Z3usePKc(ptr noundef @[[LAMBDA]])
-// OGCG-HOST:   call void @_Z3usePKc(ptr noundef @[[INT]])
-// OGCG-HOST:   store ptr @[[CONSTEXPR_STR]], ptr %{{.*}}, align 8
-
 // CIR-HOST-LABEL: cir.func {{.*}} @_Z14template_paramIiEvv()
 // CIR-HOST:   %[[T:.*]] = cir.get_global @[[TPL_INT]] : !cir.ptr<!cir.array<!s8i x 6>>
 // CIR-HOST:   %[[T_CAST:.*]] = cir.cast bitcast %[[T]] : !cir.ptr<!cir.array<!s8i x 6>> -> !cir.ptr<!s8i>
@@ -117,9 +112,6 @@ void host_only() {
 // LLVM-HOST-LABEL: define linkonce_odr void @_Z14template_paramIiEvv()
 // LLVM-HOST:   call void @_Z3usePKc(ptr noundef @[[TPL_INT]])
 
-// OGCG-HOST-LABEL: define linkonce_odr void @_Z14template_paramIiEvv()
-// OGCG-HOST:   call void @_Z3usePKc(ptr noundef @[[TPL_INT]])
-
 // CIR-HOST-LABEL: cir.func {{.*}} @_Z14template_paramIZ9host_onlyvEUlvE_Evv()
 // CIR-HOST:   %[[T:.*]] = cir.get_global @[[TPL_LAMBDA]] : !cir.ptr<!cir.array<!s8i x 23>>
 // CIR-HOST:   %[[T_CAST:.*]] = cir.cast bitcast %[[T]] : !cir.ptr<!cir.array<!s8i x 23>> -> !cir.ptr<!s8i>
@@ -127,9 +119,6 @@ void host_only() {
 
 // LLVM-HOST-LABEL: define internal void @_Z14template_paramIZ9host_onlyvEUlvE_Evv()
 // LLVM-HOST:   call void @_Z3usePKc(ptr noundef @[[TPL_LAMBDA]])
-
-// OGCG-HOST-LABEL: define internal void @_Z14template_paramIZ9host_onlyvEUlvE_Evv()
-// OGCG-HOST:   call void @_Z3usePKc(ptr noundef @[[TPL_LAMBDA]])
 
 int main() {
   kernel_single_task<class K>([] {
@@ -154,6 +143,3 @@ int main() {
 // LLVM-DEV:   call spir_func void @_Z3usePKc(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[KERNEL_LAMBDA]] to ptr addrspace(4)))
 // LLVM-DEV:   store ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[KERNEL_CONSTEXPR]] to ptr addrspace(4)), ptr addrspace(4) %{{.*}}, align 8
 
-// OGCG-DEV-LABEL: define internal spir_func void @_ZZ4mainENKUlvE_clEv(
-// OGCG-DEV:   call spir_func void @_Z3usePKc(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @[[KERNEL_LAMBDA]] to ptr addrspace(4)))
-// OGCG-DEV:   store ptr addrspace(4) addrspacecast (ptr addrspace(1) @[[KERNEL_CONSTEXPR]] to ptr addrspace(4)), ptr addrspace(4) %{{.*}}, align 8
