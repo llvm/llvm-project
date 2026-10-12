@@ -137,7 +137,7 @@ makeSession(const Options &Opts) noexcept {
 
   if (Opts.Verbose) {
     fprintf(stderr,
-            "executor info: triple = \"%s\", page-size = %zu, "
+            "ogre: executor info: triple = \"%s\", page-size = %zu, "
             "cpu-features = \"%s\"\n",
             EPI->targetTriple().c_str(), EPI->pageSize(),
             EPI->targetCPUFeatures().c_str());
@@ -177,8 +177,19 @@ makeSession(const Options &Opts) noexcept {
 
   // Connect to the controller described by the ConnectionSpec, handing over the
   // bootstrap info. From here on the controller can call into this process.
-  if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI)))
+  if (Opts.Verbose)
+    fprintf(stderr, "ogre: connecting via %s ...\n",
+            Opts.ConnSpec.str().c_str());
+
+  if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI))) {
+    if (Opts.Verbose)
+      fprintf(stderr, "ogre: connection failed\n");
+
     return Err;
+  }
+
+  if (Opts.Verbose)
+    fprintf(stderr, "ogre: connection success\n");
 
   return S;
 }
@@ -197,12 +208,16 @@ static Expected<int> runOgre(const Options &Opts) noexcept {
   // wait below cannot miss the detach.
   std::promise<void> StopP;
   std::future<void> StopF = StopP.get_future();
-  (*S)->addOnDetach(
-      [StopP = std::move(StopP)]() mutable noexcept { StopP.set_value(); });
+  (*S)->addOnDetach([&Opts, StopP = std::move(StopP)]() mutable noexcept {
+    if (Opts.Verbose)
+      fprintf(stderr, "ogre: detached\n");
+    StopP.set_value();
+  });
 
   // Wait for detach. The main thread has nothing else to do: the dispatcher
   // runs the controller's calls. Returning destroys the Session.
   StopF.get();
+
   return 0;
 }
 
@@ -216,9 +231,13 @@ int main(int argc, char *argv[]) {
     return *Result;
 
   if (auto *Opts = std::get_if<Options>(&OptsOrResult)) {
-    if (auto Result = runOgre(*Opts))
+    if (auto Result = runOgre(*Opts)) {
+      if (Opts->Verbose)
+        fprintf(stderr, "ogre: session ended with result = %i\n", *Result);
       return *Result;
-    else {
+    } else {
+      if (Opts->Verbose)
+        fprintf(stderr, "ogre: session ended with error\n");
       fprintf(stderr, "error: %s\n", toString(Result.takeError()).c_str());
       return 1;
     }
