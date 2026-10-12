@@ -8985,6 +8985,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
         metadata->Dump(&s);
       }
 
+      metadata.reset();
       if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
         metadata = GetMetadata(tag);
 
