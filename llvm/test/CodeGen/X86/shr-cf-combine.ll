@@ -9,22 +9,11 @@
 ; This is a common pattern in GMP's reciprocal computation (mpn/x86_64/invert_limb.asm).
 ; See: https://github.com/llvm/llvm-project/issues/228046
 
-define { i64, i64 } @neg_lsb(i64 %d) {
-; CHECK-LABEL: neg_lsb:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    shrq %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    retq
+define { i64, i64 } @neg_lsb(i64 %d) nounwind {
 ; X86-LABEL: neg_lsb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -40,9 +29,7 @@ define { i64, i64 } @neg_lsb(i64 %d) {
 ; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: neg_lsb:
@@ -60,25 +47,12 @@ define { i64, i64 } @neg_lsb(i64 %d) {
   ret { i64, i64 } %r1
 }
 
-define { i64, i64 } @sub_lsb(i64 %d, i64 %x) {
-; CHECK-LABEL: sub_lsb:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq %rdi
-; CHECK-NEXT:    sbbq $0, %rax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    retq
+define { i64, i64 } @sub_lsb(i64 %d, i64 %x) nounwind {
 ; X86-LABEL: sub_lsb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -95,11 +69,8 @@ define { i64, i64 } @sub_lsb(i64 %d, i64 %x) {
 ; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: sub_lsb:
@@ -118,14 +89,7 @@ define { i64, i64 } @sub_lsb(i64 %d, i64 %x) {
 }
 
 ; Test 32-bit version
-define { i32, i32 } @neg_lsb_32(i32 %d) {
-; CHECK-LABEL: neg_lsb_32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i32, i32 } @neg_lsb_32(i32 %d) nounwind {
 ; X86-LABEL: neg_lsb_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -149,14 +113,7 @@ define { i32, i32 } @neg_lsb_32(i32 %d) {
   ret { i32, i32 } %r1
 }
 
-define { i32, i32 } @sub_lsb_32(i32 %d, i32 %x) {
-; CHECK-LABEL: sub_lsb_32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    sbbl $0, %eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i32, i32 } @sub_lsb_32(i32 %d, i32 %x) nounwind {
 ; X86-LABEL: sub_lsb_32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -181,15 +138,7 @@ define { i32, i32 } @sub_lsb_32(i32 %d, i32 %x) {
 }
 
 ; Test 16-bit version
-define { i16, i16 } @neg_lsb_16(i16 %d) {
-; CHECK-LABEL: neg_lsb_16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    shrw %di
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i16, i16 } @neg_lsb_16(i16 %d) nounwind {
 ; X86-LABEL: neg_lsb_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
@@ -215,15 +164,7 @@ define { i16, i16 } @neg_lsb_16(i16 %d) {
   ret { i16, i16 } %r1
 }
 
-define { i16, i16 } @sub_lsb_16(i16 %d, i16 %x) {
-; CHECK-LABEL: sub_lsb_16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    shrw %di
-; CHECK-NEXT:    sbbw $0, %ax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i16, i16 } @sub_lsb_16(i16 %d, i16 %x) nounwind {
 ; X86-LABEL: sub_lsb_16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -249,15 +190,7 @@ define { i16, i16 } @sub_lsb_16(i16 %d, i16 %x) {
 }
 
 ; Test 8-bit version
-define { i8, i8 } @neg_lsb_8(i8 %d) {
-; CHECK-LABEL: neg_lsb_8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    shrb %dil
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i8, i8 } @neg_lsb_8(i8 %d) nounwind {
 ; X86-LABEL: neg_lsb_8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
@@ -283,15 +216,7 @@ define { i8, i8 } @neg_lsb_8(i8 %d) {
   ret { i8, i8 } %r1
 }
 
-define { i8, i8 } @sub_lsb_8(i8 %d, i8 %x) {
-; CHECK-LABEL: sub_lsb_8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    shrb %dil
-; CHECK-NEXT:    sbbb $0, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    retq
+define { i8, i8 } @sub_lsb_8(i8 %d, i8 %x) nounwind {
 ; X86-LABEL: sub_lsb_8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -318,13 +243,7 @@ define { i8, i8 } @sub_lsb_8(i8 %d, i8 %x) {
 
 ; Negative test: when only (and D, 1) is used (no corresponding srl D, 1),
 ; we should NOT use SHR_FLAG (falls back to the normal AND+NEG pattern).
-define i64 @only_lsb(i64 %d) {
-; CHECK-LABEL: only_lsb:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    retq
+define i64 @only_lsb(i64 %d) nounwind {
 ; X86-LABEL: only_lsb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -347,12 +266,7 @@ define i64 @only_lsb(i64 %d) {
 
 ; Negative test: when only (srl D, 1) is used (no corresponding and D, 1),
 ; we should just use normal SHR.
-define i64 @only_srl(i64 %d) {
-; CHECK-LABEL: only_srl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq %rax
-; CHECK-NEXT:    retq
+define i64 @only_srl(i64 %d) nounwind {
 ; X86-LABEL: only_srl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax

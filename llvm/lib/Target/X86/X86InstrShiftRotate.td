@@ -741,3 +741,28 @@ let Predicates = [HasNDD, In64BitMode] in {
   def : Pat<(X86shr_flag GR64:$src, (i8 timm:$amt)),
             (SHR64ri_ND GR64:$src, timm:$amt)>;
 }
+
+// SHR_FLAG with CL register - use the shift-by-CL instructions.
+// Note: Currently unused since the optimization only handles shift-by-1,
+// but included for completeness.
+let Predicates = [NoNDD] in {
+  def : Pat<(X86shr_flag GR8:$src, CL),
+            (SHR8rCL GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, CL),
+            (SHR16rCL GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, CL),
+            (SHR32rCL GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, CL),
+            (SHR64rCL GR64:$src)>;
+}
+
+let Predicates = [HasNDD, In64BitMode] in {
+  def : Pat<(X86shr_flag GR8:$src, CL),
+            (SHR8rCL_ND GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, CL),
+            (SHR16rCL_ND GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, CL),
+            (SHR32rCL_ND GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, CL),
+            (SHR64rCL_ND GR64:$src)>;
+}
