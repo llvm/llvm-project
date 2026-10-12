@@ -76,16 +76,16 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
 
-  // Decide whether to enable scalable vectorisation
+  // Decide whether to enable scalable vectorization.
   auto ComputeScalable =
       [TTI](ScalableForceKind ForceScalableHint,
             ScalableForceKind ForceScalableOpt, unsigned ForceWidth,
             ElementCount ForceWidthOpt) -> ScalableForceKind {
-    // -scalable-vectorization=(always|off|on) has the highest precedence
+    // -scalable-vectorization=(always|off|on) has the highest precedence.
     if (ForceScalableOpt != SK_Unspecified)
       return ForceScalableOpt;
 
-    // Then, listen to loop hints
+    // Then, consider loop hints.
     assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
     if (ForceScalableHint == SK_PreferScalable ||
         ForceScalableHint == SK_FixedWidthOnly)
@@ -102,7 +102,7 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
     if (TTI && TTI->enableScalableVectorization())
       return SK_PreferScalable;
 
-    // Preference unspecified, fallback to fixed-length vectorisation.
+    // Preference unspecified, fallback to fixed-length vectorization.
     return SK_FixedWidthOnly;
   };
   Scalable =
