@@ -2049,7 +2049,8 @@ protected:
 };
 
 /// A recipe for widening vector memory intrinsics.
-class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
+class LLVM_ABI_FOR_TEST VPWidenMemIntrinsicRecipe final
+    : public VPWidenIntrinsicRecipe {
   /// Alignment information for this memory access.
   Align Alignment;
 
