@@ -445,6 +445,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def LDEXP_#S : RuntimeLibcall;
   def LGAMMA_#S : RuntimeLibcall;
   def LOG_#S : RuntimeLibcall;
+  def LOG_FINITE_#S : RuntimeLibcall;
   def LOG10_#S : RuntimeLibcall;
   def LOG1P_#S : RuntimeLibcall;
   def LOG2_#S : RuntimeLibcall;
@@ -452,6 +453,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def MODF_#S : RuntimeLibcall;
   def NEXTAFTER_#S : RuntimeLibcall;
   def POW_#S : RuntimeLibcall;
+  def POW_FINITE_#S : RuntimeLibcall;
   def REMAINDER_#S : RuntimeLibcall;
   def SINCOS_#S : RuntimeLibcall;
   def SINCOSPI_#S : RuntimeLibcall;
@@ -466,11 +468,6 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def CDFNORM_#S : RuntimeLibcall;
   def CDFNORMINV_#S : RuntimeLibcall;
   def ROUND_#S : RuntimeLibcall;
-}
-
-foreach S = F64VectorSuffixes in {
-  def LOG_FINITE_#S : RuntimeLibcall;
-  def POW_FINITE_#S : RuntimeLibcall;
 }
 
 def FEGETENV : RuntimeLibcall;
@@ -4015,14 +4012,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVbN2v_tan : LibmvecLibcall<TAN_V2F64>;
   def LIBMVEC__ZGVbN2vv___pow_finite : LibmvecLibcall<POW_FINITE_V2F64>;
   def LIBMVEC__ZGVbN2vv_pow : LibmvecLibcall<POW_V2F64>;
-  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
-  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4v___expf_finite : LibmvecLibcall<EXP_FINITE_V4F32>;
+  def LIBMVEC__ZGVbN4v___logf_finite : LibmvecLibcall<LOG_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4v_cosf : LibmvecLibcall<COS_V4F32>;
   def LIBMVEC__ZGVbN4v_expf : LibmvecLibcall<EXP_V4F32>;
   def LIBMVEC__ZGVbN4v_logf : LibmvecLibcall<LOG_V4F32>;
   def LIBMVEC__ZGVbN4v_sinf : LibmvecLibcall<SIN_V4F32>;
   def LIBMVEC__ZGVbN4v_tanf : LibmvecLibcall<TAN_V4F32>;
-  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F64>;
+  def LIBMVEC__ZGVbN4vv___powf_finite : LibmvecLibcall<POW_FINITE_V4F32>;
   def LIBMVEC__ZGVbN4vv_powf : LibmvecLibcall<POW_V4F32>;
   def LIBMVEC__ZGVdN4v___exp_finite : LibmvecLibcall<EXP_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4v___log_finite : LibmvecLibcall<LOG_FINITE_V4F64>;
@@ -4033,14 +4030,14 @@ defset list<RuntimeLibcallImpl> LIBMVEC_X86_VECFUNCS = {
   def LIBMVEC__ZGVdN4v_tan : LibmvecLibcall<TAN_V4F64>;
   def LIBMVEC__ZGVdN4vv___pow_finite : LibmvecLibcall<POW_FINITE_V4F64>;
   def LIBMVEC__ZGVdN4vv_pow : LibmvecLibcall<POW_V4F64>;
-  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F64>;
-  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8v___expf_finite : LibmvecLibcall<EXP_FINITE_V8F32>;
+  def LIBMVEC__ZGVdN8v___logf_finite : LibmvecLibcall<LOG_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8v_cosf : LibmvecLibcall<COS_V8F32>;
   def LIBMVEC__ZGVdN8v_expf : LibmvecLibcall<EXP_V8F32>;
   def LIBMVEC__ZGVdN8v_logf : LibmvecLibcall<LOG_V8F32>;
   def LIBMVEC__ZGVdN8v_sinf : LibmvecLibcall<SIN_V8F32>;
   def LIBMVEC__ZGVdN8v_tanf : LibmvecLibcall<TAN_V8F32>;
-  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F64>;
+  def LIBMVEC__ZGVdN8vv___powf_finite : LibmvecLibcall<POW_FINITE_V8F32>;
   def LIBMVEC__ZGVdN8vv_powf : LibmvecLibcall<POW_V8F32>;
 }
 
@@ -4777,7 +4774,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd4_atan2 : RuntimeLibcallImpl<ATAN2_V4F64>;
   def amd_vrd4_cos : RuntimeLibcallImpl<COS_V4F64>;
   def amd_vrd4_cosh : RuntimeLibcallImpl<COSH_V4F64>;
-  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F32>;
+  def amd_vrd4_erf : RuntimeLibcallImpl<ERF_V4F64>;
   def amd_vrd4_exp : RuntimeLibcallImpl<EXP_V4F64>;
   def amd_vrd4_exp10 : RuntimeLibcallImpl<EXP10_V4F64>;
   def amd_vrd4_exp2 : RuntimeLibcallImpl<EXP2_V4F64>;
@@ -4794,7 +4791,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrd8_atan2 : RuntimeLibcallImpl<ATAN2_V8F64>;
   def amd_vrd8_cos : RuntimeLibcallImpl<COS_V8F64>;
   def amd_vrd8_cosh : RuntimeLibcallImpl<COSH_V8F64>;
-  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F32>;
+  def amd_vrd8_erf : RuntimeLibcallImpl<ERF_V8F64>;
   def amd_vrd8_exp : RuntimeLibcallImpl<EXP_V8F64>;
   def amd_vrd8_exp10 : RuntimeLibcallImpl<EXP10_V8F64>;
   def amd_vrd8_exp2 : RuntimeLibcallImpl<EXP2_V8F64>;
