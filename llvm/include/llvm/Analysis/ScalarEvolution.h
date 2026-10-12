@@ -1625,6 +1625,9 @@ public:
       return Guards;
     }
 
+    /// Return true if the loop guards have already been collected.
+    bool isCollected() const { return !PendingLoop; }
+
     /// Try to apply the collected loop guards to \p Expr.
     LLVM_ABI const SCEV *rewrite(const SCEV *Expr) const;
   };
@@ -2564,7 +2567,8 @@ private:
   /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
-                                     bool IsSigned, bool Invert);
+                                     bool IsSigned, bool Invert, const Loop *L,
+                                     LoopGuards &Guards);
 
   /// Verify if a linear IV with positive \p Stride can overflow when compared
   /// against the invariant \p RHS with a less-than. If \p Invert is true, both

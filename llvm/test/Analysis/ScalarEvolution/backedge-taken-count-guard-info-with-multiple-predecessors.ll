@@ -254,7 +254,7 @@ define void @epilogue(i64 %count) {
 ; CHECK-NEXT:  Loop %epilogue: symbolic max backedge-taken count is (-1 + %count.epilogue)
 ; CHECK-NEXT:  Loop %epilogue: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.body: backedge-taken count is ((-8 + %count) /u 8)
-; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %while.body: constant max backedge-taken count is i64 2305843009213693950
 ; CHECK-NEXT:  Loop %while.body: symbolic max backedge-taken count is ((-8 + %count) /u 8)
 ; CHECK-NEXT:  Loop %while.body: Trip multiple is 1
 ;
