@@ -3353,30 +3353,32 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       // If added to MI, asm printer will emit .reloc R_MIPS_JALR for the
       // symbol.
       const SDValue TargetAddr = Node->getOperand(0).getOperand(1);
-      StringRef Sym;
+      MCSymbol *S = nullptr;
       if (const GlobalAddressSDNode *G =
               dyn_cast_or_null<const GlobalAddressSDNode>(TargetAddr)) {
+        const GlobalValue *GV = G->getGlobal();
+
         // We must not emit the R_MIPS_JALR relocation against data symbols
         // since this will cause run-time crashes if the linker replaces the
         // call instruction with a relative branch to the data symbol.
-        if (!isa<Function>(G->getGlobal())) {
+        if (!isa<Function>(GV)) {
           LLVM_DEBUG(dbgs() << "Not adding R_MIPS_JALR against data symbol "
-                            << G->getGlobal()->getName() << "\n");
+                            << GV->getName() << "\n");
           return;
         }
-        Sym = G->getGlobal()->getName();
+        S = getTargetMachine().getSymbol(GV);
       }
       else if (const ExternalSymbolSDNode *ES =
                    dyn_cast_or_null<const ExternalSymbolSDNode>(TargetAddr)) {
-        Sym = ES->getSymbol();
+        S = MI.getParent()->getParent()->getContext().getOrCreateSymbol(
+            ES->getSymbol());
       }
 
-      if (Sym.empty())
+      if (!S)
         return;
 
-      MachineFunction *MF = MI.getParent()->getParent();
-      MCSymbol *S = MF->getContext().getOrCreateSymbol(Sym);
-      LLVM_DEBUG(dbgs() << "Adding R_MIPS_JALR against " << Sym << "\n");
+      LLVM_DEBUG(dbgs() << "Adding R_MIPS_JALR against " << S->getName()
+                        << "\n");
       MI.addOperand(MachineOperand::CreateMCSymbol(S, MipsII::MO_JALR));
     }
   }
