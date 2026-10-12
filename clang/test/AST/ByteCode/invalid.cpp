@@ -327,3 +327,14 @@ namespace StringLiteralDtor {
   static_assert(bar(), ""); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to}}
 }
+
+namespace PointerIntoInvalidRecord {
+  template <auto V> auto foo = bar(V);
+  union U {
+    int baz;
+    union {
+      auto baz; // both-error {{'auto' not allowed in non-static union member}}
+    } internal;
+  } u;
+  template int *foo<&u.baz>; // both-error {{non-type template argument is not a constant expression}}
+}

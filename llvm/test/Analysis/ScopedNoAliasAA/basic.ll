@@ -22,6 +22,6 @@ entry:
 
 attributes #0 = { nounwind uwtable }
 
-!0 = !{!0, !"some domain"}
+!0 = !{!0, i1 false, !"some domain"}
 !1 = !{!1, !0, !"some scope"}
 !2 = !{!1}

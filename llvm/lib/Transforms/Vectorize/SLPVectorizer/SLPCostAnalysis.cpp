@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -123,8 +124,20 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             ? TTI::PointersChainInfo::getUnknownStride()
             : TTI::PointersChainInfo::getKnownStride();
 
+    // The GEPs of the masked gather loads are accessed with the loaded type
+    // and form a chain only if the lanes share the base.
+    Type *AccessTy = ScalarTy;
+    if (all_of(Ptrs, [](const Value *V) {
+          auto *Ptr = dyn_cast<GetElementPtrInst>(V);
+          return Ptr && Ptr->hasOneUse() && isa<LoadInst>(Ptr->user_back());
+        })) {
+      PtrsInfo.IsSameBaseAddress = all_equal(map_range(Ptrs, [](Value *V) {
+        return cast<GetElementPtrInst>(V)->getPointerOperand();
+      }));
+      AccessTy = Ptrs.front()->user_back()->getType();
+    }
     ScalarCost =
-        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy, CostKind);
+        TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, AccessTy, CostKind);
     auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr);
     if (!BaseGEP) {
       auto *It = find_if(Ptrs, IsaPred<GEPOperator>);
@@ -153,6 +166,31 @@ InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy,
          TTI.getArithmeticInstrCost(Instruction::Xor, CmpTy, CostKind) +
          TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+}
+
+InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
+                                          Type *SrcTy, Type *DstTy,
+                                          const DataLayout &DL,
+                                          TTI::CastContextHint CCH,
+                                          TTI::TargetCostKind CostKind) {
+  bool ToPtr = cast<VectorType>(DstTy)->getElementType()->isPointerTy();
+  if (ToPtr == cast<VectorType>(SrcTy)->getElementType()->isPointerTy())
+    return TTI.getCastInstrCost(Instruction::BitCast, DstTy, SrcTy, CCH,
+                                CostKind);
+  // The ptr/int conversion keeps the vector shape, the bitcast transforms the
+  // resulting integer vector.
+  if (ToPtr) {
+    Type *IntVecTy = DL.getIntPtrType(DstTy);
+    return TTI.getCastInstrCost(Instruction::IntToPtr, DstTy, IntVecTy, CCH,
+                                CostKind) +
+           TTI.getCastInstrCost(Instruction::BitCast, IntVecTy, SrcTy, CCH,
+                                CostKind);
+  }
+  Type *IntVecTy = DL.getIntPtrType(SrcTy);
+  return TTI.getCastInstrCost(Instruction::PtrToInt, IntVecTy, SrcTy, CCH,
+                              CostKind) +
+         TTI.getCastInstrCost(Instruction::BitCast, DstTy, IntVecTy, CCH,
+                              CostKind);
 }
 
 InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,

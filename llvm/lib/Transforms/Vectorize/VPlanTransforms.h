@@ -172,7 +172,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
-      const VPDominatorTree &VPDT,
+      OptimizationRemarkEmitter *ORE, const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -216,7 +216,7 @@ struct VPlanTransforms {
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
-      VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
+      VPlan &Plan, VPValue *MainVectorTripCount, bool RequiresScalarEpilogue,
       ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
       ScalarEvolution &SE);
 
@@ -283,9 +283,9 @@ struct VPlanTransforms {
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
   /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
-  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
-  /// regions are dissolved by replicating their blocks and their recipes \p VF
-  /// times.
+  /// VPInstruction in \p Plan with \p VF single-scalar recipes, packed into
+  /// Build(Struct)Vectors for vector users. Replicate regions are dissolved by
+  /// replicating their blocks and their recipes \p VF times.
   /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
 
@@ -482,6 +482,11 @@ struct VPlanTransforms {
   static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
+  /// Widens memory operations by a factor of UF based on a target hook.
+  /// This allows targets to use wider memory operations when profitable.
+  static void widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF, unsigned UF,
+                                      const TargetTransformInfo &TTI);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
@@ -503,10 +508,8 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
-  /// Add explicit Build[Struct]Vector recipes to Pack multiple scalar values
-  /// into vectors and Unpack recipes to extract scalars from vectors as
-  /// needed.
-  static void materializePacksAndUnpacks(VPlan &Plan);
+  /// Add explicit Unpack recipes to extract scalars from vectors as needed.
+  static void materializeUnpacks(VPlan &Plan);
 
   /// Materialize UF, VF and VFxUF to be computed explicitly using
   /// VPInstructions.
@@ -638,12 +641,14 @@ struct VPlanTransforms {
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
-  /// enabled by prior widening of consecutive memory operations for now.
+  /// enabled by prior widening of consecutive memory operations and calls for
+  /// now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
   /// intrinsic or replicate recipes based on a cost comparison via \p CostCtx.
-  static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
+  /// Returns true if any call was widened.
+  static bool makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 

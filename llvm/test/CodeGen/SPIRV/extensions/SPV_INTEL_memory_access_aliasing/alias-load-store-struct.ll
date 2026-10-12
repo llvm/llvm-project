@@ -23,4 +23,4 @@ entry:
 
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"foo: %this"}
-!3 = distinct !{!3, !"foo"}
+!3 = distinct !{!3, i1 false, !"foo"}

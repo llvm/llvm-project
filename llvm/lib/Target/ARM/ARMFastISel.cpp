@@ -2811,13 +2811,12 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     unsigned Opcode = isLsl ? LSLOpc : Opc;
     ARM_AM::ShiftOpc ShiftAM = isLsl ? ARM_AM::lsl : Shift;
     unsigned ImmEnc = ImmIsSO ? ARM_AM::getSORegOpc(ShiftAM, Imm) : Imm;
-    bool isKill = 1 == Instr;
     MachineInstrBuilder MIB = BuildMI(
         *FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode), ResultReg);
     if (setsCPSR)
-      MIB.addReg(ARM::CPSR, RegState::Define);
+      MIB.addReg(ARM::CPSR, RegState::Define | RegState::Dead);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, getKillRegState(isKill))
+    MIB.addReg(SrcReg)
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)
@@ -3158,9 +3157,9 @@ bool ARMFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY),
-            ResultReg).addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&Arg, ResultReg);
   }
 

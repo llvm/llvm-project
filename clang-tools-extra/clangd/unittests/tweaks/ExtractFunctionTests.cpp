@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::Not;
 using ::testing::StartsWith;
@@ -56,15 +57,13 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(
       apply("#define RETURN_IF_ERROR(x) if (x) return\nRETU^RN_IF_ERROR(4);"),
       StartsWith("unavailable"));
-
-  FileName = "a.c";
-  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
   // Check all parameters are in order. `a` and `ptr` are mutated in the
-  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` and
-  // `foo` are only read, so become const references.
+  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` is
+  // an unmutated scalar, so becomes a by-value parameter; `foo` is an
+  // unmutated class type, so becomes a const reference.
   std::string ParameterCheckInput = R"cpp(
 struct Foo {
   int x;
@@ -80,7 +79,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, const int &b, int * &ptr, const Foo &foo) {
+void extracted(int &a, int b, int * &ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -98,7 +97,7 @@ void f(const int c) {
   [[while(c) {}]]
 })cpp";
   std::string ConstCheckOutput = R"cpp(
-void extracted(const int &c) {
+void extracted(const int c) {
 while(c) {}
 }
 void f(const int c) {
@@ -106,7 +105,7 @@ void f(const int c) {
 })cpp";
   EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
 
-  // Check const qualifier with namespace
+  // Check const qualifier: kept for a by-reference non-scalar.
   std::string ConstNamespaceCheckInput = R"cpp(
 namespace X { struct Y { int z; }; }
 int f(const X::Y &y) {
@@ -573,11 +572,10 @@ TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
       }
     }
   )cpp";
-  // FIXME: min/max should be by value.
   // FIXME: avoid emitting redundant braces
   const char *After = R"cpp(
     bool lucky(int N);
-    int extracted(const int &Min, const int &Max) {
+    int extracted(int Min, int Max) {
 {
         for (int I = Min; I <= Max; ++I)
           if (lucky(I))
@@ -782,12 +780,14 @@ TEST_F(ExtractFunctionTest, VarDeclInitializer) {
 
 TEST_F(ExtractFunctionTest, ConstParameters) {
   Context = File;
-  // A captured variable that's only read becomes a const reference.
+  // A captured scalar that's only read becomes a by-value parameter;
+  // non-scalars instead become a const reference (see the `S` cases
+  // below).
   EXPECT_THAT(apply(R"cpp(
     void use(int);
     void f(int x) { [[use(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(int x)"));
   // Direct assignment: stays non-const.
   EXPECT_THAT(apply("void f(int x) { [[x = 1;]] }"),
               HasSubstr("void extracted(int &x)"));
@@ -817,21 +817,30 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
   )cpp"),
               HasSubstr("void extracted(int &x)"));
   // Passed to a parameter taking a const reference or by value: becomes
-  // const, since neither can mutate the caller's variable.
+  // an unmutated scalar, so by value.
   EXPECT_THAT(apply(R"cpp(
     void readOnly(const int &);
     void f(int x) { [[readOnly(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(int x)"));
   EXPECT_THAT(apply(R"cpp(
     void byValue(int);
     void f(int x) { [[byValue(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
-  // A parameter that's already declared const stays as-is (no double
-  // const).
+              HasSubstr("void extracted(int x)"));
+  // A scalar parameter that's already declared const keeps that
+  // qualifier when passed by value: It might be relevant for overload
+  // resolution.
   EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(const int x)"));
+  // A non-scalar parameter that's already declared const keeps that
+  // qualifier, since it's still passed by reference.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {};
+    void use(const S &);
+    void f(const S s) { [[use(s);]] }
+  )cpp"),
+              HasSubstr("void extracted(const S &s)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersReferenceAliasing) {
@@ -864,9 +873,10 @@ TEST_F(ExtractFunctionTest, ConstParametersConservativeAliasing) {
   // whether the lambda actually mutates it.
   EXPECT_THAT(apply("void f(int x) { [[auto l = [&x]() { int y = x; };]] }"),
               HasSubstr("int &x"));
-  // Captured by value in a lambda: doesn't alias x, so becomes const.
+  // Captured by value in a lambda: doesn't alias x, so it's unmutated and
+  // (being a scalar) passed by value.
   EXPECT_THAT(apply("void f(int x) { [[auto l = [x]() { int y = x; };]] }"),
-              HasSubstr("const int &x"));
+              HasSubstr("void extracted(int x)"));
   // Returning a captured variable is conservatively treated as a possible
   // mutation, regardless of whether the return is actually by value (safe)
   // or by non-const reference (not safe) -- telling these apart isn't
@@ -909,19 +919,20 @@ TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
 TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
   Context = File;
   // Mutating a member/element through a pointer only mutates the pointee,
-  // never the pointer's own binding, so the pointer stays const-eligible --
+  // never the pointer's own binding, so the pointer itself is unmutated --
   // unlike the same access through a value or reference (already covered
   // by ConstParameters' `ptr` case, which is mutated directly instead).
+  // Being an unmutated scalar, it's then passed by value.
   EXPECT_THAT(apply(R"cpp(
     struct S { int x; };
     void f(S *ptr) { [[ptr->x = 1;]] }
   )cpp"),
-              HasSubstr("extracted(S *const &ptr)"));
+              HasSubstr("extracted(S * ptr)"));
   EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
-              HasSubstr("extracted(int *const &p)"));
+              HasSubstr("extracted(int * p)"));
   // Same for a plain dereference.
   EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
-              HasSubstr("extracted(int *const &p)"));
+              HasSubstr("extracted(int * p)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
@@ -936,7 +947,7 @@ TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
       a = 5;]]
     }
   )cpp"),
-              HasSubstr("extracted(const bool &cond, int &c, int &d)"));
+              HasSubstr("extracted(bool cond, int &c, int &d)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
@@ -948,7 +959,7 @@ TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
       [[(cond ? s1 : s2).n = 0;]]
     }
   )cpp"),
-              HasSubstr("extracted(const bool &cond, S &s1, S &s2)"));
+              HasSubstr("extracted(bool cond, S &s1, S &s2)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
@@ -961,7 +972,243 @@ TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
     struct S { static void operator()(int); };
     void f(S s, int x) { [[s(x);]] }
   )cpp"),
-              HasSubstr("extracted(const S &s, const int &x)"));
+              HasSubstr("extracted(const S &s, int x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
+  Context = File;
+  // An unmutated pointer is a scalar too: passed by value.
+  EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
+              HasSubstr("extracted(int * p)"));
+  // An unmutated enum: passed by value.
+  EXPECT_THAT(apply(R"cpp(
+    enum E { A, B };
+    void use(E);
+    void f(E e) { [[use(e);]] }
+  )cpp"),
+              HasSubstr("extracted(E e)"));
+  // A class type, even one that's small and trivially copyable, is never
+  // passed by value: that's deliberately out of scope for now.
+  EXPECT_THAT(apply(R"cpp(
+    struct Point { int x, y; };
+    void use(Point);
+    void f(Point p) { [[use(p);]] }
+  )cpp"),
+              HasSubstr("extracted(const Point &p)"));
+  // An unmutated array is not a scalar (even though its element type is):
+  // stays a non-const reference, per the existing array carve-out.
+  EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
+              HasSubstr("extracted(int[5] &arr)"));
+}
+
+// Variables of reference type, const or non-const, must stay references,
+// otherwise they'd stop tracking their target.
+TEST_F(ExtractFunctionTest, ReferenceToScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      const int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+}
+
+TEST_F(ExtractFunctionTest, VolatileScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(const volatile int &, int) {}
+      void foo() {
+      volatile int V = 0;
+      [[
+        bar(V, 0);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(const volatile int &V)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileAllowUnmodifiedScalar) {
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      int i;
+      void foo() {
+         int j = 0;
+         [[i = j;]]
+    })cpp"),
+              HasSubstr("extracted(int j)"));
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedScalarBecomesPointer) {
+  // C has no references: a mutated capture becomes a real pointer
+  // parameter instead, with the call site taking its address and the
+  // body dereferencing it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int j;
+         [[j = 0;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(int * j)"), HasSubstr("(*j) = 0;"),
+                    HasSubstr("extracted(&j)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileUnmodifiedStructBecomesConstPointer) {
+  // Same, but for an unmutated non-scalar capture: the parameter becomes
+  // a pointer to const, and every member access on it is rewritten too.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      int i;
+      void foo() {
+         struct pair p;
+         p.v1 = 0;
+         [[i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(const struct pair * p)"),
+                    HasSubstr("i = p->v1;"), HasSubstr("extracted(&p)")));
+}
+
+TEST_F(ExtractFunctionTest, CFileStructMixedUses) {
+  // The same capture can appear both as a member-access base (rewritten
+  // to "->") and as a plain use (wrapped in "(*...)") within a single
+  // extraction; each occurrence is rewritten independently.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      struct pair { int v1; int v2; };
+      void use(struct pair);
+      int i;
+      void foo() {
+         struct pair p;
+         [[use(p); i = p.v1;]]
+    })cpp"),
+              AllOf(HasSubstr("use((*p));"), HasSubstr("i = p->v1;")));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectMacroDot) {
+  // The identifier itself need not be a macro expansion for the
+  // member-access ".", immediately following it, to be one -- that dot
+  // is a separate token with its own location, which also needs
+  // checking before relying on it to splice in "->".
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      #define DOT .
+      struct pair { int v1; int v2; };
+      void foo() {
+         struct pair p;
+         [[p DOT v1 = 1;]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileModifiedArrayStaysPlainPointer) {
+  // Unlike other non-scalar types, an array decays to a pointer on its
+  // own wherever it's used, so it needs neither an address-of at the
+  // call site nor a dereference-rewrite of its uses in the body. The
+  // parameter's own type must be decayed too, though: leaving it as an
+  // array type would print as the uncompilable "int[5] arr" (there's no
+  // special-cased array declarator syntax, unlike C++'s reference case).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[arr[0] = 1;]]
+    })cpp"),
+              AllOf(HasSubstr("extracted(int * arr)"), HasSubstr("arr[0] = 1;"),
+                    HasSubstr("extracted(arr)"), Not(HasSubstr("&arr"))));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticFunctionStaysStatic) {
+  // A free function's own `static` (internal linkage) must carry over to
+  // an extracted sibling, or that sibling would default to external
+  // linkage instead.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileStaticForwardDeclaredFunctionStaysStatic) {
+  // Same as above, but the definition itself omits `static` (legal in C:
+  // once a prior declaration gives the function internal linkage, a
+  // later one doesn't need to repeat it, and still has it). Checking
+  // only the current declaration's storage class would miss this.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      static void foo();
+      void foo() {
+         int j = 0;
+         [[int k = j;]]
+    })cpp"),
+              HasSubstr("static void extracted"));
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArraySizeof) {
+  // Decaying the array to a pointer parameter would silently change the
+  // meaning of a `sizeof` on it (pointer size instead of array size), so
+  // this is refused rather than risk miscompiling it.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = sizeof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayAlignof) {
+  // Same hazard as sizeof, and the same UnaryExprOrTypeTraitExpr AST
+  // node: alignof(int) and alignof(int *) aren't guaranteed to match
+  // (and commonly don't, e.g. 4 vs 8 on a typical 64-bit target).
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[int n = __alignof(arr);]]
+    })cpp"),
+            "fail: Too complex to extract.");
+}
+
+TEST_F(ExtractFunctionTest, CFileRejectArrayTypeof) {
+  // Same hazard again, but via a completely different AST node
+  // (TypeOfExprType, reached through the VarDecl's TypeLoc, not through
+  // any Stmt a plain expression visitor would see): typeof(arr) would
+  // resolve to the decayed pointer type instead of the array type.
+  FileName = "a.c";
+  Context = File;
+  EXPECT_EQ(apply(R"cpp(
+      void foo() {
+         int arr[5];
+         [[__typeof__(arr) copy;]]
+    })cpp"),
+            "fail: Too complex to extract.");
 }
 
 } // namespace

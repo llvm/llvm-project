@@ -33,78 +33,6 @@ namespace omp {
 
 class DataSharingProcessor {
 private:
-  /// A symbol visitor that keeps track of the currently active OpenMPConstruct
-  /// at any point in time. This is used to track Symbol definition scopes in
-  /// order to tell which OMP scope defined vs. references a certain Symbol.
-  struct OMPConstructSymbolVisitor {
-    OMPConstructSymbolVisitor(
-        semantics::SemanticsContext &ctx,
-        llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs)
-        : metadirectiveLoopIVs(metadirectiveLoopIVs.begin(),
-                               metadirectiveLoopIVs.end()),
-          isMetadirectiveLoop(!metadirectiveLoopIVs.empty()),
-          version(ctx.langOptions().getOpenMPVersion()) {}
-    template <typename T>
-    bool Pre(const T &) {
-      return true;
-    }
-    template <typename T>
-    void Post(const T &) {}
-
-    bool Pre(const parser::LoopControl::Bounds &bounds) {
-      if (isMetadirectiveLoop)
-        if (const semantics::Symbol *symbol = bounds.Name().thing.symbol)
-          metadirectiveLoopIVs.insert(symbol);
-      return true;
-    }
-
-    bool Pre(const parser::OpenMPConstruct &omp) {
-      // Skip constructs that may not have privatizations.
-      if (isOpenMPPrivatizingConstruct(omp, version))
-        constructs.push_back(&omp);
-      return true;
-    }
-
-    void Post(const parser::OpenMPConstruct &omp) {
-      if (isOpenMPPrivatizingConstruct(omp, version))
-        constructs.pop_back();
-    }
-
-    void Post(const parser::Name &name) {
-      auto current = !constructs.empty() ? constructs.back() : ConstructPtr();
-      symDefMap.try_emplace(name.symbol, current);
-    }
-
-    bool Pre(const parser::DeclarationConstruct &decl) {
-      constructs.push_back(&decl);
-      return true;
-    }
-
-    void Post(const parser::DeclarationConstruct &decl) {
-      constructs.pop_back();
-    }
-
-    /// Given a \p symbol and an \p eval, returns true if eval is the OMP
-    /// construct that defines symbol.
-    bool isSymbolDefineBy(const semantics::Symbol *symbol,
-                          lower::pft::Evaluation &eval) const;
-
-    // Given a \p symbol, returns true if it is defined by a nested
-    // `DeclarationConstruct`.
-    bool
-    isSymbolDefineByNestedDeclaration(const semantics::Symbol *symbol) const;
-
-  private:
-    using ConstructPtr = std::variant<const parser::OpenMPConstruct *,
-                                      const parser::DeclarationConstruct *>;
-    llvm::SmallVector<ConstructPtr> constructs;
-    llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
-    llvm::SmallPtrSet<const semantics::Symbol *, 4> metadirectiveLoopIVs;
-    bool isMetadirectiveLoop;
-
-    llvm::omp::Version version;
-  };
-
   mlir::OpBuilder::InsertPoint lastPrivIP;
   llvm::SmallVector<mlir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
@@ -132,7 +60,6 @@ private:
   lower::SymMap &symTable;
   bool isTargetPrivatization;
   bool isMetadirectiveLoop;
-  OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
   void collectPrivatizedSymbols(

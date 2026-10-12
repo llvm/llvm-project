@@ -4,7 +4,7 @@
 ;; DBG_VALUE, and LiveDebugValues and the DWARF emitter are shared, so the
 ;; emitted DWARF is identical between the two pipelines.
 
-; RUN: llc -O2 -mtriple=aarch64-apple-macosx -global-isel -stop-after=irtranslator \
+; RUN: llc -O2 -mtriple=aarch64-apple-macosx -global-isel -stop-after=ir-translator \
 ; RUN:   < %s | FileCheck %s --check-prefix=MIR
 ; RUN: llc -O2 -mtriple=aarch64-apple-macosx -global-isel -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF

@@ -3002,8 +3002,16 @@ func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
 
 // -----
 
-func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+func.func @omp_map_var_ptr_ptr_missing_type(%arg : memref<?xi32>) {
+  // expected-error @below {{expected attribute value}}
   %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) name("") -> memref<?xi32>
+  return
+}
+
+// -----
+
+func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+  %map1 = "omp.map.info"(%arg, %arg) <{map_capture_type = #omp.variable_capture_kind<ByRef>, map_type = #omp.clause_map_flags<to>, operandSegmentSizes = array<i32: 1, 1, 0, 0>, var_ptr_type = tensor<?xi32>}> : (memref<?xi32>, memref<?xi32>) -> memref<?xi32>
 
   // expected-error @below {{if varPtrPtr or varPtrPtrType is specified, then both must be present}}
   omp.target_update map_entries(%map1 : memref<?xi32>)

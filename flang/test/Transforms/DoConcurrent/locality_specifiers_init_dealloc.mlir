@@ -27,7 +27,7 @@ func.func @_QPlocal_assoc() {
 
   fir.do_concurrent {
     %9 = fir.alloca i32 {bindc_name = "i"}
-    %10:2 = hlfir.declare %9 {uniq_name = "_QFlocal_assocEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %10:2 = hlfir.declare %9 uniq_name("_QFlocal_assocEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) local(@_QFlocal_assocEaa_private_box_10xf32 %0 -> %arg1 : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
       %11 = fir.convert %arg0 : (index) -> i32
       fir.store %11 to %10#0 : !fir.ref<i32>

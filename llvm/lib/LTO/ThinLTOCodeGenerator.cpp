@@ -463,7 +463,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM.getTargetTriple().isOSBinFormatELF() &&
+      TheModule.getTargetTriple().isOSBinFormatELF() &&
       TM.getRelocationModel() != Reloc::Static &&
       TheModule.getPIELevel() == PIELevel::Default;
 

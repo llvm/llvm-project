@@ -1921,6 +1921,203 @@ struct SgToLaneConvertLayout
   }
 };
 
+/// The offsets and shape of one `lane_data`-sized piece of a lane's fragment.
+/// `computeDistributedCoords` returns one coordinate per distribution unit,
+/// enumerated row major over `shape / (lane_layout * lane_data)`, and unit `u`
+/// owns the piece of the fragment at `delinearize(u) * lane_data`.
+struct LaneFragmentPiece {
+  SmallVector<int64_t> offsets;
+  SmallVector<int64_t> sizes;
+};
+
+static LaneFragmentPiece getLaneFragmentPiece(int64_t unit,
+                                              ArrayRef<int64_t> shape,
+                                              ArrayRef<int64_t> laneLayout,
+                                              ArrayRef<int64_t> laneData) {
+  int64_t rank = shape.size();
+  SmallVector<int64_t> units(rank);
+  for (int64_t d = 0; d < rank; ++d)
+    units[d] = shape[d] / std::min(shape[d], laneLayout[d] * laneData[d]);
+  SmallVector<int64_t> unitCoords = delinearize(unit, computeStrides(units));
+  LaneFragmentPiece piece;
+  for (int64_t d = 0; d < rank; ++d) {
+    piece.offsets.push_back(unitCoords[d] * laneData[d]);
+    piece.sizes.push_back(laneData[d]);
+  }
+  return piece;
+}
+
+/// Last-resort lowering for a `convert_layout` that none of the patterns above
+/// handle: round-trip the value through shared local memory, writing each
+/// lane's fragment to the coordinates `input_layout` gives it and reading it
+/// back from the ones `target_layout` gives it. Any pair of layouts that can
+/// both distribute the value works, at the cost of an SLM write and read.
+///
+/// The op is subgroup level, but every subgroup of the workgroup executes it on
+/// its own data, so the scratch holds one tile per subgroup and each subgroup
+/// addresses its own through a `gpu.subgroup_id` offset on the outermost
+/// dimension. The subgroup count comes from the kernel's `known_block_size`.
+///
+/// A lane's fragment is one `lane_data`-sized piece per distribution unit, so
+/// the transfer is one `store_matrix`/`load_matrix` per unit; layouts with
+/// a single unit, which is the common case, give a single pair.
+struct SgToLaneConvertLayoutViaSLM
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
+    xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
+    if (!inputLayout || !targetLayout || !inputLayout.isForSubgroup() ||
+        !targetLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(op, "both layouts must be lane level");
+
+    auto valueTy = dyn_cast<VectorType>(op.getResult().getType());
+    if (!valueTy)
+      return rewriter.notifyMatchFailure(op, "value type must be a vector");
+    Type elemTy = valueTy.getElementType();
+    // The scratch is sized in bytes, so sub-byte elements would not get a
+    // well-defined address.
+    if (!elemTy.isIntOrFloat() || elemTy.getIntOrFloatBitWidth() % 8 != 0)
+      return rewriter.notifyMatchFailure(
+          op, "element type must be a whole number of bytes");
+
+    ArrayRef<int64_t> sgShape = valueTy.getShape();
+    int64_t rank = sgShape.size();
+    if (rank != inputLayout.getRank() || rank != targetLayout.getRank())
+      return rewriter.notifyMatchFailure(
+          op, "both layouts must have the rank of the value");
+
+    FailureOr<VectorType> distInputTy =
+        xegpu::getDistVecTypeBasedOnLaneLayout(inputLayout, valueTy);
+    FailureOr<VectorType> distTargetTy =
+        xegpu::getDistVecTypeBasedOnLaneLayout(targetLayout, valueTy);
+    if (failed(distInputTy) || failed(distTargetTy))
+      return rewriter.notifyMatchFailure(
+          op, "value type must be distributable by both layouts");
+
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return rewriter.notifyMatchFailure(
+          op, "target attribute is required to determine the subgroup size");
+    FailureOr<int64_t> numSubgroups =
+        xegpu::getNumSubgroupsFromBlockSize(op, uArch->getSubgroupSize());
+    if (failed(numSubgroups))
+      return rewriter.notifyMatchFailure(
+          op, "the scratch holds one tile per subgroup, so @known_block_size "
+              "must be attached to the kernel, with power-of-two dimensions "
+              "covering at least one subgroup");
+
+    Location loc = op.getLoc();
+
+    // One tile per subgroup, stacked along the outermost dimension.
+    SmallVector<int64_t> slmShape(sgShape);
+    slmShape[0] *= *numSubgroups;
+    int64_t slmBytes =
+        computeProduct(slmShape) * elemTy.getIntOrFloatBitWidth() / 8;
+    auto slmTy = MemRefType::get({slmBytes}, rewriter.getI8Type(), {}, 3);
+    Value slm = memref::AllocaOp::create(rewriter, loc, slmTy);
+    Value memDesc = xegpu::CreateMemDescOp::create(
+        rewriter, loc,
+        xegpu::MemDescType::get(rewriter.getContext(), slmShape, elemTy,
+                                nullptr),
+        slm);
+
+    // This subgroup's tile starts at `subgroup_id` tiles into the scratch.
+    Value sgId = gpu::SubgroupIdOp::create(rewriter, loc,
+                                           rewriter.getIndexType(), nullptr);
+    SmallVector<Value> base(rank);
+    base[0] = arith::MulIOp::create(
+        rewriter, loc, sgId,
+        arith::ConstantIndexOp::create(rewriter, loc, sgShape[0]));
+    for (int64_t d = 1; d < rank; ++d)
+      base[d] = arith::ConstantIndexOp::create(rewriter, loc, 0);
+
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto dynamicOffsets = rewriter.getDenseI64ArrayAttr(
+        SmallVector<int64_t>(rank, ShapedType::kDynamic));
+
+    // Adds this subgroup's base to one distribution unit's coordinates.
+    auto withBase = [&](ArrayRef<Value> coords) {
+      SmallVector<Value> offsets;
+      for (auto [coord, b] : llvm::zip_equal(coords, base))
+        offsets.push_back(arith::AddIOp::create(rewriter, loc, coord, b));
+      return offsets;
+    };
+
+    // Write phase: every lane stores the pieces `input_layout` gives it.
+    auto storeCoords =
+        inputLayout.computeDistributedCoords(rewriter, loc, laneId, sgShape);
+    if (failed(storeCoords))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute the input_layout coordinates");
+    SmallVector<int64_t> inputLaneLayout =
+        inputLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> inputLaneData =
+        inputLayout.getEffectiveLaneDataAsInt();
+    Value fragment =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getSource()),
+                    *distInputTy);
+    for (auto [unit, coords] : llvm::enumerate(*storeCoords)) {
+      LaneFragmentPiece piece =
+          getLaneFragmentPiece(unit, sgShape, inputLaneLayout, inputLaneData);
+      Value data = fragment;
+      if (piece.sizes != SmallVector<int64_t>(distInputTy->getShape()))
+        data = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, fragment, piece.offsets, piece.sizes,
+            SmallVector<int64_t>(rank, 1));
+      xegpu::StoreMatrixOp::create(rewriter, loc, TypeRange{}, data, memDesc,
+                                   ValueRange(withBase(coords)), dynamicOffsets,
+                                   nullptr, xegpu::DistributeLayoutAttr{});
+    }
+
+    // The scratch is only exchanged between the lanes of one subgroup, which is
+    // a single hardware thread, so ordering the write before the read is enough
+    // and no workgroup barrier is needed.
+    xegpu::FenceOp::create(rewriter, loc, xegpu::MemorySpace::SLM,
+                           xegpu::FenceScope::Workgroup);
+
+    // Read phase: every lane loads the pieces `target_layout` gives it.
+    auto loadCoords =
+        targetLayout.computeDistributedCoords(rewriter, loc, laneId, sgShape);
+    if (failed(loadCoords))
+      return rewriter.notifyMatchFailure(
+          op, "failed to compute the target_layout coordinates");
+    SmallVector<int64_t> targetLaneLayout =
+        targetLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> targetLaneData =
+        targetLayout.getEffectiveLaneDataAsInt();
+    Value result;
+    if (loadCoords->size() > 1)
+      result = arith::ConstantOp::create(rewriter, loc, *distTargetTy,
+                                         rewriter.getZeroAttr(*distTargetTy));
+    for (auto [unit, coords] : llvm::enumerate(*loadCoords)) {
+      LaneFragmentPiece piece =
+          getLaneFragmentPiece(unit, sgShape, targetLaneLayout, targetLaneData);
+      auto pieceTy = VectorType::get(piece.sizes, elemTy);
+      Value loaded = xegpu::LoadMatrixOp::create(
+          rewriter, loc, pieceTy, memDesc, ValueRange(withBase(coords)),
+          dynamicOffsets, nullptr, xegpu::DistributeLayoutAttr{});
+      if (!result) {
+        result = loaded;
+        break;
+      }
+      result = vector::InsertStridedSliceOp::create(
+          rewriter, loc, loaded, result, piece.offsets,
+          SmallVector<int64_t>(rank, 1));
+    }
+
+    rewriter.replaceOp(op, castValueTo(rewriter,
+                                       cast<TypedValue<VectorType>>(result),
+                                       *distTargetTy));
+    return success();
+  }
+};
+
 /// `getEffectiveLaneDataAsInt` is empty when `lane_data` is unset, so the unit
 /// check also rejects layouts that are not lane level.
 static bool hasDefaultOrderAndUnitLaneData(xegpu::DistributeLayoutAttr layout) {
@@ -2526,7 +2723,8 @@ void XeGPUSgToLaneDistributePass::runOnOperation() {
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target, root);
     target.addLegalOp<UnrealizedConversionCastOp>();
-    (void)applyPartialConversion(root, target, std::move(patterns));
+    if (failed(applyPartialConversion(root, target, std::move(patterns))))
+      return signalPassFailure();
   }
   // Fold cancelling cast chains and erase dead casts.
   xegpu::cleanupUnrealizedConversionCasts(root, existingCasts);
@@ -2669,4 +2867,9 @@ void xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
            SgToLaneConvertLayoutPartialBroadcastExtractShuffle,
            SgToLaneConvertLayoutDeinterleaveSelect>(typeConverter,
                                                     patterns.getContext());
+  // The SLM round-trip handles any pair of layouts but pays for a memory
+  // round-trip, so it only runs when every pattern above has declined.
+  patterns.add<SgToLaneConvertLayoutViaSLM>(typeConverter,
+                                            patterns.getContext(),
+                                            /*benefit=*/PatternBenefit(0));
 }

@@ -3091,9 +3091,12 @@ static void genCanonicalLoopNest(
         loc, isDownwards, loopLBVar, loopUBVar);
 
     // Compute the trip count assuming lb <= ub. This guarantees that the result
-    // is non-negative and we can use unsigned arithmetic.
-    mlir::Value span = firOpBuilder.createOrFold<mlir::arith::SubIOp>(
-        loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+    // is non-negative and we can use unsigned arithmetic. The subtraction
+    // cannot be nuw: lb <= ub is a signed comparison, and lb may be negative
+    // while ub is not. It cannot be nsw either, since the span may not fit in
+    // the signed loop variable type.
+    mlir::Value span =
+        firOpBuilder.createOrFold<mlir::arith::SubIOp>(loc, ub, lb);
     mlir::Value tcMinusOne =
         firOpBuilder.createOrFold<mlir::arith::DivUIOp>(loc, span, incr);
     mlir::Value tcIfLooping = firOpBuilder.createOrFold<mlir::arith::AddIOp>(

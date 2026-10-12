@@ -183,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {
@@ -195,7 +199,8 @@ struct TypeInfo {
            AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -209,7 +214,8 @@ struct TypeInfoChars {
                 AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -873,7 +879,7 @@ public:
   };
 
   /// Returns the dynamic AST node parent map context.
-  ParentMapContext &getParentMapContext();
+  ParentMapContext &getParentMapContext() { return *ParentMapCtx; }
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
   // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.
@@ -1393,6 +1399,7 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
+  CanQualType MetaInfoTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
   CanQualType BuiltinFnTy;

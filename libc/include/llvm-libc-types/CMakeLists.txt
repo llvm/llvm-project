@@ -78,6 +78,7 @@ add_header(caddr_t HDR caddr_t.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
 add_header(id_t HDR id_t.h)
+add_header(idtype_t HDR idtype_t.h)
 add_header(ino64_t HDR ino64_t.h)
 add_header(u_int HDR u_int.h)
 add_header(u_int16_t HDR u_int16_t.h)
@@ -315,6 +316,7 @@ add_header(regoff_t HDR regoff_t.h)
 add_header(regmatch_t HDR regmatch_t.h DEPENDS .regoff_t)
 add_header(struct_epoll_event HDR struct_epoll_event.h)
 add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(struct_inotify_event HDR struct_inotify_event.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(
   float128
   HDR

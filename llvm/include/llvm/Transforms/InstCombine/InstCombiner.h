@@ -49,16 +49,14 @@ class TargetTransformInfo;
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// IRBuilder inserter that adds new instructions to the worklist and new
   /// assumptions to the AssumptionCache.
-  class LLVM_ABI IRBuilderInstCombineInserter final
-      : public IRBuilderDefaultInserter {
+  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
     InstCombiner &IC;
 
   public:
-    ~IRBuilderInstCombineInserter() override;
     IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
 
-    void InsertHelper(Instruction *I, const Twine &Name,
-                      BasicBlock::iterator InsertPt) const override;
+    LLVM_ABI void InsertHelper(Instruction *I, const Twine &Name,
+                               BasicBlock::iterator InsertPt) const;
   };
 
   /// Only used to call target specific intrinsic combining.
@@ -123,7 +121,7 @@ public:
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI),
-        Builder(F.getContext(), TargetFolder(DL),
+        Builder(*F.getParent(), TargetFolder(DL),
                 IRBuilderInstCombineInserter(*this)),
         Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
         TLI(TLI), DT(DT), DL(DL),
@@ -362,6 +360,7 @@ public:
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }
 
+  Module &getModule() const { return *F.getParent(); }
   AssumptionCache &getAssumptionCache() const { return AC; }
   TargetLibraryInfo &getTargetLibraryInfo() const { return TLI; }
   DominatorTree &getDominatorTree() const { return DT; }

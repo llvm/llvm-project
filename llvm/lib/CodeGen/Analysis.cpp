@@ -198,6 +198,15 @@ GlobalValue *llvm::ExtractTypeInfo(Value *V) {
   return GV;
 }
 
+bool llvm::isExceptionPointerAndSelectorType(Type *Ty) {
+  auto *STy = dyn_cast<StructType>(Ty);
+  if (!STy || STy->getNumElements() != 2)
+    return false;
+  Type *ExnTy = STy->getElementType(0);
+  return (ExnTy->isPointerTy() || ExnTy->isIntegerTy()) &&
+         STy->getElementType(1)->isIntegerTy();
+}
+
 /// getFCmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR floating-point condition code.  This includes
 /// consideration of global floating-point math flags.
@@ -595,7 +604,7 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
   // those addends for global variables, but they need a relocation, which a
   // location list cannot carry, so a local pointing at such a global has to
   // keep being described by whatever register holds the computed address.
-  if (TM.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
+  if (M.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
     return false;
   if (TM.getRelocationModel() == Reloc::RWPI ||
       TM.getRelocationModel() == Reloc::ROPI_RWPI) {

@@ -2033,10 +2033,10 @@ public:
     /// \param IP	Insertion point for generating the finalization code.
     static void FinalizeOMPRegion(CodeGenFunction &CGF, InsertPointTy IP) {
       CGBuilderTy::InsertPointGuard IPG(CGF.Builder);
-      assert(IP.getBlock()->end() != IP.getPoint() &&
+      llvm::BasicBlock *IPBB = IP.getNodeParent();
+      assert(IPBB->end() != IP &&
              "OpenMP IR Builder should cause terminated block!");
 
-      llvm::BasicBlock *IPBB = IP.getBlock();
       llvm::BasicBlock *DestBB = IPBB->getUniqueSuccessor();
       assert(DestBB && "Finalization block should have one successor!");
 
@@ -2060,10 +2060,10 @@ public:
                                          InsertPointTy CodeGenIP,
                                          Twine RegionName);
 
-    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+    static void EmitCaptureStmt(CodeGenFunction &CGF,
+                                llvm::BasicBlock *CodeGenIPBB,
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
       if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
@@ -2074,7 +2074,7 @@ public:
       else
         CGF.EmitRuntimeCall(Fn, Args);
 
-      if (CGF.Builder.saveIP().isSet())
+      if (CGF.Builder.saveIP().isValid())
         CGF.Builder.CreateBr(&FiniBB);
     }
 
@@ -2103,10 +2103,10 @@ public:
       OutlinedRegionBodyRAII(CodeGenFunction &cgf, InsertPointTy &AllocaIP,
                              llvm::BasicBlock &RetBB)
           : CGF(cgf) {
-        assert(AllocaIP.isSet() &&
+        assert(AllocaIP.isValid() &&
                "Must specify Insertion point for allocas of outlined function");
         OldAllocaIP = CGF.AllocaInsertPt;
-        CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        CGF.AllocaInsertPt = &*AllocaIP;
 
         OldReturnBlock = CGF.ReturnBlock;
         CGF.ReturnBlock = CGF.getJumpDestInCurrentScope(&RetBB);
@@ -2132,13 +2132,13 @@ public:
         // function so it expects an empty AllocaIP in which case will reuse the
         // old alloca insertion point, or a new AllocaIP in the same block as
         // the old one
-        assert((!AllocaIP.isSet() ||
-                CGF.AllocaInsertPt->getParent() == AllocaIP.getBlock()) &&
+        assert((!AllocaIP.isValid() ||
+                CGF.AllocaInsertPt->getParent() == AllocaIP.getNodeParent()) &&
                "Insertion point should be in the entry block of containing "
                "function!");
         OldAllocaIP = CGF.AllocaInsertPt;
-        if (AllocaIP.isSet())
-          CGF.AllocaInsertPt = &*AllocaIP.getPoint();
+        if (AllocaIP.isValid())
+          CGF.AllocaInsertPt = &*AllocaIP;
 
         // TODO: Remove the call, after making sure the counter is not used by
         //       the EHStack.
@@ -3553,9 +3553,9 @@ public:
     /// escaping block.
     bool IsEscapingByRef;
 
-    /// True if the variable is of aggregate type and has a constant
-    /// initializer.
-    bool IsConstantAggregate;
+    /// If the variable is of aggregate type and has a constant initializer,
+    /// a constant representing that initializer.
+    llvm::Constant *ConstantAggregateInitializer;
 
     /// True if lifetime markers should be used.
     bool UseLifetimeMarkers;
@@ -3571,7 +3571,7 @@ public:
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
-          IsEscapingByRef(false), IsConstantAggregate(false),
+          IsEscapingByRef(false), ConstantAggregateInitializer(nullptr),
           UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }

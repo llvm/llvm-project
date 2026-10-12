@@ -44,7 +44,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -120,8 +119,6 @@ int llvm::compileModuleWithNewPM(
 
   MachineModuleInfo MMI(Target.get());
 
-  Target->getObjFileLowering()->Initialize(MMI.getContext(), *Target);
-
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
@@ -182,14 +179,15 @@ int llvm::compileModuleWithNewPM(
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    printFormattedPipelinePasses(outs(), PipelineStr, *Format);
     outs() << '\n';
     return 0;
   }

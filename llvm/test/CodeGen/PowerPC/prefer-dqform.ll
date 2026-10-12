@@ -16,49 +16,49 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P9-NEXT:    andi. r3, r6, 15
 ; CHECK-P9-NEXT:    li r3, 2
 ; CHECK-P9-NEXT:    li r10, 1
-; CHECK-P9-NEXT:    lwz r4, 0(r4)
-; CHECK-P9-NEXT:    lwz r5, 0(r5)
-; CHECK-P9-NEXT:    iseleq r3, r10, r3
-; CHECK-P9-NEXT:    subfic r10, r3, 1
-; CHECK-P9-NEXT:    add r4, r10, r4
-; CHECK-P9-NEXT:    srawi r4, r4, 4
+; CHECK-P9-NEXT:    iseleq r10, r10, r3
+; CHECK-P9-NEXT:    lwz r3, 0(r4)
+; CHECK-P9-NEXT:    subfic r4, r10, 1
+; CHECK-P9-NEXT:    add r3, r4, r3
+; CHECK-P9-NEXT:    srawi r3, r3, 4
+; CHECK-P9-NEXT:    addze r3, r3
+; CHECK-P9-NEXT:    slwi r3, r3, 4
+; CHECK-P9-NEXT:    sub r3, r3, r4
+; CHECK-P9-NEXT:    lwz r4, 0(r5)
+; CHECK-P9-NEXT:    cmpw r10, r3
+; CHECK-P9-NEXT:    srawi r4, r4, 1
 ; CHECK-P9-NEXT:    addze r4, r4
-; CHECK-P9-NEXT:    srawi r5, r5, 1
-; CHECK-P9-NEXT:    slwi r4, r4, 4
-; CHECK-P9-NEXT:    addze r5, r5
-; CHECK-P9-NEXT:    sub r4, r4, r10
-; CHECK-P9-NEXT:    cmpw r3, r4
 ; CHECK-P9-NEXT:    bgtlr cr0
 ; CHECK-P9-NEXT:  # %bb.1: # %_loop_2_do_.lr.ph
-; CHECK-P9-NEXT:    extswsli r5, r5, 3
-; CHECK-P9-NEXT:    add r5, r8, r5
-; CHECK-P9-NEXT:    addi r8, r5, -8
-; CHECK-P9-NEXT:    lwz r5, 0(r7)
-; CHECK-P9-NEXT:    extsw r7, r4
-; CHECK-P9-NEXT:    rldic r4, r3, 3, 29
-; CHECK-P9-NEXT:    sub r3, r7, r3
-; CHECK-P9-NEXT:    addi r10, r4, 8
-; CHECK-P9-NEXT:    lxvdsx vs0, 0, r8
-; CHECK-P9-NEXT:    rldicl r3, r3, 60, 4
-; CHECK-P9-NEXT:    extswsli r5, r5, 3
-; CHECK-P9-NEXT:    addi r3, r3, 1
-; CHECK-P9-NEXT:    sub r4, r10, r5
-; CHECK-P9-NEXT:    add r5, r9, r10
-; CHECK-P9-NEXT:    mtctr r3
-; CHECK-P9-NEXT:    add r4, r6, r4
+; CHECK-P9-NEXT:    extswsli r4, r4, 3
+; CHECK-P9-NEXT:    add r4, r8, r4
+; CHECK-P9-NEXT:    addi r5, r4, -8
+; CHECK-P9-NEXT:    lwz r4, 0(r7)
+; CHECK-P9-NEXT:    extsw r7, r3
+; CHECK-P9-NEXT:    rldic r3, r10, 3, 29
+; CHECK-P9-NEXT:    addi r8, r3, 8
+; CHECK-P9-NEXT:    extswsli r4, r4, 3
+; CHECK-P9-NEXT:    lxvdsx vs0, 0, r5
+; CHECK-P9-NEXT:    sub r3, r8, r4
+; CHECK-P9-NEXT:    add r4, r9, r8
+; CHECK-P9-NEXT:    add r3, r6, r3
+; CHECK-P9-NEXT:    sub r6, r7, r10
+; CHECK-P9-NEXT:    rldicl r6, r6, 60, 4
+; CHECK-P9-NEXT:    addi r6, r6, 1
+; CHECK-P9-NEXT:    mtctr r6
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB0_2: # %_loop_2_do_
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    lxv vs1, -16(r5)
-; CHECK-P9-NEXT:    lxv vs2, 0(r5)
-; CHECK-P9-NEXT:    lxv vs3, -16(r4)
-; CHECK-P9-NEXT:    lxv vs4, 0(r4)
-; CHECK-P9-NEXT:    addi r4, r4, 128
+; CHECK-P9-NEXT:    lxv vs1, -16(r4)
+; CHECK-P9-NEXT:    lxv vs2, 0(r4)
+; CHECK-P9-NEXT:    lxv vs3, -16(r3)
+; CHECK-P9-NEXT:    lxv vs4, 0(r3)
+; CHECK-P9-NEXT:    addi r3, r3, 128
 ; CHECK-P9-NEXT:    xvmaddadp vs1, vs3, vs1
-; CHECK-P9-NEXT:    stxv vs1, -16(r5)
+; CHECK-P9-NEXT:    stxv vs1, -16(r4)
 ; CHECK-P9-NEXT:    xvmaddadp vs2, vs4, vs0
-; CHECK-P9-NEXT:    stxv vs2, 0(r5)
-; CHECK-P9-NEXT:    addi r5, r5, 128
+; CHECK-P9-NEXT:    stxv vs2, 0(r4)
+; CHECK-P9-NEXT:    addi r4, r4, 128
 ; CHECK-P9-NEXT:    bdnz .LBB0_2
 ; CHECK-P9-NEXT:  # %bb.3: # %_return_bb
 ; CHECK-P9-NEXT:    blr
@@ -68,49 +68,49 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P10-NEXT:    andi. r3, r6, 15
 ; CHECK-P10-NEXT:    li r3, 2
 ; CHECK-P10-NEXT:    li r10, 1
-; CHECK-P10-NEXT:    lwz r4, 0(r4)
-; CHECK-P10-NEXT:    lwz r5, 0(r5)
-; CHECK-P10-NEXT:    iseleq r3, r10, r3
-; CHECK-P10-NEXT:    subfic r10, r3, 1
-; CHECK-P10-NEXT:    add r4, r10, r4
-; CHECK-P10-NEXT:    srawi r4, r4, 4
+; CHECK-P10-NEXT:    iseleq r10, r10, r3
+; CHECK-P10-NEXT:    lwz r3, 0(r4)
+; CHECK-P10-NEXT:    subfic r4, r10, 1
+; CHECK-P10-NEXT:    add r3, r4, r3
+; CHECK-P10-NEXT:    srawi r3, r3, 4
+; CHECK-P10-NEXT:    addze r3, r3
+; CHECK-P10-NEXT:    slwi r3, r3, 4
+; CHECK-P10-NEXT:    sub r3, r3, r4
+; CHECK-P10-NEXT:    lwz r4, 0(r5)
+; CHECK-P10-NEXT:    cmpw r10, r3
+; CHECK-P10-NEXT:    srawi r4, r4, 1
 ; CHECK-P10-NEXT:    addze r4, r4
-; CHECK-P10-NEXT:    srawi r5, r5, 1
-; CHECK-P10-NEXT:    slwi r4, r4, 4
-; CHECK-P10-NEXT:    addze r5, r5
-; CHECK-P10-NEXT:    sub r4, r4, r10
-; CHECK-P10-NEXT:    cmpw r3, r4
 ; CHECK-P10-NEXT:    bgtlr cr0
 ; CHECK-P10-NEXT:  # %bb.1: # %_loop_2_do_.lr.ph
-; CHECK-P10-NEXT:    extswsli r5, r5, 3
-; CHECK-P10-NEXT:    add r5, r8, r5
-; CHECK-P10-NEXT:    addi r8, r5, -8
-; CHECK-P10-NEXT:    lwz r5, 0(r7)
-; CHECK-P10-NEXT:    extsw r7, r4
-; CHECK-P10-NEXT:    rldic r4, r3, 3, 29
-; CHECK-P10-NEXT:    addi r10, r4, 8
-; CHECK-P10-NEXT:    sub r3, r7, r3
-; CHECK-P10-NEXT:    lxvdsx vs0, 0, r8
-; CHECK-P10-NEXT:    rldicl r3, r3, 60, 4
-; CHECK-P10-NEXT:    extswsli r5, r5, 3
-; CHECK-P10-NEXT:    addi r3, r3, 1
-; CHECK-P10-NEXT:    sub r4, r10, r5
-; CHECK-P10-NEXT:    add r5, r9, r10
-; CHECK-P10-NEXT:    mtctr r3
-; CHECK-P10-NEXT:    add r4, r6, r4
+; CHECK-P10-NEXT:    extswsli r4, r4, 3
+; CHECK-P10-NEXT:    add r4, r8, r4
+; CHECK-P10-NEXT:    addi r5, r4, -8
+; CHECK-P10-NEXT:    lwz r4, 0(r7)
+; CHECK-P10-NEXT:    extsw r7, r3
+; CHECK-P10-NEXT:    rldic r3, r10, 3, 29
+; CHECK-P10-NEXT:    addi r8, r3, 8
+; CHECK-P10-NEXT:    lxvdsx vs0, 0, r5
+; CHECK-P10-NEXT:    extswsli r4, r4, 3
+; CHECK-P10-NEXT:    sub r3, r8, r4
+; CHECK-P10-NEXT:    add r4, r9, r8
+; CHECK-P10-NEXT:    add r3, r6, r3
+; CHECK-P10-NEXT:    sub r6, r7, r10
+; CHECK-P10-NEXT:    rldicl r6, r6, 60, 4
+; CHECK-P10-NEXT:    addi r6, r6, 1
+; CHECK-P10-NEXT:    mtctr r6
 ; CHECK-P10-NEXT:    .p2align 4
 ; CHECK-P10-NEXT:  .LBB0_2: # %_loop_2_do_
 ; CHECK-P10-NEXT:    #
-; CHECK-P10-NEXT:    lxv vs1, -16(r5)
-; CHECK-P10-NEXT:    lxv vs2, 0(r5)
-; CHECK-P10-NEXT:    lxv vs3, -16(r4)
+; CHECK-P10-NEXT:    lxv vs1, -16(r4)
+; CHECK-P10-NEXT:    lxv vs2, 0(r4)
+; CHECK-P10-NEXT:    lxv vs3, -16(r3)
 ; CHECK-P10-NEXT:    xvmaddadp vs1, vs3, vs1
-; CHECK-P10-NEXT:    lxv vs4, 0(r4)
+; CHECK-P10-NEXT:    lxv vs4, 0(r3)
 ; CHECK-P10-NEXT:    xvmaddadp vs2, vs4, vs0
+; CHECK-P10-NEXT:    addi r3, r3, 128
+; CHECK-P10-NEXT:    stxv vs1, -16(r4)
+; CHECK-P10-NEXT:    stxv vs2, 0(r4)
 ; CHECK-P10-NEXT:    addi r4, r4, 128
-; CHECK-P10-NEXT:    stxv vs1, -16(r5)
-; CHECK-P10-NEXT:    stxv vs2, 0(r5)
-; CHECK-P10-NEXT:    addi r5, r5, 128
 ; CHECK-P10-NEXT:    bdnz .LBB0_2
 ; CHECK-P10-NEXT:  # %bb.3: # %_return_bb
 ; CHECK-P10-NEXT:    blr

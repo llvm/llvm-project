@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -start-before=greedy -stop-after=virtregrewriter -mtriple x86_64 -mattr=+ndd,+prefer-ndd-mem | FileCheck %s
+# RUN: llc %s -o - -start-before=greedy -stop-after=virt-reg-rewriter -mtriple x86_64 -mattr=+ndd,+prefer-ndd-mem | FileCheck %s
 #
 # This test is for stack spill folding -- the ADD32ri_ND near the end of the MIR
 # below show be morphed into an ADD32mi by the register allocator, making it

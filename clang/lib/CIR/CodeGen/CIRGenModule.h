@@ -470,6 +470,10 @@ public:
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
 
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
+
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
   ///
@@ -723,6 +727,10 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.

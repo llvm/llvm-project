@@ -12,6 +12,7 @@
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
+#include "ErrorMatchers.h"
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"
 
@@ -360,8 +361,7 @@ TEST(SimplePackedSerializationTest, SerializeErrorSuccess) {
     return;
   }
 
-  auto E = SE.toError();
-  EXPECT_FALSE(!!E); // Expect non-error, i.e. Error::success().
+  EXPECT_THAT_ERROR(SE.toError(), Succeeded());
 }
 
 TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
@@ -377,7 +377,7 @@ TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
     return;
   }
 
-  EXPECT_EQ(toString(SE.toError()), std::string("test error message"));
+  EXPECT_THAT_ERROR(SE.toError(), FailedWithMessage("test error message"));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
@@ -393,11 +393,7 @@ TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    EXPECT_EQ(*E, 42U);
-  else
-    ADD_FAILURE() << "Unexpected failure value";
+  EXPECT_THAT_EXPECTED(SE.toExpected(), HasValue(42U));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
@@ -413,11 +409,7 @@ TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    EXPECT_EQ(*E, 42U);
-  else
-    ADD_FAILURE() << "Unexpected failure value";
+  EXPECT_THAT_EXPECTED(SE.toExpected(), HasValue(42U));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedFailure) {
@@ -434,9 +426,6 @@ TEST(SimplePackedSerializationTest, SerializeExpectedFailure) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    ADD_FAILURE() << "Unexpected failure value";
-  else
-    EXPECT_EQ(toString(E.takeError()), std::string("test error message"));
+  EXPECT_THAT_EXPECTED(SE.toExpected(),
+                       FailedWithMessage("test error message"));
 }

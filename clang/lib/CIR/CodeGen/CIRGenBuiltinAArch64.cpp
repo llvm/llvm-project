@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 
 // TODO(cir): once all builtins are covered, decide whether we still
 // need to use LLVM intrinsics or if there's a better approach to follow. Right
@@ -88,43 +89,6 @@ static llvm::StringRef getLLVMIntrNameNoPrefix(llvm::Intrinsic::ID intrID) {
   llvm::StringRef llvmIntrName = llvm::Intrinsic::getBaseName(intrID);
   assert(llvmIntrName.starts_with("llvm.") && "Not an LLVM intrinsic!");
   return llvmIntrName.drop_front(/*strlen("llvm.")=*/5);
-}
-
-//===----------------------------------------------------------------------===//
-//  NEON helpers
-//===----------------------------------------------------------------------===//
-/// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
-/// argument that specifies the vector type. The additional argument is meant
-/// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
-/// should be kept consistent with the logic in Sema.
-/// TODO: Make this return false for SISD builtins.
-/// TODO(cir): Share this with ARM.cpp
-static bool hasExtraNeonArgument(unsigned builtinID) {
-  // Required by the headers included below, but not in this particular
-  // function.
-  [[maybe_unused]] int PtrArgNum = -1;
-  [[maybe_unused]] bool HasConstPtr = false;
-
-  // The mask encodes the type. We don't care about the actual value. Instead,
-  // we just check whether its been set.
-  uint64_t mask = 0;
-  switch (builtinID) {
-#define GET_NEON_OVERLOAD_CHECK
-#include "clang/Basic/arm_fp16.inc"
-#include "clang/Basic/arm_neon.inc"
-#undef GET_NEON_OVERLOAD_CHECK
-  // Non-neon builtins for controling VFP that take extra argument for
-  // discriminating the type.
-  case ARM::BI__builtin_arm_vcvtr_f:
-  case ARM::BI__builtin_arm_vcvtr_d:
-    mask = 1;
-  }
-  switch (builtinID) {
-  default:
-    break;
-  }
-
-  return mask != 0;
 }
 
 static cir::VectorType getFloatNeonType(CIRGenFunction &cgf,
@@ -204,12 +168,26 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              builder.getStringAttr(intrinsicName.value()),
                              funcResTy, args)
         .getResult();
-  } else {
+  }
+  if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
+    assert(args.size() == 3 && "fma expects three operands");
+    return Operation::create(builder, loc, funcResTy, args[0], args[1], args[2],
+                             builder.getConstrainedFPAttr())
+        .getResult();
+  }
+  if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {
+    assert(args.size() == 1 && "sqrt expects one operand");
+    return Operation::create(builder, loc, funcResTy, args[0],
+                             builder.getConstrainedFPAttr())
+        .getResult();
+  }
+  if constexpr (!std::is_same_v<Operation, cir::LLVMIntrinsicCallOp> &&
+                !std::is_same_v<Operation, cir::FMAOp> &&
+                !std::is_same_v<Operation, cir::SqrtOp>)
     return Operation::create(
                builder, loc, mlir::TypeRange{funcResTy}, args,
                cir::getDefaultProperties<Operation>(builder.getContext()))
         .getResult();
-  }
 }
 
 // TODO(cir): Remove `cgm` from the list of arguments once all NYI(s) are gone.
@@ -1860,7 +1838,15 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svdupq_n_u32:
   case SVE::BI__builtin_sve_svdupq_n_f32:
   case SVE::BI__builtin_sve_svdupq_n_s32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+
   case SVE::BI__builtin_sve_svpfalse_b:
+    return builder.getNullValue(convertType(expr->getType()),
+                                getLoc(expr->getExprLoc()));
+
   case SVE::BI__builtin_sve_svpfalse_c:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
@@ -2709,6 +2695,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
+  CIRGenFPOptionsRAII fpOptsRAII(*this, expr);
+
   // Some intrinsics are equivalent - if they are use the base intrinsic ID.
   auto it = llvm::find_if(neonEquivalentIntrinsicMap, [builtinID](auto &p) {
     return p.first == builtinID;
@@ -2733,7 +2721,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   // Skip extra arguments used to discriminate vector types and that are
   // intended for Sema checking.
-  bool hasExtraArg = hasExtraNeonArgument(builtinID);
+  bool hasExtraArg = CodeGenUtils::hasExtraNeonArgument(builtinID);
   unsigned numArgs = expr->getNumArgs() - (hasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = numArgs; i != e; i++) {
     if (i == 0) {
@@ -3630,7 +3618,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
-    assert(!cir::MissingFeatures::emitConstrainedFPCall());
     return emitNeonCallToOp<cir::SqrtOp>(cgm, builder, {ty}, ops, std::nullopt,
                                          ty, loc);
   case NEON::BI__builtin_neon_vrbit_v:

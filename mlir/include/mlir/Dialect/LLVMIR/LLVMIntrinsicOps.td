@@ -491,7 +491,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
                     std::back_inserter(overloadedTypes),
                     [&args](unsigned index) { return args[index]->getType(); });
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::Function *callee =
       llvm::Intrinsic::getOrInsertDeclaration(module,
         llvm::Intrinsic::experimental_constrained_}] #
@@ -1105,7 +1105,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
                      llvm::cast<llvm::DILocalVariable>(
@@ -1131,7 +1131,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDbgValue(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
@@ -1153,7 +1153,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertLabel(
         llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
@@ -1306,8 +1306,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
         op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
@@ -1342,8 +1341,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
-    const llvm::DataLayout &dl =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+    const llvm::DataLayout &dl = builder.getDataLayout();
     Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));

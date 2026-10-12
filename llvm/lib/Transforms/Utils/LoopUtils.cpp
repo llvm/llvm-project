@@ -1434,7 +1434,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
     NewLoop->addBasicBlockToLoop(LoopBB, *LI);
   }
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Res;
 }
 
@@ -2217,9 +2217,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
@@ -2272,9 +2271,8 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                                   SCEVExpander &Expander, ElementCount VF,
                                   unsigned IC) {
 
-  LLVMContext &Ctx = Loc->getContext();
-  IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
-  ChkBuilder.SetInsertPoint(Loc);
+  IRBuilder ChkBuilder(Loc->getIterator(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 

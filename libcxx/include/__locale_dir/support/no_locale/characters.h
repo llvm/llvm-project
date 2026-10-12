@@ -10,21 +10,21 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_NO_LOCALE_CHARACTERS_H
 
 #include <__config>
-#include <__cstddef/size_t.h>
-#include <cctype>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar>
-#  include <cwctype>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if defined(_LIBCPP_BUILDING_LIBRARY)
+
+#  include <__cstddef/size_t.h>
+#  include <cctype>
+#  include <cstdlib>
+#  include <cstring>
+#  include <ctime>
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    include <cwchar>
+#    include <cwctype>
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {

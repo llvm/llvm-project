@@ -45,14 +45,12 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -306,17 +304,19 @@ IncrementalCompilerBuilder::CreateCpp() {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
-  const bool HipEnabled = Type == OffloadType::HIP;
+IncrementalCompilerBuilder::createCuda(bool device) {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
-  Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
-  Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  llvm::StringRef SDKPath = HipEnabled ? RocmSDKPath : CudaSDKPath;
-  std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
-  if (!SDKPath.empty()) {
-    SDKPathArg += SDKPath;
+  Argv.push_back("-xcuda");
+  if (device)
+    Argv.push_back("--cuda-device-only");
+  else
+    Argv.push_back("--cuda-host-only");
+
+  std::string SDKPathArg = "--cuda-path=";
+  if (!CudaSDKPath.empty()) {
+    SDKPathArg += CudaSDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -326,12 +326,6 @@ IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
-  if (OffloadCUID.empty())
-    OffloadCUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
-                                  /*LowerCase=*/true);
-  std::string CUIDArg = "-cuid=" + OffloadCUID;
-  Argv.push_back(CUIDArg.c_str());
-
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
@@ -339,13 +333,13 @@ IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateDevice(OffloadType Type) {
-  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/true);
+IncrementalCompilerBuilder::CreateCudaDevice() {
+  return IncrementalCompilerBuilder::createCuda(true);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateHost(OffloadType Type) {
-  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/false);
+IncrementalCompilerBuilder::CreateCudaHost() {
+  return IncrementalCompilerBuilder::createCuda(false);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -357,6 +351,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
+
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -480,9 +477,8 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithDevice(OffloadType Type,
-                              std::unique_ptr<CompilerInstance> CI,
-                              std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
+                            std::unique_ptr<CompilerInstance> DCI) {
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -519,20 +515,14 @@ Interpreter::createWithDevice(OffloadType Type,
 
   Interp->DeviceCI = std::move(DCI);
 
-  if (Type == OffloadType::HIP) {
-    // FIXME: HIP device parsing is not supported yet; it should use an
-    // IncrementalHIPDeviceParser once one exists.
-  } else {
-    auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-        *Interp->DeviceCI, *Interp->getCompilerInstance(),
-        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+      *Interp->DeviceCI, *Interp->getCompilerInstance(),
+      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
-    if (Err)
-      return std::move(Err);
+  if (Err)
+    return std::move(Err);
 
-    Interp->DeviceParser = std::move(DeviceParser);
-  }
-
+  Interp->DeviceParser = std::move(DeviceParser);
   return std::move(Interp);
 }
 
@@ -620,6 +610,10 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = std::make_unique<IncrementalExecutorBuilder>();
+
+  // Propagate mllvm args so the wasm executor can restore them after each
+  // lldMain invocation (which resets all cl options for test isolation).
+  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

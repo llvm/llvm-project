@@ -13,11 +13,11 @@
 // <memory>
 
 // template <class ExecutionPolicy,
-//           class InputIterator,
-//           class ForwardIterator>
-//   ForwardIterator uninitialized_move(ExecutionPolicy&& exec,
-//                                      InputIterator first, InputIterator last,
-//                                      ForwardIterator result);
+//           class ForwardIterator1,
+//           class ForwardIterator2>
+//   ForwardIterator1 uninitialized_move(ExecutionPolicy&& exec,
+//                                       ForwardIterator1 first, ForwardIterator1 last,
+//                                       ForwardIterator2 result);
 
 #include <array>
 #include <algorithm>
@@ -133,13 +133,13 @@ struct TestInt {
 
 int main(int, char**) {
   types::for_each(
-      types::cpp17_input_iterator_list<Src*>{}, types::apply_type_identity{[](auto v) {
+      types::forward_iterator_list<Src*>{}, types::apply_type_identity{[](auto v) {
         using Iter = typename decltype(v)::type;
         types::for_each(
             types::forward_iterator_list<Dst*>{},
             TestIteratorWithPolicies<types::partial_instantiation<TestCustomTypes, Iter>::template apply>{});
       }});
-  types::for_each(types::cpp17_input_iterator_list<int*>{}, types::apply_type_identity{[](auto v) {
+  types::for_each(types::forward_iterator_list<int*>{}, types::apply_type_identity{[](auto v) {
                     using Iter = typename decltype(v)::type;
                     types::for_each(
                         types::forward_iterator_list<int*>{},

@@ -23,8 +23,8 @@ func.func @load_array1d_var(%arg0: !fir.ref<!fir.array<3xf32>>, %arg1: !fir.ref<
   %c3 = arith.constant 3 : index
   %0 = fir.undefined !fir.dscope
   %shape = fir.shape %c3 : (index) -> !fir.shape<1>
-  %1 = fir.declare %arg0(%shape) dummy_scope %0 {uniq_name = "a"} : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xf32>>
-  %2 = fir.declare %arg1 dummy_scope %0 {uniq_name = "i"} : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64>
+  %1 = fir.declare %arg0(%shape) dummy_scope %0 uniq_name("a") : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xf32>>
+  %2 = fir.declare %arg1 dummy_scope %0 uniq_name("i") : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64>
   %3 = fir.load %2 : !fir.ref<i64>
   %4 = fir.array_coor %1(%shape) %3 : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
   %5 = fir.load %4 : !fir.ref<f32>
