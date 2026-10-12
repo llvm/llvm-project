@@ -122,6 +122,7 @@ private:
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMAX(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;

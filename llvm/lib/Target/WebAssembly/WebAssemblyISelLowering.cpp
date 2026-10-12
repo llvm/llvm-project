@@ -168,12 +168,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
       setTruncStoreAction(T, MVT::f16, Expand);
     }
-    // bf16 is not a WebAssembly type either; expand the soft conversions
-    // and the bf16 extending loads / truncating stores to the generic
-    // bit-shift sequences, mirroring the fp16 handling above.
+    // bf16 is not a WebAssembly type either. Widening is exact, so expand
+    // it and the bf16 extending loads to the generic bit-shift sequence.
+    // Narrowing must round to nearest even, which the generic expansion
+    // does not (it truncates), so lower it ourselves.
     if (T == MVT::f32 || T == MVT::f64) {
       setOperationAction(ISD::BF16_TO_FP, T, Expand);
-      setOperationAction(ISD::FP_TO_BF16, T, Expand);
+      setOperationAction(ISD::FP_TO_BF16, T, Custom);
       setLoadExtAction(ISD::EXTLOAD, T, MVT::bf16, Expand);
       setTruncStoreAction(T, MVT::bf16, Expand);
     }
@@ -1815,6 +1816,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
+  case ISD::FP_TO_BF16:
+    return LowerFP_TO_BF16(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMINIMUMNUM:
     return LowerFMIN(Op, DAG);
@@ -2973,6 +2976,33 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return Op;
 
   return SDValue();
+}
+
+SDValue WebAssemblyTargetLowering::LowerFP_TO_BF16(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  // Round to nearest even, as TargetLowering::expandFP_ROUND does for bf16.
+  // An f64 source is first rounded to f32 with round-to-odd, so the second
+  // rounding cannot double-round.
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  if (Src.getValueType() == MVT::f64)
+    Src = expandRoundInexactToOdd(MVT::f32, Src, DL, DAG);
+  SDValue IsNaN = DAG.getSetCC(DL, MVT::i32, Src, Src, ISD::SETUO);
+  SDValue Bits = DAG.getBitcast(MVT::i32, Src);
+  SDValue Sixteen = DAG.getShiftAmountConstant(16, MVT::i32, DL);
+
+  // Quiet NaNs; this also keeps them from rounding into infinities.
+  SDValue NaN = DAG.getNode(ISD::OR, DL, MVT::i32, Bits,
+                            DAG.getConstant(0x400000, DL, MVT::i32));
+  SDValue Lsb = DAG.getNode(ISD::AND, DL, MVT::i32,
+                            DAG.getNode(ISD::SRL, DL, MVT::i32, Bits, Sixteen),
+                            DAG.getConstant(1, DL, MVT::i32));
+  SDValue Bias = DAG.getNode(ISD::ADD, DL, MVT::i32, Lsb,
+                             DAG.getConstant(0x7fff, DL, MVT::i32));
+  SDValue Rounded = DAG.getNode(ISD::ADD, DL, MVT::i32, Bits, Bias);
+  SDValue Res = DAG.getSelect(DL, MVT::i32, IsNaN, NaN, Rounded);
+  Res = DAG.getNode(ISD::SRL, DL, MVT::i32, Res, Sixteen);
+  return DAG.getAnyExtOrTrunc(Res, DL, Op.getValueType());
 }
 
 static bool HasNoSignedZerosOrNaNs(SDValue Op, SelectionDAG &DAG) {

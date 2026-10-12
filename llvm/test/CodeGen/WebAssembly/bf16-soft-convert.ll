@@ -3,18 +3,34 @@
 ; RUN: llc < %s -mtriple=wasm64-unknown-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,WASM64
 
 ; bf16 is not a WebAssembly type, so scalar fptrunc/fpext involving bfloat,
-; bf16 extending loads, and bf16 truncating stores must all expand to the
-; generic bit-shift sequences; without the Expand actions SelectionDAG
-; aborts with "Cannot select: fp_to_bf16".
+; bf16 extending loads, and bf16 truncating stores must all be lowered
+; without it; previously SelectionDAG aborted with "Cannot select:
+; fp_to_bf16". Widening is a plain shift. Narrowing rounds to nearest even
+; (f64 goes through f32 with round-to-odd to avoid double rounding).
 
 define bfloat @f32_to_bf16(float %x) {
 ; CHECK-LABEL: f32_to_bf16:
 ; CHECK:         .functype f32_to_bf16 (f32) -> (f32)
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32.const 0x1p0
-; CHECK-NEXT:    f32.mul
 ; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i32.const 4194304
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.shr_u
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 32767
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i32.const -65536
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    f32.reinterpret_i32
@@ -36,10 +52,57 @@ define float @bf16_to_f32(bfloat %x) {
 define bfloat @f64_to_bf16(double %x) {
 ; CHECK-LABEL: f64_to_bf16:
 ; CHECK:         .functype f64_to_bf16 (f64) -> (f32)
+; CHECK-NEXT:    .local f32, i32, f64
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f32.demote_f64
+; CHECK-NEXT:    local.tee 1
 ; CHECK-NEXT:    i32.reinterpret_f32
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.const -1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64.abs
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64.promote_f32
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    f64.abs
+; CHECK-NEXT:    f64.gt
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f64.gt
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f64.lt
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.xor
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i32.const 4194304
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.shr_u
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    i32.const 32767
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.reinterpret_i32
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    i32.select
 ; CHECK-NEXT:    i32.const -65536
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    f32.reinterpret_i32
@@ -87,12 +150,27 @@ define float @load_bf16_ext(ptr %p) {
 define void @store_bf16_trunc(ptr %p, float %x) {
 ; WASM32-LABEL: store_bf16_trunc:
 ; WASM32:         .functype store_bf16_trunc (i32, f32) -> ()
+; WASM32-NEXT:    .local i32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    f32.const 0x1p0
-; WASM32-NEXT:    f32.mul
 ; WASM32-NEXT:    i32.reinterpret_f32
+; WASM32-NEXT:    local.tee 2
+; WASM32-NEXT:    i32.const 4194304
+; WASM32-NEXT:    i32.or
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i32.const 16
+; WASM32-NEXT:    i32.shr_u
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    i32.const 32767
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    f32.ne
+; WASM32-NEXT:    i32.select
 ; WASM32-NEXT:    i32.const 16
 ; WASM32-NEXT:    i32.shr_u
 ; WASM32-NEXT:    i32.store16 0
@@ -100,12 +178,27 @@ define void @store_bf16_trunc(ptr %p, float %x) {
 ;
 ; WASM64-LABEL: store_bf16_trunc:
 ; WASM64:         .functype store_bf16_trunc (i64, f32) -> ()
+; WASM64-NEXT:    .local i32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    f32.const 0x1p0
-; WASM64-NEXT:    f32.mul
 ; WASM64-NEXT:    i32.reinterpret_f32
+; WASM64-NEXT:    local.tee 2
+; WASM64-NEXT:    i32.const 4194304
+; WASM64-NEXT:    i32.or
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i32.const 16
+; WASM64-NEXT:    i32.shr_u
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    i32.add
+; WASM64-NEXT:    i32.const 32767
+; WASM64-NEXT:    i32.add
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    f32.ne
+; WASM64-NEXT:    i32.select
 ; WASM64-NEXT:    i32.const 16
 ; WASM64-NEXT:    i32.shr_u
 ; WASM64-NEXT:    i32.store16 0
@@ -145,11 +238,58 @@ define double @load_bf16_ext_f64(ptr %p) {
 define void @store_bf16_trunc_f64(ptr %p, double %x) {
 ; WASM32-LABEL: store_bf16_trunc_f64:
 ; WASM32:         .functype store_bf16_trunc_f64 (i32, f64) -> ()
+; WASM32-NEXT:    .local f32, i32, f64
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    local.get 1
 ; WASM32-NEXT:    f32.demote_f64
+; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    i32.reinterpret_f32
+; WASM32-NEXT:    local.tee 3
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.const -1
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    f64.abs
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    f64.promote_f32
+; WASM32-NEXT:    local.tee 4
+; WASM32-NEXT:    f64.abs
+; WASM32-NEXT:    f64.gt
+; WASM32-NEXT:    i32.select
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 4
+; WASM32-NEXT:    f64.gt
+; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 4
+; WASM32-NEXT:    f64.lt
+; WASM32-NEXT:    i32.or
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.xor
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    i32.or
+; WASM32-NEXT:    i32.select
+; WASM32-NEXT:    local.tee 3
+; WASM32-NEXT:    i32.const 4194304
+; WASM32-NEXT:    i32.or
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.const 16
+; WASM32-NEXT:    i32.shr_u
+; WASM32-NEXT:    i32.const 1
+; WASM32-NEXT:    i32.and
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    i32.const 32767
+; WASM32-NEXT:    i32.add
+; WASM32-NEXT:    local.get 3
+; WASM32-NEXT:    f32.reinterpret_i32
+; WASM32-NEXT:    local.tee 2
+; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    f32.ne
+; WASM32-NEXT:    i32.select
 ; WASM32-NEXT:    i32.const 16
 ; WASM32-NEXT:    i32.shr_u
 ; WASM32-NEXT:    i32.store16 0
@@ -157,11 +297,58 @@ define void @store_bf16_trunc_f64(ptr %p, double %x) {
 ;
 ; WASM64-LABEL: store_bf16_trunc_f64:
 ; WASM64:         .functype store_bf16_trunc_f64 (i64, f64) -> ()
+; WASM64-NEXT:    .local f32, i32, f64
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    local.get 1
 ; WASM64-NEXT:    f32.demote_f64
+; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    i32.reinterpret_f32
+; WASM64-NEXT:    local.tee 3
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.const -1
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    f64.abs
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    f64.promote_f32
+; WASM64-NEXT:    local.tee 4
+; WASM64-NEXT:    f64.abs
+; WASM64-NEXT:    f64.gt
+; WASM64-NEXT:    i32.select
+; WASM64-NEXT:    i32.add
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 4
+; WASM64-NEXT:    f64.gt
+; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 4
+; WASM64-NEXT:    f64.lt
+; WASM64-NEXT:    i32.or
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.xor
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    i32.or
+; WASM64-NEXT:    i32.select
+; WASM64-NEXT:    local.tee 3
+; WASM64-NEXT:    i32.const 4194304
+; WASM64-NEXT:    i32.or
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i32.const 16
+; WASM64-NEXT:    i32.shr_u
+; WASM64-NEXT:    i32.const 1
+; WASM64-NEXT:    i32.and
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    i32.add
+; WASM64-NEXT:    i32.const 32767
+; WASM64-NEXT:    i32.add
+; WASM64-NEXT:    local.get 3
+; WASM64-NEXT:    f32.reinterpret_i32
+; WASM64-NEXT:    local.tee 2
+; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    f32.ne
+; WASM64-NEXT:    i32.select
 ; WASM64-NEXT:    i32.const 16
 ; WASM64-NEXT:    i32.shr_u
 ; WASM64-NEXT:    i32.store16 0
