@@ -491,7 +491,6 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-SD-NEXT:    add x8, x0, #12
-; CHECK-SD-NEXT:    dup.4s v0, v0[0]
 ; CHECK-SD-NEXT:    ld1.s { v0 }[1], [x8]
 ; CHECK-SD-NEXT:    str q0, [x1, #176]
 ; CHECK-SD-NEXT:    ret

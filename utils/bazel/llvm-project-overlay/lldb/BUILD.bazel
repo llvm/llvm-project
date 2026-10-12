@@ -11,7 +11,7 @@ load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
-load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "FALLBACK_PLUGINS", "OBJCPP_COPTS")
 load("//mlir:build_defs.bzl", "cc_headers_only")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
@@ -70,6 +70,16 @@ selects.config_setting_group(
         ":libedit_enabled_setting",
         "@platforms//os:linux",
     ],
+)
+
+bool_flag(
+    name = "enable_github_bug_reporter",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "github_bug_reporter_enabled",
+    flag_values = {":enable_github_bug_reporter": "true"},
 )
 
 _VERSION_SUBSTITUTIONS = {
@@ -290,8 +300,13 @@ cc_library(
         "//llvm:config",
     ] + [
         "//lldb/source/Plugins:Plugin{}".format(x)
-        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
+        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS + FALLBACK_PLUGINS
     ] + select({
+        ":github_bug_reporter_enabled": [
+            "//lldb/source/Plugins:PluginGitHubReporter",
+        ],
+        "//conditions:default": [],
+    }) + select({
         "@platforms//os:macos": [
             "//lldb/source/Plugins:PluginProcessMacOSXKernel",
             "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",

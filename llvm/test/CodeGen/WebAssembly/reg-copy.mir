@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown %s -o - -run-pass=postrapseudos | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown %s -o - -run-pass=post-ra-pseudos | FileCheck %s
 
 ---
 name: copy_i32

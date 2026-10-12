@@ -725,6 +725,8 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
   for (auto &MO : CurrMI->operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
+    if (MO.isUse() && CurrMI->getOpcode() == AMDGPU::PHI)
+      break;
     if (MO.isUse() && !MO.readsReg())
       continue;
     if (!UseInternalIterator && MO.isDef())
@@ -977,7 +979,7 @@ getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   auto &OS = dbgs();
 
@@ -1030,8 +1032,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 
         while (!RPT.advanceBeforeNext()) {
           GCNRegPressure RPBeforeMI = RPT.getPressure();
+          RPT.resetMaxPressure();
           RPT.advanceToNext();
-          RP.emplace_back(RPBeforeMI, RPT.getPressure());
+          RP.emplace_back(RPBeforeMI, RPT.getMaxPressure());
         }
 
         LiveOut = RPT.getLiveRegs();

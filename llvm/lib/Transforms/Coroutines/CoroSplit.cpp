@@ -151,7 +151,7 @@ static void lowerAwaitSuspend(IRBuilder<> &Builder, CoroAwaitSuspendInst *CB,
 }
 
 static void lowerAwaitSuspends(Function &F, coro::Shape &Shape) {
-  IRBuilder<> Builder(F.getContext());
+  IRBuilder<> Builder(*F.getParent());
   for (auto *AWS : Shape.CoroAwaitSuspends)
     lowerAwaitSuspend(Builder, AWS, Shape);
 }

@@ -19,6 +19,21 @@
 
 namespace clang::CodeGenUtils {
 
+/// Determines whether the language options require us to model
+/// unwind exceptions.  We treat -fexceptions as mandating this
+/// except under the fragile ObjC ABI with only ObjC exceptions
+/// enabled.  This means, for example, that C with -fexceptions
+/// enables this.
+/// Return the AST address space of constant literal, which is used to emit
+/// the constant literal as global variable in LLVM IR.
+/// Note: This is not necessarily the address space of the constant literal
+/// in AST. For address space agnostic language, e.g. C++, constant literal
+/// in AST is always in default address space.
+LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
+                                     const TargetInfo &Target);
+
+bool hasUnwindExceptions(const LangOptions &LangOpts);
+
 /// Check whether \p D is a strong definition, and thus must not be given
 /// common linkage.  \p NoCommon reflects -fno-common.
 bool isVarDeclStrongDefinition(const ASTContext &Ctx, const VarDecl *D,

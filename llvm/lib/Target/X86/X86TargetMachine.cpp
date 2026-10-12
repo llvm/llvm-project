@@ -201,8 +201,6 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   // x86 supports the debug entry values.
   setSupportsDebugEntryValues(true);
 
-  setEnableTiedFastRegAlloc(true);
-
   initAsmInfo();
 }
 
@@ -429,7 +427,7 @@ void X86PassConfig::addIRPasses() {
   // Add passes that handle indirect branch removal and insertion of a retpoline
   // thunk. These will be a no-op unless a function subtarget has the retpoline
   // feature enabled.
-  addPass(createIndirectBrExpandPass());
+  addPass(createIndirectBrExpandPass(getOptLevel()));
 
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();

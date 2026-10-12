@@ -14,7 +14,7 @@ define void @cond_br(i1 %c) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY1]], 1
   ; CHECK-NEXT:   BGTZ [[ANDi]], %bb.1, implicit-def dead $at
-  ; CHECK-NEXT:   B %bb.2, implicit-def $at
+  ; CHECK-NEXT:   B %bb.2, implicit-def dead $at
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   RetRA

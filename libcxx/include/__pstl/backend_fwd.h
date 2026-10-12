@@ -439,16 +439,16 @@ struct __destroy_n;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __uninitialized_copy;
-// template <class _Policy, class _InputIterator, class _ForwardIterator>
-// optional<_ForwardIterator>
-// operator()(_Policy&& __policy, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result) const
 // noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __uninitialized_copy_n;
-// template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
-// optional<_ForwardIterator>
-// operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const
+// template <class _Policy, class _ForwardIterator1, class _Size, class _ForwardIterator2>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _Size __n, _ForwardIterator2 __result) const
 // noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
@@ -465,16 +465,16 @@ struct __uninitialized_default_construct_n;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __uninitialized_move;
-// template <class _Policy, class _InputIterator, class _ForwardIterator>
-// optional<_ForwardIterator>
-// operator()(_Policy&& __policy, _InputIterator __first, _InputIterator __last, _ForwardIterator __result) const
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result) const
 // noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __uninitialized_move_n;
-// template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
-// optional<pair<_InputIterator, _ForwardIterator>>
-// operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const
+// template <class _Policy, class _ForwardIterator1, class _Size, class _ForwardIterator2>
+// optional<pair<_ForwardIterator1, _ForwardIterator2>>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _Size __n, _ForwardIterator2 __result) const
 // noexcept;
 
 template <class _Backend, class _ExecutionPolicy>

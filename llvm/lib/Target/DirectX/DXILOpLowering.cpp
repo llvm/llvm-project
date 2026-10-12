@@ -951,6 +951,25 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerBarrierByMemoryHandle(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *SemanticFlags = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::BarrierByMemoryHandle, {Handle, SemanticFlags});
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -1455,6 +1474,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_barrier_by_memory_handle:
+        HasErrors |= lowerBarrierByMemoryHandle(F);
         break;
       case Intrinsic::dx_resource_atomic_binop:
         HasErrors |= lowerResourceAtomicBinOp(F);

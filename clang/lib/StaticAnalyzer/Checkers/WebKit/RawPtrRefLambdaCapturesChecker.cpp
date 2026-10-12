@@ -590,7 +590,8 @@ public:
         if (Model->checksForInteriorDestruction()) {
           if (!CaptureInit)
             continue;
-          if (isCaptureOriginSafeForInteriorDestruction(CaptureInit, Origin))
+          if (isCaptureOriginSafeToEscape(CaptureInit, Origin,
+                                          CapturedVarQualType))
             continue;
         }
         reportBug(C, CapturedVar, CapturedVarQualType, L, Origin);
@@ -602,18 +603,23 @@ public:
     }
   }
 
-  bool isCaptureOriginSafeForInteriorDestruction(const Expr *CaptureInit,
-                                                 const Expr *&Origin) const {
+  bool isCaptureOriginSafeToEscape(const Expr *CaptureInit, const Expr *&Origin,
+                                   QualType SinkType) const {
     return tryToFindPtrOrigin(
         CaptureInit, /*StopAtFirstRefCountedObj=*/false,
         Model->checksForInteriorDestruction(),
-        [&](const clang::CXXRecordDecl *Record) {
-          return Model->isSafePtr(Record);
-        },
-        [&](const clang::QualType Type) { return Model->isSafePtrType(Type); },
+
+        // A smart pointer, even if safe, has shorter lifetime than an
+        // escaping lambda, so we do not treat it as a guarantee of safety.
+        /*isSafePtr=*/[](const clang::CXXRecordDecl *) { return false; },
+        /*isSafePtrType=*/[](const clang::QualType) { return false; },
+
+        // A global has longer lifetime, and can be safe.
+        /*isSafeGlobalDecl=*/
         [&](const clang::Decl *D) {
           return Model->isSafeDecl(D, BR->getSourceManager());
         },
+
         [&](const clang::Expr *CaptureOrigin, bool IsSafe,
             bool /*OriginDependsOnFullExpressionTemporary*/,
             bool PtrIsLifetimeBoundToOrigin) {
@@ -621,17 +627,10 @@ public:
             return true;
           if (isa<CXXThisExpr>(CaptureOrigin))
             return true;
-          // A Borrow in the enclosing scope does not travel with the lambda,
-          // so a loan taken through it is unguarded once the lambda escapes.
-          QualType OriginType = pointeeType(CaptureOrigin->getType());
-          if (!OriginType.isNull() && isBorrowType(OriginType)) {
-            if (!Origin)
-              Origin = CaptureOrigin;
-            return false;
-          }
           if (IsSafe)
             return true;
-          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin))
+          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType, /*SinkMayEscape=*/true))
             return true;
           if (!Origin)
             Origin = CaptureOrigin;

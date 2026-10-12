@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -84,34 +85,12 @@ STATISTIC(NumThreads, "Number of jumps threaded");
 STATISTIC(NumFolds,   "Number of terminators folded");
 STATISTIC(NumDupes,   "Number of branch blocks duplicated to eliminate phi");
 
-static cl::opt<unsigned>
-BBDuplicateThreshold("jump-threading-threshold",
-          cl::desc("Max block size to duplicate for jump threading"),
-          cl::init(6), cl::Hidden);
-
-static cl::opt<unsigned>
-ImplicationSearchThreshold(
-  "jump-threading-implication-search-threshold",
-  cl::desc("The number of predecessors to search for a stronger "
-           "condition to use to thread over a weaker condition"),
-  cl::init(3), cl::Hidden);
-
-static cl::opt<unsigned> PhiDuplicateThreshold(
-    "jump-threading-phi-threshold",
-    cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
-    cl::Hidden);
-
-static cl::opt<bool> ThreadAcrossLoopHeaders(
-    "jump-threading-across-loop-headers",
-    cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
-    cl::init(false), cl::Hidden);
-
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
 
 JumpThreadingPass::JumpThreadingPass(int T) {
-  DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
+  DefaultBBDupThreshold = (T == -1) ? 6 : unsigned(T);
 }
 
 // Update branch probability information according to conditional
@@ -289,6 +268,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 BlockFrequencyInfo *BFI_,
                                 BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
+  Opts = &ScalarOptions::Global;
   F = &F_;
   FAM = FAM_;
   TLI = TLI_;
@@ -304,8 +284,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
   // Reduce the number of instructions duplicated when optimizing strictly for
   // size.
-  if (BBDuplicateThreshold.getNumOccurrences())
-    BBDupThreshold = BBDuplicateThreshold;
+  if (Opts->jump_threading_threshold)
+    BBDupThreshold = *Opts->jump_threading_threshold;
   else if (F->hasMinSize())
     BBDupThreshold = 3;
   else
@@ -320,7 +300,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     if (!DT.isReachableFromEntry(&BB))
       Unreachable.insert(&BB);
 
-  if (!ThreadAcrossLoopHeaders)
+  if (!Opts->jump_threading_across_loop_headers)
     findLoopHeaders(*F);
 
   bool EverChanged = false;
@@ -425,7 +405,8 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
 /// Return the cost of duplicating a piece of this block from first non-phi
 /// and before StopAt instruction to thread across it. Stop scanning the block
 /// when exceeding the threshold. If duplication is impossible, returns ~0U.
-static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
+static unsigned getJumpThreadDuplicationCost(const ScalarOptions &Opts,
+                                             const TargetTransformInfo *TTI,
                                              BasicBlock *BB,
                                              Instruction *StopAt,
                                              unsigned Threshold) {
@@ -441,7 +422,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
       FirstNonPHI = &I;
       break;
     }
-    if (++PhiCount > PhiDuplicateThreshold)
+    if (++PhiCount > Opts.jump_threading_phi_threshold)
       return ~0U;
   }
 
@@ -1164,7 +1145,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
 
   auto &DL = BB->getDataLayout();
 
-  while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
+  while (CurrentPred &&
+         Iter++ < Opts->jump_threading_implication_search_threshold) {
     auto *PBI = dyn_cast<CondBrInst>(CurrentPred->getTerminator());
     if (!PBI)
       return false;
@@ -2269,9 +2251,9 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
 
   // Compute the cost of duplicating BB and PredBB.
   unsigned BBCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   unsigned PredBBCost = getJumpThreadDuplicationCost(
-      TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
 
   // Give up if costs are too high.  We need to check BBCost and PredBBCost
   // individually before checking their sum because getJumpThreadDuplicationCost
@@ -2390,7 +2372,7 @@ bool JumpThreadingPass::tryThreadEdge(
   }
 
   unsigned JumpThreadCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -2664,7 +2646,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   }
 
   unsigned DuplicationCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (DuplicationCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
                       << "' - Cost is too high: " << DuplicationCost << "\n");
@@ -3181,7 +3163,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
   ValueToValueMapTy UnguardedMapping, GuardedMapping;
   Instruction *AfterGuard = Guard->getNextNode();
   unsigned Cost =
-      getJumpThreadDuplicationCost(TTI, BB, AfterGuard, BBDupThreshold);
+      getJumpThreadDuplicationCost(*Opts, TTI, BB, AfterGuard, BBDupThreshold);
   if (Cost > BBDupThreshold)
     return false;
   // Duplicate all instructions before the guard and the guard itself to the

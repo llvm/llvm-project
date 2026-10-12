@@ -168,7 +168,7 @@ struct FunctionsAndLDSAccess {
 class AMDGPUSwLowerLDS {
 public:
   AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
-      : M(Mod), IRB(M.getContext()), DTCallback(Callback) {}
+      : M(Mod), IRB(M), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSArguments(const CallGraph &CG);

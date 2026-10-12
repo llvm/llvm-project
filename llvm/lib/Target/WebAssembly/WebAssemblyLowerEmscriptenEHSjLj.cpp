@@ -478,7 +478,7 @@ static void markAsImported(Function *F) {
 // Returns an integer type for the target architecture's address space.
 // i32 for wasm32 and i64 for wasm64.
 static Type *getAddrIntType(Module *M) {
-  IRBuilder<> IRB(M->getContext());
+  IRBuilder<> IRB(*M);
   return IRB.getIntNTy(M->getDataLayout().getPointerSizeInBits());
 }
 
@@ -493,7 +493,7 @@ static Type *getAddrPtrType(Module *M) {
 // space. Returns (i32 C) for wasm32 and (i64 C) for wasm64, when C is the
 // integer.
 static Value *getAddrSizeInt(Module *M, uint64_t C) {
-  IRBuilder<> IRB(M->getContext());
+  IRBuilder<> IRB(*M);
   return IRB.getIntN(M->getDataLayout().getPointerSizeInBits(), C);
 }
 
@@ -854,8 +854,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::replaceLongjmpWith(
   assert(NewF == EmLongjmpF || NewF == WasmLongjmpF);
   Module *M = LongjmpF->getParent();
   SmallVector<CallInst *, 8> ToErase;
-  LLVMContext &C = LongjmpF->getParent()->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*LongjmpF->getParent());
 
   // For calls to longjmp, replace it with emscripten_longjmp/__wasm_longjmp and
   // cast its first argument (jmp_buf*) appropriately
@@ -900,7 +899,7 @@ static bool containsLongjmpableCalls(const Function *F) {
 // returns 0 when called directly.
 static void nullifySetjmp(Function *F) {
   Module &M = *F->getParent();
-  IRBuilder<> IRB(M.getContext());
+  IRBuilder<> IRB(M);
   Function *SetjmpF = M.getFunction("setjmp");
   SmallVector<Instruction *, 1> ToErase;
 
@@ -930,8 +929,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   // threaded in from the TargetMachine.
   EnableEmEH |= M.getExceptionModel() == ExceptionHandling::Emscripten;
 
-  LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
 
   Function *SetjmpF = M.getFunction("setjmp");
   Function *LongjmpF = M.getFunction("longjmp");
@@ -1127,7 +1125,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runEHOnFunction(Function &F) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
@@ -1319,8 +1317,7 @@ static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
   assert(EnableEmSjLj || EnableWasmSjLj);
   Module &M = *F.getParent();
-  LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder IRB(M);
   SmallVector<Instruction *, 64> ToErase;
 
   // Setjmp preparation
@@ -1431,7 +1428,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::
         SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   SmallVector<Instruction *, 64> ToErase;
 
   // call.em.longjmp BB that will be shared within the function.
@@ -1626,7 +1623,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
 
   // A function with catchswitch/catchpad instruction should have a personality
   // function attached to it. Search for the wasm personality function, and if

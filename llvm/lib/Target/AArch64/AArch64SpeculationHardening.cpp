@@ -113,10 +113,6 @@ using namespace llvm;
 
 #define AARCH64_SPECULATION_HARDENING_NAME "AArch64 speculation hardening pass"
 
-static cl::opt<bool> HardenLoads("aarch64-slh-loads", cl::Hidden,
-                                 cl::desc("Sanitize loads from memory."),
-                                 cl::init(true));
-
 namespace {
 
 class AArch64SpeculationHardening : public MachineFunctionPass {
@@ -661,7 +657,7 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
 
   // Step 1: Enable automatic insertion of SpeculationSafeValue.
-  if (HardenLoads) {
+  if (MF.getSubtarget<AArch64Subtarget>().getCLOpts().slh_loads) {
     LLVM_DEBUG(
         dbgs() << "***** AArch64SpeculationHardening - automatic insertion of "
                   "SpeculationSafeValue intrinsics *****\n");
