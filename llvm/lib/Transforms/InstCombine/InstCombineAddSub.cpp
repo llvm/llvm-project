@@ -1608,8 +1608,7 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
 }
 
 /// Given (X >> C) & M, returns {X, M << C} (the source and a mask of what bits
-/// of the source are in \p V). The and and the shift are both optional: a
-/// missing and is treated as M = -1, and a missing shift as C = 0.
+/// of the source are in \p V).
 static std::pair<Value *, APInt> matchMaskedBits(Value *V) {
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
   APInt Mask = APInt::getAllOnes(BitWidth);
