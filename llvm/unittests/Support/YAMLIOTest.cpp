@@ -3033,7 +3033,7 @@ TEST(YAMLIO, TestEscaped) {
         'f', 'o', 'o', 0xC2, 0xAD,       // UTF-8 of U+00AD
         'b', 'a', 'r', 0xE2, 0x80, 0x8B, // UTF-8 of U+200B
         'b', 'a', 'z', 0x0};
-    TestEscaped((char const *)foobar, "\"foo\\u00ADbar\\u200Bbaz\"");
+    TestEscaped((char const *)foobar, "\"foo\\xADbar\\u200Bbaz\"");
   }
 }
 

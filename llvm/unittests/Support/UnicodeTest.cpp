@@ -33,9 +33,9 @@ TEST(Unicode, columnWidthUTF8) {
 
   // 00AD SOFT HYPHEN is displayed on most terminals as a space or a dash. Some
   // text editors display it only when a line is broken at it, some use it as a
-  // line-break hint, but don't display. We choose terminal-oriented
+  // line-break hint, but don't display. We do not take any particular
   // interpretation.
-  EXPECT_EQ(1, columnWidthUTF8("\302\255"));
+  EXPECT_EQ(-1, columnWidthUTF8("\302\255"));
 
   EXPECT_EQ(0, columnWidthUTF8("\314\200"));     // 0300 COMBINING GRAVE ACCENT
   EXPECT_EQ(1, columnWidthUTF8("\340\270\201")); // 0E01 THAI CHARACTER KO KAI
@@ -81,8 +81,7 @@ TEST(Unicode, isPrintable) {
   EXPECT_FALSE(isPrintable(0x9F));
 
   EXPECT_TRUE(isPrintable(0xAC));
-  EXPECT_TRUE(isPrintable(0xAD)); // SOFT HYPHEN is displayed on most terminals
-                                  // as either a space or a dash.
+  EXPECT_FALSE(isPrintable(0xAD));
   EXPECT_TRUE(isPrintable(0xAE));
 
   EXPECT_TRUE(isPrintable(0x0377));  // GREEK SMALL LETTER PAMPHYLIAN DIGAMMA
