@@ -277,3 +277,26 @@ func.func @test_gpu_dealloc_moved_after_async_token(%d: !gpu.async.token) {
   gpu.wait [%done]
   return
 }
+
+// -----
+// CHECK-LABEL:   func.func @nested_result(
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<8xf32>
+// CHECK:           %[[REALLOC_0:.*]] = memref.realloc %[[ALLOC_0]] : memref<8xf32> to memref<16xf32>
+// CHECK:           scf.if %[[ARG0]] {
+// CHECK:             memref.dealloc %[[REALLOC_0]] : memref<16xf32>
+// CHECK:           } else {
+// CHECK:             memref.dealloc %[[REALLOC_0]] : memref<16xf32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @nested_result(%cond: i1) {
+  %a = memref.alloc() : memref<8xf32>
+  %b = memref.realloc %a : memref<8xf32> to memref<16xf32>
+  scf.if %cond {
+    memref.dealloc %b : memref<16xf32>
+  } else {
+    memref.dealloc %b : memref<16xf32>
+  }
+  return
+}

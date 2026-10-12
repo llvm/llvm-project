@@ -107,10 +107,10 @@ struct OptimizeAllocationLiveness
 public:
   OptimizeAllocationLiveness() = default;
 
-  static Operation *findValidInsertionPoint(Operation *allocOp,
+  static Operation *findValidInsertionPoint(DominanceInfo *domInfo,
+                                            Operation *allocOp,
                                             Operation *deallocOp,
                                             Operation *lastUser) {
-    auto domInfo = DominanceInfo();
 
     auto *target = lastUser;
 
@@ -119,7 +119,7 @@ public:
       if (!definingOp)
         continue;
 
-      if (!target || domInfo.properlyDominates(target, definingOp))
+      if (!target || domInfo->properlyDominates(target, definingOp))
         target = definingOp;
     }
 
@@ -128,7 +128,8 @@ public:
 
     for (Value result : deallocOp->getResults()) {
       for (Operation *user : result.getUsers()) {
-        if (user == target || !domInfo.properlyDominates(target, user))
+        if (user == target ||
+            !domInfo->properlyDominates(target, user, /*enclosingOpOk=*/false))
           return nullptr;
       }
     }
@@ -142,6 +143,7 @@ public:
       return;
 
     BufferViewFlowAnalysis analysis = BufferViewFlowAnalysis(func);
+    auto domInfo = DominanceInfo();
 
     func.walk([&](MemoryEffectOpInterface memEffectOp) -> WalkResult {
       if (!hasMemoryAllocEffect(memEffectOp))
@@ -190,7 +192,8 @@ public:
       assert(lastUser->getBlock() == allocOp->getBlock());
       assert(lastUser->getBlock() == deallocOp->getBlock());
 
-      Operation *target = findValidInsertionPoint(allocOp, deallocOp, lastUser);
+      Operation *target =
+          findValidInsertionPoint(&domInfo, allocOp, deallocOp, lastUser);
       if (!target) {
         LDBG() << "No valid insertion point found; skipping move";
         return WalkResult::advance();
