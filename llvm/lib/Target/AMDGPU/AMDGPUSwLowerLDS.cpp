@@ -274,8 +274,8 @@ static bool isLDSMemoryInstruction(const Instruction &Inst) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
     if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
       return true;
-    if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI))
-      return MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+    auto *MTI = dyn_cast<AnyMemTransferInst>(MI);
+    return MTI && MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
   }
   return false;
 }
