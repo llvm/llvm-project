@@ -92,7 +92,7 @@ struct ForOpInterface
             ValueBoundsConstraintSet::ComparisonOperator::EQ,
             /*rhs=*/{iterArg, dim})) {
       if (dim.has_value()) {
-        cstr.bound(value)[*dim] == cstr.getExpr(initArg, dim);
+        cstr.bound(value)[*dim] == cstr.getExpr({initArg, dim});
       } else {
         cstr.bound(value) == cstr.getExpr(initArg);
       }
@@ -181,7 +181,7 @@ struct ForallOpInterface
     // The forall results and output arguments have the same sizes as the output
     // operands.
     Value outputOperand = forallOp.getOutputs()[iterArgIdx];
-    cstr.bound(value)[dim] == cstr.getExpr(outputOperand, dim);
+    cstr.bound(value)[dim] == cstr.getExpr({outputOperand, dim});
   }
 };
 
@@ -195,41 +195,11 @@ struct IfOpInterface
     Value thenValue = ifOp.thenYield().getResults()[resultNum];
     Value elseValue = ifOp.elseYield().getResults()[resultNum];
 
-    auto boundsBuilder = cstr.bound(value);
-    if (dim)
-      boundsBuilder[*dim];
-
-    // Compare yielded values.
-    // If thenValue <= elseValue:
-    // * result <= elseValue
-    // * result >= thenValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{thenValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{elseValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(thenValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(elseValue, dim);
-      } else {
-        cstr.bound(value) >= thenValue;
-        cstr.bound(value) <= elseValue;
-      }
-    }
-    // If elseValue <= thenValue:
-    // * result <= thenValue
-    // * result >= elseValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{elseValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{thenValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(elseValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(thenValue, dim);
-      } else {
-        cstr.bound(value) >= elseValue;
-        cstr.bound(value) <= thenValue;
-      }
-    }
+    // Region results have one candidate origin per control-flow branch. Record
+    // that disjunction and let the common merge solver derive an envelope once
+    // both backward slices have been collected.
+    ValueDimList candidates{{thenValue, dim}, {elseValue, dim}};
+    cstr.addMerge({value, dim}, std::move(candidates));
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,

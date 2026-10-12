@@ -58,7 +58,7 @@ struct SubgroupBroadcastOpInterface
                                        ValueBoundsConstraintSet &cstr) const {
     auto broadcastOp = cast<SubgroupBroadcastOp>(op);
     assert(value == broadcastOp.getResult() && "invalid value");
-    cstr.bound(value)[dim] == cstr.getExpr(broadcastOp.getSrc(), dim);
+    cstr.bound(value)[dim] == cstr.getExpr({broadcastOp.getSrc(), dim});
   }
 };
 

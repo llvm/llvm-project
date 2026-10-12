@@ -39,7 +39,7 @@ struct IndexOpInterface
       assert(flatDimPos >= flatDimCtr && "invalid pos");
       auto shapedType = llvm::cast<ShapedType>(operand.getType());
       if (flatDimPos < flatDimCtr + shapedType.getRank()) {
-        cstr.bound(value) < cstr.getExpr(operand, flatDimPos - flatDimCtr);
+        cstr.bound(value) < cstr.getExpr({operand, flatDimPos - flatDimCtr});
         break;
       }
       flatDimCtr += shapedType.getRank();

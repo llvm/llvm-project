@@ -129,9 +129,9 @@ FailureOr<OpFoldResult> reifyShapedValueDimBound(
 ///   dialect ops.
 /// * `reifyIndexValueBound`/`reifyShapedValueDimBound` are a combination of
 ///   the two functions mentioned above.
-OpFoldResult materializeComputedBound(
-    OpBuilder &b, Location loc, AffineMap boundMap,
-    ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands);
+OpFoldResult materializeComputedBound(OpBuilder &b, Location loc,
+                                      AffineMap boundMap,
+                                      ArrayRef<ValueDim> mapOperands);
 
 /// This transform tries to simplify the affine min operation `op`, by finding a
 /// common lower bound for a set of expressions in the affine map results. It

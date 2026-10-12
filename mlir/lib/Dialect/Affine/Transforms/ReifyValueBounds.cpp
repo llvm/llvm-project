@@ -33,9 +33,9 @@ FailureOr<OpFoldResult> mlir::affine::reifyValueBound(
   return affine::materializeComputedBound(b, loc, boundMap, mapOperands);
 }
 
-OpFoldResult affine::materializeComputedBound(
-    OpBuilder &b, Location loc, AffineMap boundMap,
-    ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands) {
+OpFoldResult affine::materializeComputedBound(OpBuilder &b, Location loc,
+                                              AffineMap boundMap,
+                                              ArrayRef<ValueDim> mapOperands) {
   // Materialize tensor.dim/memref.dim ops.
   SmallVector<Value> operands;
   for (auto valueDim : mapOperands) {
@@ -89,14 +89,14 @@ FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
     ValueBoundsOptions options) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+  auto reifyToOperands = [&](ValueDim valueDim,
                              ValueBoundsConstraintSet &cstr) {
     // We are trying to reify a bound for `value` in terms of the owning op's
     // operands. Construct a stop condition that evaluates to "true" for any SSA
     // value except for `value`. I.e., the bound will be computed in terms of
     // any SSA values except for `value`. The first such values are operands of
     // the owner of `value`.
-    return v != value;
+    return valueDim.first != value;
   };
   return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
@@ -107,9 +107,9 @@ FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     ValueBoundsConstraintSet::StopConditionFn stopCondition,
     ValueBoundsOptions options) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+  auto reifyToOperands = [&](ValueDim valueDim,
                              ValueBoundsConstraintSet &cstr) {
-    return v != value;
+    return valueDim.first != value;
   };
   return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,

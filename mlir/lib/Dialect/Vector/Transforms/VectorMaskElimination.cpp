@@ -90,8 +90,8 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
     // `base + n * vscale`, which can prove either kind of dimension all-true.
     FailureOr<ConstantOrScalableBound> dimLowerBound =
         vector::ScalableValueBoundsConstraintSet::computeScalableBound(
-            dimSize, {}, vscaleRange->vscaleMin, vscaleRange->vscaleMax,
-            presburger::BoundType::LB);
+            {dimSize, std::nullopt}, vscaleRange->vscaleMin,
+            vscaleRange->vscaleMax, presburger::BoundType::LB);
     if (failed(dimLowerBound))
       return failure();
     auto dimLowerBoundSize = dimLowerBound->getSize();

@@ -39,7 +39,7 @@ struct AssumeAlignmentOpInterface
     assert(value == assumeAlignmentOp.getResult() && "invalid value");
 
     cstr.bound(value)[dim] ==
-        cstr.getExpr(assumeAlignmentOp.getViewSource(), dim);
+        cstr.getExpr({assumeAlignmentOp.getViewSource(), dim});
   }
 };
 
@@ -52,7 +52,7 @@ struct CastOpInterface
 
     if (llvm::isa<MemRefType>(castOp.getResult().getType()) &&
         llvm::isa<MemRefType>(castOp.getSource().getType())) {
-      cstr.bound(value)[dim] == cstr.getExpr(castOp.getSource(), dim);
+      cstr.bound(value)[dim] == cstr.getExpr({castOp.getSource(), dim});
     }
   }
 };
@@ -68,7 +68,7 @@ struct DimOpInterface
     auto constIndex = dimOp.getConstantIndex();
     if (!constIndex.has_value())
       return;
-    cstr.bound(value) == cstr.getExpr(dimOp.getSource(), *constIndex);
+    cstr.bound(value) == cstr.getExpr({dimOp.getSource(), *constIndex});
   }
 };
 
@@ -104,7 +104,7 @@ struct ExtractStridedMetadataOpInterface
     if (resultNumber >= sizeStart && resultNumber < strideStart) {
       int64_t idx = resultNumber - sizeStart;
       cstr.bound(value) >= 0;
-      cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
+      cstr.bound(value) == cstr.getExpr({metadataOp.getSource(), idx});
       return;
     }
 
@@ -160,10 +160,10 @@ struct CollapseShapeOpInterface
     const ReassociationIndices reassocIndices =
         collapseOp.getReassociationIndices()[dim];
     AffineExpr productExpr =
-        cstr.getExpr(collapseOp.getSrc(), reassocIndices[0]);
+        cstr.getExpr({collapseOp.getSrc(), reassocIndices[0]});
     for (size_t i = 1; i < reassocIndices.size(); ++i) {
       productExpr =
-          productExpr * cstr.getExpr(collapseOp.getSrc(), reassocIndices[i]);
+          productExpr * cstr.getExpr({collapseOp.getSrc(), reassocIndices[i]});
     }
     cstr.bound(value)[dim] == productExpr;
   }

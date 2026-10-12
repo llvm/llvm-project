@@ -48,9 +48,13 @@ private:
   SmallVector<OpFoldResult> mixedStrides;
 };
 
+/// An index/integer-typed SSA value (`std::nullopt`) or a dimension of a shaped
+/// SSA value. The dimension must be present if and only if the value is shaped.
+using ValueDim = std::pair<Value, std::optional<int64_t>>;
+
 // Inline size chosen empirically based on compilation profiling.
 // Profiled: 488K calls, avg=1.5+-0.5. N=2 covers >90% of cases inline.
-using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>, 2>;
+using ValueDimList = SmallVector<ValueDim, 2>;
 
 /// Options that control value bound computation.
 struct ValueBoundsOptions {
@@ -171,11 +175,10 @@ public:
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.
   ///
-  /// The first parameter of the function is the shaped value/index-typed
-  /// value. The second parameter is the dimension in case of a shaped value.
-  /// The third parameter is this constraint set.
-  using StopConditionFn = std::function<bool(
-      Value, std::optional<int64_t> /*dim*/, ValueBoundsConstraintSet &cstr)>;
+  /// The first parameter is the shaped value dimension/index-typed value. The
+  /// second parameter is this constraint set.
+  using StopConditionFn =
+      std::function<bool(ValueDim, ValueBoundsConstraintSet &cstr)>;
 
   /// Compute a bound for the given variable. The computed bound is stored in
   /// `resultMap`. The operands of the bound are stored in `mapOperands`. An
@@ -239,20 +242,15 @@ public:
                        const StopConditionFn &stopCondition = nullptr,
                        ValueBoundsOptions options = {});
 
-  /// Compute a constant delta between the given two values. Return "failure"
-  /// if a constant delta could not be determined.
-  ///
-  /// `dim1`/`dim2` must be `nullopt` if and only if `value1`/`value2` are
-  /// index-typed.
-  static FailureOr<int64_t>
-  computeConstantDelta(Value value1, Value value2,
-                       std::optional<int64_t> dim1 = std::nullopt,
-                       std::optional<int64_t> dim2 = std::nullopt);
+  /// Compute a constant delta between the given two values/dimensions. Return
+  /// "failure" if a constant delta could not be determined.
+  static FailureOr<int64_t> computeConstantDelta(ValueDim valueDim1,
+                                                 ValueDim valueDim2);
 
   /// Traverse the IR starting from the given value/dim and populate constraints
   /// as long as the stop condition holds. Also process all values/dims that are
   /// already on the worklist.
-  void populateConstraints(Value value, std::optional<int64_t> dim);
+  void populateConstraints(ValueDim valueDim);
 
   /// Comparison operator for `ValueBoundsConstraintSet::compare`.
   enum ComparisonOperator { LT, LE, EQ, GT, GE };
@@ -340,8 +338,14 @@ public:
   /// value dimension. If this value/dimension was not used so far, it is added
   /// to the worklist.
   ///
-  /// `dim` must be `nullopt` if and only if the given value is of index type.
-  AffineExpr getExpr(Value value, std::optional<int64_t> dim = std::nullopt);
+  /// The dimension must be `nullopt` if and only if the given value is of index
+  /// type.
+  AffineExpr getExpr(ValueDim valueDim);
+
+  /// Convenience overload for an index-typed value.
+  AffineExpr getExpr(Value value) {
+    return getExpr(ValueDim{value, std::nullopt});
+  }
 
   /// Return an expression that represents a constant or index-typed SSA value.
   /// In case of a value, if this value was not used so far, it is added to the
@@ -351,18 +355,35 @@ public:
   /// Return an expression that represents a constant.
   AffineExpr getExpr(int64_t constant);
 
+  /// Record all possible origins of `value` as one complete relationship.
+  ///
+  /// A merge is a disjunction: `value` equals exactly one element of
+  /// `candidates` at runtime. The complete candidate list is passed atomically
+  /// so that temporary queries may solve the relationship immediately without
+  /// observing a partially constructed merge. An interface must call this
+  /// function exactly once for a given `value`.
+  ///
+  /// Candidate relationships are collected together with ordinary bounds and
+  /// solved after the current value-bounds worklist has been processed. This
+  /// keeps operation interface implementations declarative: an interface only
+  /// describes the possible origins, while the common merge solver decides
+  /// which conservative bounds can be derived from them.
+  ///
+  /// Each candidate carries its own dimension, independently of `valueDim`. A
+  /// merge may therefore relate different dimensions of shaped values, e.g.
+  /// result dimension 0 to candidate dimension 1. A dimension must be
+  /// `std::nullopt` if and only if its corresponding value is index-typed.
+  ///
+  /// A merge with exactly one candidate is an unconditional equality. Merges
+  /// with multiple candidates are solved conservatively after relationship
+  /// collection has finished.
+  void addMerge(ValueDim value, ValueDimList candidates);
+
   /// Debugging only: Dump the constraint set and the column-to-value/dim
   /// mapping to llvm::errs.
   void dump() const;
 
 protected:
-  /// Dimension identifier to indicate a value is index-typed. This is used for
-  /// internal data structures/API only.
-  static constexpr int64_t kIndexValue = -1;
-
-  /// An index-typed value or the dimension of a shaped-type value.
-  using ValueDim = std::pair<Value, int64_t>;
-
   ValueBoundsConstraintSet(MLIRContext *ctx,
                            const StopConditionFn &stopCondition,
                            ValueBoundsOptions options = {},
@@ -402,13 +423,21 @@ protected:
   /// any further.
   void processWorklist();
 
+  /// Try to derive ordinary constraints from all collected candidate-origin
+  /// relationships. The phase 1 merge solver intentionally matches the
+  /// behavior of the merge logic that used to live in individual op interface
+  /// implementations. A single candidate becomes an equality. For multiple
+  /// candidates, any candidate proven to be below/above every other candidate
+  /// provides a conservative lower/upper envelope bound.
+  void solveMerges();
+
   /// Bound the given column in the underlying constraint set by the given
   /// expression.
   void addBound(presburger::BoundType type, int64_t pos, AffineExpr expr);
 
   /// Return the column position of the given value/dimension. Asserts that the
   /// value/dimension exists in the constraint set.
-  int64_t getPos(Value value, std::optional<int64_t> dim = std::nullopt) const;
+  int64_t getPos(ValueDim valueDim) const;
 
   /// Return an affine expression that represents column `pos` in the constraint
   /// set.
@@ -416,7 +445,7 @@ protected:
 
   /// Return "true" if the given value/dim is mapped (i.e., has a corresponding
   /// column in the constraint system).
-  bool isMapped(Value value, std::optional<int64_t> dim = std::nullopt) const;
+  bool isMapped(ValueDim valueDim) const;
 
   /// Insert a value/dimension into the constraint set. If `isSymbol` is set to
   /// "false", a dimension is added. The value/dimension is added to the
@@ -425,7 +454,7 @@ protected:
   /// Note: There are certain affine restrictions wrt. dimensions. E.g., they
   /// cannot be multiplied. Furthermore, bounds can only be queried for
   /// dimensions but not for symbols.
-  int64_t insert(Value value, std::optional<int64_t> dim, bool isSymbol = true,
+  int64_t insert(ValueDim valueDim, bool isSymbol = true,
                  bool addToWorklist = true);
 
   /// Insert an anonymous column into the constraint set. The column is not
@@ -464,6 +493,28 @@ protected:
   /// Inserting a SetDim shifts symbol columns, so a queued column index would
   /// go stale.
   std::queue<ValueDim> worklist;
+
+  /// A candidate-origin relationship. Unlike an ordinary equality, this
+  /// represents `value == candidate[0] OR value == candidate[1] OR ...`.
+  /// Keeping this relation separate from `cstr` is essential because
+  /// FlatLinearConstraints represents a conjunction of constraints and cannot
+  /// directly represent this disjunction.
+  struct MergeRelation {
+    ValueDim value;
+    ValueDimList candidates;
+
+    /// Lower and upper bounds are tracked separately because a partially
+    /// ordered candidate set may have a provable minimum but no provable
+    /// maximum, or vice versa. Once derived, a bound remains valid because the
+    /// constraint set only accumulates sound constraints.
+    bool lowerBoundSolved = false;
+    bool upperBoundSolved = false;
+  };
+
+  /// Candidate-origin relationships collected by op interfaces. Relationships
+  /// that cannot yet be solved are retained because solving another merge may
+  /// provide enough information to order their candidates on a later pass.
+  SmallVector<MergeRelation> mergeRelations;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;

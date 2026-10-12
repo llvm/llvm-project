@@ -138,14 +138,14 @@ FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim, const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
     ValueBoundsOptions options) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+  auto reifyToOperands = [&](ValueDim valueDim,
                              ValueBoundsConstraintSet &cstr) {
     // We are trying to reify a bound for `value` in terms of the owning op's
     // operands. Construct a stop condition that evaluates to "true" for any SSA
     // value expect for `value`. I.e., the bound will be computed in terms of
     // any SSA values expect for `value`. The first such values are operands of
     // the owner of `value`.
-    return v != value;
+    return valueDim.first != value;
   };
   return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
@@ -156,9 +156,9 @@ FailureOr<OpFoldResult> mlir::arith::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
     ValueBoundsOptions options) {
-  auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
+  auto reifyToOperands = [&](ValueDim valueDim,
                              ValueBoundsConstraintSet &cstr) {
-    return v != value;
+    return valueDim.first != value;
   };
   return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,
