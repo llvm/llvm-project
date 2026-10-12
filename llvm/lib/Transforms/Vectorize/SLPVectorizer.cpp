@@ -9366,7 +9366,8 @@ static SeedGroupKey getSeedGroupKey(const Instruction *I,
 static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
                                const TargetLibraryInfo &TLI,
                                PoorThroughputOpCache &Cache,
-                               const TTI::TargetCostKind CostKind) {
+                               const TTI::TargetCostKind CostKind,
+                               unsigned MaxVecRegSize) {
   if (!isa<BinaryOperator, CallInst>(I))
     return false;
   Type *Ty = I->getType();
@@ -9378,7 +9379,14 @@ static bool isPoorThroughputOp(Instruction *I, const TargetTransformInfo &TTI,
     if (ScalarCost < TTI::TCC_Expensive)
       return false;
     constexpr unsigned MinVF = 2;
-    return getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF;
+    if (getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF)
+      return true;
+    // Some ops (e.g. div by constant) scalarize at VF=2 but have a cheap
+    // vector form at the full register width.
+    unsigned TyBits = Ty->getPrimitiveSizeInBits().getFixedValue();
+    unsigned MaxVF = TyBits ? llvm::bit_floor(MaxVecRegSize / TyBits) : 0;
+    return MaxVF > MinVF &&
+           getVectorOpCost(I, MaxVF, TTI, TLI, CostKind) < ScalarCost * MaxVF;
   };
   auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
     if (IsCheap)
@@ -13528,7 +13536,8 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
     return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
            !TransformedToGatherNodes.contains(&TE) &&
            TE.State != TreeEntry::CombinedVectorize &&
-           isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache, CostKind);
+           isPoorThroughputOp(TE.getMainOp(), *TTI, *TLI, Cache, CostKind,
+                              getMaxVecRegSize());
   });
 }
 
@@ -29653,6 +29662,8 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     R.clearReductionData();
     collectSeedInstructions(BB);
 
+    Changed |= vectorizeSplitStorePoorThroughputSeeds(BB, R);
+
     // Vectorize trees that end at stores.
     if (!Stores.empty()) {
       LLVM_DEBUG(dbgs() << "SLP: Found stores for " << Stores.size()
@@ -35751,7 +35762,8 @@ static bool tryToVectorizeSequence(
     SmallVectorImpl<T *> &Incoming, function_ref<bool(T *, T *)> Comparator,
     function_ref<bool(ArrayRef<T *>, T *)> AreCompatible,
     function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
-    bool MaxVFOnly, BoUpSLP &R) {
+    bool MaxVFOnly, BoUpSLP &R,
+    function_ref<bool(ArrayRef<T *>)> Filter = nullptr) {
   bool Changed = false;
   // Sort by type, parent, operands.
   stable_sort(Incoming, Comparator);
@@ -35778,6 +35790,10 @@ static bool tryToVectorizeSequence(
       if (I && !R.isDeleted(I))
         VL.push_back(cast<T>(I));
     }
+
+    // Rejected groups are dropped, not left among the candidates.
+    if (Filter && !Filter(ArrayRef(VL)))
+      VL.clear();
 
     // Try to vectorize them.
     unsigned NumElts = VL.size();
@@ -36707,7 +36723,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
       PostProcessInsts.insert(&*It);
     else if (VectorizePoorThroughput &&
              isPoorThroughputOp(&*It, *TTI, *TLI, PoorThroughputCache,
-                                R.getCostKind()))
+                                R.getCostKind(), R.getMaxVecRegSize()))
       PoorThroughputSeeds.insert(&*It);
   }
 
@@ -36759,7 +36775,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(
 }
 
 bool SLPVectorizerPass::vectorizePoorThroughputSeeds(
-    ArrayRef<Instruction *> Candidates, BoUpSLP &R) {
+    ArrayRef<Instruction *> Candidates, BoUpSLP &R,
+    function_ref<bool(ArrayRef<Value *>)> Filter) {
   if (Candidates.size() < 2)
     return false;
   SmallVector<Value *> Seeds;
@@ -36777,12 +36794,43 @@ bool SLPVectorizerPass::vectorizePoorThroughputSeeds(
       [&](Value *V1, Value *V2) {
         return SeedKeys.at(V1).less(SeedKeys.at(V2));
       },
-      R);
+      R, Filter);
+}
+
+// Seed the groups with scalars not stored locally (e.g. the store is sunk to
+// the join block) before the store chains split them into a remainder too
+// small to vectorize.
+bool SLPVectorizerPass::vectorizeSplitStorePoorThroughputSeeds(BasicBlock *BB,
+                                                               BoUpSLP &R) {
+  if (!VectorizePoorThroughput || Stores.empty())
+    return false;
+  PoorThroughputOpCache PoorThroughputCache;
+  SmallVector<Instruction *> Candidates;
+  for (Instruction &I : *BB) {
+    if (R.isDeleted(&I) || isAssumeLikeIntrinsic(&I) ||
+        I.isDebugOrPseudoInst() || R.isEphemeralValue(&I) ||
+        isNonVectorizableInst(&I, TLI))
+      continue;
+    if (isPoorThroughputOp(&I, *TTI, *TLI, PoorThroughputCache, R.getCostKind(),
+                           R.getMaxVecRegSize()))
+      Candidates.push_back(&I);
+  }
+  auto HasLocalStoreUser = [&](Value *V) {
+    return any_of(V->users(), [&](User *U) {
+      auto *SI = dyn_cast<StoreInst>(U);
+      return SI && SI->isSimple() && SI->getParent() == BB &&
+             SI->getValueOperand() == V;
+    });
+  };
+  return vectorizePoorThroughputSeeds(Candidates, R, [&](ArrayRef<Value *> VL) {
+    return any_of(VL, HasLocalStoreUser) && !all_of(VL, HasLocalStoreUser);
+  });
 }
 
 bool SLPVectorizerPass::vectorizeSeeds(
     SmallVectorImpl<Value *> &Seeds,
-    function_ref<bool(Value *, Value *)> IsLessGroup, BoUpSLP &R) {
+    function_ref<bool(Value *, Value *)> IsLessGroup, BoUpSLP &R,
+    function_ref<bool(ArrayRef<Value *>)> Filter) {
   if (Seeds.size() < 2)
     return false;
   auto SeedSorter = [&](Value *V1, Value *V2) {
@@ -36822,7 +36870,7 @@ bool SLPVectorizerPass::vectorizeSeeds(
         R.analyzedBundle(Candidates);
         return false;
       },
-      /*MaxVFOnly=*/false, R);
+      /*MaxVFOnly=*/false, R, Filter);
 }
 
 bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
@@ -36844,8 +36892,8 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
     // The poor-throughput ops are seeded on their own, with the different
     // grouping.
     if (VectorizePoorThroughput &&
-        isPoorThroughputOp(&I, *TTI, *TLI, PoorThroughputCache,
-                           R.getCostKind()))
+        isPoorThroughputOp(&I, *TTI, *TLI, PoorThroughputCache, R.getCostKind(),
+                           R.getMaxVecRegSize()))
       continue;
     // The multiplication is contracted into the scalar FMA with its user, the
     // vector node breaks the contraction.
