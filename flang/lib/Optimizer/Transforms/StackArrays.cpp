@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
@@ -797,7 +797,7 @@ void StackArraysPass::runOnOperation() {
   llvm::SmallVector<mlir::Operation *> opsToConvert;
   opsToConvert.reserve(candidateOps->size());
   for (auto [op, _] : *candidateOps)
-    if (!cuf::isExecutingOnDevice(op))
+    if (!fir::isInOffloadRegion(op))
       opsToConvert.push_back(op);
 
   if (opsToConvert.empty())

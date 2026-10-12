@@ -222,7 +222,7 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 
 struct MergeConsecutiveExtractSlice
     : public OpRewritePattern<tensor::ExtractSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp nextOp,
                                 PatternRewriter &rewriter) const override {

@@ -69,6 +69,9 @@ int aligned_type4::* __unaligned p2_aligned_type4 = &aligned_type4::i;
 __unaligned int aligned_type4::* __unaligned p3_aligned_type4 = &aligned_type4::i;
 void (aligned_type4::*__unaligned p4_aligned_type4)();
 
+void unaligned_array(int x[__unaligned]) {} // expected-error {{qualifier in array size is a C99 feature, not permitted in C++}}
+template <int N> void unaligned_dependent_array(int x[__unaligned N]) {} // expected-error {{qualifier in array size is a C99 feature, not permitted in C++}}
+
 // Check that __unaligned qualifier can be used for overloading
 void foo_unaligned(int *arg) {} // expected-note {{not viable: 1st argument ('const __unaligned int *') would lose const qualifier}}
 void foo_unaligned(__unaligned int *arg) {} // expected-note {{not viable: 1st argument ('const __unaligned int *') would lose const qualifier}}

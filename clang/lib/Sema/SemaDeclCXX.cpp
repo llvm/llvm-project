@@ -9668,7 +9668,7 @@ bool SpecialMemberDeletionInfo::isAccessible(Subobject Subobj,
   /// type of this special member.
   CanQualType objectTy;
   AccessSpecifier access = target->getAccess();
-  if (CXXBaseSpecifier *base = Subobj.dyn_cast<CXXBaseSpecifier*>()) {
+  if (CXXBaseSpecifier *base = dyn_cast<CXXBaseSpecifier *>(Subobj)) {
     objectTy = S.Context.getCanonicalTagType(MD->getParent());
     access = CXXRecordDecl::MergeAccess(base->getAccessSpecifier(), access);
 
@@ -9687,7 +9687,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     Subobject Subobj, Sema::SpecialMemberOverloadResult SMOR,
     bool IsDtorCallInCtor) {
   CXXMethodDecl *Decl = SMOR.getMethod();
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
 
   enum {
     NotSet = -1,
@@ -9766,7 +9766,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 /// direct or virtual base class or non-static data member of class type M.
 bool SpecialMemberDeletionInfo::shouldDeleteForClassSubobject(
     CXXRecordDecl *Class, Subobject Subobj, unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
 
   // C++11 [class.ctor]p5:
@@ -14165,7 +14165,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
 void SpecialMemberExceptionSpecInfo::visitClassSubobject(CXXRecordDecl *Class,
                                                          Subobject Subobj,
                                                          unsigned Quals) {
-  FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
+  FieldDecl *Field = dyn_cast<FieldDecl *>(Subobj);
   bool IsMutable = Field && Field->isMutable();
   visitSubobjectCall(Subobj, lookupIn(Class, Quals, IsMutable));
 }
@@ -17530,6 +17530,30 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   if (!Invalid && BaseType.isWebAssemblyReferenceType()) {
     Diag(Loc, diag::err_wasm_reftype_tc) << 1;
     Invalid = true;
+  }
+
+  // Reject catch types that need a cross-AS conversion.
+  // cause runtimes don't yet support cross-address-
+  // space conversions
+  if (Mode == 1) {
+    if (ExDeclType.getAddressSpace() != LangAS::Default ||
+        BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    }
+  } else if (Mode == 2) {
+    if (const PointerType *PT = BaseType->getAs<PointerType>();
+        PT && (BaseType.getAddressSpace() != LangAS::Default ||
+               PT->getPointeeType().getAddressSpace() != LangAS::Default)) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/0 << ExDeclType;
+      Invalid = true;
+    } else if (BaseType.getAddressSpace() != LangAS::Default) {
+      Diag(Loc, diag::err_throw_or_catch_address_space_qualified_ptr)
+          << /*IsCatch=*/1 << /*IsRef=*/1 << ExDeclType;
+      Invalid = true;
+    }
   }
 
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {

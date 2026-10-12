@@ -29,14 +29,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
-                                       cl::init(false), cl::Hidden);
-static cl::opt<bool>
-    DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
-                         cl::init(false),
-                         cl::desc("Disable two address hints for register "
-                                  "allocation"));
-
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
 static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
@@ -983,9 +975,9 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
   // Set CostPerUse to 1 only when optimizing for size and RVC exists.
-  return MF.getFunction().hasOptSize() &&
-                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
-                 !DisableCostPerUse
+  const auto &ST = MF.getSubtarget<RISCVSubtarget>();
+  return MF.getFunction().hasOptSize() && ST.hasStdExtZca() &&
+                 ST.getCLOpts().cost_per_use
              ? 1
              : 0;
 }
@@ -1047,7 +1039,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
-  if (!VRM || DisableRegAllocHints)
+  if (!VRM || !MF.getSubtarget<RISCVSubtarget>().getCLOpts().regalloc_hints)
     return BaseImplRetVal;
 
   // Add any two address hints after any copy hints.

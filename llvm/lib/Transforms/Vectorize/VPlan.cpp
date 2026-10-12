@@ -259,13 +259,6 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
-  // Look through BuildVector to avoid redundant extracts.
-  // TODO: Remove once replicate regions are unrolled explicitly.
-  if (Lane.getKind() == VPLane::Kind::First && match(Def, m_BuildVector())) {
-    auto *BuildVector = cast<VPInstruction>(Def);
-    return get(BuildVector->getOperand(Lane.getKnownLane()), true);
-  }
-
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
@@ -1462,14 +1455,13 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
   return !isDefinedInsideLoopRegions(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
-  replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  replaceUsesWithIf(New, [](VPUser &) { return true; });
   if (auto *SV = dyn_cast<VPSymbolicValue>(this))
     SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
-    VPValue *New,
-    llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+    VPValue *New, llvm::function_ref<bool(VPUser &U)> ShouldReplace) {
   assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
@@ -1481,7 +1473,7 @@ void VPValue::replaceUsesWithIf(
     VPUser *User = Users[J];
     bool RemovedUser = false;
     for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I) {
-      if (User->getOperand(I) != this || !ShouldReplace(*User, I))
+      if (User->getOperand(I) != this || !ShouldReplace(*User))
         continue;
 
       RemovedUser = true;

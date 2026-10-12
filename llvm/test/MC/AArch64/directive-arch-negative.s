@@ -79,3 +79,15 @@
 
 # CHECK: error: instruction requires: f8f32mm
 # CHECK-NEXT:   fmmla v0.4s, v1.16b, v2.16b
+
+	.arch armv9-a+cflt+nocflt
+	cfltz #1, w0
+
+# CHECK: error: instruction requires: cflt
+# CHECK-NEXT:   cfltz #1, w0
+
+	.arch armv9-a+lsc64b+nolsc64b
+        lda64b x0, [x13]
+
+# CHECK: [[@LINE-2]]:9: error: instruction requires: ls64 lsc64b
+# CHECK-NEXT:   lda64b x0, [x13]

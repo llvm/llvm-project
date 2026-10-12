@@ -16,6 +16,11 @@
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/off.ll | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/absent.ll | FileCheck --check-prefix=CHECK %s
 
+; The ELF XNACK mode bits must be zero even though XNACK is always enabled.
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=5 -filetype=obj < %t/absent.ll | llvm-readobj --file-headers - | FileCheck --check-prefix=ELF %s
+
+; ELF: Flags [ (0x449)
+
 ; Module flags are ignored - target ID has no xnack specifier
 ; CHECK: .amdgcn_target "amdgpu12.5{{[0-1]?}}-amd-amdhsa-unknown-gfx{{12-5-generic|1250|1251}}"
 

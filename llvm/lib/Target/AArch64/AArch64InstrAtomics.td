@@ -328,9 +328,6 @@ class atomic_hint_store<PatFrag Base, int Relaxed, code Pred>
             (Base node:$val, node:$ptr), Pred> {
   let IsAtomic = 1;
   let IsAtomicOrderingReleaseOrStronger = !eq(Relaxed, 0);
-
-  // TODO: Change once mem.cache_hint supported in GISel
-  let GISelPredicateCode = [{ return false; }];
 }
 
 multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
@@ -422,14 +419,23 @@ multiclass AtomicHintPatterns<int Relaxed, int Hint, code Pred> {
             (ATOMIC_STORE_HINT_X GPR64:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
 }
 
-let AddedComplexity = 15 in {
-  defm : AtomicHintPatternsAddrMode<48, [{ return isAtomicSTSHH_KEEP(N); }]>;
-  defm : AtomicHintPatternsAddrMode<49, [{ return isAtomicSTSHH_STRM(N); }]>;
+let AddedComplexity = 1, GISelShouldIgnore = 1 in {
+  defm : AtomicHintPatternsAddrMode<48, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_KEEP); }]>;
+  defm : AtomicHintPatternsAddrMode<49, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_STRM); }]>;
+  defm : AtomicHintPatternsAddrMode<52, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STCPH); }]>;
+  defm : AtomicHintPatternsAddrMode<50, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH); }]>;
+  defm : AtomicHintPatternsAddrMode<51, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>;
 
-  defm : AtomicHintPatterns<1, 48, [{ return isAtomicSTSHH_KEEP(N); }]>;
-  defm : AtomicHintPatterns<0, 48, [{ return isAtomicSTSHH_KEEP(N); }]>;
-  defm : AtomicHintPatterns<1, 49, [{ return isAtomicSTSHH_STRM(N); }]>;
-  defm : AtomicHintPatterns<0, 49, [{ return isAtomicSTSHH_STRM(N); }]>;
+  defm : AtomicHintPatterns<1, 48, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_KEEP); }]>;
+  defm : AtomicHintPatterns<0, 48, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_KEEP); }]>;
+  defm : AtomicHintPatterns<1, 49, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_STRM); }]>;
+  defm : AtomicHintPatterns<0, 49, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STSHH_STRM); }]>;
+  defm : AtomicHintPatterns<1, 52, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STCPH); }]>;
+  defm : AtomicHintPatterns<0, 52, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::STCPH); }]>;
+  defm : AtomicHintPatterns<1, 50, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH); }]>;
+  defm : AtomicHintPatterns<0, 50, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH); }]>;
+  defm : AtomicHintPatterns<1, 51, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>;
+  defm : AtomicHintPatterns<0, 51, [{ return isAtomicMemoryHint(N, AArch64MemoryHint::SHUH_PH); }]>;
 }
 
 //===----------------------------------

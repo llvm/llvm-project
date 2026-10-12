@@ -614,18 +614,6 @@ TEST_F(TargetDeclTest, ClassTemplate) {
     [[Test]](I, I) -> Test<typename I::type>;
   )cpp";
   EXPECT_DECLS("CXXDeductionGuideDecl", {"template <typename T> struct Test"});
-
-  Flags.push_back("-std=c++26"); // for pack indexing
-
-  Code = R"cpp(
-    // Deduced specialization of an indexed template template parameter pack
-    template <template <typename> class... X>
-    void foo() {
-      [[X]]...[0] a(1);
-    }
-  )cpp";
-  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
-               "template <typename> class ...X");
 }
 
 TEST_F(TargetDeclTest, Concept) {
@@ -679,6 +667,30 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptReference",
                {"template <typename T, typename U> concept Fooable = true"});
+}
+
+TEST_F(TargetDeclTest, PackIndexing) {
+  Flags.push_back("-std=c++2d");
+
+  Code = R"cpp(
+    // Deduced specialization of an indexed template template parameter pack
+    template <template <typename> class... X>
+    void foo() {
+      [[X]]...[0] a(1);
+    }
+  )cpp";
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               "template <typename> class ...X");
+
+  Code = R"cpp(
+    // Specialization of an indexed template template parameter pack
+    template <template <typename> class... X>
+    void foo() {
+      [[X]]...[0]<int> x;
+    }
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc",
+               "template <typename> class ...X");
 }
 
 TEST_F(TargetDeclTest, PackIndexedConcept) {
@@ -770,7 +782,10 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"bool operator==(const Foo &) const noexcept = default"});
+               {"std::strong_ordering operator<=>(const Foo &) const = default",
+                Rel::TemplatePattern},
+               {"bool operator==(const Foo &) const noexcept = default",
+                Rel::TemplateInstantiation});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {

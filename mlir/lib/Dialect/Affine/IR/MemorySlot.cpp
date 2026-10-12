@@ -31,7 +31,7 @@ void AffineForOp::setupPromotion(
   }
 
   getInitsMutable().append(reachingDef);
-  bodyRegion.addArgument(slot.elemType, slot.ptr.getLoc());
+  bodyRegion.addArgument(slot.valueType, slot.ptr.getLoc());
   regionsToProcess.insert({&bodyRegion, bodyRegion.getArguments().back()});
 }
 
@@ -47,7 +47,7 @@ Value AffineForOp::finalizePromotion(
   memoryslot::updateTerminator(getBody(), reachingDef, reachingAtBlockEnd);
 
   SmallVector<Type> resultTypes(getResultTypes());
-  resultTypes.push_back(slot.elemType);
+  resultTypes.push_back(slot.valueType);
 
   IRRewriter rewriter(builder);
   Operation *newOp =

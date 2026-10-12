@@ -218,6 +218,18 @@ DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
 DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
                                          FileID ID) const {
+  assert(ID != FileID::getSentinel());
+  if (LastLookupFileID != ID) {
+    // getFileUncached() can recurse into getFile(), so update the cache after.
+    LastLookupFile = getFileUncached(SrcMgr, ID);
+    LastLookupFileID = ID;
+  }
+  return LastLookupFile;
+}
+
+DiagnosticsEngine::DiagStateMap::File *
+DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
+                                                 FileID ID) const {
   // Get or insert the File for this ID.
   auto Range = Files.equal_range(ID);
   if (Range.first != Range.second)
@@ -579,11 +591,11 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
-  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
-  if (!PLoc.isValid())
-    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
+    return false;
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
     return false;
 
   StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());

@@ -1,7 +1,7 @@
 # RUN: llc -start-before=x86-asm-printer --filetype=obj %s -o - \
 # RUN:     | llvm-dwarfdump -v - | FileCheck %s
 #
-# Generated at -O2, stopped after livedebugvalues, with some metadata removed
+# Generated at -O2, stopped after live-debug-values, with some metadata removed
 # by hand:
 # int global;
 # void ext();

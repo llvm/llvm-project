@@ -514,13 +514,12 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   for (unsigned i = 0; i != MaskNumElts; ++i) {
     int Elt = Mask[i];
     if (Elt == -1) {
-      Result.push_back(UndefValue::get(EltTy));
+      Result.push_back(PoisonValue::get(EltTy));
       continue;
     }
     Constant *InElt;
-    if (unsigned(Elt) >= SrcNumElts*2)
-      InElt = UndefValue::get(EltTy);
-    else if (unsigned(Elt) >= SrcNumElts) {
+    assert(unsigned(Elt) < SrcNumElts * 2 && "Invalid shuffle mask element");
+    if (unsigned(Elt) >= SrcNumElts) {
       Type *Ty = IntegerType::get(V2->getContext(), 32);
       InElt =
         ConstantExpr::getExtractElement(V2,
@@ -996,7 +995,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
                                                       const GlobalValue *GV2) {
   auto isGlobalUnsafeForEquality = [](const GlobalValue *GV) {
-    if (GV->isInterposable() || GV->hasGlobalUnnamedAddr())
+    // noipa doesn't affect which definition (and so which address) a global
+    // resolves to, so it's ignored here.
+    if (GV->isInterposable(/*CheckNoIPA=*/false) || GV->hasGlobalUnnamedAddr())
       return true;
     if (const auto *GVar = dyn_cast<GlobalVariable>(GV)) {
       Type *Ty = GVar->getValueType();
