@@ -1806,24 +1806,77 @@ body:             |
     ; HARD-NEXT: $r1 = COPY [[UV1]](f32)
     ; HARD-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
     ;
-    ; SOFT-LABEL: name: test_fneg_double
-    ; SOFT: liveins: $r0, $r1
-    ; SOFT-NEXT: {{  $}}
-    ; SOFT-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
-    ; SOFT-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $r1
-    ; SOFT-NEXT: [[MV:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[COPY]](f32), [[COPY1]](f32)
-    ; SOFT-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[MV]](f64)
-    ; SOFT-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
-    ; SOFT-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
-    ; SOFT-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]](i64)
-    ; SOFT-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[UV]], [[C]]
-    ; SOFT-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[UV1]], [[C1]]
-    ; SOFT-NEXT: [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[XOR]](i32), [[XOR1]](i32)
-    ; SOFT-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[MV1]](i64)
-    ; SOFT-NEXT: [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST1]](f64)
-    ; SOFT-NEXT: $r0 = COPY [[UV2]](f32)
-    ; SOFT-NEXT: $r1 = COPY [[UV3]](f32)
-    ; SOFT-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+    ; SOFT-AEABI-ARM-LABEL: name: test_fneg_double
+    ; SOFT-AEABI-ARM: liveins: $r0, $r1
+    ; SOFT-AEABI-ARM-NEXT: {{  $}}
+    ; SOFT-AEABI-ARM-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-AEABI-ARM-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $r1
+    ; SOFT-AEABI-ARM-NEXT: [[MV:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[COPY]](f32), [[COPY1]](f32)
+    ; SOFT-AEABI-ARM-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[MV]](f64)
+    ; SOFT-AEABI-ARM-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SOFT-AEABI-ARM-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SOFT-AEABI-ARM-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]](i64)
+    ; SOFT-AEABI-ARM-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[UV]], [[C]]
+    ; SOFT-AEABI-ARM-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[UV1]], [[C1]]
+    ; SOFT-AEABI-ARM-NEXT: [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[XOR]](i32), [[XOR1]](i32)
+    ; SOFT-AEABI-ARM-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[MV1]](i64)
+    ; SOFT-AEABI-ARM-NEXT: [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST1]](f64)
+    ; SOFT-AEABI-ARM-NEXT: $r0 = COPY [[UV2]](f32)
+    ; SOFT-AEABI-ARM-NEXT: $r1 = COPY [[UV3]](f32)
+    ; SOFT-AEABI-ARM-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+    ;
+    ; SOFT-DEFAULT-ARM-LABEL: name: test_fneg_double
+    ; SOFT-DEFAULT-ARM: liveins: $r0, $r1
+    ; SOFT-DEFAULT-ARM-NEXT: {{  $}}
+    ; SOFT-DEFAULT-ARM-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-DEFAULT-ARM-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $r1
+    ; SOFT-DEFAULT-ARM-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-DEFAULT-ARM-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY1]](f32)
+    ; SOFT-DEFAULT-ARM-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT-ARM-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SOFT-DEFAULT-ARM-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[BITCAST]], [[C]]
+    ; SOFT-DEFAULT-ARM-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[BITCAST1]], [[C1]]
+    ; SOFT-DEFAULT-ARM-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[XOR]](i32)
+    ; SOFT-DEFAULT-ARM-NEXT: [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[XOR1]](i32)
+    ; SOFT-DEFAULT-ARM-NEXT: $r0 = COPY [[BITCAST2]](f32)
+    ; SOFT-DEFAULT-ARM-NEXT: $r1 = COPY [[BITCAST3]](f32)
+    ; SOFT-DEFAULT-ARM-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+    ;
+    ; SOFT-AEABI-THUMB-LABEL: name: test_fneg_double
+    ; SOFT-AEABI-THUMB: liveins: $r0, $r1
+    ; SOFT-AEABI-THUMB-NEXT: {{  $}}
+    ; SOFT-AEABI-THUMB-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-AEABI-THUMB-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $r1
+    ; SOFT-AEABI-THUMB-NEXT: [[MV:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[COPY]](f32), [[COPY1]](f32)
+    ; SOFT-AEABI-THUMB-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[MV]](f64)
+    ; SOFT-AEABI-THUMB-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SOFT-AEABI-THUMB-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SOFT-AEABI-THUMB-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]](i64)
+    ; SOFT-AEABI-THUMB-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[UV]], [[C]]
+    ; SOFT-AEABI-THUMB-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[UV1]], [[C1]]
+    ; SOFT-AEABI-THUMB-NEXT: [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[XOR]](i32), [[XOR1]](i32)
+    ; SOFT-AEABI-THUMB-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[MV1]](i64)
+    ; SOFT-AEABI-THUMB-NEXT: [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST1]](f64)
+    ; SOFT-AEABI-THUMB-NEXT: $r0 = COPY [[UV2]](f32)
+    ; SOFT-AEABI-THUMB-NEXT: $r1 = COPY [[UV3]](f32)
+    ; SOFT-AEABI-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
+    ;
+    ; SOFT-DEFAULT-THUMB-LABEL: name: test_fneg_double
+    ; SOFT-DEFAULT-THUMB: liveins: $r0, $r1
+    ; SOFT-DEFAULT-THUMB-NEXT: {{  $}}
+    ; SOFT-DEFAULT-THUMB-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $r0
+    ; SOFT-DEFAULT-THUMB-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $r1
+    ; SOFT-DEFAULT-THUMB-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+    ; SOFT-DEFAULT-THUMB-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY1]](f32)
+    ; SOFT-DEFAULT-THUMB-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT-THUMB-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SOFT-DEFAULT-THUMB-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[BITCAST]], [[C]]
+    ; SOFT-DEFAULT-THUMB-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[BITCAST1]], [[C1]]
+    ; SOFT-DEFAULT-THUMB-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[XOR]](i32)
+    ; SOFT-DEFAULT-THUMB-NEXT: [[BITCAST3:%[0-9]+]]:_(f32) = G_BITCAST [[XOR1]](i32)
+    ; SOFT-DEFAULT-THUMB-NEXT: $r0 = COPY [[BITCAST2]](f32)
+    ; SOFT-DEFAULT-THUMB-NEXT: $r1 = COPY [[BITCAST3]](f32)
+    ; SOFT-DEFAULT-THUMB-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
     %0(f32) = COPY $r0
     %1(f32) = COPY $r1
     %2(f64) = G_MERGE_VALUES %0(f32), %1(f32)
