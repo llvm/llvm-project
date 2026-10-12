@@ -403,6 +403,13 @@ void CIRGenModule::constructAttributeList(
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
               cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
 
+    // Both __attribute__((malloc)) and __declspec(restrict) are represented by
+    // RestrictAttr. Only forms without a deallocator imply a noalias return.
+    if (const auto *restrictAttr = targetDecl->getAttr<RestrictAttr>();
+        restrictAttr && restrictAttr->getDeallocator() == nullptr)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
+
     if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !codeGenOpts.NullPointerIsValid)
       retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
@@ -662,15 +669,6 @@ void CIRGenModule::constructFunctionReturnAttributes(
                          getNaturalPointeeTypeAlignment(retTy).getQuantity()));
     }
   }
-
-  // __attribute__((malloc)) / __declspec(restrict) -> noalias on the return
-  // value. Classic skips the attribute when a deallocator is specified
-  // (malloc(dealloc) / malloc(dealloc, N)).
-  if (const auto *restrictAttr =
-          targetDecl ? targetDecl->getAttr<RestrictAttr>() : nullptr;
-      restrictAttr && restrictAttr->getDeallocator() == nullptr)
-    retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
-                 mlir::UnitAttr::get(&getMLIRContext()));
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes(
