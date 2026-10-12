@@ -3592,12 +3592,7 @@ struct AAIntraFnReachabilityFunction final
     }
     DeadEdges.clear();
     DeadBlocks.clear();
-    // Liveness does not change while the queries are updated, so queries from
-    // the same block can share the exploration.
-    SharedExplorations.emplace();
-    ChangeStatus Changed = Base::updateImpl(A);
-    SharedExplorations.reset();
-    return Changed;
+    return Base::updateImpl(A);
   }
 
   bool isReachableImpl(Attributor &A, RQITy &RQI,
@@ -3657,50 +3652,16 @@ struct AAIntraFnReachabilityFunction final
                             IsTemporaryRQI);
     }
 
-    if (SharedExplorations) {
-      const Exploration &E = getSharedExploration(FromBB, RQI.ExclusionSet,
-                                                  ExclusionBlocks, LivenessAA);
-      UsedExclusionSet |= E.UsedExclusionSet;
-      if (E.Successors.contains(ToBB) ||
-          (DT && ExclusionBlocks.empty() && isDominatedByAny(E, ToBB)))
-        return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
-                              IsTemporaryRQI);
-      DeadEdges.insert_range(E.DeadEdges);
-      return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
+    // The exploration from FromBB is shared by all queries with the same
+    // exclusion set until the liveness of an edge changes.
+    const Exploration &E = getExploration(A, FromBB, RQI.ExclusionSet,
+                                          ExclusionBlocks, LivenessAA);
+    UsedExclusionSet |= E.UsedExclusionSet;
+    if (E.Successors.contains(ToBB) ||
+        (DT && ExclusionBlocks.empty() && isDominatedByAny(E, ToBB)))
+      return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
                             IsTemporaryRQI);
-    }
-
-    SmallPtrSet<const BasicBlock *, 16> Visited;
-    SmallVector<const BasicBlock *, 16> Worklist;
-    Worklist.push_back(FromBB);
-
-    DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
-    while (!Worklist.empty()) {
-      const BasicBlock *BB = Worklist.pop_back_val();
-      if (!Visited.insert(BB).second)
-        continue;
-      for (const BasicBlock *SuccBB : successors(BB)) {
-        if (LivenessAA && LivenessAA->isEdgeDead(BB, SuccBB)) {
-          LocalDeadEdges.insert({BB, SuccBB});
-          continue;
-        }
-        // We checked before if we just need to reach the ToBB block.
-        if (SuccBB == ToBB)
-          return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
-                                IsTemporaryRQI);
-        if (DT && ExclusionBlocks.empty() && DT->dominates(BB, ToBB))
-          return rememberResult(A, RQITy::Reachable::Yes, RQI, UsedExclusionSet,
-                                IsTemporaryRQI);
-
-        if (ExclusionBlocks.count(SuccBB)) {
-          UsedExclusionSet = true;
-          continue;
-        }
-        Worklist.push_back(SuccBB);
-      }
-    }
-
-    DeadEdges.insert_range(LocalDeadEdges);
+    DeadEdges.insert_range(E.DeadEdges);
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -3721,15 +3682,24 @@ private:
     bool UsedExclusionSet = false;
   };
 
-  const Exploration &getSharedExploration(
-      const BasicBlock *FromBB, const AA::InstExclusionSetTy *ExclusionSet,
-      const SmallPtrSetImpl<const BasicBlock *> &ExclusionBlocks,
-      const AAIsDead *LivenessAA) {
+  const Exploration &
+  getExploration(Attributor &A, const BasicBlock *FromBB,
+                 const AA::InstExclusionSetTy *ExclusionSet,
+                 const SmallPtrSetImpl<const BasicBlock *> &ExclusionBlocks,
+                 const AAIsDead *LivenessAA) {
+    uint64_t LivenessVersion =
+        LivenessAA ? LivenessAA->getEdgeLivenessVersion() : 0;
+    if (LivenessVersion != ExplorationsLivenessVersion) {
+      Explorations.clear();
+      ExplorationsLivenessVersion = LivenessVersion;
+    }
     // The exclusion set only matters through the blocks in this function.
     if (ExclusionBlocks.empty())
       ExclusionSet = nullptr;
-    auto [It, Inserted] =
-        SharedExplorations->try_emplace({FromBB, ExclusionSet});
+    else
+      ExclusionSet =
+          A.getInfoCache().getOrCreateUniqueBlockExecutionSet(ExclusionSet);
+    auto [It, Inserted] = Explorations.try_emplace({FromBB, ExclusionSet});
     Exploration &E = It->second;
     if (!Inserted)
       return E;
@@ -3770,11 +3740,12 @@ private:
     return false;
   }
 
-  /// The explorations shared by the queries during an update, if any.
-  std::optional<
-      DenseMap<std::pair<const BasicBlock *, const AA::InstExclusionSetTy *>,
-               Exploration>>
-      SharedExplorations;
+  /// The explorations shared by the queries, and the liveness version they
+  /// were computed for.
+  DenseMap<std::pair<const BasicBlock *, const AA::InstExclusionSetTy *>,
+           Exploration>
+      Explorations;
+  uint64_t ExplorationsLivenessVersion = 0;
 
   // Set of assumed dead blocks we used in the last query. If any changes we
   // update the state.
@@ -4577,6 +4548,12 @@ struct AAIsDeadFunction : public AAIsDead {
            To->getParent() == getAnchorScope() &&
            "Used AAIsDead of the wrong function");
     return isValidState() && !AssumedLiveEdges.count(std::make_pair(From, To));
+  }
+
+  uint64_t getEdgeLivenessVersion() const override {
+    // Assumed live edges are only ever added, and all edges are live once the
+    // state is invalid.
+    return isValidState() ? AssumedLiveEdges.size() : UINT64_MAX;
   }
 
   void trackStatistics() const override {}
