@@ -1,14 +1,14 @@
 // RUN: echo -n "GPU binary would be here." > %t
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fclangir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -fclangir \
 // RUN:            -x hip -emit-cir %s -o %t.dev.cir
 // RUN: FileCheck --check-prefix=CIR-DEV --input-file=%t.dev.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fclangir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -fclangir \
 // RUN:            -x hip -emit-llvm %s -o %t.dev.cir.ll
 // RUN: FileCheck --check-prefix=DEV --input-file=%t.dev.cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:            -x hip -emit-llvm %s -o %t.dev.ll
 // RUN: FileCheck --check-prefix=DEV --input-file=%t.dev.ll %s
 

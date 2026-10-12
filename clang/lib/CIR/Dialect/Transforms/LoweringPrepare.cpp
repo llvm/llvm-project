@@ -3251,26 +3251,9 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   cir::CIRBaseBuilderTy globalBuilder(getContext());
   globalBuilder.setInsertionPointToStart(mlirModule.getBody());
 
-  // void __{cuda|hip}RegisterVar(void **fatbinHandle,
-  //                              char *hostVar, char *deviceAddress,
-  //                              const char *deviceName, int ext,
-  //                              size_t size, int constant, int normalized);
-  // OG ignores parameter types, treating pointers as void*.
   cir::VoidType voidTy = builder.getVoidTy();
-  FuncOp cudaRegisterVar = buildRuntimeFunction(
-      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
-      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
-                     sizeTy, intTy, intTy},
-                    voidTy));
-  // void __hipRegisterManagedVar(void **fatbinHandle, char *managedVar,
-  //                              char *var, const char *deviceName,
-  //                              size_t size, unsigned align);
-  FuncOp cudaRegisterManagedVar = buildRuntimeFunction(
-      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterManagedVar"),
-      loc,
-      FuncType::get(
-          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
-          voidTy));
+  FuncOp cudaRegisterVar;
+  FuncOp cudaRegisterManagedVar;
 
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
@@ -3309,6 +3292,16 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
     llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
 
     if (regAttr.getIsManaged()) {
+      // void __hipRegisterManagedVar(void **fatbinHandle, char *managedVar,
+      //                              char *var, const char *deviceName,
+      //                              size_t size, unsigned align);
+      if (!cudaRegisterManagedVar)
+        cudaRegisterManagedVar = buildRuntimeFunction(
+            globalBuilder,
+            addUnderscoredPrefix(cudaPrefix, "RegisterManagedVar"), loc,
+            FuncType::get(
+                {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, sizeTy, intTy},
+                voidTy));
       llvm::StringRef name = global.getSymName();
       assert(name.ends_with(".managed") &&
              "HIP managed variables not transformed");
@@ -3323,19 +3316,31 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
       builder.createCallOp(
           loc, cudaRegisterManagedVar,
           {fatbinHandle, managedPtr, hostVar, deviceName, varSize, align});
-      continue;
+    } else {
+      // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+      //                              char *hostVar, char *deviceAddress,
+      //                              const char *deviceName, int ext,
+      //                              size_t size, int constant,
+      //                              int normalized);
+      // OG ignores parameter types, treating pointers as void*.
+      if (!cudaRegisterVar)
+        cudaRegisterVar = buildRuntimeFunction(
+            globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
+            FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
+                           sizeTy, intTy, intTy},
+                          voidTy));
+      auto isExtern = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
+      auto varSize = ConstantOp::create(
+          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+      auto isConstant = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+      auto normalized =
+          ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+      builder.createCallOp(loc, cudaRegisterVar,
+                           {fatbinHandle, hostVar, deviceName, deviceName,
+                            isExtern, varSize, isConstant, normalized});
     }
-
-    auto isExtern = ConstantOp::create(
-        builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-    auto varSize = ConstantOp::create(
-        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
-    auto isConstant = ConstantOp::create(
-        builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
-    auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
-    builder.createCallOp(loc, cudaRegisterVar,
-                         {fatbinHandle, hostVar, deviceName, deviceName,
-                          isExtern, varSize, isConstant, normalized});
   }
 }
 
