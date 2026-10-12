@@ -3281,3 +3281,66 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// The zero initialized accumulation results are not written to memory: not
+// supported.
+
+!vecAB = vector<16x16x4xi8>
+!vecC = vector<16x16xi32>
+!memrefA = memref<16x16x4xi8, strided<[256, 4, 1], offset: ?>>
+!memrefB = memref<16x32x4xi8, strided<[512, 4, 1], offset: ?>>
+
+#map = affine_map<(d0, d1, d2, d3) -> (d1, d3, d0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+func.func @negative_matmul_int8_loop_result_not_written(
+    %arg0: memref<64x64x4xi8>, %arg1: memref<64x128x4xi8>) -> (!vecC, !vecC) {
+  %cst = arith.constant dense<0> : !vecC
+  %1 = ub.poison : i8
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  %c16 = arith.constant 16 : index
+
+  %4:2 = scf.for %arg5 = %c0 to %c64 step %c16 iter_args(%arg6 = %cst, %arg7 = %cst) -> (!vecC, !vecC) {
+
+    %subview_0 = memref.subview %arg0[0, %arg5, 0] [16, 16, 4] [1, 1, 1] :
+            memref<64x64x4xi8> to !memrefA
+    %subview_1 = memref.subview %arg1[%arg5, 0, 0] [16, 32, 4] [1, 1, 1] :
+            memref<64x128x4xi8> to !memrefB
+    %5 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefA, !vecAB
+    %6 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+    %7 = vector.transfer_read %subview_1[%c0, %c16, %c0], %1 {in_bounds = [true, true, true]} :
+            !memrefB, !vecAB
+
+    %8 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %5, %6, %arg6 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+    %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+            ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+            %5, %7, %arg7 {unroll_shape = array<i64: 4, 16, 16, 16>} : !vecAB, !vecAB into !vecC
+
+    scf.yield %8, %9 : !vecC, !vecC
+  }
+
+  return %4#0, %4#1 : !vecC, !vecC
+}
+
+// CHECK-LABEL: @negative_matmul_int8_loop_result_not_written
+// CHECK-NOT: x86.amx
+// CHECK-COUNT-2: vector.contract
+// CHECK-NOT: x86.amx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}

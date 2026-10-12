@@ -1130,6 +1130,10 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "Rewrite is supported until reduction loop depth of 2.");
 
+    if (isAccZeroVectorConstant && !accWrite)
+      return rewriter.notifyMatchFailure(
+          contractOp, "The result of the contract is not written to memory.");
+
     auto srcIndxLhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                       contractOp.getLhs(), false);
     if (failed(srcIndxLhs))
