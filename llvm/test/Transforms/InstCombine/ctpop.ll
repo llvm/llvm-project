@@ -266,10 +266,9 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 define i32 @ctpop_add_trunc(i64 %a, i64 %b) {
 ; CHECK-LABEL: @ctpop_add_trunc(
 ; CHECK-NEXT:    [[CTPOP1:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[A:%.*]])
-; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw i64 [[CTPOP1]] to i32
 ; CHECK-NEXT:    [[CTPOP2:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[T2:%.*]] = trunc nuw nsw i64 [[CTPOP2]] to i32
-; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[CTPOP1]], [[CTPOP2]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %ctpop1 = call i64 @llvm.ctpop.i64(i64 %a)
@@ -536,19 +535,12 @@ define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
   ret i32 %r
 }
 
-; TODO: We can combine these two ctpops through the truncs
-
 define i32 @ctpop_add_no_common_bits_shifted_trunc(i64 %x) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_trunc(
-; CHECK-NEXT:    [[LO:%.*]] = and i64 [[X:%.*]], 15
-; CHECK-NEXT:    [[C0:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[LO]])
-; CHECK-NEXT:    [[T0:%.*]] = trunc nuw nsw i64 [[C0]] to i32
-; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[X]], 8
-; CHECK-NEXT:    [[HI:%.*]] = and i64 [[S]], 15
-; CHECK-NEXT:    [[C1:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[HI]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 3855
+; CHECK-NEXT:    [[C1:%.*]] = call range(i64 0, 9) i64 @llvm.ctpop.i64(i64 [[TMP1]])
 ; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw i64 [[C1]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[T0]], [[T1]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[T1]]
 ;
   %lo = and i64 %x, 15
   %c0 = call i64 @llvm.ctpop.i64(i64 %lo)
