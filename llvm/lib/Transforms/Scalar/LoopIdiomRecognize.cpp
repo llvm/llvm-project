@@ -3249,8 +3249,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   assert(CurLoop->isLoopInvariant(BaseX) &&
          "Expected BaseX to be available in the preheader!");
 
-  if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
-    // FIXME: support right-shift?
+  if (!NextX || (!match(NextX, m_Shl(m_Specific(CurrX), m_One())) &&
+                 !match(NextX, m_LShr(m_Specific(CurrX), m_One())))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad recurrence.\n");
     return false;
   }
@@ -3327,6 +3327,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 ///     %x.next.res = phi i32 [ %x.next, %loop ] <...>
 ///     <...>
 /// \endcode
+/// A logical right-shift recurrence uses cttz of X shifted by BitPos instead,
+/// provided the preheader proves that the loop will reach a set bit.
 bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   bool MadeChange = false;
 
@@ -3353,9 +3355,42 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   IRBuilder<> Builder(LoopPreheaderBB->getTerminator());
   Builder.SetCurrentDebugLocation(cast<Instruction>(XCurr)->getDebugLoc());
 
-  Intrinsic::ID IntrID = Intrinsic::ctlz;
+  bool IsRightShift = XNext->getOpcode() == Instruction::LShr;
+  Intrinsic::ID IntrID = IsRightShift ? Intrinsic::cttz : Intrinsic::ctlz;
   Type *Ty = X->getType();
   unsigned Bitwidth = Ty->getScalarSizeInBits();
+
+  // A right shift can only reach a set bit at BitPos if some bit at or above
+  // BitPos is set. Require X to be nonzero and a precondition checking that
+  // the bits below BitPos are zero, so the loop is known to terminate.
+  if (IsRightShift) {
+    auto *Pos = dyn_cast<ConstantInt>(BitPos);
+    if (!Pos || Bitwidth == 1 || Pos->getValue().uge(Bitwidth))
+      return false;
+    SimplifyQuery SQ(*DL, DT, /*AC=*/nullptr, LoopPreheaderBB->getTerminator());
+    APInt LowBits = APInt::getLowBitsSet(Bitwidth, Pos->getZExtValue());
+    if (!isKnownNonZero(X, SQ))
+      return false;
+    if (!LowBits.isZero()) {
+      BasicBlock *Pred = LoopPreheaderBB->getSinglePredecessor();
+      auto *BI = Pred ? dyn_cast<CondBrInst>(Pred->getTerminator()) : nullptr;
+      CmpPredicate P;
+      const APInt *Mask;
+      if (!BI ||
+          !PatternMatch::match(
+              BI->getCondition(),
+              PatternMatch::m_ICmp(
+                  P,
+                  PatternMatch::m_c_And(PatternMatch::m_Specific(X),
+                                        PatternMatch::m_APInt(Mask)),
+                  PatternMatch::m_Zero())) ||
+          (P != ICmpInst::ICMP_EQ && P != ICmpInst::ICMP_NE) ||
+          ((P == ICmpInst::ICMP_EQ) !=
+           (BI->getSuccessor(0) == LoopPreheaderBB)) ||
+          (*Mask & LowBits) != LowBits)
+        return false;
+    }
+  }
 
   TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_SizeAndLatency;
@@ -3371,7 +3406,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
                " Intrinsic is too costly, not beneficial\n");
     return MadeChange;
   }
-  if (TTI->getArithmeticInstrCost(Instruction::Shl, Ty, CostKind) >
+  if (TTI->getArithmeticInstrCost(XNext->getOpcode(), Ty, CostKind) >
       TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Shift is too costly, not beneficial\n");
     return MadeChange;
@@ -3400,26 +3435,35 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // Step 1: Compute the loop trip count.
 
-  Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
-                                        BitPos->getName() + ".lowbitmask");
-  Value *Mask =
-      Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
-  Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
-      /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
-  Value *XMaskedNumActiveBits = Builder.CreateSub(
-      ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
-      XMasked->getName() + ".numactivebits", /*HasNUW=*/true,
-      /*HasNSW=*/Bitwidth != 2);
-  Value *XMaskedLeadingOnePos =
-      Builder.CreateAdd(XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
-                        XMasked->getName() + ".leadingonepos", /*HasNUW=*/false,
-                        /*HasNSW=*/Bitwidth > 2);
+  Value *LoopBackedgeTakenCount;
+  if (IsRightShift) {
+    Value *ShiftedX = Builder.CreateLShr(X, BitPos);
+    LoopBackedgeTakenCount = Builder.CreateIntrinsic(
+        IntrID, Ty, {ShiftedX, /*is_zero_poison=*/Builder.getTrue()});
+  } else {
+    Value *LowBitMask =
+        Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
+                          BitPos->getName() + ".lowbitmask");
+    Value *Mask =
+        Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
+    Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
+    Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+        IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
+        /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
+    Value *XMaskedNumActiveBits = Builder.CreateSub(
+        ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
+        XMasked->getName() + ".numactivebits",
+        /*HasNUW=*/true, /*HasNSW=*/Bitwidth != 2);
+    Value *XMaskedLeadingOnePos = Builder.CreateAdd(
+        XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
+        XMasked->getName() + ".leadingonepos", /*HasNUW=*/false,
+        /*HasNSW=*/Bitwidth > 2);
 
-  Value *LoopBackedgeTakenCount = Builder.CreateSub(
-      BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount",
-      /*HasNUW=*/true, /*HasNSW=*/true);
+    LoopBackedgeTakenCount = Builder.CreateSub(
+        BitPos, XMaskedLeadingOnePos,
+        CurLoop->getName() + ".backedgetakencount", /*HasNUW=*/true,
+        /*HasNSW=*/true);
+  }
   // We know loop's backedge-taken count, but what's loop's trip count?
   // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
   Value *LoopTripCount =
@@ -3431,21 +3475,24 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // NewX is always safe to compute, because `LoopBackedgeTakenCount`
   // will always be smaller than `bitwidth(X)`, i.e. we never get poison.
-  Value *NewX = Builder.CreateShl(X, LoopBackedgeTakenCount);
+  Value *NewX = IsRightShift ? Builder.CreateLShr(X, LoopBackedgeTakenCount)
+                             : Builder.CreateShl(X, LoopBackedgeTakenCount);
   NewX->takeName(XCurr);
   if (auto *I = dyn_cast<Instruction>(NewX))
     I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
   Value *NewXNext;
-  // Rewriting XNext is more complicated, however, because `X << LoopTripCount`
-  // will be poison iff `LoopTripCount == bitwidth(X)` (which will happen
-  // iff `BitPos` is `bitwidth(x) - 1` and `X` is `1`). So unless we know
-  // that isn't the case, we'll need to emit an alternative, safe IR.
-  if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
-      PatternMatch::match(
-          BitPos, PatternMatch::m_SpecificInt_ICMP(
-                      ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
-                                               Ty->getScalarSizeInBits() - 1))))
+  // A left shift by LoopTripCount is poison if the count equals Bitwidth.
+  // This can happen when BitPos is the highest bit and X is one, so use a
+  // single additional shift unless the larger shift is known to be safe.
+  if (IsRightShift)
+    NewXNext = Builder.CreateLShr(NewX, ConstantInt::get(Ty, 1));
+  else if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
+           PatternMatch::match(
+               BitPos,
+               PatternMatch::m_SpecificInt_ICMP(
+                   ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
+                                            Ty->getScalarSizeInBits() - 1))))
     NewXNext = Builder.CreateShl(X, LoopTripCount);
   else {
     // Otherwise, just additionally shift by one. It's the smallest solution,
