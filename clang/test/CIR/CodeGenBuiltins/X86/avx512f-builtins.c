@@ -1101,10 +1101,14 @@ __m128i test_mm512_maskz_cvtepi32_epi8(__mmask16 k, __m512i a) {
   // CIR-SAME: (!cir.vector<16 x !s32i>, !cir.vector<16 x !s8i>, !u16i) -> !cir.vector<16 x !s8i>
   //
   // LLVM-LABEL: test_mm512_maskz_cvtepi32_epi8
-  // LLVM: call <16 x i8> @llvm.x86.avx512.mask.pmov.db.512(<16 x i32> %{{.*}}, <16 x i8> %{{.*}}, i16 %{{.*}})
+  // LLVM: store <2 x i64> zeroinitializer
+  // LLVM: %[[ZERO:.*]] = bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // LLVM: call <16 x i8> @llvm.x86.avx512.mask.pmov.db.512(<16 x i32> %{{.*}}, <16 x i8> %[[ZERO]], i16 %{{.*}})
   //
   // OGCG-LABEL: test_mm512_maskz_cvtepi32_epi8
-  // OGCG: call <16 x i8> @llvm.x86.avx512.mask.pmov.db.512(<16 x i32> %{{.*}}, <16 x i8> %{{.*}}, i16 %{{.*}})
+  // OGCG: store <2 x i64> zeroinitializer
+  // OGCG: %[[ZERO:.*]] = bitcast <2 x i64> %{{.*}} to <16 x i8>
+  // OGCG: call <16 x i8> @llvm.x86.avx512.mask.pmov.db.512(<16 x i32> %{{.*}}, <16 x i8> %[[ZERO]], i16 %{{.*}})
   return _mm512_maskz_cvtepi32_epi8(k, a);
 }
 
@@ -1142,10 +1146,14 @@ __m256i test_mm512_maskz_cvtepi32_epi16(__mmask16 k, __m512i a) {
   // CIR-SAME: (!cir.vector<16 x !s32i>, !cir.vector<16 x !s16i>, !u16i) -> !cir.vector<16 x !s16i>
   //
   // LLVM-LABEL: test_mm512_maskz_cvtepi32_epi16
-  // LLVM: call <16 x i16> @llvm.x86.avx512.mask.pmov.dw.512(<16 x i32> %{{.*}}, <16 x i16> %{{.*}}, i16 %{{.*}})
+  // LLVM: store <4 x i64> zeroinitializer
+  // LLVM: %[[ZERO:.*]] = bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // LLVM: call <16 x i16> @llvm.x86.avx512.mask.pmov.dw.512(<16 x i32> %{{.*}}, <16 x i16> %[[ZERO]], i16 %{{.*}})
   //
   // OGCG-LABEL: test_mm512_maskz_cvtepi32_epi16
-  // OGCG: call <16 x i16> @llvm.x86.avx512.mask.pmov.dw.512(<16 x i32> %{{.*}}, <16 x i16> %{{.*}}, i16 %{{.*}})
+  // OGCG: store <4 x i64> zeroinitializer
+  // OGCG: %[[ZERO:.*]] = bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // OGCG: call <16 x i16> @llvm.x86.avx512.mask.pmov.dw.512(<16 x i32> %{{.*}}, <16 x i16> %[[ZERO]], i16 %{{.*}})
   return _mm512_maskz_cvtepi32_epi16(k, a);
 }
 
@@ -1183,10 +1191,14 @@ __m128i test_mm512_maskz_cvtepi64_epi16(__mmask8 k, __m512i a) {
   // CIR-SAME: (!cir.vector<8 x !s64i>, !cir.vector<8 x !s16i>, !u8i) -> !cir.vector<8 x !s16i>
   //
   // LLVM-LABEL: test_mm512_maskz_cvtepi64_epi16
-  // LLVM: call <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64> %{{.*}}, <8 x i16> %{{.*}}, i8 %{{.*}})
+  // LLVM: store <2 x i64> zeroinitializer
+  // LLVM: %[[ZERO:.*]] = bitcast <2 x i64> %{{.*}} to <8 x i16>
+  // LLVM: call <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64> %{{.*}}, <8 x i16> %[[ZERO]], i8 %{{.*}})
   //
   // OGCG-LABEL: test_mm512_maskz_cvtepi64_epi16
-  // OGCG: call <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64> %{{.*}}, <8 x i16> %{{.*}}, i8 %{{.*}})
+  // OGCG: store <2 x i64> zeroinitializer
+  // OGCG: %[[ZERO:.*]] = bitcast <2 x i64> %{{.*}} to <8 x i16>
+  // OGCG: call <8 x i16> @llvm.x86.avx512.mask.pmov.qw.512(<8 x i64> %{{.*}}, <8 x i16> %[[ZERO]], i8 %{{.*}})
   return _mm512_maskz_cvtepi64_epi16(k, a);
 }
 
