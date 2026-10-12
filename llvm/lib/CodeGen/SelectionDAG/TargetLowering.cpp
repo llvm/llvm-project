@@ -5454,6 +5454,34 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               DAG.getConstant(MinVal, dl, N0.getValueType()),
                               ISD::SETEQ);
       }
+      // X < C --> X <= (C-1) when C is not a legal compare immediate but C-1
+      // is. The gate excludes C == INT_MIN (signed) and C == 0 (unsigned),
+      // where C-1 would wrap.
+      if (!VT.isVector() && OpVT.isSimple() && C1.getBitWidth() <= 64 &&
+          (Cond == ISD::SETLT || Cond == ISD::SETULT) &&
+          !(Cond == ISD::SETLT && C1.isMinSignedValue()) &&
+          !(Cond == ISD::SETULT && C1.isZero())) {
+        bool IsSigned = (Cond == ISD::SETLT);
+        // Unsigned constants above INT64_MAX don't fit the int64_t that
+        // isLegalICmpImmediate takes, so skip them.
+        if (IsSigned || C1.getActiveBits() <= 63) {
+          auto ImmOf = [&](const APInt &V) -> int64_t {
+            return IsSigned ? V.getSExtValue()
+                            : static_cast<int64_t>(V.getZExtValue());
+          };
+          APInt C = C1 - 1;
+          ISD::CondCode NewCC = IsSigned ? ISD::SETLE : ISD::SETULE;
+          if (!isLegalICmpImmediate(ImmOf(C1)) &&
+              isLegalICmpImmediate(ImmOf(C)) &&
+              isCondCodeLegal(NewCC, OpVT.getSimpleVT())) {
+            return DAG.getSetCC(
+                dl, VT, N0,
+                DAG.getConstant(C, dl, N1.getValueType(),
+                                /*isTarget=*/false, /*isOpaque=*/true),
+                NewCC);
+          }
+        }
+      }
     }
 
     if (Cond == ISD::SETGT || Cond == ISD::SETUGT) {
