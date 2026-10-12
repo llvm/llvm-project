@@ -709,14 +709,7 @@ PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
   clang::TagTypeKind ttk = TranslateUdtKind(record.asTag());
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
-  // unions can't be dynamic
-  if (record.contextKind() != CompilerContextKind::ClassOrStruct)
-    metadata.SetIsDynamicCXXType(false);
-  // If a class has a vtable, it is dynamic.
-  else if (!record.asClass().getVTableShape().isNoneType())
-    metadata.SetIsDynamicCXXType(true);
-  // else
-  //   wait until the record is completed as it might have virtual bases
+  metadata.SetIsDynamicCXXType(IsDynamicTagRecord(record));
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), uname, llvm::to_underlying(ttk),
@@ -1794,4 +1787,48 @@ PdbAstBuilderClang::FindNamespaceDecl(CompilerDeclContext parent_ctx,
       return FindNamespaceDecl(ToCompilerDeclContext(namespace_decl), name);
 
   return {};
+}
+
+bool PdbAstBuilderClang::IsDynamicTagRecord(const CVTagRecord &tag) {
+  // Unions or enums can't be dynamic.
+  if (tag.contextKind() != CompilerContextKind::ClassOrStruct)
+    return false;
+
+  // If a class has a vtable, it is dynamic.
+  if (!tag.asClass().getVTableShape().isNoneType())
+    return true;
+
+  // Otherwise, check if there are any (possibly indirect) virtual bases on the
+  // type.
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+
+  std::optional<CVType> cvt = index.tpi().tryGetType(tag.asTag().FieldList);
+  if (!cvt)
+    return false;
+
+  FieldListRecord fl;
+  if (llvm::Error ec =
+          TypeDeserializer::deserializeAs<FieldListRecord>(*cvt, fl)) {
+    llvm::consumeError(std::move(ec));
+    return false;
+  }
+
+  struct Visitor : public TypeVisitorCallbacks {
+    llvm::Error visitKnownMember(CVMemberRecord &CVM,
+                                 VirtualBaseClassRecord &Record) override {
+      m_has_vbase = true;
+      return llvm::Error::success();
+    }
+
+    bool m_has_vbase = false;
+  };
+
+  Visitor visitor;
+  llvm::Error ec = llvm::codeview::visitMemberRecordStream(fl.Data, visitor);
+  if (ec)
+    llvm::consumeError(std::move(ec));
+
+  return visitor.m_has_vbase;
 }

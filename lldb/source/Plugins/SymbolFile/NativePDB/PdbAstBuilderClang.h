@@ -167,6 +167,8 @@ private:
 
   clang::QualType CreateSimpleType(TypeIndex ti);
 
+  bool IsDynamicTagRecord(const CVTagRecord &tag);
+
   TypeSystemClang &m_clang;
 
   ClangASTImporter m_importer;
