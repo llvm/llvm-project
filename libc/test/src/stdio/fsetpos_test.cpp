@@ -11,10 +11,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
 #include "hdr/types/fpos_t.h"
+#include "hdr/types/off_t.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/wint_t.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/libc_errno.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/feof.h"
 #include "src/stdio/ferror.h"
@@ -24,6 +29,7 @@
 #include "src/stdio/fseek.h"
 #include "src/stdio/fsetpos.h"
 #include "src/stdio/fwrite.h"
+#include "src/stdio/remove.h"
 #include "src/stdio/setvbuf.h"
 #include "src/stdio/ungetc.h"
 #include "src/wchar/fgetwc.h"
@@ -36,21 +42,23 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::cpp::scope_exit;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 class LlvmLibcFsetposTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 protected:
   void test_with_bufmode(int bufmode) {
-    constexpr char FILENAME[] = "testdata/fsetpos_bufmode.test";
+    constexpr char FILENAME[] = "fsetpos_bufmode.test";
     auto FILEPATH = libc_make_test_file_path(FILENAME);
 
     constexpr size_t BUFFER_SIZE = 1024;
     char buffer[BUFFER_SIZE];
 
     ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w+");
-    ASSERT_FALSE(file == nullptr);
-    scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+    ASSERT_NE(file, nullptr);
+    scope_exit close_file([&] {
+      ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+      ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+    });
 
     ASSERT_EQ(0, LIBC_NAMESPACE::setvbuf(file, buffer, bufmode, BUFFER_SIZE));
 
@@ -82,12 +90,15 @@ protected:
 };
 
 TEST_F(LlvmLibcFsetposTest, BasicRepositioningAndRoundTrip) {
-  constexpr char FILENAME[] = "testdata/fsetpos_basic.test";
+  constexpr char FILENAME[] = "fsetpos_basic.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "wb+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
@@ -124,12 +135,15 @@ TEST_F(LlvmLibcFsetposTest, BasicRepositioningAndRoundTrip) {
 }
 
 TEST_F(LlvmLibcFsetposTest, ClearEOFIndicator) {
-  constexpr char FILENAME[] = "testdata/fsetpos_eof.test";
+  constexpr char FILENAME[] = "fsetpos_eof.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "wb+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
@@ -161,12 +175,15 @@ TEST_F(LlvmLibcFsetposTest, ClearEOFIndicator) {
 }
 
 TEST_F(LlvmLibcFsetposTest, UndoUngetc) {
-  constexpr char FILENAME[] = "testdata/fsetpos_ungetc.test";
+  constexpr char FILENAME[] = "fsetpos_ungetc.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "wb+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   constexpr char DATA[] = "0123456789";
   constexpr size_t DATA_SIZE = sizeof(DATA) - 1;
@@ -195,12 +212,15 @@ TEST_F(LlvmLibcFsetposTest, UndoUngetc) {
 }
 
 TEST_F(LlvmLibcFsetposTest, UndoUngetwc) {
-  constexpr char FILENAME[] = "testdata/fsetpos_ungetwc.test";
+  constexpr char FILENAME[] = "fsetpos_ungetwc.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   ASSERT_GT(LIBC_NAMESPACE::fwide(file, 1), 0);
 
@@ -233,18 +253,21 @@ TEST_F(LlvmLibcFsetposTest, UndoUngetwc) {
 }
 
 TEST_F(LlvmLibcFsetposTest, WideStreamParseState) {
-  constexpr char FILENAME[] = "testdata/fsetpos_wide_state.test";
+  constexpr char FILENAME[] = "fsetpos_wide_state.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   ASSERT_GT(LIBC_NAMESPACE::fwide(file, 1), 0);
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
-  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&pos_start.state), 0);
+  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&pos_start.__state), 0);
 
   // Write multi-byte wide character: L'¢' (0xC2, 0xA2 in UTF-8)
   ASSERT_EQ(LIBC_NAMESPACE::fputwc(L'¢', file), static_cast<wint_t>(L'¢'));
@@ -258,20 +281,23 @@ TEST_F(LlvmLibcFsetposTest, WideStreamParseState) {
   // Position and parse state are restored
   fpos_t current_pos;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &current_pos), Succeeds(0));
-  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&current_pos.state), 0);
-  ASSERT_EQ(current_pos.pos, off_t(0));
+  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&current_pos.__state), 0);
+  ASSERT_EQ(current_pos.__pos, off_t(0));
 
   // Read back wide character
   ASSERT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'¢'));
 }
 
 TEST_F(LlvmLibcFsetposTest, UpdateStreamDirectionSwitching) {
-  constexpr char FILENAME[] = "testdata/fsetpos_direction.test";
+  constexpr char FILENAME[] = "fsetpos_direction.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
@@ -301,15 +327,18 @@ TEST_F(LlvmLibcFsetposTest, UpdateStreamDirectionSwitching) {
 }
 
 TEST_F(LlvmLibcFsetposTest, FlushDirtyBufferOnSeek) {
-  constexpr char FILENAME[] = "testdata/fsetpos_flush.test";
+  constexpr char FILENAME[] = "fsetpos_flush.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   constexpr size_t BUFFER_SIZE = 1024;
   char buffer[BUFFER_SIZE];
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   ASSERT_EQ(0, LIBC_NAMESPACE::setvbuf(file, buffer, _IOFBF, BUFFER_SIZE));
 
@@ -332,13 +361,16 @@ TEST_F(LlvmLibcFsetposTest, FlushDirtyBufferOnSeek) {
 }
 
 TEST_F(LlvmLibcFsetposTest, ErrorIndicatorPreserved) {
-  constexpr char FILENAME[] = "testdata/fsetpos_ferror.test";
+  constexpr char FILENAME[] = "fsetpos_ferror.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   // Open file in write-only mode
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "w");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
@@ -347,7 +379,7 @@ TEST_F(LlvmLibcFsetposTest, ErrorIndicatorPreserved) {
   char c;
   ASSERT_EQ(LIBC_NAMESPACE::fread(&c, 1, 1, file), size_t(0));
   ASSERT_NE(LIBC_NAMESPACE::ferror(file), 0);
-  libc_errno = 0; // Clear errno from expected read failure
+  ASSERT_ERRNO_EQ(EBADF);
 
   // ISO C §7.21.9.3: fsetpos does not clear the error indicator
   ASSERT_THAT(LIBC_NAMESPACE::fsetpos(file, &pos_start), Succeeds(0));
@@ -355,12 +387,15 @@ TEST_F(LlvmLibcFsetposTest, ErrorIndicatorPreserved) {
 }
 
 TEST_F(LlvmLibcFsetposTest, ErrnoPreservedOnSuccess) {
-  constexpr char FILENAME[] = "testdata/fsetpos_errno.test";
+  constexpr char FILENAME[] = "fsetpos_errno.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "wb+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos), Succeeds(0));
@@ -370,22 +405,19 @@ TEST_F(LlvmLibcFsetposTest, ErrnoPreservedOnSuccess) {
 
   ASSERT_EQ(LIBC_NAMESPACE::fsetpos(file, &pos), 0);
   // ISO C / POSIX: errno must remain unaltered on success
-  ASSERT_EQ(static_cast<int>(libc_errno), 42);
-
-  libc_errno = 0;
+  ASSERT_ERRNO_EQ(42);
 }
 
 TEST_F(LlvmLibcFsetposTest, AppendMode) {
-  constexpr char FILENAME[] = "testdata/fsetpos_append.test";
+  constexpr char FILENAME[] = "fsetpos_append.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
 
-  ::FILE *init_file = LIBC_NAMESPACE::fopen(FILEPATH, "w");
-  ASSERT_FALSE(init_file == nullptr);
-  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(init_file));
-
   ::FILE *file = LIBC_NAMESPACE::fopen(FILEPATH, "ab+");
-  ASSERT_FALSE(file == nullptr);
-  scope_exit close_file([&] { ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file)); });
+  ASSERT_NE(file, nullptr);
+  scope_exit close_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::remove(FILEPATH), Succeeds(0));
+  });
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));

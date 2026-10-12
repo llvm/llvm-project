@@ -12,12 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fgetpos.h"
+
 #include "hdr/types/FILE.h"
 #include "hdr/types/fpos_t.h"
+#include "hdr/types/mbstate_t.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/File/file.h"
+#include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
@@ -27,6 +33,10 @@ static_assert(sizeof(mbstate_t) >= sizeof(internal::mbstate),
               "mbstate_t is too small for internal::mbstate");
 static_assert(alignof(mbstate_t) >= alignof(internal::mbstate),
               "mbstate_t has insufficient alignment for internal::mbstate");
+static_assert(cpp::is_trivially_copyable_v<mbstate_t>,
+              "mbstate_t must be trivially copyable");
+static_assert(cpp::is_trivially_copyable_v<internal::mbstate>,
+              "internal::mbstate must be trivially copyable");
 
 LLVM_LIBC_FUNCTION(int, fgetpos,
                    (::FILE *__restrict stream, ::fpos_t *__restrict pos)) {
@@ -38,9 +48,9 @@ LLVM_LIBC_FUNCTION(int, fgetpos,
     return -1;
   }
   File::Position fpos = result.value();
-  pos->pos = fpos.offset;
-  inline_memset(&pos->state, 0, sizeof(mbstate_t));
-  inline_memcpy(&pos->state, &fpos.state, sizeof(internal::mbstate));
+  pos->__pos = fpos.offset;
+  inline_memset(&pos->__state, 0, sizeof(mbstate_t));
+  inline_memcpy(&pos->__state, &fpos.state, sizeof(internal::mbstate));
   return 0;
 }
 

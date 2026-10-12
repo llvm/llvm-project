@@ -132,9 +132,12 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
     libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.libc_errno
-    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.wchar.mbstate
     libc.src.string.memory_utils.inline_memcpy
@@ -150,9 +153,12 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.hdr.types.fpos_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.CPP.type_traits
     libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.libc_errno
-    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.wchar.mbstate
     libc.src.string.memory_utils.inline_memcpy

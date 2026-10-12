@@ -13,19 +13,30 @@
 
 #include "file.h"
 
+#include "file_io_result.h"
+#include "file_mode.h"
 #include "hdr/errno_macros.h"
 #include "hdr/func/realloc.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
+#include "hdr/types/char32_t.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/off_t.h"
+#include "hdr/types/wchar_t.h"
+#include "hdr/types/wint_t.h"
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/mutex.h"
 #include "src/__support/wchar/character_converter.h"
+#include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcrtomb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
+
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 File *File::list_all = nullptr;
@@ -403,15 +414,14 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-ErrorOr<int> File::seek(off_t offset, int whence) {
-  FileLock lock(this);
+ErrorOr<int> File::seek_unlocked(off_t offset, int whence) {
   if (prev_op == FileOp::WRITE && pos > 0) {
-
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return Error(buf_result.error);
     }
+    pos = 0;
   } else if (prev_op == FileOp::READ && whence == SEEK_CUR) {
     // More data could have been read out from the platform file than was
     // required. So, we have to adjust the offset we pass to platform seek
@@ -435,9 +445,9 @@ ErrorOr<int> File::seek(off_t offset, int whence) {
 }
 
 ErrorOr<off_t> File::tell_unlocked() {
-  bool is_append = (mode & static_cast<ModeFlags>(OpenMode::APPEND)) != 0;
-  int seek_target =
-      (eof || (is_append && prev_op == FileOp::WRITE)) ? SEEK_END : SEEK_CUR;
+  int seek_target = (eof || (mode.is_append() && prev_op == FileOp::WRITE))
+                        ? SEEK_END
+                        : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
   if (!result.has_value())
     return Error(result.error());
@@ -456,35 +466,18 @@ ErrorOr<File::Position> File::get_pos_unlocked() {
   if (!pos_result.has_value())
     return Error(pos_result.error());
 
-  Position fpos;
-  fpos.offset = pos_result.value();
-  if (orientation == Orientation::WIDE)
-    fpos.state = mbstate;
-  else
-    fpos.state = internal::mbstate();
-
-  return fpos;
+  return Position{
+      pos_result.value(),
+      orientation == Orientation::WIDE ? mbstate : internal::mbstate(),
+  };
 }
 
 ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
-  if (prev_op == FileOp::WRITE && pos > 0) {
-    FileIOResult buf_result = platform_write(this, buf, pos);
-    if (buf_result.has_error() || buf_result.value < pos) {
-      err = true;
-      return Error(buf_result.error ? buf_result.error : EIO);
-    }
-    pos = 0;
-  }
-
-  auto result = platform_seek(this, fpos.offset, SEEK_SET);
+  auto result = seek_unlocked(fpos.offset, SEEK_SET);
   if (!result.has_value())
     return Error(result.error());
 
-  pos = read_limit = 0;
-  prev_op = FileOp::SEEK;
-  eof = false;
   mbstate = fpos.state;
-
   return 0;
 }
 
