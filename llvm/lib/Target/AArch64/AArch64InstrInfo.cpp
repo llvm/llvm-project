@@ -3628,11 +3628,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI =
-      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
-  if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
-                      MI.getFlag(MachineInstr::FrameDestroy)))
+  if ((MI.getFlag(MachineInstr::FrameSetup) ||
+       MI.getFlag(MachineInstr::FrameDestroy)) &&
+      MI.getMF()->needsWinCFI())
     return false;
 
   // On some CPUs quad load/store pairs are slower than two single load/stores.
@@ -10984,7 +10982,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (MF.usesWindowsUnwindInfo())
     return false;
 
   // It's safe to outline from MF.
