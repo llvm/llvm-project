@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -156,24 +157,24 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::floor, FTZ_MustBeOff};
     case Intrinsic::nvvm_floor_ftz_f:
       return {Intrinsic::floor, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fma_rn_d:
-      return {Intrinsic::fma, FTZ_Any};
-    case Intrinsic::nvvm_fma_rn_f:
-      return {Intrinsic::fma, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fma_rn_ftz_f:
-      return {Intrinsic::fma, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fma_rn_f16:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_f16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fma_rn_f16x2:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_f16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fma_rn_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma:
+    case Intrinsic::nvvm_fma_ftz: {
+      // Only fma with the round-to-nearest-even rounding mode matches the
+      // semantics of llvm.fma.
+      if (nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3)) !=
+          APFloat::rmNearestTiesToEven)
+        return {};
+      const bool IsFTZ = II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz;
+      Type *EltTy = II->getType()->getScalarType();
+      if (EltTy->isDoubleTy())
+        return IsFTZ ? SimplifyAction{}
+                     : SimplifyAction{Intrinsic::fma, FTZ_Any};
+      // ftz is not supported for bf16.
+      if (EltTy->isBFloatTy() && IsFTZ)
+        return {};
+      const bool IsHalfTy = EltTy->isHalfTy() || EltTy->isBFloatTy();
+      return {Intrinsic::fma, IsFTZ ? FTZ_MustBeOn : FTZ_MustBeOff, IsHalfTy};
+    }
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maximumnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
@@ -317,6 +318,11 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
     SmallVector<Value *, 4> Args(II->args());
+    // The overloaded NVVM fma intrinsics have a trailing rounding-mode
+    // operand that llvm.fma does not take; it is known to be RN here.
+    if (II->getIntrinsicID() == Intrinsic::nvvm_fma ||
+        II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz)
+      Args.pop_back();
     // All the target-generic intrinsics currently of interest to us have one
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};

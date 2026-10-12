@@ -85,6 +85,24 @@ static mlir::Value emitNVVMFPArith(CIRGenFunction &cgf, const CallExpr *expr,
       .getResult();
 }
 
+/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fma intrinsic, which takes the
+/// rounding mode as a trailing operand.
+static mlir::Value emitNVVMFMA(CIRGenFunction &cgf, const CallExpr *expr,
+                               llvm::StringRef intrinsicName,
+                               llvm::APFloat::roundingMode rm) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value a = cgf.emitScalarExpr(expr->getArg(0));
+  mlir::Value b = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Value c = cgf.emitScalarExpr(expr->getArg(2));
+  mlir::Value rnd =
+      builder.getConstInt(loc, builder.getSInt32Ty(), static_cast<int>(rm));
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(intrinsicName),
+                                          a.getType(), {a, b, c, rnd})
+      .getResult();
+}
+
 static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
                                      llvm::StringRef intrinsicName,
                                      bool returnsPred) {
@@ -552,43 +570,76 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_bf16:
+  case NVPTX::BI__nvvm_fma_rn_bf16x2:
+  case NVPTX::BI__nvvm_fma_rn_f:
+  case NVPTX::BI__nvvm_fma_rn_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_f:
+  case NVPTX::BI__nvvm_fma_rz_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma", llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_f:
+  case NVPTX::BI__nvvm_fma_rm_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_f:
+  case NVPTX::BI__nvvm_fma_rp_d:
+    return emitNVVMFMA(*this, expr, "nvvm.fma",
+                       llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_fma_rn_ftz_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.relu.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr,
-                                               "nvvm.fma.rn.ftz.relu.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.sat.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr,
-                                               "nvvm.fma.rn.ftz.sat.f16x2")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_relu_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16")
-        .getValue();
-  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_ftz_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz",
+                       llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_fma_rn_sat_f16:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16")
-        .getValue();
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
-    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16x2")
-        .getValue();
+  case NVPTX::BI__nvvm_fma_rn_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.sat",
+                       llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rz_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_fma_rm_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_fma_rp_ftz_sat_f:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.sat",
+                       llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_fma_rn_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16:
+  case NVPTX::BI__nvvm_fma_rn_relu_bf16x2:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.relu",
+                       llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
+  case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
+    return emitNVVMFMA(*this, expr, "nvvm.fma.ftz.relu",
+                       llvm::APFloat::rmNearestTiesToEven);
   case NVPTX::BI__nvvm_fma_rn_oob_f16:
   case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
   case NVPTX::BI__nvvm_fma_rn_oob_bf16:

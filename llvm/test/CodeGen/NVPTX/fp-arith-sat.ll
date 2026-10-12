@@ -132,17 +132,17 @@ define float @fma_sat_f32(float %a, float %b, float %c) {
 ; CHECK-NEXT:    fma.rp.ftz.sat.f32 %r11, %r1, %r2, %r10;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fma.rn.sat.f(float %a, float %b, float %c)
-  %r2 = call float @llvm.nvvm.fma.rn.ftz.sat.f(float %a, float %b, float %r1)
+  %r1 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %c, i32 1)
+  %r2 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r1, i32 1)
 
-  %r3 = call float @llvm.nvvm.fma.rz.sat.f(float %a, float %b, float %r2)
-  %r4 = call float @llvm.nvvm.fma.rz.ftz.sat.f(float %a, float %b, float %r3)
+  %r3 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r2, i32 0)
+  %r4 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r3, i32 0)
 
-  %r5 = call float @llvm.nvvm.fma.rm.sat.f(float %a, float %b, float %r4)
-  %r6 = call float @llvm.nvvm.fma.rm.ftz.sat.f(float %a, float %b, float %r5)
+  %r5 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r4, i32 3)
+  %r6 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r5, i32 3)
 
-  %r7 = call float @llvm.nvvm.fma.rp.sat.f(float %a, float %b, float %r6)
-  %r8 = call float @llvm.nvvm.fma.rp.ftz.sat.f(float %a, float %b, float %r7)
+  %r7 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r6, i32 2)
+  %r8 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r7, i32 2)
 
   ret float %r8
 }

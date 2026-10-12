@@ -7453,15 +7453,17 @@ static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
   const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
   const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
   const bool IsSat = nvvm::FPArithIsSaturating(IID);
+  const bool IsRelu = nvvm::FPArithIsRelu(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return IsRN;
   case MVT::bf16:
     return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
-    return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
+    return !IsRelu &&
+           (!VT.isVector() || (!IsSat && STI.hasF32x2Instructions()));
   case MVT::f64:
-    return !VT.isVector() && !IsSat && !IsFTZ;
+    return !VT.isVector() && !IsSat && !IsFTZ && !IsRelu;
   default:
     return false;
   }
@@ -7502,6 +7504,18 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_spcompress:
   case Intrinsic::nvvm_spdecompress:
     return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(4).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMA, IID, RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
   case Intrinsic::nvvm_fmul_sat:
