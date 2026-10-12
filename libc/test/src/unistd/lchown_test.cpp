@@ -51,29 +51,23 @@ TEST_F(LlvmLibcLchownTest, LchownSuccessRegularFile) {
               Succeeds(0));
 }
 
-TEST_F(LlvmLibcLchownTest, LchownSuccessSymlink) {
+TEST_F(LlvmLibcLchownTest, LchownSuccessDanglingSymlink) {
   uid_t my_uid = LIBC_NAMESPACE::getuid();
   gid_t my_gid = LIBC_NAMESPACE::getgid();
-  constexpr const char *TARGET_FILENAME = "lchown_target.test";
-  constexpr const char *LINK_FILENAME = "lchown_symlink.test";
+  constexpr const char *TARGET_FILENAME = "lchown_dangling_target.test";
+  constexpr const char *LINK_FILENAME = "lchown_dangling_symlink.test";
   auto TARGET_FILE = libc_make_test_file_path(TARGET_FILENAME);
   auto LINK_FILE = libc_make_test_file_path(LINK_FILENAME);
 
-  int write_fd = LIBC_NAMESPACE::open(TARGET_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(write_fd, 0);
-  ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
-
-  LIBC_NAMESPACE::cpp::scope_exit cleanup_target(
-      [&] { EXPECT_THAT(LIBC_NAMESPACE::unlink(TARGET_FILE), Succeeds(0)); });
-
-  // Create a symbolic link to the target file.
+  // Create a dangling symbolic link (pointing to a non-existent target).
   ASSERT_THAT(LIBC_NAMESPACE::symlink(TARGET_FILE, LINK_FILE), Succeeds(0));
 
   LIBC_NAMESPACE::cpp::scope_exit cleanup_link(
       [&] { EXPECT_THAT(LIBC_NAMESPACE::unlink(LINK_FILE), Succeeds(0)); });
 
-  // lchown should operate on the symbolic link itself.
+  // lchown operates on the symbolic link itself without dereferencing it,
+  // so it succeeds even when the target does not exist (where a dereferencing
+  // call like chown would fail with ENOENT).
   ASSERT_THAT(LIBC_NAMESPACE::lchown(LINK_FILE, my_uid, my_gid), Succeeds(0));
 
   // Passing -1 for owner and group leaves them unchanged without error.

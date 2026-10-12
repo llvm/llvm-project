@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> lchown(const char *path, uid_t owner, gid_t group) {
-#ifdef SYS_fchownat
+#if defined(SYS_fchownat)
   return syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner, group,
                               AT_SYMLINK_NOFOLLOW);
 #elif defined(SYS_lchown)
