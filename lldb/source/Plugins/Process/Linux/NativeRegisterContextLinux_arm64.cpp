@@ -71,8 +71,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
 void NativeRegisterContextLinux_arm64::Invalidate(RegisterSetType set) {
-  using Mask_t = std::underlying_type_t<RegisterSetType>;
-  Mask_t to_invalidate = 0;
+  RegisterSetTypeStorage to_invalidate = 0;
 
   switch (set) {
   case RegisterSetType::FPMR:
@@ -82,24 +81,26 @@ void NativeRegisterContextLinux_arm64::Invalidate(RegisterSetType set) {
   case RegisterSetType::PAC:
   case RegisterSetType::POE:
   case RegisterSetType::TLS:
-    to_invalidate = static_cast<Mask_t>(set);
+    to_invalidate = static_cast<RegisterSetTypeStorage>(set);
     break;
   case RegisterSetType::SVE_HEADER:
   case RegisterSetType::SVE:
   case RegisterSetType::FPR:
     // SVE registers overlap FP registers in hardware.
-    to_invalidate = static_cast<Mask_t>(RegisterSetType::SVE_HEADER) |
-                    static_cast<Mask_t>(RegisterSetType::SVE) |
-                    static_cast<Mask_t>(RegisterSetType::FPR);
+    to_invalidate =
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::SVE_HEADER) |
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::SVE) |
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::FPR);
     break;
   case RegisterSetType::ZA_HEADER:
   case RegisterSetType::ZA:
   case RegisterSetType::ZT:
     // In the Linux ptrace ABI, writes that enable ZA or ZT result in
     // both ZA and ZT being enabled.
-    to_invalidate = static_cast<Mask_t>(RegisterSetType::ZA_HEADER) |
-                    static_cast<Mask_t>(RegisterSetType::ZA) |
-                    static_cast<Mask_t>(RegisterSetType::ZT);
+    to_invalidate =
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::ZA_HEADER) |
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::ZA) |
+        static_cast<RegisterSetTypeStorage>(RegisterSetType::ZT);
     break;
   }
 

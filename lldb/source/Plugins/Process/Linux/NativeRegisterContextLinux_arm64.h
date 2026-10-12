@@ -111,6 +111,9 @@ private:
     // Permission Overlay registers.
     POE = 1 << 12,
   };
+
+  using RegisterSetTypeStorage = std::underlying_type_t<RegisterSetType>;
+
   // Returns the ptrace register set number for the given register set.
   unsigned int GetPtraceSet(RegisterSetType set) const;
 
@@ -118,15 +121,14 @@ private:
 
   void *GetSetBuffer(RegisterSetType set);
 
-  std::underlying_type_t<RegisterSetType> m_validity;
+  RegisterSetTypeStorage m_validity = 0;
 
   void MakeValid(RegisterSetType set) {
-    m_validity |= static_cast<std::underlying_type_t<RegisterSetType>>(set);
+    m_validity |= static_cast<RegisterSetTypeStorage>(set);
   }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
-    return m_validity &
-           static_cast<std::underlying_type_t<RegisterSetType>>(set);
+    return m_validity & static_cast<RegisterSetTypeStorage>(set);
   }
 
   /// Invalidate our saved copies of the given register set and any sets that
