@@ -628,7 +628,9 @@ bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   // Collect single-successor chains in the loop region.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+           vp_depth_first_deep(LoopRegion->getEntry()))) {
+    if (!VPBB->getParent())
+      continue;
     VPBlockBase *PredBlock = VPBB->getSinglePredecessor();
     if (!isa_and_nonnull<VPBasicBlock>(PredBlock) ||
         !PredBlock->getSingleSuccessor())
