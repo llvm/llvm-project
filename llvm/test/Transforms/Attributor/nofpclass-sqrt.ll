@@ -95,6 +95,16 @@ define float @ret_sqrt_noinf_nonegzero(float nofpclass(inf nzero) %arg0) #0 {
   ret float %call
 }
 
+define float @ret_sqrt_noinf_noposzero(float nofpclass(inf pzero) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf sub nnorm) float @ret_sqrt_noinf_noposzero
+; CHECK-SAME: (float nofpclass(inf pzero) [[ARG0:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf sub nnorm) float @llvm.sqrt.f32(float nofpclass(inf pzero) [[ARG0]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.sqrt.f32(float %arg0)
+  ret float %call
+}
+
 define float @ret_sqrt_positive_source(i32 %arg) #0 {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_positive_source
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
@@ -268,6 +278,324 @@ define float @constrained_sqrt_nozero(float nofpclass(zero) %arg) strictfp {
 ;
   %val = call float @llvm.experimental.constrained.sqrt.f32(float %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %val
+}
+
+; sqrt(pos-subnormal) = pos-normal
+define float @ret_sqrt__no_pnorm(float nofpclass(pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt__no_pnorm
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+; Watches for a change where subnormals are force flushed to zero.
+define float @ret_sqrt__no_pnorm__mode_ieee_daz(float nofpclass(pnorm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt__no_pnorm__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__no_pnorm__mode_ieee_dapz(float nofpclass(pnorm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt__no_pnorm__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__no_psub_pnorm(float nofpclass(psub pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt__no_psub_pnorm
+; CHECK-SAME: (float nofpclass(psub pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float nofpclass(psub pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__no_psub(float nofpclass(psub) %arg) #0 {
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_sqrt__no_psub
+; CHECK-SAME: (float nofpclass(psub) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.sqrt.f32(float nofpclass(psub) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+; sqrt cannot produce a subnormal result, so only the input denormal mode
+; affects the following tests.
+
+define float @ret_sqrt__psub__mode_ieee_ieee(float nofpclass(nan inf zero nsub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt__psub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__nsub__mode_ieee_ieee(float nofpclass(nan inf zero psub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt__nsub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__sub__mode_ieee_ieee(float nofpclass(nan inf zero norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt__sub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__psub__mode_ieee_daz(float nofpclass(nan inf zero nsub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt__psub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__nsub__mode_ieee_daz(float nofpclass(nan inf zero psub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(snan inf sub nnorm) float @ret_sqrt__nsub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__sub__mode_ieee_daz(float nofpclass(nan inf zero norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(snan inf sub nnorm) float @ret_sqrt__sub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__psub__mode_ieee_dapz(float nofpclass(nan inf zero nsub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt__psub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__nsub__mode_ieee_dapz(float nofpclass(nan inf zero psub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt__nsub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__sub__mode_ieee_dapz(float nofpclass(nan inf zero norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt__sub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__psub__mode_ieee_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt__psub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__nsub__mode_ieee_dynamic(float nofpclass(nan inf zero psub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan inf sub nnorm) float @ret_sqrt__nsub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt__sub__mode_ieee_dynamic(float nofpclass(nan inf zero norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan inf sub nnorm) float @ret_sqrt__sub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nofpclass(snan inf sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+; nsz does not make a -0.0 result poison, so nzero must not be inferred for
+; these calls.
+
+define float @ret_sqrt_nsz__nzero(float nofpclass(nan inf pzero sub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__nzero
+; CHECK-SAME: (float nofpclass(nan inf pzero sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf pzero sub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__zero(float nofpclass(nan inf sub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__zero
+; CHECK-SAME: (float nofpclass(nan inf sub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf sub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__psub__mode_ieee_ieee(float nofpclass(nan inf zero nsub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__psub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__nsub__mode_ieee_ieee(float nofpclass(nan inf zero psub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__nsub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__sub__mode_ieee_ieee(float nofpclass(nan inf zero norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__sub__mode_ieee_ieee
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__psub__mode_ieee_daz(float nofpclass(nan inf zero nsub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__psub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__nsub__mode_ieee_daz(float nofpclass(nan inf zero psub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__nsub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__sub__mode_ieee_daz(float nofpclass(nan inf zero norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__sub__mode_ieee_daz
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__psub__mode_ieee_dapz(float nofpclass(nan inf zero nsub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__psub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__nsub__mode_ieee_dapz(float nofpclass(nan inf zero psub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__nsub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__sub__mode_ieee_dapz(float nofpclass(nan inf zero norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__sub__mode_ieee_dapz
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__psub__mode_ieee_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @ret_sqrt_nsz__psub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(nan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero nsub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__nsub__mode_ieee_dynamic(float nofpclass(nan inf zero psub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__nsub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero psub norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
+}
+
+define float @ret_sqrt_nsz__sub__mode_ieee_dynamic(float nofpclass(nan inf zero norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @ret_sqrt_nsz__sub__mode_ieee_dynamic
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz nofpclass(snan inf nzero sub nnorm) float @llvm.sqrt.f32(float nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %arg)
+  ret float %sqrt
 }
 
 attributes #0 = { denormal_fpenv(ieee|ieee) }
