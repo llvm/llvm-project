@@ -10,6 +10,14 @@
 // RUN:            %s -o %t.ll
 // RUN: FileCheck --check-prefix=HOST --input-file=%t.ll %s
 
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
+// RUN:            -x hip -emit-llvm %s -o %t-hip-cir.ll
+// RUN: FileCheck --check-prefix=HOST --input-file=%t-hip-cir.ll %s
+
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:            -x hip -emit-llvm %s -o %t-hip.ll
+// RUN: FileCheck --check-prefix=HOST --input-file=%t-hip.ll %s
+
 // Host shadows of device variables are undef for every type.
 
 struct S { float x, y; };
