@@ -205,8 +205,7 @@ define amdgpu_kernel void @uniform_invariant_flat_load(ptr %f, ptr addrspace(1) 
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; SDAG-NEXT:    flat_load_dword v1, v[0:1]
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
