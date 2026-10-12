@@ -497,6 +497,9 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
+add_custom_target(flang-headers)
+set_target_properties(flang-headers PROPERTIES FOLDER "Flang/Meta")
+
 add_subdirectory(include)
 add_subdirectory(lib)
 
@@ -550,6 +553,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   add_llvm_install_targets(install-flang-headers
+    DEPENDS flang-headers
     COMPONENT flang-headers)
 
   install(DIRECTORY include/flang

@@ -93,7 +93,7 @@ define void @store_nonzero_to_escaped_alloca(i16 %a) {
 define void @store64_align8(ptr %p, i64 %a) {
 ; NO_COMBINE_STORE_PTR-LABEL: define void @store64_align8(
 ; NO_COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i64 [[A:%.*]]) {
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -127,7 +127,7 @@ define void @store64_align8(ptr %p, i64 %a) {
 ; COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i64 [[A:%.*]]) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
-; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; COMBINE_STORE_PTR-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP2]]
 ; COMBINE_STORE_PTR-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP2]], 0
@@ -167,7 +167,7 @@ define void @store64_align8(ptr %p, i64 %a) {
 define void @store64_align2(ptr %p, i64 %a) {
 ; NO_COMBINE_STORE_PTR-LABEL: define void @store64_align2(
 ; NO_COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i64 [[A:%.*]]) {
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -201,7 +201,7 @@ define void @store64_align2(ptr %p, i64 %a) {
 ; COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i64 [[A:%.*]]) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
-; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; COMBINE_STORE_PTR-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP2]]
 ; COMBINE_STORE_PTR-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP2]], 0
@@ -241,7 +241,7 @@ define void @store64_align2(ptr %p, i64 %a) {
 define void @store96_align8(ptr %p, i96 %a) {
 ; NO_COMBINE_STORE_PTR-LABEL: define void @store96_align8(
 ; NO_COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i96 [[A:%.*]]) {
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -285,7 +285,7 @@ define void @store96_align8(ptr %p, i96 %a) {
 ; COMBINE_STORE_PTR-SAME: ptr [[P:%.*]], i96 [[A:%.*]]) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP1:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP2:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
-; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; COMBINE_STORE_PTR-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; COMBINE_STORE_PTR-NEXT:    [[TMP4:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; COMBINE_STORE_PTR-NEXT:    [[TMP5:%.*]] = or i8 [[TMP4]], [[TMP2]]
 ; COMBINE_STORE_PTR-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP2]], 0

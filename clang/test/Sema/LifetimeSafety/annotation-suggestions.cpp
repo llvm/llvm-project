@@ -550,7 +550,7 @@ struct CaptureViewToView {
 CaptureViewToView test_view_to_view() {
   MyObj obj;
   View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
-  CaptureViewToView x(v);
+  CaptureViewToView x(v); // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return x; // expected-note {{returned here}}
 }
 

@@ -38,6 +38,7 @@ endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   list(APPEND FILES
+    windows/PathUtilsTest.cpp
     windows/StripConPTYSequencesTest.cpp
   )
 endif()

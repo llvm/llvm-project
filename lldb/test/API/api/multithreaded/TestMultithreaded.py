@@ -20,6 +20,8 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfWindows  # https://github.com/llvm/llvm-project/issues/225860
     @skipIfRemote
     @skipIfHostIncompatibleWithTarget
+    # Occasional SIGABRT, see https://github.com/llvm/llvm-project/issues/225860.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_python_stop_hook(self):
         """Test that you can run a python command in a stop-hook when stdin is File based."""
         self.build_and_test("driver.cpp test_stop-hook.cpp", "test_python_stop_hook")

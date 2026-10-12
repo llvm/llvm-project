@@ -131,11 +131,32 @@ static bool detectUnstructuredControlFlow(Operation *op) {
   return walkRes.wasInterrupted();
 }
 
+/// Return "true" if any allowed op has a parallel region.
+static bool detectParallelRegions(Operation *op,
+                                  const BufferizationOptions &options) {
+  WalkResult walkRes =
+      op->walk([&](BufferizableOpInterface bufferizableOp) -> WalkResult {
+        if (!options.isOpAllowed(bufferizableOp))
+          return WalkResult::skip();
+        for (Region &region : bufferizableOp->getRegions()) {
+          if (bufferizableOp.isParallelRegion(region.getRegionNumber()))
+            return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+  return walkRes.wasInterrupted();
+}
+
 OneShotAnalysisState::OneShotAnalysisState(
     Operation *op, const OneShotBufferizationOptions &options)
     : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
   mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
       detectUnstructuredControlFlow(op));
+  if (!options.mayHaveParallelRegions.has_value()) {
+    mayHaveParallelRegionsFlag = detectParallelRegions(op, options);
+  } else {
+    mayHaveParallelRegionsFlag = *options.mayHaveParallelRegions;
+  }
 
   // Set up alias sets.
   op->walk([&](Operation *op) {
@@ -153,6 +174,7 @@ OneShotAnalysisState::OneShotAnalysisState(
   op->walk([&](BufferizableOpInterface bufferizableOp) {
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
+
     for (OpOperand &opOperand : bufferizableOp->getOpOperands())
       if (isa<TensorLikeType>(opOperand.get().getType()))
         if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
@@ -841,7 +863,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (options.checkParallelRegions && !usesRead.empty()) {
+  if (state.mayHaveParallelRegions() && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of
@@ -858,10 +880,11 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
 
       // The writing op must bufferize out-of-place if the definition is in a
       // different parallel region than this write.
+      Region *writeParallelRegion = getParallelRegion(
+          uConflictingWrite->getOwner()->getParentRegion(), options);
       for (Value def : definitionsOrLeaves) {
         if (getParallelRegion(def.getParentRegion(), options) !=
-            getParallelRegion(uConflictingWrite->getOwner()->getParentRegion(),
-                              options)) {
+            writeParallelRegion) {
           LDBG() << "\n- bufferizes out-of-place due to parallel region:\n"
                  << "  unConflictingWrite = operand "
                  << uConflictingWrite->getOperandNumber() << " of "

@@ -43,6 +43,8 @@ def _llvm_repos_extension_impl(module_ctx):
         build_file_content = _PYYAML_CONTENT,
     )
 
+    return module_ctx.extension_metadata(reproducible = True)
+
 llvm_repos_extension = module_extension(
     implementation = _llvm_repos_extension_impl,
 )

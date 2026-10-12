@@ -9,7 +9,7 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QPincluded_sub(%arg0: !fir.ref<i32>) {
     %0 = fir.undefined !fir.dscope loc(#sub_in_body)
-    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFincluded_subEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#arg_in_body)
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFincluded_subEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#arg_in_body)
     return loc(#ret_in_body)
   } loc(#sub_in_body)
 

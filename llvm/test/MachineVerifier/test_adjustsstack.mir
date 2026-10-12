@@ -1,4 +1,4 @@
-# RUN: not --crash llc -start-before=twoaddressinstruction -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -start-before=two-address-instruction -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |

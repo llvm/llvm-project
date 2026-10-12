@@ -906,6 +906,10 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::resolveScope(
     const DIScope *Scope, const DICompileUnit *FallbackCU) const {
 
+  // DebugLexicalBlockDiscriminator cannot be used as a scope, so unwrap it.
+  while (const auto *DLBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
+    Scope = DLBF->getScope();
+
   if (isa_and_nonnull<DIType, DILexicalBlock, DINamespace, DISubprogram>(Scope))
     return lookupOptReg(DebugScopeRegs, Scope);
 

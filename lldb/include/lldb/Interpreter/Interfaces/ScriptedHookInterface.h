@@ -13,6 +13,8 @@
 
 #include "ScriptedInterface.h"
 
+#include "llvm/Support/Errc.h"
+
 namespace lldb_private {
 class ScriptedHookInterface : virtual public ScriptedInterface {
 public:
@@ -37,12 +39,12 @@ public:
 
   /// Called when modules are loaded into the target.
   virtual llvm::Error HandleModuleLoaded(lldb::StreamSP &output_sp) {
-    return llvm::Error::success();
+    return llvm::errorCodeToError(llvm::errc::not_supported);
   }
 
   /// Called when modules are unloaded from the target. Optional.
   virtual llvm::Error HandleModuleUnloaded(lldb::StreamSP &output_sp) {
-    return llvm::Error::success();
+    return llvm::errorCodeToError(llvm::errc::not_supported);
   }
 
   /// Called when the process stops. Returns "should_stop" if false, the

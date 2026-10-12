@@ -36,6 +36,9 @@ public:
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
+
+/// Return true if -profile-correlate is set.
+LLVM_ABI bool isProfileCorrelationEnabled();
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H

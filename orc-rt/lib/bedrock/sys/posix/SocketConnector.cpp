@@ -60,7 +60,9 @@ Error socketConnector(const ConnectionSpec &CS, Session &S,
                  " is not a socket (" + sys::strError(ErrNum) + ")");
   }
 
-  auto CA = createSimpleRemoteCAOverSocket(S, SocketHandle(FD));
+  // Inherited, under the preconditions documented on registerSocketConnector.
+  auto CA = createSimpleRemoteCAOverSocket(
+      S, VettedPeer<SocketHandle>::inherited(SocketHandle(FD)));
   if (!CA)
     return CA.takeError();
 

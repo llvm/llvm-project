@@ -425,9 +425,11 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant` $invariant^)?
-    (`invariant_group` $invariantGroup^)?
-    (`dereferenceable` `` $dereferenceable^)?
+    oilist(
+      `invariant` $invariant |
+      `invariant_group` $invariantGroup |
+      `dereferenceable` `` $dereferenceable
+    )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
@@ -513,7 +515,7 @@ def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
   let assemblyFormat = [{
     (`volatile` $volatile_^)? $value `,` $addr
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
-    (`invariant_group` $invariantGroup^)?
+    oilist(`invariant_group` $invariantGroup)
     prop-dict
     attr-dict `:` type($value) `,` qualified(type($addr))
   }];
@@ -739,6 +741,7 @@ def LLVM_InvokeOp
     : LLVM_Op<"invoke", [AttrSizedOperandSegments,
                          DeclareOpInterfaceMethods<BranchOpInterface>,
                          DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                          DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
                          Terminator]> {
   let arguments = (ins
@@ -1416,7 +1419,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
-     SymbolVisibility, Symbol]> {
+     SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -2067,7 +2071,8 @@ def LLVM_ComdatOp
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
-    SymbolVisibility, FunctionOpInterface
+    SymbolVisibility, FunctionOpInterface,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -2431,12 +2436,14 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
               LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<I64Attr>:$alignment,
-              UnitAttr:$volatile_);
+              UnitAttr:$volatile_,
+              UnitAttr:$ignore_denormal_mode);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_AtomicRMWType:$res);
   let assemblyFormat = [{
-    (`volatile` $volatile_^)? $bin_op $ptr `,` $val
+    (`volatile` $volatile_^)? (`ignore_denormal_mode` $ignore_denormal_mode^)?
+    $bin_op $ptr `,` $val
     (`syncscope` `(` $syncscope^ `)`)? $ordering
     prop-dict
     attr-dict `:`
@@ -2449,6 +2456,7 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
         convertAtomicOrderingToLLVM($ordering));
     $res = inst;
   }] # setVolatileCode
+     # setIgnoreDenormalModeCode
      # setSyncScopeCode
      # setAlignmentCode
      # setAccessGroupsMetadataCode
@@ -2459,16 +2467,30 @@ def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
     $res = LLVM::AtomicRMWOp::create($_builder, $_location,
         convertAtomicBinOpFromLLVM(atomicInst->getOperation()), $ptr, $val,
         convertAtomicOrderingFromLLVM(atomicInst->getOrdering()),
-        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile());
+        getLLVMSyncScope(atomicInst), alignment, atomicInst->isVolatile(),
+        atomicInst->hasMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode));
   }];
-  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1];
+  list<int> llvmArgIndices = [-1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
   let builders = [
     OpBuilder<(ins "LLVM::AtomicBinOp":$binOp, "Value":$ptr, "Value":$val,
       "LLVM::AtomicOrdering":$ordering,
       CArg<"StringRef", "StringRef()">:$syncscope,
-      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile
+      CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
+      CArg<"bool", "false">:$ignoreDenormalMode
     )>
   ];
+  let extraClassDeclaration = [{
+    bool isFloatingPointOperation() {
+      return getBinOp() == AtomicBinOp::fadd ||
+             getBinOp() == AtomicBinOp::fsub ||
+             getBinOp() == AtomicBinOp::fmin ||
+             getBinOp() == AtomicBinOp::fmax ||
+             getBinOp() == AtomicBinOp::fminimum ||
+             getBinOp() == AtomicBinOp::fmaximum ||
+             getBinOp() == AtomicBinOp::fminimumnum ||
+             getBinOp() == AtomicBinOp::fmaximumnum;
+    }
+  }];
   let hasVerifier = 1;
 }
 

@@ -238,6 +238,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
+  // Typo correction may replace a qualifier we have already consumed the tokens
+  // for. The scope specifier must still cover those tokens, or the annotation
+  // built from it won't replace them and they reappear after backtracking.
+  auto RestoreScopeSpecRange = [&](SourceRange Range) {
+    if (Range.isValid() && SS.isValid() && SS.getRange() != Range)
+      SS.MakeTrivial(Actions.getASTContext(), SS.getScopeRep(), Range);
+  };
+
   // Preferred type might change when parsing qualifiers, we need the original.
   auto SavedType = PreferredType;
   while (true) {
@@ -353,6 +361,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       if (LastII)
         *LastII = TemplateId->Name;
 
+      SourceLocation StartLoc =
+          SS.getBeginLoc().isValid() ? SS.getBeginLoc() : Tok.getLocation();
+
       // Consume the template-id token.
       ConsumeAnnotationToken();
 
@@ -365,20 +376,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                                          TemplateId->NumArgs);
 
       if (TemplateId->isInvalid() ||
-          Actions.ActOnCXXNestedNameSpecifier(getCurScope(),
-                                              SS,
-                                              TemplateId->TemplateKWLoc,
-                                              TemplateId->Template,
-                                              TemplateId->TemplateNameLoc,
-                                              TemplateId->LAngleLoc,
-                                              TemplateArgsPtr,
-                                              TemplateId->RAngleLoc,
-                                              CCLoc,
-                                              EnteringContext)) {
-        SourceLocation StartLoc
-          = SS.getBeginLoc().isValid()? SS.getBeginLoc()
-                                      : TemplateId->TemplateNameLoc;
+          Actions.ActOnCXXNestedNameSpecifier(
+              getCurScope(), SS, TemplateId->TemplateKWLoc,
+              TemplateId->Template, TemplateId->TemplateNameLoc,
+              TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc,
+              CCLoc, EnteringContext)) {
         SS.SetInvalid(SourceRange(StartLoc, CCLoc));
+      } else {
+        RestoreScopeSpecRange(SourceRange(StartLoc, CCLoc));
       }
 
       continue;
@@ -415,7 +420,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
     // If we get foo:bar, this is almost certainly a typo for foo::bar.  Recover
     // and emit a fixit hint for it.
-    if (Next.is(tok::colon) && !ColonIsSacred) {
+    if (Next.is(tok::colon) && !ColonIsSacred &&
+        !ParsingGenericAssociationType) {
       if (Actions.IsInvalidUnlessNestedName(getCurScope(), SS, IdInfo,
                                             EnteringContext) &&
           // If the token after the colon isn't an identifier, it's still an
@@ -472,6 +478,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
              "NextToken() not working properly!");
       Token ColonColon = Tok;
       SourceLocation CCLoc = ConsumeToken();
+      SourceLocation ScopeBeginLoc = SS.getBeginLoc();
 
       bool IsCorrectedToColon = false;
       bool *CorrectionFlagPtr = ColonIsSacred ? &IsCorrectedToColon : nullptr;
@@ -488,11 +495,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           break;
         }
         SS.SetInvalid(SourceRange(IdLoc, CCLoc));
+      } else {
+        RestoreScopeSpecRange(SourceRange(ScopeBeginLoc, CCLoc));
       }
       HasScopeSpecifier = true;
       continue;
     }
 
+    SourceRange ScopeRange = SS.getRange();
     CheckForTemplateAndDigraph(Next, ObjectType, EnteringContext, II, SS);
 
     // nested-name-specifier:
@@ -516,6 +526,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
             isTemplateArgumentList(1) == TPResult::False)
           break;
 
+        RestoreScopeSpecRange(ScopeRange);
+        bool DroppedScope = ScopeRange.isValid() && SS.isEmpty();
+
         // We have found a template name, so annotate this token
         // with a template-id annotation. We do not permit the
         // template-id to be translated into a type annotation,
@@ -527,6 +540,12 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                     TemplateName, false))
           return true;
+        if (DroppedScope) {
+          // No scope specifier is left to cover the dropped qualifier's
+          // tokens, so extend the template-id annotation over them.
+          Tok.setLocation(ScopeRange.getBegin());
+          PP.AnnotateCachedTokens(Tok);
+        }
         continue;
       }
 
@@ -2221,6 +2240,11 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case tok::kw_##Name:                                                         \
+    DS.SetTypeSpecType(DeclSpec::TST_##Name, Loc, PrevSpec, DiagID, Policy);   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 
   case tok::annot_decltype:
   case tok::kw_decltype:
@@ -3687,11 +3711,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
   }
 
   // Create a fake EOF to mark end of Toks buffer.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(Toks.data());
+  Token AttrEnd = Token::createEof(Tok.getLocation(), Toks.data());
   Toks.push_back(AttrEnd);
 
   // The current token should go after the cached tokens.

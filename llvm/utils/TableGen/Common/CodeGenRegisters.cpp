@@ -2376,29 +2376,6 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     // Iterate through SubRegisters.
     using SubRegMap = CodeGenRegister::SubRegMap;
     const SubRegMap &SubRegs = Register.getSubRegs();
-    for (auto [SubRegIndex, SubReg] : SubRegs) {
-      // Ignore non-leaf subregisters, their lane masks are fully covered by
-      // the leaf subregisters, unless the subregister is not CoveredBySubRegs -
-      // this is dealt with by the loop below.
-      if (!SubReg->getSubRegs().empty())
-        continue;
-      LaneBitmask LaneMask = SubRegIndex->LaneMask;
-      // Distribute LaneMask to Register Units touched.
-      for (unsigned SUI : SubReg->getRegUnits()) {
-        bool Found = false;
-        unsigned u = 0;
-        for (unsigned RU : RegUnits) {
-          if (SUI == RU) {
-            RegUnitLaneMasks[u] &= LaneMask;
-            assert(!Found);
-            Found = true;
-          }
-          ++u;
-        }
-        (void)Found;
-        assert(Found);
-      }
-    }
 
     auto UnitMaskIdx = [&](unsigned SUI) {
       unsigned U = 0;
@@ -2409,6 +2386,18 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
       }
       llvm_unreachable("unit is not part of the register");
     };
+
+    for (auto [SubRegIndex, SubReg] : SubRegs) {
+      // Ignore non-leaf subregisters, their lane masks are fully covered by
+      // the leaf subregisters, unless the subregister is not CoveredBySubRegs -
+      // this is dealt with by the loop below.
+      if (!SubReg->getSubRegs().empty())
+        continue;
+      LaneBitmask LaneMask = SubRegIndex->LaneMask;
+      // Distribute LaneMask to Register Units touched.
+      for (unsigned SUI : SubReg->getRegUnits())
+        RegUnitLaneMasks[UnitMaskIdx(SUI)] &= LaneMask;
+    }
 
     // A sub-register that is not CoveredBySubRegs may be missing lanes that
     // none of its leaves account for. If left unclaimed, those lanes would

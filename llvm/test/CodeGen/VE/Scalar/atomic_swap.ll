@@ -226,8 +226,8 @@ define i128 @_Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB9_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB9_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -236,7 +236,7 @@ define i128 @_Z24atomic_swap_relaxed_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB9_2:
+; CHECK-NEXT:  .LBB9_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -275,8 +275,8 @@ define i128 @_Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB10_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB10_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -285,7 +285,7 @@ define i128 @_Z24atomic_swap_relaxed_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:  .LBB10_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -474,8 +474,8 @@ define i128 @_Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB20_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB20_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -484,7 +484,7 @@ define i128 @_Z24atomic_swap_acquire_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB20_2:
+; CHECK-NEXT:  .LBB20_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -523,8 +523,8 @@ define i128 @_Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB21_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB21_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -533,7 +533,7 @@ define i128 @_Z24atomic_swap_acquire_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB21_2:
+; CHECK-NEXT:  .LBB21_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -731,8 +731,8 @@ define i128 @_Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB31_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB31_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -741,7 +741,7 @@ define i128 @_Z24atomic_swap_seq_cst_i128RNSt3__16atomicInEEn(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB31_2:
+; CHECK-NEXT:  .LBB31_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -780,8 +780,8 @@ define i128 @_Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB32_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB32_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -790,7 +790,7 @@ define i128 @_Z24atomic_swap_seq_cst_u128RNSt3__16atomicIoEEo(ptr nonnull align 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:  .LBB32_1:
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    st %s2, 264(, %s11)
 ; CHECK-NEXT:    st %s1, 256(, %s11)
@@ -826,8 +826,8 @@ define zeroext i1 @_Z26atomic_swap_relaxed_stk_i1b(i1 zeroext %0) {
 ; CHECK-LABEL: _Z26atomic_swap_relaxed_stk_i1b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB33_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB33_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -836,7 +836,7 @@ define zeroext i1 @_Z26atomic_swap_relaxed_stk_i1b(i1 zeroext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB33_2:
+; CHECK-NEXT:  .LBB33_1:
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    or %s1, 1, (0)1
 ; CHECK-NEXT:    lea %s2, 8(, %s11)
@@ -865,8 +865,8 @@ define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
 ; CHECK-LABEL: _Z26atomic_swap_relaxed_stk_i8c:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB34_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB34_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -875,7 +875,7 @@ define signext i8 @_Z26atomic_swap_relaxed_stk_i8c(i8 signext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB34_2:
+; CHECK-NEXT:  .LBB34_1:
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    or %s1, 1, (0)1
 ; CHECK-NEXT:    lea %s2, 8(, %s11)
@@ -896,8 +896,8 @@ define zeroext i8 @_Z26atomic_swap_relaxed_stk_u8h(i8 zeroext %0) {
 ; CHECK-LABEL: _Z26atomic_swap_relaxed_stk_u8h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB35_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB35_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -906,7 +906,7 @@ define zeroext i8 @_Z26atomic_swap_relaxed_stk_u8h(i8 zeroext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB35_2:
+; CHECK-NEXT:  .LBB35_1:
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    or %s1, 1, (0)1
 ; CHECK-NEXT:    lea %s2, 8(, %s11)
@@ -926,8 +926,8 @@ define signext i16 @_Z27atomic_swap_relaxed_stk_i16s(i16 signext %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_i16s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB36_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB36_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -936,7 +936,7 @@ define signext i16 @_Z27atomic_swap_relaxed_stk_i16s(i16 signext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB36_2:
+; CHECK-NEXT:  .LBB36_1:
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    or %s1, 3, (0)1
 ; CHECK-NEXT:    lea %s2, 8(, %s11)
@@ -957,8 +957,8 @@ define zeroext i16 @_Z27atomic_swap_relaxed_stk_u16t(i16 zeroext %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_u16t:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB37_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB37_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -967,7 +967,7 @@ define zeroext i16 @_Z27atomic_swap_relaxed_stk_u16t(i16 zeroext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB37_2:
+; CHECK-NEXT:  .LBB37_1:
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    or %s1, 3, (0)1
 ; CHECK-NEXT:    lea %s2, 8(, %s11)
@@ -987,8 +987,8 @@ define signext i32 @_Z27atomic_swap_relaxed_stk_i32i(i32 signext %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_i32i:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB38_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB38_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -997,7 +997,7 @@ define signext i32 @_Z27atomic_swap_relaxed_stk_i32i(i32 signext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB38_2:
+; CHECK-NEXT:  .LBB38_1:
 ; CHECK-NEXT:    ts1am.w %s0, 8(%s11), 15
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -1014,8 +1014,8 @@ define zeroext i32 @_Z27atomic_swap_relaxed_stk_u32j(i32 zeroext %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_u32j:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB39_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB39_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1024,7 +1024,7 @@ define zeroext i32 @_Z27atomic_swap_relaxed_stk_u32j(i32 zeroext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB39_2:
+; CHECK-NEXT:  .LBB39_1:
 ; CHECK-NEXT:    ts1am.w %s0, 8(%s11), 15
 ; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -1041,8 +1041,8 @@ define i64 @_Z27atomic_swap_relaxed_stk_i64l(i64 %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_i64l:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB40_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB40_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1051,7 +1051,7 @@ define i64 @_Z27atomic_swap_relaxed_stk_i64l(i64 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB40_2:
+; CHECK-NEXT:  .LBB40_1:
 ; CHECK-NEXT:    lea %s1, 255
 ; CHECK-NEXT:    ts1am.l %s0, 8(%s11), %s1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -1068,8 +1068,8 @@ define i64 @_Z27atomic_swap_relaxed_stk_u64m(i64 %0) {
 ; CHECK-LABEL: _Z27atomic_swap_relaxed_stk_u64m:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB41_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB41_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1078,7 +1078,7 @@ define i64 @_Z27atomic_swap_relaxed_stk_u64m(i64 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB41_2:
+; CHECK-NEXT:  .LBB41_1:
 ; CHECK-NEXT:    lea %s1, 255
 ; CHECK-NEXT:    ts1am.l %s0, 8(%s11), %s1
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
@@ -1098,8 +1098,8 @@ define i128 @_Z28atomic_swap_relaxed_stk_i128n(i128 %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB42_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB42_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1108,7 +1108,7 @@ define i128 @_Z28atomic_swap_relaxed_stk_i128n(i128 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB42_2:
+; CHECK-NEXT:  .LBB42_1:
 ; CHECK-NEXT:    st %s1, 280(, %s11)
 ; CHECK-NEXT:    st %s0, 272(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_exchange@lo
@@ -1149,8 +1149,8 @@ define i128 @_Z28atomic_swap_relaxed_stk_u128o(i128 %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -288(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB43_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB43_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1159,7 +1159,7 @@ define i128 @_Z28atomic_swap_relaxed_stk_u128o(i128 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB43_2:
+; CHECK-NEXT:  .LBB43_1:
 ; CHECK-NEXT:    st %s1, 280(, %s11)
 ; CHECK-NEXT:    st %s0, 272(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_exchange@lo
@@ -1366,8 +1366,8 @@ define i128 @_Z27atomic_swap_relaxed_gv_i128n(i128 %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB53_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB53_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1376,7 +1376,7 @@ define i128 @_Z27atomic_swap_relaxed_gv_i128n(i128 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB53_2:
+; CHECK-NEXT:  .LBB53_1:
 ; CHECK-NEXT:    st %s1, 264(, %s11)
 ; CHECK-NEXT:    st %s0, 256(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_exchange@lo
@@ -1416,8 +1416,8 @@ define i128 @_Z27atomic_swap_relaxed_gv_u128o(i128 %0) {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -272(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB54_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB54_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -1426,7 +1426,7 @@ define i128 @_Z27atomic_swap_relaxed_gv_u128o(i128 %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB54_2:
+; CHECK-NEXT:  .LBB54_1:
 ; CHECK-NEXT:    st %s1, 264(, %s11)
 ; CHECK-NEXT:    st %s0, 256(, %s11)
 ; CHECK-NEXT:    lea %s0, __atomic_exchange@lo

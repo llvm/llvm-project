@@ -34,36 +34,6 @@ class L0ContextTy;
 
 constexpr static int32_t MaxMemKind = TARGET_ALLOC_LAST + 1;
 
-struct DynamicMemHeapTy {
-  /// Base address memory is allocated from.
-  uintptr_t AllocBase = 0;
-  /// Minimal size served by the current heap.
-  size_t BlockSize = 0;
-  /// Max size served by the current heap.
-  size_t MaxSize = 0;
-  /// Available memory blocks.
-  uint32_t NumBlocks = 0;
-  /// Number of block descriptors.
-  uint32_t NumBlockDesc = 0;
-  /// Number of block counters.
-  uint32_t NumBlockCounter = 0;
-  /// List of memory block descriptors.
-  uint64_t *BlockDesc = nullptr;
-  /// List of memory block counters.
-  uint32_t *BlockCounter = nullptr;
-};
-
-struct DynamicMemPoolTy {
-  /// Location of device memory blocks.
-  void *PoolBase = nullptr;
-  /// Heap size common to all heaps.
-  size_t HeapSize = 0;
-  /// Number of heaps available.
-  uint32_t NumHeaps = 0;
-  /// Heap descriptors (using fixed-size array to simplify memory allocation).
-  DynamicMemHeapTy HeapDesc[8];
-};
-
 /// Memory allocation information used in memory allocation/deallocation.
 struct MemAllocInfoTy {
   /// Base address allocated from compute runtime.
@@ -240,7 +210,7 @@ class MemAllocatorTy {
     /// Map from allocated pointer to allocation information.
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments.
-    std::array<uint32_t, MaxMemKind> NumImplicitArgs;
+    std::array<uint32_t, MaxMemKind> NumImplicitArgs{};
 
   public:
     /// Add allocation information to the map.
@@ -436,92 +406,6 @@ public:
     return Ret;
   }
 }; /// MemAllocatorTy
-
-/// Staging buffer.
-/// A single staging buffer is not enough when batching is enabled since there
-/// can be multiple pending copy operations.
-class StagingBufferTy {
-  /// Context for L0 calls.
-  ze_context_handle_t Context = nullptr;
-  /// Max allowed size for staging buffer.
-  size_t Size = L0StagingBufferSize;
-  /// Number of buffers allocated together.
-  size_t Count = L0StagingBufferCount;
-  /// Buffers increasing by Count if a new buffer is required.
-  llvm::SmallVector<void *> Buffers;
-  /// Next buffer location in the buffers.
-  size_t Offset = 0;
-
-  Expected<void *> addBuffers() {
-    ze_host_mem_alloc_desc_t AllocDesc{ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC,
-                                       nullptr, 0};
-    void *Ret = nullptr;
-    size_t AllocSize = Size * Count;
-    CALL_ZE_RET_ERROR(zeMemAllocHost, Context, &AllocDesc, AllocSize,
-                      L0DefaultAlignment, &Ret);
-    Buffers.push_back(Ret);
-    return Ret;
-  }
-
-public:
-  StagingBufferTy() = default;
-  StagingBufferTy(const StagingBufferTy &) = delete;
-  StagingBufferTy(StagingBufferTy &&) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &) = delete;
-  StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
-  ~StagingBufferTy() = default;
-
-  Error clear() {
-    for (auto *Ptr : Buffers)
-      CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
-    Context = nullptr;
-    return Plugin::success();
-  }
-
-  bool initialized() const { return Context != nullptr; }
-
-  void init(ze_context_handle_t ContextIn, size_t SizeIn, size_t CountIn) {
-    Context = ContextIn;
-    Size = SizeIn;
-    Count = CountIn;
-  }
-
-  void reset() { Offset = 0; }
-
-  /// Always return the first buffer.
-  Expected<void *> get() {
-    if (Size == 0 || Count == 0)
-      return nullptr;
-    return Buffers.empty() ? addBuffers() : Buffers.front();
-  }
-
-  /// Return the next available buffer.
-  Expected<void *> getNext() {
-    void *Ret = nullptr;
-    if (Size == 0 || Count == 0)
-      return Ret;
-
-    size_t AllocSize = Size * Count;
-    bool NeedToGrow = Buffers.empty() || Offset >= Buffers.size() * AllocSize;
-    if (NeedToGrow) {
-      auto PtrOrErr = addBuffers();
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      Ret = *PtrOrErr;
-    } else
-      Ret = reinterpret_cast<void *>(
-          reinterpret_cast<uintptr_t>(Buffers.back()) + (Offset % AllocSize));
-
-    if (!Ret)
-      return nullptr;
-
-    Offset += Size;
-    return Ret;
-  }
-
-  /// Return either a fixed buffer or next buffer.
-  Expected<void *> get(bool Next) { return Next ? getNext() : get(); }
-};
 
 } // namespace llvm::omp::target::plugin
 

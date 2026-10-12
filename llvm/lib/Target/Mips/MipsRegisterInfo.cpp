@@ -15,6 +15,7 @@
 #include "Mips.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
+#include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -177,6 +178,12 @@ getReservedRegs(const MachineFunction &MF) const {
 
   for (MCPhysReg R : ReservedGPR64)
     Reserved.set(R);
+
+  // Static JIT code uses t9 in RuntimeDyld stubs for R_MIPS_26 relocations,
+  // including jumps within a function. Keep it out of register allocation.
+  const auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
+  if (TM.isJIT() && TM.getRelocationModel() == Reloc::Static)
+    markSuperRegs(Reserved, Mips::T9);
 
   // Mark user-reserved GPRs and their 64-bit super-registers.
   for (unsigned I = 1; I < 32; ++I)

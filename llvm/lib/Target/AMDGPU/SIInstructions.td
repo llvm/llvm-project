@@ -656,13 +656,13 @@ def SI_EARLY_TERMINATE_SCC0 : SPseudoInstSI <(outs), (ins)> {
 
 let Uses = [EXEC] in {
 
-multiclass PseudoInstKill <dag ins> {
+multiclass PseudoInstKill <dag ins, list<Register> extraDefs = []> {
   // Even though this pseudo can usually be expanded without an SCC def, we
   // conservatively assume that it has an SCC def, both because it is sometimes
   // required in degenerate cases (when V_CMPX cannot be used due to constant
   // bus limitations) and because it allows us to avoid having to track SCC
   // liveness across basic blocks.
-  let isConvergent = 1, Defs = [EXEC,SCC] in {
+  let isConvergent = 1, Defs = !listconcat([EXEC, SCC], extraDefs) in {
     def _PSEUDO : PseudoInstSI <(outs), ins> {
       let usesCustomInserter = 1;
     }
@@ -673,15 +673,14 @@ multiclass PseudoInstKill <dag ins> {
 }
 
 defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
-let Defs = [VCC] in
-defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
+defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond), [VCC]>;
 
 let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
   (outs unknown:$dst), (ins unknown:$src),
   [], " ; illegal copy $src to $dst">;
 
-} // End Uses = [EXEC], Defs = [EXEC,VCC]
+} // End Uses = [EXEC]
 
 // Branch on undef scc. Used to avoid intermediate copy from
 // IMPLICIT_DEF to SCC.
@@ -2464,10 +2463,16 @@ def : GCNPat <
 }
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat <
-  (fcopysign fp16vt:$src0, fp16vt:$src1),
+  (UniformBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
+  (S_OR_B32 (S_AND_B32 SReg_32:$src0, (i32 0x00007fff)),
+            (S_AND_B32 SReg_32:$src1, (i32 0x00008000)))
+>;
+
+def : GCNPat <
+  (DivergentBinFrag<fcopysign> fp16vt:$src0, fp16vt:$src1),
   (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-    (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
-    (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
+    (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
+    (REG_SEQUENCE VGPR_32, VGPR_16:$src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
 >;
 
 // TODO: Scalar case for 0 magnitude special case
@@ -4256,8 +4261,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_32:$src0))),
-  (COPY VGPR_32:$src0)
+  (v2bf16 (scalar_to_vector bf16:$src0)),
+  (COPY $src0)
 >;
 }
 
@@ -4286,14 +4291,14 @@ def : GCNPat <
   (v2bf16 (DivergentUnaryFrag<scalar_to_vector> (bf16 VGPR_16:$src0))),
   (REG_SEQUENCE VGPR_32, VGPR_16:$src0, lo16, (i16 (IMPLICIT_DEF)), hi16)
 >;
-}
 
-// A bf16 value can only be in the low 16 bits of an SGPR, regardless of
-// Real-True16 or Fake-True16.
+// Unlike the divergent case above, a uniform bf16 value lives in the low 16
+// bits of a 32-bit SGPR even for Real-True16, so a plain COPY is enough.
 def : GCNPat <
   (v2bf16 (UniformUnaryFrag<scalar_to_vector> (bf16 SReg_32:$src0))),
   (COPY SReg_32:$src0)
 >;
+}
 
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,

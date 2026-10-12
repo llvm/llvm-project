@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopRotation.h"
+#include "ScalarOptions.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
@@ -20,7 +21,6 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -28,24 +28,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
-
-static cl::opt<unsigned> DefaultRotationThreshold(
-    "rotation-max-header-size", cl::init(16), cl::Hidden,
-    cl::desc("The default maximum header size for automatic loop rotation"));
-
-static cl::opt<bool> PrepareForLTOOption(
-    "rotation-prepare-for-lto", cl::init(false), cl::Hidden,
-    cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
-             "should be used for testing only."));
-
-// Experimentally allow loop header duplication. This should allow for better
-// optimization at Oz, since loop-idiom recognition can then recognize things
-// like memcpy. If this ends up being useful for many targets, we should drop
-// this flag and make a code generation option that can be controlled
-// independent of the opt level and exposed through the frontend.
-static cl::opt<bool> EnableLoopHeaderDuplicationAtMinSize(
-    "enable-loop-header-duplication-at-minsize", cl::init(false), cl::Hidden,
-    cl::desc("Enable loop header duplication even for minsize"));
 
 LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO,
                                bool CheckExitCount)
@@ -74,14 +56,15 @@ void LoopRotatePass::printPipeline(
 PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
                                       LPMUpdater &) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   // Vectorization requires loop-rotation. Use default threshold for loops the
   // user explicitly marked for vectorization, even when header duplication is
   // disabled.
   int Threshold = EnableHeaderDuplication &&
                           (!L.getHeader()->getParent()->hasMinSize() ||
-                           EnableLoopHeaderDuplicationAtMinSize ||
+                           Opts.enable_loop_header_duplication_at_minsize ||
                            hasVectorizeTransformation(&L) == TM_ForcedByUser)
-                      ? DefaultRotationThreshold
+                      ? Opts.rotation_max_header_size
                       : 0;
   const DataLayout &DL = L.getHeader()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
@@ -89,10 +72,10 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = MemorySSAUpdater(AR.MSSA);
-  bool Changed =
-      LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
-                   MSSAU ? &*MSSAU : nullptr, SQ, false, Threshold, false,
-                   PrepareForLTO || PrepareForLTOOption, CheckExitCount);
+  bool Changed = LoopRotation(
+      &L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE, MSSAU ? &*MSSAU : nullptr,
+      SQ, false, Threshold, false,
+      PrepareForLTO || Opts.rotation_prepare_for_lto, CheckExitCount);
 
   if (!Changed)
     return PreservedAnalyses::all();

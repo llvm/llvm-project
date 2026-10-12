@@ -566,7 +566,8 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
         inconvertibleErrorCode());
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), TT, SubtargetFeatures(),
+      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), TT,
+      TT.getArchPointerBitWidth() / 8, SubtargetFeatures(),
       jitlink::getGenericEdgeKindName);
   jitlink::Section &Sec =
       G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);

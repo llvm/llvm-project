@@ -339,6 +339,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -465,6 +469,10 @@ public:
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -719,6 +727,10 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.

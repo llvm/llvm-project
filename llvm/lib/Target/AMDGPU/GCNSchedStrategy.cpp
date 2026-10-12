@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/Rematerializer.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCSchedule.h"
@@ -234,8 +235,9 @@ static bool canUsePressureDiffs(const SUnit &SU) {
     return false;
 
   // Cannot use pressure diffs for subregister defs or with physregs, it's
-  // imprecise in both cases.
-  for (const auto &Op : SU.getInstr()->operands()) {
+  // imprecise in both cases. For a bundle, check the instructions inside it:
+  // the BUNDLE header only has implicit operands.
+  for (const auto &Op : const_mi_bundle_ops(*SU.getInstr())) {
     if (!Op.isReg() || Op.isImplicit())
       continue;
     if (Op.getReg().isPhysical() ||
@@ -568,7 +570,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (shouldVerifyScheduling()) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand,
@@ -593,7 +595,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode,
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (shouldVerifyScheduling()) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,
@@ -691,8 +693,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
   return SU;
 }
 
@@ -724,11 +725,6 @@ bool GCNSchedStrategy::advanceStage() {
 bool GCNSchedStrategy::hasNextStage() const {
   assert(CurrentStage);
   return std::next(CurrentStage) != SchedStages.end();
-}
-
-GCNSchedStageID GCNSchedStrategy::getNextStage() const {
-  assert(CurrentStage && std::next(CurrentStage) != SchedStages.end());
-  return *std::next(CurrentStage);
 }
 
 bool GCNSchedStrategy::tryPendingCandidate(SchedCandidate &Cand,
@@ -2422,17 +2418,8 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
     }
 
     // Reset read-undef flags and update them later.
-    for (MachineOperand &Op : MI->all_defs())
-      Op.setIsUndef(false);
-    RegisterOperands RegOpers;
-    RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
-    if (DAG.ShouldTrackLaneMasks) {
-      // Adjust liveness and add missing dead+read-undef flags.
-      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, *MI);
-    } else {
-      // Adjust for missing dead-def flags.
-      RegOpers.detectDeadDefs(*MI, *DAG.LIS, DAG.MRI);
-    }
+    RegisterOperands::restoreLivenessFlags(*MI, *DAG.TRI, DAG.MRI, *DAG.LIS,
+                                           DAG.ShouldTrackLaneMasks);
     LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
   }
 

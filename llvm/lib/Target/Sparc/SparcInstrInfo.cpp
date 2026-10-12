@@ -26,14 +26,6 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "SparcGenInstrInfo.inc"
 
-static cl::opt<unsigned> BPccDisplacementBits(
-    "sparc-bpcc-offset-bits", cl::Hidden, cl::init(19),
-    cl::desc("Restrict range of BPcc/FBPfcc instructions (DEBUG)"));
-
-static cl::opt<unsigned>
-    BPrDisplacementBits("sparc-bpr-offset-bits", cl::Hidden, cl::init(16),
-                        cl::desc("Restrict range of BPr instructions (DEBUG)"));
-
 // Pin the vtable to this file.
 void SparcInstrInfo::anchor() {}
 
@@ -458,13 +450,13 @@ bool SparcInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case SP::BPFCCANT:
   case SP::FBCOND_V9:
   case SP::FBCONDA_V9:
-    return isIntN(BPccDisplacementBits, Offset >> 2);
+    return isIntN(Subtarget.getCLOpts().bpcc_offset_bits, Offset >> 2);
 
   case SP::BPR:
   case SP::BPRA:
   case SP::BPRNT:
   case SP::BPRANT:
-    return isIntN(BPrDisplacementBits, Offset >> 2);
+    return isIntN(Subtarget.getCLOpts().bpr_offset_bits, Offset >> 2);
   }
 
   llvm_unreachable("Unknown branch instruction!");
@@ -656,7 +648,8 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
 
   DebugLoc dl;
 
-  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg);
+  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg)
+      .setOperandDead(1); // implicit-def $o7
   SparcFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }

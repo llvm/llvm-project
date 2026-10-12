@@ -1,4 +1,5 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj | spirv-val %}
 
 ; A typedef chain that closes on itself. Verifier::visitDIDerivedType checks
 ; only that a base type is a type, so this passes the IR verifier, and

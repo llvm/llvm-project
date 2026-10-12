@@ -85,8 +85,8 @@
   Func(void basic_string<CharT>::__init_copy_ctor_external(const value_type*, size_type))                              \
   Func(basic_string<CharT>& basic_string<CharT>::__assign_external(const value_type*, size_type))                      \
   Func(basic_string<CharT>& basic_string<CharT>::__assign_external(const value_type*))                                 \
-  Func(basic_string<CharT>& basic_string<CharT>::__assign_no_alias<false>(const value_type*, size_type))               \
-  Func(basic_string<CharT>& basic_string<CharT>::__assign_no_alias<true>(const value_type*, size_type))                \
+  Func(void basic_string<CharT>::__assign_no_alias<false>(const value_type*, size_type))                               \
+  Func(void basic_string<CharT>::__assign_no_alias<true>(const value_type*, size_type))                                \
   Func(void basic_string<CharT>::__erase_external_with_move(size_type, size_type))
 
 // clang-format on

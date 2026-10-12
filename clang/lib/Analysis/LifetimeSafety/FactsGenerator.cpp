@@ -1008,10 +1008,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   if (isa<CXXConstructorDecl>(FD))
     return;
   const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-  bool IsInstance =
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
-  auto getParamDeclAt = [FD, IsInstance](unsigned I) -> const ParmVarDecl * {
-    if (IsInstance) {
+  bool HasImplicitObjectArg = Method &&
+                              Method->isImplicitObjectMemberFunction() &&
+                              !isa<CXXConstructorDecl>(FD);
+  auto getParamDeclAt =
+      [FD, HasImplicitObjectArg](unsigned I) -> const ParmVarDecl * {
+    if (HasImplicitObjectArg) {
       // FIXME: Add support for I == 0 i.e. capture_by on function declarations
       if (I > 0 && I - 1 < FD->getNumParams())
         return FD->getParamDecl(I - 1);
@@ -1044,11 +1046,12 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
           CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
           CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
         continue;
-      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
-      const Expr *CapturedByArg =
-          (CapturingArgIdx == LifetimeCaptureByAttr::This)
-              ? Args[0]
-              : CallArgs[CapturingArgIdx];
+      // FIXME: Diagnose bad CapturingArgIdx.
+      if (CapturingArgIdx != LifetimeCaptureByAttr::This &&
+          (CapturingArgIdx < 0 ||
+           static_cast<size_t>(CapturingArgIdx) >= Args.size()))
+        continue;
+      const Expr *CapturedByArg = Args[CapturingArgIdx];
       assert(CapturedByArg && "Capturer expression must be valid");
 
       OriginList *Dest = readValue(CapturedByArg);

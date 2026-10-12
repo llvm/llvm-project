@@ -424,6 +424,11 @@ public:
     return getUncountableExitTrait() == UncountableExitTrait::ReadWrite;
   }
 
+  /// If Cond is a combined exit condition featuring uncountable and countable
+  /// comparisons, returns the countable comparison. Otherwise returns nullptr.
+  LLVM_ABI Instruction *
+  findCountableComparisonInCombinedCondition(Value *Cond) const;
+
   /// Return true if there is store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();

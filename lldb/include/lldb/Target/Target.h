@@ -227,6 +227,7 @@ public:
   void SetStandardErrorPath(const char *path) = delete;
 
   bool GetBreakpointsConsultPlatformAvoidList();
+  lldb::BreakpointConditionMode GetBreakpointsConditionMode() const;
 
   SourceLanguage GetLanguage() const;
 
@@ -769,12 +770,18 @@ public:
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
+  /// \param[in] invoke_symbol_locators
+  ///     Whether to search beyond the Target's modules, the shared module list
+  ///     and the locate module callback, i.e. with the platform and the symbol
+  ///     locators. A caller that has already searched passes false.
+  ///
   /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
   lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr = nullptr);
+                                   Status *error_ptr = nullptr,
+                                   bool invoke_symbol_locators = true);
 
   // Settings accessors
 
@@ -1200,25 +1207,31 @@ public:
   /// discovered at runtime as things are dynamically loaded.
   ///
   /// \return
-  ///     The shared pointer to the executable module which can
-  ///     contains a nullptr Module object if no executable has been
-  ///     set.
+  ///     The first module of type ObjectFile::eTypeExecutable. Failing that,
+  ///     the module set by RebuildModuleListWithExecutable or
+  ///     MarkExecutableModule while the target still holds it, which can be a
+  ///     shared library (an ELF PIE). Otherwise, nullptr.
   ///
   /// \see DynamicLoader
   /// \see ObjectFile::GetDependentModules (FileSpecList&)
-  /// \see Process::SetExecutableModule(lldb::ModuleSP&)
+  /// \see Target::RebuildModuleListWithExecutable(lldb::ModuleSP&)
   lldb::ModuleSP GetExecutableModule();
 
   Module *GetExecutableModulePointer();
 
-  /// Set the main executable module.
+  /// Make \a module_sp the main executable without clearing the other images,
+  /// unlike RebuildModuleListWithExecutable. Has no effect until the target
+  /// holds it.
+  void MarkExecutableModule(const lldb::ModuleSP &module_sp);
+
+  /// Clear the module list and rebuild it around a new main executable.
   ///
   /// Each process has a notion of a main executable that is the file
   /// that will be executed or attached to. Executable files can have
   /// dependent modules that are discovered from the object files, or
   /// discovered at runtime as things are dynamically loaded.
   ///
-  /// Setting the executable causes any of the current dependent
+  /// Rebuilding causes any of the current dependent
   /// image information to be cleared and replaced with the static
   /// dependent image information found by calling
   /// ObjectFile::GetDependentModules (FileSpecList&) on the main
@@ -1236,7 +1249,7 @@ public:
   ///
   /// \see ObjectFile::GetDependentModules (FileSpecList&)
   /// \see Process::GetImages()
-  void SetExecutableModule(
+  void RebuildModuleListWithExecutable(
       lldb::ModuleSP &module_sp,
       LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
 
@@ -2109,6 +2122,8 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  /// The marked main executable. Weak, so it can't outlive its image.
+  lldb::ModuleWP m_executable_module_wp;
   SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;

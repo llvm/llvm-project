@@ -63,7 +63,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +75,7 @@
 #include <memory>
 
 using namespace llvm;
+using AArch64PAuth::PtrauthCheckMode;
 
 #define DEBUG_TYPE "AArch64AsmPrinter"
 
@@ -84,14 +84,6 @@ using namespace llvm;
 STATISTIC(NumZCZeroingInstrsFPR,
           "Number of zero-cycle FPR zeroing instructions expanded from "
           "canonical pseudo instructions");
-
-enum PtrauthCheckMode { Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"));
 
 namespace {
 
@@ -423,7 +415,7 @@ static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
 }
 
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
     emitCOFFFeatureSymbol(M);
@@ -638,7 +630,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   auto &O = *OutStreamer;
   MCSymbol *CurSled = OutContext.createTempSymbol("xray_sled_", true);
   O.emitLabel(CurSled);
-  bool MachO = TM.getTargetTriple().isOSBinFormatMachO();
+  bool MachO = MMI->getModule()->getTargetTriple().isOSBinFormatMachO();
   auto *Sym = MCSymbolRefExpr::create(
       OutContext.getOrCreateSymbol(
           Twine(MachO ? "_" : "") +
@@ -831,7 +823,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   assert(TT.isOSBinFormatELF());
   // AArch64Subtarget is huge, so heap allocate it so we don't run out of stack
   // space.
@@ -1045,7 +1037,7 @@ static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   emitHwasanMemaccessSymbols(M);
 
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
     // Output authenticated pointers as indirect symbols, if we have any.
     MachineModuleInfoMachO &MMIMacho =
@@ -2372,8 +2364,9 @@ static PtrauthCheckMode getCheckMode(const MachineFunction *MF) {
   const AArch64Subtarget &STI = MF->getSubtarget<AArch64Subtarget>();
 
   // If an override is passed via command line argument, just use that value.
-  if (PtrauthAuthChecks.getNumOccurrences())
-    return PtrauthAuthChecks;
+  if (std::optional<PtrauthCheckMode> Mode =
+          STI.getCLOpts().ptrauth_auth_checks)
+    return *Mode;
 
   // Otherwise, on an FPAC CPU, you get traps whether you want them or not:
   // there's no point in emitting checks or traps.
@@ -2491,14 +2484,14 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   switch (CheckMode) {
-  case Unchecked:
+  case PtrauthCheckMode::Unchecked:
     EmitResignOnSuccess();
     break;
-  case Trap:
+  case PtrauthCheckMode::Trap:
     EmitCheck();
     EmitResignOnSuccess();
     break;
-  case Poison:
+  case PtrauthCheckMode::Poison:
     MCSymbol *OnFailure = createTempSymbol("resign_end_");
     EmitCheck(OnFailure);
     EmitResignOnSuccess();

@@ -145,6 +145,7 @@ void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     MIB.add(Cond[i]);
   }
   MIB.addMBB(TBB);
+  MIB->setImplicitPhysRegDefsDead();
 }
 
 unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
@@ -168,16 +169,22 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // Two-way Conditional branch.
   if (FBB) {
     BuildCondBr(MBB, TBB, DL, Cond);
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(FBB);
+    BuildMI(&MBB, DL, get(UncondBrOpc))
+        .addMBB(FBB)
+        ->setImplicitPhysRegDefsDead();
     return 2;
   }
 
   // One way branch.
   // Unconditional branch.
-  if (Cond.empty())
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(TBB);
-  else // Conditional branch.
+  if (Cond.empty()) {
+    BuildMI(&MBB, DL, get(UncondBrOpc))
+        .addMBB(TBB)
+        ->setImplicitPhysRegDefsDead();
+  } else {
+    // Conditional branch.
     BuildCondBr(MBB, TBB, DL, Cond);
+  }
   return 1;
 }
 

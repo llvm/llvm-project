@@ -88,7 +88,7 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
           "convertTypeForMemory: Matrix with bool as element type");
     }
 
-    uint64_t size = matrixTy.getRowNum() * matrixTy.getColumnNum();
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
     mlir::Type elementType = converter.convertType(matrixTy.getElementType());
     return mlir::LLVM::LLVMArrayType::get(elementType, size);
   }
@@ -96,9 +96,8 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   if (auto vecTy = mlir::dyn_cast<cir::VectorType>(type)) {
     if (mlir::isa<cir::BoolType>(vecTy.getElementType())) {
       assert(!cir::MissingFeatures::hlsl());
-      // Pad to at least one byte.
-      uint64_t bytePadded = std::max<uint64_t>(vecTy.getSize(), 8);
-      return mlir::IntegerType::get(type.getContext(), bytePadded);
+      return mlir::IntegerType::get(type.getContext(),
+                                    vecTy.getBoolStorageWidth());
     }
   }
 
@@ -130,6 +129,14 @@ mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
       intTy && intTy.isBitInt())
     return mlir::IntegerType::get(type.getContext(),
                                   intTy.getStorageTypeWidth(dataLayout));
+
+  // Convert the Matrix type to a vector type (the value type of
+  // MatrixType), if it points to a array (the memory type of MatrixType).
+  if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
+    uint64_t size = matrixTy.getNumRows() * matrixTy.getNumColumns();
+    mlir::Type elemTy = converter.convertType(matrixTy.getElementType());
+    return mlir::VectorType::get(size, elemTy);
+  }
 
   return convertTypeForMemory(converter, dataLayout, type);
 }

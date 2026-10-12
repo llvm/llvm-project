@@ -507,6 +507,8 @@ private:
 class BytecodeSyntheticChildren : public SyntheticChildren {
 public:
   struct SyntheticBytecodeImplementation {
+    /// The version of this record. Specs are found in formatterbytecode.md.
+    uint32_t version = 1;
     std::unique_ptr<llvm::MemoryBuffer> init;
     std::unique_ptr<llvm::MemoryBuffer> update;
     std::unique_ptr<llvm::MemoryBuffer> num_children;

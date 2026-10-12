@@ -787,15 +787,19 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
         checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
       return true;
 
-    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
+    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_za_builtin_no_za_state)
+           diag::err_attribute_arm_za_builtin_no_za_state)
           << TheCall->getSourceRange();
+      return true;
+    }
 
-    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
+           diag::err_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
+      return true;
+    }
   }
 
   // Range check SME intrinsics that take immediate values.
@@ -1156,6 +1160,26 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
   return false;
 }
 
+static bool checkFPMScaleIfConstant(Sema &S, CallExpr *Call, unsigned ArgNum,
+                                    int64_t Low, int64_t High) {
+  Expr *Arg = Call->getArg(ArgNum);
+
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  std::optional<llvm::APSInt> Value = Arg->getIntegerConstantExpr(S.Context);
+
+  // Runtime value: accept it.
+  if (!Value)
+    return false;
+
+  if (*Value < Low || *Value > High)
+    return S.Diag(Call->getBeginLoc(), diag::warn_argument_invalid_range)
+           << toString(*Value, 10) << Low << High << Arg->getSourceRange();
+
+  return false;
+}
+
 bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
@@ -1189,7 +1213,6 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
     return true;
   if (CheckCDEBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
-
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
   // FIXME: VFP Intrinsics should error if VFP not present.
@@ -1297,9 +1320,11 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // Only check the valid encoding range. Any constant in this range would be
   // converted to a register of the form S2_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
+  // Bit 14 is o0, i.e. op0 - 2, so op0 == 2 registers have it clear and encode
+  // below 0x4000.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
       BuiltinID == AArch64::BI_WriteStatusReg)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0x7fff);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
@@ -1344,6 +1369,15 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
 
   if (CheckSMEBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_nscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, -128, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale2)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 63);
 
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.

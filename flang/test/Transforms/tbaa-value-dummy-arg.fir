@@ -67,12 +67,12 @@ func.func @fnt4(%arg0: !fir.type<_QMmTdtd1{a:!fir.array<50xi8>}> {fir.bindc_name
   fir.store %arg0 to %alloca : !fir.ref<!fir.type<_QMmTdtd1{a:!fir.array<50xi8>}>>
   // dummy_scope + arg 1 + value causes loop reads to get SourceKind::Argument.
   %decl = fir.declare %alloca dummy_scope %scope arg 1
-            {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFfnt4Edt"} :
+            uniq_name("_QFfnt4Edt") fortran_attrs<value> :
           (!fir.ref<!fir.type<_QMmTdtd1{a:!fir.array<50xi8>}>>, !fir.dscope) ->
            !fir.ref<!fir.type<_QMmTdtd1{a:!fir.array<50xi8>}>>
   // Accumulator -- genuine SourceKind::Allocate, unaffected by the fix.
   %result_alloca = fir.alloca i8 {uniq_name = "_QFfnt4Efnt4"}
-  %result_decl   = fir.declare %result_alloca {uniq_name = "_QFfnt4Efnt4"} :
+  %result_decl   = fir.declare %result_alloca uniq_name("_QFfnt4Efnt4") :
                    (!fir.ref<i8>) -> !fir.ref<i8>
   fir.store %c0_i8 to %result_decl : !fir.ref<i8>
   // Loop reads: "dummy arg data/_QFfnt4Edt".  Live -- result is returned.

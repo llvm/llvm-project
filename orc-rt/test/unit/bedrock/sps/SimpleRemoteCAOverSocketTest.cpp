@@ -39,6 +39,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -85,14 +86,15 @@ public:
 
   void SetUp() override {
     auto P = makeStreamSocketPair();
-    ASSERT_TRUE(!!P) << toString(P.takeError());
+    ASSERT_THAT_EXPECTED(P, Succeeded());
     Near = std::move(P->first);
     Far = std::move(P->second);
   }
 
   /// Creates a CA over Near and attaches it, the way a connector would.
   Error attachOverSocket() {
-    auto CA = createSimpleRemoteCAOverSocket(S, std::move(Near));
+    auto CA = createSimpleRemoteCAOverSocket(
+        S, VettedPeer<SocketHandle>::unchecked(std::move(Near)));
     if (!CA)
       return CA.takeError();
     S.attach(std::move(*CA), BootstrapInfo(S));
@@ -284,6 +286,11 @@ void outOfBandErrorWrapper(orc_rt_SessionRef S,
 
 } // namespace
 
+// Starting a conversation means deciding to trust the peer, so the factory
+// takes only a VettedPeer, never a bare socket.
+static_assert(!std::is_invocable_v<decltype(createSimpleRemoteCAOverSocket),
+                                   Session &, SocketHandle>);
+
 TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
   // The framing reads a message in as many parts as the stream delivers it, so
   // a socket that preserves message boundaries would truncate one.
@@ -291,17 +298,18 @@ TEST_F(SimpleRemoteCAOverSocketTest, RejectsANonStreamSocket) {
   ASSERT_TRUE(H.has_value()) << "could not create a socket for the test";
 
   EXPECT_THAT_EXPECTED(
-      createSimpleRemoteCAOverSocket(S, SocketHandle(*H)),
+      createSimpleRemoteCAOverSocket(
+          S, VettedPeer<SocketHandle>::unchecked(SocketHandle(*H))),
       FailedWithMessage(HasSubstr("requires a stream socket")));
   EXPECT_FALSE(isNativeSocketOpen(*H))
       << "a rejected socket is still owned, and must be closed";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, SetupIsSentOnConnect) {
-  ASSERT_FALSE(!!attachOverSocket());
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
 
   auto F = readFrame(Far.get());
-  ASSERT_TRUE(!!F) << toString(F.takeError());
+  ASSERT_THAT_EXPECTED(F, Succeeded());
   EXPECT_EQ(F->opcode(), Opcode::Setup);
   EXPECT_EQ(F->seqNo(), 0u) << "setup carries no sequence number";
   EXPECT_EQ(F->tag(), 0u) << "setup carries no handler tag";
@@ -310,8 +318,9 @@ TEST_F(SimpleRemoteCAOverSocketTest, SetupIsSentOnConnect) {
 
 TEST_F(SimpleRemoteCAOverSocketTest,
        ControllerCallIsFramedAndResultCompletesIt) {
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   std::future<std::string> Result;
   S.callController(
@@ -321,29 +330,32 @@ TEST_F(SimpleRemoteCAOverSocketTest,
       nullptr, WrapperFunctionBuffer::copyFrom("args", 4));
 
   auto Call = readFrame(Far.get());
-  ASSERT_TRUE(!!Call) << toString(Call.takeError());
+  ASSERT_THAT_EXPECTED(Call, Succeeded());
   EXPECT_EQ(Call->opcode(), Opcode::Call);
   EXPECT_NE(Call->seqNo(), 0u)
       << "a call awaiting a result needs a sequence no.";
   EXPECT_EQ(Call->payload(), "args");
 
   // Reply under the same sequence number; the handler completes.
-  ASSERT_FALSE(
-      !!writeFrame(Far.get(), Opcode::Result, Call->seqNo(), 0, "reply"));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Result, Call->seqNo(), 0, "reply"),
+      Succeeded());
   EXPECT_EQ(Result.get(), "reply");
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, ControllerInitiatedCallReturnsAResult) {
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // A Call names the wrapper by tag, and its sequence number is the call id.
   auto Tag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
-  ASSERT_FALSE(
-      !!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/42, Tag, "world"));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/42, Tag, "world"),
+      Succeeded());
 
   auto R = readFrame(Far.get());
-  ASSERT_TRUE(!!R) << toString(R.takeError());
+  ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(R->opcode(), Opcode::Result);
   EXPECT_EQ(R->seqNo(), 42u) << "the result must carry the call id back";
   EXPECT_EQ(R->payload(), "world");
@@ -353,14 +365,17 @@ TEST_F(SimpleRemoteCAOverSocketTest, OutOfBandErrorResultIsFramedAsItsOwnKind) {
   // An out-of-band error is a pointer to a message, not a serialized value, so
   // it has no bytes to put in a payload. Before it had a result kind of its own
   // there was no way to send one at all: framing it aborted the reactor thread.
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   auto Tag = wrapperTag(reinterpret_cast<void *>(outOfBandErrorWrapper));
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/7, Tag, "junk"));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/7, Tag, "junk"),
+      Succeeded());
 
   auto R = readFrame(Far.get());
-  ASSERT_TRUE(!!R) << toString(R.takeError());
+  ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(R->opcode(), Opcode::Result);
   EXPECT_EQ(R->seqNo(), 7u) << "the result must carry the call id back";
   EXPECT_EQ(R->tag(), resultTag(ResultKind::OutOfBandError));
@@ -378,8 +393,9 @@ TEST_F(SimpleRemoteCAOverSocketTest,
   // The other direction: a controller-side wrapper fails the same way, and the
   // handler waiting on the result must see an out-of-band error rather than an
   // empty result.
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   std::future<std::string> Result;
   S.callController(
@@ -390,12 +406,13 @@ TEST_F(SimpleRemoteCAOverSocketTest,
       nullptr, WrapperFunctionBuffer::copyFrom("args", 4));
 
   auto Call = readFrame(Far.get());
-  ASSERT_TRUE(!!Call) << toString(Call.takeError());
+  ASSERT_THAT_EXPECTED(Call, Succeeded());
 
   auto [Tag, Payload] = resultMessage(
       WrapperFunctionBuffer::createOutOfBandError("controller lost its mind"));
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Result, Call->seqNo(), Tag,
-                            view(Payload)));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Result, Call->seqNo(), Tag, view(Payload)),
+      Succeeded());
 
   EXPECT_EQ(Result.get(), "controller lost its mind");
 }
@@ -406,8 +423,9 @@ TEST_F(SimpleRemoteCAOverSocketTest, UnknownResultKindEndsTheSession) {
   // unrecognized opcode is.
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   std::future<std::string> Result;
   S.callController(
@@ -418,16 +436,17 @@ TEST_F(SimpleRemoteCAOverSocketTest, UnknownResultKindEndsTheSession) {
       nullptr, WrapperFunctionBuffer::copyFrom("args", 4));
 
   auto Call = readFrame(Far.get());
-  ASSERT_TRUE(!!Call) << toString(Call.takeError());
+  ASSERT_THAT_EXPECTED(Call, Succeeded());
 
   uint64_t UnknownKind = static_cast<uint64_t>(ResultKind::LastResultKind) + 1;
-  ASSERT_FALSE(
-      !!writeFrame(Far.get(), Opcode::Result, Call->seqNo(), UnknownKind, ""));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Result, Call->seqNo(), UnknownKind, ""),
+      Succeeded());
 
-  auto Err = Disconnected.get();
-  ASSERT_TRUE(!!Err) << "an uninterpretable result must not end cleanly";
-  EXPECT_EQ(toString(std::move(Err)),
-            "Malformed result message: invalid kind 2");
+  ASSERT_THAT_ERROR(
+      Disconnected.get(),
+      FailedWithMessage("Malformed result message: invalid kind 2"))
+      << "an uninterpretable result must not end cleanly";
 
   // The call it could not answer is still settled on the way out, rather than
   // left waiting forever.
@@ -439,41 +458,45 @@ TEST_F(SimpleRemoteCAOverSocketTest, EmptyPayloadsRoundTrip) {
   // the header is decoded, which is the case that stops "header full" and
   // "header decoded" being the same state, in both directions: the echoed
   // result is empty too.
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   auto Tag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/8, Tag));
+  ASSERT_THAT_ERROR(writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/8, Tag),
+                    Succeeded());
 
   auto R = readFrame(Far.get());
-  ASSERT_TRUE(!!R) << toString(R.takeError());
+  ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(R->opcode(), Opcode::Result);
   EXPECT_EQ(R->seqNo(), 8u);
   EXPECT_TRUE(R->Payload.empty());
 
   // Still framing correctly afterwards: an empty message must not desynchronise
   // the stream.
-  ASSERT_FALSE(
-      !!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/9, Tag, "after"));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/9, Tag, "after"),
+      Succeeded());
   auto R2 = readFrame(Far.get());
-  ASSERT_TRUE(!!R2) << toString(R2.takeError());
+  ASSERT_THAT_EXPECTED(R2, Succeeded());
   EXPECT_EQ(R2->seqNo(), 9u);
   EXPECT_EQ(R2->payload(), "after");
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, PartialWritesAreReassembled) {
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // One byte at a time, so the reactor sees the message split in every possible
   // place -- including mid-header.
   auto Tag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
   auto Buf = frame(Opcode::Call, /*SeqNo=*/7, Tag, "drip");
   for (char C : Buf)
-    ASSERT_FALSE(!!sendAll(Far.get(), &C, 1));
+    ASSERT_THAT_ERROR(sendAll(Far.get(), &C, 1), Succeeded());
 
   auto R = readFrame(Far.get());
-  ASSERT_TRUE(!!R) << toString(R.takeError());
+  ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(R->opcode(), Opcode::Result);
   EXPECT_EQ(R->seqNo(), 7u);
   EXPECT_EQ(R->payload(), "drip");
@@ -488,23 +511,26 @@ TEST_F(SimpleRemoteCAOverSocketTest, NothingIsQueuedBehindTheHangup) {
   // finishing, which is narrow. It is held open here by never reading the far
   // end until the very end: the reactor parks in would-block with a part-sent
   // message, so nothing drains while the late result is submitted.
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // Echo back more than the socket buffer can hold, so the reactor stalls
   // part-way through sending the result.
   const std::string Big(StallingPayloadSize, 'x');
   auto EchoTag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
-  ASSERT_FALSE(
-      !!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, EchoTag, Big));
+  ASSERT_THAT_ERROR(
+      writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, EchoTag, Big),
+      Succeeded());
 
   // A second call that will not have returned when teardown starts. The
   // wrapper is told where to park its state by being handed this object's
   // address as the call payload.
   DeferredCall Deferred;
   auto DeferTag = wrapperTag(reinterpret_cast<void *>(DeferredCall::wrapper));
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/2, DeferTag,
-                            Deferred.asCallPayload()));
+  ASSERT_THAT_ERROR(writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/2, DeferTag,
+                               Deferred.asCallPayload()),
+                    Succeeded());
 
   // Wait for the wrapper to run without draining the socket.
   auto DeferredReturn = Deferred.waitForCall();
@@ -518,31 +544,34 @@ TEST_F(SimpleRemoteCAOverSocketTest, NothingIsQueuedBehindTheHangup) {
 
   // Now drain. The stalled result completes, then the hang-up, then EOF.
   auto R = readFrame(Far.get());
-  ASSERT_TRUE(!!R) << toString(R.takeError());
+  ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(R->opcode(), Opcode::Result);
   EXPECT_EQ(R->Payload.size(), Big.size());
 
   auto H = readFrame(Far.get());
-  ASSERT_TRUE(!!H) << toString(H.takeError());
+  ASSERT_THAT_EXPECTED(H, Succeeded());
   EXPECT_EQ(H->opcode(), Opcode::Hangup) << "the hang-up did not come last";
 
   char Byte = 0;
   auto N = recvAll(Far.get(), &Byte, 1);
-  ASSERT_TRUE(!!N) << toString(N.takeError());
+  ASSERT_THAT_EXPECTED(N, Succeeded());
   EXPECT_EQ(*N, 0u) << "a message was queued behind the hang-up";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, HangupFromControllerEndsTheSession) {
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // An orderly hang-up carries a success Error as its reason.
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Hangup, 0, 0,
-                            view(hangupPayload(Error::success()))));
+  ASSERT_THAT_ERROR(writeFrame(Far.get(), Opcode::Hangup, 0, 0,
+                               view(hangupPayload(Error::success()))),
+                    Succeeded());
 
-  EXPECT_FALSE(!!Disconnected.get()) << "an orderly hang-up is not an error";
+  EXPECT_THAT_ERROR(Disconnected.get(), Succeeded())
+      << "an orderly hang-up is not an error";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, PeerReasonSurvivesAStalledSendQueue) {
@@ -551,42 +580,46 @@ TEST_F(SimpleRemoteCAOverSocketTest, PeerReasonSurvivesAStalledSendQueue) {
   // would fail with EPIPE and report that instead, losing the reason.
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // Echo back more than the socket will hold, and never read it, so the reactor
   // is left with a part-sent message queued.
   const std::string Big(StallingPayloadSize, 'x');
   auto Tag = wrapperTag(reinterpret_cast<void *>(echoWrapper));
-  ASSERT_FALSE(!!writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, Tag, Big));
+  ASSERT_THAT_ERROR(writeFrame(Far.get(), Opcode::Call, /*SeqNo=*/1, Tag, Big),
+                    Succeeded());
 
   // Hang up with a reason, then vanish. The reason is buffered on our side of
   // the socket and survives the close.
-  ASSERT_FALSE(!!writeFrame(
-      Far.get(), Opcode::Hangup, 0, 0,
-      view(hangupPayload(make_error<StringError>("controller ran out of x")))));
+  ASSERT_THAT_ERROR(writeFrame(Far.get(), Opcode::Hangup, 0, 0,
+                               view(hangupPayload(make_error<StringError>(
+                                   "controller ran out of x")))),
+                    Succeeded());
   Far.reset();
 
-  auto Err = Disconnected.get();
-  ASSERT_TRUE(!!Err) << "a hang-up carrying a reason ends with that reason";
-  EXPECT_EQ(toString(std::move(Err)), "controller ran out of x");
+  EXPECT_THAT_ERROR(Disconnected.get(),
+                    FailedWithMessage("controller ran out of x"))
+      << "a hang-up carrying a reason ends with that reason";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, TruncatedMessageIsReportedAsAnError) {
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // Half a header, then gone: distinguishable from a close at a boundary.
   char Half[HeaderSize / 2] = {};
-  ASSERT_FALSE(!!sendAll(Far.get(), Half, sizeof(Half)));
+  ASSERT_THAT_ERROR(sendAll(Far.get(), Half, sizeof(Half)), Succeeded());
   Far.reset();
 
-  auto Err = Disconnected.get();
-  EXPECT_TRUE(!!Err) << "a truncated message must not look like a clean end";
-  EXPECT_EQ(toString(std::move(Err)),
-            "Connection closed without a hang-up message");
+  EXPECT_THAT_ERROR(
+      Disconnected.get(),
+      FailedWithMessage("Connection closed without a hang-up message"))
+      << "a truncated message must not look like a clean end";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, PeerCloseWithoutAHangupIsAnError) {
@@ -595,30 +628,31 @@ TEST_F(SimpleRemoteCAOverSocketTest, PeerCloseWithoutAHangupIsAnError) {
   // clean shutdown -- a controller that dies has to fail the session.
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // Closed between messages, so nothing is truncated -- it is simply gone.
   Far.reset();
 
-  auto Err = Disconnected.get();
-  ASSERT_TRUE(!!Err) << "a silent close is not an orderly end";
-  EXPECT_EQ(toString(std::move(Err)),
-            "Connection closed without a hang-up message");
+  EXPECT_THAT_ERROR(
+      Disconnected.get(),
+      FailedWithMessage("Connection closed without a hang-up message"))
+      << "a silent close is not an orderly end";
 }
 
 TEST_F(SimpleRemoteCAOverSocketTest, MessageSizeBelowHeaderIsRejected) {
   std::future<Error> Disconnected;
   S.setOnDisconnect(waitFor(Disconnected));
-  ASSERT_FALSE(!!attachOverSocket());
-  ASSERT_TRUE(!!readFrame(Far.get())) << "expected setup first";
+  ASSERT_THAT_ERROR(attachOverSocket(), Succeeded());
+  ASSERT_THAT_EXPECTED(readFrame(Far.get()), Succeeded())
+      << "expected setup first";
 
   // A size that excludes its own header would make the payload length negative.
   char H[HeaderSize] = {};
   endian_write<uint64_t>(H, HeaderSize - 1, endian::little);
-  ASSERT_FALSE(!!sendAll(Far.get(), H, sizeof(H)));
+  ASSERT_THAT_ERROR(sendAll(Far.get(), H, sizeof(H)), Succeeded());
 
-  auto Err = Disconnected.get();
-  EXPECT_TRUE(!!Err);
-  EXPECT_EQ(toString(std::move(Err)), "Message size smaller than its header");
+  EXPECT_THAT_ERROR(Disconnected.get(),
+                    FailedWithMessage("Message size smaller than its header"));
 }

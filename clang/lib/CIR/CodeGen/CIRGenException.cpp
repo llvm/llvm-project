@@ -22,42 +22,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-const EHPersonality EHPersonality::GNU_C = {"__gcc_personality_v0", nullptr};
-const EHPersonality EHPersonality::GNU_C_SJLJ = {"__gcc_personality_sj0",
-                                                 nullptr};
-const EHPersonality EHPersonality::GNU_C_SEH = {"__gcc_personality_seh0",
-                                                nullptr};
-const EHPersonality EHPersonality::NeXT_ObjC = {"__objc_personality_v0",
-                                                nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus = {"__gxx_personality_v0",
-                                                    nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus_SJLJ = {
-    "__gxx_personality_sj0", nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus_SEH = {
-    "__gxx_personality_seh0", nullptr};
-const EHPersonality EHPersonality::GNU_ObjC = {"__gnu_objc_personality_v0",
-                                               "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjC_SJLJ = {
-    "__gnu_objc_personality_sj0", "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjC_SEH = {
-    "__gnu_objc_personality_seh0", "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjCXX = {
-    "__gnustep_objcxx_personality_v0", nullptr};
-const EHPersonality EHPersonality::GNUstep_ObjC = {
-    "__gnustep_objc_personality_v0", nullptr};
-const EHPersonality EHPersonality::MSVC_except_handler = {"_except_handler3",
-                                                          nullptr};
-const EHPersonality EHPersonality::MSVC_C_specific_handler = {
-    "__C_specific_handler", nullptr};
-const EHPersonality EHPersonality::MSVC_CxxFrameHandler3 = {
-    "__CxxFrameHandler3", nullptr};
-const EHPersonality EHPersonality::GNU_Wasm_CPlusPlus = {
-    "__gxx_wasm_personality_v0", nullptr};
-const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
-                                                   nullptr};
-const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
-                                                    nullptr};
-
 static const EHPersonality &getCPersonality(const TargetInfo &target,
                                             const CodeGenOptions &cgOpts) {
   const llvm::Triple &triple = target.getTriple();
@@ -159,8 +123,10 @@ static const EHPersonality &getSEHPersonalityMSVC(const llvm::Triple &triple) {
              : EHPersonality::MSVC_C_specific_handler;
 }
 
-const EHPersonality &EHPersonality::get(CIRGenModule &cgm,
-                                        const FunctionDecl *fd) {
+namespace clang::CIRGen {
+
+const EHPersonality &getEHPersonality(CIRGenModule &cgm,
+                                      const FunctionDecl *fd) {
   const llvm::Triple &triple = cgm.getTarget().getTriple();
   const LangOptions &langOpts = cgm.getLangOpts();
   const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
@@ -178,14 +144,16 @@ const EHPersonality &EHPersonality::get(CIRGenModule &cgm,
                             : getCPersonality(target, cgOpts);
 }
 
-const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
+const EHPersonality &getEHPersonality(CIRGenFunction &cgf) {
   const auto *fg = cgf.curCodeDecl;
   // For outlined finallys and filters, use the SEH personality in case they
   // contain more SEH. This mostly only affects finallys. Filters could
   // hypothetically use gnu statement expressions to sneak in nested SEH.
   fg = fg ? fg : cgf.curSEHParent.getDecl();
-  return get(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
+  return getEHPersonality(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
 }
+
+} // namespace clang::CIRGen
 
 static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
                                         const EHPersonality &personality) {
@@ -194,7 +162,7 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
-      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
+      funcTy, personality.PersonalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
 }
@@ -281,7 +249,7 @@ void CIRGenFunction::emitStartEHSpec(const Decl *d) {
 
   cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(curFn);
   if (!funcOp.getPersonality())
-    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+    funcOp.setPersonality(getPersonalityFn(cgm, getEHPersonality(*this)));
 
   bool emptyFilter = permittedTypes.empty();
   ehSpecTryOp = cir::TryOp::create(
@@ -544,16 +512,16 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
-  bool shouldInitFromExnDirectly = false;
 
-  // If we're catching by reference, we can just cast the object
-  // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
     QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
-    if (const PointerType *ptr = dyn_cast<PointerType>(caughtType)) {
-      shouldInitFromExnDirectly = !ptr->getPointeeType()->isRecordType();
-    }
-    kind = cir::InitCatchKind::Reference;
+    const PointerType *ptr = dyn_cast<PointerType>(caughtType);
+    if (!ptr)
+      kind = cir::InitCatchKind::Reference;
+    else if (ptr->getPointeeType()->isRecordType())
+      kind = cir::InitCatchKind::ReferenceToRecordPointer;
+    else
+      kind = cir::InitCatchKind::ReferenceToPointer;
   } else {
     cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
     if (tek == cir::TEK_Aggregate) {
@@ -587,7 +555,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   mlir::Location mloc = cgf.getLoc(loc);
 
   if (kind == cir::InitCatchKind::NonTrivialCopy ||
-      (kind == cir::InitCatchKind::Reference && shouldInitFromExnDirectly)) {
+      kind == cir::InitCatchKind::ReferenceToPointer) {
     // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
     // would require additional adornments that cir.construct_catch_param does
     // not yet carry.
@@ -641,9 +609,8 @@ void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
                  catchStmt->getBeginLoc());
 }
 
-mlir::LogicalResult
-CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
-                               cxxTryBodyEmitter &bodyCallback) {
+mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
+    const CXXTryStmt &s, cxxTryBodyEmitter &bodyCallback, bool isFnTryBlock) {
   mlir::Location loc = getLoc(s.getSourceRange());
 
   // Create a scope to hold try local storage for catch params.
@@ -657,7 +624,7 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   // Set personality function if not already set
   auto funcOp = mlir::cast<cir::FuncOp>(curFn);
   if (!funcOp.getPersonality())
-    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+    funcOp.setPersonality(getPersonalityFn(cgm, getEHPersonality(*this)));
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(scopeIP);
@@ -732,6 +699,12 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   tryOp.setHandlerTypesAttr(
       mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
 
+  // Determine if we need an implicit rethrow for all these catch handlers;
+  // see the comment below.
+  const bool doImplicitRethrow =
+      isFnTryBlock && (isa<CXXConstructorDecl>(curCodeDecl) ||
+                       isa<CXXDestructorDecl>(curCodeDecl));
+
   // Emit the catch handler bodies. This has to be done after the try op is
   // created and in place so that we can find the insertion point for the
   // catch parameter alloca.
@@ -768,8 +741,13 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
     //   The currently handled exception is rethrown if control
     //   reaches the end of a handler of the function-try-block of a
     //   constructor or destructor.
-
-    // TODO(cir): Handle implicit rethrow?
+    //
+    // It is important that we only do this on fallthrough and not on
+    // return.  Note that it's illegal to put a return in a
+    // constructor function-try-block's catch handler (p14), so this
+    // really only applies to destructors.
+    if (doImplicitRethrow && insertionPointIsReachable())
+      cgm.getCXXABI().emitRethrow(*this, /*isNoReturn=*/true);
 
     // Fall out through the catch cleanups.
     handlerScope.forceCleanup();

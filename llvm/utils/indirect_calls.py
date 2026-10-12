@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """A tool for looking for indirect jumps and calls in x86 binaries.
 

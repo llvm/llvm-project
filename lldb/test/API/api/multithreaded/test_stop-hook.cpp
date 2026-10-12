@@ -110,7 +110,10 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
     }
     ~Cleanup() {
       fclose(m_write_end);
-      m_dbg.SetInputFileHandle(m_file, false);
+      // Normally driver.cpp would do this, but we must do it now so that
+      // any in-progress reads from the input handle are finished before
+      // we close it.
+      SBDebugger::Destroy(m_dbg);
       fclose(m_read_end);
     }
 

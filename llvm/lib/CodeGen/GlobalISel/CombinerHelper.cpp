@@ -3566,6 +3566,9 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   // Check the size of unmerge source
   MatchInfo = UnmergeMI->getSourceReg();
   LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  if (!UnmergeSrcTy.isVector())
+    return false;
+
   if (!DstTy.getElementCount().isKnownMultipleOf(UnmergeSrcTy.getNumElements()))
     return false;
 

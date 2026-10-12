@@ -26,8 +26,10 @@ template <int x, int y, int z>  void test_template(void) __cluster_dims__(x, y, 
 // CHECK: template <int x, int y, int z> void test_template_expr() __attribute__((cluster_dims(x + constint, y, z)))
 template <int x, int y, int z> void test_template_expr(void) __cluster_dims__(x + constint, y, z) {} //NS-error {{'cluster_dims' is not supported for this GPU architecture}}
 
+// cuda-error@+3 {{cluster does not support more than 8 thread blocks; 256 provided}}
+// amd-error@+2 {{cluster does not support more than 16 thread blocks; 256 provided}}
 //NS-error@+1 {{'cluster_dims' is not supported for this GPU architecture}}
-__global__ void __cluster_dims__(32, 2, 4) test_too_large_dim_0() {} // common-error {{integer constant expression evaluates to value 32 that cannot be represented in a 4-bit unsigned integer type}}
+__global__ void __cluster_dims__(32, 2, 4) test_too_large_dim_0() {}
 
 // cuda-error@+2 {{cluster does not support more than 8 thread blocks; 64 provided}}
 // amd-error@+1 {{cluster does not support more than 16 thread blocks; 64 provided}}
@@ -38,6 +40,18 @@ __global__ void __cluster_dims__(4, 4, 4) test_too_large_dim_1() {} // NS-error 
 template<unsigned a, unsigned b, unsigned c>
 __global__ void __cluster_dims__(a, b, c) test_too_large_dim_template() {} // NS-error {{'cluster_dims' is not supported for this GPU architecture}}
 template __global__ void test_too_large_dim_template<4, 4, 4>(); // common-note {{in instantiation of function template specialization 'test_too_large_dim_template<4U, 4U, 4U>' requested here}}
+
+// cuda-error@+2 {{cluster does not support more than 8 thread blocks; 16 provided}}
+//NS-error@+1 {{'cluster_dims' is not supported for this GPU architecture}}
+__global__ void __cluster_dims__(16, 1, 1) test_max_blocks_in_one_dim() {}
+
+// cuda-error@+3 {{cluster does not support more than 8 thread blocks; 225 provided}}
+// amd-error@+2 {{cluster does not support more than 16 thread blocks; 225 provided}}
+//NS-error@+1 {{'cluster_dims' is not supported for this GPU architecture}}
+__global__ void __cluster_dims__(15, 15) test_too_large_dim_2d() {}
+
+//NS-error@+1 {{'cluster_dims' is not supported for this GPU architecture}}
+__global__ void __cluster_dims__(-1, 1, 1) test_negative_dim() {} // common-warning {{'cluster_dims' attribute parameter 0 is negative and will be ignored}}
 
 int none_const_int = 4;
 
