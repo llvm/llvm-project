@@ -2595,6 +2595,9 @@ public:
         break;
       }
 
+      // TODO: Factor in subvector extract costs if the types are different
+      //       sizes. We get some ridiculously high costs for vector_extract
+      //       at present, so fix that first.
       // For a type-only query, model as (possibly multiple) basic instructions
       // for the accumulator type.
       return InTy->getElementCount().getKnownScalarFactor(
