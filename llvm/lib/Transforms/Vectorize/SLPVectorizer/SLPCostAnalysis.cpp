@@ -73,15 +73,12 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                             /*CtxI=*/nullptr, VIC);
 }
 
-InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
-                                   const DataLayout &DL, Value *StrideVal,
-                                   Type *StridedLoadTy, Type *VecTy, Value *Ptr,
-                                   Align CommonAlignment,
-                                   TargetTransformInfo::CastContextHint Ctx,
-                                   TargetTransformInfo::TargetCostKind CostKind,
-                                   bool IsReverse) {
-  Value *Stride = getStrideBytesIfConstant(StrideVal, VecTy->getScalarType(),
-                                           DL, IsReverse);
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
+  Value *Stride = getStrideBytesIfConstant(StrideVal, ScalarTy, DL, IsReverse);
   InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
       MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
                                  StridedLoadTy, Ptr,

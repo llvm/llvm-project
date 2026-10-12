@@ -51,13 +51,11 @@ ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
                                       bool IsReverse = false);
 
 /// Return the cost of a strided load and accompanying bitcast.
-InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
-                                   const DataLayout &DL, Value *StrideVal,
-                                   Type *StridedLoadTy, Type *VecTy, Value *Ptr,
-                                   Align CommonAlignment,
-                                   TargetTransformInfo::CastContextHint Ctx,
-                                   TargetTransformInfo::TargetCostKind CostKind,
-                                   bool IsReverse = false);
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse = false);
 
 /// Describe a single compressed load for costing and generating the vector
 /// instruction.

@@ -14583,7 +14583,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
     bool IsReverse = E.isReverse() && !isWidenedStridedLoad(&E);
     InstructionCost StridedCost =
         getStridedLoadCost(*TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy,
-                           LI0->getPointerOperand(), CommonAlignment,
+                           ScalarTy, LI0->getPointerOperand(), CommonAlignment,
                            getCastContextHint(E), CostKind, IsReverse);
     bool PreferStrided = StridedCost < CompressedCost;
     if (PreferStrided)
@@ -17830,10 +17830,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         bool IsReverse = E->isReverse() && !isWidenedStridedLoad(E);
-        VecLdCost =
-            getStridedLoadCost(*TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy,
-                               VecTy, LI0->getPointerOperand(), CommonAlignment,
-                               getCastContextHint(*E), CostKind, IsReverse);
+        VecLdCost = getStridedLoadCost(
+            *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
+            LI0->getPointerOperand(), CommonAlignment, getCastContextHint(*E),
+            CostKind, IsReverse);
         break;
       }
       case TreeEntry::CompressVectorize: {

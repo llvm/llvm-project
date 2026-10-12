@@ -263,12 +263,19 @@ entry:
 
 ; Strided load that's more profitable as compressed
 define void @strided_load_compressed(ptr %in, ptr %out) {
-; CHECK-LABEL: @strided_load_compressed(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr align 4 [[IN:%.*]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[TMP0]] to <16 x i16>
-; CHECK-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT:%.*]], align 2
-; CHECK-NEXT:    ret void
+; SIFIVEP870-LABEL: @strided_load_compressed(
+; SIFIVEP870-NEXT:  entry:
+; SIFIVEP870-NEXT:    [[TMP0:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr align 4 [[IN:%.*]], i64 64, <8 x i1> splat (i1 true), i32 8)
+; SIFIVEP870-NEXT:    [[TMP1:%.*]] = bitcast <8 x i32> [[TMP0]] to <16 x i16>
+; SIFIVEP870-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT:%.*]], align 2
+; SIFIVEP870-NEXT:    ret void
+;
+; ZVL4096-LABEL: @strided_load_compressed(
+; ZVL4096-NEXT:  entry:
+; ZVL4096-NEXT:    [[TMP0:%.*]] = call <226 x i16> @llvm.masked.load.v226i16.p0(ptr align 4 [[IN:%.*]], <226 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <226 x i16> poison)
+; ZVL4096-NEXT:    [[TMP1:%.*]] = shufflevector <226 x i16> [[TMP0]], <226 x i16> poison, <16 x i32> <i32 0, i32 1, i32 32, i32 33, i32 64, i32 65, i32 96, i32 97, i32 128, i32 129, i32 160, i32 161, i32 192, i32 193, i32 224, i32 225>
+; ZVL4096-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT:%.*]], align 2
+; ZVL4096-NEXT:    ret void
 ;
 entry:
   %in0 = getelementptr i16, ptr %in, i64 32
