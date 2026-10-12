@@ -13,16 +13,24 @@
 
 #include "src/grp/grp_utils.h"
 #include "hdr/errno_macros.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/gid_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_group.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/setgroups.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/pwd/dynamic_buffer.h"
 #include "src/__support/pwd/field_tokenizer.h"
 #include "src/__support/pwd/flat_file_db.h"
@@ -200,6 +208,115 @@ ErrorOr<bool> lookup_by_gid(gid_t gid, struct group *grp, BufferType &buffer,
   return local_db.lookup(matcher, grp, buffer);
 }
 
+// Small-buffer-optimised container for collecting group IDs without duplicates.
+// Initial storage is stack-local; falls back to dynamic allocation if the
+// user belongs to more than 32 groups.
+class GidList {
+  static constexpr size_t STATIC_CAP = 32;
+  cpp::array<gid_t, STATIC_CAP> static_buf = {};
+  gid_t *buf = static_buf.data();
+  size_t count = 0;
+  size_t cap = STATIC_CAP;
+
+public:
+  LIBC_INLINE GidList() = default;
+  LIBC_INLINE ~GidList() {
+    if (buf != static_buf.data())
+      ::free(buf);
+  }
+
+  GidList(const GidList &) = delete;
+  GidList &operator=(const GidList &) = delete;
+
+  [[nodiscard]] LIBC_INLINE cpp::span<const gid_t> span() const {
+    return {buf, count};
+  }
+
+  [[nodiscard]] LIBC_INLINE bool contains(gid_t gid) const {
+    for (gid_t g : span()) {
+      if (g == gid)
+        return true;
+    }
+    return false;
+  }
+
+  [[nodiscard]] LIBC_INLINE bool push_back(gid_t gid) {
+    if (count == cap) {
+      if (LIBC_UNLIKELY(cap > cpp::numeric_limits<size_t>::max() /
+                                  (2 * sizeof(gid_t))))
+        return false;
+      size_t new_cap = cap * 2;
+      void *new_buf = nullptr;
+      if (buf == static_buf.data()) {
+        new_buf = ::malloc(new_cap * sizeof(gid_t));
+        if (!new_buf)
+          return false;
+        for (size_t i = 0; i < count; ++i)
+          static_cast<gid_t *>(new_buf)[i] = static_buf[i];
+      } else {
+        new_buf = ::realloc(buf, new_cap * sizeof(gid_t));
+        if (!new_buf)
+          return false;
+      }
+      buf = static_cast<gid_t *>(new_buf);
+      cap = new_cap;
+    }
+    buf[count++] = gid;
+    return true;
+  }
+
+  [[nodiscard]] LIBC_INLINE size_t size() const { return count; }
+
+  [[nodiscard]] LIBC_INLINE const gid_t *data() const { return buf; }
+
+  [[nodiscard]] LIBC_INLINE gid_t operator[](size_t i) const {
+    LIBC_ASSERT(i < count);
+    return buf[i];
+  }
+};
+
+ErrorOr<void> populate_gid_list(cpp::string_view user, gid_t group,
+                                GidList &gid_list, const char *path) {
+  if (!gid_list.push_back(group))
+    return Error(ENOMEM);
+
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
+                                                          : group_file_path);
+  pwd::ScopedDynamicBuffer buffer;
+  struct group entry = {};
+
+  const auto open_res = local_db.setdb();
+  if (open_res.has_value()) {
+    while (true) {
+      const auto next_res = local_db.getnext(&entry, buffer);
+      if (!next_res.has_value()) {
+        if (next_res.error() == ENOMEM)
+          return Error(ENOMEM);
+        break;
+      }
+      if (!next_res.value())
+        break;
+
+      bool is_member = false;
+      if (entry.gr_mem) {
+        for (char **m = entry.gr_mem; *m != nullptr; ++m) {
+          if (cpp::string_view(*m) == user) {
+            is_member = true;
+            break;
+          }
+        }
+      }
+
+      if (is_member && !gid_list.contains(entry.gr_gid)) {
+        if (!gid_list.push_back(entry.gr_gid))
+          return Error(ENOMEM);
+      }
+    }
+  }
+
+  return {};
+}
+
 } // namespace
 
 void TESTONLY_set_group_path(const char *path) {
@@ -256,6 +373,31 @@ ErrorOr<struct group *> find_by_gid(gid_t gid) {
   if (!res.value())
     return nullptr;
   return &grp_entry;
+}
+
+ErrorOr<size_t> get_group_list(cpp::string_view user, gid_t group,
+                               gid_t *groups, size_t ngroups,
+                               const char *path) {
+  GidList gid_list;
+  const auto res = populate_gid_list(user, group, gid_list, path);
+  if (!res.has_value())
+    return Error(res.error());
+
+  const size_t copy_count =
+      ngroups < gid_list.size() ? ngroups : gid_list.size();
+  for (size_t i = 0; i < copy_count; ++i)
+    groups[i] = gid_list[i];
+
+  return gid_list.size();
+}
+
+ErrorOr<int> init_groups(cpp::string_view user, gid_t group, const char *path) {
+  GidList gid_list;
+  const auto res = populate_gid_list(user, group, gid_list, path);
+  if (!res.has_value())
+    return Error(res.error());
+
+  return linux_syscalls::setgroups(gid_list.size(), gid_list.data());
 }
 
 } // namespace grp

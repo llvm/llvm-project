@@ -220,6 +220,9 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &AddiImmOp = OffsetTail.getOperand(2);
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
+    // Make sure this isn't something weird like a frame index.
+    if (!OffsetTail.getOperand(1).isReg())
+      return false;
     Register AddiReg = OffsetTail.getOperand(1).getReg();
     int64_t OffLo = AddiImmOp.getImm();
 

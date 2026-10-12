@@ -19,6 +19,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
@@ -40,6 +41,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
@@ -3428,6 +3430,28 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
   return SpirvOperand::createType(OperandArg);
 }
 
+static QualType sortBuiltinTemplatePack(ASTContext &Context,
+                                        ArrayRef<TemplateArgument> InputArgs) {
+  // FIXME: cache mangling globally?
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+  SmallVector<std::pair<std::string, TemplateArgument>> SortedArgs(
+      InputArgs.size());
+  llvm::transform(InputArgs, SortedArgs.begin(),
+                  [&](const TemplateArgument &Arg) {
+                    assert(Arg.getKind() == TemplateArgument::Type);
+                    std::string MangledName;
+                    llvm::raw_string_ostream OS(MangledName);
+                    MC->mangleCanonicalTypeName(Arg.getAsType(), OS);
+                    return std::pair<std::string, TemplateArgument>(
+                        std::move(MangledName), Arg);
+                  });
+  llvm::stable_sort(SortedArgs, llvm::less_first());
+
+  auto OutArgs = llvm::to_vector(llvm::make_second_range(SortedArgs));
+  return Context.getSubstBuiltinTemplatePack(
+      TemplateArgument::CreatePackCopy(Context, OutArgs));
+}
+
 static QualType checkBuiltinTemplateIdType(
     Sema &SemaRef, ElaboratedTypeKeyword Keyword, BuiltinTemplateDecl *BTD,
     ArrayRef<TemplateArgument> Converted, SourceLocation TemplateLoc,
@@ -3586,6 +3610,15 @@ static QualType checkBuiltinTemplateIdType(
     }
     return Context.getSubstBuiltinTemplatePack(
         TemplateArgument::CreatePackCopy(Context, OutArgs));
+  }
+  case BTK__builtin_sort_pack: {
+    assert(Converted.size() == 1 &&
+           "__builtin_sort_pack should be given a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    if (Ts.isDependent())
+      return QualType();
+    assert(Ts.getKind() == TemplateArgument::Pack);
+    return sortBuiltinTemplatePack(Context, Ts.getPackAsArray());
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
@@ -4992,8 +5025,6 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   R.suppressDiagnostics();
 
   if (R.getAsSingle<ConceptDecl>()) {
-    assert(TemplateKWLoc.isInvalid() &&
-           "template keyword in front of a concept id?");
     return CheckConceptTemplateId(SS, TemplateKWLoc, R.getLookupNameInfo(),
                                   R.getRepresentativeDecl(),
                                   R.getAsSingle<ConceptDecl>(), TemplateArgs);
@@ -5214,13 +5245,17 @@ bool Sema::CheckTemplateTypeArgument(
     // expression; see if maybe it is missing the "typename" keyword.
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo;
+    TemplateArgument Pattern = Arg;
+    if (Pattern.isPackExpansion())
+      Pattern = Pattern.getPackExpansionPattern();
+    Expr *E = Pattern.getAsExpr();
 
-   if (DependentScopeDeclRefExpr *ArgExpr =
-               dyn_cast<DependentScopeDeclRefExpr>(Arg.getAsExpr())) {
+    if (DependentScopeDeclRefExpr *ArgExpr =
+            dyn_cast<DependentScopeDeclRefExpr>(E)) {
       SS.Adopt(ArgExpr->getQualifierLoc());
       NameInfo = ArgExpr->getNameInfo();
     } else if (CXXDependentScopeMemberExpr *ArgExpr =
-               dyn_cast<CXXDependentScopeMemberExpr>(Arg.getAsExpr())) {
+                   dyn_cast<CXXDependentScopeMemberExpr>(E)) {
       if (ArgExpr->isImplicitAccess()) {
         SS.Adopt(ArgExpr->getQualifierLoc());
         NameInfo = ArgExpr->getMemberNameInfo();
@@ -5251,6 +5286,12 @@ bool Sema::CheckTemplateTypeArgument(
         TL.setElaboratedKeywordLoc(SourceLocation(/*synthesized*/));
         TL.setQualifierLoc(SS.getWithLocInContext(Context));
         TL.setNameLoc(NameInfo.getLoc());
+        if (Arg.isPackExpansion()) {
+          ArgType = Context.getPackExpansionType(ArgType, std::nullopt);
+          PackExpansionTypeLoc TL = TLB.push<PackExpansionTypeLoc>(ArgType);
+          TL.setEllipsisLoc(
+              cast<PackExpansionExpr>(Arg.getAsExpr())->getEllipsisLoc());
+        }
         TSI = TLB.getTypeSourceInfo(Context, ArgType);
 
         // Overwrite our input TemplateArgumentLoc so that we can recover
@@ -8104,6 +8145,18 @@ static Expr *BuildExpressionFromIntegralTemplateArgumentValue(
   return E;
 }
 
+/// Construct a new reflect expression that refers to the given
+/// entity with the given source-location of the reflection operator.
+static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
+                                                SourceLocation CaretCaretLoc) {
+  // TODO(Reflection): Add support for NamespaceReference, TemplateReference,
+  // and DeclRefExpr.
+  return CXXReflectExpr::Create(
+      S.Context, CaretCaretLoc,
+      static_cast<TypeSourceInfo *>(
+          const_cast<void *>(RV.getReflectionOpaqueOperand())));
+}
+
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     Sema &S, QualType T, const APValue &Val, SourceLocation Loc) {
   auto MakeInitList = [&](ArrayRef<Expr *> Elts) -> Expr * {
@@ -8169,7 +8222,7 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
   case APValue::Indeterminate:
     llvm_unreachable("Unexpected APValue kind.");
   case APValue::LValue:
-  case APValue::MemberPointer:
+  case APValue::MemberPointer: {
     // There isn't necessarily a valid equivalent source-level syntax for
     // these; in particular, a naive lowering might violate access control.
     // So for now we lower to a ConstantExpr holding the value, wrapped around
@@ -8182,6 +8235,9 @@ static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(
     }
     auto *OVE = new (S.Context) OpaqueValueExpr(Loc, T, VK);
     return ConstantExpr::Create(S.Context, OVE, Val);
+  }
+  case APValue::Reflection:
+    return BuildExpressionFromReflection(S, Val, Loc).get();
   }
   llvm_unreachable("Unhandled APValue::ValueKind enum");
 }
@@ -11909,10 +11965,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<ClassTemplateDecl *>())
+    if (auto *TD = dyn_cast<ClassTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);
@@ -11925,10 +11981,10 @@ private:
       return;
 
     auto From = SD->getSpecializedTemplateOrPartial();
-    if (auto *TD = From.dyn_cast<VarTemplateDecl *>())
+    if (auto *TD = dyn_cast<VarTemplateDecl *>(From))
       checkTemplate(TD);
     else if (auto *TD =
-                 From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+                 dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
       if (!CheckDeclaration(TD))
         diagnose(TD, true);
       checkTemplate(TD);

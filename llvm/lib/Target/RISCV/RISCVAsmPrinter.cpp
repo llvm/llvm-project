@@ -123,8 +123,6 @@ public:
   void emitNoteGnuProperty(const Module &M);
 
 private:
-  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
-
   void emitNTLHint(const MachineInstr *MI);
 
   void emitLpadAlignedCall(const MachineInstr &MI);
@@ -685,26 +683,18 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
     RTS.setFlagsFromFeatures(SubtargetInfo);
   }
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(SubtargetInfo);
+  if (M.getTargetTriple().isOSBinFormatELF())
+    RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign=*/true);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
     emitNoteGnuProperty(M);
   }
   EmitHwasanMemaccessSymbols(M);
-}
-
-void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS = getTargetStreamer();
-  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
-  // attributes that differ from other functions in the module and we have no
-  // way to know which function is correct.
-  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
@@ -832,7 +822,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  assert(TM.getTargetTriple().isOSBinFormatELF());
+  assert(M.getTargetTriple().isOSBinFormatELF());
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
@@ -1052,7 +1042,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
-  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  assert(M.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())

@@ -74,7 +74,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
-  initializeMipsSetMachineRegisterFlagsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile>
@@ -84,11 +83,8 @@ createTLOF(const Triple &TT, bool UseSmallSection) {
   return std::make_unique<MipsTargetObjectFile>(UseSmallSection);
 }
 
-static Reloc::Model getEffectiveRelocModel(bool JIT,
-                                           std::optional<Reloc::Model> RM) {
-  if (!RM || JIT)
-    return Reloc::Static;
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  return RM.value_or(Reloc::Static);
 }
 
 // On function prologue, the stack is created by decrementing
@@ -104,11 +100,11 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      CodeGenOptLevel OL, bool JIT,
                                      bool isLittle)
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
-                               getEffectiveRelocModel(JIT, RM),
+                               getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      isLittle(isLittle),
-      ABI(MipsABIInfo::computeTargetABI(TT, Options.MCOptions.getABIName())),
-      DefaultSubtarget(TT, CPU, FS, isLittle, *this, std::nullopt),
+      isLittle(isLittle), IsJIT(JIT),
+      DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(), isLittle,
+                       *this, std::nullopt),
       TLOF(createTLOF(TT, DefaultSubtarget.useSmallSection())) {
   initAsmInfo();
 
@@ -169,10 +165,12 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
-  auto &I = SubtargetMap[CPU + FS];
+  StringRef ABIName = getTargetABIName(*F.getParent());
+
+  auto &I = SubtargetMap[CPU + FS + ABIName.str()];
   if (!I) {
     I = std::make_unique<MipsSubtarget>(
-        TargetTriple, CPU, FS, isLittle, *this,
+        TargetTriple, CPU, FS, ABIName, isLittle, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()));
   }
   return I.get();
@@ -237,7 +235,6 @@ bool MipsPassConfig::addInstSelector() {
 
 void MipsPassConfig::addPreRegAlloc() {
   addPass(createMipsOptimizePICCallPass());
-  addPass(createMipsSetMachineRegisterFlagsPass());
 }
 
 TargetTransformInfo

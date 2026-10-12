@@ -169,18 +169,6 @@ public:
     // Ok, this node has a valid parent. Return it.
     return TBAANodeImpl<MDNodeTy>(P);
   }
-
-  /// Test if this TBAANode represents a type for objects which are
-  /// not modified (by any means) in the context where this
-  /// AliasAnalysis is relevant.
-  bool isTypeImmutable() const {
-    if (Node->getNumOperands() < 3)
-      return false;
-    ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(2));
-    if (!CI)
-      return false;
-    return CI->getValue()[0];
-  }
 };
 
 /// \name Specializations of \c TBAANodeImpl for const and non const qualified
@@ -760,17 +748,14 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
 }
 
 // Read a !tbaa.struct field entry (an offset or a size) as a 64-bit value.
-// Returns std::nullopt if it is not a constant integer that fits in 64 bits.
+// Returns std::nullopt if it does not fit in 64 bits.
 static std::optional<uint64_t> getTBAAStructFieldAsInt64(const MDOperand &Op) {
-  auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
-  return CI ? CI->getValue().tryZExtValue() : std::nullopt;
+  return mdconst::extract<ConstantInt>(Op)->getValue().tryZExtValue();
 }
 
 static bool isScalarAccessTag(const MDNode *Tag) {
   TBAAStructTagNode T(Tag);
-  const MDNode *AccessType;
-  return Tag->getNumOperands() >= 3 && (AccessType = T.getAccessType()) &&
-         AccessType == T.getBaseType();
+  return T.getAccessType() == T.getBaseType();
 }
 
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {

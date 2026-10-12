@@ -60,7 +60,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
-        {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
+        WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -527,6 +527,13 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPBuilder Builder(&R);
+      // !prof is only supported on scalar selects.
+      if (auto *Widen = dyn_cast<VPWidenRecipe>(&R)) {
+        if (Widen->getOpcode() == Instruction::Select &&
+            !vputils::isSingleScalar(Widen->getOperand(0)))
+          Widen->eraseMetadata(LLVMContext::MD_prof);
+      }
+
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR);
         WidenIVR->eraseFromParent();
@@ -741,10 +748,9 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
-    VPV->replaceUsesWithIf(Broadcast,
-                           [VPV, Broadcast](VPUser &U, unsigned Idx) {
-                             return Broadcast != &U && !U.usesScalars(VPV);
-                           });
+    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser &U) {
+      return Broadcast != &U && !U.usesScalars(VPV);
+    });
   }
 }
 
@@ -795,48 +801,12 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   BTC->replaceAllUsesWith(TCMO);
 }
 
-void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
+void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
-      vp_depth_first_shallow(Plan.getEntry()));
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
-      vp_depth_first_shallow(LoopRegion->getEntry()));
-  // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
-  // VPScalarIVStepsRecipe and VPInstructions, excluding ones in replicate
-  // regions. Those are not materialized explicitly yet.
-  // TODO: materialize build vectors for replicating recipes in replicating
-  // regions.
-  for (VPBasicBlock *VPBB :
-       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!vputils::doesGeneratePerAllLanes(&R))
-        continue;
-      auto *DefR = cast<VPSingleDefRecipe>(&R);
-      auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
-        VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
-        return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
-      };
-      if (none_of(DefR->users(), UsesVectorOrInsideReplicateRegion))
-        continue;
-
-      Type *ScalarTy = DefR->getScalarType();
-      unsigned Opcode = ScalarTy->isStructTy()
-                            ? VPInstruction::BuildStructVector
-                            : VPInstruction::BuildVector;
-      auto *BuildVector = new VPInstruction(Opcode, {DefR});
-      BuildVector->insertAfter(DefR);
-
-      DefR->replaceUsesWithIf(
-          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
-                           VPUser &U, unsigned) {
-            return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
-          });
-    }
-  }
-
+      vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
   // Create explicit VPInstructions to convert vectors to scalars. The current
   // implementation is conservative - it may miss some cases that may or may not
   // be vector values. TODO: introduce Unpacks speculatively - remove them later
@@ -867,9 +837,8 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(Unpack, [&Def](VPUser &U, unsigned) {
-          return U.usesFirstLaneOnly(Def);
-        });
+        Def->replaceUsesWithIf(
+            Unpack, [&Def](VPUser &U) { return U.usesFirstLaneOnly(Def); });
       }
     }
   }
@@ -974,8 +943,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
   if (!vputils::onlyScalarValuesUsed(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
-    VF.replaceUsesWithIf(
-        BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
+    VF.replaceUsesWithIf(BC, [&VF](VPUser &U) { return !U.usesScalars(&VF); });
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
