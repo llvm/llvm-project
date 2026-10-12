@@ -6273,6 +6273,16 @@ void VPlanTransforms::convertToStridedAccesses(
     return I32VF;
   };
   auto &DL = Plan.getDataLayout();
+  // Return the scalar data type and the strided-load/store intrinsic ID to
+  // use for \p R, which must be a VPWidenStoreRecipe or VPWidenLoadRecipe.
+  auto GetDataTyAndIntrinID =
+      [](VPRecipeBase *R) -> std::pair<Type *, Intrinsic::ID> {
+    if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(R))
+      return {StoreR->getStoredValue()->getScalarType(),
+              Intrinsic::experimental_vp_strided_store};
+    return {cast<VPWidenLoadRecipe>(R)->getScalarType(),
+            Intrinsic::experimental_vp_strided_load};
+  };
   // Transform interleave access into multiple strided accesses.
   InterleaveGroups.remove_if([&](const auto *IG) {
     auto It =
@@ -6285,16 +6295,7 @@ void VPlanTransforms::convertToStridedAccesses(
     VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
     VPRecipeBase *StartR = StartMemR->getAsRecipe();
 
-    Type *DataTy;
-    Intrinsic::ID IntrinID;
-    if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(StartR)) {
-      DataTy = StoreR->getStoredValue()->getScalarType();
-      IntrinID = Intrinsic::experimental_vp_strided_store;
-    } else {
-      auto *LoadR = cast<VPWidenLoadRecipe>(StartR);
-      DataTy = LoadR->getScalarType();
-      IntrinID = Intrinsic::experimental_vp_strided_load;
-    }
+    auto [DataTy, IntrinID] = GetDataTyAndIntrinID(StartR);
 
     unsigned NumOfMembers =
         llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
@@ -6393,18 +6394,10 @@ void VPlanTransforms::convertToStridedAccesses(
                                      m_SpecificLoop(&L))))
         continue;
 
+      auto [DataTy, IntrinID] = GetDataTyAndIntrinID(&R);
       VPValue *StoredValue = nullptr;
-      Type *DataTy;
-      Intrinsic::ID IntrinID;
-      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
-        StoredValue = StoreR->getStoredValue();
-        DataTy = StoredValue->getScalarType();
-        IntrinID = Intrinsic::experimental_vp_strided_store;
-      } else {
-        auto *LoadR = cast<VPWidenLoadRecipe>(&R);
-        DataTy = LoadR->getScalarType();
-        IntrinID = Intrinsic::experimental_vp_strided_load;
-      }
+      if (IntrinID == Intrinsic::experimental_vp_strided_store)
+        StoredValue = cast<VPWidenStoreRecipe>(&R)->getStoredValue();
 
       Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
