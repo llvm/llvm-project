@@ -232,7 +232,6 @@ $ gh attestation verify --repo llvm/llvm-project <package file name> --bundle <p
 ```"""
         )
 
-
     prerelease = True if "rc" in release else False
 
     repo.create_git_release(
