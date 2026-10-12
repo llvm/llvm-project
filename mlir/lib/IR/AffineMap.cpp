@@ -24,14 +24,15 @@ using namespace mlir;
 
 using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
+using llvm::divideSignedWouldOverflow;
 using llvm::mod;
 
 namespace {
-
 // AffineExprConstantFolder evaluates an affine expression using constant
 // operands passed in 'operandConsts'. Returns an IntegerAttr attribute
 // representing the constant value of the affine expression evaluated on
-// constant 'operandConsts', or nullptr if it can't be folded.
+// constant 'operandConsts', or nullptr if it can't be folded (e.g., because the
+// result would overflow int64_t).
 class AffineExprConstantFolder {
 public:
   AffineExprConstantFolder(unsigned numDims, ArrayRef<Attribute> operandConsts)
@@ -52,10 +53,20 @@ private:
     switch (expr.getKind()) {
     case AffineExprKind::Add:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return lhs + rhs; });
+          expr, [](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            int64_t sum;
+            if (llvm::AddOverflow(lhs, rhs, sum))
+              return std::nullopt;
+            return sum;
+          });
     case AffineExprKind::Mul:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return lhs * rhs; });
+          expr, [](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            int64_t product;
+            if (llvm::MulOverflow(lhs, rhs, product))
+              return std::nullopt;
+            return product;
+          });
     case AffineExprKind::Mod:
       return constantFoldBinExpr(
           expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
@@ -72,6 +83,8 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
+            if (divideSignedWouldOverflow(lhs, rhs))
+              return std::nullopt;
             return divideFloorSigned(lhs, rhs);
           });
     case AffineExprKind::CeilDiv:
@@ -81,6 +94,8 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
+            if (divideSignedWouldOverflow(lhs, rhs))
+              return std::nullopt;
             return divideCeilSigned(lhs, rhs);
           });
     case AffineExprKind::Constant:
