@@ -26,9 +26,11 @@ STATISTIC(numMachineSimpleRegions, "The # of simple machine regions");
 
 namespace llvm {
 
-template class RegionBase<RegionTraits<MachineFunction>>;
-template class RegionNodeBase<RegionTraits<MachineFunction>>;
-template class RegionInfoBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE RegionBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionNodeBase<RegionTraits<MachineFunction>>;
+template class LLVM_EXPORT_TEMPLATE
+    RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
 

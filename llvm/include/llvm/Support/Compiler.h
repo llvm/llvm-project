@@ -282,6 +282,33 @@
 #endif
 // clang-format on
 
+// Macros to suppress the MSVC warning C4661:
+// > no suitable definition provided for explicit template instantiation request
+// MSVC instantiates and exports the class template specializations that a
+// dllexport class derives from, even when they are declared with
+// `extern template`. For bases whose member definitions live in a separate
+// `*Impl.h` header, MSVC reports every such member as missing in the dylib
+// build.
+// For these cases, including the `*Impl.h` header or moving the implementation
+// to the main header would increase compile time, so we suppress the warning.
+// These should only be used to wrap the base's `extern template` declaration,
+// in cases where it is safe to do so because a TU includes the `*Impl.h` header
+// and explicitly instantiates the specialization, which defines and exports its
+// members. Any other use should be avoided as it is likely hiding a missing
+// definition.
+// clang-format off
+#if defined(_MSC_VER) && !defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_PUSH                    \
+  __pragma(warning(push))                                                      \
+  __pragma(warning(disable : 4661))
+#define LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_POP                     \
+  __pragma(warning(pop))
+#else
+#define LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_PUSH
+#define LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_POP
+#endif
+// clang-format on
+
 // Indicate that a non-static, non-const C++ member function reinitializes
 // the entire object to a known state, independent of the previous state of
 // the object.

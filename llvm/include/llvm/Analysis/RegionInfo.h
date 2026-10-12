@@ -44,6 +44,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <map>
@@ -899,7 +900,9 @@ public:
   }
 };
 
+LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_PUSH
 extern template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
+LLVM_SUPPRESS_MSVC_EXPORTED_BASE_INSTANTIATION_POP
 
 class LLVM_ABI RegionInfo : public RegionInfoBase<RegionTraits<Function>> {
 public:
