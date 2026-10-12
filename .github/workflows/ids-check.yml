@@ -51,6 +51,12 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
 
+      - if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          set >> "%GITHUB_ENV%"
+
       - name: Configure LLVM
         shell: bash
         env:
@@ -65,7 +71,7 @@ jobs:
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
                 -D LLVM_BUILD_LLVM_DYLIB_VIS=ON \
                 -D LLVM_LINK_LLVM_DYLIB=ON \
-                -G "$CMAKE_GENERATOR"
+                -G Ninja
 
       - name: Build minimal LLVM and run ids
         if: runner.os != 'Windows'
@@ -117,4 +123,4 @@ jobs:
       - name: Build and test libLLVM.so
         shell: bash
         run: |
-          cmake --build ./llvm-project/build --target check-llvm --config Release
+          ninja -C ./llvm-project/build  check-llvm
