@@ -21,11 +21,13 @@
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/desugars_to.h>
-#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -58,37 +60,30 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_pa
   _Len2 __len2      = __last2 - __first2;
   _Common __min_len = std::min<_Common>(__len1, __len2);
 
-  for (_Common __i = 0; __i < __min_len; ++__i) {
-    auto __c = __comp(*__first1, *__first2);
-    if (__c != 0) {
-      return __c;
+  using _Tp = remove_pointer_t<_InputIterator1>;
+  if constexpr (is_pointer_v<_InputIterator1> && is_same_v<_InputIterator1, _InputIterator2> &&
+                __desugars_to_v<__compare_three_way_tag, _Cmp, _Tp, _Tp> && !is_volatile_v<_Tp> &&
+                __is_trivially_equality_comparable_v<_Tp, _Tp>) {
+    if constexpr (__is_trivially_lexicographically_comparable_v<_Tp, _Tp>) {
+      auto __res = std::__constexpr_memcmp(__first1, __first2, __element_count(__min_len));
+      if (__res != 0)
+        return __res <=> 0;
+    } else {
+      auto __res = std::mismatch(__first1, __last1, __first2, __last2);
+      if (__res.first != __last1 && __res.second != __last2)
+        return __comp(*__res.first, *__res.second);
     }
-    ++__first1;
-    ++__first2;
-  }
-
-  return __len1 <=> __len2;
-}
-
-template <class _Tp,
-          class _Cmp,
-          __enable_if_t<__desugars_to_v<__compare_three_way_tag, _Cmp, _Tp, _Tp> && !is_volatile<_Tp>::value &&
-                            __is_trivially_equality_comparable_v<_Tp, _Tp>,
-                        int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-__lexicographical_compare_three_way_fast_path(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __last2, _Cmp& __comp)
-    -> decltype(__comp(*__first1, *__first2)) {
-  auto __len1 = __last1 - __first1;
-  auto __len2 = __last2 - __first2;
-  if constexpr (__is_trivially_lexicographically_comparable_v<_Tp, _Tp>) {
-    auto __res = std::__constexpr_memcmp(__first1, __first2, __element_count(std::min(__len1, __len2)));
-    if (__res != 0)
-      return __res <=> 0;
   } else {
-    auto __res = std::mismatch(__first1, __last1, __first2, __last2);
-    if (__res.first != __last1 && __res.second != __last2)
-      return __comp(*__res.first, *__res.second);
+    for (_Common __i = 0; __i < __min_len; ++__i) {
+      auto __c = __comp(*__first1, *__first2);
+      if (__c != 0) {
+        return __c;
+      }
+      ++__first1;
+      ++__first2;
+    }
   }
+
   return __len1 <=> __len2;
 }
 
