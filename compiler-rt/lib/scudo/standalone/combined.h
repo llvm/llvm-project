@@ -409,7 +409,7 @@ public:
     void *Block = nullptr;
     uptr ClassId = 0;
     uptr SecondaryBlockEnd = 0;
-    if (LIKELY(PrimaryT::canAllocate(NeededSize))) {
+    if (LIKELY(PrimaryT::canAllocate(NeededSize) && Primary.isUsable())) {
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
       DCHECK_NE(ClassId, 0U);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
