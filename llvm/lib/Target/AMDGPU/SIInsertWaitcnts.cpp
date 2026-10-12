@@ -388,8 +388,7 @@ public:
   AMDGPU::InstCounterType SmemAccessCounter;
   AMDGPU::InstCounterType MaxCounter;
   bool IsExpertMode = false;
-  bool FuncUsesAsyncCnt = false;
-  bool FuncUsesTensorCnt = false;
+  bool FuncUsesAsyncOrTensorCnt = false;
   const bool TgSplit;
 
   SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
@@ -2628,21 +2627,15 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
 
-  // Barriers do not drain async transfers (CDNA5 ISA), and GFX1250 frontends
-  // bypass asyncmark tracking, leaving them invisible above. Set after
-  // simplifyWaitcnt, which would otherwise strip the untracked counter.
-  if (FuncUsesAsyncCnt && ST.hasGFX1250Insts() &&
+  // Barriers do not drain async/tensor transfers (CDNA5 ISA), and GFX1250
+  // frontends bypass asyncmark tracking, leaving them invisible above. Set
+  // after simplifyWaitcnt, which would otherwise strip untracked counters.
+  if (FuncUsesAsyncOrTensorCnt && ST.hasGFX1250Insts() &&
       ST.getGeneration() != AMDGPUSubtarget::GFX13 &&
-      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
+      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT)) {
     Wait.set(AMDGPU::ASYNC_CNT, 0);
-
-  // Barriers do not drain tensor transfers (CDNA5 ISA), and GFX1250 frontends
-  // bypass asyncmark tracking, leaving them invisible above. Set after
-  // simplifyWaitcnt, which would otherwise strip the untracked counter.
-  if (FuncUsesTensorCnt && ST.hasGFX1250Insts() &&
-      ST.getGeneration() != AMDGPUSubtarget::GFX13 &&
-      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
     Wait.set(AMDGPU::TENSOR_CNT, 0);
+  }
 
   if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
@@ -3522,15 +3515,11 @@ bool SIInsertWaitcnts::run() {
 
   SmemAccessCounter = getCounterFromEvent(HWEvents::SMEM_ACCESS);
 
-  FuncUsesAsyncCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
+  FuncUsesAsyncOrTensorCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
     return llvm::any_of(MBB, [](const MachineInstr &MI) {
-      return SIInstrInfo::usesASYNC_CNT(MI) && !MI.isMetaInstruction();
-    });
-  });
-
-  FuncUsesTensorCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
-    return llvm::any_of(MBB, [](const MachineInstr &MI) {
-      return SIInstrInfo::usesTENSOR_CNT(MI) && !MI.isMetaInstruction();
+      return (SIInstrInfo::usesASYNC_CNT(MI) ||
+              SIInstrInfo::usesTENSOR_CNT(MI)) &&
+             !MI.isMetaInstruction();
     });
   });
 
