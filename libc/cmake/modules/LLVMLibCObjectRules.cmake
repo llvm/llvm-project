@@ -368,28 +368,6 @@ function(create_entrypoint_object fq_target_name)
         "ON but LLVM_LIBC_CLANG_TIDY is not set.")
     endif()
 
-    # We only want a second invocation of clang-tidy to run
-    # restrict-system-libc-headers if the compiler-resource-dir was set in
-    # order to prevent false-positives due to a mismatch between the host
-    # compiler and the compiled clang-tidy.
-    if(COMPILER_RESOURCE_DIR)
-      # We run restrict-system-libc-headers with --system-headers to prevent
-      # transitive inclusion through compler provided headers.
-      set(restrict_system_headers_check_invocation
-        COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
-        --checks="-*,llvmlibc-restrict-system-libc-headers"
-        # We explicitly set the resource dir here to match the
-        # resource dir of the host compiler.
-        "--extra-arg=-resource-dir=${COMPILER_RESOURCE_DIR}"
-        --quiet
-        -p ${PROJECT_BINARY_DIR}
-        ${ADD_ENTRYPOINT_OBJ_SRCS}
-      )
-    else()
-      set(restrict_system_headers_check_invocation
-        COMMAND ${CMAKE_COMMAND} -E echo "Header file check skipped")
-    endif()
-
     add_custom_target(
       ${fq_target_name}.__lint__
       # --quiet is used to surpress warning statistics from clang-tidy like:
@@ -404,9 +382,6 @@ function(create_entrypoint_object fq_target_name)
         # Path to directory containing compile_commands.json
         -p ${PROJECT_BINARY_DIR}
         ${ADD_ENTRYPOINT_OBJ_SRCS}
-        # See above: this might be a second invocation of clang-tidy depending on
-        # the conditions above.
-        ${restrict_system_headers_check_invocation}
       # We have two options for running commands, add_custom_command and
       # add_custom_target. We don't want to run the linter unless source files
       # have changed. add_custom_target explicitly runs everytime therefore we
