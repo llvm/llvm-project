@@ -13791,6 +13791,10 @@ def err_hlsl_semantic_partial_explicit_indexing
 def err_hlsl_vk_builtin_unsupported_value
     : Error<"'%0' is not a supported value for the 'vk::builtin' attribute; "
             "supported values are: %1">;
+def err_hlsl_vk_builtin_wrong_type
+    : Error<"'%0' builtin must be of type %1">;
+def err_hlsl_vk_builtin_wrong_stage
+    : Error<"'%0' builtin cannot be used as %1 shader %2">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;

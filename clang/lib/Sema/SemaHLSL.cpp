@@ -1015,6 +1015,46 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
   }
 }
 
+static void validateVkBuiltinUsage(Sema &S, FunctionDecl *FD,
+                                   const DeclaratorDecl *D,
+                                   const HLSLVkBuiltInAttr *Attr,
+                                   IOType CurrentIOType) {
+  const ASTContext &AstContext = S.getASTContext();
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return;
+
+  StringRef BuiltIn = Attr->getBuiltIn();
+
+  QualType T =
+      (D == FD ? FD->getReturnType() : D->getType()).getNonReferenceType();
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType Stage = ShaderAttr->getType();
+  bool IsIn = any(CurrentIOType & IOType::In);
+  bool IsOut = any(CurrentIOType & IOType::Out);
+
+  if (BuiltIn == "PointSize") {
+    if (!T->isFloatingType())
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_type)
+          << BuiltIn << S.getASTContext().FloatTy;
+
+    bool LegalStage = (Stage == llvm::Triple::Vertex && IsOut) ||
+                      Stage == llvm::Triple::Hull ||
+                      Stage == llvm::Triple::Domain ||
+                      Stage == llvm::Triple::Geometry ||
+                      (Stage == llvm::Triple::Pixel && IsIn) ||
+                      (Stage == llvm::Triple::Mesh && IsOut);
+    if (!LegalStage) {
+      StringRef IOTypeName = (IsIn && IsOut) ? "inputs and outputs"
+                             : IsIn          ? "inputs"
+                                             : "outputs";
+      S.Diag(Attr->getLocation(), diag::err_hlsl_vk_builtin_wrong_stage)
+          << BuiltIn << llvm::Triple::getEnvironmentTypeName(Stage)
+          << IOTypeName;
+    }
+  }
+}
+
 bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
                                                DeclaratorDecl *OutputDecl,
                                                DeclaratorDecl *D,
@@ -1054,8 +1094,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
 
-  if (!isVkPipelineBuiltin(getASTContext(), FD, D, A,
-                           any(SC.CurrentIOType & IOType::In))) {
+  bool IsBuiltin = isVkPipelineBuiltin(getASTContext(), FD, D, A,
+                                       any(SC.CurrentIOType & IOType::In));
+  if (IsBuiltin) {
+    if (const auto *BuiltInAttr = D->getAttr<HLSLVkBuiltInAttr>())
+      validateVkBuiltinUsage(SemaRef, FD, D, BuiltInAttr, SC.CurrentIOType);
+  }
+
+  if (!IsBuiltin) {
     bool HasVkLocation = false;
     if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
       HasVkLocation = true;
