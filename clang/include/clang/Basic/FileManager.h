@@ -310,6 +310,12 @@ public:
   bool makeAbsolutePath(SmallVectorImpl<char> &Path,
                         bool Canonicalize = false) const;
 
+  /// Append the directories the contents of \p Dir come from, as by
+  /// \c llvm::vfs::FileSystem::getDirectoryContentRealSources, made absolute
+  /// and with dots removed.
+  void getDirectoryContentRealSources(StringRef Dir,
+                                      SmallVectorImpl<std::string> &Out) const;
+
   /// Retrieve the canonical name for a given directory.
   ///
   /// This is a very expensive operation, despite its results being cached,

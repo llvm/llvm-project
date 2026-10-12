@@ -522,6 +522,18 @@ bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path,
   return Changed;
 }
 
+void FileManager::getDirectoryContentRealSources(
+    StringRef Dir, SmallVectorImpl<std::string> &Out) const {
+  size_t Begin = Out.size();
+  FS->getDirectoryContentRealSources(Dir, Out);
+  for (std::string &Path : llvm::drop_begin(Out, Begin)) {
+    SmallString<256> Canonical(Path);
+    makeAbsolutePath(Canonical);
+    llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
+    Path = std::string(Canonical);
+  }
+}
+
 void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
   llvm::SmallString<128> AbsPath(FileName);
   // This is not the same as `VFS::getRealPath()`, which resolves symlinks

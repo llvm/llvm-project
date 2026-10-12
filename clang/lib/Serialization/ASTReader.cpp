@@ -4900,6 +4900,20 @@ bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
   ModuleCache &ModCache = getModuleManager().getModuleCache();
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  if (HSOpts.ModulesValidateSearchDirectories) {
+    const SearchDirectoriesChange &Change = getSearchDirectoriesChange();
+    if (Change.Time > F.ModTime) {
+      Diag(Change.Invalidated ? diag::remark_module_path_invalidated
+                              : diag::remark_module_directory_dep_changed)
+          << F.ModuleName << Change.Dir;
+      if (Complain)
+        Diag(Change.Invalidated ? diag::err_module_path_invalidated
+                                : diag::err_module_directory_dep_changed)
+            << F.ModuleName << Change.Dir;
+      return true;
+    }
+  }
+
   for (StringRef Dir : F.DirectoryDependencies) {
     if (std::optional<bool> Invalidated =
             ModCache.isDirectoryInvalidated(Dir)) {
@@ -4936,6 +4950,49 @@ bool ASTReader::isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain) {
     return true;
   }
   return false;
+}
+
+const ASTReader::SearchDirectoriesChange &
+ASTReader::getSearchDirectoriesChange() {
+  if (SearchDirsChange)
+    return *SearchDirsChange;
+
+  SearchDirectoriesChange &Change = SearchDirsChange.emplace();
+  auto Update = [&](time_t Time, StringRef Dir, bool Invalidated) {
+    if (Time > Change.Time)
+      Change = {Time, Dir.str(), Invalidated};
+  };
+
+  llvm::vfs::FileSystem &FS = PP.getFileManager().getVirtualFileSystem();
+  auto UpdateFromModTime = [&](StringRef Dir) {
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Dir);
+    if (Status && Status->isDirectory())
+      Update(llvm::sys::toTimeT(Status->getLastModificationTime()), Dir,
+             /*Invalidated=*/false);
+  };
+
+  ModuleCache &ModCache = getModuleManager().getModuleCache();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  for (const std::string &Dir :
+       getNonSystemSearchDirs(HSOpts, PP.getFileManager())) {
+    if (std::optional<bool> Invalidated =
+            ModCache.isDirectoryInvalidated(Dir)) {
+      // As for a directory dependency, a module built during the build session
+      // is newer than a reported change.
+      if (*Invalidated)
+        Update(HSOpts.BuildSessionTimestamp, Dir, /*Invalidated=*/true);
+      continue;
+    }
+    // As for a directory dependency, the whole tree's listing matters.
+    UpdateFromModTime(Dir);
+    std::error_code EC;
+    for (llvm::vfs::recursive_directory_iterator I(FS, Dir, EC), E;
+         I != E && !EC; I.increment(EC))
+      if (I->type() == llvm::sys::fs::file_type::directory_file)
+        UpdateFromModTime(I->path());
+  }
+  return Change;
 }
 
 /// Move the given method to the back of the global list of methods.

@@ -35,6 +35,10 @@ public:
     Dependencies.push_back(std::string(File));
   }
 
+  void handleDirectoryDependency(StringRef Dir) override {
+    DirectoryDeps.push_back(std::string(Dir));
+  }
+
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
     PrebuiltModuleDeps.emplace_back(std::move(PMD));
   }
@@ -67,6 +71,7 @@ public:
 
 private:
   std::vector<std::string> Dependencies;
+  std::vector<std::string> DirectoryDeps;
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
   llvm::MapVector<ModuleID, ModuleDeps> ClangModuleDeps;
   std::string ModuleName;

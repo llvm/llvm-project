@@ -1352,15 +1352,10 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 }
 
 void ModuleMap::recordDirectoryDependencies(Module *Mod, StringRef Dir) {
-  FileManager &FileMgr = SourceMgr.getFileManager();
-  SmallVector<std::string, 2> Sources;
-  FileMgr.getVirtualFileSystem().getDirectoryContentRealSources(Dir, Sources);
-  for (StringRef Source : Sources) {
-    SmallString<256> Canonical(Source);
-    FileMgr.makeAbsolutePath(Canonical);
-    llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true);
-    Mod->addDirectoryDependency(Canonical);
-  }
+  SmallVector<std::string, 2> Paths;
+  SourceMgr.getFileManager().getDirectoryContentRealSources(Dir, Paths);
+  for (StringRef Path : Paths)
+    Mod->addDirectoryDependency(Path);
 }
 
 void ModuleMap::setUmbrellaDirAsWritten(

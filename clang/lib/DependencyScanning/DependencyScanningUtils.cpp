@@ -18,6 +18,7 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TU.ID.ModuleName = std::move(ModuleName);
   TU.NamedModuleDeps = std::move(NamedModuleDeps);
   TU.FileDeps = std::move(Dependencies);
+  TU.DirectoryDeps = std::move(DirectoryDeps);
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.VisibleModules = std::move(VisibleModules);
   TU.Commands = std::move(Commands);

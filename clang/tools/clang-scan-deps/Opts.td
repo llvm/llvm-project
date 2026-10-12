@@ -31,6 +31,11 @@ defm invalidated_path
          "are resolved against the current directory. May be given more than "
          "once">;
 
+def track_search_directories
+    : F<"track-search-directories",
+        "Also report the non-system directories searched for headers in "
+        "'directory-deps'">;
+
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
 defm compilation_database : Eq<"compilation-database", "Compilation database">;

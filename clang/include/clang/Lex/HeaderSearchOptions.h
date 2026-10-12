@@ -285,6 +285,13 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesIncludeVFSUsage : 1;
 
+  /// Whether validating the directory dependencies of a module also checks the
+  /// non-system directories searched for headers, which decide where its
+  /// includes resolved. Only sound with \c ModulesStrictContextHash, which
+  /// makes them the ones the module was built with.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ModulesValidateSearchDirectories : 1;
+
   /// Whether we should look for a module in module maps only in provided
   /// header search paths or if we are allowed to look for module maps in
   /// subdirectories of provided paths too.
@@ -315,6 +322,7 @@ public:
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
         ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
+        ModulesValidateSearchDirectories(false),
         AllowModuleMapSubdirectorySearch(true), LazyLoadModuleMaps(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.

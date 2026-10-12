@@ -93,6 +93,7 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static bool CacheNegativeStats;
 static std::vector<std::string> InvalidatedPaths;
+static bool TrackSearchDirectories;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
@@ -216,6 +217,8 @@ static void ParseArgs(int argc, char **argv) {
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
     InvalidatedPaths.emplace_back(Path);
   }
+
+  TrackSearchDirectories = Args.hasArg(OPT_track_search_directories);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -424,6 +427,7 @@ public:
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
+    ID.DirectoryDeps = std::move(TUDeps.DirectoryDeps);
     ID.NamedModule = std::move(TUDeps.ID.ModuleName);
     ID.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
     ID.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
@@ -556,6 +560,9 @@ public:
                                        toJSONSorted(JOS, I.ClangModuleDeps));
                     JOS.attributeArray("command-line",
                                        toJSONStrings(JOS, Cmd.Arguments));
+                    if (!I.DirectoryDeps.empty())
+                      JOS.attributeArray("directory-deps",
+                                         toJSONStrings(JOS, I.DirectoryDeps));
                     JOS.attribute("executable", StringRef(Cmd.Executable));
                     JOS.attributeArray("file-deps",
                                        toJSONStrings(JOS, I.FileDeps));
@@ -579,6 +586,9 @@ public:
                                      toJSONSorted(JOS, I.ClangModuleDeps));
                   JOS.attributeArray("command-line",
                                      toJSONStrings(JOS, I.DriverCommandLine));
+                  if (!I.DirectoryDeps.empty())
+                    JOS.attributeArray("directory-deps",
+                                       toJSONStrings(JOS, I.DirectoryDeps));
                   JOS.attribute("executable", "clang");
                   JOS.attributeArray("file-deps",
                                      toJSONStrings(JOS, I.FileDeps));
@@ -634,6 +644,7 @@ private:
     std::string FileName;
     std::string ContextHash;
     std::vector<std::string> FileDeps;
+    std::vector<std::string> DirectoryDeps;
     std::string NamedModule;
     std::vector<std::string> NamedModuleDeps;
     std::vector<ModuleID> ClangModuleDeps;
@@ -1180,6 +1191,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.FlushModuleCache = !NoFlushModuleCache;
   Opts.CacheNegativeStats = CacheNegativeStats;
   Opts.ValidateAgainstInvalidatedPaths = true;
+  Opts.TrackSearchDirectories = TrackSearchDirectories;
   Opts.LogPath = LogPath;
 
   llvm::Timer T;

@@ -1585,6 +1585,19 @@ private:
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
 
+  /// The latest change to the search directories that every module is
+  /// validated against, and the directory it was in.
+  struct SearchDirectoriesChange {
+    time_t Time = 0;
+    std::string Dir;
+    /// Whether the build system reported \c Dir as changed, rather than its
+    /// modification time being \c Time.
+    bool Invalidated = false;
+  };
+  /// Computed on first use.
+  std::optional<SearchDirectoriesChange> SearchDirsChange;
+  const SearchDirectoriesChange &getSearchDirectoriesChange();
+
   void ReadDirectoryDependencies(const RecordData &Record, ModuleFile &F);
   bool isDirectoryDependencyOutOfDate(ModuleFile &F, bool Complain);
 

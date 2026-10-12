@@ -88,6 +88,10 @@ struct DependencyScanningServiceOptions {
   bool ReportVisibleModules = false;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
+  /// Whether to report the non-system directories searched for headers, and to
+  /// rebuild scanning modules when the build system reports one of them as
+  /// changed. Requires \c ValidateAgainstInvalidatedPaths.
+  bool TrackSearchDirectories = false;
   /// Whether to trace VFS accesses during the scan.
   bool TraceVFS = false;
   /// Whether to scan modules asynchronously.
@@ -114,6 +118,10 @@ class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
       : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {
+    assert((!this->Opts.TrackSearchDirectories ||
+            this->Opts.ValidateAgainstInvalidatedPaths) &&
+           "search directories are only checked when validating against "
+           "invalidated paths");
     ModCacheEntries.ValidateAgainstInvalidatedPaths =
         this->Opts.ValidateAgainstInvalidatedPaths;
   }
