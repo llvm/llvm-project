@@ -513,6 +513,29 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
+# Hermetic and integration tests link with -nodefaultlibs, so the compiler
+# runtime builtins have to be linked explicitly. -print-libgcc-file-name
+# reports whichever library the driver would use (libgcc.a or
+# libclang_rt.builtins.a). The query uses the same flags as the test link so
+# that the driver selects the same multilib. GPU and UEFI targets do not link a
+# compiler runtime.
+if(LLVM_INCLUDE_TESTS AND LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND
+  NOT LIBC_TARGET_OS_IS_UEFI AND
+  NOT LIBC_TEST_BUILTINS_LIBRARY AND NOT LIBC_TEST_BUILTINS_TARGET)
+  separate_arguments(libc_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} ${libc_cxx_flags}
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+      -print-libgcc-file-name
+    OUTPUT_VARIABLE LIBC_TEST_BUILTINS_LIBRARY
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT EXISTS "${LIBC_TEST_BUILTINS_LIBRARY}")
+    message(FATAL_ERROR "Compiler runtime builtins library "
+      "'${LIBC_TEST_BUILTINS_LIBRARY}' not found. Set "
+      "LIBC_TEST_BUILTINS_LIBRARY or LIBC_TEST_BUILTINS_TARGET.")
+  endif()
+endif()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
