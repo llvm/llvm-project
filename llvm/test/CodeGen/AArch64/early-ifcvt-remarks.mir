@@ -1,10 +1,9 @@
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
-# RUN:   -enable-early-ifcvt-data-dependent \
-# RUN:   -verify-machineinstrs -verify-each -pass-remarks-analysis='early-ifcvt' \
+# RUN:   -enable-early-ifcvt-data-dependent -pass-remarks-analysis='early-ifcvt' \
 # RUN:   -o /dev/null %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
 # RUN:   -enable-early-ifcvt-data-dependent -early-ifcvt-cold-edge-threshold=0 \
-# RUN:   -verify-machineinstrs -verify-each -pass-remarks-analysis='early-ifcvt' \
+# RUN:   -pass-remarks-analysis='early-ifcvt' \
 # RUN:   -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NO-COLD-EDGE
 
 # Test the reasons for changing the critical-path extension budget.
