@@ -36,8 +36,8 @@ ProgramWrapper::~ProgramWrapper() {
 
 ol_symbol_handle_t ProgramWrapper::getKernel(std::string_view KernelName) {
   ol_symbol_handle_t Kernel{};
-  callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
-               &Kernel);
+  callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
   return Kernel;
 }
 
