@@ -1496,60 +1496,61 @@ endif()
 # is enabled.
 set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
 set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-
-if(NOT CMAKE_HOST_WIN32)
-  set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
+if(LLVM_ENABLE_CCACHE)
+  if(NOT CMAKE_HOST_WIN32)
+    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
-  set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
-  if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-    # ccache's preprocessor mode yields false postives for changes in macro
-    # definitions, as changes in macro definitions are not captured. While
-    # ccache _usually_ disables the preprocessor mode for Clang+PCH, there
-    # are rare (but no less annoying) circumstances where this is not
-    # enough. Therefore enable "depend mode" where instead of preprocessing
-    # dependencies are tracked as emitted by the compiler. This might
-    # slightly increase false negatives for .cpp files that don't use a PCH
-    # when PCH is enabled.
-    # See: https://github.com/ccache/ccache/issues/1668
-    # See: https://github.com/llvm/llvm-project/issues/225047
-    #
-    # Prepend the option so that users can override this default by adding
-    # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
-    # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
-    # particular changing from ON to OFF) updates the default.
-    set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
-  endif()
-  if (LLVM_CCACHE_MAXSIZE)
-    set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
-  endif()
-  if (LLVM_CCACHE_DIR)
-    set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
-  endif()
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
-else()
-  if (CCACHE_SUPPORTS_CLI_OPTIONS)
-    # configure ccache with the command line configuration syntax
-    set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
-        CACHE STRING "Parameters to pass through to ccache")
+    set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
+    if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+      # ccache's preprocessor mode yields false postives for changes in macro
+      # definitions, as changes in macro definitions are not captured. While
+      # ccache _usually_ disables the preprocessor mode for Clang+PCH, there
+      # are rare (but no less annoying) circumstances where this is not
+      # enough. Therefore enable "depend mode" where instead of preprocessing
+      # dependencies are tracked as emitted by the compiler. This might
+      # slightly increase false negatives for .cpp files that don't use a PCH
+      # when PCH is enabled.
+      # See: https://github.com/ccache/ccache/issues/1668
+      # See: https://github.com/llvm/llvm-project/issues/225047
+      #
+      # Prepend the option so that users can override this default by adding
+      # "CCACHE_NODEPEND=1" to LLVM_CCACHE_PARAMS. We don't store this in a
+      # cache variable so that changes to CMAKE_DISABLE_PRECOMPILE_HEADERS (in
+      # particular changing from ON to OFF) updates the default.
+      set(CCACHE_PROGRAM "CCACHE_DEPEND=1 ${CCACHE_PROGRAM}")
+    endif()
     if (LLVM_CCACHE_MAXSIZE)
-      list(APPEND LLVM_CCACHE_PARAMS "cache_maxsize=${LLVM_CCACHE_MAXSIZE}")
+      set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
     endif()
     if (LLVM_CCACHE_DIR)
-      list(APPEND LLVM_CCACHE_PARAMS "cache_dir=${LLVM_CCACHE_DIR}")
+      set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
     endif()
-    if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-      # prepend depend mode so that it can be disabled by the user with depend_mode=false
-      # see above for reasoning
-      list(PREPEND LLVM_CCACHE_PARAMS "depend_mode=true")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+  else()
+    if (CCACHE_SUPPORTS_CLI_OPTIONS)
+      # configure ccache with the command line configuration syntax
+      set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
+        CACHE STRING "Parameters to pass through to ccache")
+      if (LLVM_CCACHE_MAXSIZE)
+        list(APPEND LLVM_CCACHE_PARAMS "cache_maxsize=${LLVM_CCACHE_MAXSIZE}")
+      endif()
+      if (LLVM_CCACHE_DIR)
+        list(APPEND LLVM_CCACHE_PARAMS "cache_dir=${LLVM_CCACHE_DIR}")
+      endif()
+      if (NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+        # prepend depend mode so that it can be disabled by the user with depend_mode=false
+        # see above for reasoning
+        list(PREPEND LLVM_CCACHE_PARAMS "depend_mode=true")
+      endif()
+
+      # Since ccache 4.8 it is possible to pass options as arguments
+      set(CCACHE_PROGRAM ${CCACHE_PROGRAM} ${LLVM_CCACHE_PARAMS})
+
+      # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
+      # with cmd.exe and some MSVC tools other than cl.exe
+      set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     endif()
-
-    # Since ccache 4.8 it is possible to pass options as arguments
-    set(CCACHE_PROGRAM ${CCACHE_PROGRAM} ${LLVM_CCACHE_PARAMS})
-
-    # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
-    # with cmd.exe and some MSVC tools other than cl.exe
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
   endif()
 endif()
 
