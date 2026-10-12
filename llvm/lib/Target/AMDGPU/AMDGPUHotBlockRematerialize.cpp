@@ -550,12 +550,27 @@ static void buildCandidates(std::vector<RematNode> &OutCandidates,
     if (SIRI->isVGPR(MRI, Reg))
       continue;
 
-    bool IsSafeCandidate = true;
     MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
-    if (!MI || MI->getDesc().NumDefs > 1 ||
-        MI->getOpcode() == AMDGPU::S_GETPC_B64_pseudo)
+    if (MI->getOpcode() == AMDGPU::S_GETPC_B64_pseudo)
+      continue;
+
+    bool UsesExecOpnd = false;
+    for (MachineOperand &MO : MI->operands()) {
+      if (MO.isReg() &&
+          (MO.getReg() == AMDGPU::EXEC || MO.getReg() == AMDGPU::EXEC_LO)) {
+        UsesExecOpnd = true;
+        break;
+      }
+    }
+
+    if (UsesExecOpnd)
+      continue;
+
+    bool IsSafeCandidate = true;
+    if (!MI || MI->getDesc().NumDefs > 1)
       IsSafeCandidate = false;
 
+    
     if (IsSafeCandidate) {
       int Gain = computeGainInDwords(MI, Reg, MRI, SIRI);
       if (Gain > 0)
