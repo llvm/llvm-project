@@ -503,4 +503,5 @@ def : MergeRule<"adjustCallerStackProbes">;
 def : MergeRule<"adjustCallerStackProbeSize">;
 def : MergeRule<"adjustMinLegalVectorWidth">;
 def : MergeRule<"adjustNullPointerValidAttr">;
+def : MergeRule<"adjustInlineStringops">;
 def : MergeRule<"setAND<MustProgressAttr>">;
