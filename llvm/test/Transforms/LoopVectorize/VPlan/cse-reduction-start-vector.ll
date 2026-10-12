@@ -3,7 +3,7 @@
 ; RUN:   -epilogue-vectorization-force-VF=2 -vplan-print-after="printFinalVPlan$" \
 ; RUN:   -disable-output %s 2>&1 | FileCheck %s
 
-; We don't CSE VPI::ReductionStartVector.
+; We duplicate VPI::ReductionStartVector when CSE'ing.
 define i32 @cse_reduction_start_vector_multiple_users(ptr %a, i64 %n) {
 ; CHECK-LABEL: VPlan for loop in 'cse_reduction_start_vector_multiple_users'
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
