@@ -79,6 +79,11 @@ static cl::opt<unsigned> MaxRegionInstrs(
     cl::desc("Limit the number of blocks and instructions examined when "
              "searching for calls between a load and the condition it feeds"));
 
+static cl::opt<unsigned> ColdEdgeThreshold(
+    "early-ifcvt-cold-edge-threshold", cl::Hidden, cl::init(1),
+    cl::desc("Cold edge probability threshold in percent for using no "
+             "critical-path extension budget (0 disables the threshold)"));
+
 STATISTIC(NumDiamondsSeen,  "Number of diamonds");
 STATISTIC(NumDiamondsConv,  "Number of diamonds converted");
 STATISTIC(NumTrianglesSeen, "Number of triangles");
@@ -1234,7 +1239,7 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
   // Use the full misprediction penalty for data-dependent branches and half
-  // for others. A branch with a cold edge below 1% gets no budget for
+  // for others. A branch with a cold edge below ColdEdgeThreshold gets no
   // extending the critical path: it is unlikely to mispredict often enough
   // to recover the extra latency from if-conversion.
   bool DataDependent = false;
@@ -1247,7 +1252,10 @@ bool EarlyIfConverter::shouldConvertIf() {
   const BranchProbability ColdProb =
       std::min(MBPI.getEdgeProbability(IfConv.Head, IfConv.TBB),
                MBPI.getEdgeProbability(IfConv.Head, IfConv.FBB));
-  const bool StronglyBiased = ColdProb < BranchProbability(1, 100);
+  const unsigned ColdEdgePercent =
+      std::min(ColdEdgeThreshold.getValue(), 100U);
+  const bool StronglyBiased =
+      ColdProb < BranchProbability(ColdEdgePercent, 100);
   if (StronglyBiased) {
     CritLimit = 0;
     ++NumStronglyBiased;
@@ -1263,7 +1271,9 @@ bool EarlyIfConverter::shouldConvertIf() {
       return MachineOptimizationRemarkAnalysis(DEBUG_TYPE,
                                                "StronglyBiasedBranch",
                                                MBB.back().getDebugLoc(), &MBB)
-             << "branch has a cold edge below 1%, using a critical-path "
+             << "branch has a cold edge below "
+             << ore::NV("ColdEdgeThreshold", ColdEdgePercent)
+             << "%, using a critical-path "
                 "extension budget of "
              << ore::NV("CritLimit", CritLimit) << " cycles";
     });
