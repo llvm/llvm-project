@@ -112,23 +112,23 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: trans_war_wmma_dst_not_hinted
     ; CHECK: renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr8 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $vgpr16 = nofpexcept V_EXP_F32_e32 killed $vgpr8, implicit $mode, implicit $exec
     ; CHECK-NEXT: renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = IMPLICIT_DEF
-    ; CHECK-NEXT: renamable $vgpr16 = IMPLICIT_DEF
-    ; CHECK-NEXT: renamable $vgpr24 = nofpexcept V_EXP_F32_e32 killed $vgpr16, implicit $mode, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = IMPLICIT_DEF
     ; CHECK-NEXT: V_NOP_e32 implicit $exec
-    ; CHECK-NEXT: early-clobber renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr24, implicit killed renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: early-clobber renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr16, implicit killed renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ;
     ; NOAH-LABEL: name: trans_war_wmma_dst_not_hinted
     ; NOAH: renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = IMPLICIT_DEF
+    ; NOAH-NEXT: renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25 = IMPLICIT_DEF
+    ; NOAH-NEXT: renamable $vgpr8 = IMPLICIT_DEF
+    ; NOAH-NEXT: renamable $vgpr16 = nofpexcept V_EXP_F32_e32 killed $vgpr8, implicit $mode, implicit $exec
     ; NOAH-NEXT: renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = IMPLICIT_DEF
-    ; NOAH-NEXT: renamable $vgpr16 = IMPLICIT_DEF
-    ; NOAH-NEXT: renamable $vgpr24 = nofpexcept V_EXP_F32_e32 killed $vgpr16, implicit $mode, implicit $exec
-    ; NOAH-NEXT: renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = IMPLICIT_DEF
     ; NOAH-NEXT: V_NOP_e32 implicit $exec
-    ; NOAH-NEXT: early-clobber renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
-    ; NOAH-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr24, implicit killed renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; NOAH-NEXT: early-clobber renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25, 8, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, 0, implicit $exec
+    ; NOAH-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr16, implicit killed renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %2:vreg_256_align2 = IMPLICIT_DEF
     %3:vreg_256_align2 = IMPLICIT_DEF
     %0:vgpr_32 = IMPLICIT_DEF

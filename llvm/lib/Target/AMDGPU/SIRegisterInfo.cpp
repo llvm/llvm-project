@@ -4340,7 +4340,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
   // Append v_wmma_* bank-conflict avoidance candidates (gfx11/gfx12). This only
   // augments the candidate order for VirtReg and never changes BaseImplRetVal.
   if (ST.hasVGPRBankConflict())
-    addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM);
+    addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM, Matrix);
 
   return BaseImplRetVal;
 }
@@ -4381,9 +4381,38 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
   SaveSiblings({Src0, Src1});
 }
 
+static std::pair<unsigned, unsigned>
+getVGPROccupancyCutoffs(const MachineFunction &MF, const GCNSubtarget &ST,
+                        unsigned MaxVGPRsForCurrentOccupancy) {
+  const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
+      (ST.getMaxNumVGPRs(MFI->getOccupancy(), MFI->getDynamicVGPRBlockSize()) *
+       80) /
+      100;
+  unsigned MaxVGPRsCutOffForCurrentOccupancy =
+      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+  return {MaxVGPRsCutOffForRecordedMaxOccupancy,
+          MaxVGPRsCutOffForCurrentOccupancy};
+}
+
+static unsigned getNumAllocatedVectorRegs(ArrayRef<MCPhysReg> Order,
+                                          const MachineRegisterInfo &MRI,
+                                          const SIRegisterInfo &TRI,
+                                          const LiveRegMatrix &Matrix) {
+  unsigned NumRegs = 0;
+  for (MCPhysReg Reg : Order) {
+    if (MRI.isAllocatable(Reg) &&
+        (Matrix.isPhysRegUsed(Reg) ||
+         MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true)))
+      NumRegs = std::max(NumRegs, TRI.getHWRegIndex(Reg) + 1);
+  }
+  return NumRegs;
+}
+
 static unsigned getWMMABankSize(const MachineFunction &MF,
                                 const GCNSubtarget &ST,
-                                const SIRegisterInfo &TRI) {
+                                const SIRegisterInfo &TRI,
+                                const LiveRegMatrix *Matrix) {
   const auto *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (std::optional<unsigned> BankSize = FuncInfo->getWMMABankSize())
     return *BankSize;
@@ -4433,6 +4462,29 @@ static unsigned getWMMABankSize(const MachineFunction &MF,
       if (unsigned Budget = ST.getMaxNumVGPRs(MF))
         Want = std::min(Want, Budget);
       MaxVGPR = std::min(MaxVGPR, Want);
+    } else {
+      if (!Matrix)
+        return 0;
+
+      unsigned NumVGPRs = getNumAllocatedVectorRegs(
+          AMDGPU::VGPR_32RegClass.getRegisters(), MRI, TRI, *Matrix);
+      unsigned NumAGPRs = getNumAllocatedVectorRegs(
+          AMDGPU::AGPR_32RegClass.getRegisters(), MRI, TRI, *Matrix);
+      unsigned NumAllocatedVGPRs =
+          AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
+      unsigned DynamicVGPRBlockSize = FuncInfo->getDynamicVGPRBlockSize();
+      unsigned CurrentOccupancy =
+          ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
+      auto [RecordedCutoff, CurrentCutoff] = getVGPROccupancyCutoffs(
+          MF, ST, ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize));
+      // Anchor the cached layout to occupancy headroom when no scheduler
+      // pressure is available, rather than spreading hints over the register
+      // file.
+      MaxVGPR = std::min({MaxVGPR, RecordedCutoff, CurrentCutoff});
+      LLVM_DEBUG(dbgs() << "WMMA bank hints: " << MF.getName()
+                        << ", no peak, recorded cutoff = " << RecordedCutoff
+                        << ", current cutoff = " << CurrentCutoff
+                        << ", VGPR budget = " << MaxVGPR << '\n');
     }
   }
 
@@ -4456,7 +4508,7 @@ static unsigned getWMMABankSize(const MachineFunction &MF,
 void SIRegisterInfo::addWMMABankConflictHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
-    const VirtRegMap *VRM) const {
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   if (!VRM || !isVGPR(MRI, VirtReg))
@@ -4490,7 +4542,7 @@ void SIRegisterInfo::addWMMABankConflictHints(
   if (W && (W % 4) != 0)
     return;
 
-  unsigned BankSize = getWMMABankSize(MF, ST, *this);
+  unsigned BankSize = getWMMABankSize(MF, ST, *this, Matrix);
   if (!BankSize)
     return;
   if (MF.getInfo<SIMachineFunctionInfo>()->shouldPadWMMABankHints())
@@ -4579,11 +4631,9 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   // recorded max occupancy. For current occupancy, the 95% cutoff margin is
   // used to not apply anti-hints close to the limit of the current occupancy
   // budget.
-  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
-      (ST.getMaxNumVGPRs(RecordedMaxOccupancy, DynamicVGPRBlockSize) * 80) /
-      100;
-  unsigned MaxVGPRsCutOffForCurrentOccupancy =
-      (MaxVGPRsForCurrentOccupancy * 95) / 100;
+  auto [MaxVGPRsCutOffForRecordedMaxOccupancy,
+        MaxVGPRsCutOffForCurrentOccupancy] =
+      getVGPROccupancyCutoffs(MF, ST, MaxVGPRsForCurrentOccupancy);
 
   if (NumAllocatedVGPRs >= MaxVGPRsCutOffForRecordedMaxOccupancy) {
     LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
@@ -4641,22 +4691,12 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   assert(hasVectorRegisters(MRI.getRegClass(VirtReg)) &&
          "SGPR anti-hints are not handled");
-  unsigned NumVGPRs = 0;
-  unsigned NumAGPRs = 0;
-
   assert(Matrix && "LiveRegMatrix required to compute occupancy");
   assert(RegClassInfo && "RegClassInfo required to compute occupancy");
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-  }
-
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass)) {
-    if (Matrix->isPhysRegUsed(Reg) ||
-        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
-      NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
-  }
+  unsigned NumVGPRs = getNumAllocatedVectorRegs(
+      RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass), MRI, *this, *Matrix);
+  unsigned NumAGPRs = getNumAllocatedVectorRegs(
+      RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass), MRI, *this, *Matrix);
 
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);

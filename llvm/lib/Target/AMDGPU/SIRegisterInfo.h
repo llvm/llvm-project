@@ -371,12 +371,15 @@ public:
 
   /// Append physreg candidates that keep the v_wmma_* operand \p VirtReg in a
   /// VGPR bank distinct from its already-allocated WMMA siblings (gfx11/gfx12).
+  /// Without scheduler pressure, bound the cached layout by both occupancy
+  /// cutoffs at the first hint request.
   /// Only augments \p Hints for \p VirtReg; the global allocation order is
   /// unchanged.
   void addWMMABankConflictHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                                 SmallSetVector<MCPhysReg, 16> &Hints,
                                 const MachineFunction &MF,
-                                const VirtRegMap *VRM) const;
+                                const VirtRegMap *VRM,
+                                const LiveRegMatrix *Matrix) const;
 
   bool shouldApplyAntiHints(const MachineFunction &MF,
                             unsigned NumAllocatedVGPRs,
