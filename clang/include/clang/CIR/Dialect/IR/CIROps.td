@@ -512,7 +512,9 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
 
 def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
   Pure, AllTypesMatch<["base", "result"]>,
-  DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
 ]> {
   let summary = "Pointer access with stride";
   let description = [{
@@ -550,8 +552,7 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 //===----------------------------------------------------------------------===//
 
 def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
-  Pure, AllTypesMatch<["ptr", "result"]>,
-  DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  Pure, AllTypesMatch<["ptr", "result"]>
 ]> {
   let summary = "Clear bits of a pointer";
   let description = [{
@@ -4008,7 +4009,9 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_GetMemberOp : CIR_Op<"get_member", [
-  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
 ]> {
   let summary = "Get the address of a member of a record";
   let description = [{
@@ -4173,7 +4176,9 @@ def CIR_GetElementOp : CIR_Op<"get_element", [
       "cir::PointerType::get("
       "mlir::cast<cir::ArrayType>(mlir::cast<cir::PointerType>($_self).getPointee()).getElementType(), "
       "mlir::cast<cir::PointerType>($_self).getAddrSpace())">,
-  DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
 ]> {
   let summary = "Get the address of an array element";
 
@@ -6078,7 +6083,9 @@ def CIR_ArrayDtor : CIR_Op<"array.dtor", [
 //===----------------------------------------------------------------------===//
 
 def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member", [
-  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
 ]> {
   let summary = "Get the address of a member of a record";
   let description = [{
@@ -6853,7 +6860,11 @@ def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
 // BaseClassAddrOp & DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
-class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
+]> {
   let arguments = (ins
     CIR_PointerType:$src_addr,
     IndexAttr:$offset,
@@ -7145,7 +7156,9 @@ def CIR_ComplexImagOp : CIR_ComplexPartOp<"complex.imag"> {
 //===----------------------------------------------------------------------===//
 
 class CIR_ComplexPartPtrOp<string mnemonic> : CIR_Op<mnemonic, [
-  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface>
+  Pure, DeclareOpInterfaceMethods<ViewLikeOpInterface, [
+    "mayHaveNonZeroOffset"
+  ]>
 ]> {
   let arguments = (ins CIR_PtrToComplexType:$operand);
   let results = (outs CIR_PtrToIntOrFloatType:$result);
