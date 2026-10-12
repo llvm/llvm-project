@@ -22,11 +22,20 @@ class OptionsStruct<string namespace = "llvm", string prefix = ""> {
   string MemberPrefix = prefix;
 }
 
+// The builds an option exists in, as a preprocessor expression.
+class BuildCondition<code expr> {
+  code Expr = expr;
+}
+def AssertsOnly : BuildCondition<"!defined(NDEBUG)">;
+
 // The member an option sets, and the member's type and default value.
+// `let Condition = AssertsOnly in` makes the option unknown, and removes the
+// member, in other builds.
 class Field<string name, string type, code default> {
   string FieldName = name;
   string FieldType = type;
   code FieldDefault = default;
+  BuildCondition Condition = ?;
 }
 
 // The value a FlagOrEq row assigns when given without one.
@@ -61,6 +70,13 @@ multiclass EnumField<string name, string type, code default, string values,
     EnumValues<values, enumerators>, HelpText<help>;
 }
 
+// An EnumField whose std::optional<<type>> member defaults to std::nullopt.
+multiclass OptionalEnumField<string name, string type, string values,
+                             list<code> enumerators, string help> {
+  defm NAME : EnumField<name, "std::optional<"#type#">", "", values,
+    enumerators, help>;
+}
+
 // An EnumField that -<name> alone sets to <bare>; <default> applies when the
 // option is absent. -<name> doesn't consume the next argument.
 multiclass FlagOrEnumField<string name, string type, code default,
@@ -83,4 +99,23 @@ multiclass DefaultOnOffField<string name, string help> {
 multiclass ValueField<string name, string type, code default, string help> {
   def NAME : SeparateOrEq<["-", "--"], name>, Field<NAME, type, default>,
     HelpText<help>;
+}
+
+// A ValueField whose std::optional<<type>> member defaults to std::nullopt.
+multiclass OptionalValueField<string name, string type, string help> {
+  defm NAME : ValueField<name, "std::optional<"#type#">", "", help>;
+}
+
+// An llvm::ArrayRef<<type>> member. Each -<name>=<values> or -<name> <values>
+// appends its comma-separated values.
+multiclass ListField<string name, string type, string help> {
+  def NAME : SeparateOrEq<["-", "--"], name>,
+    Field<NAME, "llvm::ArrayRef<"#type#">", "">, HelpText<help>;
+}
+
+// A ListField of the enumeration <type>, with <values> mapping to <enumerators>
+// as in EnumField.
+multiclass EnumListField<string name, string type, string values,
+                         list<code> enumerators, string help> {
+  defm NAME : ListField<name, type, help>, EnumValues<values, enumerators>;
 }

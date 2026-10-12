@@ -26,7 +26,7 @@ define i32 @test1() nounwind readnone {
 ; CHECK-NEXT:    %add = add i32 %0, %sum.04
 ; CHECK-NEXT:    --> (%0 + %sum.04) U: full-set S: full-set Exits: 2500 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add2 = add i32 %add, %1
-; CHECK-NEXT:    --> (%1 + %0 + %sum.04) U: full-set S: full-set Exits: 2500 LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> (%0 + %1 + %sum.04) U: full-set S: full-set Exits: 2500 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %inc = add nsw i32 %i.03, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,51) S: [1,51) Exits: 50 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test1

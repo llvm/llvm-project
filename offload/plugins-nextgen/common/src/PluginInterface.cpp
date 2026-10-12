@@ -160,10 +160,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                                  int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
-    : Plugin(Plugin), OMP_TeamLimit("OMP_TEAM_LIMIT"),
-      OMP_NumTeams("OMP_NUM_TEAMS"),
-      OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
-      OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
+    : Plugin(Plugin),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We initialize them in GenericDeviceTy::init().
@@ -177,32 +174,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   // Conservative fall-back to the plugin's device uid for the case that no real
   // vendor (u)uid will become available later.
   setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
-
-  // Envar that indicates whether mapped host buffers should be locked
-  // automatically. The possible values are boolean (on/off) and a special:
-  //   off:       Mapped host buffers are not locked.
-  //   on:        Mapped host buffers are locked in a best-effort approach.
-  //              Failure to lock the buffers are silent.
-  //   mandatory: Mapped host buffers are always locked and failures to lock
-  //              a buffer results in a fatal error.
-  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
-                                     "off");
-
-  bool Enabled;
-  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
-    // Parsed as a boolean value. Enable the feature if necessary.
-    LockMappedBuffers = Enabled;
-    IgnoreLockMappedFailures = true;
-  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
-    // Enable the feature and failures are fatal.
-    LockMappedBuffers = true;
-    IgnoreLockMappedFailures = false;
-  } else {
-    // Disable by default.
-    ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
-                     << OMPX_LockMappedBuffers.get();
-    LockMappedBuffers = false;
-  }
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin,
@@ -232,16 +203,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin,
     OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
   }
 
-  // Update the maximum number of teams and threads after the device
-  // initialization sets the corresponding hardware limit.
-  if (OMP_NumTeams > 0)
-    GridValues.GV_Max_Teams =
-        std::min(GridValues.GV_Max_Teams, uint32_t(OMP_NumTeams));
-
-  if (OMP_TeamsThreadLimit > 0)
-    GridValues.GV_Max_WG_Size =
-        std::min(GridValues.GV_Max_WG_Size, uint32_t(OMP_TeamsThreadLimit));
-
   return Plugin::success();
 }
 
@@ -253,6 +214,7 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 
   if (!ProfOrErr->empty()) {
     // Dump out profdata
+    static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
     if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
         uint32_t(DeviceDebugKind::PGODump))
       ProfOrErr->dump();
@@ -1316,60 +1278,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
              << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                                   void **LockedPtr) {
-  auto LockedPtrOrErr = getDevice(DeviceId).registerMemory(Ptr, Size);
-  if (!LockedPtrOrErr) {
-    auto Err = LockedPtrOrErr.takeError();
-    REPORT() << "Failure to lock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  if (!(*LockedPtrOrErr)) {
-    REPORT() << "Failure to lock memory " << Ptr
-             << ": obtained a null locked pointer";
-    return OFFLOAD_FAIL;
-  }
-  *LockedPtr = *LockedPtrOrErr;
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_unlock(int32_t DeviceId, void *Ptr) {
-  auto Err = getDevice(DeviceId).unregisterMemory(Ptr);
-  if (Err) {
-    REPORT() << "Failure to unlock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_mapped(int32_t DeviceId, void *HstPtr,
-                                            int64_t Size) {
-  auto Err = getDevice(DeviceId).notifyDataMapped(HstPtr, Size);
-  if (Err) {
-    REPORT() << "Failure to notify data mapped " << HstPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
-  auto Err = getDevice(DeviceId).notifyDataUnmapped(HstPtr);
-  if (Err) {
-    REPORT() << "Failure to notify data unmapped " << HstPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
   return OFFLOAD_SUCCESS;
 }
 

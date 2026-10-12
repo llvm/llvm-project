@@ -118,6 +118,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
     bool failed = false;
     for (uint32_t i = 0; i < m_threads.size(); ++i) {
       auto thread = static_cast<NativeThreadWindows *>(m_threads[i].get());
+      thread->ClearSingleStepping();
       const ResumeAction *const action =
           resume_actions.GetActionForThread(thread->GetID(), true);
       if (action == nullptr)
@@ -582,6 +583,34 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
       *this, m_session_data->m_debugger->GetMainThread()));
 }
 
+bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
+    const ExceptionRecord &record) {
+  if (!m_initial_stop_seen)
+    return false;
+  NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+  if (!thread)
+    return false;
+  const lldb::addr_t trap_addr = record.GetExceptionAddress();
+  llvm::ArrayRef<uint8_t> trap_opcode =
+      cantFail(GetSoftwareBreakpointTrapOpcode(0));
+  NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
+  if (reg_ctx.GetPC() != trap_addr + trap_opcode.size())
+    return false;
+  llvm::SmallVector<uint8_t, 4> bytes(trap_opcode.size(), 0);
+  size_t bytes_read = 0;
+  if (ProcessDebugger::ReadMemory(trap_addr, bytes.data(), bytes.size(),
+                                  bytes_read)
+          .Fail() ||
+      bytes_read != bytes.size() ||
+      llvm::ArrayRef<uint8_t>(bytes) == trap_opcode)
+    return false;
+  LLDB_LOG(GetLog(WindowsLog::Exception),
+           "Trap at {0:x} on thread {1:x} is from a removed breakpoint, "
+           "rewinding the thread onto the original instruction.",
+           trap_addr, thread->GetID());
+  return reg_ctx.SetPC(trap_addr).Success();
+}
+
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
   uint32_t wp_id = LLDB_INVALID_INDEX32;
@@ -605,8 +634,17 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
     }
   }
 #endif
-  if (wp_id == LLDB_INVALID_INDEX32)
+  if (wp_id == LLDB_INVALID_INDEX32) {
+    NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+    if (thread && !thread->IsSingleStepping()) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "ignoring a late single-step trap on thread {0:x}, which this "
+               "resume did not step",
+               record.GetThreadID());
+      return ExceptionResult::MaskException;
+    }
     StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
+  }
 
   SetState(eStateStopped, true);
   return ExceptionResult::MaskException;
@@ -658,6 +696,9 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
         return ExceptionResult::MaskException;
       }
     }
+
+    if (RewindTrapOfRemovedBreakpoint(record))
+      return ExceptionResult::MaskException;
   }
 
   if (!m_initial_stop_seen) {
