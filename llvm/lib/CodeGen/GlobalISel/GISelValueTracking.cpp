@@ -1547,9 +1547,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
+    // Note that NSZ only permits flipping the sign of a zero input operand,
+    // and does not make a -0.0 poison. So the NSZ flag cannot be used to
+    // refine the result class here.
     Known = KnownFPClass::sqrt(KnownSrc, Mode);
-    if (MI.getFlag(MachineInstr::MIFlag::FmNsz))
-      Known.knownNot(fcNegZero);
     break;
   }
   case TargetOpcode::G_FABS: {
