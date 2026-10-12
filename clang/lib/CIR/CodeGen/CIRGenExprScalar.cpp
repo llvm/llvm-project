@@ -2290,12 +2290,9 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
   }
 
   if (ops.fullType->isConstantMatrixType()) {
-    auto *bo = cast<BinaryOperator>(ops.e);
-    (void)bo;
-    assert(
-        isa<ConstantMatrixType>(bo->getLHS()->getType().getCanonicalType()) &&
-        "first operand must be a matrix");
-    assert(bo->getRHS()->getType().getCanonicalType()->isArithmeticType() &&
+    assert(mlir::isa<cir::MatrixType>(ops.lhs.getType()) &&
+           "first operand must be a matrix");
+    assert(cir::isAnyIntegerOrFloatingPointType(ops.rhs.getType()) &&
            "second operand must be an arithmetic type");
 
     auto [lhs, rhs] =
