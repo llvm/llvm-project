@@ -1,10 +1,11 @@
-!RUN: not %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
-subroutine s1(k)
+subroutine s1(x)
   integer, intent(in) :: x 
   real, save :: c[*]
   real :: r
-! CHECK: error: STAT variable 'x' is not definable
+  ! ERROR: STAT variable 'x' is not definable
+  ! BECAUSE: 'x' is an INTENT(IN) dummy argument
   r = c[1, STAT=x]
 end subroutine
 
@@ -15,7 +16,8 @@ subroutine s2
   use m
   real, save :: rCoarray[1,2,*]
   real :: rVar1
-! CHECK: error: STAT variable 'pv' is not definable
+  ! ERROR: STAT variable 'pv' is not definable
+  ! BECAUSE: 'pv' is protected in this scope
   rVar1 = rCoarray[1,2,3,STAT=pv]
 end
 
@@ -24,7 +26,8 @@ subroutine s3()
   real :: r
   integer :: i
   associate (z => i + 1)
-! CHECK: error: STAT variable 'z' is not definable
+    ! ERROR: STAT variable 'z' is not definable
+    ! BECAUSE: 'z' is construct associated with an expression
     r = c[1,2,3, STAT=z]
   end associate
 end subroutine

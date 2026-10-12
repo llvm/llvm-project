@@ -117,16 +117,18 @@ static void CheckTeamStat(
   const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
   auto at{parser::FindSourceLocation(var)};
   if (parser::GetCoindexedNamedObject(var)) {
-    context.Say(parser::FindSourceLocation(var), // C931
+    context.Say(at, // C931
         "Image selector STAT variable must not be a coindexed "
         "object"_err_en_US);
   } else if (const auto *expr{GetExpr(context, var)}) {
-    if (auto whyNot{WhyNotDefinable(at, context.FindScope(at),
-            {DefinabilityFlag::DoNotNoteDefinition}, *expr)}) {
+    context.CheckIndexVarRedefine(var);
+    auto whyNot{WhyNotDefinable(at, context.FindScope(at), {}, *expr)};
+    if (whyNot && IsVariable(*expr)) {
       whyNot->set_severity(parser::Severity::Because);
+      const Symbol *sym{evaluate::GetFirstSymbol(*expr)};
       context
           .Say(at, "STAT variable '%s' is not definable"_err_en_US,
-              var.GetSource().ToString())
+              sym ? sym->name().ToString() : var.GetSource().ToString())
           .Attach(std::move(*whyNot));
     }
   }
