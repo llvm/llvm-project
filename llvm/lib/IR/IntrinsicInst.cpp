@@ -160,41 +160,6 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   setArgOperand(
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
-void DbgVariableIntrinsic::replaceVariableLocationOp(unsigned OpIdx,
-                                                     Value *NewValue) {
-  assert(OpIdx < getNumVariableLocationOps() && "Invalid Operand Index");
-  if (!hasArgList()) {
-    Value *NewOperand = isa<MetadataAsValue>(NewValue)
-                            ? NewValue
-                            : MetadataAsValue::get(
-                                  getContext(), ValueAsMetadata::get(NewValue));
-    return setArgOperand(0, NewOperand);
-  }
-  SmallVector<ValueAsMetadata *, 4> MDs;
-  ValueAsMetadata *NewOperand = getAsMetadata(NewValue);
-  for (unsigned Idx = 0; Idx < getNumVariableLocationOps(); ++Idx)
-    MDs.push_back(Idx == OpIdx ? NewOperand
-                               : getAsMetadata(getVariableLocationOp(Idx)));
-  setArgOperand(
-      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
-}
-
-void DbgVariableIntrinsic::addVariableLocationOps(ArrayRef<Value *> NewValues,
-                                                  DIExpression *NewExpr) {
-  assert(NewExpr->hasAllLocationOps(getNumVariableLocationOps() +
-                                    NewValues.size()) &&
-         "NewExpr for debug variable intrinsic does not reference every "
-         "location operand.");
-  assert(!is_contained(NewValues, nullptr) && "New values must be non-null");
-  setArgOperand(2, MetadataAsValue::get(getContext(), NewExpr));
-  SmallVector<ValueAsMetadata *, 4> MDs;
-  for (auto *VMD : location_ops())
-    MDs.push_back(getAsMetadata(VMD));
-  for (auto *VMD : NewValues)
-    MDs.push_back(getAsMetadata(VMD));
-  setArgOperand(
-      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
-}
 
 std::optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
@@ -219,17 +184,6 @@ void DbgAssignIntrinsic::setAssignId(DIAssignID *New) {
 void DbgAssignIntrinsic::setAddress(Value *V) {
   setOperand(OpAddress,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
-}
-
-void DbgAssignIntrinsic::setKillAddress() {
-  if (isKillAddress())
-    return;
-  setAddress(PoisonValue::get(getAddress()->getType()));
-}
-
-bool DbgAssignIntrinsic::isKillAddress() const {
-  Value *Addr = getAddress();
-  return !Addr || isa<UndefValue>(Addr);
 }
 
 void DbgAssignIntrinsic::setValue(Value *V) {

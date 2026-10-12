@@ -685,14 +685,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // FIXME: Currently the DIStringType in llvm does not have the option to set
-  // type of the underlying character. This restricts out ability to represent
-  // string with non-default characters. Please see issue #95440 for more
-  // details.
+  // TODO: Populate the charType field to represent strings with non-default
+  // character types. Please see issue #95440 for more details.
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, nullptr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(

@@ -145,7 +145,7 @@ INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
 
 bool WasmEHPrepare::doInitialization(Module &M) {
-  IRBuilder<> IRB(M.getContext());
+  IRBuilder<> IRB(M);
   P.LPadContextTy = StructType::get(IRB.getInt32Ty(), // lpad_index
                                     IRB.getPtrTy(),   // lsda
                                     IRB.getInt32Ty()  // selector
@@ -176,7 +176,7 @@ bool WasmEHPrepareImpl::runOnFunction(Function &F) {
 
 bool WasmEHPrepareImpl::prepareThrows(Function &F) {
   Module &M = *F.getParent();
-  IRBuilder<> IRB(F.getContext());
+  IRBuilder<> IRB(M);
   bool Changed = false;
 
   // wasm.throw() intinsic, which will be lowered to wasm 'throw' instruction.
@@ -296,7 +296,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
 void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
                                      unsigned Index) {
   assert(BB->isEHPad() && "BB is not an EHPad!");
-  IRBuilder<> IRB(BB, BB->getFirstInsertionPt());
+  IRBuilder<> IRB(BB->getFirstInsertionPt());
 
   auto *FPI = cast<FuncletPadInst>(BB->getFirstNonPHIIt());
   Instruction *GetExnCI = nullptr, *GetSelectorCI = nullptr;

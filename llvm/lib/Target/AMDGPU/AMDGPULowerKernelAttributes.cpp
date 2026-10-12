@@ -496,10 +496,6 @@ INITIALIZE_PASS_END(AMDGPULowerKernelAttributes, DEBUG_TYPE,
 
 char AMDGPULowerKernelAttributes::ID = 0;
 
-ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
-  return new AMDGPULowerKernelAttributes();
-}
-
 PreservedAnalyses
 AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   bool IsV5OrAbove =

@@ -9,6 +9,8 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -61,10 +63,19 @@ private:
 
   ArgInfo coerceIllegalVector(const VectorType *VT, unsigned &NSRN,
                               unsigned &NPRN) const;
+  ArgInfo coerceAndExpandPureScalableAggregate(
+      const Type *Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
+      const SmallVectorImpl<const Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
+      unsigned &NPRN) const;
 
   bool isIllegalVectorType(const Type *Ty) const;
 
   bool passAsAggregateType(const Type *Ty) const;
+  bool passAsPureScalableType(const Type *Ty, unsigned &NV, unsigned &NP,
+                              SmallVectorImpl<const Type *> &CoerceToSeq) const;
+
+  void flattenType(const Type *Ty,
+                   SmallVectorImpl<const Type *> &Flattened) const;
 
   bool isHomogeneousAggregateBaseType(const Type *Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -124,6 +135,20 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
       !(Opts.IsILP32 && IsVariadicFn)) {
     // Homogeneous Floating-point Aggregates (HFAs) are returned directly.
     return ArgInfo::getDirect();
+  }
+
+  // In AAPCS return values of a Pure Scalable type are treated as a single
+  // named argument and passed expanded in registers, or indirectly if there are
+  // not enough registers.
+  if (Opts.Kind == AArch64ABIKind::AAPCS) {
+    unsigned NSRN = 0, NPRN = 0;
+    unsigned NVec = 0, NPred = 0;
+    SmallVector<const Type *> UnpaddedCoerceToSeq;
+    if (passAsPureScalableType(RetTy, NVec, NPred, UnpaddedCoerceToSeq) &&
+        (NVec + NPred) > 0)
+      return coerceAndExpandPureScalableAggregate(
+          RetTy, /*IsNamedArg=*/true, NVec, NPred, UnpaddedCoerceToSeq, NSRN,
+          NPRN);
   }
 
   reportNYI("Aggregate return type handling");
@@ -225,6 +250,17 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     unsigned TyAlign = Ty->getUnadjustedAlignment().value();
     TyAlign = (TyAlign >= 16) ? 16 : 8;
     return ArgInfo::getDirect(CoerceTy, /*Offset=*/0, llvm::Align(TyAlign));
+  }
+
+  // In AAPCS, named arguments of a Pure Scalable Type are passed expanded
+  // in registers, or indirectly if there are not enough registers.
+  if (Opts.Kind == AArch64ABIKind::AAPCS) {
+    unsigned NVec = 0, NPred = 0;
+    SmallVector<const Type *> UnpaddedCoerceToSeq;
+    if (passAsPureScalableType(Ty, NVec, NPred, UnpaddedCoerceToSeq) &&
+        (NVec + NPred) > 0)
+      return coerceAndExpandPureScalableAggregate(
+          Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
   }
 
   reportNYI("Aggregate argument type handling");
@@ -336,6 +372,180 @@ bool AArch64TargetInfo::isIllegalVectorType(const Type *Ty) const {
 
     return Size != 64 && (Size != 128 || NumElements == 1);
   }
+  return false;
+}
+
+// Expand a memory type into a sequence with an element for each non-record,
+// non-array member of the type, with the exception of the padding types, which
+// are retained.
+void AArch64TargetInfo::flattenType(
+    const Type *Ty, SmallVectorImpl<const Type *> &Flattened) const {
+  if (ArgInfo::isPaddingForCoerceAndExpand(Ty)) {
+    Flattened.push_back(Ty);
+    return;
+  }
+
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    uint64_t NElt = AT->getNumElements();
+    if (NElt == 0)
+      return;
+
+    SmallVector<const Type *, 4> EltFlattened;
+    flattenType(AT->getElementType(), EltFlattened);
+
+    for (uint64_t I = 0; I < NElt; ++I)
+      llvm::append_range(Flattened, EltFlattened);
+    return;
+  }
+
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    for (const FieldInfo &Field : RT->getFields())
+      flattenType(Field.FieldType, Flattened);
+    return;
+  }
+
+  Flattened.push_back(Ty);
+}
+
+ArgInfo AArch64TargetInfo::coerceAndExpandPureScalableAggregate(
+    const Type *Ty, bool IsNamedArg, unsigned NVec, unsigned NPred,
+    const SmallVectorImpl<const Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
+    unsigned &NPRN) const {
+  // An unnamed argument, or one that does not fit in the remaining Z or P
+  // registers, is passed indirectly and does not consume those registers.
+  if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
+    return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
+
+  NSRN += NVec;
+  NPRN += NPred;
+
+  // A sizeless SVE tuple is already one register per member.
+  if (Ty->isSVESizelessType())
+    return ArgInfo::getDirect();
+
+  assert(!UnpaddedCoerceToSeq.empty() && "pure scalable type has no members");
+  const Type *UnpaddedCoerceToType =
+      UnpaddedCoerceToSeq.size() == 1
+          ? UnpaddedCoerceToSeq[0]
+          : getStructOfTypes(UnpaddedCoerceToSeq, /*Packed=*/true);
+
+  SmallVector<const Type *, 8> CoerceToSeq;
+  flattenType(convertTypeForMem(Ty), CoerceToSeq);
+  return ArgInfo::getCoerceAndExpand(
+      getStructOfTypes(CoerceToSeq, /*Packed=*/false), UnpaddedCoerceToType);
+}
+
+// A Pure Scalable Type (AAPCS64) is passed in Z and P registers. On success
+// NVec and NPred are how many of each it needs, and CoerceToSeq has one
+// scalable vector per register. A sequence longer than 12 is rejected so the
+// caller treats the type as a large composite.
+bool AArch64TargetInfo::passAsPureScalableType(
+    const Type *Ty, unsigned &NVec, unsigned &NPred,
+    SmallVectorImpl<const Type *> &CoerceToSeq) const {
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
+    if (AT->isMatrixType())
+      return false;
+
+    uint64_t NElt = AT->getNumElements();
+    if (NElt == 0)
+      return false;
+
+    unsigned NV = 0, NP = 0;
+    SmallVector<const Type *, 4> EltCoerceToSeq;
+    if (!passAsPureScalableType(AT->getElementType(), NV, NP, EltCoerceToSeq))
+      return false;
+
+    if (CoerceToSeq.size() + NElt * EltCoerceToSeq.size() > 12)
+      return false;
+
+    for (uint64_t I = 0; I < NElt; ++I)
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
+
+    NVec += NElt * NV;
+    NPred += NElt * NP;
+    return true;
+  }
+
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    if (getRecordArgABI(RT) != RAA_Default)
+      return false;
+    // Pure scalable types are never unions and never contain unions.
+    if (RT->isUnion())
+      return false;
+
+    // A flexible array member is lowered as a zero-length array, which the
+    // field walk below skips. The member disqualifies a pure scalable type.
+    if (RT->hasFlexibleArrayMember())
+      return false;
+
+    // Direct virtual bases are not in getBaseClasses(). A record that has
+    // one cannot be passed in registers, and getRecordArgABI rejected it
+    // above.
+    for (const FieldInfo &Base : RT->getBaseClasses()) {
+      if (Base.FieldType->isEmptyRecord())
+        continue;
+      if (!passAsPureScalableType(Base.FieldType, NVec, NPred, CoerceToSeq))
+        return false;
+    }
+    for (const FieldInfo &Field : RT->getFields()) {
+      if (Field.isEmpty())
+        continue;
+      if (!passAsPureScalableType(Field.FieldType, NVec, NPred, CoerceToSeq))
+        return false;
+    }
+    return true;
+  }
+
+  if (const auto *TT = dyn_cast<TupleType>(Ty)) {
+    const VectorType *VT = TT->getVectorType();
+    if (!VT->isScalable() || VT->isSVECount())
+      return false;
+
+    unsigned N = TT->getNumVectors();
+    if (CoerceToSeq.size() + N > 12)
+      return false;
+
+    bool IsPred = VT->isSVEPredicate();
+    if (!IsPred && !VT->isSVEData())
+      return false;
+    if (IsPred)
+      NPred += N;
+    else
+      NVec += N;
+
+    for (unsigned I = 0; I < N; ++I)
+      CoerceToSeq.push_back(VT);
+    return true;
+  }
+
+  if (const auto *VT = dyn_cast<VectorType>(Ty)) {
+    const Type *Coerced = nullptr;
+    bool IsPred = false;
+    if (VT->isFixedLengthSVEPredicate()) {
+      IsPred = true;
+      Coerced = convertFixedToScalableVectorType(VT);
+    } else if (VT->isFixedLengthSVEData()) {
+      Coerced = convertFixedToScalableVectorType(VT);
+    } else if (VT->isScalable() && VT->isSVEPredicate()) {
+      IsPred = true;
+      Coerced = VT;
+    } else if (VT->isScalable() && VT->isSVEData()) {
+      Coerced = VT;
+    } else {
+      return false;
+    }
+
+    if (CoerceToSeq.size() + 1 > 12)
+      return false;
+
+    if (IsPred)
+      ++NPred;
+    else
+      ++NVec;
+    CoerceToSeq.push_back(Coerced);
+    return true;
+  }
+
   return false;
 }
 

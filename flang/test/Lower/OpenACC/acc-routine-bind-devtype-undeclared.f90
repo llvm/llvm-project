@@ -15,4 +15,4 @@ end subroutine
 
 ! CHECK: acc.routine @[[ACLEAR_DEV_ROUTINE:.*]] func(@_QPaclear_dev) seq
 ! CHECK: acc.routine @{{.*}} func(@_QPaclear){{.*}}@_QPaclear_dev
-! CHECK: func.func private @_QPaclear_dev({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_DEV_ROUTINE]]]>{{.*}}}
+! CHECK: func.func private @_QPaclear_dev({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_DEV_ROUTINE]]]>}

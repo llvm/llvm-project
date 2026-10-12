@@ -37,8 +37,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> X86EnableMachineCombinerPass;
-
 namespace {
 
 class X86CodeGenPassBuilder : public CodeGenPassBuilder {
@@ -171,7 +169,7 @@ Error X86CodeGenPassBuilder::addGlobalInstructionSelect(
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass)
+  if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
@@ -185,6 +183,7 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(LiveRangeShrinkPass(), PMW);
     addMachineFunctionPass(X86FixupSetCCPass(), PMW);
+    addMachineFunctionPass(X86OptimizeLEAsPass(), PMW);
     addMachineFunctionPass(X86CallFrameOptimizationPass(), PMW);
     addMachineFunctionPass(X86AvoidStoreForwardingBlocksPass(), PMW);
   }

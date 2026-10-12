@@ -2782,7 +2782,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxHeight = I;
           }
           NodeOrder.insert(maxHeight);
-          LLVM_DEBUG(dbgs() << maxHeight->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxHeight << " ");
           R.remove(maxHeight);
           for (const auto &OE : DDG->getOutEdges(maxHeight)) {
             SUnit *SU = OE.getDst();
@@ -2833,7 +2833,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               maxDepth = I;
           }
           NodeOrder.insert(maxDepth);
-          LLVM_DEBUG(dbgs() << maxDepth->NodeNum << " ");
+          LLVM_DEBUG(dbgs() << *maxDepth << " ");
           R.remove(maxDepth);
           if (Nodes.isExceedSU(maxDepth)) {
             Order = TopDown;
@@ -2878,7 +2878,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
   LLVM_DEBUG({
     dbgs() << "Node order: ";
     for (SUnit *I : NodeOrder)
-      dbgs() << " " << I->NodeNum << " ";
+      dbgs() << " " << *I << " ";
     dbgs() << "\n";
   });
 }
@@ -2926,7 +2926,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       Schedule.computeStart(SU, &EarlyStart, &LateStart, II, this);
       LLVM_DEBUG({
         dbgs() << "\n";
-        dbgs() << "Inst (" << SU->NodeNum << ") ";
+        dbgs() << *SU << " ";
         SU->getInstr()->dump();
         dbgs() << "\n";
       });
@@ -3050,9 +3050,6 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 
   const TargetInstrInfo *TII =
       LoopBB->getParent()->getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI =
-      LoopBB->getParent()->getSubtarget().getRegisterInfo();
-
   MachineInstr *Phi = nullptr;
   MachineInstr *Increment = nullptr;
 
@@ -3091,8 +3088,8 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
       const MachineOperand *BaseOp;
       int64_t Offset;
       bool OffsetIsScalable;
-      if (TII->getMemOperandWithOffset(*Def, BaseOp, Offset, OffsetIsScalable,
-                                       TRI)) {
+      if (TII->getMemOperandWithOffset(*Def, BaseOp, Offset,
+                                       OffsetIsScalable)) {
         // Pre/post increment instruction
         CurReg = BaseOp->getReg();
       } else {
@@ -3119,11 +3116,10 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
 bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -3264,11 +3260,10 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
   const MachineOperand *BaseOpB, *BaseOpO;
   int64_t OffsetB, OffsetO;
   bool OffsetBIsScalable, OffsetOIsScalable;
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (!TII->getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
-                                    OffsetBIsScalable, TRI) ||
+                                    OffsetBIsScalable) ||
       !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
-                                    OffsetOIsScalable, TRI))
+                                    OffsetOIsScalable))
     return true;
 
   if (OffsetBIsScalable || OffsetOIsScalable)
@@ -3847,9 +3842,8 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
         NumNodeOrderIssues++;
         LLVM_DEBUG(dbgs() << "Predecessor ");
       }
-      LLVM_DEBUG(dbgs() << Pred->NodeNum << " and successor " << Succ->NodeNum
-                        << " are scheduled before node " << SU->NodeNum
-                        << "\n");
+      LLVM_DEBUG(dbgs() << *Pred << " and successor " << *Succ
+                        << " are scheduled before node " << *SU << "\n");
     }
   }
 
@@ -3964,6 +3958,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
   LLVM_DEBUG(dump(););
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void NodeSet::print(raw_ostream &os) const {
   os << "Num nodes " << size() << " rec " << RecMII << " mov " << MaxMOV
      << " depth " << MaxDepth << " col " << Colocate << "\n";
@@ -3972,7 +3967,6 @@ void NodeSet::print(raw_ostream &os) const {
   os << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.
@@ -3981,7 +3975,7 @@ void SMSchedule::print(raw_ostream &os) const {
     const_sched_iterator cycleInstrs = ScheduledInstrs.find(cycle);
     for (SUnit *CI : cycleInstrs->second) {
       os << "cycle " << cycle << " (" << stageScheduled(CI) << ") ";
-      os << "(" << CI->NodeNum << ") ";
+      os << *CI << " ";
       CI->getInstr()->print(os);
       os << "\n";
     }
@@ -4452,8 +4446,8 @@ bool SwingSchedulerDDG::isValidSchedule(const SMSchedule &Schedule) const {
     int MaxLateStart = CycleDst + Edge.getDistance() * II - Edge.getLatency();
     if (CycleSrc > MaxLateStart) {
       LLVM_DEBUG({
-        dbgs() << "Validation failed for edge from " << Src->NodeNum << " to "
-               << Dst->NodeNum << "\n";
+        dbgs() << "Validation failed for edge from " << *Src << " to " << *Dst
+               << "\n";
       });
       return false;
     }
@@ -4503,8 +4497,10 @@ void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
   }
 }
 
-void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
-                            const MachineRegisterInfo *MRI) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void
+LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
+                       const MachineRegisterInfo *MRI) const {
   const auto *Order = getOrderDepOrNull(SU);
 
   if (!Order)
@@ -4522,3 +4518,4 @@ void LoopCarriedEdges::dump(SUnit *SU, const TargetRegisterInfo *TRI,
   for (SUnit *Dst : *Order)
     dbgs() << "      " << DumpSU(Dst) << "\n";
 }
+#endif

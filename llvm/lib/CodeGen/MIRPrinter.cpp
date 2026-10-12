@@ -989,7 +989,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
                            const MachineRegisterInfo &MRI, bool PrintDef) {
   LLT TypeToPrint = MI.getTypeToPrint(OpIdx, PrintedTypes, MRI);
   const MachineOperand &Op = MI.getOperand(OpIdx);
-  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx, TRI);
+  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx);
 
   switch (Op.getType()) {
   case MachineOperand::MO_Immediate:

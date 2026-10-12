@@ -74,7 +74,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
-  initializeMipsSetMachineRegisterFlagsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile>
@@ -98,12 +97,12 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
-                                     CodeGenOptLevel OL, bool /*JIT*/,
+                                     CodeGenOptLevel OL, bool JIT,
                                      bool isLittle)
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      isLittle(isLittle),
+      isLittle(isLittle), IsJIT(JIT),
       DefaultSubtarget(TT, CPU, FS, Options.MCOptions.getABIName(), isLittle,
                        *this, std::nullopt),
       TLOF(createTLOF(TT, DefaultSubtarget.useSmallSection())) {
@@ -236,7 +235,6 @@ bool MipsPassConfig::addInstSelector() {
 
 void MipsPassConfig::addPreRegAlloc() {
   addPass(createMipsOptimizePICCallPass());
-  addPass(createMipsSetMachineRegisterFlagsPass());
 }
 
 TargetTransformInfo

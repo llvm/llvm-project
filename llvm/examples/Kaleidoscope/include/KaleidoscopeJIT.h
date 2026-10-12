@@ -87,6 +87,8 @@ public:
                                              std::move(*DL));
   }
 
+  const Triple &getTargetTriple() const { return ES->getTargetTriple(); }
+
   const DataLayout &getDataLayout() const { return DL; }
 
   JITDylib &getMainJITDylib() { return MainJD; }

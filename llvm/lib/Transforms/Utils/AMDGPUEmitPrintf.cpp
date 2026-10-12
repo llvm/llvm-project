@@ -53,7 +53,7 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg) {
 
 static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_begin", Int64Ty, Int64Ty);
   return Builder.CreateCall(Fn, Version);
 }
@@ -64,7 +64,7 @@ static Value *callAppendArgs(IRBuilder<> &Builder, Value *Desc, int NumArgs,
                              bool IsLast) {
   auto Int64Ty = Builder.getInt64Ty();
   auto Int32Ty = Builder.getInt32Ty();
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_args", Int64Ty,
                                    Int64Ty, Int32Ty, Int64Ty, Int64Ty, Int64Ty,
                                    Int64Ty, Int64Ty, Int64Ty, Int64Ty, Int32Ty);
@@ -154,7 +154,7 @@ static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
   auto IsLastInt32 = Builder.getInt32(isLast);
-  auto M = Builder.GetInsertBlock()->getModule();
+  auto M = Builder.getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
                                    Desc->getType(), Str->getType(),
                                    Length->getType(), IsLastInt32->getType());
@@ -222,7 +222,7 @@ static Value *callBufferedPrintfStart(
     IRBuilder<> &Builder, ArrayRef<Value *> Args, Value *Fmt,
     bool isConstFmtStr, SparseBitVector<8> &SpecIsCString,
     SmallVectorImpl<StringData> &StringContents, Value *&ArgSize) {
-  Module *M = Builder.GetInsertBlock()->getModule();
+  Module *M = Builder.getModule();
   Value *NonConstStrLen = nullptr;
   Value *LenWithNull = nullptr;
   Value *LenWithNullAligned = nullptr;
@@ -350,7 +350,7 @@ static void processConstantStringArg(StringData *SD, IRBuilder<> &Builder,
 }
 
 static Value *processNonStringArg(Value *Arg, IRBuilder<> &Builder) {
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  const DataLayout &DL = Builder.getDataLayout();
   auto Ty = Arg->getType();
 
   if (auto IntTy = dyn_cast<IntegerType>(Ty)) {
@@ -373,7 +373,7 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                           Value *PtrToStore, SparseBitVector<8> &SpecIsCString,
                           SmallVectorImpl<StringData> &StringContents,
                           bool IsConstFmtStr) {
-  Module *M = Builder.GetInsertBlock()->getModule();
+  Module *M = Builder.getModule();
   const DataLayout &DL = M->getDataLayout();
   auto StrIt = StringContents.begin();
   size_t i = IsConstFmtStr ? 1 : 0;
@@ -436,7 +436,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
 
   if (IsBuffered) {
     SmallVector<StringData, 8> StringContents;
-    Module *M = Builder.GetInsertBlock()->getModule();
+    Module *M = Builder.getModule();
     LLVMContext &Ctx = Builder.getContext();
     auto Int8Ty = Builder.getInt8Ty();
     auto Int32Ty = Builder.getInt32Ty();

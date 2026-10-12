@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -453,6 +454,55 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
   });
 
   return dominatingDataClauses.takeVector();
+}
+
+static mlir::Value getIfCondition(mlir::Operation *op) {
+  if (auto ifOp = mlir::dyn_cast<mlir::scf::IfOp>(op))
+    return ifOp.getCondition();
+
+  if (!mlir::isa<mlir::RegionBranchOpInterface>(op) ||
+      mlir::isa<mlir::LoopLikeOpInterface>(op))
+    return {};
+  if (op->getNumOperands() != 1 || op->getNumRegions() != 2 ||
+      !op->getOperand(0).getType().isSignlessInteger(1))
+    return {};
+  return op->getOperand(0);
+}
+
+bool mlir::acc::isInOffTargetBranch(mlir::Operation *op,
+                                    llvm::ArrayRef<int64_t> deviceTypes) {
+  // No device type is known to be true, so no branch can be classified.
+  if (deviceTypes.empty())
+    return false;
+
+  for (mlir::Operation *parent = op->getParentOp();
+       parent &&
+       !mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp,
+                  mlir::FunctionOpInterface>(parent);
+       parent = parent->getParentOp()) {
+    mlir::Value condition = getIfCondition(parent);
+    if (!condition)
+      continue;
+
+    // The condition must be the `acc.on_device` result itself.
+    auto onDeviceOp = condition.getDefiningOp<mlir::acc::OnDeviceOp>();
+    if (!onDeviceOp)
+      continue;
+
+    std::optional<int64_t> deviceTypeValue =
+        mlir::getConstantIntValue(onDeviceOp.getDeviceType());
+    if (!deviceTypeValue)
+      continue;
+
+    bool onTarget = llvm::is_contained(deviceTypes, *deviceTypeValue);
+    bool inThen = parent->getRegion(0).isAncestor(op->getParentRegion());
+    bool inElse = parent->getRegion(1).isAncestor(op->getParentRegion());
+    // Off the target: the then of a device type outside `deviceTypes`, or
+    // the else of a device type in `deviceTypes`.
+    if ((!onTarget && inThen) || (onTarget && inElse))
+      return true;
+  }
+  return false;
 }
 
 mlir::remark::detail::InFlightRemark

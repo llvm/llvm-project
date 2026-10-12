@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -mtriple=mips -o - %s | FileCheck %s
+# RUN: llc -run-pass=live-debug-values -mtriple=mips -o - %s | FileCheck %s
 #
 #"last-instr-bundled.c"
 #extern void set_cond(int, int*);
@@ -17,7 +17,7 @@
 #
 # reproduce:
 # clang --target=mips-linux-gnu -g -O1 -S -emit-llvm last-instr-bundled
-# llc -stop-before=livedebugvalues < last-instr-bundled.ll > last-instr-bundled.mir
+# llc -stop-before=live-debug-values < last-instr-bundled.ll > last-instr-bundled.mir
 #
 # Check that last bundled instruction of block gets recognized as end of basic block.
 # CHECK: bb.2.if.end

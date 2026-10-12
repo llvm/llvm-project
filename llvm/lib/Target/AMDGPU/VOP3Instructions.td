@@ -1850,9 +1850,14 @@ def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>
 def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
 }
 
-let HasClamp = 0, HasOpSel = 1 in {
+let HasClamp = 0, HasOpSel = 0 in {
 def VOP3_CVT_SR_F8_F16_Profile : VOP3_CVT_SR_F8_ByteSel_Profile<f16>;
-def VOP3_CVT_SR_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_SR_F8_F16_Profile>;
+def VOP3_CVT_SR_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_SR_F8_F16_Profile> {
+  let Src0RC64 = VSrcT_f16_LO16;
+  let Src0Mod = FPT16_LO16InputMods;
+  let Src0VOP3DPP = VGPROp_16_LO16;
+  let Src0ModVOP3DPP = FPT16_LO16VRegInputMods;
+}
 def VOP3_CVT_SR_F8_F16_Fake16_Profile : VOP3_Profile_Fake16<VOP3_CVT_SR_F8_F16_Profile>;
 }
 
@@ -1861,8 +1866,7 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
 
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
-    // to select a byte in the vdst. Bit 1 must be zero, and bit 0 can be non-zero to select
-    // the high 16-bits of src0.
+    // to select a byte in the vdst. Bit 0 and 1 must be zero.
     let Constraints = "$vdst = $vdst_in", SubtargetPredicate = HasF16FP8ConversionInsts in {
       defm V_CVT_SR_FP8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_F16_Profile,
                                                           VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;

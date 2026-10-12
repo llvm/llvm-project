@@ -50,6 +50,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -81,7 +82,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -98,21 +98,12 @@ STATISTIC(NumTREPreventedCold,
           "Number of tail calls/recursion eliminations prevented due to cold "
           "calling convention or attribute");
 
-static cl::opt<bool> DisableEntryCountRecompute(
-    "tre-disable-entrycount-recompute", cl::init(false), cl::Hidden,
-    cl::desc("Force disabling recomputing of function entry count, on "
-             "successful tail recursion elimination."));
-
-static cl::opt<bool> DisableTailCallElimForColdCalls(
-    "disable-tail-call-elim-for-cold-calls", cl::Hidden, cl::init(false),
-    cl::desc("Disable tail call elimination and optimization for cold calls or "
-             "in cold functions"));
-
-static bool shouldDisableTailCallsForCold(const CallBase *CB,
+static bool shouldDisableTailCallsForCold(const ScalarOptions &Opts,
+                                          const CallBase *CB,
                                           const Function *Caller,
                                           const ProfileSummaryInfo *PSI,
                                           BlockFrequencyInfo *BFI) {
-  if (!DisableTailCallElimForColdCalls)
+  if (!Opts.disable_tail_call_elim_for_cold_calls)
     return false;
 
   if (CB && CB->isMustTailCall())
@@ -159,10 +150,10 @@ static bool canTRE(Function &F) {
 }
 
 namespace {
-struct AllocaDerivedValueTracker {
+struct LocalStackValueTracker {
   // Start at a root value and walk its use-def chain to mark calls that use the
-  // value or a derived value in AllocaUsers, and places where it may escape in
-  // EscapePoints.
+  // value or a derived value in LocalStackUsers, and places where it may
+  // escape in EscapePoints.
   void walk(Value *Root) {
     SmallVector<Use *, 32> Worklist;
     SmallPtrSet<Use *, 32> Visited;
@@ -185,6 +176,12 @@ struct AllocaDerivedValueTracker {
       case Instruction::Call:
       case Instruction::Invoke: {
         auto &CB = cast<CallBase>(*I);
+        // llvm.stackrestore does not capture its argument, but it is not marked
+        // nocapture because of its unusual memory semantics. Treating it as an
+        // escape would block tail calls after every VLA scope.
+        if (auto *II = dyn_cast<IntrinsicInst>(I);
+            II && II->getIntrinsicID() == Intrinsic::stackrestore)
+          continue;
         // If the alloca-derived argument is passed byval it is not an escape
         // point, or a use of an alloca. Calling with byval copies the contents
         // of the alloca into argument registers or stack slots, which exist
@@ -227,8 +224,8 @@ struct AllocaDerivedValueTracker {
   }
 
   void callUsesLocalStack(CallBase &CB, bool IsNocapture) {
-    // Add it to the list of alloca users.
-    AllocaUsers.insert(&CB);
+    // Add it to the list of calls that use the local stack.
+    LocalStackUsers.insert(&CB);
 
     // If it's nocapture then it can't capture this alloca.
     if (IsNocapture)
@@ -239,26 +236,49 @@ struct AllocaDerivedValueTracker {
       EscapePoints.insert(&CB);
   }
 
-  SmallPtrSet<Instruction *, 32> AllocaUsers;
+  SmallPtrSet<Instruction *, 32> LocalStackUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
 } // namespace
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
-                      ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+/// Returns true if \p II returns an address in the current function's frame.
+static bool returnsCurrentFrameAddress(const IntrinsicInst *II) {
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::frameaddress:
+    // A non-zero level refers to a caller's frame, which outlives a tail call.
+    return cast<ConstantInt>(II->getArgOperand(0))->isZero();
+  case Intrinsic::addressofreturnaddress:
+  case Intrinsic::eh_dwarf_cfa:
+  case Intrinsic::localaddress:
+  case Intrinsic::sponentry:
+  case Intrinsic::stackaddress:
+  case Intrinsic::stacksave:
+  case Intrinsic::swift_async_context_addr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool markTails(const ScalarOptions &Opts, Function &F,
+                      OptimizationRemarkEmitter *ORE, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
 
-  // The local stack holds all alloca instructions and all byval arguments.
-  AllocaDerivedValueTracker Tracker;
+  // The local stack holds allocas and byval arguments, and frame-address
+  // intrinsics point into it.
+  LocalStackValueTracker Tracker;
   for (Argument &Arg : F.args()) {
     if (Arg.hasByValAttr())
       Tracker.walk(&Arg);
   }
-  for (auto &BB : F) {
-    for (auto &I : BB)
-      if (AllocaInst *AI = dyn_cast<AllocaInst>(&I))
-        Tracker.walk(AI);
+  for (Instruction &I : instructions(F)) {
+    if (isa<AllocaInst>(&I) ||
+        returnsCurrentFrameAddress(dyn_cast<IntrinsicInst>(&I)))
+      Tracker.walk(&I);
   }
 
   bool Modified = false;
@@ -309,7 +329,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool DisableForCold = shouldDisableTailCallsForCold(CI, &F, PSI, BFI);
+      bool DisableForCold =
+          shouldDisableTailCallsForCold(Opts, CI, &F, PSI, BFI);
       bool IsNoTail = CI->isNoTailCall() || DisableForCold ||
                       CI->hasOperandBundlesOtherThan(
                           {LLVMContext::OB_clang_arc_attachedcall,
@@ -324,7 +345,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         // global anyhow.
         //
         // Note that this runs whether we know an alloca has escaped or not. If
-        // it has, then we can't trust Tracker.AllocaUsers to be accurate.
+        // it has, then we can't trust Tracker.LocalStackUsers to be accurate.
         bool SafeToTail = true;
         for (auto &Arg : CI->args()) {
           if (isa<Constant>(Arg.getUser()))
@@ -347,7 +368,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE,
         }
       }
 
-      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI))
+      if (!IsNoTail && Escaped == UNESCAPED &&
+          !Tracker.LocalStackUsers.count(CI))
         DeferredTails.push_back(CI);
     }
 
@@ -452,6 +474,7 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
 
 namespace {
 class TailRecursionEliminator {
+  const ScalarOptions &Opts;
   Function &F;
   const TargetTransformInfo *TTI;
   AliasAnalysis *AA;
@@ -496,13 +519,13 @@ class TailRecursionEliminator {
 
   Constant *AccumulatorInitialValue = nullptr;
 
-  TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
-                          AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
-                          DomTreeUpdater &DTU, BlockFrequencyInfo *BFI,
-                          ProfileSummaryInfo *PSI,
+  TailRecursionEliminator(const ScalarOptions &Opts, Function &F,
+                          const TargetTransformInfo *TTI, AliasAnalysis *AA,
+                          OptimizationRemarkEmitter *ORE, DomTreeUpdater &DTU,
+                          BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
                           bool UpdateFunctionEntryCount)
-      : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI), PSI(PSI),
-        UpdateFunctionEntryCount(UpdateFunctionEntryCount),
+      : Opts(Opts), F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU), BFI(BFI),
+        PSI(PSI), UpdateFunctionEntryCount(UpdateFunctionEntryCount),
         OrigEntryBBFreq(
             BFI ? BFI->getBlockFreq(&F.getEntryBlock()).getFrequency() : 0U),
         OrigEntryCount(F.getEntryCount() ? *F.getEntryCount() : 0) {
@@ -671,7 +694,8 @@ CallInst *TailRecursionEliminator::findTRECandidate(BasicBlock *BB) {
 
   assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
          "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall() || shouldDisableTailCallsForCold(CI, &F, PSI, BFI))
+  if (!CI->isTailCall() ||
+      shouldDisableTailCallsForCold(Opts, CI, &F, PSI, BFI))
     return nullptr;
 
   // As a special case, detect code like this:
@@ -942,7 +966,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
-  if (!DisableEntryCountRecompute && UpdateFunctionEntryCount &&
+  if (!Opts.tre_disable_entrycount_recompute && UpdateFunctionEntryCount &&
       OrigEntryBBFreq) {
     assert(F.getEntryCount().has_value());
     // This pass is not expected to remove BBs, only add an entry BB. For that
@@ -1124,8 +1148,9 @@ bool TailRecursionEliminator::eliminate(
   if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
     return false;
 
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE, PSI, BFI);
+  MadeChange |= markTails(Opts, F, ORE, PSI, BFI);
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
@@ -1136,7 +1161,7 @@ bool TailRecursionEliminator::eliminate(
     return MadeChange;
 
   // Change any tail recursive calls to loops.
-  TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU, BFI, PSI,
+  TailRecursionEliminator TRE(Opts, F, TTI, AA, ORE, DTU, BFI, PSI,
                               UpdateFunctionEntryCount);
 
   for (BasicBlock &BB : F)

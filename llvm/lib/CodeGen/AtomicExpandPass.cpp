@@ -182,9 +182,8 @@ struct ReplacementIRBuilder
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
       : IRBuilder(
-            I->getContext(), InstSimplifyFolder(DL),
+            I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    SetInsertPoint(I);
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 

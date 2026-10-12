@@ -150,6 +150,15 @@ func.func @test_conv2d(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<8x1x1x4xf32>, %
 }
 
 // -----
+// Allow i64 accumulators to facilitate incremental lowerings to/from TOSA.
+// CHECK-LABEL: conv2d_i64
+// CHECK: acc_type(i64)
+func.func @test_conv2d_i64(%input: tensor<1x1x1x1xi16>, %weight: tensor<1x1x1x1xi8>, %bias: tensor<1xi64>, %izp: tensor<1xi16>, %wzp: tensor<1xi8>) -> tensor<1x1x1x1xi64> {
+  %0 = tosa.conv2d %input, %weight, %bias, %izp, %wzp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(i64) : (tensor<1x1x1x1xi16>, tensor<1x1x1x1xi8>, tensor<1xi64>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x1x1x1xi64>
+  return %0 : tensor<1x1x1x1xi64>
+}
+
+// -----
 // CHECK-LABEL: conv2d_mxfp
 func.func @test_conv2d_mxfp(%arg0: tensor<1x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<8x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg2: tensor<8xf16>) -> tensor<1x4x4x8xf16> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>

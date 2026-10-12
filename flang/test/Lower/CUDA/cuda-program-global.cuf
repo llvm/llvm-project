@@ -18,7 +18,7 @@ end
 ! CHECK: fir.address_of(@_QFEb) : !fir.ref<!fir.array<10xi32>>
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK: hlfir.declare %[[ALLOCA]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> uniq_name("_QFEp") bindc_name("p") data_attr(pinned) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "p", uniq_name = "_QFEp"}>
 ! CHECK: cuf.alloc !fir.array<10xf32> uniq_name("_QFEt") bindc_name("t") data_attr(device) -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: cuf.alloc !fir.array<10xi32> uniq_name("_QFEu") bindc_name("u") data_attr(unified) -> !fir.ref<!fir.array<10xi32>>
 

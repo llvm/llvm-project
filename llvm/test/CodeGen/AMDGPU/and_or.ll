@@ -280,8 +280,8 @@ define <2 x i32> @v_and_or_v2i32_inline_const(<2 x i32> %a, <2 x i32> %b) {
 ; GFX10-LABEL: v_and_or_v2i32_inline_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_and_or_b32 v0, 0x808, v0, v2
-; GFX10-NEXT:    v_and_or_b32 v1, 0x809, v1, v3
+; GFX10-NEXT:    v_and_or_b32 v0, v0, 0x808, v2
+; GFX10-NEXT:    v_and_or_b32 v1, v1, 0x809, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, %b
@@ -310,8 +310,8 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x2(<2 x i32> %a) {
 ; GFX10-LABEL: v_and_or_v2i32_inline_const_x2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_and_or_b32 v0, 0x808, v0, 4
-; GFX10-NEXT:    v_and_or_b32 v1, 0x809, v1, 16
+; GFX10-NEXT:    v_and_or_b32 v0, v0, 0x808, 4
+; GFX10-NEXT:    v_and_or_b32 v1, v1, 0x809, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 4, i32 16>
@@ -342,7 +342,7 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x3(<2 x i32> %a) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_movk_i32 [[SR:s[0-9]+]], 0x808
 ; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR]], 0x81
-; GFX10-DAG:     v_and_or_b32 v1, 0x809, v1, 16
+; GFX10-DAG:     v_and_or_b32 v1, v1, 0x809, 16
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 16>
   ret <2 x i32> %result
