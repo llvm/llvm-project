@@ -8219,7 +8219,12 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           return false;
         if (includesPoison(Kind) && C->containsPoisonElement())
           return false;
-        return !C->containsConstantExpression();
+        if (auto *CA = dyn_cast<ConstantAggregate>(C))
+          return all_of(CA->operands(), [&](const Use &Op) {
+            return isGuaranteedNotToBeUndefOrPoison(Op.get(), AC, CtxI, DT,
+                                                  Depth + 1, Kind);
+          });
+        return true;
       }
     }
   }
