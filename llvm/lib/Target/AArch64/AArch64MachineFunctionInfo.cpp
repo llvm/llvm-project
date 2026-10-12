@@ -181,8 +181,6 @@ static bool isLRSpilled(const MachineFunction &MF) {
       [](const auto &Info) { return Info.getReg() == AArch64::LR; });
 }
 
-// Declare the registers that AArch64PointerAuthImpl::authenticateLR has to
-// clobber when implementing PAUTH_EPILOGUE.
 SmallVector<MCPhysReg, 3> AArch64FunctionInfo::getPauthEpilogueClobberedRegs(
     const MachineFunction &MF, const MachineBasicBlock *MBB) const {
   if (!BranchProtectionPAuthLR && SignCondition == SignReturnAddress::None)

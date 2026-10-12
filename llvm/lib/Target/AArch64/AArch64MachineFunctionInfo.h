@@ -587,7 +587,9 @@ public:
 
   /// \returns the registers that the PAUTH_EPILOGUE expansion may clobber in
   /// front of the terminator while authenticating LR, which is some subset of
-  /// {x15, x16, x17}.
+  /// {x15, x16, x17}. The returned list conservatively covers what is known
+  /// will be used, or may need to be used, and thus may contain registers that
+  /// are not needed in all cases.
   /// If \p MBB is nullptr, the SP adjustment is unknown, and assumed to be
   /// present.
   SmallVector<MCPhysReg, 3>
