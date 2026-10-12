@@ -96,9 +96,11 @@ static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
   if (AsyncInfo.SyncType != AsyncInfoTy::SyncTy::BLOCKING)
     return;
   SourceInfo Info(Loc);
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
-       "Waiting for asynchronous operations to complete at %s:%d:%d\n",
-       Info.getFilename(), Info.getLine(), Info.getColumn());
+  if (Info.isAvailable()) {
+    INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+         "Waiting for asynchronous operations to complete at %s:%d:%d\n",
+         Info.getFilename(), Info.getLine(), Info.getColumn());
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
