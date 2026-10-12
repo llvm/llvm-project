@@ -196,20 +196,47 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                             ".omp_offloading.descriptor" + Suffix);
 }
 
+namespace {
+/// Names of the runtime entry points and of the generated static constructor
+/// and destructor for OpenMP and OpenACC.
+struct OmpAccFuncNames {
+  StringRef CtorName;
+  StringRef DtorName;
+  StringRef RegFuncName;
+  StringRef UnregFuncName;
+
+  explicit OmpAccFuncNames(OffloadKind Kind) {
+    if (Kind == OFK_OpenMP) {
+      CtorName = ".omp_offloading.descriptor_reg";
+      DtorName = ".omp_offloading.descriptor_unreg";
+      RegFuncName = "__tgt_register_lib";
+      UnregFuncName = "__tgt_unregister_lib";
+    } else if (Kind == OFK_OpenACC) {
+      CtorName = ".acc.descriptor_reg";
+      DtorName = ".acc.descriptor_unreg";
+      RegFuncName = "__tgt_acc_register_lib";
+      UnregFuncName = "__tgt_acc_unregister_lib";
+    } else {
+      llvm_unreachable("Unexpected Kind - only OpenMP or OpenACC allowed");
+    }
+  }
+};
+} // namespace
+
 Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                                   StringRef Suffix) {
+                                   StringRef Suffix, OffloadKind Kind) {
+  OmpAccFuncNames Names(Kind);
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *Func =
-      Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                       ".omp_offloading.descriptor_unreg" + Suffix, &M);
+  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                                Names.DtorName + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get __tgt_unregister_lib function declaration.
+  // Get the unreg function declaration.
   auto *UnRegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                         /*isVarArg*/ false);
   FunctionCallee UnRegFuncC =
-      M.getOrInsertFunction("__tgt_unregister_lib", UnRegFuncTy);
+      M.getOrInsertFunction(Names.UnregFuncName, UnRegFuncTy);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -220,24 +247,24 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
 }
 
 void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix) {
+                            StringRef Suffix, OffloadKind Kind) {
+  OmpAccFuncNames Names(Kind);
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_reg" + Suffix, &M);
+                                Names.CtorName + Suffix, &M);
   Func->setSection(getStartupSection(M.getTargetTriple()));
 
-  // Get __tgt_register_lib function declaration.
+  // Get the reg function declaration.
   auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                       /*isVarArg*/ false);
-  FunctionCallee RegFuncC =
-      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
+  FunctionCallee RegFuncC = M.getOrInsertFunction(Names.RegFuncName, RegFuncTy);
 
   auto *AtExitTy = FunctionType::get(
       Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
-  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix);
+  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix, Kind);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -713,15 +740,16 @@ private:
 
 } // namespace
 
-Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+Error offloading::wrapOmpAccBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
                                      EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix, bool Relocatable) {
+                                     llvm::StringRef Suffix, bool Relocatable,
+                                     OffloadKind Kind) {
   GlobalVariable *Desc =
       createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
-  createRegisterFunction(M, Desc, Suffix);
+  createRegisterFunction(M, Desc, Suffix, Kind);
   return Error::success();
 }
 
