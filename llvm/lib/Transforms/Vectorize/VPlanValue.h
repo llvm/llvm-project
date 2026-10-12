@@ -198,6 +198,9 @@ public:
   /// concrete subclass.
   Type *getScalarType() const;
 
+  /// Returns the type of this VPValue when widened to \p VF.
+  Type *getWideType(ElementCount VF) const;
+
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
