@@ -89,8 +89,8 @@ InstructionCost getStridedLoadCost(const TargetTransformInfo &TTI,
                                  /*I=*/nullptr, Stride),
       CostKind);
   if (StridedLoadTy != VecTy)
-    StridedCost += TTI.getCastInstrCost(Instruction::BitCast, VecTy,
-                                        StridedLoadTy, Ctx, CostKind);
+    StridedCost +=
+        getWidenedStridedCastCost(TTI, StridedLoadTy, VecTy, DL, Ctx, CostKind);
   return StridedCost;
 }
 

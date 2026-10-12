@@ -14580,7 +14580,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
     auto *VecTy =
         cast<FixedVectorType>(getWidenedType(ScalarTy, E.getVectorFactor()));
     FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-    bool IsReverse = E->isReverse() && !isWidenedStridedLoad(E);
+    bool IsReverse = E.isReverse() && !isWidenedStridedLoad(&E);
     InstructionCost StridedCost =
         getStridedLoadCost(*TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy,
                            LI0->getPointerOperand(), CommonAlignment,
