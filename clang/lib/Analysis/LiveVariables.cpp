@@ -339,6 +339,12 @@ void TransferFunctions::Visit(Stmt *S) {
       AddLiveExpr(val.liveExprs, LV.ESetFact, CO->getFalseExpr());
       return;
     }
+    case Stmt::BinaryOperatorClass: {
+      auto const *BO = cast<BinaryOperator>(S);
+      if (BO->isLogicalOp())
+        AddAllConditionalTerms(val.liveExprs, LV.ESetFact, BO);
+      break;
+    }
   }
 
   // Mark all child expressions live -- "normal" case.
