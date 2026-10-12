@@ -1795,16 +1795,12 @@ void AArch64EpilogueEmitter::emitEarlyReturnAddressAuthentication(
   bool UseFP = MFI.hasVarSizedObjects() || AFI->isStackRealigned();
 
   // Compute the SP the return address was signed with, which is SP on entry.
-  if (UseFP)
-    emitFrameOffset(
-        MBB, MBBI, DL, AArch64::X16, AArch64::FP,
-        StackOffset::getFixed(PrologueSaveSize -
-                              AFI->getCalleeSaveBaseToFrameRecordOffset()),
-        TII, MachineInstr::NoFlags);
-  else
-    emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                    StackOffset::getFixed(StackSize), TII,
-                    MachineInstr::NoFlags);
+  int64_t Adjustment =
+      UseFP ? PrologueSaveSize - AFI->getCalleeSaveBaseToFrameRecordOffset()
+            : StackSize;
+  emitFrameOffset(
+      MBB, MBBI, DL, AArch64::X16, UseFP ? AArch64::FP : AArch64::SP,
+      StackOffset::getFixed(Adjustment), TII, MachineInstr::NoFlags);
 
   // LR holds whatever the last call left in it; get the signed return address.
   // The authentication sequence expects it in X17 if it works on that and moves
