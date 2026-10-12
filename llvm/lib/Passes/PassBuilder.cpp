@@ -960,6 +960,11 @@ Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "memssa", "EarlyCSE");
 }
 
+Expected<bool> parseSinkingPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "avoid-postdominators",
+                                            "SinkingPass");
+}
+
 Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "post-inline",
                                             "EntryExitInstrumenter");

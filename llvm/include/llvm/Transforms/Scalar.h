@@ -137,7 +137,7 @@ LLVM_ABI FunctionPass *createConstantHoistingPass();
 //
 // Sink - Code Sinking
 //
-LLVM_ABI FunctionPass *createSinkingPass();
+LLVM_ABI FunctionPass *createSinkingPass(bool AvoidPostDominators = false);
 
 //===----------------------------------------------------------------------===//
 //
