@@ -65,7 +65,7 @@ struct CompilerInstance {
     ASSERT_NE("", PluginPath);
     Expected<PassPlugin> Plugin = PassPlugin::load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath
-	                  << " Error: " << Plugin.takeError();
+                          << " Error: " << Plugin.takeError();
     Plugin->registerPassBuilderCallbacks(PB);
   }
 
