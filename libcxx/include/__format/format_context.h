@@ -110,7 +110,8 @@ private:
   optional<std::locale> __loc_;
 
   template <class _OtherOutIt, class _OtherCharT>
-  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OtherOutIt, _OtherCharT> __format_context_create(
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OtherOutIt, _OtherCharT>
+  __format_context_create(
       _OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>, optional<std::locale>&&);
 
   // Note: the Standard doesn't specify the required constructors.
