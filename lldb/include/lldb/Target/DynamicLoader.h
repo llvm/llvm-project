@@ -263,6 +263,10 @@ public:
     /// be no symbols mapped in memory at all.
     bool allow_memory_image_last_resort = false;
 
+    /// Whether this is the process' main executable. It becomes the Target's
+    /// executable if the Target has none.
+    bool is_main_executable = false;
+
     /// The module found for the binary, or empty if it was not found.  It is
     /// not registered with the Target until LoadBinaryInTarget.
     lldb::ModuleSP module_sp;

@@ -62,10 +62,10 @@ TEST_F(DeviceOffloadTest, FirstDeviceModuleVerifies) {
         IncrementalCompilerBuilder CB;
         CB.SetCompilerArgs(
             {"-nocudainc", "-nocudalib", "-fverify-intermediate-code"});
-        auto DeviceCI = llvm::cantFail(CB.CreateDevice(OffloadType::CUDA));
-        auto HostCI = llvm::cantFail(CB.CreateHost(OffloadType::CUDA));
-        auto Interp = llvm::cantFail(Interpreter::createWithDevice(
-            OffloadType::CUDA, std::move(HostCI), std::move(DeviceCI)));
+        auto DeviceCI = llvm::cantFail(CB.CreateCudaDevice());
+        auto HostCI = llvm::cantFail(CB.CreateCudaHost());
+        auto Interp = llvm::cantFail(Interpreter::createWithCUDA(
+            std::move(HostCI), std::move(DeviceCI)));
         llvm::cantFail(Interp->Parse("__attribute__((device)) void f() {}"));
         exit(0);
       },
@@ -79,12 +79,12 @@ TEST_F(DeviceOffloadTest, EmptyDeviceModule) {
   // Without the runtime headers and libdevice no CUDA toolkit is needed.
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"-nocudainc", "-nocudalib"});
-  auto DeviceCI = CB.CreateDevice(OffloadType::CUDA);
+  auto DeviceCI = CB.CreateCudaDevice();
   ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
-  auto HostCI = CB.CreateHost(OffloadType::CUDA);
+  auto HostCI = CB.CreateCudaHost();
   ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
-  auto Interp = Interpreter::createWithDevice(
-      OffloadType::CUDA, std::move(*HostCI), std::move(*DeviceCI));
+  auto Interp =
+      Interpreter::createWithCUDA(std::move(*HostCI), std::move(*DeviceCI));
   ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
 
   // A host-only input leaves the device module without a function. Its PTX

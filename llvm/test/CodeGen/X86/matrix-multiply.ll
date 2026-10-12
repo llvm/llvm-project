@@ -3415,7 +3415,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    pushq %rbp
 ; AVX1OR2-NEXT:    movq %rsp, %rbp
 ; AVX1OR2-NEXT:    andq $-32, %rsp
-; AVX1OR2-NEXT:    subq $448, %rsp # imm = 0x1C0
+; AVX1OR2-NEXT:    subq $416, %rsp # imm = 0x1A0
 ; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm12
 ; AVX1OR2-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
 ; AVX1OR2-NEXT:    movq %rdi, %rax

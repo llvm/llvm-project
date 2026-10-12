@@ -1,0 +1,128 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+// Allocas the pass creates use the data layout's alloca address space,
+// and pointers derived from them keep that address space.
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+!rec_TwoLong = !cir.struct<"TwoLong" {data !s64i, data !s64i}>
+!rec_Dim3 = !cir.struct<"Dim3" {data !s32i, data !s32i, data !s32i}>
+!rec_coerced_dim3 = !cir.struct<{data !s64i, data !s32i}>
+
+#coerce_pair_to_i64 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i } ]
+}
+
+#ret_pair_as_i64 = {
+  return = { kind = "direct", coerced_type = !s64i },
+  args   = [ ]
+}
+
+#flatten_dim3 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_coerced_dim3,
+               can_flatten = true } ]
+}
+
+#expand_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+cir.func @takes_pair(%arg0: !rec_Pair)
+    attributes { test_classify = #coerce_pair_to_i64 } {
+  %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair, target_address_space(5)>
+  cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair, target_address_space(5)>
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_pair(%[[ARG:.*]]: !s64i)
+// CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        cir.store %[[ARG]], %[[SLOT]] : !s64i, !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        cir.cast bitcast %[[SLOT]] : !cir.ptr<!s64i, target_address_space(5)> -> !cir.ptr<!rec_Pair, target_address_space(5)>
+
+cir.func @call_pair() attributes { test_classify = #passthrough } {
+  %0 = cir.const #cir.zero : !rec_Pair
+  cir.call @takes_pair(%0) : (!rec_Pair) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @call_pair()
+// CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Pair, target_address_space(5)>
+// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Pair, target_address_space(5)> -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        %[[INT:.*]] = cir.load %[[CAST]] : !cir.ptr<!s64i, target_address_space(5)>, !s64i
+// CHECK:        cir.call @takes_pair(%[[INT]]) : (!s64i) -> ()
+
+cir.func @ret_pair() -> !rec_Pair
+    attributes { test_classify = #ret_pair_as_i64 } {
+  %0 = cir.const #cir.zero : !rec_Pair
+  cir.return %0 : !rec_Pair
+}
+
+// CHECK:      cir.func{{.*}} @ret_pair() -> !s64i
+// CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_Pair, target_address_space(5)>
+// CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Pair, target_address_space(5)> -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        %[[INT:.*]] = cir.load %[[CAST]] : !cir.ptr<!s64i, target_address_space(5)>, !s64i
+// CHECK:        cir.return %[[INT]] : !s64i
+
+// The flattened fields go through a slot of the coerced struct, and their
+// member pointers keep its address space.
+cir.func @takes_dim3(%arg0: !rec_Dim3)
+    attributes { test_classify = #flatten_dim3 } {
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_dim3(%[[D0:.*]]: !s64i, %[[D1:.*]]: !s32i)
+// CHECK:        cir.alloca "coerce" {{.*}} : !cir.ptr<{{.*}}, target_address_space(5)>
+// CHECK:        %[[FSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<{{.*}}, target_address_space(5)>
+// CHECK:        %[[P0:.*]] = cir.get_member %[[FSLOT]][0] {{.*}} -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        cir.store %[[D0]], %[[P0]] : !s64i, !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        %[[P1:.*]] = cir.get_member %[[FSLOT]][1] {{.*}} -> !cir.ptr<!s32i, target_address_space(5)>
+// CHECK:        cir.store %[[D1]], %[[P1]] : !s32i, !cir.ptr<!s32i, target_address_space(5)>
+
+cir.func @call_dim3() attributes { test_classify = #passthrough } {
+  %0 = cir.const #cir.zero : !rec_Dim3
+  cir.call @takes_dim3(%0) : (!rec_Dim3) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @call_dim3()
+// CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<{{.*}}, target_address_space(5)>
+// CHECK:        %[[P0:.*]] = cir.get_member %[[SLOT]][0] {{.*}} -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        %[[E0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i, target_address_space(5)>, !s64i
+// CHECK:        %[[P1:.*]] = cir.get_member %[[SLOT]][1] {{.*}} -> !cir.ptr<!s32i, target_address_space(5)>
+// CHECK:        %[[E1:.*]] = cir.load %[[P1]] : !cir.ptr<!s32i, target_address_space(5)>, !s32i
+// CHECK:        cir.call @takes_dim3(%[[E0]], %[[E1]]) : (!s64i, !s32i) -> ()
+
+// Expanded fields are stored straight into the parameter's own slot, so their
+// member pointers take that slot's address space.
+cir.func @takes_two_long(%arg0: !rec_TwoLong)
+    attributes { test_classify = #expand_two } {
+  %0 = cir.alloca "p" align(8) init : !cir.ptr<!rec_TwoLong, target_address_space(5)>
+  cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong, target_address_space(5)>
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @takes_two_long(%[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i)
+// CHECK:        %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_TwoLong, target_address_space(5)>
+// CHECK:        %[[P0:.*]] = cir.get_member %[[P]][0] {{.*}} -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        %[[P1:.*]] = cir.get_member %[[P]][1] {{.*}} -> !cir.ptr<!s64i, target_address_space(5)>
+// CHECK:        cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i, target_address_space(5)>
+
+}

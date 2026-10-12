@@ -3,9 +3,9 @@
 subroutine test_inline()
   integer :: x, y
 !CHECK:  %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFtest_inlineEx"}>
-!CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "_QFtest_inlineEx"} : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:  %[[VAL_1:.*]] = fir.declare %[[VAL_0]] uniq_name("_QFtest_inlineEx") : (!fir.ref<i32>) -> !fir.ref<i32>
 !CHECK:  %[[VAL_2:.*]] = fir.alloca i32 <{bindc_name = "y", uniq_name = "_QFtest_inlineEy"}>
-!CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QFtest_inlineEy"} : (!fir.ref<i32>) -> !fir.ref<i32>
+!CHECK:  %[[VAL_3:.*]] = fir.declare %[[VAL_2]] uniq_name("_QFtest_inlineEy") : (!fir.ref<i32>) -> !fir.ref<i32>
 
   !dir$ forceinline
   y = g(x)

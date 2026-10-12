@@ -451,6 +451,101 @@ DWARF:
   ASSERT_EQ(compiler_type.GetPtrAuthDiscriminator(), 42U);
 }
 
+TEST_F(DWARFASTParserClangTests, TestPtrAuthAddressDiscriminatedTemplateParam) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Foo
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x02
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x03
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x04
+          Tag:             DW_TAG_LLVM_ptrauth_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_LLVM_ptrauth_key
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_LLVM_ptrauth_address_discriminated
+              Form:            DW_FORM_flag_present
+        - Code:            0x05
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x04 # DW_LANG_C_plus_plus
+
+# 0x0f:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp] (\"Foo\")
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+
+# 0x14:     DW_TAG_template_type_parameter
+#             DW_AT_type [DW_FORM_ref4] (0x0000001a)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x1a
+
+        - AbbrCode:        0x00 # end of children of structure_type
+
+# 0x1a: DW_TAG_LLVM_ptrauth_type
+#         DW_AT_type [DW_FORM_ref4] (0x00000020)
+#         DW_AT_LLVM_ptrauth_key [DW_FORM_data1] (0x04)
+#         DW_AT_LLVM_ptrauth_address_discriminated [DW_FORM_flag_present] (true)
+        - AbbrCode:        0x04
+          Values:
+            - Value:           0x20
+            - Value:           0x04
+
+# 0x20: DW_TAG_pointer_type
+        - AbbrCode:        0x05
+
+        - AbbrCode:        0x00 # end of children of compile_unit
+...
+)";
+  DWARFASTParserClangYAMLTester tester(yamldata);
+
+  DWARFDIE cu_die = tester.GetCUDIE();
+  DWARFDIE struct_die = cu_die.GetFirstChild();
+  ASSERT_EQ(struct_die.Tag(), DW_TAG_structure_type);
+
+  EXPECT_EQ(tester.GetParser().GetDIEClassTemplateParams(struct_die),
+            "<void *__ptrauth(4, 1, 0x00)>");
+}
+
 struct ExtractIntFromFormValueTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
   clang_utils::TypeSystemClangHolder holder;

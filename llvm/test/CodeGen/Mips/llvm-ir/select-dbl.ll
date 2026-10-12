@@ -72,8 +72,8 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    mtc1 $7, $f1
 ; 32R6-NEXT:    mthc1 $6, $f1
-; 32R6-NEXT:    ldc1 $f2, 16($sp)
 ; 32R6-NEXT:    mtc1 $4, $f0
+; 32R6-NEXT:    ldc1 $f2, 16($sp)
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f2, $f1
 ;
@@ -130,8 +130,8 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    mtc1 $7, $f1
 ; MM32R6-NEXT:    mthc1 $6, $f1
-; MM32R6-NEXT:    ldc1 $f2, 16($sp)
 ; MM32R6-NEXT:    mtc1 $4, $f0
+; MM32R6-NEXT:    ldc1 $f2, 16($sp)
 ; MM32R6-NEXT:    sel.d $f0, $f2, $f1
 ; MM32R6-NEXT:    jrc $ra
 ;

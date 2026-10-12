@@ -355,6 +355,13 @@ module ModuleFlagBehavior = struct
   | AppendUnique
 end
 
+module GEPNoWrapFlags = struct
+  let none = 0
+  let inbounds = 1
+  let nusw = 2
+  let nuw = 4
+end
+
 module Endian = struct
   type t =
   | Big
@@ -393,7 +400,6 @@ module DataLayout = struct
   external offset_of_element : lltype -> int -> t -> Int64.t
                              = "llvm_datalayout_offset_of_element"
 end
-
 
 exception IoError of string
 
@@ -483,9 +489,9 @@ external target_triple: llmodule -> string
                       = "llvm_target_triple"
 external set_target_triple: string -> llmodule -> unit
                           = "llvm_set_target_triple"
-external data_layout: llmodule -> string
+external data_layout: llmodule -> DataLayout.t
                     = "llvm_data_layout"
-external set_data_layout: string -> llmodule -> unit
+external set_data_layout: DataLayout.t -> llmodule -> unit
                         = "llvm_set_data_layout"
 external dump_module : llmodule -> unit = "llvm_dump_module"
 external print_module : string -> llmodule -> unit = "llvm_print_module"
@@ -697,10 +703,11 @@ external const_sub : llvalue -> llvalue -> llvalue = "llvm_const_sub"
 external const_nsw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nsw_sub"
 external const_nuw_sub : llvalue -> llvalue -> llvalue = "llvm_const_nuw_sub"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_gep : lltype -> llvalue -> llvalue array -> llvalue
-                   = "llvm_const_gep"
-external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
-                             = "llvm_const_in_bounds_gep"
+external const_ptradd : llvalue -> llvalue -> int -> llvalue
+                      = "llvm_const_ptradd"
+external const_ptradd_from_indices : DataLayout.t -> lltype -> llvalue ->
+                                     llvalue array -> int -> llvalue option
+                                   = "llvm_const_ptradd_from_indices"
 external const_trunc : llvalue -> lltype -> llvalue = "llvm_const_trunc"
 external const_ptrtoint : llvalue -> lltype -> llvalue = "llvm_const_ptrtoint"
 external const_inttoptr : llvalue -> lltype -> llvalue = "llvm_const_inttoptr"

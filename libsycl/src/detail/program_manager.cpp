@@ -33,8 +33,12 @@ getDeviceKernelInfo(std::string_view KernelName) {
 
 DeviceKernelInfo &
 ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   auto It = MDeviceKernelInfoMap.find(KernelName);
-  assert(It != MDeviceKernelInfoMap.end());
+  if (It == MDeviceKernelInfoMap.end())
+    throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+                          "No registered device image provides kernel " +
+                              std::string(KernelName));
   return It->second;
 }
 

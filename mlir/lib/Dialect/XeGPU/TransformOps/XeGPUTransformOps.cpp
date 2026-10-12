@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
@@ -406,6 +409,41 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
 
+  // Collect the loop-local operations computing the load offsets. These
+  // operations must be safe to execute before the corresponding load, both in
+  // the initial prefetch loop and at the start of each main-loop iteration.
+  SetVector<Operation *> offsetSlice;
+  BackwardSliceOptions sliceOptions;
+  sliceOptions.inclusive = true;
+  sliceOptions.omitBlockArguments = true;
+  sliceOptions.filter = [&](Operation *op) {
+    return op->getBlock() == forOp.getBody();
+  };
+  for (Value offset : loadOp.getOffsets())
+    if (failed(getBackwardSlice(offset, &offsetSlice, sliceOptions)))
+      return emitSilenceableFailure(getLoc())
+             << "Could not trace load offset computation.";
+
+  DominanceInfo dominance;
+  auto isAvailable = [&](Value value) {
+    return value == forOp.getInductionVar() ||
+           (value.getDefiningOp() &&
+            offsetSlice.contains(value.getDefiningOp())) ||
+           dominance.dominates(value, forOp);
+  };
+  for (Operation *op : offsetSlice) {
+    if (!isPure(op) || op->getNumRegions() != 0)
+      return emitSilenceableFailure(getLoc())
+             << "Offset computation cannot be safely replicated before the "
+                "for loop.";
+    if (!llvm::all_of(op->getOperands(), isAvailable))
+      return emitSilenceableFailure(getLoc())
+             << "Load offset depends on a value unavailable before the loop.";
+  }
+  if (!llvm::all_of(loadOp.getOffsets(), isAvailable))
+    return emitSilenceableFailure(getLoc())
+           << "Load offset depends on a value unavailable before the loop.";
+
   // Clone desc op outside the loop.
   rewriter.setInsertionPoint(forOp);
   auto newDescOp =
@@ -427,12 +465,15 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   auto readCacheHint =
       xegpu::CachePolicyAttr::get(ctx, xegpu::CachePolicy::CACHED);
 
-  // Modify loadOp mixedOffsets by replacing the for loop induction variable
-  // with the given value.
+  // Recreate the offset calculation with the induction variable replaced by
+  // the iteration being prefetched. Cloning in slice order maps every result
+  // before it is used by a later offset operation.
   auto getPrefetchOffsets =
       [&](Value replacementVal) -> SmallVector<OpFoldResult> {
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
+    for (Operation *op : offsetSlice)
+      rewriter.clone(*op, mapping);
     SmallVector<Value> dynamicOffsets =
         llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);

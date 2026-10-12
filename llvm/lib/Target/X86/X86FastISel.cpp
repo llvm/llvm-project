@@ -532,9 +532,11 @@ bool X86FastISel::X86FastEmitStore(EVT VT, Register ValReg, X86AddressMode &AM,
   case MVT::i1: {
     // Mask out all but lowest bit.
     Register AndResult = createResultReg(&X86::GR8RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(X86::AND8ri), AndResult)
-      .addReg(ValReg).addImm(1);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(X86::AND8ri),
+            AndResult)
+        .addReg(ValReg)
+        .addImm(1)
+        .setOperandDead(3); // implicit-def $eflags
     ValReg = AndResult;
     [[fallthrough]]; // handle i1 as i8.
   }
@@ -1619,7 +1621,10 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
             FlagReg2)
         .addImm(SETFOpc[1]);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(SETFOpc[2]),
-            ResultReg).addReg(FlagReg1).addReg(FlagReg2);
+            ResultReg)
+        .addReg(FlagReg1)
+        .addReg(FlagReg2)
+        .setOperandDead(3); // implicit-def $eflags
     updateValueMap(I, ResultReg);
     return true;
   }
@@ -3322,9 +3327,9 @@ bool X86FastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-      .addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&Arg, ResultReg);
   }
   return true;

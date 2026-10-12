@@ -84,8 +84,11 @@ static void specializeForLoopForUnrolling(ForOp op) {
   auto minOp = bound.getDefiningOp<AffineMinOp>();
   if (!minOp)
     return;
+  AffineMap canonicalizedMap = minOp.getMap();
+  SmallVector<Value> operands(minOp.getMapOperands());
+  affine::canonicalizeMapAndOperands(&canonicalizedMap, &operands);
   int64_t minConstant = std::numeric_limits<int64_t>::max();
-  for (AffineExpr expr : minOp.getMap().getResults()) {
+  for (AffineExpr expr : canonicalizedMap.getResults()) {
     if (auto constantIndex = dyn_cast<AffineConstantExpr>(expr))
       minConstant = std::min(minConstant, constantIndex.getValue());
   }

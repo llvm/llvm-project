@@ -103,7 +103,7 @@ def Tosa_ArgMinOp : Tosa_InferShapedTypeOp<"argmin", [NoMemoryEffect]> {
 // Accumulator types.
 //===----------------------------------------------------------------------===//
 
-def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, F16, F32, BF16]>;
+def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, I<64>, F16, F32, BF16]>;
 
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d

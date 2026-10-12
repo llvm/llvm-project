@@ -581,7 +581,10 @@ Status ProcessWindows::DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
 
 lldb::addr_t ProcessWindows::GetImageInfoAddress() {
   Target &target = GetTarget();
-  ObjectFile *obj_file = target.GetExecutableModule()->GetObjectFile();
+  ModuleSP executable_sp = target.GetExecutableModule();
+  if (!executable_sp)
+    return LLDB_INVALID_ADDRESS;
+  ObjectFile *obj_file = executable_sp->GetObjectFile();
   Address addr = obj_file->GetImageInfoAddress(&target);
   if (addr.IsValid())
     return addr.GetLoadAddress(&target);
@@ -603,10 +606,9 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 
   if (m_pty) {
     DrainProcessStdout();
-    m_pty->SetStopping(true);
     m_pty->Close();
     m_stdio_communication.InterruptRead();
-    m_stdio_communication.StopReadThread();
+    m_stdio_communication.JoinReadThread();
   }
 
   TargetSP target = CalculateTarget();
@@ -624,29 +626,8 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 }
 
 void ProcessWindows::DrainProcessStdout() {
-  if (!m_stdio_communication.ReadThreadIsRunning())
-    return;
-  m_stdio_communication.SynchronizeWithReadThread();
-  if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
-    return;
-
-  HANDLE pipe = m_pty->GetSTDOUTHandle();
-  for (int consec_empty = 0; consec_empty < 3;) {
-    if (!m_stdio_communication.ReadThreadIsRunning())
-      break;
-    DWORD avail = 0;
-    // PeekNamedPipe is thread safe.
-    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
-      break;
-    if (avail > 0) {
-      consec_empty = 0;
-      m_stdio_communication.SynchronizeWithReadThread();
-    } else {
-      ++consec_empty;
-      if (consec_empty < 3)
-        ::SleepEx(1, FALSE);
-    }
-  }
+  if (m_stdio_communication.ReadThreadIsRunning())
+    m_stdio_communication.SynchronizeWithReadThread();
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -670,7 +651,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
         GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
     if (!module)
       return;
-    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+    GetTarget().RebuildModuleListWithExecutable(module, eLoadDependentsNo);
   }
 
   if (auto dyld = GetDynamicLoader())

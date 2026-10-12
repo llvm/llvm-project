@@ -280,7 +280,7 @@ class AMDGPULowerModuleLDS {
     // codegen would suffice for that, but one would still need to ensure that
     // the variables are allocated in the anticipated order.
     BasicBlock *Entry = &Func->getEntryBlock();
-    IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
+    IRBuilder<> Builder(Entry->getFirstNonPHIIt());
 
     Function *Decl = Intrinsic::getOrInsertDeclaration(
         Func->getParent(), Intrinsic::donothing, {});
@@ -402,7 +402,7 @@ public:
       GlobalVariable *LookupTable) {
 
     LLVMContext &Ctx = M.getContext();
-    IRBuilder<> Builder(Ctx);
+    IRBuilder<> Builder(M);
     Type *I32 = Type::getInt32Ty(Ctx);
 
     for (size_t Index = 0; Index < ModuleScopeVariables.size(); Index++) {
@@ -556,7 +556,7 @@ public:
 
       // Annotate the kernels with their order in this vector
       LLVMContext &Ctx = M->getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(*M);
 
       if (OrderedKernels.size() > UINT32_MAX) {
         // 32 bit keeps it in one SGPR. > 2**32 kernels won't fit on the GPU
@@ -855,7 +855,7 @@ public:
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS;
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(M);
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
@@ -1138,8 +1138,7 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
+      IRBuilder<> Builder(M);
 
       // The order must be consistent between lookup table and accesses to
       // lookup table

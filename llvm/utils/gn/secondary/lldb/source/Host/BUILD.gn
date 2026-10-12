@@ -103,6 +103,11 @@ static_library("Host") {
     if (current_os != "emscripten") {
       sources += [ "posix/ProcessLauncherPosixFork.cpp" ]
     }
+
+    # Darwin has its own framework-aware implementation.
+    if (current_os != "mac") {
+      sources += [ "posix/PythonRuntimeLoaderPosix.cpp" ]
+    }
   }
 
   if (current_os == "aix") {
@@ -141,7 +146,6 @@ static_library("Host") {
       "linux/Host.cpp",
       "linux/HostInfoLinux.cpp",
       "linux/LibcGlue.cpp",
-      "linux/PythonRuntimeLoaderLinux.cpp",
       "linux/Support.cpp",
     ]
   }

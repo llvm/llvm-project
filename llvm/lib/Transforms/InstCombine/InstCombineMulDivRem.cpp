@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -104,39 +105,48 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 static Value *foldMulSelectToNegate(BinaryOperator &I,
                                     InstCombiner::BuilderTy &Builder) {
   Value *Cond, *OtherOp;
+  Instruction *SI = nullptr;
 
   // mul (select Cond, 1, -1), OtherOp --> select Cond, OtherOp, -OtherOp
   // mul OtherOp, (select Cond, 1, -1) --> select Cond, OtherOp, -OtherOp
-  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
+  if (match(&I, m_c_Mul(m_OneUse(m_Instruction(
+                            SI, m_Select(m_Value(Cond), m_One(), m_AllOnes()))),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, OtherOp, Neg);
+    return Builder.CreateSelect(Cond, OtherOp, Neg, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
   // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
-  if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
+  if (match(&I, m_c_Mul(m_OneUse(m_Instruction(
+                            SI, m_Select(m_Value(Cond), m_AllOnes(), m_One()))),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, Neg, OtherOp);
+    return Builder.CreateSelect(Cond, Neg, OtherOp, "",
+                                ProfcheckDisableMetadataFixes ? nullptr : SI);
   }
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
-  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
-                                           m_SpecificFP(-1.0))),
+  if (match(&I, m_c_FMul(m_OneUse(m_Instruction(
+                             SI, m_Select(m_Value(Cond), m_SpecificFP(1.0),
+                                          m_SpecificFP(-1.0)))),
                          m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, OtherOp,
-                                   Builder.CreateFNegFMF(OtherOp, &I), &I);
+    return Builder.CreateSelectFMF(
+        Cond, OtherOp, Builder.CreateFNegFMF(OtherOp, &I), &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
-  if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
-                                           m_SpecificFP(1.0))),
+  if (match(&I, m_c_FMul(m_OneUse(m_Instruction(
+                             SI, m_Select(m_Value(Cond), m_SpecificFP(-1.0),
+                                          m_SpecificFP(1.0)))),
                          m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
-                                   OtherOp, &I);
+    return Builder.CreateSelectFMF(
+        Cond, Builder.CreateFNegFMF(OtherOp, &I), OtherOp, &I, "",
+        ProfcheckDisableMetadataFixes ? nullptr : SI);
 
   return nullptr;
 }
@@ -334,10 +344,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   {
     Value *NewOp, *Cond, *OtherValue;
     Constant *C1, *C2, *C3;
+    Instruction *SI = nullptr;
 
     if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
-                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
-                                            m_ImmConstant(C3))))) &&
+                          m_OneUse(m_Instruction(
+                              SI, m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                           m_ImmConstant(C3)))))) &&
         (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
          match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
 
@@ -348,7 +360,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
       Constant *NewFV = ConstantFoldBinaryOpOperands(Opc, C3, C1, DL);
 
       if (NewTV && NewFV) {
-        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV);
+        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV, "", SI);
         BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, NewSel);
 
         if (HasNUW && OtherInst->hasNoUnsignedWrap())
@@ -2120,17 +2132,31 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 /// Negate the exponent of pow/exp to fold division-by-pow() into multiply.
 static Instruction *foldFDivPowDivisor(BinaryOperator &I,
                                        InstCombiner::BuilderTy &Builder) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  auto *II = dyn_cast<IntrinsicInst>(Op1);
-  if (!II || !II->hasOneUse() || !I.hasAllowReassoc() ||
-      !I.hasAllowReciprocal())
-    return nullptr;
-
   // Z / pow(X, Y) --> Z * pow(X, -Y)
   // Z / exp{2}(Y) --> Z * exp{2}(-Y)
+  // Z / splat(pow(X, Y)) --> Z * splat(pow(X, -Y))
   // In the general case, this creates an extra instruction, but fmul allows
   // for better canonicalization and optimization than fdiv.
+  if (!I.hasAllowReassoc() || !I.hasAllowReciprocal())
+    return nullptr;
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+
+  Value *Divisor = Op1;
+  Value *Splat = nullptr;
+  if (match(Op1,
+            m_OneUse(m_Shuffle(
+                m_OneUse(m_InsertElt(m_Value(), m_Value(Splat), m_ZeroInt())),
+                m_Value(), m_ZeroMask()))))
+    Divisor = Splat;
+
+  auto *II = dyn_cast<IntrinsicInst>(Divisor);
+  if (!II || !II->hasOneUse())
+    return nullptr;
+
   Intrinsic::ID IID = II->getIntrinsicID();
+  SmallVector<Type *, 2> Tys = {II->getType()};
   SmallVector<Value *> Args;
   switch (IID) {
   case Intrinsic::pow:
@@ -2147,9 +2173,8 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
       return nullptr;
     Args.push_back(II->getArgOperand(0));
     Args.push_back(Builder.CreateNeg(II->getArgOperand(1)));
-    Type *Tys[] = {I.getType(), II->getArgOperand(1)->getType()};
-    Value *Pow = Builder.CreateIntrinsic(IID, Tys, Args, &I);
-    return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+    Tys.push_back(II->getArgOperand(1)->getType());
+    break;
   }
   case Intrinsic::exp:
   case Intrinsic::exp2:
@@ -2158,7 +2183,12 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   default:
     return nullptr;
   }
-  Value *Pow = Builder.CreateIntrinsic(IID, I.getType(), Args, &I);
+
+  Value *Pow = Builder.CreateIntrinsic(IID, Tys, Args, &I);
+  if (Pow->getType() != I.getType())
+    Pow = Builder.CreateVectorSplat(
+        cast<VectorType>(I.getType())->getElementCount(), Pow);
+
   return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
 }
 

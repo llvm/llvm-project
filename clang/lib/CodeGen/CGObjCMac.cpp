@@ -5329,7 +5329,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
       // call.  If the call throws, then this is sufficient to
       // guarantee correctness as long as it doesn't also write to any
       // locals.
-      Builder.SetInsertPoint(&BB, BI);
+      Builder.SetInsertPoint(BI);
       emitReadHazard(Builder);
     }
   }

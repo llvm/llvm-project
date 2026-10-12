@@ -807,7 +807,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
 
 void SystemZXPLINKAsmPrinter::emitGlobalAlias(const Module &M,
                                               const GlobalAlias &GA) {
-  if (!TM.getTargetTriple().isOSzOS())
+  if (!M.getTargetTriple().isOSzOS())
     return AsmPrinter::emitGlobalAlias(M, GA);
 
   // Aliased function labels have already been emitted for z/OS

@@ -294,7 +294,7 @@ struct DoWhileLowering : public OpRewritePattern<WhileOp> {
 
 /// Lower an `scf.index_switch` operation to a `cf.switch` operation.
 struct IndexSwitchLowering : public OpRewritePattern<IndexSwitchOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IndexSwitchOp op,
                                 PatternRewriter &rewriter) const override;
@@ -475,7 +475,7 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+      cf::BranchOp::create(rewriter, terminator.getLoc(), remainingOpsBlock,
                            terminatorOperands);
       rewriter.eraseOp(terminator);
     }

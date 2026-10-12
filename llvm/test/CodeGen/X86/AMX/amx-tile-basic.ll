@@ -164,8 +164,8 @@ define void @multi_use() nounwind {
 ; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $16, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $64, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $64, %ax
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $64, %ax
 ; CHECK-NEXT:    movw $16, %cx
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    movabsq $64, %rbp

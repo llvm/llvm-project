@@ -10,6 +10,8 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
+math_test(name = "acos")
+
 math_test(
     name = "acosbf16",
     deps = [
@@ -27,6 +29,8 @@ math_test(name = "acoshf16")
 
 math_test(name = "acospif16")
 
+math_test(name = "asin")
+
 math_test(
     name = "asinbf16",
     deps = [
@@ -41,6 +45,8 @@ math_test(name = "asinf16")
 math_test(name = "asinhf")
 
 math_test(name = "asinhf16")
+
+math_test(name = "asinpi")
 
 math_test(name = "asinpif16")
 
@@ -124,6 +130,11 @@ math_test(
     deps = [
         "//libc:__support_integer_literals",
     ],
+)
+
+math_test(
+    name = "iscanonical",
+    hdrs = ["IsCanonicalTest.h"],
 )
 
 math_test(
@@ -1799,7 +1810,13 @@ math_test(
 
 math_test(name = "pow")
 
-math_test(name = "powf")
+math_test(
+    name = "powf",
+    deps = [
+        "//libc:__support_math_powf_double_eval",
+        "//libc:__support_math_powf_float_eval",
+    ],
+)
 
 math_test(
     name = "remquo",
@@ -2329,6 +2346,11 @@ math_test(
 math_test(name = "expm1f16")
 
 math_test(
+    name = "issignaling",
+    hdrs = ["IsSignalingTest.h"],
+)
+
+math_test(
     name = "issignalingbf16",
     hdrs = ["IsSignalingTest.h"],
     deps = [
@@ -2360,6 +2382,14 @@ math_test(name = "log10p1f16")
 math_test(name = "logf16")
 
 math_test(name = "lgammaf16")
+
+math_test(
+    name = "nan",
+    deps = [
+        "//libc:__support_macros_sanitizer",
+        "//libc:hdr_signal_macros",
+    ],
+)
 
 math_test(
     name = "nanbf16",

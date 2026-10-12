@@ -11,26 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCOptions.h"
 #include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
-
-enum AsmWriterVariantTy {
-  Default = -1,
-  Generic = 0,
-  Apple = 1
-};
-
-static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
-    "aarch64-neon-syntax", cl::init(Default),
-    cl::desc("Choose style of NEON code to emit from AArch64 backend:"),
-    cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
-               clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
 constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> COFFAtSpecifierDefs[] = {
     {{"IMGREL"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
@@ -148,7 +136,8 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
     : MCAsmInfoDarwin(Options) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
-  AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
+  AssemblerDialect =
+      AArch64MCOptions::Global.neon_syntax.value_or(AArch64::Apple);
 
   InternalSymbolPrefix = "L";
   SeparatorString = "%%";
@@ -216,7 +205,8 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   // We prefer NEON instructions to be printed in the generic form when
   // targeting ELF.
-  AssemblerDialect = AsmWriterVariant == Default ? Generic : AsmWriterVariant;
+  AssemblerDialect =
+      AArch64MCOptions::Global.neon_syntax.value_or(AArch64::Generic);
 
   CodePointerSize = T.getEnvironment() == Triple::GNUILP32 ? 4 : 8;
 
