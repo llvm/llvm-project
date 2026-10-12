@@ -123,8 +123,8 @@ private:
   const TargetRegisterClass *getOperandRegClass(SDNode *N, unsigned OpNo) const;
   virtual bool SelectADDRVTX_READ(SDValue Addr, SDValue &Base, SDValue &Offset);
   virtual bool SelectADDRIndirect(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool isDSOffsetLegal(SDValue Base, unsigned Offset) const;
-  bool isDSOffset2Legal(SDValue Base, unsigned Offset0, unsigned Offset1,
+  bool isDSOffsetLegal(SDValue Base, int64_t Offset) const;
+  bool isDSOffset2Legal(SDValue Base, int64_t Offset0, int64_t Offset1,
                         unsigned Size) const;
 
   bool isFlatScratchBaseLegal(SDValue Addr) const;
