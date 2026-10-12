@@ -499,8 +499,15 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
     module_sp->FindSymbolsWithNameAndType(reexport_name, eSymbolTypeAny,
                                           sc_list);
     for (const SymbolContext &sc : sc_list) {
-      if (sc.symbol->IsExternal())
-        return sc.symbol;
+      if (!sc.symbol->IsExternal() && !sc.symbol->IsWeak())
+        continue;
+      // Don't return a symbol that itself only re-exports the definition
+      // (e.g. an ELF filter library's placeholder): the real definition is
+      // found by following the module-level re-exports below, which also
+      // guards against cycles.
+      if (sc.symbol->GetType() == eSymbolTypeReExported)
+        continue;
+      return sc.symbol;
     }
     // If we didn't find the symbol in this module, it may be because this
     // module re-exports some whole other library.  We have to search those as
@@ -523,17 +530,68 @@ Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
   return nullptr;
 }
 
-Symbol *Symbol::ResolveReExportedSymbol(Target &target) const {
+Symbol *Symbol::ResolveReExportedSymbol(
+    Target &target, const lldb::ModuleSP &containing_module_sp) const {
   ConstString reexport_name(GetReExportedSymbolName());
+  ModuleList seen_modules;
+
   if (reexport_name) {
+    // Search the library recorded on the symbol itself first.
     ModuleSpec module_spec;
-    ModuleList seen_modules;
     module_spec.GetFileSpec() = GetReExportedSymbolSharedLibrary();
     if (module_spec.GetFileSpec()) {
-      return ResolveReExportedSymbolInModuleSpec(target, reexport_name,
-                                                 module_spec, seen_modules);
+      if (Symbol *result = ResolveReExportedSymbolInModuleSpec(
+              target, reexport_name, module_spec, seen_modules))
+        return result;
+    }
+  } else {
+    // This symbol isn't itself marked as a re-export. Some formats (ELF's
+    // DT_FILTER / DT_AUXILIARY) have no per-symbol tagging: the dynamic
+    // linker always resolves through the filtee(s) first and only falls
+    // back to the filter object's own definition if none of them provide
+    // it, even when the filter also provides a genuine implementation of
+    // the same symbol.
+    ObjectFile *object_file =
+        containing_module_sp ? containing_module_sp->GetObjectFile() : nullptr;
+    if (!object_file ||
+        !object_file->ReExportedLibrariesShadowLocalDefinitions())
+      return nullptr;
+
+    // Only exported (global or weak) definitions take part in dynamic
+    // linking, so local symbols are never shadowed by a filtee.
+    if (!IsExternal() && !IsWeak())
+      return nullptr;
+
+    // Use this symbol's own (version-suffix-stripped) name so the filtees
+    // below are searched for it.
+    reexport_name = GetName();
+    if (!reexport_name)
+      return nullptr;
+    if (ContainsLinkerAnnotations())
+      reexport_name = ConstString(object_file->StripLinkerSymbolAnnotations(
+          reexport_name.GetStringRef()));
+  }
+
+  // The recorded library is only the first candidate: the module defining
+  // this symbol may re-export several libraries which must be searched in
+  // the order they are declared (e.g. an ELF filter library with multiple
+  // DT_FILTER / DT_AUXILIARY entries).  seen_modules is shared with the
+  // search above so no library is searched twice.
+  if (containing_module_sp) {
+    if (ObjectFile *object_file = containing_module_sp->GetObjectFile()) {
+      FileSpecList reexported_libraries = object_file->GetReExportedLibraries();
+      const size_t count = reexported_libraries.GetSize();
+      for (size_t idx = 0; idx < count; ++idx) {
+        ModuleSpec reexported_module_spec;
+        reexported_module_spec.GetFileSpec() =
+            reexported_libraries.GetFileSpecAtIndex(idx);
+        if (Symbol *result = ResolveReExportedSymbolInModuleSpec(
+                target, reexport_name, reexported_module_spec, seen_modules))
+          return result;
+      }
     }
   }
+
   return nullptr;
 }
 
@@ -557,20 +615,22 @@ ConstString Symbol::GetNameNoArguments() const {
   return GetMangled().GetName(Mangled::ePreferDemangledWithoutArguments);
 }
 
-lldb::addr_t Symbol::ResolveCallableAddress(Target &target) const {
+lldb::addr_t Symbol::ResolveCallableAddress(
+    Target &target, const lldb::ModuleSP &containing_module_sp) const {
   if (GetType() == lldb::eSymbolTypeUndefined)
     return LLDB_INVALID_ADDRESS;
 
   Address func_so_addr;
 
   bool is_indirect = IsIndirect();
-  if (GetType() == eSymbolTypeReExported) {
-    Symbol *reexported_symbol = ResolveReExportedSymbol(target);
-    if (reexported_symbol) {
-      func_so_addr = reexported_symbol->GetAddress();
-      is_indirect = reexported_symbol->IsIndirect();
-    }
-  } else {
+  // A symbol from an ELF filter/auxiliary library is resolved through its
+  // filtee(s) first, falling back to its own definition only if none of them
+  // provide it, mirroring what the dynamic linker does.
+  if (Symbol *reexported_symbol =
+          ResolveReExportedSymbol(target, containing_module_sp)) {
+    func_so_addr = reexported_symbol->GetAddress();
+    is_indirect = reexported_symbol->IsIndirect();
+  } else if (GetType() != eSymbolTypeReExported) {
     func_so_addr = GetAddress();
     is_indirect = IsIndirect();
   }
@@ -697,11 +757,10 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   } else {
     m_addr_or_reexport.GetReExportInfo(*this).name =
         ConstString(strtab.Get(data.GetU32(offset_ptr)));
-    // m_reexport_info.library is calculated based on the
-    // binaries loaded in the target, lazily.  It is not
-    // saved in the serialized Symbol format as it could vary
-    // depending on the Target libraries.
-    m_addr_or_reexport.GetReExportInfo(*this).library_up.reset();
+    llvm::StringRef filename = strtab.Get(data.GetU32(offset_ptr));
+    if (!filename.empty())
+      m_addr_or_reexport.GetReExportInfo(*this).library_up =
+          std::make_unique<FileSpec>(filename);
   }
   m_flags = data.GetU32(offset_ptr);
   return true;
@@ -712,7 +771,7 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 // the DataFileCache version number in Symtab::Encode
 // will need to be incremented as well.
 #if __SIZEOF_POINTER__ == 8
-static_assert(sizeof(lldb_private::Symbol) == 80,
+static_assert(sizeof(lldb_private::Symbol) == 72,
               "Symbol size has changed, Symbol::Encode and Decode likely need "
               "to be updated");
 #endif
@@ -775,10 +834,14 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     file.AppendU64(m_addr_or_reexport.GetAddressRange(*this).GetByteSize());
   } else {
     file.AppendU32(strtab.Add(m_addr_or_reexport.GetReExportInfo(*this).name));
-    // m_reexport_info.library_up is calculated based on the
-    // binaries loaded in the target, lazily.  It is not
-    // saved in the serialized Symbol format as it could vary
-    // depending on the Target libraries.
+    if (m_addr_or_reexport.GetReExportInfo(*this).library_up) {
+      ConstString filepath(m_addr_or_reexport.GetReExportInfo(*this)
+                               .library_up->GetPath()
+                               .c_str());
+      file.AppendU32(strtab.Add(filepath));
+    } else {
+      file.AppendU32(strtab.Add(ConstString("")));
+    }
   }
   file.AppendU32(m_flags);
 }

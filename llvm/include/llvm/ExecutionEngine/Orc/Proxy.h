@@ -115,24 +115,6 @@ public:
   Proxy(DispatchFn Dispatch, ExecutorAddr CalleeAddr)
       : ProxyBase(CalleeAddr), Dispatch(Dispatch) {}
 
-  static Expected<Proxy> Create(DispatchFn Dispatch, JITDylib &JD,
-                                StringRef Name, SymbolLookupFlags LF) {
-    auto &ES = JD.getExecutionSession();
-    if (auto CalleeSyms = ES.lookup(makeJITDylibSearchOrder(&JD),
-                                    SymbolLookupSet{ES.intern(Name), LF})) {
-      if (!CalleeSyms->empty())
-        return Proxy(Dispatch, CalleeSyms->begin()->second.getAddress());
-      assert(LF == SymbolLookupFlags::WeaklyReferencedSymbol);
-      return Proxy();
-    } else
-      return CalleeSyms.takeError();
-  }
-
-  static Expected<Proxy> Create(DispatchFn Dispatch, ExecutionSession &ES,
-                                StringRef Name, SymbolLookupFlags LF) {
-    return Create(Dispatch, ES.getBootstrapJITDylib(), Name, LF);
-  }
-
   /// Asynchronously invoke the operation with the given Args, delivering its
   /// result (or an error) to OnComplete.
   void operator()(unique_function<void(ErrorRetT)> OnComplete,
@@ -155,55 +137,6 @@ public:
 private:
   DispatchFn Dispatch = nullptr;
 };
-
-template <typename FnT> struct ProxyInit {
-  Proxy<FnT> *P = nullptr;
-  typename Proxy<FnT>::DispatchFn Dispatch = nullptr;
-  StringRef Name;
-  SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol;
-};
-
-template <typename FnT>
-ProxyInit<FnT>
-proxyInit(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
-          StringRef Name,
-          SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
-  return {P, Dispatch, Name, LookupFlags};
-}
-
-template <typename ProxySpecT, typename FnT>
-ProxyInit<FnT>
-proxyInit(Proxy<FnT> *P,
-          SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
-  return {P, ProxySpecT::dispatch, ProxySpecT::Name, LookupFlags};
-}
-
-template <typename ProxySpecT, typename FnT>
-ProxyInit<FnT>
-proxyInit(Proxy<FnT> *P, StringRef Name,
-          SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol) {
-  return {P, ProxySpecT::dispatch, Name, LookupFlags};
-}
-
-/// buildProxies base case.
-inline Error buildProxies(JITDylib &JD) { return Error::success(); }
-
-/// buildProxies: Given an ExecutionSession, use BootstrapJITDylib.
-template <typename... FnTs>
-Error buildProxies(ExecutionSession &ES, ProxyInit<FnTs>... PIs) {
-  return buildProxies(ES.getBootstrapJITDylib(), PIs...);
-}
-
-/// Build a sequence of proxies from their respective specs.
-template <typename FnT, typename... FnTs>
-Error buildProxies(JITDylib &JD, ProxyInit<FnT> PI, ProxyInit<FnTs>... PIs) {
-  if (auto POrErr =
-          Proxy<FnT>::Create(PI.Dispatch, JD, PI.Name, PI.LookupFlags))
-    *PI.P = std::move(*POrErr);
-  else
-    return POrErr.takeError();
-  return buildProxies(JD, PIs...);
-}
 
 } // namespace llvm::orc
 

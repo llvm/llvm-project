@@ -465,12 +465,11 @@ define float @D139275_c4001580(float %val) {
 ; ALL-NEXT:    br i1 [[CMP1]], label [[IF_END3:%.*]], label [[RETURN]]
 ; ALL:       if.end3:
 ; ALL-NEXT:    [[CMP4:%.*]] = fcmp olt float [[VAL]], 2.000000e-01
-; ALL-NEXT:    br i1 [[CMP4]], label [[RETURN]], label [[IF_END6:%.*]]
-; ALL:       if.end6:
 ; ALL-NEXT:    [[SUB:%.*]] = fadd float [[VAL]], -1.000000e-01
+; ALL-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP4]], float 0.000000e+00, float [[SUB]]
 ; ALL-NEXT:    br label [[RETURN]]
 ; ALL:       return:
-; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SUB]], [[IF_END6]] ], [ 0.000000e+00, [[ENTRY:%.*]] ], [ 1.000000e-01, [[IF_END]] ], [ 0.000000e+00, [[IF_END3]] ]
+; ALL-NEXT:    [[RETVAL_0:%.*]] = phi float [ [[SPEC_SELECT]], [[IF_END3]] ], [ 0.000000e+00, [[ENTRY:%.*]] ], [ 1.000000e-01, [[IF_END]] ]
 ; ALL-NEXT:    ret float [[RETVAL_0]]
 ;
 entry:

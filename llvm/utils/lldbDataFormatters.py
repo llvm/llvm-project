@@ -446,12 +446,14 @@ class PointerUnionSynthProvider:
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     raw_value = valobj.GetNonSyntheticValue()
-    num_entries = raw_value.GetChildMemberWithName("NumEntries").unsigned
+    storage = raw_value.GetChildMemberWithName("Storage")
+    num_entries = storage.GetChildMemberWithName("NumEntries").unsigned
     return f"size={num_entries}"
 
 
 class DenseMapSynthetic:
     valobj: lldb.SBValue
+    storage: lldb.SBValue
 
     # The indexes into `Buckets` that contain valid map entries.
     child_buckets: list[int]
@@ -464,28 +466,19 @@ class DenseMapSynthetic:
 
     def get_child_at_index(self, child_index: int) -> lldb.SBValue:
         bucket_index = self.child_buckets[child_index]
-        entry = self.valobj.GetValueForExpressionPath(f".Buckets[{bucket_index}]")
-
-        # By default, DenseMap instances use DenseMapPair to hold key-value
-        # entries. When the entry is a DenseMapPair, unwrap it to expose the
-        # children as simple std::pair values.
-        #
-        # This entry type is customizable (a template parameter). For other
-        # types, expose the entry type as is.
-        if entry.type.name.startswith("llvm::detail::DenseMapPair<"):
-            entry = entry.GetChildAtIndex(0)
-
+        entry = self.storage.GetValueForExpressionPath(f".Buckets[{bucket_index}]")
         return entry.Clone(f"[{child_index}]")
 
     def update(self):
         self.child_buckets = []
+        self.storage = self.valobj.GetChildMemberWithName("Storage")
 
-        num_entries = self.valobj.GetChildMemberWithName("NumEntries").unsigned
+        num_entries = self.storage.GetChildMemberWithName("NumEntries").unsigned
         if num_entries == 0:
             return
 
-        num_buckets = self.valobj.GetChildMemberWithName("NumBuckets").unsigned
-        used = self.valobj.GetChildMemberWithName("Used")
+        num_buckets = self.storage.GetChildMemberWithName("NumBuckets").unsigned
+        used = self.storage.GetChildMemberWithName("Used")
 
         # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
         # uint32_t words. A bucket holds a valid entry iff its bit is set;

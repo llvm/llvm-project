@@ -97,8 +97,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
-  // map of aliasing decorations to aliasing metadata
-  DenseMap<const MDNode *, MachineInstr *> AliasInstMDMap;
+  // map of aliasing decorations to aliasing metadata, keyed per
+  // MachineFunction: the cached instructions define virtual registers, which
+  // are only valid in the function that created them.
+  DenseMap<std::pair<const MachineFunction *, const MDNode *>, MachineInstr *>
+      AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVTypeInst createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -477,8 +480,15 @@ private:
   SPIRVTypeInst getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
                                SPIRV::FPEncoding::FPEncoding FPEncode);
 
+  SPIRVTypeInst getOpTypeVectorImpl(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                    MachineIRBuilder &MIRBuilder,
+                                    bool IsLongVectorEXT = false);
+
   SPIRVTypeInst getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                 MachineIRBuilder &MIRBuilder);
+
+  SPIRVTypeInst getOpTypeVectorIdEXT(uint32_t NumElems, SPIRVTypeInst ElemType,
+                                     MachineIRBuilder &MIRBuilder);
 
   SPIRVTypeInst getOpTypeArray(uint32_t NumElems, SPIRVTypeInst ElemType,
                                MachineIRBuilder &MIRBuilder,
@@ -732,7 +742,8 @@ public:
   // mappings.
   void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
 
-  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg,
+                       bool CanUseAnyVectorRank);
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };

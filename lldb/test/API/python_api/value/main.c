@@ -51,6 +51,7 @@ int main (int argc, char const *argv[])
     int32_t  sinthex = 0xE0A35F10;
 
     int i;
+    int a_val = 10;
     MyInt a = 12345;
     struct MyStruct s = {11, 22};
     struct MyBiggerStruct f = { 33, 44, 55 };

@@ -1,11 +1,21 @@
 ; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
 ; RUN:     -function-sections -unique-section-names=false \
-; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=HOT,COMM --dump-input=always
 
-; Repeat the RUN command above for big-endian systems.
+; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NOHOT,COMM --dump-input=always
+
+; Repeat the RUN commands above for big-endian systems.
 ; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
 ; RUN:     -function-sections -unique-section-names=false \
-; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=HOT,COMM --dump-input=always
+
+; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
+; RUN:     -preserve-hot-data-section-prefix=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NOHOT,COMM --dump-input=always
 
 ; Tests that constant pool hotness is aggregated across the module. The
 ; static-data-splitter processes data from cold_func first, unprofiled_func
@@ -19,88 +29,79 @@
 ;   function, constant pools for this constant should not have `.unlikely` suffix.
 
 ;; Constant pools for function @cold_func.
-; CHECK:       .section	.rodata.cst8.hot.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI0_0,@object
-; CHECK-NEXT: .LCPI0_0:
-; CHECK:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT:  .size .LCPI0_0, 8
-; CHECK: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI0_1,@object
-; CHECK-NEXT: .LCPI0_1:
-; CHECK:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
-; CHECK-NEXT:  .size .LCPI0_1, 8
-; CHECK:	.section	.rodata.cst8,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI0_2,@object
-; CHECK-NEXT: .LCPI0_2:
-; CHECK:     .byte   1                               // 0x1
-; CHECK-NEXT:     .byte   2                               // 0x2
-; CHECK-NEXT:     .byte   3                               // 0x3
-; CHECK-NEXT:     .byte   4                               // 0x4
-; CHECK-NEXT:     .byte   5                               // 0x5
-; CHECK-NEXT:     .byte   6                               // 0x6
-; CHECK-NEXT:     .byte   7                               // 0x7
-; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:  .size .LCPI0_2, 8
+; HOT:         .section	 .rodata.cst8.hot.,"aM",@progbits,8
+; NOHOT:       .section	 .rodata.cst8,"aM",@progbits,8
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI0_0,@object
+; COMM-NEXT:  .LCPI0_0:
+; COMM:	      .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; COMM-NEXT:   .size .LCPI0_0, 8
+; COMM:        .section	.rodata.cst8.unlikely.,"aM",@progbits,8
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI0_1,@object
+; COMM-NEXT:  .LCPI0_1:
+; COMM:        .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
+; COMM-NEXT:   .size .LCPI0_1, 8
 
 ;; Constant pools for function @unprofiled_func
-; CHECK:	    .section	.rodata.cst8,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI1_0,@object
-; CHECK-NEXT: .LCPI1_0:
-; CHECK:     .byte   1                               // 0x1
-; CHECK-NEXT:     .byte   2                               // 0x2
-; CHECK-NEXT:     .byte   3                               // 0x3
-; CHECK-NEXT:     .byte   4                               // 0x4
-; CHECK-NEXT:     .byte   5                               // 0x5
-; CHECK-NEXT:     .byte   6                               // 0x6
-; CHECK-NEXT:     .byte   7                               // 0x7
-; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:  .size .LCPI1_0, 8
-; CHECK: .section .rodata.cst16,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI1_1,@object
-; CHECK-NEXT: .LCPI1_1:
-; CHECK:     .word 2                                 // 0x2
-; CHECK-NEXT:     .word 3                                 // 0x3
-; CHECK-NEXT:     .word 5                                 // 0x5
-; CHECK-NEXT:     .word 7                                 // 0x7
-; CHECK-NEXT:  .size .LCPI1_1, 16
-; CHECK: .section        .rodata.cst16.hot.,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI1_2,@object
-; CHECK-NEXT: .LCPI1_2:
-; CHECK:     .word   442                             // 0x1ba
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:  .size .LCPI1_2, 16
+; COMM:	       .section	 .rodata.cst8,"aM",@progbits,8
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI1_0,@object
+; COMM-NEXT:  .LCPI1_0:
+; COMM:        .byte   1                               // 0x1
+; COMM-NEXT:   .byte   2                               // 0x2
+; COMM-NEXT:   .byte   3                               // 0x3
+; COMM-NEXT:   .byte   4                               // 0x4
+; COMM-NEXT:   .byte   5                               // 0x5
+; COMM-NEXT:   .byte   6                               // 0x6
+; COMM-NEXT:   .byte   7                               // 0x7
+; COMM-NEXT:   .byte   8                               // 0x8
+; COMM-NEXT:   .size .LCPI1_0, 8
+
+; COMM:        .section .rodata.cst16,"aM",@progbits,16
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI1_1,@object
+; COMM-NEXT:  .LCPI1_1:
+; COMM:        .word 2                                 // 0x2
+; COMM-NEXT:   .word 3                                 // 0x3
+; COMM-NEXT:   .word 5                                 // 0x5
+; COMM-NEXT:   .word 7                                 // 0x7
+; COMM-NEXT:   .size .LCPI1_1, 16
+; HOT:         .section        .rodata.cst16.hot.,"aM",@progbits,16
+; HOT-NEXT:    .p2align
+; COMM-LABEL:  .type .LCPI1_2,@object
+; COMM-NEXT:  .LCPI1_2:
+; COMM:        .word   442                             // 0x1ba
+; COMM-NEXT:   .word   100                             // 0x64
+; COMM-NEXT:   .word   0                               // 0x0
+; COMM-NEXT:   .word   0                               // 0x0
+; COMM-NEXT:   .size .LCPI1_2, 16
 
 ;; Constant pools for function @hot_func
-; CHECK:      .section        .rodata.cst8.hot.,"aM",@progbits,8
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI2_0,@object
-; CHECK-NEXT: .LCPI2_0:
-; CHECK:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT:  .size .LCPI2_0, 8
-; CHECK: .section        .rodata.cst16.hot.,"aM",@progbits,16
-; CHECK-NEXT:     .p2align
-; CHECK-LABEL: .type .LCPI2_1,@object
-; CHECK-NEXT: .LCPI2_1:
-; CHECK:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   442                             // 0x1ba
-; CHECK-NEXT:  .size   .LCPI2_1, 16
-; CHECK-LABEL: .type .LCPI2_2,@object
-; CHECK-NEXT: .LCPI2_2:
-; CHECK:     .word   442                             // 0x1ba
-; CHECK-NEXT:     .word   100                             // 0x64
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:     .word   0                               // 0x0
-; CHECK-NEXT:  .size .LCPI2_2, 16
+; HOT:         .section        .rodata.cst8.hot.,"aM",@progbits,8
+; NOHOT:       .section	.rodata.cst8,"aM",@progbits,8
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI2_0,@object
+; COMM-NEXT:  .LCPI2_0:
+; COMM:        .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; COMM-NEXT:   .size .LCPI2_0, 8
+; HOT:         .section        .rodata.cst16.hot.,"aM",@progbits,16
+; NOHOT:       .section	.rodata.cst16,"aM",@progbits,16
+; COMM-NEXT:   .p2align
+; COMM-LABEL:  .type .LCPI2_1,@object
+; COMM-NEXT:  .LCPI2_1:
+; COMM:        .word   0                               // 0x0
+; COMM-NEXT:   .word   100                             // 0x64
+; COMM-NEXT:   .word   0                               // 0x0
+; COMM-NEXT:   .word   442                             // 0x1ba
+; COMM-NEXT:   .size   .LCPI2_1, 16
+; COMM-LABEL:  .type .LCPI2_2,@object
+; COMM-NEXT:  .LCPI2_2:
+; COMM:        .word   442                             // 0x1ba
+; COMM-NEXT:   .word   100                             // 0x64
+; COMM-NEXT:   .word   0                               // 0x0
+; COMM-NEXT:   .word   0                               // 0x0
+; COMM-NEXT:   .size .LCPI2_2, 16
 
 ;; For global variable @val
 ;; The section name remains `.rodata.cst32` without hotness prefix because

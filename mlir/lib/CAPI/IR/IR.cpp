@@ -127,6 +127,18 @@ MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
 }
 
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
@@ -716,6 +728,14 @@ MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
   return wrap(unwrap(op)->getParentOp());
 }
 
+bool mlirOperationIsAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isAncestor(unwrap(b));
+}
+
+bool mlirOperationIsProperAncestor(MlirOperation a, MlirOperation b) {
+  return unwrap(a)->isProperAncestor(unwrap(b));
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -806,13 +826,13 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
   return static_cast<intptr_t>(
-      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
+      llvm::range_size(unwrap(op)->getDiscardableAttrDictionary().getValue()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr =
-      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
+  NamedAttribute attr = *std::next(
+      unwrap(op)->getDiscardableAttrDictionary().getValue().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
@@ -1391,11 +1411,11 @@ MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
 //===----------------------------------------------------------------------===//
 
 MlirStringRef mlirSymbolTableGetSymbolAttributeName() {
-  return wrap(SymbolTable::getSymbolAttrName());
+  return wrap(llvm::StringRef("sym_name"));
 }
 
-MlirStringRef mlirSymbolTableGetVisibilityAttributeName() {
-  return wrap(SymbolTable::getVisibilityAttrName());
+MlirStringRef mlirSymbolTableGetDefaultVisibilityAttributeName() {
+  return wrap(SymbolOpInterface::getDefaultVisibilityAttrName());
 }
 
 MlirSymbolTable mlirSymbolTableCreate(MlirOperation operation) {

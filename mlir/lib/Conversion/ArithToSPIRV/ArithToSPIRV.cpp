@@ -214,12 +214,14 @@ struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
         op, dstType, adaptor.getOperands());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoSignedWrap),
+          rewriter.getUnitAttr());
 
     if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
-      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
-                     rewriter.getUnitAttr());
+      newOp->setDiscardableAttr(
+          getDecorationString(spirv::Decoration::NoUnsignedWrap),
+          rewriter.getUnitAttr());
 
     return success();
   }
@@ -729,8 +731,14 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
     // Check if the source integer type was widened during type conversion.
     unsigned originalBitwidth =
         getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
-    unsigned convertedBitwidth =
-        getElementTypeOrSelf(srcType).getIntOrFloatBitWidth();
+
+    Type srcElemType = getElementTypeOrSelf(srcType);
+    if (!srcElemType.isIntOrFloat()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "unsupported type for uitofp/sitofp");
+    }
+
+    unsigned convertedBitwidth = srcElemType.getIntOrFloatBitWidth();
 
     if (originalBitwidth >= convertedBitwidth) {
       rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, adaptor.getOperands());
@@ -1059,7 +1067,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
           op, dstType, adaptor.getOperands());
       if (rm) {
-        newOp->setAttr(
+        newOp->setDiscardableAttr(
             getDecorationString(spirv::Decoration::FPRoundingMode),
             spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
@@ -1500,6 +1508,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
+    TypeCastingOpPattern<arith::ConvertFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,

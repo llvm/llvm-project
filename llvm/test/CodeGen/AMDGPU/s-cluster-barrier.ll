@@ -5,17 +5,14 @@
 define amdgpu_kernel void @kernel1() #0 {
 ; GFX12-LABEL: kernel1:
 ; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX12-NEXT:    v_nop
 ; GFX12-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX12-NEXT:    s_cmp_eq_u32 0, 0
 ; GFX12-NEXT:    s_barrier_signal_isfirst -1
 ; GFX12-NEXT:    s_barrier_wait -1
-; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_cmp_lg_u32 s0, 1
-; GFX12-NEXT:    s_cbranch_scc1 .LBB0_2
+; GFX12-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX12-NEXT:  ; %bb.1:
 ; GFX12-NEXT:    s_barrier_signal -3
 ; GFX12-NEXT:  .LBB0_2:

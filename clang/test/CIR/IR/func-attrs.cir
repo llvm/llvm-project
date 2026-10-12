@@ -5,7 +5,7 @@
 !s8i = !cir.int<s, 8>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_Struct = !cir.struct<"Struct" padded {data !u8i}>
+!rec_Struct = !cir.struct<"Struct" {pad !u8i}>
 !rec_anon_struct = !cir.struct<{data !s64i, data !s64i}>
 
 cir.func no_inline dso_local @Func1(%arg0: !s32i {llvm.noundef}, %arg1: !cir.float {llvm.noundef}) -> (!cir.float {llvm.noundef}) {
@@ -75,3 +75,54 @@ cir.func @make_calls() {
 
   cir.return
 }
+
+cir.func @mustProgressFn() attributes {mustprogress} {
+  cir.return
+}
+// CHECK: cir.func @mustProgressFn() attributes {mustprogress} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @noMustProgressFn() {
+  cir.return
+}
+// CHECK: cir.func @noMustProgressFn() {
+// CHECK-NOT: mustprogress
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline dso_local @mustProgressWithOthers() attributes {mustprogress} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @mustProgressWithOthers() attributes {mustprogress} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @asyncUwtable() attributes {uwtable = #cir.uwtable<async>} {
+  cir.return
+}
+// CHECK: cir.func @asyncUwtable() attributes {uwtable = #cir.uwtable<async>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @syncUwtable() attributes {uwtable = #cir.uwtable<sync>} {
+  cir.return
+}
+// CHECK: cir.func @syncUwtable() attributes {uwtable = #cir.uwtable<sync>} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @noUwtable() {
+  cir.return
+}
+// CHECK: cir.func @noUwtable() {
+// CHECK-NOT: uwtable
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwtable = #cir.uwtable<async>} {
+  cir.return
+}
+// CHECK: cir.func no_inline dso_local @uwtableWithOthers() attributes {mustprogress, uwtable = #cir.uwtable<async>} {
+// CHECK:   cir.return
+// CHECK: }

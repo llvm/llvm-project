@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fms-compatibility -triple x86_64-windows-msvc -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fms-compatibility -fexperimental-new-constant-interpreter -triple x86_64-windows-msvc -verify %s
 
 typedef long long LONG_PTR;
 typedef long LONG;

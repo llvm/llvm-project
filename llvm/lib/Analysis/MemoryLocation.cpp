@@ -327,8 +327,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   // for memcpy/memset.  This is particularly important because the
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
-  LibFunc F;
-  if (TLI && TLI->getLibFunc(*Call, F) && TLI->has(F)) {
+  LibFunc F = TLI ? TLI->getLibFunc(*Call) : NotLibFunc;
+  if (F != NotLibFunc && TLI->has(F)) {
     switch (F) {
     case LibFunc_strcpy:
     case LibFunc_strcat:

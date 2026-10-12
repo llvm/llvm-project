@@ -7,7 +7,7 @@
 # RUN: wasm-ld --extra-features=mutable-globals --export=foo_global %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# Explcitly check that __stack_pointer can be exported
+# Explicitly check that __stack_pointer can be exported
 # RUN: wasm-ld --extra-features=mutable-globals --export=__stack_pointer %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck -check-prefix=CHECK-SP %s
 

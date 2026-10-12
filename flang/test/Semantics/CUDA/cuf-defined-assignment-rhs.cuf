@@ -1,0 +1,109 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! RUN: rm -rf %t && mkdir -p %t && %flang_fc1 -module-dir %t \
+! RUN:   -fdebug-unparse %s 2>&1 | FileCheck %s
+
+module m
+  type box
+    integer :: n
+  end type
+
+  interface assignment(=)
+    module procedure assign_host
+    module procedure assign_device
+    module procedure assign_scalar
+  end interface
+
+contains
+  subroutine assign_host(lhs, rhs)
+    type(box), intent(inout) :: lhs
+    real, intent(in) :: rhs(:)
+  end subroutine
+
+  subroutine assign_device(lhs, rhs)
+    type(box), intent(inout) :: lhs
+    real, device, intent(in) :: rhs(:)
+  end subroutine
+
+  subroutine assign_scalar(lhs, rhs)
+    type(box), intent(inout) :: lhs
+    real, intent(in) :: rhs
+  end subroutine
+end module
+
+subroutine test_defined_assignment
+  use m
+  type(box) :: lhs
+  real :: host(4)
+  real, device, allocatable :: dev(:)
+  allocate(dev(4))
+
+  ! CHECK: CALL assign_host(lhs,(host))
+  lhs = host
+
+  ! CHECK: CALL assign_device(lhs,dev)
+  lhs = dev
+
+  ! A source-parenthesized DEVICE variable is an expression, so it does not
+  ! trigger the DEVICE-variable RHS exception.
+  ! CHECK: CALL assign_host(lhs,(dev))
+  lhs = (dev)
+end subroutine
+
+module issue_reproducer
+  type t
+    real :: x(100)
+  end type
+
+  interface assignment(=)
+    module procedure assign_t
+  end interface
+
+contains
+  subroutine assign_t(host_t, dev_x)
+    type(t), intent(inout) :: host_t
+    real, device, intent(in) :: dev_x(:)
+
+    host_t%x = dev_x
+  end subroutine
+end module
+
+subroutine test_issue_reproducer
+  use issue_reproducer
+  real :: y(100)
+  real, device :: x(100)
+  type(t) :: tee
+
+  x = y
+  ! CHECK: CALL assign_t(tee,x)
+  tee = x
+end subroutine
+
+subroutine test_value_actual(rhs)
+  use m
+  type(box) :: lhs
+  real, value :: rhs
+
+  ! CHECK: CALL assign_scalar(lhs,rhs)
+  lhs = rhs
+end subroutine
+
+subroutine test_host_scalar_actual(rhs)
+  use m
+  type(box) :: lhs
+  real :: rhs
+
+  ! CHECK: CALL assign_scalar(lhs,(rhs))
+  lhs = rhs
+end subroutine
+
+subroutine test_explicit_parenthesized_actuals
+  use m
+  type(box) :: lhs
+  real :: host(4)
+  real, device, allocatable :: dev(:)
+  allocate(dev(4))
+
+  call assign_host(lhs, host)
+  call assign_host(lhs, (host))
+  call assign_device(lhs, dev)
+end subroutine

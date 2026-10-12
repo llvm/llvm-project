@@ -52,12 +52,19 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
     for (auto it : zip(sourceStrides, targetStrides))
       if (dynamicToStatic(std::get<0>(it), std::get<1>(it)))
         return false;
+    // A cast cannot safely zero out a non-zero offset. If the source has a
+    // non-identity layout (e.g., a subview with a dynamic offset) and the
+    // destination requires identity layout (zero offset, unit strides), a cast
+    // would silently strip the offset and cause incorrect loads in the callee.
+    // Fall through to the alloc+copy path instead.
+    if (!source.getLayout().isIdentity() && target.getLayout().isIdentity())
+      return false;
     return true;
   };
 
   // Note: If `areCastCompatible`, a cast is valid, but may fail at runtime. To
   // ensure that we only generate casts that always succeed at runtime, we check
-  // a fix extra conditions in `isGuaranteedCastCompatible`.
+  // a few extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
     Value casted = *options.castFn(b, value.getLoc(), destType, value);
@@ -297,7 +304,26 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (sizeHintKeyword.succeeded())
     if (parser.parseEqual() || parser.parseOperand(sizeHintOperand))
       return failure();
-  if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon())
+
+  Attribute parsedProperties;
+  if (AllocTensorOp::genericParseProperties(parser, parsedProperties))
+    return failure();
+  auto propertyDictionary = dyn_cast_or_null<DictionaryAttr>(parsedProperties);
+  if (parsedProperties && !propertyDictionary)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected properties dictionary");
+
+  auto attrsLoc = parser.getCurrentLocation();
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  for (StringRef attrName : AllocTensorOp::getAttributeNames()) {
+    if (result.attributes.get(attrName))
+      return parser.emitError(attrsLoc)
+             << "inherent attribute '" << attrName
+             << "' cannot be parsed from attr-dict when strict properties in "
+                "assembly format is enabled";
+  }
+  if (parser.parseColon())
     return failure();
 
   TensorType type;
@@ -314,11 +340,24 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
   if (sizeHintKeyword.succeeded())
     if (parser.resolveOperand(sizeHintOperand, indexType, result.operands))
       return failure();
-  result.addAttribute(AllocTensorOp::getOperandSegmentSizeAttr(),
-                      parser.getBuilder().getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(dynamicSizesOperands.size()),
-                           static_cast<int32_t>(copyKeyword.succeeded()),
-                           static_cast<int32_t>(sizeHintKeyword.succeeded())}));
+  Builder &builder = parser.getBuilder();
+  NamedAttrList properties(propertyDictionary ? propertyDictionary
+                                              : builder.getDictionaryAttr({}));
+  properties.set(AllocTensorOp::getOperandSegmentSizeAttr(),
+                 builder.getDenseI32ArrayAttr(
+                     {static_cast<int32_t>(dynamicSizesOperands.size()),
+                      static_cast<int32_t>(copyKeyword.succeeded()),
+                      static_cast<int32_t>(sizeHintKeyword.succeeded())}));
+  propertyDictionary = properties.getDictionary(builder.getContext());
+  auto emitError = [&]() {
+    return mlir::emitError(result.location, "invalid properties ")
+           << propertyDictionary << " for op " << result.name.getStringRef()
+           << ": ";
+  };
+  if (failed(AllocTensorOp::setPropertiesFromParsedAttr(
+          result.getOrAddProperties<Properties>(), propertyDictionary,
+          emitError)))
+    return failure();
   return success();
 }
 
@@ -328,8 +367,9 @@ void AllocTensorOp::print(OpAsmPrinter &p) {
     p << " copy(" << getCopy() << ")";
   if (getSizeHint())
     p << " size_hint=" << getSizeHint();
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
-                              AllocTensorOp::getOperandSegmentSizeAttr()});
+  AllocTensorOp::printProperties(getContext(), p, getProperties(),
+                                 /*elidedProps=*/getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " : ";
   auto type = getResult().getType();
   if (auto validType = llvm::dyn_cast<::mlir::TensorType>(type))

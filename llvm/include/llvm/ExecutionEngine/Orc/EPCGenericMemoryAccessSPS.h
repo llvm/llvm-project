@@ -14,7 +14,7 @@
 // controller-interface descriptor in Shared/SPSCI/MemoryAccessSPSCI.h, which
 // supplies the wrapper name and wire signature. The specs are public so that
 // clients can resolve the operations under non-default names, using
-// proxyInit<Spec>(&P, Name) with buildProxies.
+// recordProxy<Spec>(&P, Name) with lookupAndApply.
 //
 //===----------------------------------------------------------------------===//
 

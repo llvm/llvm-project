@@ -125,6 +125,7 @@ struct AndroidConfig {
       static const u32 QuarantineSize = 32U;
       static const u32 DefaultMaxEntriesCount = 32U;
       static const uptr DefaultMaxEntrySize = 2UL << 20;
+      static const uptr DefaultMaxCacheResidentBytes = 14UL << 20;
       static const s32 MinReleaseToOsIntervalMs = 0;
       static const s32 MaxReleaseToOsIntervalMs = 1000;
     };

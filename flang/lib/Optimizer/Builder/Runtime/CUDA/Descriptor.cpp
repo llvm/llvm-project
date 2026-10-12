@@ -1,5 +1,4 @@
-
-//===-- Allocatable.cpp -- Allocatable statements lowering ----------------===//
+//===-- Descriptor.cpp -- descriptor related runtime calls ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,12 +45,4 @@ void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, sourceFile, sourceLine)};
   fir::CallOp::create(builder, loc, func, args);
-}
-
-mlir::Value fir::runtime::cuda::genDeviceIsActive(fir::FirOpBuilder &builder,
-                                                  mlir::Location loc) {
-  mlir::func::FuncOp func =
-      fir::runtime::getRuntimeFunc<mkRTKey(CUFDeviceIsActive)>(loc, builder);
-  auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
-  return builder.createConvert(loc, builder.getI1Type(), call.getResult(0));
 }

@@ -189,6 +189,11 @@ public:
            !callee().isSMEABIRoutine();
   }
 
+  bool requiresNonLazySaveZA() const {
+    return caller().hasZAState() && callee().hasSharedZAInterface() &&
+           !callee().sharesZA();
+  }
+
   bool requiresPreservingZT0() const {
     return caller().hasZT0State() && !callee().sharesZT0() &&
            !callee().hasAgnosticZAInterface();
@@ -197,6 +202,11 @@ public:
   bool requiresPreservingAllZAState() const {
     return caller().hasAgnosticZAInterface() &&
            !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
+  }
+
+  bool requiresZASave() const {
+    return requiresLazySave() || requiresNonLazySaveZA() ||
+           requiresPreservingAllZAState();
   }
 };
 

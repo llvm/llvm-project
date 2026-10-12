@@ -122,7 +122,8 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
   if (bitwidth != 0 &&
       *numElements > static_cast<int64_t>(maximumSizeInBytes * 8ULL / bitwidth))
     return false;
-  return *numElements * bitwidth <= maximumSizeInBytes * 8;
+  return *numElements * bitwidth <=
+         static_cast<int64_t>(maximumSizeInBytes * 8ULL);
 }
 
 /// Checks whether the given aliases leave the allocation scope.
@@ -267,6 +268,11 @@ private:
            (parentBlock = parentOp->getBlock()) &&
            (!upperBound ||
             dominators.properlyDominates(upperBound, currentBlock))) {
+      // A reachable nested region may have an unreachable enclosing block,
+      // which has no node in the dominator tree.
+      if (!dominators.isReachableFromEntry(currentBlock))
+        break;
+
       // Try to find an immediate dominator and check whether the parent block
       // is above the immediate dominator (if any).
       DominanceInfoNode *idom = nullptr;
@@ -281,12 +287,11 @@ private:
         currentBlock = idom->getBlock();
         state.recordMoveToDominator(currentBlock);
       } else {
-        // We have to move to our parent block since an immediate dominator does
-        // either not exist or is above our parent block. If we cannot move to
-        // our parent operation due to constraints given by the StateT
-        // implementation, break the walk loop. Furthermore, we should not move
-        // allocations out of unknown region-based control-flow operations.
-        if (!isKnownControlFlowInterface(parentOp) ||
+        // The target's parent block is outside the liveness analysis. Keep
+        // allocations within the target and preserve isolation boundaries.
+        if (parentOp == scopeOp ||
+            parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() ||
+            !isKnownControlFlowInterface(parentOp) ||
             !state.isLegalPlacement(parentOp))
           break;
         // Move to our parent block by notifying the current StateT

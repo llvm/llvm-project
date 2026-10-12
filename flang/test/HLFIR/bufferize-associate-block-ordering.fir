@@ -7,7 +7,7 @@ func.func @shape_of_non_dominating_block(%cond: i1, %n: index) {
     %c0 = arith.constant 0 : i32
     hlfir.yield_element %c0 : i32
   }
-  %assoc:3 = hlfir.associate %expr(%shape) {uniq_name = "test"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+  %assoc:3 = hlfir.associate %expr(%shape) uniq_name("test") : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
   cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
   %s = hlfir.shape_of %expr : (!hlfir.expr<?xi32>) -> !fir.shape<1>

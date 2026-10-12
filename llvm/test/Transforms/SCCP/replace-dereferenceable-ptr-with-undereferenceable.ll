@@ -3,6 +3,9 @@
 
 @y = common global [1 x i32] zeroinitializer, align 4
 @x = common global [1 x i32] zeroinitializer, align 4
+@c = constant i32 42
+
+declare void @use(ptr)
 
 define i32 @eq_undereferenceable(ptr %p) {
 ; CHECK-LABEL: @eq_undereferenceable(
@@ -32,14 +35,14 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 
-define i32 @eq_dereferenceable(ptr %p) {
-; CHECK-LABEL: @eq_dereferenceable(
+define i32 @eq_dereferenceable_not_constant(ptr %p) {
+; CHECK-LABEL: @eq_dereferenceable_not_constant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 1, ptr @y, align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P:%.*]], @x
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 2, ptr @x, align 4
+; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @y, align 4
@@ -57,6 +60,32 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
   %0 = load i32, ptr @y, align 4
   ret i32 %0
+}
+
+define i32 @eq_dereferenceable_constant(ptr %p) {
+; CHECK-LABEL: @eq_dereferenceable_constant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 1, ptr @y, align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P:%.*]], @c
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @use(ptr @c)
+; CHECK-NEXT:    ret i32 42
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  store i32 1, ptr @y, align 4
+  %cmp = icmp eq ptr %p, @c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  call void @use(ptr %p)
+  %v = load i32, ptr %p, align 4
+  ret i32 %v
+
+if.end:
+  ret i32 0
 }
 
 define i1 @eq_undereferenceable_cmp_simp(ptr %p) {

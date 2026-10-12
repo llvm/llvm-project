@@ -27,12 +27,13 @@ extern "C" {
 void __llvmRegisterFunction(const char *Binary, const char *KernelID,
                             char *KernelName, const char *KernelName1, int,
                             uint3 *, uint3 *, dim3 *, dim3 *, int *) {
+  RuntimeState &State = RuntimeState::get();
   ol_symbol_handle_t Kernel;
-  ol_program_handle_t Program = RuntimeState::getProgram(Binary);
+  ol_program_handle_t Program = State.getProgram(Binary);
   ol_result_t Result = olGetSymbol(
       Program, KernelName, ol_symbol_kind_t::OL_SYMBOL_KIND_KERNEL, &Kernel);
   CHECK_FATAL(Result, "Failed to get kernel symbol for " << KernelName);
-  RuntimeState::registerKernel(KernelID, Kernel);
+  State.registerKernel(KernelID, Kernel);
 }
 
 void __llvmRegisterVar(void **, char *, char *, const char *, int, int, int,
@@ -76,7 +77,10 @@ struct __tgt_bin_desc {
 
 void __tgt_register_lib(__tgt_bin_desc *Desc) {
   // TODO: For each device, lazily.
-  ol_device_handle_t Device = ThreadState::getDefaultDevice();
+  RuntimeState &State = RuntimeState::get();
+  ThreadState &Thread = ThreadState::get();
+  ol_device_handle_t Device = Thread.getDefaultDevice();
+  ol_context_handle_t Context = State.getContext();
 
   for (int32_t I = 0, E = Desc->NumDeviceImages; I < E; ++I) {
     ol_program_handle_t Program = nullptr;
@@ -86,7 +90,7 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
     size_t ProgramSize =
         (char *)DeviceImage.ImageEnd - (char *)DeviceImage.ImageStart;
     ol_result_t Result =
-        olCreateProgram(Device, ProgramData, ProgramSize, &Program);
+        olCreateProgram(Context, Device, ProgramData, ProgramSize, &Program);
 
     if (Result && Result->Code) {
       fprintf(stderr, "Failed to register device code (%i): %s\n", Result->Code,
@@ -94,7 +98,7 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
       abort();
     }
 
-    RuntimeState::registerProgram(DeviceImage.ImageStart, Program);
+    State.registerProgram(DeviceImage.ImageStart, Program);
 
     for (auto *Entry = DeviceImage.EntriesBegin;
          Entry != DeviceImage.EntriesEnd; ++Entry) {
@@ -108,16 +112,20 @@ void __tgt_register_lib(__tgt_bin_desc *Desc) {
 }
 
 void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
+  RuntimeState *State = RuntimeState::tryGet();
+  if (!State)
+    return;
+
   for (int32_t I = 0, E = Desc->NumDeviceImages; I < E; ++I) {
     __tgt_device_image &DeviceImage = Desc->DeviceImages[I];
     for (auto *Entry = DeviceImage.EntriesBegin;
          Entry != DeviceImage.EntriesEnd; ++Entry) {
       if (!Entry->Size && !Entry->Flags)
-        RuntimeState::unregisterKernel((const char *)Entry->Address);
+        State->unregisterKernel((const char *)Entry->Address);
     }
 
     if (ol_program_handle_t Program =
-            RuntimeState::unregisterProgram(DeviceImage.ImageStart))
+            State->unregisterProgram(DeviceImage.ImageStart))
       olDestroyProgram(Program);
   }
 }
