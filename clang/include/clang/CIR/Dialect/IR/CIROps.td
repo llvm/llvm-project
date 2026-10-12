@@ -2831,12 +2831,12 @@ def CIR_AddOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SubOp
-    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer subtraction";
   let description = [{
     The `cir.sub` operation performs subtraction on integer operands. Both
-    operands and the result must have the same integer or vector-of-integer
-    type.
+    operands and the result must have the same integer, vector-of-integer or
+    matrix-of-integer type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2851,6 +2851,7 @@ def CIR_SubOp
     %1 = cir.sub nsw %a, %b : !s32i
     %2 = cir.sub sat %a, %b : !s32i
     %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.sub %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2992,12 +2993,13 @@ def CIR_FAddOp
 // FSubOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
+def CIR_FSubOp
+    : CIR_FPBinaryOp<"fsub", [], CIR_AnyFloatOrVecOrMatrixOfFloatType> {
   let summary = "Floating-point subtraction";
   let description = [{
     The `cir.fsub` operation performs floating-point subtraction on its
     operands. Both operands and the result must have the same floating-point
-    scalar or vector-of-float type.
+    scalar vector-of-float or matrix-of-float type.
 
     Example:
 
@@ -3005,6 +3007,7 @@ def CIR_FSubOp : CIR_FPBinaryOp<"fsub"> {
     %0 = cir.fsub %a, %b : !cir.float
     %1 = cir.fsub %a, %b : !cir.double
     %2 = cir.fsub %va, %vb : !cir.vector<4 x !cir.float>
+    %3 = cir.fsub %ma, %mb : !cir.matrix<3 x 3 x !cir.float>
     ```
   }];
 
