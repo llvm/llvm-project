@@ -8,15 +8,12 @@
 
 ; Verify that we can interleave vector loop iterations.
 
-define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n) {
+define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; VF1IC2-LABEL: define void @load_add_store(
-; VF1IC2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]]) {
+; VF1IC2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VF1IC2-NEXT:  [[ENTRY:.*:]]
-; VF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
-; VF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF1IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF1IC2:       [[VECTOR_PH]]:
-; VF1IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
-; VF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -36,23 +33,20 @@ define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; VF1IC2-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP5]], align 16
 ; VF1IC2-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP6]], align 16
 ; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF1IC2-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VF1IC2:       [[MIDDLE_BLOCK]]:
-; VF1IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; VF1IC2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF1IC2-NEXT:    br label %[[SCALAR_PH:.*]]
 ; VF1IC2:       [[SCALAR_PH]]:
+; VF1IC2-NEXT:    ret void
 ;
 ; SVF1IC2-LABEL: define void @load_add_store(
-; SVF1IC2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]]) {
+; SVF1IC2-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVF1IC2-NEXT:  [[ENTRY:.*:]]
+; SVF1IC2-NEXT:    br label %[[VECTOR_PH:.*]]
+; SVF1IC2:       [[VECTOR_PH]]:
 ; SVF1IC2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVF1IC2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVF1IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
-; SVF1IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; SVF1IC2:       [[VECTOR_PH]]:
-; SVF1IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
-; SVF1IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVF1IC2:       [[VECTOR_BODY]]:
 ; SVF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -71,12 +65,12 @@ define void @load_add_store(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; SVF1IC2-NEXT:    store <vscale x 4 x i32> [[TMP8]], ptr [[TMP5]], align 16
 ; SVF1IC2-NEXT:    store <vscale x 4 x i32> [[TMP9]], ptr [[TMP10]], align 16
 ; SVF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; SVF1IC2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SVF1IC2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SVF1IC2-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; SVF1IC2:       [[MIDDLE_BLOCK]]:
-; SVF1IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; SVF1IC2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; SVF1IC2-NEXT:    br label %[[SCALAR_PH:.*]]
 ; SVF1IC2:       [[SCALAR_PH]]:
+; SVF1IC2-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -91,7 +85,7 @@ loop:
   %add = add <4 x i32> %a, %b
   store <4 x i32> %add, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:

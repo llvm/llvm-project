@@ -3,16 +3,13 @@
 ; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 1" \
 ; RUN:     < %s | FileCheck %s --check-prefix=REVEC
 
-define void @copy_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
+define void @copy_v4(ptr noalias %dst, ptr noalias %src) vscale_range(1, 16) {
 ; REVEC-LABEL: define void @copy_v4(
-; REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; REVEC-NEXT:  [[ENTRY:.*:]]
-; REVEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; REVEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; REVEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; REVEC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; REVEC:       [[VECTOR_PH]]:
-; REVEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; REVEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; REVEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; REVEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; REVEC:       [[VECTOR_BODY]]:
 ; REVEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -21,12 +18,12 @@ define void @copy_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; REVEC-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP1]], align 16
 ; REVEC-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP2]], align 16
 ; REVEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; REVEC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; REVEC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; REVEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; REVEC:       [[MIDDLE_BLOCK]]:
-; REVEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; REVEC-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; REVEC-NEXT:    br label %[[SCALAR_PH:.*]]
 ; REVEC:       [[SCALAR_PH]]:
+; REVEC-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -38,37 +35,34 @@ loop:
   %v = load <4 x i32>, ptr %src.gep, align 16
   store <4 x i32> %v, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
   ret void
 }
 
-define void @copy_v4_nontemporal(ptr noalias %dst, ptr noalias %src, i64 %n) {
+define void @copy_v4_nontemporal(ptr noalias %dst, ptr noalias %src) vscale_range(1, 16) {
 ; REVEC-LABEL: define void @copy_v4_nontemporal(
-; REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; REVEC-NEXT:  [[ENTRY:.*:]]
-; REVEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; REVEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; REVEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; REVEC-NEXT:    br label %[[VECTOR_PH:.*]]
 ; REVEC:       [[VECTOR_PH]]:
-; REVEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; REVEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; REVEC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; REVEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; REVEC:       [[VECTOR_BODY]]:
 ; REVEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; REVEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[INDEX]]
 ; REVEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[DST]], i64 [[INDEX]]
-; REVEC-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP1]], align 16, !nontemporal [[META4:![0-9]+]]
-; REVEC-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP2]], align 16, !nontemporal [[META4]]
+; REVEC-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP1]], align 16, !nontemporal [[META3:![0-9]+]]
+; REVEC-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP2]], align 16, !nontemporal [[META3]]
 ; REVEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; REVEC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; REVEC-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; REVEC-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; REVEC:       [[MIDDLE_BLOCK]]:
-; REVEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; REVEC-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; REVEC-NEXT:    br label %[[SCALAR_PH:.*]]
 ; REVEC:       [[SCALAR_PH]]:
+; REVEC-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -80,7 +74,7 @@ loop:
   %v = load <4 x i32>, ptr %src.gep, align 16, !nontemporal !0
   store <4 x i32> %v, ptr %dst.gep, align 16, !nontemporal !0
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:

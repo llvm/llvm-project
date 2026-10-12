@@ -3,16 +3,13 @@
 ; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 1" \
 ; RUN:     < %s | FileCheck %s
 
-define void @icmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n) {
+define void @icmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_v4(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -25,12 +22,12 @@ define void @icmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP4]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP5]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -46,25 +43,22 @@ loop:
   %sel = select <4 x i1> %cmp, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
   ret void
 }
 
-define void @icmp_select_v4_uniform_cond(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n, <4 x i32> %conds) {
+define void @icmp_select_v4_uniform_cond(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, <4 x i32> %conds) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_v4_uniform_cond(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]], <4 x i32> [[CONDS:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], <4 x i32> [[CONDS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[CONDS]], zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST:%.*]] = call <vscale x 4 x i1> @llvm.vector.repeat.nxv4i1.v4i1(<4 x i1> [[CMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -76,12 +70,12 @@ define void @icmp_select_v4_uniform_cond(ptr noalias %dst, ptr noalias %lhs, ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <vscale x 4 x i1> [[BROADCAST]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP4]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp = icmp sgt <4 x i32> %conds, splat (i32 0)
@@ -97,23 +91,20 @@ loop:
   %sel = select <4 x i1> %cmp, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
   ret void
 }
 
-define void @icmp_select_scalar_cond_uniform(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n, i1 %cond) {
+define void @icmp_select_scalar_cond_uniform(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i1 %cond) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_uniform(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -125,12 +116,12 @@ define void @icmp_select_scalar_cond_uniform(ptr noalias %dst, ptr noalias %lhs,
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[COND]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP4]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -145,7 +136,7 @@ loop:
   %sel = select i1 %cond, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
@@ -153,9 +144,9 @@ exit:
 }
 
 ; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
-define void @icmp_select_scalar_cond_load(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, ptr noalias %cond, i64 %n) {
+define void @icmp_select_scalar_cond_load(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, ptr noalias %cond) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_load(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], ptr noalias [[COND:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], ptr noalias [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -171,7 +162,7 @@ define void @icmp_select_scalar_cond_load(ptr noalias %dst, ptr noalias %lhs, pt
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_I1]], <4 x i32> [[A]], <4 x i32> [[B]]
 ; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr [[DST_GEP]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -192,7 +183,7 @@ loop:
   %sel = select i1 %cond.i1, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
@@ -200,9 +191,9 @@ exit:
 }
 
 ; TODO-REVEC: LV does not handle stretching a nxv1i1 predicate to nxv4i1
-define void @icmp_select_scalar_cond_iv(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n) {
+define void @icmp_select_scalar_cond_iv(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @icmp_select_scalar_cond_iv(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -216,7 +207,7 @@ define void @icmp_select_scalar_cond_iv(ptr noalias %dst, ptr noalias %lhs, ptr 
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND_I1]], <4 x i32> [[A]], <4 x i32> [[B]]
 ; CHECK-NEXT:    store <4 x i32> [[SEL]], ptr [[DST_GEP]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -235,23 +226,20 @@ loop:
   %sel = select i1 %cond.i1, <4 x i32> %a, <4 x i32> %b
   store <4 x i32> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
   ret void
 }
 
-define void @fcmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs, i64 %n) {
+define void @fcmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @fcmp_select_v4(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[LHS:%.*]], ptr noalias [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -264,12 +252,12 @@ define void @fcmp_select_v4(ptr noalias %dst, ptr noalias %lhs, ptr noalias %rhs
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <vscale x 4 x i1> [[TMP4]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP5]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -285,7 +273,7 @@ loop:
   %sel = select <4 x i1> %cmp, <4 x float> %a, <4 x float> %b
   store <4 x float> %sel, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
