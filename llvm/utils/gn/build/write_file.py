@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Write content into file."""
+"""Write content into file. Literal '\\n' in content is replaced with a newline."""
 
 import argparse
 import sys
@@ -14,7 +14,7 @@ def main():
     args = parser.parse_args()
 
     with open(args.filepath, "w") as f:
-        f.write(args.content)
+        f.write(args.content.replace("\\n", "\n"))
 
 
 if __name__ == "__main__":

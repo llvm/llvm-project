@@ -614,6 +614,7 @@ View the diff from {self.name} here.
         diff = self.check_for_diff()
         should_update_gh = args.token is not None and args.repo is not None
         if diff:
+            print(diff)
             if should_update_gh:
                 comment_text = self.pr_comment_text_for_diff(diff)
                 self.update_pr(comment_text, args, create_new=True)
@@ -625,7 +626,6 @@ View the diff from {self.name} here.
                     "Apply the following diff to fix the LLVM_ABI annotations:\n",
                     file=sys.stderr,
                 )
-                print(diff)
             return 1
         else:
             if should_update_gh:
