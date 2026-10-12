@@ -7303,9 +7303,9 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    v_add_co_u32 v4, s4, s2, v5
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v22, null, s3, 0, s4
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x804
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x80, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v4, 0x80
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v22, vcc_lo
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, 0x100, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, v4, 0x100
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7355,7 +7355,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[6:9], off offset:244 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v6, vcc_lo, 0x180, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v6, vcc_lo, v4, 0x180
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[8:11], v[6:7], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7381,7 +7381,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[8:11], v[6:7], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[8:11], off offset:372 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v8, vcc_lo, 0x200, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v8, vcc_lo, v4, 0x200
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[10:13], v[8:9], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7407,7 +7407,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[10:13], v[8:9], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[10:13], off offset:500 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v10, vcc_lo, 0x280, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v10, vcc_lo, v4, 0x280
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v11, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[12:15], v[10:11], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7433,7 +7433,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[12:15], v[10:11], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[12:15], off offset:628 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v12, vcc_lo, 0x300, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v12, vcc_lo, v4, 0x300
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v13, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[14:17], v[12:13], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7459,7 +7459,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[14:17], v[12:13], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[14:17], off offset:756 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v14, vcc_lo, 0x380, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v14, vcc_lo, v4, 0x380
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v15, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[16:19], v[14:15], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7485,7 +7485,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[16:19], v[14:15], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[16:19], off offset:884 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v16, vcc_lo, 0x400, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v16, vcc_lo, v4, 0x400
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v17, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[18:21], v[16:17], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7511,9 +7511,9 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[18:21], v[16:17], off offset:2032
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[18:21], off offset:1012 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v18, vcc_lo, 0x480, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v18, vcc_lo, v4, 0x480
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v19, null, 0, v22, vcc_lo
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x500, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x500
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[18:19], off offset:1920
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
@@ -7561,7 +7561,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1252 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[20:21], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x580, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x580
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1268 ; 16-byte Folded Spill
@@ -7587,7 +7587,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1380 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[20:21], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x600, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x600
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1396 ; 16-byte Folded Spill
@@ -7613,7 +7613,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1508 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[20:21], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x680, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x680
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1524 ; 16-byte Folded Spill
@@ -7639,7 +7639,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1636 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[20:21], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x700, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x700
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1652 ; 16-byte Folded Spill
@@ -7665,9 +7665,9 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1764 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[23:26], v[20:21], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, 0x780, v4
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v20, vcc_lo, v4, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v22, vcc_lo
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v0
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[23:26], off offset:1780 ; 16-byte Folded Spill
@@ -7717,7 +7717,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[20:23], off offset:2020 ; 16-byte Folded Spill
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:2032
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v2
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v2, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[20:23], off offset:2036 ; 16-byte Folded Spill
@@ -7753,7 +7753,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x874
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v6
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v6, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v7, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x884
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:1920
@@ -7788,7 +7788,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x8f4
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v8
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v8, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v9, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x904
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -7823,7 +7823,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x974
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v10
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v10, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v11, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x984
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -7858,7 +7858,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0x9f4
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v12
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v12, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v13, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xa04
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -7893,7 +7893,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xa74
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v14
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v14, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v15, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xa84
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -7928,7 +7928,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xaf4
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v16
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v16, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v17, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xb04
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -7963,7 +7963,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xb74
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s4 ; 16-byte Folded Spill
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, 0x780, v18
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v0, vcc_lo, v18, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v19, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s4, 0xb84
 ; GFX10-FLATSCR-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off offset:1920
@@ -9074,7 +9074,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-FLATSCR-NEXT:    v_add_co_u32 v2, vcc_lo, 0x400, v18
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v19, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_movk_i32 s0, 0xb64
-; GFX10-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, 0x780, v2
+; GFX10-FLATSCR-NEXT:    v_add_co_u32 v4, vcc_lo, v2, 0x780
 ; GFX10-FLATSCR-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v3, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    global_store_dwordx4 v[4:5], v[6:9], off offset:2032

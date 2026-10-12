@@ -81,7 +81,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32I-NEXT:   $x10 = COPY [[ANYEXT]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x10
   ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -98,7 +98,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV32IF-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32IF-NEXT:   $f10_f = COPY [[ANYEXT]](s32)
-  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit-def $f10_f
+  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_f, implicit-def $f10_f
   ; RV32IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -113,7 +113,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV32IZFH-NEXT:   [[COPY:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
-  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_h, implicit-def $f10_h
+  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_h, implicit-def $f10_h
   ; RV32IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   [[COPY1:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY1]](s16)
@@ -128,7 +128,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s16)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s64)
@@ -145,7 +145,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV64IF-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV64IF-NEXT:   $f10_f = COPY [[ANYEXT]](s32)
-  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit-def $f10_f
+  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_f, implicit-def $f10_f
   ; RV64IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV64IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
@@ -160,7 +160,7 @@ define half @caller_half_in_regs(half %x) nounwind {
   ; RV64IZFH-NEXT:   [[COPY:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
-  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_h, implicit-def $f10_h
+  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @caller_half_in_regs, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_h, implicit-def $f10_h
   ; RV64IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   [[COPY1:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY1]](s16)
@@ -249,7 +249,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV32I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32I-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[ANYEXT]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -268,7 +268,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV32IF-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV32IF-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32IF-NEXT:   $f10_f = COPY [[ANYEXT]](s32)
-  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $f10_f
+  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $f10_f, implicit-def $f10_f
   ; RV32IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -285,7 +285,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV32IZFH-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
-  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_h, implicit-def $f10_h
+  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $f10_h, implicit-def $f10_h
   ; RV32IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)
@@ -304,7 +304,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV64I-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s16)
   ; RV64I-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[ANYEXT1]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s64)
@@ -325,7 +325,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV64IF-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; RV64IF-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64IF-NEXT:   $f10_f = COPY [[ANYEXT1]](s32)
-  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_f, implicit-def $f10_f
+  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $f10_f, implicit-def $f10_f
   ; RV64IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV64IF-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -344,7 +344,7 @@ define half @caller_half_mixed_with_int(half %x, i32 %x0) nounwind {
   ; RV64IZFH-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s32)
   ; RV64IZFH-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY]](s16)
-  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $f10_h, implicit-def $f10_h
+  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_mixed_with_int, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $f10_h, implicit-def $f10_h
   ; RV64IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)
@@ -515,7 +515,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV32I-NEXT:   $x15 = COPY [[C4]](s32)
   ; RV32I-NEXT:   $x16 = COPY [[C5]](s32)
   ; RV32I-NEXT:   $x17 = COPY [[C6]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; RV32I-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
@@ -548,7 +548,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV32IF-NEXT:   $x16 = COPY [[C5]](s32)
   ; RV32IF-NEXT:   $x17 = COPY [[C6]](s32)
   ; RV32IF-NEXT:   $f10_f = COPY [[ANYEXT]](s32)
-  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $f10_f
+  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $f10_f
   ; RV32IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32IF-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -579,7 +579,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV32IZFH-NEXT:   $x16 = COPY [[C5]](s32)
   ; RV32IZFH-NEXT:   $x17 = COPY [[C6]](s32)
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY1]](s16)
-  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_h, implicit-def $f10_h
+  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_h, implicit-def $f10_h
   ; RV32IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)
@@ -622,7 +622,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV64I-NEXT:   $x15 = COPY [[ANYEXT5]](s64)
   ; RV64I-NEXT:   $x16 = COPY [[ANYEXT6]](s64)
   ; RV64I-NEXT:   $x17 = COPY [[ANYEXT7]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s64)
@@ -664,7 +664,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV64IF-NEXT:   $x16 = COPY [[ANYEXT6]](s64)
   ; RV64IF-NEXT:   $x17 = COPY [[ANYEXT7]](s64)
   ; RV64IF-NEXT:   $f10_f = COPY [[ANYEXT8]](s32)
-  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $f10_f
+  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_f, implicit-def $f10_f
   ; RV64IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV64IF-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
@@ -704,7 +704,7 @@ define half @caller_half_return_stack1(i32 %v1, half %x) nounwind {
   ; RV64IZFH-NEXT:   $x16 = COPY [[ANYEXT6]](s64)
   ; RV64IZFH-NEXT:   $x17 = COPY [[ANYEXT7]](s64)
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY1]](s16)
-  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_h, implicit-def $f10_h
+  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack1, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $f10_h, implicit-def $f10_h
   ; RV64IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)
@@ -889,7 +889,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32I-NEXT:   $x15 = COPY [[ANYEXT3]](s32)
   ; RV32I-NEXT:   $x16 = COPY [[COPY4]](s32)
   ; RV32I-NEXT:   $x17 = COPY [[COPY5]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; RV32I-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $x2, implicit $x2
   ; RV32I-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY8]](s32)
@@ -926,7 +926,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32IF-NEXT:   $f16_f = COPY [[COPY4]](s32)
   ; RV32IF-NEXT:   $f17_f = COPY [[COPY5]](s32)
   ; RV32IF-NEXT:   $x10 = COPY [[COPY6]](s32)
-  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $f10_f
+  ; RV32IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $f10_f
   ; RV32IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IF-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV32IF-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY7]](s32)
@@ -953,7 +953,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV32IZFH-NEXT:   $f17_h = COPY [[COPY1]](s16)
   ; RV32IZFH-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
   ; RV32IZFH-NEXT:   $x10 = COPY [[ANYEXT]](s32)
-  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_h, implicit $f11_h, implicit $f12_h, implicit $f13_h, implicit $f14_h, implicit $f15_h, implicit $f16_h, implicit $f17_h, implicit $x10, implicit-def $f10_h
+  ; RV32IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_h, implicit $f11_h, implicit $f12_h, implicit $f13_h, implicit $f14_h, implicit $f15_h, implicit $f16_h, implicit $f17_h, implicit $x10, implicit-def $f10_h
   ; RV32IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV32IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)
@@ -991,7 +991,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64I-NEXT:   $x15 = COPY [[ANYEXT3]](s64)
   ; RV64I-NEXT:   $x16 = COPY [[COPY4]](s64)
   ; RV64I-NEXT:   $x17 = COPY [[COPY5]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; RV64I-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $x2, implicit $x2
   ; RV64I-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY8]](s64)
@@ -1028,7 +1028,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64IF-NEXT:   $f17_f = COPY [[COPY5]](s32)
   ; RV64IF-NEXT:   [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[TRUNC]](s16)
   ; RV64IF-NEXT:   $x10 = COPY [[ANYEXT4]](s64)
-  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $f10_f
+  ; RV64IF-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_f, implicit $f11_f, implicit $f12_f, implicit $f13_f, implicit $f14_f, implicit $f15_f, implicit $f16_f, implicit $f17_f, implicit $x10, implicit-def $f10_f
   ; RV64IF-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IF-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f10_f
   ; RV64IF-NEXT:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[COPY6]](s32)
@@ -1055,7 +1055,7 @@ define half @caller_half_return_stack2(half %x, half %y) nounwind {
   ; RV64IZFH-NEXT:   $f17_h = COPY [[COPY1]](s16)
   ; RV64IZFH-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
   ; RV64IZFH-NEXT:   $x10 = COPY [[ANYEXT]](s64)
-  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def $x1, implicit $f10_h, implicit $f11_h, implicit $f12_h, implicit $f13_h, implicit $f14_h, implicit $f15_h, implicit $f16_h, implicit $f17_h, implicit $x10, implicit-def $f10_h
+  ; RV64IZFH-NEXT:   PseudoCALL target-flags(riscv-call) @callee_half_return_stack2, csr_ilp32f_lp64f, implicit-def dead $x1, implicit $f10_h, implicit $f11_h, implicit $f12_h, implicit $f13_h, implicit $f14_h, implicit $f15_h, implicit $f16_h, implicit $f17_h, implicit $x10, implicit-def $f10_h
   ; RV64IZFH-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV64IZFH-NEXT:   [[COPY2:%[0-9]+]]:_(s16) = COPY $f10_h
   ; RV64IZFH-NEXT:   $f10_h = COPY [[COPY2]](s16)

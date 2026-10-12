@@ -560,7 +560,7 @@ define amdgpu_kernel void @fadd_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], 0x42c80000, v[0:1] op_sel_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0x42c80000 op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -575,7 +575,7 @@ define amdgpu_kernel void @fadd_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], 0x42c80000, v[0:1]
+; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0x42c80000
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -926,7 +926,7 @@ define amdgpu_kernel void @fadd_v2_v_literal32(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], 0x42c80000, v[0:1] op_sel_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0x42c80000 op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -941,7 +941,7 @@ define amdgpu_kernel void @fadd_v2_v_literal32(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], 0x42c80000, v[0:1]
+; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0x42c80000
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -2073,7 +2073,7 @@ define amdgpu_kernel void @fmul_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], 0x42c80000, v[0:1] op_sel_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 0x42c80000 op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -2088,7 +2088,7 @@ define amdgpu_kernel void @fmul_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 0x42c80000, v[0:1]
+; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 0x42c80000
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -2304,7 +2304,7 @@ define amdgpu_kernel void @fmul_v2_v_literal32(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], 0x42c80000, v[0:1] op_sel_hi:[0,1]
+; GFX1250-SDAG-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 0x42c80000 op_sel_hi:[1,0]
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
@@ -2319,7 +2319,7 @@ define amdgpu_kernel void @fmul_v2_v_literal32(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], 0x42c80000, v[0:1]
+; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], 0x42c80000
 ; GFX1250-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -3078,7 +3078,7 @@ define amdgpu_kernel void @fma_v2_v_imm(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], 0x42c80000, v[0:1], v[2:3]
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 0x42c80000, v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -3337,7 +3337,7 @@ define amdgpu_kernel void @fma_v2_v_literal32(ptr addrspace(1) %a) {
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v4, s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], 0x42c80000, v[0:1], v[2:3]
+; GFX1250-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], 0x42c80000, v[2:3]
 ; GFX1250-GISEL-NEXT:    global_store_b64 v4, v[0:1], s[0:1] scale_offset
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
