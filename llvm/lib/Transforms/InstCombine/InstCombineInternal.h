@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
+#include "InstCombineCLOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -34,10 +35,6 @@
 
 #define DEBUG_TYPE "instcombine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
-
-// As a default, let's assume that we want to be aggressive,
-// and attempt to traverse with no limits in attempt to sink negation.
-static constexpr unsigned NegatorDefaultMaxDepth = ~0U;
 
 // Let's guesstimate that most often we will end up visiting/producing
 // fairly small number of new instructions.
@@ -77,11 +74,15 @@ public:
                    OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                    const DataLayout &DL,
-                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT,
+                   const InstCombineCLOptions &CLOpts)
       : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
-                     RPOT) {}
+                     RPOT),
+        CLOpts(CLOpts) {}
 
   ~InstCombinerImpl() override = default;
+
+  const InstCombineCLOptions &CLOpts;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -527,6 +528,16 @@ public:
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
 
+  /// If InnerVal1 and OuterVal form a symmetric pair, and "op" is commutative:
+  /// "(InnerVal0 op InnerVal1) op OuterVal" ==> "(X op' Y) op InnerVal0".
+  /// "OuterVal op (InnerVal0 op InnerVal1)" ==> "InnerVal0 op (X op' Y)".
+  /// X and Y are the inputs to the symmetric pair. "op'" indicates that
+  /// InnerOp will have its poison-generating flags dropped.
+  bool tryReassociateAndFoldSymmetricPair(BinaryOperator &OuterOp,
+                                          BinaryOperator &InnerOp,
+                                          Value *InnerVal0, Value *InnerVal1,
+                                          Value *OuterVal);
+
   /// Tries to simplify binary operations which some other binary
   /// operation distributes over.
   ///
@@ -886,10 +897,12 @@ class Negator final {
 
   const bool IsTrulyNegation;
 
+  const unsigned MaxDepth;
+
   SmallDenseMap<Value *, Value *> NegationsCache;
 
-  Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT,
-          bool IsTrulyNegation);
+  Negator(Module &M, const DominatorTree &DT, bool IsTrulyNegation,
+          unsigned MaxDepth);
 
 #if LLVM_ENABLE_STATS
   unsigned NumValuesVisitedInThisNegator = 0;
