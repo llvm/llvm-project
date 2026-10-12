@@ -1,10 +1,18 @@
 
 // RUN: %clang_cc1 -O0 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -O0 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
 // RUN: %clang_cc1 -O1 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -O2 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -O3 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
 // RUN: %clang_cc1 -Og -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
-// RUN: %clang_cc1 -O2 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
-// RUN: %clang_cc1 -Os -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
-// RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -Os -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -O1 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -O2 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -O3 -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -Og -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -Os -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
+// RUN: %clang_cc1 -Oz -triple spirv64-amd-amdhsa -disable-llvm-passes -emit-llvm-bc -fenable-spirv-size-optimization -o /dev/null -fdebug-pass-manager %s 2>&1 | FileCheck %s --check-prefix=O
 
 // O0-NOT: Running pass: LowerExpectIntrinsic
 // O0-NOT: Running pass: SimplifyCFG
