@@ -15863,25 +15863,24 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   }
 
   if (VT == MVT::i32 && !DCI.isBeforeLegalize()) {
-    // The select may need an e64 cndmask, so only fold when it eliminates
-    // the extension.
-    auto IsProfitableBoolExt = [N](SDValue V) {
-      if (!V.hasOneUse() || !isBoolSGPRExt(V))
-        return false;
+    for (unsigned I : {1u, 0u}) {
+      SDValue Ext = N->getOperand(I);
+      // The select may need an e64 cndmask, so only fold when it eliminates
+      // the extension.
+      if (!Ext.hasOneUse() || !isBoolSGPRExt(Ext))
+        continue;
       // A divergent select still needs to materialize a uniform condition.
       // Sharing that condition can also require converting it back to SCC.
-      SDValue Cond = V.getOperand(0);
-      return !N->isDivergent() || Cond->isDivergent() || Cond.hasOneUse();
-    };
-    bool RHSIsBoolExt = IsProfitableBoolExt(RHS);
-    if (RHSIsBoolExt || IsProfitableBoolExt(LHS)) {
+      SDValue Cond = Ext.getOperand(0);
+      if (N->isDivergent() && !Cond->isDivergent() && !Cond.hasOneUse())
+        continue;
+
       // or x, (sext/anyext cc from i1) => select cc, -1, x
       // Any-extended bits can be chosen to match sign extension.
-      if (!RHSIsBoolExt)
-        std::swap(LHS, RHS);
       SDLoc DL(N);
-      return DAG.getSelect(DL, MVT::i32, RHS.getOperand(0),
-                           DAG.getAllOnesConstant(DL, MVT::i32), LHS);
+      return DAG.getSelect(DL, MVT::i32, Cond,
+                           DAG.getAllOnesConstant(DL, MVT::i32),
+                           N->getOperand(1 - I));
     }
   }
 
