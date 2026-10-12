@@ -1,6 +1,4 @@
 ; REQUIRES: comgr-has-transpiler
-; XFAIL: *
-; FIXME: Update the gfx1250-to-gfx942 trap diagnostic and remove this XFAIL (#4886).
 
 ; RUN: %llvm-mc -defsym=GFX942=1 -triple=amdgpu9.42-amd-amdhsa -filetype=obj %s -o %t.gfx942.o
 ; RUN: %ld.lld -shared %t.gfx942.o -o %t.gfx942.hsaco
@@ -25,8 +23,8 @@ trap_kernel:
 ; GFX942-TRAP-LABEL: define amdgpu_kernel void @trap_kernel(
 ; GFX942-TRAP: call void @llvm.trap()
 ; GFX942-TRAP-NEXT: unreachable
-; GFX1250-TO-GFX942: unsupported-wave-projection: s_trap [SOPP]
-; GFX1250-TO-GFX942-SAME: WaveNative does not support per-wave hardware side effects
+; GFX1250-TO-GFX942: requires-per-source-wave-execution: s_trap [SOPP]
+; GFX1250-TO-GFX942-SAME: instruction requires a separate target wave for each source wave
 	s_trap 0x102
 	s_endpgm
 
