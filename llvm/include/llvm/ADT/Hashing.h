@@ -218,7 +218,7 @@ template <typename T> auto get_hashable_data(const T &value) {
 /// allocated.
 template <typename InputIteratorT>
 hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
-  alignas(uint64_t) char stack_buf[256];
+  alignas(uint64_t) char stack_buf[256] = {};
   std::unique_ptr<char[]> heap_buf;
   char *buf = stack_buf;
   size_t cap = sizeof(stack_buf);
