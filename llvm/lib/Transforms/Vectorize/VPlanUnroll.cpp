@@ -648,12 +648,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
 
-    // Look through buildvector to avoid unnecessary extracts.
-    if (match(Op, m_BuildVector())) {
-      NewOps.push_back(
-          cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
-      continue;
-    }
     VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
@@ -976,7 +970,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   DenseMap<VPValue *, SmallVector<VPValue *>> Def2LaneDefs;
   // The removal of current recipes being replaced by new ones needs to be
   // delayed after Def2LaneDefs is no longer in use.
-  SmallVector<VPRecipeBase *> ToRemove;
+  SmallVector<VPSingleDefRecipe *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!vputils::doesGeneratePerAllLanes(&R))
@@ -998,6 +992,15 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
             cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs));
 
       Def2LaneDefs[DefR] = LaneDefs;
+      // Pack the lanes for vector users.
+      if (!vputils::onlyScalarValuesUsed(DefR)) {
+        unsigned Opcode = DefR->getScalarType()->isStructTy()
+                              ? VPInstruction::BuildStructVector
+                              : VPInstruction::BuildVector;
+        DefR->replaceUsesWithIf(
+            Builder.createNaryOp(Opcode, LaneDefs),
+            [DefR](VPUser &U) { return !U.usesScalars(DefR); });
+      }
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U) {
@@ -1006,26 +1009,22 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
         auto *VPI = dyn_cast<VPInstruction>(&U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
-
-      // Update each build vector user that currently has DefR as its only
-      // operand, to have all LaneDefs as its operands.
-      for (VPUser *U : to_vector(DefR->users())) {
-        auto *VPI = dyn_cast<VPInstruction>(U);
-        if (!VPI || (VPI->getOpcode() != VPInstruction::BuildVector &&
-                     VPI->getOpcode() != VPInstruction::BuildStructVector))
-          continue;
-        assert(VPI->getNumOperands() == 1 &&
-               "Build(Struct)Vector must have a single operand before "
-               "replicating by VF");
-        VPI->setOperand(0, LaneDefs[0]);
-        for (VPValue *LaneDef : drop_begin(LaneDefs))
-          VPI->addOperand(LaneDef);
-      }
       ToRemove.push_back(DefR);
     }
   }
-  for (auto *R : reverse(ToRemove))
-    R->eraseFromParent();
 
   replicateReplicateRegionsByVF(Plan, VF, IdxTy);
+  // Replace the lane extracts created when dissolving replicate regions.
+  for (VPSingleDefRecipe *DefR : reverse(ToRemove)) {
+    for (VPUser *U : to_vector(DefR->users())) {
+      uint64_t Lane;
+      [[maybe_unused]] bool Match =
+          match(U, m_ExtractElement(m_Specific(DefR), m_ConstantInt(Lane)));
+      assert(Match && "unexpected remaining user");
+      auto *Ext = cast<VPInstruction>(U);
+      Ext->replaceAllUsesWith(Def2LaneDefs.at(DefR)[Lane]);
+      Ext->eraseFromParent();
+    }
+    DefR->eraseFromParent();
+  }
 }
