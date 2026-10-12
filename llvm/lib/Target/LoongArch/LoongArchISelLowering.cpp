@@ -2030,6 +2030,7 @@ static SDValue lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(const SDLoc &DL,
       SDValue Ext =
           AnyExt ? DAG.getFreeze(InputV) : DAG.getConstant(0, DL, InputVT);
       InputV = DAG.getBitcast(InputVT, InputV);
+      Ext = DAG.getBitcast(InputVT, Ext);
       InputV = DAG.getNode(VilVLoHi, DL, InputVT, Ext, InputV);
       Scale /= 2;
       EltBits *= 2;
