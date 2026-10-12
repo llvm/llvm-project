@@ -3343,10 +3343,12 @@ void JoinVals::pruneValues(JoinVals &Other,
       // Check if we're replacing an IMPLICIT_DEF value. The IMPLICIT_DEF
       // instructions are only inserted to provide a live-out value for PHI
       // predecessors, so the instruction should simply go away once its value
-      // has been replaced.
+      // has been replaced. If it still carries defined lanes, this def must
+      // preserve them.
       Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-      bool EraseImpDef =
-          OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+      bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                         OtherV.Resolution == CR_Keep &&
+                         OtherV.ValidLanes.none();
       if (!Def.isBlock()) {
         if (changeInstrs) {
           // Remove <def,read-undef> flags. This def is now a partial redef.
