@@ -6,26 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file Tracks a per-InstCounterType event timeline which preserves
-/// information about previously encountered MachineInstr and HWEvents.
-///
-/// The goal of this file is to implement a minimal API to preserve information
-/// about events that increment an instruction counter. Such events are
-/// contained in records called \ref EventTrackerRecord, which include:
-///   - The event kind, as a `HWEvent`
-///   - The instruction that triggered the event
-///   - The height of the record in the overall timeline of the counter, see
-///     \ref EventTrackerRecord for more details.
-///
-/// The "timeline" represents the state of an InstCounterType at a
-/// given point in time for a given MBB during a reverse postorder dataflow
-/// analysis of a function. Such a dataflow analysis is expected to pass over
-/// blocks as many times as necessary until a "fix point" is reached, which is a
-/// state in which the client (the pass that uses the APIs) decides it has
-/// enough information to safely perform its duties (generally, inserting
-/// `s_waitcnt` instructions).
-///
-/// See \ref EventTracker for more information as well.
+/// \file Implement a minimal API to preserve information about events that
+/// increment instruction counters.
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,7 +32,8 @@ class EventTracker;
 ///
 /// Represents target-specific information about available \ref InstCounterType
 /// and their specifities. This is handled by reference and is expected to
-/// outlive \ref EventTracker
+/// outlive \ref EventTracker.
+/// This information is constant and inferred from the subtarget info.
 struct CounterInfo {
   CounterInfo() = default;
 
@@ -58,8 +41,6 @@ struct CounterInfo {
       : CounterT(T), Events(Events), Limit(Limit) {}
 
   /// Type of counter this is.
-  /// This must match the index in the container, e.g. CounterT=2 must be at
-  /// index 2.
   InstCounterType CounterT;
   /// HWEvents for this counter.
   HWEvents Events;
@@ -67,25 +48,34 @@ struct CounterInfo {
   unsigned Limit;
 };
 
-/// Information about an event recorded within the \ref EventTracker's timeline
-/// for one \ref InstCounterType. An event (see \ref HWEvents) has an
-/// accompanying \ref MachineInstr, and exists at a fixed height in the
-/// timeline.
+/// Represents a record within the \ref EventTracker's timeline
+/// for one \ref InstCounterType. Records are a pair of \ref MachineInstr
+/// and \ref SingleHWEvent that exists at a fixed height in the timeline.
 ///
-/// An event's height is a conservative minimum estimate of *when* the event
-/// occured. There are two examples that help illustrate this concept:
+/// The height is a conservative minimum estimate of *when* the event it
+/// represents occured. The height is used to emit wait instruction that ensures
+/// the event that this record represents has completed. (e.g. Height = 2 means
+/// "wait 2" on the counter ensures completion of the event across all
+/// control-flow paths).
+///
+/// There are two examples that help illustrate how the "height" works:
 ///
 /// If we are iterating a single block where there are no records inherited from
 /// incoming basic blocks, then the height of an event is trivial: if there are
 /// N events, the oldest event is at N-1, while the youngest one is at 0.
 /// The height of each existing event increases whenever a new one is recorded.
 ///
-/// However, in cases where one record is carried over into multiple successor
+/// However, in cases where one record is carried into multiple successor
 /// blocks, and then merged later (in a diamond pattern for example), then the
 /// divergence (the same record could be at a different height depending on the
 /// CFG path taken) is reconciled by merging the records with the same
 /// \ref MachineInstr and \ref SingleHWEvent into a single record, and the
 /// height of the record is the minimum across the predecessors.
+///
+/// The second example highlights how the height is decoupled from a record's
+/// actual position in the timeline (and is thus not a simple position in an
+/// array). For example a timeline could have 4 entries, but 3 of them are at
+/// height 0 and the last one is at height 1.
 class EventTrackerRecord {
 public:
   EventTrackerRecord(MachineInstr *MI, SingleHWEvent Kind, uint32_t Height = 0)
@@ -102,12 +92,6 @@ public:
   /// \returns the height of this record.
   uint32_t getHeight() const { return Height; }
 
-  /// Sets the height of this record to \p NewHeight.
-  void setHeight(uint32_t NewHeight) {
-    Height = NewHeight;
-    assert(Height == NewHeight && "Height overflow!");
-  }
-
   void print(raw_ostream &OS, bool PrintMI = true, unsigned Indent = 0) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -119,6 +103,14 @@ public:
   hash_code getIdentity() const;
 
 private:
+  friend class EventTracker;
+
+  /// Sets the height of this record to \p NewHeight.
+  void setHeight(uint32_t NewHeight) {
+    Height = NewHeight;
+    assert(Height == NewHeight && "Height overflow!");
+  }
+
   MachineInstr *MI;
   SingleHWEvent Kind;
   // Height should never exceed uint8_t limit in normal circumstances as
@@ -140,12 +132,13 @@ static_assert(sizeof(EventTrackerRecord) == 16,
 /// This class is only responsible for tracking records for every
 /// \ref InstCounterType. It does not deal with calculating the waitcnts needed,
 /// or doing more advanced reasoning over the timeline for specific queries
-/// (e.g. finding an aliasing store). These responsibilities are for
-/// utils/wrappers/users of the class.
+/// (e.g. finding an aliasing store). These responsibilities are for left to
+/// users of the pass, which are free to create appropriate wrappers for their
+/// use cases.
 ///
-/// As stated earlier in the file, this is a per-MBB state, it is intended to be
-/// used during a reverse postorder dataflow analysis of a function.
-/// The expected usage pattern is to visit a MBB in instruction order, call
+/// This is a per-MBB state, it is intended to be used during a reverse
+/// postorder dataflow analysis of a function. The expected usage pattern is to
+/// visit a MBB in instruction order, call
 /// \ref EventTracker::record whenever an interesting event occurs, call
 /// \ref EventTracker::drain whenever a wait on a counter is performed.
 /// In between those operations, the user of the class can use all other methods
