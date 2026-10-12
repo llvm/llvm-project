@@ -2284,7 +2284,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   for (auto *RI : Returns) {
     Value *RetOpnd = objcarc::GetRCIdentityRoot(RI->getOperand(0));
     bool InsertRetainCall = IsRetainRV;
-    IRBuilder<> Builder(RI->getContext());
+    IRBuilder<> Builder(*RI->getModule());
 
     // Walk backwards through the basic block looking for either a matching
     // autoreleaseRV call or an unannotated call.

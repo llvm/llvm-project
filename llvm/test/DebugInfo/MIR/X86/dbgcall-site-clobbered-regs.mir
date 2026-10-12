@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -filetype=obj -start-after=livedebugvalues \
+# RUN: llc %s -o - -filetype=obj -start-after=live-debug-values \
 # RUN:      -emit-call-site-info | \
 # RUN:  llvm-dwarfdump - | FileCheck %s --implicit-check-not=call_value
 #

@@ -1846,13 +1846,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::WideVectorLoad:
-    return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
-    // Before replicating by VF, Build(Struct)Vector uses all lanes of the
-    // operand, after replicating its operands only the first lane is used.
-    // Before replicating, it will have only a single operand.
-    return getNumOperands() > 1;
+    return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
@@ -2236,16 +2232,8 @@ void VPIRMetadata::clearExecutionFrequency() {
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
-  SmallVector<std::pair<unsigned, MDNode *>> MetadataIntersection;
-  for (const auto &[KindA, MDA] : Metadata) {
-    for (const auto &[KindB, MDB] : Other.Metadata) {
-      if (KindA == KindB && MDA == MDB) {
-        MetadataIntersection.emplace_back(KindA, MDA);
-        break;
-      }
-    }
-  }
-  Metadata = std::move(MetadataIntersection);
+  erase_if(Metadata,
+           [&](const auto &MD) { return !is_contained(Other.Metadata, MD); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2411,7 +2399,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   }
 
   // Use vector version of the intrinsic.
-  Module *M = State.Builder.GetInsertBlock()->getModule();
+  Module *M = State.Builder.getModule();
   Function *VectorF =
       Intrinsic::getOrInsertDeclaration(M, VectorIntrinsicID, TysForDecl);
   assert(VectorF &&
@@ -3889,7 +3877,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  VPValue *Mask = getOperand(getNumOperands() - 1);
+  VPValue *Mask = getLastOperand();
   VPValue *EVL =
       isa<VPReductionEVLRecipe>(Red)
           ? getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1))
@@ -3911,7 +3899,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
     bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    getLastOperand()->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
     if (Negated)
@@ -4107,8 +4095,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // instruction cost.
     return 0;
   case Instruction::Call: {
-    auto *CalledFn =
-        cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+    auto *CalledFn = cast<Function>(getLastOperand()->getLiveInIRValue());
     Type *ResultTy = this->getScalarType();
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);

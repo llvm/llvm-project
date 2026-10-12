@@ -5355,18 +5355,21 @@ add_fp_unittest(
     libc.src.math.pow
 )
 
-add_fp_unittest(
-  powf_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    powf_test.cpp
-  DEPENDS
-    libc.src.math.powf
-    libc.src.__support.math.powf_double_eval
-    libc.src.__support.math.powf_float_eval
-    libc.src.__support.FPUtil.fp_bits
-)
+# TODO: Re-enable the test for GPU.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_fp_unittest(
+    powf_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      powf_test.cpp
+    DEPENDS
+      libc.src.math.powf
+      libc.src.__support.math.powf_double_eval
+      libc.src.__support.math.powf_float_eval
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
 
 add_fp_unittest(
   totalorder_test

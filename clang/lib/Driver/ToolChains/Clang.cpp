@@ -357,6 +357,9 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
     case types::TY_PP_CXXModule:
       ClangType = "c++-cpp-output";
       break;
+    case types::TY_CIRBC:
+      ClangType = "cir";
+      break;
     default:
       ClangType = types::getTypeName(Input.getType());
       break;
@@ -5582,6 +5585,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_CIR) {
       CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_CIRBC) {
+      CmdArgs.push_back("-emit-cir-bc");
     } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
       CmdArgs.push_back("-emit-obj");
     } else {
@@ -5797,15 +5802,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Discard value names in no-asserts builds unless otherwise specified.
   if (Args.hasFlag(options::OPT_fdiscard_value_names,
-                   options::OPT_fno_discard_value_names, !IsAssertBuild)) {
-    if (Args.hasArg(options::OPT_fdiscard_value_names) &&
-        llvm::any_of(Inputs, [](const clang::driver::InputInfo &II) {
-          return types::isLLVMIR(II.getType());
-        })) {
-      D.Diag(diag::warn_ignoring_fdiscard_for_bitcode);
-    }
+                   options::OPT_fno_discard_value_names, !IsAssertBuild))
     CmdArgs.push_back("-discard-value-names");
-  }
 
   // Set the main file name, so that debug info works even with
   // -save-temps.

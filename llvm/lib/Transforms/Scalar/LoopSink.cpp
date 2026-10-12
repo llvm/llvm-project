@@ -31,6 +31,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopSink.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -42,7 +43,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -52,15 +52,6 @@ using namespace llvm;
 
 STATISTIC(NumLoopSunk, "Number of instructions sunk into loop");
 STATISTIC(NumLoopSunkCloned, "Number of cloned instructions sunk into loop");
-
-static cl::opt<unsigned> SinkFrequencyPercentThreshold(
-    "sink-freq-percent-threshold", cl::Hidden, cl::init(90),
-    cl::desc("Do not sink instructions that require cloning unless they "
-             "execute less than this percent of the time."));
-
-static cl::opt<unsigned> MaxNumberOfUseBBsForSinking(
-    "max-uses-for-sinking", cl::Hidden, cl::init(30),
-    cl::desc("Do not sink instructions that have too many uses."));
 
 /// Return adjusted total frequency of \p BBs.
 ///
@@ -75,13 +66,14 @@ static cl::opt<unsigned> MaxNumberOfUseBBsForSinking(
 ///   BBs as the difference is too small to justify the code size increase.
 ///   To model this, The adjusted Freq(BBs) will be:
 ///     AdjustedFreq(BBs) = 99 / SinkFrequencyPercentThreshold%
-static BlockFrequency adjustedSumFreq(SmallPtrSetImpl<BasicBlock *> &BBs,
+static BlockFrequency adjustedSumFreq(const ScalarOptions &Opts,
+                                      SmallPtrSetImpl<BasicBlock *> &BBs,
                                       BlockFrequencyInfo &BFI) {
   BlockFrequency T(0);
   for (BasicBlock *B : BBs)
     T += BFI.getBlockFreq(B);
   if (BBs.size() > 1)
-    T /= BranchProbability(SinkFrequencyPercentThreshold, 100);
+    T /= BranchProbability(Opts.sink_freq_percent_threshold, 100);
   return T;
 }
 
@@ -113,7 +105,8 @@ static BlockFrequency adjustedSumFreq(SmallPtrSetImpl<BasicBlock *> &BBs,
 /// To avoid expensive computation, we cap the maximum UseBBs.size() in its
 /// caller.
 static SmallPtrSet<BasicBlock *, 2>
-findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
+findBBsToSinkInto(const ScalarOptions &Opts, const Loop &L,
+                  const SmallPtrSetImpl<BasicBlock *> &UseBBs,
                   const SmallVectorImpl<BasicBlock *> &ColdLoopBBs,
                   DominatorTree &DT, BlockFrequencyInfo &BFI) {
   SmallPtrSet<BasicBlock *, 2> BBsToSinkInto;
@@ -138,7 +131,7 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
         BBsDominatedByColdestBB.insert(SinkedBB);
     if (BBsDominatedByColdestBB.size() == 0)
       continue;
-    if (adjustedSumFreq(BBsDominatedByColdestBB, BFI) >
+    if (adjustedSumFreq(Opts, BBsDominatedByColdestBB, BFI) >
         BFI.getBlockFreq(ColdestBB)) {
       for (BasicBlock *DominatedBB : BBsDominatedByColdestBB) {
         BBsToSinkInto.erase(DominatedBB);
@@ -159,7 +152,8 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
     // that often ended up continuing early due to an empty
     // BBsDominatedByColdestBB set, and the frequency check there was false
     // most of the time anyway).
-    if (adjustedSumFreq(BBsToSinkInto, BFI) <= BFI.getBlockFreq(ColdestBB))
+    if (adjustedSumFreq(Opts, BBsToSinkInto, BFI) <=
+        BFI.getBlockFreq(ColdestBB))
       break;
   }
 
@@ -173,7 +167,7 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
 
   // If the total frequency of BBsToSinkInto is larger than preheader frequency,
   // do not sink.
-  if (adjustedSumFreq(BBsToSinkInto, BFI) >
+  if (adjustedSumFreq(Opts, BBsToSinkInto, BFI) >
       BFI.getBlockFreq(L.getLoopPreheader()))
     BBsToSinkInto.clear();
   return BBsToSinkInto;
@@ -183,10 +177,12 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
 // sinking is successful.
 // \p LoopBlockNumber is used to sort the insertion blocks to ensure
 // determinism.
-static bool sinkInstruction(
-    Loop &L, Instruction &I, const SmallVectorImpl<BasicBlock *> &ColdLoopBBs,
-    const SmallDenseMap<BasicBlock *, int, 16> &LoopBlockNumber, LoopInfo &LI,
-    DominatorTree &DT, BlockFrequencyInfo &BFI, MemorySSAUpdater *MSSAU) {
+static bool
+sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
+                const SmallVectorImpl<BasicBlock *> &ColdLoopBBs,
+                const SmallDenseMap<BasicBlock *, int, 16> &LoopBlockNumber,
+                LoopInfo &LI, DominatorTree &DT, BlockFrequencyInfo &BFI,
+                MemorySSAUpdater *MSSAU) {
   // Compute the set of blocks in loop L which contain a use of I.
   SmallPtrSet<BasicBlock *, 2> BBs;
   for (auto &U : I.uses()) {
@@ -217,12 +213,12 @@ static bool sinkInstruction(
   // findBBsToSinkInto is O(BBs.size() * ColdLoopBBs.size()). We cap the max
   // BBs.size() to avoid expensive computation.
   // FIXME: Handle code size growth for min_size and opt_size.
-  if (BBs.size() > MaxNumberOfUseBBsForSinking)
+  if (BBs.size() > Opts.max_uses_for_sinking)
     return false;
 
   // Find the set of BBs that we should insert a copy of I.
   SmallPtrSet<BasicBlock *, 2> BBsToSinkInto =
-      findBBsToSinkInto(L, BBs, ColdLoopBBs, DT, BFI);
+      findBBsToSinkInto(Opts, L, BBs, ColdLoopBBs, DT, BFI);
   if (BBsToSinkInto.empty())
     return false;
 
@@ -299,6 +295,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
                                           BlockFrequencyInfo &BFI,
                                           MemorySSA &MSSA,
                                           ScalarEvolution *SE) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   BasicBlock *Preheader = L.getLoopPreheader();
   assert(Preheader && "Expected loop to have preheader");
 
@@ -343,7 +340,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
            "Insts in a loop's preheader should have loop invariant operands!");
     if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
       continue;
-    if (sinkInstruction(L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
+    if (sinkInstruction(Opts, L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
                         &MSSAU)) {
       Changed = true;
       if (SE)

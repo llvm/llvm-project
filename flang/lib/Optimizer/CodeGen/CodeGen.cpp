@@ -235,6 +235,41 @@ mlir::Value replaceWithAddrOfOrASCast(mlir::ConversionPatternRewriter &rewriter,
   return mlir::LLVM::AddressOfOp::create(rewriter, loc, type, symName);
 }
 
+/// In device code under -gpu=mem:managed, load the host address of the type
+/// descriptor \p name from the managed pointer created for it by the
+/// CUFSharedTypeInfo pass. \p name may be in source or assembly form; the
+/// mapping is keyed by the assembly form. Return a null value when the type
+/// descriptor is not shared, or when the code is emitted in a global
+/// initializer, which needs a constant address and keeps the device copy.
+static mlir::Value
+loadSharedTypeDescriptor(mlir::gpu::GPUModuleOp gpuMod,
+                         mlir::ConversionPatternRewriter &rewriter,
+                         mlir::Location loc, llvm::StringRef name) {
+  if (mlir::Block *block = rewriter.getInsertionBlock()) {
+    mlir::Operation *parent = block->getParentOp();
+    if (mlir::isa<fir::GlobalOp, mlir::LLVM::GlobalOp>(parent) ||
+        parent->getParentOfType<fir::GlobalOp>() ||
+        parent->getParentOfType<mlir::LLVM::GlobalOp>())
+      return {};
+  }
+  auto typeDescs =
+      gpuMod->getAttrOfType<mlir::DictionaryAttr>(cudaSharedTypeDescsAttrName);
+  if (!typeDescs)
+    return {};
+  auto ptrSym = typeDescs.getAs<mlir::FlatSymbolRefAttr>(
+      fir::NameUniquer::replaceSpecialSymbols(name.str()));
+  if (!ptrSym)
+    return {};
+  mlir::Type llvmPtrTy = getLlvmPtrType(gpuMod.getContext());
+  mlir::DataLayout dataLayout(gpuMod);
+  // Managed globals live in the global address space on the device.
+  mlir::Value ptrAddr = replaceWithAddrOfOrASCast(
+      rewriter, loc, static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Global),
+      fir::factory::getProgramAddressSpace(&dataLayout), ptrSym.getValue(),
+      llvmPtrTy);
+  return mlir::LLVM::LoadOp::create(rewriter, loc, llvmPtrTy, ptrAddr);
+}
+
 /// Return the NVVM address space implied by a CUF data attribute on a
 /// fir::GlobalOp that has not yet been converted to llvm.mlir.global.
 /// Returns std::nullopt if no CUF-specific address space applies.
@@ -270,6 +305,12 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     if (auto gpuMod = addr->getParentOfType<mlir::gpu::GPUModuleOp>()) {
+      if (mlir::Value typeDesc = loadSharedTypeDescriptor(
+              gpuMod, rewriter, addr.getLoc(),
+              addr.getSymbol().getRootReference().getValue())) {
+        rewriter.replaceOp(addr, typeDesc);
+        return mlir::success();
+      }
       auto global = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
       replaceWithAddrOfOrASCast(
           rewriter, addr->getLoc(),
@@ -322,8 +363,8 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, memRef.getLoc(), memRef,
-                                         varAttr, nullptr);
+        mlir::LLVM::DbgDeclareOp::create(rewriter, fusedLoc, memRef, varAttr,
+                                         nullptr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
@@ -343,7 +384,7 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgValueOp::create(rewriter, value.getLoc(), value, varAttr,
+        mlir::LLVM::DbgValueOp::create(rewriter, fusedLoc, value, varAttr,
                                        nullptr);
       }
     }
@@ -1818,6 +1859,11 @@ getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
       options.typeDescriptorsRenamedForAssembly
           ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
           : fir::NameUniquer::getTypeDescriptorName(recType.getName());
+  if constexpr (std::is_same_v<ModOpTy, mlir::gpu::GPUModuleOp>) {
+    if (mlir::Value typeDesc =
+            loadSharedTypeDescriptor(mod, rewriter, loc, name))
+      return typeDesc;
+  }
   mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
   mlir::DataLayout dataLayout(mod);
   if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name))
@@ -3731,6 +3777,18 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     mlir::Type inTy = typeDescOp.getInType();
     assert(mlir::isa<fir::RecordType>(inTy) && "expecting fir.type");
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
+    if (auto gpuMod = typeDescOp->getParentOfType<mlir::gpu::GPUModuleOp>()) {
+      std::string name =
+          this->options.typeDescriptorsRenamedForAssembly
+              ? fir::NameUniquer::getTypeDescriptorAssemblyName(
+                    recordType.getName())
+              : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
+      if (mlir::Value typeDesc = loadSharedTypeDescriptor(
+              gpuMod, rewriter, typeDescOp.getLoc(), name)) {
+        rewriter.replaceOp(typeDescOp, typeDesc);
+        return mlir::success();
+      }
+    }
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
     mlir::Value typeDesc = getTypeDescriptor(
         module, rewriter, typeDescOp.getLoc(), recordType, this->options);

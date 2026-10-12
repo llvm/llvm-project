@@ -15,6 +15,9 @@
 ; RUN: llc <%s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s -check-prefix=THUMB
 ; RUN: llc <%s -mtriple=thumbv7m-none-eabi 2>&1 | FileCheck %s -check-prefix=THUMB
 
+; RUN: llc <%s -mtriple=armv7a-none-eabi -mattr=-d32 -o /dev/null 2>&1 \
+; RUN:   | FileCheck %s -check-prefix=NO_D32
+
 ; ARM_NONE: warning: inline asm clobber list contains reserved registers: SP, PC
 ; ARM_NONE: warning: inline asm clobber list contains reserved registers: R11
 ; RWPI: warning: inline asm clobber list contains reserved registers: R9, SP, PC
@@ -24,6 +27,9 @@
 ; IOS2: warning: inline asm clobber list contains reserved registers: R9, SP, PC
 ; IOS3: warning: inline asm clobber list contains reserved registers: SP, PC
 ; THUMB: warning: inline asm clobber list contains reserved registers: SP, PC
+; NO_D32: warning: inline asm clobber list contains reserved registers: SP, PC
+; NO_D32: warning: inline asm clobber list contains reserved registers: R11
+; NO_D32-NOT: warning
 
 define void @foo() nounwind {
   call void asm sideeffect "movs r7, #1",
@@ -36,6 +42,15 @@ define i32 @bar(i32 %i) {
   tail call void asm sideeffect "movs r7, #1", "~{r11}"()
   %1 = load volatile i32, ptr %vla, align 4
   ret i32 %1
+}
+
+; Without d32, D16-D31 are reserved because they don't exist, but this function can be inlined
+; into a function where that target feature is enabled. So it is reasonable for frontends to
+; mark these registers as clobbered regardless of the enabled target features. Test that this
+; works and doesn't generate a warning.
+define void @clobber_d16_d31() nounwind {
+  call void asm sideeffect "nop", "~{d16},~{d31}"()
+  ret void
 }
 
 ; r14 is an alias for lr.

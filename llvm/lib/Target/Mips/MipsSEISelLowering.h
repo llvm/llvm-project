@@ -68,12 +68,11 @@ using TargetRegisterClass = MCRegisterClass;
         const CCState &CCInfo, unsigned NextStackOffset,
         const MipsFunctionInfo &FI) const override;
 
-    void
-    getOpndList(SmallVectorImpl<SDValue> &Ops,
-                std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
-                bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
-                SDValue Chain) const override;
+    void getOpndList(SmallVectorImpl<SDValue> &Ops,
+                     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
+                     bool IsPICCall, bool GlobalOrExternal, bool LocalLinkage,
+                     bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
+                     SDValue Chain) const override;
 
     SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
                            RTLIB::Libcall LC) const;

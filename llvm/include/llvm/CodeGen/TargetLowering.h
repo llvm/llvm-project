@@ -365,6 +365,8 @@ public:
 
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
+    LLVM_ABI ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr);
+
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
@@ -615,25 +617,25 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateDivEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateDivEnabled(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a square root of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getSqrtRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getSqrtRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a division of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getDivRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getDivRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Returns true if target has indicated at least one type should be bypassed.
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }

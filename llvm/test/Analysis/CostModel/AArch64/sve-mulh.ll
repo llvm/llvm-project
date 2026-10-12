@@ -4,31 +4,83 @@
 
 define void @smulh_scalable() {
 ; CHECK-LABEL: 'smulh_scalable'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.smulh.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.smulh.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.smulh.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.smulh.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i8 = call <vscale x 2 x i8> @llvm.smulh.nxv2i8(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4i8 = call <vscale x 4 x i8> @llvm.smulh.nxv4i8(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv8i8 = call <vscale x 8 x i8> @llvm.smulh.nxv8i8(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.smulh.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.smulh.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i16 = call <vscale x 2 x i16> @llvm.smulh.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4i16 = call <vscale x 4 x i16> @llvm.smulh.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.smulh.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i16 = call <vscale x 16 x i16> @llvm.smulh.nxv16i16(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i32 = call <vscale x 2 x i32> @llvm.smulh.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.smulh.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i32 = call <vscale x 8 x i32> @llvm.smulh.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.smulh.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.smulh.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = call <vscale x 2 x i128> @llvm.smulh.nxv2i128(<vscale x 2 x i128> poison, <vscale x 2 x i128> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+  %nxv2i8  = call <vscale x 2 x i8> @llvm.smulh(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison)
+  %nxv4i8  = call <vscale x 4 x i8> @llvm.smulh(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison)
+  %nxv8i8  = call <vscale x 8 x i8> @llvm.smulh(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison)
   %nxv16i8 = call <vscale x 16 x i8> @llvm.smulh(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-  %nxv8i16 = call <vscale x 8 x i16> @llvm.smulh(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-  %nxv4i32 = call <vscale x 4 x i32> @llvm.smulh(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv32i8 = call <vscale x 32 x i8> @llvm.smulh(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+
+  %nxv2i16  = call <vscale x 2 x i16> @llvm.smulh(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison)
+  %nxv4i16  = call <vscale x 4 x i16> @llvm.smulh(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison)
+  %nxv8i16  = call <vscale x 8 x i16> @llvm.smulh(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv16i16 = call <vscale x 16 x i16> @llvm.smulh(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison)
+
+  %nxv2i32  = call <vscale x 2 x i32> @llvm.smulh(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
+  %nxv4i32  = call <vscale x 4 x i32> @llvm.smulh(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv8i32  = call <vscale x 8 x i32> @llvm.smulh(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+
   %nxv2i64 = call <vscale x 2 x i64> @llvm.smulh(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv4i64 = call <vscale x 4 x i64> @llvm.smulh(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
+
+  %nxv2i128 = call <vscale x 2 x i128> @llvm.smulh(<vscale x 2 x i128> poison, <vscale x 2 x i128> poison)
   ret void
 }
 
 define void @umulh_scalable() {
 ; CHECK-LABEL: 'umulh_scalable'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.umulh.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.umulh.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.umulh.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.umulh.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i8 = call <vscale x 2 x i8> @llvm.umulh.nxv2i8(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4i8 = call <vscale x 4 x i8> @llvm.umulh.nxv4i8(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv8i8 = call <vscale x 8 x i8> @llvm.umulh.nxv8i8(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv16i8 = call <vscale x 16 x i8> @llvm.umulh.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv32i8 = call <vscale x 32 x i8> @llvm.umulh.nxv32i8(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i16 = call <vscale x 2 x i16> @llvm.umulh.nxv2i16(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4i16 = call <vscale x 4 x i16> @llvm.umulh.nxv4i16(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv8i16 = call <vscale x 8 x i16> @llvm.umulh.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv16i16 = call <vscale x 16 x i16> @llvm.umulh.nxv16i16(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv2i32 = call <vscale x 2 x i32> @llvm.umulh.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4i32 = call <vscale x 4 x i32> @llvm.umulh.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv8i32 = call <vscale x 8 x i32> @llvm.umulh.nxv8i32(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2i64 = call <vscale x 2 x i64> @llvm.umulh.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %nxv4i64 = call <vscale x 4 x i64> @llvm.umulh.nxv4i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %nxv2i128 = call <vscale x 2 x i128> @llvm.umulh.nxv2i128(<vscale x 2 x i128> poison, <vscale x 2 x i128> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+  %nxv2i8  = call <vscale x 2 x i8> @llvm.umulh(<vscale x 2 x i8> poison, <vscale x 2 x i8> poison)
+  %nxv4i8  = call <vscale x 4 x i8> @llvm.umulh(<vscale x 4 x i8> poison, <vscale x 4 x i8> poison)
+  %nxv8i8  = call <vscale x 8 x i8> @llvm.umulh(<vscale x 8 x i8> poison, <vscale x 8 x i8> poison)
   %nxv16i8 = call <vscale x 16 x i8> @llvm.umulh(<vscale x 16 x i8> poison, <vscale x 16 x i8> poison)
-  %nxv8i16 = call <vscale x 8 x i16> @llvm.umulh(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
-  %nxv4i32 = call <vscale x 4 x i32> @llvm.umulh(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv32i8 = call <vscale x 32 x i8> @llvm.umulh(<vscale x 32 x i8> poison, <vscale x 32 x i8> poison)
+
+  %nxv2i16  = call <vscale x 2 x i16> @llvm.umulh(<vscale x 2 x i16> poison, <vscale x 2 x i16> poison)
+  %nxv4i16  = call <vscale x 4 x i16> @llvm.umulh(<vscale x 4 x i16> poison, <vscale x 4 x i16> poison)
+  %nxv8i16  = call <vscale x 8 x i16> @llvm.umulh(<vscale x 8 x i16> poison, <vscale x 8 x i16> poison)
+  %nxv16i16 = call <vscale x 16 x i16> @llvm.umulh(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison)
+
+  %nxv2i32  = call <vscale x 2 x i32> @llvm.umulh(<vscale x 2 x i32> poison, <vscale x 2 x i32> poison)
+  %nxv4i32  = call <vscale x 4 x i32> @llvm.umulh(<vscale x 4 x i32> poison, <vscale x 4 x i32> poison)
+  %nxv8i32  = call <vscale x 8 x i32> @llvm.umulh(<vscale x 8 x i32> poison, <vscale x 8 x i32> poison)
+
   %nxv2i64 = call <vscale x 2 x i64> @llvm.umulh(<vscale x 2 x i64> poison, <vscale x 2 x i64> poison)
+  %nxv4i64 = call <vscale x 4 x i64> @llvm.umulh(<vscale x 4 x i64> poison, <vscale x 4 x i64> poison)
+
+  %nxv2i128 = call <vscale x 2 x i128> @llvm.umulh(<vscale x 2 x i128> poison, <vscale x 2 x i128> poison)
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

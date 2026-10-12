@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues \
+# RUN: llc %s -o - -run-pass=live-debug-values \
 # RUN:     -experimental-debug-variable-locations \
 # RUN: | FileCheck %s
 #
