@@ -96,6 +96,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRTransformUtils
   MLIRTransforms
   MLIRValueBoundsOpInterface
+  MLIRViewLikeInterface
   MLIRBufferizationDialect
 )
 
