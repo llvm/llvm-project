@@ -107,7 +107,7 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
     : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
                           M.getFloatABI(), ABIName, VecLib) {}
 
-bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
+bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
   // every named library is reported as available.
   return true;
