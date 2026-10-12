@@ -2370,7 +2370,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     SetFPMinMaxAction(MVT::f16);
-    setOperationAction(ISD::FREM,                 MVT::f16, Custom);
+    setOperationAction(ISD::FREM, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
@@ -23288,7 +23288,8 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
 
-  MVT OpVT = N0.getSimpleValueType(); dl(Op);
+  MVT OpVT = N0.getSimpleValueType();
+  dl(Op);
   assert((OpVT == MVT::f32 || OpVT == MVT::f64) &&
          "Unexpected type for FGETSIGN");
 
@@ -23312,21 +23313,24 @@ static SDValue LowerFREM(SDValue Op, SelectionDAG &DAG) {
   SDValue y = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, b);
 
   SDValue Res = DAG.getNode(ISD::FDIV, dl, MVT::f64, x, y);
-  Res = DAG.getNode(ISD::FTRUNC, dl, MVT::f64, Res);        // q
-  Res = DAG.getNode(ISD::FNEG, dl, MVT::f64, Res);          // -q
-  Res = DAG.getNode(ISD::FMA, dl, MVT::f64, Res, y, x);     // -q*y + x
-  Res = DAG.getNode(ISD::FCOPYSIGN, dl, MVT::f64, Res, x);  // remainder takes sign of x
-							    
-  // with f32 as a substitute for f16, this causes unhandled conditions with the` use of f64 internally
+  Res = DAG.getNode(ISD::FTRUNC, dl, MVT::f64, Res);    // q
+  Res = DAG.getNode(ISD::FNEG, dl, MVT::f64, Res);      // -q
+  Res = DAG.getNode(ISD::FMA, dl, MVT::f64, Res, y, x); // -q*y + x
+  Res = DAG.getNode(ISD::FCOPYSIGN, dl, MVT::f64, Res,
+                    x); // remainder takes sign of x
+
+  // with f32 as a substitute for f16, this causes unhandled conditions with
+  // the` use of f64 internally
 
   // 1 % inf = NaN
   EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
-    DAG.getDataLayout(), *DAG.getContext(), MVT::f64);
+      DAG.getDataLayout(), *DAG.getContext(), MVT::f64);
   SDValue YIsInf = DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, y,
-                             DAG.getTargetConstant(fcInf, dl, MVT::i32));
+                               DAG.getTargetConstant(fcInf, dl, MVT::i32));
 
-  SDValue XIsFinite = DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, x,
-                                DAG.getTargetConstant(fcFinite, dl, MVT::i32));
+  SDValue XIsFinite =
+      DAG.getNode(ISD::IS_FPCLASS, dl, CCVT, x,
+                  DAG.getTargetConstant(fcFinite, dl, MVT::i32));
 
   SDValue UseX = DAG.getNode(ISD::AND, dl, CCVT, YIsInf, XIsFinite);
   Res = DAG.getSelect(dl, MVT::f64, UseX, x, Res);
