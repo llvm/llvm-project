@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -22,6 +23,7 @@
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -5170,6 +5172,19 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
   return true;
 }
 
+// Vector FP constant folding assumes IEEE denormal arithmetic. Flush-to-zero
+// and dynamic modes can produce a different value, so skip those folds.
+//
+// TODO: Honor non-IEEE and dynamic denormal modes instead of skipping the
+// vector folds. Scalar folds have the same limitation and stay unchanged here.
+static bool vectorFPFoldUsesIEEEDenormals(const MachineFunction &MF, LLT Ty) {
+  LLT ScalarTy = Ty.getScalarType();
+  if (!ScalarTy.isFloat())
+    return true;
+  return MF.getDenormalMode(getFltSemanticForLLT(ScalarTy)) ==
+         DenormalMode::getIEEE();
+}
+
 bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -5181,6 +5196,8 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
     return false;
 
   if (DstTy.isFixedVector()) {
+    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
+      return false;
     SmallVector<APFloat> Csts =
         ConstantFoldVectorFPBinop(MI.getOpcode(), Op1, Op2, MRI);
     if (Csts.empty())
@@ -5203,9 +5220,18 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
 bool CombinerHelper::matchConstantFoldFPUnary(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
-  SmallVector<APFloat> Csts = ConstantFoldUnaryFPOp(
-      MI.getOpcode(), DstTy, MI.getOperand(1).getReg(), MRI);
+  LLT SrcTy = MRI.getType(Src);
+  // Source and destination element types can differ (G_FPEXT/G_FPTRUNC) and
+  // can have different denormal modes.
+  if (SrcTy.isVector() &&
+      (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), SrcTy) ||
+       !vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy)))
+    return false;
+
+  SmallVector<APFloat> Csts =
+      ConstantFoldUnaryFPOp(MI.getOpcode(), DstTy, Src, MRI);
   if (Csts.empty())
     return false;
   MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
@@ -5236,6 +5262,8 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
     return false;
 
   if (DstTy.isFixedVector()) {
+    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
+      return false;
     auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
     auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
     auto *BV3 = getOpcodeDef<GBuildVector>(Op3, MRI);
