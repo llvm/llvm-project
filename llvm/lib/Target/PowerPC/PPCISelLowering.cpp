@@ -10443,12 +10443,14 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If this is a load-and-splat, we can do that with a single instruction
   // in some cases. However if the load has multiple uses, we don't want to
-  // combine it because that will just produce multiple loads.
+  // combine it because that will just produce multiple loads. Since we are
+  // looking through bitcasts and scalar_to_vector, the input load and V1 might
+  // be different nodes so we need to check both.
   bool IsPermutedLoad = false;
   const SDValue *InputLoad = getNormalLoadInput(V1, IsPermutedLoad);
   if (InputLoad && Subtarget.hasVSX() && V2.isUndef() &&
       (PPC::isSplatShuffleMask(SVOp, 4) || PPC::isSplatShuffleMask(SVOp, 8)) &&
-      InputLoad->hasOneUse()) {
+      InputLoad->hasOneUse() && V1.hasOneUse()) {
     bool IsFourByte = PPC::isSplatShuffleMask(SVOp, 4);
     int SplatIdx =
       PPC::getSplatIdxForPPCMnemonics(SVOp, IsFourByte ? 4 : 8, DAG);
