@@ -13,6 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
@@ -29,6 +30,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
@@ -613,6 +616,102 @@ struct CBufferRowIntrin {
 };
 } // namespace
 
+static Value *loadCBufferRowIntoWindow(IRBuilder<> &Builder,
+                                       const CBufferRowIntrin &Intrin,
+                                       Value *Handle, Value *FirstRow,
+                                       Value *Window, unsigned RowNumber,
+                                       StringRef Name) {
+  Value *RowIndex =
+      RowNumber == 0 ? FirstRow
+                     : Builder.CreateAdd(FirstRow, Builder.getInt32(RowNumber));
+  Value *RowLoad = Builder.CreateIntrinsic(
+      Intrin.RetTy, Intrin.IID, {Handle, RowIndex}, nullptr, Name + ".load");
+  for (unsigned J = 0; J != Intrin.NumElts; ++J) {
+    Value *Element = Builder.CreateExtractValue(RowLoad, {J});
+    Window = Builder.CreateInsertElement(
+        Window, Element, Builder.getInt32(RowNumber * Intrin.NumElts + J));
+  }
+  return Window;
+}
+
+static Value *createDynamicCBufferLoad(IntrinsicInst *II, LoadInst *LI,
+                                       const CBufferRowIntrin &Intrin,
+                                       Value *BaseRow, Value *ByteOffset,
+                                       const KnownBits &WithinRow) {
+  IRBuilder<> Builder(LI);
+  Type *Ty = LI->getType();
+  auto *VT = dyn_cast<FixedVectorType>(Ty);
+  unsigned NumElements = VT ? VT->getNumElements() : 1;
+  StringRef Name = LI->getName();
+  Value *Handle = II->getOperand(0);
+  Value *RowSize = Builder.getInt32(hlsl::CBufferRowSizeInBytes);
+  Value *FirstRow =
+      Builder.CreateAdd(BaseRow, Builder.CreateUDiv(ByteOffset, RowSize));
+  Value *Component = Builder.CreateUDiv(Builder.CreateURem(ByteOffset, RowSize),
+                                        Builder.getInt32(Intrin.EltSize));
+  unsigned MinComponent =
+      WithinRow.getMinValue().getZExtValue() / Intrin.EltSize;
+  unsigned MaxComponent =
+      WithinRow.getMaxValue().getZExtValue() / Intrin.EltSize;
+  unsigned MinRows = 1 + (MinComponent + NumElements - 1) / Intrin.NumElts;
+  unsigned MaxRows = 1 + (MaxComponent + NumElements - 1) / Intrin.NumElts;
+  auto *WindowTy =
+      FixedVectorType::get(Ty->getScalarType(), MaxRows * Intrin.NumElts);
+  Value *Window = PoisonValue::get(WindowTy);
+  for (unsigned I = 0; I != MinRows; ++I)
+    Window = loadCBufferRowIntoWindow(Builder, Intrin, Handle, FirstRow, Window,
+                                      I, Name);
+
+  // The unknown starting component can require at most one extra row.
+  // Load it only when needed, rather than accessing beyond the load.
+  if (MaxRows != MinRows) {
+    BasicBlock *Head = LI->getParent();
+    Value *LastComponent =
+        Builder.CreateAdd(Component, Builder.getInt32(NumElements - 1));
+    Value *CrossesRow = Builder.CreateICmpUGE(
+        LastComponent, Builder.getInt32(MinRows * Intrin.NumElts));
+    Instruction *ThenTerm = SplitBlockAndInsertIfThen(CrossesRow, LI, false);
+    Builder.SetInsertPoint(ThenTerm);
+    Value *NextWindow = loadCBufferRowIntoWindow(
+        Builder, Intrin, Handle, FirstRow, Window, MinRows, Name);
+    Builder.SetInsertPoint(LI);
+    auto *Rows = Builder.CreatePHI(WindowTy, 2, Name + ".rows");
+    Rows->addIncoming(Window, Head);
+    Rows->addIncoming(NextWindow, ThenTerm->getParent());
+    Window = Rows;
+  }
+
+  Value *Result = PoisonValue::get(Ty);
+  for (unsigned I = 0; I != NumElements; ++I) {
+    Value *Index =
+        I == 0 ? Component : Builder.CreateAdd(Component, Builder.getInt32(I));
+    Value *Element =
+        Builder.CreateExtractElement(Window, Index, Name + ".extract");
+    Result =
+        VT ? Builder.CreateInsertElement(Result, Element, Builder.getInt32(I))
+           : Element;
+  }
+  return Result;
+}
+
+static KnownBits computeCBufferOffsetKnownBits(Value *Offset,
+                                               const DataLayout &DL,
+                                               const Instruction *CxtI) {
+  KnownBits Known = computeKnownBits(Offset, DL, nullptr, CxtI);
+  auto *Phi = dyn_cast<PHINode>(Offset);
+  if (!Phi || Phi->getNumIncomingValues() == 0)
+    return Known;
+
+  // PHI queries limit recursion into each input, which can hide row alignment.
+  KnownBits IncomingKnown(Known.getBitWidth());
+  IncomingKnown.setAllConflict();
+  for (unsigned I = 0; I != Phi->getNumIncomingValues(); ++I)
+    IncomingKnown = IncomingKnown.intersectWith(
+        computeKnownBits(Phi->getIncomingValue(I), DL, nullptr,
+                         Phi->getIncomingBlock(I)->getTerminator()));
+  return Known.unionWith(IncomingKnown);
+}
+
 static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
                               dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
@@ -662,19 +761,35 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
     } else {
       assert(LastGEP->getNumIndices() == 1 &&
              "Last GEP of cbuffer access is not array or struct access");
-      // We assume a non-constant access will be row-aligned. This is safe
-      // because arrays and structs are always row aligned, and accesses to
-      // vector elements will show up as a load of the vector followed by an
-      // extractelement.
-      Value *RowIndex = *LastGEP->idx_begin();
+      // Aggregate strides are row-aligned, but merged byte offsets can select
+      // different components within a row.
+      Value *RowIndex = Builder.CreateSExtOrTrunc(*LastGEP->idx_begin(),
+                                                  Builder.getInt32Ty());
       uint64_t IndexScale =
           DL.getTypeAllocSize(LastGEP->getSourceElementType());
       if (IndexScale < hlsl::CBufferRowSizeInBytes) {
         assert(hlsl::CBufferRowSizeInBytes % IndexScale == 0 &&
                "CBuffer GEP index is not row aligned");
-        RowIndex = Builder.CreateExactUDiv(
-            RowIndex,
-            ConstantInt::get(RowIndex->getType(), hlsl::CBufferRowSizeInBytes / IndexScale));
+        Value *ByteOffset =
+            IndexScale == 1
+                ? RowIndex
+                : Builder.CreateMul(RowIndex, Builder.getInt32(IndexScale));
+        uint64_t BaseWithinRow = GlobalOffsetVal % hlsl::CBufferRowSizeInBytes;
+        if (BaseWithinRow != 0)
+          ByteOffset =
+              Builder.CreateAdd(ByteOffset, Builder.getInt32(BaseWithinRow));
+        Value *RowSize = Builder.getInt32(hlsl::CBufferRowSizeInBytes);
+        KnownBits WithinRow =
+            computeCBufferOffsetKnownBits(ByteOffset, DL, LI) &
+            KnownBits::makeConstant(APInt(32, hlsl::CBufferRowSizeInBytes - 1));
+        if (!WithinRow.isConstant()) {
+          LI->replaceAllUsesWith(createDynamicCBufferLoad(
+              II, LI, Intrin, CurrentRow, ByteOffset, WithinRow));
+          return;
+        }
+        RowIndex = Builder.CreateUDiv(ByteOffset, RowSize, "",
+                                      WithinRow.getConstant().isZero());
+        CurrentIndex = WithinRow.getConstant().getZExtValue() / Intrin.EltSize;
       } else if (IndexScale > hlsl::CBufferRowSizeInBytes) {
         assert(IndexScale % hlsl::CBufferRowSizeInBytes == 0 &&
                "CBuffer GEP index is not row aligned");
@@ -683,8 +798,11 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
             ConstantInt::get(Builder.getInt32Ty(),
                              IndexScale / hlsl::CBufferRowSizeInBytes));
       }
-      CurrentRow = Builder.CreateAdd(CurrentRow, RowIndex);
-      CurrentIndex = 0;
+      if (auto *BaseRow = dyn_cast<ConstantInt>(CurrentRow);
+          BaseRow && BaseRow->isZero())
+        CurrentRow = RowIndex;
+      else
+        CurrentRow = Builder.CreateAdd(CurrentRow, RowIndex);
     }
   }
 
@@ -1220,7 +1338,6 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserve<DXILResourceTypeAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
 
@@ -1240,7 +1357,6 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
 char DXILResourceAccessLegacy::ID = 0;
