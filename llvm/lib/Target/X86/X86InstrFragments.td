@@ -726,26 +726,22 @@ def memopf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
          Ld->getAlign() >= Ld->getMemoryVT().getStoreSize();
 }]>;
 
-// An extending move loads the same number of bytes as the plain move, so it
-// can also be used for an atomic load that extends its result: the memory
-// access keeps its original width and ordering. A 16 bit result is left out
-// because MOVZX16rm8 writes a partial register.
 def sextloadi16i8  : PatFrag<(ops node:$ptr), (i16 (sextloadi8 node:$ptr))>;
 def sextloadi32i8  : PatFrags<(ops node:$ptr),
                               [(i32 (sextloadi8 node:$ptr)),
-                               (i32 (atomic_load_asext_8 node:$ptr))]>;
+                               (i32 (atomic_load_sext_8 node:$ptr))]>;
 def sextloadi32i16 : PatFrags<(ops node:$ptr),
                               [(i32 (sextloadi16 node:$ptr)),
-                               (i32 (atomic_load_asext_16 node:$ptr))]>;
+                               (i32 (atomic_load_sext_16 node:$ptr))]>;
 def sextloadi64i8  : PatFrags<(ops node:$ptr),
                               [(i64 (sextloadi8 node:$ptr)),
-                               (i64 (atomic_load_asext_8 node:$ptr))]>;
+                               (i64 (atomic_load_sext_8 node:$ptr))]>;
 def sextloadi64i16 : PatFrags<(ops node:$ptr),
                               [(i64 (sextloadi16 node:$ptr)),
-                               (i64 (atomic_load_asext_16 node:$ptr))]>;
+                               (i64 (atomic_load_sext_16 node:$ptr))]>;
 def sextloadi64i32 : PatFrags<(ops node:$ptr),
                               [(i64 (sextloadi32 node:$ptr)),
-                               (i64 (atomic_load_asext_32 node:$ptr))]>;
+                               (i64 (atomic_load_sext_32 node:$ptr))]>;
 
 def zextloadi8i1   : PatFrag<(ops node:$ptr), (i8  (zextloadi1 node:$ptr))>;
 def zextloadi16i1  : PatFrag<(ops node:$ptr), (i16 (zextloadi1 node:$ptr))>;
