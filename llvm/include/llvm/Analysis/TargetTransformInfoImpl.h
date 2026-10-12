@@ -417,7 +417,8 @@ public:
 
   virtual bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
                                unsigned Opcode1,
-                               const SmallBitVector &OpcodeMask) const {
+                               const SmallBitVector &OpcodeMask,
+                               ArrayRef<const Value *> Scalars) const {
     return false;
   }
 
@@ -583,8 +584,6 @@ public:
   }
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
-
-  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
 
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
@@ -782,10 +781,11 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
-                                          unsigned Opcode1,
-                                          const SmallBitVector &OpcodeMask,
-                                          TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost
+  getAltInstrCost(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
+                  const SmallBitVector &OpcodeMask,
+                  TTI::TargetCostKind CostKind,
+                  ArrayRef<const Value *> Scalars) const {
     return InstructionCost::getInvalid();
   }
 
@@ -1248,11 +1248,6 @@ public:
   }
 
   virtual unsigned getMaxNumArgs() const { return UINT_MAX; }
-
-  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
-                                               Type *ArrayType) const {
-    return 0;
-  }
 
   virtual void collectKernelLaunchBounds(
       const Function &F,

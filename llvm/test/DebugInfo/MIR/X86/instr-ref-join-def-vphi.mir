@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues %s -o - -experimental-debug-variable-locations | FileCheck %s --check-prefixes=CHECK
+# RUN: llc -run-pass=live-debug-values %s -o - -experimental-debug-variable-locations | FileCheck %s --check-prefixes=CHECK
 
 # Test that we do not drop debug values when joining a VPHI and a Def that use
 # the same value.

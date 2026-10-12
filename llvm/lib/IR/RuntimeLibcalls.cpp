@@ -21,6 +21,7 @@ using namespace RTLIB;
 
 #define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
@@ -152,6 +153,104 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
 /// be kept in sync.
 static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
+}
+
+static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
+                                                           LLVMContext &Ctx,
+                                                           const DataLayout &DL,
+                                                           unsigned IntBits) {
+
+  // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
+  switch (ID) {
+  case Void:
+    return {Type::getVoidTy(Ctx), Attribute()};
+  case Bool:
+    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int16:
+  case UInt16:
+    return {IntegerType::get(Ctx, 16), Attribute()};
+  case Int32:
+  case UInt32:
+    return {IntegerType::get(Ctx, 32), Attribute()};
+  case Int:
+  case UInt:
+  case IntPlus:
+  case UIntPlus:
+  case Long:
+  case ULong:
+  case IntX:
+  case UIntX:
+    return {IntegerType::get(Ctx, IntBits), Attribute()};
+  case Int64:
+  case UInt64:
+  case LLong:
+  case ULLong:
+    return {IntegerType::get(Ctx, 64), Attribute()};
+  case SizeT:
+  case SSizeT:
+    return {getSizeTType(Ctx, DL), Attribute()};
+  case Flt:
+  case Floating:
+    return {Type::getFloatTy(Ctx), Attribute()};
+  case Dbl:
+  case LDbl:
+    return {Type::getDoubleTy(Ctx), Attribute()};
+  case Ptr:
+    return {PointerType::get(Ctx, 0), Attribute()};
+  default:
+    return {};
+  }
+}
+
+std::pair<FunctionType *, AttributeList>
+RuntimeLibcallsInfo::getDefaultFunctionTy(
+    LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+    RTLIB::LibcallImpl LibcallImpl) const {
+  Libcall LC = getLibcallFromImpl(LibcallImpl);
+  const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
+
+  if (ProtoTypes[0] == NoFuncArgType)
+    return {};
+
+  unsigned IntBits = getIntSize(TT);
+  AttributeList Attrs;
+
+  auto [RetTy, RetAttr] =
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
+  if (RetAttr.isValid())
+    Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+
+  Type *LastTy = RetTy, *ArgTy;
+  Attribute LastAttr = RetAttr, ArgAttr;
+  SmallVector<Type *, 4> ArgTys;
+  bool IsVarArg = false;
+  unsigned Idx = 1;
+  for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == Ellip) {
+      // The ellipsis ends the protoype list so it must be followed by
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx + 1] == NoFuncArgType);
+      IsVarArg = true;
+      break;
+    }
+
+    if (TyID == Same) {
+      ArgTy = LastTy;
+      ArgAttr = LastAttr;
+    } else {
+      std::tie(ArgTy, ArgAttr) =
+          convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
+      LastTy = ArgTy;
+      LastAttr = ArgAttr;
+    }
+
+    ArgTys.push_back(ArgTy);
+    if (ArgAttr.isValid())
+      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
+  }
+
+  return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
 }
 
 std::pair<FunctionType *, AttributeList>
@@ -520,7 +619,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
   }
   default:
-    return {};
+    return getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
   }
 
   return {};

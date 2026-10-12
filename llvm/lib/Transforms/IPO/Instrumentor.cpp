@@ -878,8 +878,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
   auto CompleteName =
       IConf.getRTName(IO.IP.isPRE() ? "pre_" : "post_", IO.getName(),
                       ForceIndirection ? "_ind" : "");
-  auto FC = IIRB.IRB.GetInsertBlock()->getModule()->getOrInsertFunction(
-      CompleteName, FnTy);
+  auto FC = IIRB.IRB.getModule()->getOrInsertFunction(CompleteName, FnTy);
   auto *CI = IIRB.IRB.CreateCall(FC, CallParams);
   CI->addFnAttr(Attribute::get(IIRB.Ctx, Attribute::WillReturn));
 

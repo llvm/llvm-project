@@ -1424,6 +1424,16 @@ bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
       // location expression. Also after doing this we change the DBG_VALUE
       // to be direct.
       if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+        // DW_OP_deref_size may not read more than the size of an address.
+        if (Size > MF.getDataLayout().getPointerSize()) {
+          LLVM_DEBUG(dbgs() << "Dropping location of object larger than an "
+                               "address: "
+                            << MI);
+          MI.setDebugValueUndef();
+          return true;
+        }
+        assert(isUInt<8>(Size) &&
+               "DW_OP_deref_size operand must fit in a byte");
         SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
         bool WithStackValue = true;
         DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);

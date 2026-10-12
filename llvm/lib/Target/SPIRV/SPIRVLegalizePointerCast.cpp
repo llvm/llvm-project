@@ -777,7 +777,7 @@ class SPIRVLegalizePointerCastImpl {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
 
-    IRBuilder<> B(II->getContext());
+    IRBuilder<> B(*II->getModule());
     std::vector<Value *> Users;
     for (Use &U : II->uses())
       Users.push_back(U.getUser());
