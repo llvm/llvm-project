@@ -58296,15 +58296,15 @@ static SDValue combineExtSetcc(SDNode *N, SelectionDAG &DAG,
       SVT != MVT::i64 && SVT != MVT::f32 && SVT != MVT::f64)
     return SDValue();
 
-  // We don't have CMPP Instruction for vxf16
-  if (N0.getOperand(0).getValueType().getVectorElementType() == MVT::f16)
+  // We don't have CMPP Instruction for vxf16/vxbf16.
+  EVT N00VT = N0.getOperand(0).getValueType();
+  EVT N00SVT = N00VT.getVectorElementType();
+  if (N00SVT == MVT::f16 || N00SVT == MVT::bf16)
     return SDValue();
   // We can only do this if the vector size in 256 bits or less.
   unsigned Size = VT.getSizeInBits();
   if (Size > 256 && Subtarget.useAVX512Regs())
     return SDValue();
-
-  EVT N00VT = N0.getOperand(0).getValueType();
 
   // Don't fold if the condition code can't be handled by PCMPEQ/PCMPGT since
   // that's the only integer compares with we have.
@@ -64306,6 +64306,7 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
     case ISD::MUL:
+    case ISD::SINT_TO_FP:
       return false;
     case ISD::SHL:
     case ISD::SRA:
@@ -65673,6 +65674,6 @@ Align X86TargetLowering::getPrefLoopAlignment(
   std::optional<int> InnermostAlign =
       Subtarget.getCLOpts().experimental_pref_innermost_loop_alignment;
   if (ML && ML->isInnermost() && InnermostAlign)
-    return Align(1ULL << *InnermostAlign);
+    return Align::fromLog2(*InnermostAlign);
   return TargetLowering::getPrefLoopAlignment();
 }

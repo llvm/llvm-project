@@ -4030,7 +4030,7 @@ static SDValue lowerLOADi1(LoadSDNode *LD, SelectionDAG &DAG) {
   // The legalizer (the caller) is expecting two values from the legalized
   // load, so we build a MergeValues node for it. See ExpandUnalignedLoad()
   // in LegalizeDAG.cpp which also uses MergeValues.
-  return DAG.getMergeValues({result, LD->getChain()}, dl);
+  return DAG.getMergeValues({result, newLD.getValue(1)}, dl);
 }
 
 SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {

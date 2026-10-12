@@ -89,7 +89,6 @@ protected:
   unsigned BufferResourceNumRecordsWidth = 0;
 
   // Dynamically set bits that enable features.
-  bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
 
@@ -480,9 +479,6 @@ public:
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override { return true; }
-
-  void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
-  bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }

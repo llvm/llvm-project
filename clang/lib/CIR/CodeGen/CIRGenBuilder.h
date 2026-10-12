@@ -826,6 +826,13 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixExtractOp createMatrixExtract(mlir::Location loc,
+                                           mlir::Value matrix,
+                                           mlir::Value rowIdx,
+                                           mlir::Value columnIdx) {
+    return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
   cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
                                                            mlir::Type resultTy,
                                                            mlir::Value value,
@@ -838,8 +845,9 @@ public:
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
                                                mlir::Value matrix) {
     auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
-    auto resultTy = cir::MatrixType::get(
-        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    auto resultTy =
+        cir::MatrixType::get(inputTy.getElementType(), inputTy.getNumColumns(),
+                             inputTy.getNumRows());
     return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
   }
 
