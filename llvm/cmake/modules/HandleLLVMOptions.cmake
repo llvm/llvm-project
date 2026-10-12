@@ -135,8 +135,15 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
+  # Cautiously enable the extensive hardening mode in the build of libc++.
+  if((DEFINED LIBCXX_HARDENING_MODE) AND
+     (NOT LIBCXX_HARDENING_MODE STREQUAL "extensive"))
+    message(STATUS "LLVM_ENABLE_ASSERTIONS implies LIBCXX_HARDENING_MODE \"extensive\" but is overriden from command line with value \"${LIBCXX_HARDENING_MODE}\".")
+  else()
+    set(LIBCXX_HARDENING_MODE "extensive")
+  endif()
 
-  # Enable libc++ hardening mode used to build binaries and tests if supported.
+  # Enable libc++ extensive hardening mode used to build binaries and tests if supported.
   CHECK_CXX_SOURCE_COMPILES("
   #define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
   #include <string>
