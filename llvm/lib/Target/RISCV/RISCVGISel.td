@@ -16,9 +16,6 @@
 include "RISCV.td"
 include "RISCVCombine.td"
 
-let Predicates = [HasStdExtZbb] in
-def : PatGpr<int_riscv_orc_b, ORC_B>;
-
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return Imm >= -2047 && Imm <= 2048;}]>;
 def simm12Plus1i32 : ImmLeaf<i32, [{
@@ -102,6 +99,13 @@ let Predicates = [IsRV64] in {
 def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
+
+//===----------------------------------------------------------------------===//
+// Scalar Zbb intrinsic patterns not used by SelectionDAG
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZbb] in
+def : PatGpr<int_riscv_orc_b, ORC_B>;
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG
