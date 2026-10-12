@@ -1451,9 +1451,9 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
 }
 
 // Insert missing leading batch dimensions, taking their sizes from `other`.
-static Value broadcastMatMulTLeadingDimensions(PatternRewriter &rewriter,
-                                               Location loc, Value operand,
-                                               Value other) {
+static Value broadcastMatMulLeadingDimensions(PatternRewriter &rewriter,
+                                              Location loc, Value operand,
+                                              Value other) {
   auto type = cast<RankedTensorType>(operand.getType());
   int64_t missingDims =
       cast<RankedTensorType>(other.getType()).getRank() - type.getRank();
@@ -1475,13 +1475,12 @@ static Value broadcastMatMulTLeadingDimensions(PatternRewriter &rewriter,
 }
 
 // Expand an existing singleton batch dimension to `size`, preserving the rank.
-// Missing dimensions are handled by broadcastMatMulTLeadingDimensions.
+// Missing dimensions are handled by broadcastMatMulLeadingDimensions.
 // linalg.broadcast inserts dimensions, so first remove the singleton dimension
 // with a rank-reducing slice, then reinsert it at the target size.
-static Value broadcastMatMulTSingletonDimension(PatternRewriter &rewriter,
-                                                Location loc, Value operand,
-                                                int64_t dim,
-                                                OpFoldResult size) {
+static Value broadcastMatMulSingletonDimension(PatternRewriter &rewriter,
+                                               Location loc, Value operand,
+                                               int64_t dim, OpFoldResult size) {
   auto type = cast<RankedTensorType>(operand.getType());
   SmallVector<int64_t> sliceShape(type.getShape());
   sliceShape.erase(sliceShape.begin() + dim);
@@ -1503,13 +1502,13 @@ static Value broadcastMatMulTSingletonDimension(PatternRewriter &rewriter,
 
 // Align the ranks, then broadcast each shared batch dimension independently.
 static std::pair<Value, Value>
-normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
-                                Value a, Value b, int64_t batchRank) {
+normalizeMatMulBatchDimensions(PatternRewriter &rewriter, Location loc, Value a,
+                               Value b, int64_t batchRank) {
   int64_t aRank = cast<RankedTensorType>(a.getType()).getRank();
   int64_t bRank = cast<RankedTensorType>(b.getType()).getRank();
   int64_t firstSharedDim = std::max(aRank, bRank) - std::min(aRank, bRank);
-  a = broadcastMatMulTLeadingDimensions(rewriter, loc, a, b);
-  b = broadcastMatMulTLeadingDimensions(rewriter, loc, b, a);
+  a = broadcastMatMulLeadingDimensions(rewriter, loc, a, b);
+  b = broadcastMatMulLeadingDimensions(rewriter, loc, b, a);
 
   IndexPool indexPool;
   // The inserted leading dimensions already match their partner's sizes.
@@ -1526,11 +1525,11 @@ normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
     auto [size, masterOperand] =
         computeTargetSize(rewriter, loc, indexPool, ValueRange{a, b}, dim);
     if (aSize == 1) {
-      a = broadcastMatMulTSingletonDimension(rewriter, loc, a, dim, size);
+      a = broadcastMatMulSingletonDimension(rewriter, loc, a, dim, size);
       continue;
     }
     if (bSize == 1) {
-      b = broadcastMatMulTSingletonDimension(rewriter, loc, b, dim, size);
+      b = broadcastMatMulSingletonDimension(rewriter, loc, b, dim, size);
       continue;
     }
     a = broadcastDynamicDimension(rewriter, loc, indexPool, a, dim, size,
@@ -1541,14 +1540,15 @@ normalizeMatMulTBatchDimensions(PatternRewriter &rewriter, Location loc,
   return {a, b};
 }
 
-MatMulTOperands
-mlir::tosa::prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
-                                   Value a, Value b,
-                                   RankedTensorType outputType) {
+MatMulTOperands mlir::tosa::prepareMatMulOperands(PatternRewriter &rewriter,
+                                                  Location loc, Value a,
+                                                  Value b,
+                                                  RankedTensorType outputType,
+                                                  bool transposeB) {
   const int64_t outputRank = outputType.getRank();
   const int64_t batchRank = outputRank - 2;
   auto normalizedOperands =
-      normalizeMatMulTBatchDimensions(rewriter, loc, a, b, batchRank);
+      normalizeMatMulBatchDimensions(rewriter, loc, a, b, batchRank);
   a = normalizedOperands.first;
   b = normalizedOperands.second;
 
@@ -1557,7 +1557,8 @@ mlir::tosa::prepareMatMulTOperands(PatternRewriter &rewriter, Location loc,
   for (int64_t batchDim = 0; batchDim < batchRank; ++batchDim)
     outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, batchDim));
   outputShape.push_back(tensor::getMixedSize(rewriter, loc, a, outputRank - 2));
-  outputShape.push_back(tensor::getMixedSize(rewriter, loc, b, outputRank - 2));
+  outputShape.push_back(
+      tensor::getMixedSize(rewriter, loc, b, outputRank - 1 - transposeB));
   SmallVector<Value> dynamicDims;
   for (auto [dim, size] : llvm::enumerate(outputShape))
     if (outputType.isDynamicDim(dim))
@@ -1611,8 +1612,9 @@ public:
 
     const int64_t outputRank = outputType.getRank();
     const int64_t batchRank = outputRank - 2;
-    auto [a, b, zeroTensor] = prepareMatMulTOperands(
-        rewriter, loc, adaptor.getA(), adaptor.getB(), outputType);
+    auto [a, b, zeroTensor] =
+        prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
+                              outputType, /*transposeB=*/true);
     Type outputElementType = outputType.getElementType();
 
     int64_t loopRank = outputRank + 1;
