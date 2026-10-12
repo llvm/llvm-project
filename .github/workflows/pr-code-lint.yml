@@ -12,6 +12,7 @@ on:
       - 'clang-tools-extra/clang-tidy/**'
       - 'clang-tools-extra/docs/clang-tidy/**'
       - '.github/workflows/pr-code-lint.yml'
+      - '.ci/compute_projects**'
 
 jobs:
   code_linter:
