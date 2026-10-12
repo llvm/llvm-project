@@ -301,7 +301,7 @@ void LVIRReader::addConstantValue(LVElement *Element,
   if (Constant == std::nullopt)
     return;
   std::stringstream Stream;
-  uint64_t Value = DIExpr->getConstantValue();
+  uint64_t Value = DIExpr->getElement(1);
   if (DIExpression::SignedOrUnsignedConstant::SignedConstant == Constant) {
     if (int64_t SignedValue = static_cast<int64_t>(Value); SignedValue < 0) {
       Stream << "-";

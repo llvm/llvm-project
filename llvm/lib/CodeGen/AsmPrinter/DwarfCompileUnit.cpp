@@ -246,7 +246,7 @@ void DwarfCompileUnit::addLocationAttribute(
           *VariableDIE,
           DIExpression::SignedOrUnsignedConstant::UnsignedConstant ==
               *Expr->isConstant(),
-          Expr->getConstantValue());
+          Expr->getElement(1));
       break;
     }
 

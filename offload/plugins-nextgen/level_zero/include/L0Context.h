@@ -78,13 +78,16 @@ public:
             reinterpret_cast<void **>(&ExperimentalFallbackPtr));
 
     if (Result != ZE_RESULT_SUCCESS || ExperimentalFallbackPtr == nullptr) {
+#if FIXME
       ODBG(OLDT_ZeDispather) << "Failed to load experimental variant of "
                              << __PRETTY_FUNCTION__ << "using: " << FuncName;
+#endif
       return false;
     }
-
+#if FIXME
     ODBG(OLDT_ZeDispather) << "Loaded experimental variant of "
                            << __PRETTY_FUNCTION__ << " using: " << FuncName;
+#endif
     return true;
   }
 
