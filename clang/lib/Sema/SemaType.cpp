@@ -6122,6 +6122,7 @@ namespace {
     void VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typename_pack_indexing);
       TL.setEllipsisLoc(DS.getEllipsisLoc());
+      TL.getPatternLoc().initialize(Context, DS.getTypeSpecTypeLoc());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
