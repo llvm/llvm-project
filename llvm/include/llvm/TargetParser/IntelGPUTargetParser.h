@@ -40,8 +40,8 @@ enum GPUKind : uint8_t {
 /// \return the device name that \p GPUIPVersion identifies, as reported by the
 /// driver, e.g. "xe-pvc". If the table lists no such device, return an empty
 /// string. Only the major and minor versions are looked at, so every revision
-/// of a device resolves to the same name.
-/// If several rows match, the first one in IntelGPUTargetParser.def wins.
+/// of a device resolves to the same name. Only xe-pvc and xe-pvc-sdv share a
+/// version; xe-pvc is returned.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 
 /// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
@@ -54,14 +54,10 @@ LLVM_ABI StringRef getArchName(GPUKind Kind);
 /// \return the device \p Name denotes, or GK_NONE for a name this build does
 /// not know.
 ///
-/// Every spelling the user may write is accepted: a human-friendly name such as
-/// "xe-pvc", a compatibility name such as "xe-dg2", an alias such as "bmg_g21",
-/// and a numeric name such as "xe_12.60.7". Only the human-friendly name is
-/// reported back for a device, so a spelling that is not one canonicalizes to
-/// the one that is. The revision of a numeric name takes no part in the lookup,
-/// just as it takes none in getArchName, so "xe_12.60.0" and "xe_12.60.7" name
-/// the same device; the revision may also be omitted. A numeric name for a
-/// device that is not in the table yields GK_NONE like any other unknown name.
+/// \p Name may be a human-friendly name ("xe-pvc"), a compatibility name
+/// ("xe-dg2"), an alias ("bmg_g21") or a numeric name ("xe_12.60.7"). The
+/// revision of a numeric name is ignored and may be omitted, so "xe_12.60",
+/// "xe_12.60.0" and "xe_12.60.7" all denote the same device.
 LLVM_ABI GPUKind parseArch(StringRef Name);
 
 /// \return true if \p Name is a well-formed numeric name, "xe_" followed by a
