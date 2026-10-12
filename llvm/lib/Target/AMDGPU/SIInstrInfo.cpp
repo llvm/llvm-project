@@ -7137,7 +7137,9 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   }
 
   // Special case: V_FMAC_F32 and V_FMAC_F16 have src2 tied to vdst.
-  if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
+  if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64 ||
+       Opc == AMDGPU::V_FMAC_F16_fake16_e64 ||
+       Opc == AMDGPU::V_FMAC_F16_t16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
 

@@ -241,3 +241,15 @@ void copy_element(matrix2x3 &a, matrix2x3 &b) { b[1][0] = a[0][1]; }
 // LLVM-LABEL: define {{.*}} @_Z12copy_element
 // LLVM: extractelement <6 x float>
 // LLVM: insertelement <6 x float>
+
+typedef float matrix3x4 __attribute__((matrix_type(3, 4)));
+typedef float matrix2x4 __attribute__((matrix_type(2, 4)));
+
+void matrix_multiply(matrix2x3 &a, matrix3x4 &b, matrix2x4 &r) { r = a * b; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z15matrix_multiply
+// CIR: %[[RES:.*]] = cir.matrix.multiply %{{.*}}, %{{.*}} : (!cir.matrix<2 x 3 x !cir.float>, !cir.matrix<3 x 4 x !cir.float>) -> !cir.matrix<2 x 4 x !cir.float>
+
+// LLVM-LABEL: define {{.*}} @_Z15matrix_multiply
+// LLVM: call <8 x float> @llvm.matrix.multiply.v8f32.v6f32.v12f32(<6 x float> %{{.*}}, <12 x float> %{{.*}}, i32 2, i32 3, i32 4)
+
