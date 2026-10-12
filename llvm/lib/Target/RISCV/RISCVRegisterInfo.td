@@ -435,7 +435,9 @@ def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
 // Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
 // register's existence from changing codegen (due to the regPressureSetLimit
 // for the GPR register class being altered).
-def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
+def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)> {
+  let isAllocatable = 0;
+}
 
 let RegAltNameIndices = [ABIRegAltName] in {
   def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
