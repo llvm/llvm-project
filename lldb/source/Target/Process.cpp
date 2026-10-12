@@ -3736,10 +3736,21 @@ lldb::addr_t Process::FindInMemory(lldb::addr_t low, lldb::addr_t high,
 Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
   Status error;
 
+  // Let the private state thread finish handling pending events first, since
+  // it may resume the process.
+  if (PrivateStateThreadIsRunning() &&
+      !m_current_private_state_thread_sp->IsOnThread(
+          Host::GetCurrentThread())) {
+    PausePrivateStateThread();
+    ResumePrivateStateThread();
+  }
+
   // Check both the public & private states here.  If we're hung evaluating an
   // expression, for instance, then the public state will be stopped, but we
-  // still need to interrupt.
-  if (GetPublicState() == eStateRunning || GetPrivateState() == eStateRunning) {
+  // still need to interrupt. The public state can also be stale, so check the
+  // last broadcast state too.
+  if (GetPublicState() == eStateRunning || GetPrivateState() == eStateRunning ||
+      StateIsRunningState(m_last_broadcast_state)) {
     Log *log = GetLog(LLDBLog::Process);
     LLDB_LOGF(log, "Process::%s() About to stop.", __FUNCTION__);
 

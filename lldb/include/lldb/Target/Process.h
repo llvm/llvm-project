@@ -3602,9 +3602,8 @@ protected:
 
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
-  lldb::StateType m_last_broadcast_state; /// This helps with the Public event
-                                          /// coalescing in
-                                          /// ShouldBroadcastEvent.
+  /// This helps with the Public event coalescing in ShouldBroadcastEvent.
+  std::atomic<lldb::StateType> m_last_broadcast_state;
   std::map<lldb::addr_t, lldb::addr_t> m_resolved_indirect_addresses;
   bool m_destroy_in_process;
   bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel,
