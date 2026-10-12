@@ -1324,7 +1324,7 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   }
 }
 
-static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod,
+static bool allOpsDefaultValue(const int64_t *Ops, int NumOps, int Mod,
                                bool IsPacked, bool HasDstSel) {
   int DefaultValue = IsPacked && (Mod == SISrcMods::OP_SEL_1);
 
@@ -1345,7 +1345,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
                                             raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
   int NumOps = 0;
-  int Ops[3];
+  int64_t Ops[3];
 
   std::pair<AMDGPU::OpName, AMDGPU::OpName> MOps[] = {
       {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src0},
@@ -1358,9 +1358,8 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
       break;
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
-    Ops[NumOps++] = (ModIdx != -1)
-                        ? static_cast<int>(MI->getOperand(ModIdx).getImm())
-                        : DefaultValue;
+    Ops[NumOps++] =
+        (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
   // Some instructions, e.g. v_interp_p2_f16 in GFX9, have src0, src2, but no
@@ -1371,7 +1370,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
     int Mod2Idx =
         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
     assert(Mod2Idx != -1);
-    Ops[NumOps++] = static_cast<int>(MI->getOperand(Mod2Idx).getImm());
+    Ops[NumOps++] = MI->getOperand(Mod2Idx).getImm();
   }
 
   const bool HasDst =
@@ -1388,7 +1387,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
           AMDGPU::OpName::src2_modifiers}) {
       int Idx = AMDGPU::getNamedOperandIdx(Opc, OpName);
       if (Idx != -1)
-        Ops[NumOps++] = static_cast<int>(MI->getOperand(Idx).getImm());
+        Ops[NumOps++] = MI->getOperand(Idx).getImm();
       else
         Ops[NumOps++] = DefaultValue;
     }
@@ -1850,23 +1849,21 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   using namespace llvm::AMDGPU::DepCtr;
 
-  uint64_t Imm16 = MI->getOperand(OpNo).getImm() & 0xffff;
+  unsigned Imm16 = MI->getOperand(OpNo).getImm() & 0xffff;
 
   bool HasNonDefaultVal = false;
-  if (isSymbolicDepCtrEncoding(static_cast<unsigned>(Imm16), HasNonDefaultVal,
-                               STI)) {
+  if (isSymbolicDepCtrEncoding(Imm16, HasNonDefaultVal, STI)) {
     int Id = 0;
     StringRef Name;
     unsigned Val;
     bool IsDefault;
     ListSeparator Sep(" ");
-    while (decodeDepCtr(static_cast<unsigned>(Imm16), Id, Name, Val, IsDefault,
-                        STI)) {
+    while (decodeDepCtr(Imm16, Id, Name, Val, IsDefault, STI)) {
       if (!IsDefault || !HasNonDefaultVal)
         O << Sep << Name << '(' << Val << ')';
     }
   } else {
-    O << formatHex(Imm16);
+    O << formatHex(static_cast<uint64_t>(Imm16));
   }
 }
 
@@ -1884,7 +1881,7 @@ void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
   static const std::array<const char *, 6> InstSkips = {
       "SAME", "NEXT", "SKIP_1", "SKIP_2", "SKIP_3", "SKIP_4"};
 
-  unsigned SImm16 = static_cast<unsigned>(MI->getOperand(OpNo).getImm());
+  int64_t SImm16 = MI->getOperand(OpNo).getImm();
   const char *Prefix = "";
 
   unsigned Value = SImm16 & 0xF;
