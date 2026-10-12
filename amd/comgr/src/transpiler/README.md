@@ -53,9 +53,11 @@ kernel entry before enabling the whole wave and use that record to mask source
 vector memory instructions that obey EXEC.
 
 Source kernels may temporarily enable initially inactive lanes for wave-wide
-calculations, such as scans with zero-filled unused lanes. This lowering
-currently does not support such EXEC expansion. Every EXEC write must be
-proven to enable only lanes that were active at kernel entry.
+calculations, such as scans with zero-filled unused lanes. WaveNative and
+replicated dispatches that permit partial source waves must prove that every
+EXEC write enables only lanes active at kernel entry. Replicated dispatches
+restricted to complete source waves need no such check: all source lanes are
+active at entry.
 
 A source vector comparison can test whether each workitem's index is less than
 a bound. All 64 target lanes participate in the ballot. Each lane contributes
@@ -66,6 +68,15 @@ source wave without disabling either half of the target wave.
 
 Reading source lane 7 selects target lane 7 in the lower half and target lane
 39 in the upper half.
+
+After register promotion, the EXEC check follows saved masks and loop values.
+It accepts a ballot only when its predicate excludes lanes inactive at entry
+and its slice corresponds to the same source wave as entry EXEC. Casting a
+per-lane boolean to an integer does not map its value to that lane's bit.
+
+Loops can accumulate comparison ballots from zero and later restore those
+lanes. Every reachable input to a mask PHI, including loop entry and backedges,
+must stay within entry EXEC.
 
 WaveNative requires both source waves to agree on scalar branches and
 scalar-load addresses. With `LaunchPolicy::AllowReplication`, exact workgroup
@@ -79,7 +90,7 @@ writes must agree. Interrupt messages and halt instructions are unsupported.
 With nonzero source EXEC, WMMA uses inputs from all 32 source lanes, including
 lanes whose EXEC bits are clear. The lowering requires EXEC at WMMA to match
 its value at kernel entry. An all-ones restoration satisfies this requirement
-only when the launch contract guarantees complete source waves.
+only for launches with complete source waves.
 
 ## Replicated dispatch
 

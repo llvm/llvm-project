@@ -400,7 +400,8 @@ struct ExecContainmentRequirements {
   WeakTrackingVH InitialExec;
   SmallVector<std::pair<WeakTrackingVH, const DecodedInst *>> ExecWrites;
 
-  Error validate(Function &F, const MCState &MC, Value *ReplicatedLaneId) const;
+  Error validate(Function &F, const MCState &MC,
+                 const WaveProjection &Projection, Value *LaneId) const;
 };
 } // namespace
 
@@ -408,7 +409,7 @@ struct ExecContainmentRequirements {
 // of the corresponding lane's entry bit. Integer casts cannot mix these bounds.
 static bool isKnownSubsetOfEntryExec(
     const Instruction &I, const SmallPtrSetImpl<const Value *> &EntrySubsets,
-    const DominatorTree &DT, Value *ReplicatedLaneId, unsigned SourceWaveSize) {
+    const DominatorTree &DT, const WaveProjection &Projection, Value *LaneId) {
   auto IsEntrySubset = [&](const Value *V) {
     // Only zero is a subset of every possible entry mask, including partial
     // waves. Nonzero constants need an intersection with a proven subset.
@@ -420,12 +421,12 @@ static bool isKnownSubsetOfEntryExec(
   switch (I.getOpcode()) {
   case Instruction::ICmp: {
     Value *Mask = nullptr;
-    if (ReplicatedLaneId &&
-        match(&I, m_SpecificICmp(
+    if (match(&I, m_SpecificICmp(
                       ICmpInst::ICMP_NE,
                       m_And(m_LShr(m_Value(Mask),
-                                   m_And(m_Specific(ReplicatedLaneId),
-                                         m_SpecificInt(SourceWaveSize - 1))),
+                                   m_And(m_Specific(LaneId),
+                                         m_SpecificInt(
+                                             Projection.sourceWaveSize() - 1))),
                             m_One()),
                       m_Zero())))
       return IsEntrySubset(Mask);
@@ -449,13 +450,8 @@ static bool isKnownSubsetOfEntryExec(
     });
   }
   case Instruction::Trunc:
-    // The low ballot half describes source lanes 0-31. A predicate bounded
-    // by the corresponding entry bits cannot set other bits in that half.
-    if (ReplicatedLaneId && I.getType()->isIntegerTy(SourceWaveSize)) {
-      const IntrinsicInst *Call = dyn_cast<IntrinsicInst>(I.getOperand(0));
-      if (Call && Call->getIntrinsicID() == Intrinsic::amdgcn_ballot)
-        return IsEntrySubset(Call->getArgOperand(0));
-    }
+    if (const Value *Predicate = Projection.matchBallotPredicate(&I))
+      return IsEntrySubset(Predicate);
     if (I.getType()->isIntegerTy(1))
       return false;
     [[fallthrough]];
@@ -468,7 +464,8 @@ static bool isKnownSubsetOfEntryExec(
 }
 
 Error ExecContainmentRequirements::validate(Function &F, const MCState &MC,
-                                            Value *ReplicatedLaneId) const {
+                                            const WaveProjection &Projection,
+                                            Value *LaneId) const {
   auto Refuse = [&](const DecodedInst &Di, const Twine &Detail) {
     return RaiseFailure::atInstruction(
         RaiseFailureReason::UnprovenExecContainment,
@@ -492,8 +489,7 @@ Error ExecContainmentRequirements::validate(Function &F, const MCState &MC,
     Changed = false;
     for (const Instruction &I : instructions(F))
       if (&I != EntryExec && EntrySubsets.contains(&I) &&
-          !isKnownSubsetOfEntryExec(I, EntrySubsets, DT, ReplicatedLaneId,
-                                    getWaveSize(*MC.SubtargetInfo)))
+          !isKnownSubsetOfEntryExec(I, EntrySubsets, DT, Projection, LaneId))
         Changed |= EntrySubsets.erase(&I);
   } while (Changed);
   for (const auto &[Mask, Di] : ExecWrites) {
@@ -756,9 +752,9 @@ static Error raiseDecodedKernel(const RaiseEnvironment &Env, Module &M,
       return Err;
   }
   if (CheckContainment) {
-    Value *ReplicatedLaneId =
-        UseReplicated ? Projection->emitLaneIdx(B) : nullptr;
-    if (Error Err = Requirements.validate(*F, Env.Source.MC, ReplicatedLaneId))
+    Value *LaneId = Projection->emitLaneIdx(B);
+    if (Error Err =
+            Requirements.validate(*F, Env.Source.MC, *Projection, LaneId))
       return Err;
   }
   if (Error Err = Ctx->registers().validateEntrySgprs())

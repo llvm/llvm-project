@@ -22,6 +22,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -347,6 +348,20 @@ Value *ReplicationProjection::emitLaneActiveBit(IRBuilder<> &B,
   return B.CreateICmpNE(Bit, ConstantInt::get(ExecTy, 0), "spe_lane_active");
 }
 
+const Value *
+ReplicationProjection::matchBallotPredicate(const Value *Mask) const {
+  using namespace PatternMatch;
+  const Value *Ballot = nullptr;
+  const Value *Predicate = nullptr;
+  if (sourceWaveSize() == 32 && targetWaveSize() == 64 &&
+      Mask->getType() == sourceWaveMaskTy() &&
+      match(Mask, m_Trunc(m_Value(Ballot))) &&
+      Ballot->getType() == waveMaskTy() &&
+      match(Ballot, m_Intrinsic<Intrinsic::amdgcn_ballot>(m_Value(Predicate))))
+    return Predicate;
+  return nullptr;
+}
+
 Value *ReplicationProjection::ballotI1ToWidth(IRBuilder<> &B, Value *Pred,
                                               Type *ResultTy,
                                               const Twine &Name) const {
@@ -580,6 +595,22 @@ Value *WaveNativeProjection::emitLaneActiveBit(IRBuilder<> &B,
   assert(EntryActive && "initial EXEC must be emitted first");
   Value *Active = extractLaneBitFromWaveMask(B, ExecVal);
   return B.CreateSelect(EntryActive, Active, B.getFalse(), "dispatched_active");
+}
+
+const Value *
+WaveNativeProjection::matchBallotPredicate(const Value *Mask) const {
+  using namespace PatternMatch;
+  const Value *Ballot = nullptr;
+  const Value *Predicate = nullptr;
+  if (CachedLaneIdx && Mask->getType() == sourceWaveMaskTy() &&
+      match(Mask, m_Trunc(m_LShr(m_Value(Ballot),
+                                 m_ZExt(m_And(m_Specific(CachedLaneIdx),
+                                              m_SpecificInt(~(sourceWaveSize() -
+                                                              1u))))))) &&
+      Ballot->getType() == waveMaskTy() &&
+      match(Ballot, m_Intrinsic<Intrinsic::amdgcn_ballot>(m_Value(Predicate))))
+    return Predicate;
+  return nullptr;
 }
 
 Value *WaveNativeProjection::ballotI1ToWidth(IRBuilder<> &B, Value *Pred,

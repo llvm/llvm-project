@@ -320,3 +320,65 @@ TEST_F(WaveProjectionContract, WrapAsWWMValueHandlesVectorFloatOverload) {
   ASSERT_EQ(Cb->arg_size(), 1u);
   EXPECT_EQ(Cb->getArgOperand(0)->getType(), V4f32Ty);
 }
+
+TEST_F(WaveProjectionContract, SourceWaveBallotRecognition) {
+  LLVMContext Context;
+  Module M("ballot", Context);
+  IRBuilder<> B(Context);
+  Function *F = Function::Create(
+      FunctionType::get(B.getVoidTy(),
+                        {B.getInt1Ty(), B.getInt64Ty(), B.getInt32Ty()}, false),
+      Function::ExternalLinkage, "test", M);
+  B.SetInsertPoint(BasicBlock::Create(Context, "entry", F));
+  WaveNativeProjection Native(srcSTI(), tgtSTI(), B.getInt32Ty(),
+                              B.getInt64Ty());
+  ReplicationProjection Replicated(srcSTI(), tgtSTI(), B.getInt32Ty(),
+                                   B.getInt64Ty());
+  Value *Predicate = F->getArg(0);
+  Value *Mask = Native.ballotI1ToWidth(B, Predicate, B.getInt32Ty());
+  EXPECT_EQ(Native.matchBallotPredicate(Mask), Predicate);
+  EXPECT_EQ(Replicated.matchBallotPredicate(Mask), nullptr);
+  Value *Low = Replicated.ballotI1ToWidth(B, Predicate, B.getInt32Ty());
+  EXPECT_EQ(Replicated.matchBallotPredicate(Low), Predicate);
+  EXPECT_EQ(Native.matchBallotPredicate(Low), nullptr);
+
+  Value *Lane = Native.emitLaneIdx(B);
+  Value *Ballot = B.CreateIntrinsic(Intrinsic::amdgcn_ballot, {B.getInt64Ty()},
+                                    {Predicate});
+  auto Slice = [&](Value *Bits, Value *Offset, Type *ResultTy) {
+    return B.CreateTrunc(B.CreateLShr(Bits, Offset), ResultTy);
+  };
+  Value *Base = B.CreateAnd(Lane, B.getInt32(-32));
+  Value *Offset = B.CreateZExt(Base, B.getInt64Ty());
+  EXPECT_EQ(Native.matchBallotPredicate(Slice(Ballot, Offset, B.getInt32Ty())),
+            Predicate);
+  // A fixed half cannot represent both source waves.
+  for (unsigned Shift : {0u, 32u, 64u})
+    EXPECT_EQ(Native.matchBallotPredicate(
+                  Slice(Ballot, B.getInt64(Shift), B.getInt32Ty())),
+              nullptr);
+  for (Value *WrongBase : {B.CreateAnd(Lane, B.getInt32(31)),
+                           B.CreateAnd(F->getArg(2), B.getInt32(-32))})
+    EXPECT_EQ(
+        Native.matchBallotPredicate(Slice(
+            Ballot, B.CreateZExt(WrongBase, B.getInt64Ty()), B.getInt32Ty())),
+        nullptr);
+  EXPECT_EQ(Native.matchBallotPredicate(Slice(
+                Ballot, B.CreateSExt(Base, B.getInt64Ty()), B.getInt32Ty())),
+            nullptr);
+  EXPECT_EQ(Native.matchBallotPredicate(Slice(Ballot, Offset, B.getInt16Ty())),
+            nullptr);
+  EXPECT_EQ(
+      Native.matchBallotPredicate(Slice(F->getArg(1), Offset, B.getInt32Ty())),
+      nullptr);
+  Value *NarrowBallot = B.CreateIntrinsic(Intrinsic::amdgcn_ballot,
+                                          {B.getInt32Ty()}, {Predicate});
+  EXPECT_EQ(
+      Native.matchBallotPredicate(Slice(
+          B.CreateZExt(NarrowBallot, B.getInt64Ty()), Offset, B.getInt32Ty())),
+      nullptr);
+  EXPECT_EQ(Replicated.matchBallotPredicate(
+                B.CreateTrunc(NarrowBallot, B.getInt16Ty())),
+            nullptr);
+  B.CreateRetVoid();
+}
