@@ -2124,6 +2124,68 @@ define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) denormal_fpenv(dy
   ret i1 %is.denorm.or.zero
 }
 
+; nsz does not make a -0.0 result of sqrt poison, nor guarantee it does not
+; occur, so these comparisons with zero cannot be folded.
+; Miscompile from https://github.com/llvm/llvm-project/pull/230741
+
+define i1 @sqrt_nsz_maybe_negzero_une_zero(float nofpclass(nan inf pzero sub norm) %only.negzero) {
+; CHECK-LABEL: @sqrt_nsz_maybe_negzero_une_zero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_NEGZERO:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %only.negzero)
+  %cmp = fcmp une float %sqrt, 0.0
+  ret i1 %cmp
+}
+
+define i1 @sqrt_nsz_maybe_negzero_oeq_zero(float nofpclass(nan inf pzero sub norm) %only.negzero) {
+; CHECK-LABEL: @sqrt_nsz_maybe_negzero_oeq_zero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_NEGZERO:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %only.negzero)
+  %cmp = fcmp oeq float %sqrt, 0.0
+  ret i1 %cmp
+}
+
+; The negative subnormal input flushes to -0.0, so the result is -0.0.
+define i1 @sqrt_nsz_negsubnormal_une_zero__mode_daz(float nofpclass(nan inf zero psub norm) %only.negsub) #0 {
+; CHECK-LABEL: @sqrt_nsz_negsubnormal_une_zero__mode_daz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_NEGSUB:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %only.negsub)
+  %cmp = fcmp une float %sqrt, 0.0
+  ret i1 %cmp
+}
+
+; A source that can also be a normal keeps the result from being a single class,
+; so an nsz that wrongly ruled out -0.0 would still fold this to true.
+define i1 @sqrt_nsz_maybe_negzero_or_normal_une_zero(float nofpclass(nan inf pzero sub) %negzero.or.norm) {
+; CHECK-LABEL: @sqrt_nsz_maybe_negzero_or_normal_une_zero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[NEGZERO_OR_NORM:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %negzero.or.norm)
+  %cmp = fcmp une float %sqrt, 0.0
+  ret i1 %cmp
+}
+
+; A positive normal source cannot produce a zero result, so this one does fold.
+define i1 @sqrt_nsz_posnormal_une_zero(float nofpclass(nan inf zero sub nnorm) %only.posnormal) {
+; CHECK-LABEL: @sqrt_nsz_posnormal_une_zero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_POSNORMAL:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sqrt = call nsz float @llvm.sqrt.f32(float %only.posnormal)
+  %cmp = fcmp une float %sqrt, 0.0
+  ret i1 %cmp
+}
 
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)

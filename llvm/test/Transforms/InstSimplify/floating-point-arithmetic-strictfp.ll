@@ -249,8 +249,30 @@ define float @fabs_sqrt_nsz(float %a) #0 {
   ret float %fabs
 }
 
+; TODO: The fabs could be eliminated because the sqrt is nsz and nnan, but the
+; nsz of the source is no longer folded into its known fpclass.
 define float @fabs_sqrt_nnan_nsz(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %fabs = call float @llvm.fabs.f32(float %sqrt) #0
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan_nsz__no_pzero(float nofpclass(pzero) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_pzero(
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %fabs = call float @llvm.fabs.f32(float %sqrt) #0
+  ret float %fabs
+}
+
+define float @fabs_sqrt_nnan_nsz__no_nzero(float nofpclass(nzero) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_nzero(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
