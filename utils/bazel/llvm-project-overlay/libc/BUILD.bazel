@@ -4208,6 +4208,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_exit",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/exit.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_exit_group",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/exit_group.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_exit_hdrs",
     hdrs = ["src/__support/OSUtil/exit.h"],
     deps = [
@@ -4228,7 +4256,7 @@ libc_support_library(
         ":__support_common",
         ":__support_macros_config",
         ":__support_osutil_exit_hdrs",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_exit_group",
     ],
 )
 
@@ -4608,6 +4636,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_clone",
         ":__support_osutil_linux_syscall_wrappers_close",
+        ":__support_osutil_linux_syscall_wrappers_exit",
         ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_mprotect",
@@ -4659,6 +4688,7 @@ libc_support_library(
     }),
     deps = [
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_exit",
         ":__support_osutil_linux_syscall_wrappers_getrandom",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_munmap",
