@@ -4452,6 +4452,14 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_VALID(dwarf::DW_OP_lit0);
+  EXPECT_VALID(dwarf::DW_OP_lit31);
+  EXPECT_VALID(dwarf::DW_OP_lit7, dwarf::DW_OP_plus);
+  EXPECT_VALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+               dwarf::DW_OP_xderef_size, 4);
+  EXPECT_VALID(dwarf::DW_OP_deref_size, 255);
+  EXPECT_VALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+               dwarf::DW_OP_xderef_size, 255);
 
   // Invalid constructions.
   EXPECT_INVALID(~0u);
@@ -4467,6 +4475,11 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5,
                  dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_INVALID(dwarf::DW_OP_xderef_size);
+  // The size operand is encoded in a single byte.
+  EXPECT_INVALID(dwarf::DW_OP_deref_size, 256);
+  EXPECT_INVALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
+                 dwarf::DW_OP_xderef_size, 256);
 
   // A valid operation doesn't make a malformed suffix valid.
   EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_stack_value,
@@ -4553,6 +4566,113 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT
+}
+
+TEST_F(DIExpressionTest, isConstant) {
+#define EXPECT_CONSTANT(Kind, Value, ...)                                      \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    DIExpression *Expr = DIExpression::get(Context, Elements);                 \
+    EXPECT_EQ(Expr->isConstant(), DIExpression::Kind);                         \
+    EXPECT_EQ(Expr->getConstantValue(), Value);                                \
+  } while (false)
+#define EXPECT_NOT_CONSTANT(...)                                               \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    EXPECT_FALSE(DIExpression::get(Context, Elements)->isConstant());          \
+  } while (false)
+
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_constu, 5,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(SignedConstant, uint64_t(-3), dwarf::DW_OP_consts,
+                  uint64_t(-3), dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(SignedConstant, 7u, dwarf::DW_OP_consts, 7);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_constu, 5,
+                  dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 0, 32);
+
+  // DW_OP_lit<n> is shorthand for DW_OP_constu n.
+  EXPECT_CONSTANT(UnsignedConstant, 0u, dwarf::DW_OP_lit0,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(UnsignedConstant, 31u, dwarf::DW_OP_lit31,
+                  dwarf::DW_OP_stack_value);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_lit5);
+  EXPECT_CONSTANT(UnsignedConstant, 5u, dwarf::DW_OP_lit5,
+                  dwarf::DW_OP_stack_value, dwarf::DW_OP_LLVM_fragment, 0, 32);
+
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_deref);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_constu, 5, dwarf::DW_OP_plus);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_lit5, dwarf::DW_OP_plus);
+  EXPECT_NOT_CONSTANT(dwarf::DW_OP_lit5, dwarf::DW_OP_lit6,
+                      dwarf::DW_OP_stack_value);
+  EXPECT_FALSE(DIExpression::get(Context, {})->isConstant());
+
+#undef EXPECT_CONSTANT
+#undef EXPECT_NOT_CONSTANT
+}
+
+TEST_F(DIExpressionTest, isLitOp) {
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit0));
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit5));
+  EXPECT_TRUE(DIExpression::isLitOp(dwarf::DW_OP_lit31));
+  // The neighbouring opcodes on either side of the range.
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_lit0 - 1));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_lit31 + 1));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_reg0));
+  EXPECT_FALSE(DIExpression::isLitOp(dwarf::DW_OP_constu));
+}
+
+TEST_F(DIExpressionTest, extractAddressClass) {
+  unsigned AddrClass;
+  auto Extract = [&](ArrayRef<uint64_t> Elements) {
+    AddrClass = ~0u;
+    const DIExpression *Expr = DIExpression::get(Context, Elements);
+    const DIExpression *Result =
+        DIExpression::extractAddressClass(Expr, AddrClass);
+    return std::make_pair(Expr, Result);
+  };
+
+  // The whole expression is the address space sequence.
+  for (const SmallVector<uint64_t, 6> &Elements :
+       {SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_lit8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef_size, 4},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_lit8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef_size, 4}}) {
+    auto [Expr, Result] = Extract(Elements);
+    EXPECT_EQ(Result, nullptr);
+    EXPECT_EQ(AddrClass, 8u);
+  }
+
+  // A preceding address computation is kept; the sequence is a suffix.
+  {
+    auto [Expr, Result] =
+        Extract({dwarf::DW_OP_plus_uconst, 4, dwarf::DW_OP_lit3,
+                 dwarf::DW_OP_swap, dwarf::DW_OP_xderef});
+    EXPECT_EQ(AddrClass, 3u);
+    ASSERT_NE(Result, nullptr);
+    EXPECT_EQ(Result->getElements(),
+              ArrayRef<uint64_t>({dwarf::DW_OP_plus_uconst, 4}));
+  }
+
+  // Not an address space sequence: the expression is returned unchanged.
+  for (const SmallVector<uint64_t, 6> &Elements :
+       {SmallVector<uint64_t, 6>{},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_deref},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef, dwarf::DW_OP_plus_uconst,
+                                 4},
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_consts, 8, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef},
+        // The operand of DW_OP_constu must not be mistaken for an opcode.
+        SmallVector<uint64_t, 6>{dwarf::DW_OP_constu, dwarf::DW_OP_swap,
+                                 dwarf::DW_OP_xderef}}) {
+    auto [Expr, Result] = Extract(Elements);
+    EXPECT_EQ(Result, Expr);
+    EXPECT_EQ(AddrClass, ~0u);
+  }
 }
 
 TEST_F(DIExpressionTest, extractLeadingOffset) {

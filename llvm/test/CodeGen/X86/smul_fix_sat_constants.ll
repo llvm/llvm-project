@@ -29,10 +29,11 @@ define i64 @func() nounwind {
 define i64 @func2() nounwind {
 ; X64-LABEL: func2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $3, %eax
-; X64-NEXT:    imulq $2, %rax, %rcx
-; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    cmovaeq %rcx, %rax
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testb %al, %al
+; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    movl $6, %eax
+; X64-NEXT:    cmovneq %rcx, %rax
 ; X64-NEXT:    retq
   %tmp = call i64 @llvm.smul.fix.sat.i64(i64 3, i64 2, i32 0)
   ret i64 %tmp

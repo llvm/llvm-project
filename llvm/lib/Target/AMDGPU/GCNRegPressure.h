@@ -310,13 +310,13 @@ public:
   using LiveRegSet = DenseMap<unsigned, LaneBitmask>;
 
 protected:
-  const LiveIntervals &LIS;
+  LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
   /// instruction.
@@ -340,6 +340,10 @@ public:
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+
+  void resetMaxPressure() { MaxPressure = CurPressure; }
+
   GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(LiveRegs) moveLiveRegs() {
@@ -357,7 +361,7 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
@@ -373,10 +377,6 @@ public:
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.
   bool isValid() const;
-
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
-
-  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
     GCNRegPressure RP = MaxPressure;
@@ -400,7 +400,7 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   void retireVirtReg(Register Reg, SlotIndex SI);
 
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 

@@ -339,7 +339,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, floa
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f32_e64 v0, 0xc0c00000, s2
+; GFX10-NEXT:    v_mul_f32_e64 v0, s2, 0xc0c00000
 ; GFX10-NEXT:    v_mul_f32_e32 v0, s2, v0
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -351,7 +351,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f32(ptr addrspace(1) %out, float %x, floa
 ; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mul_f32_e64 v0, 0xc0c00000, s2
+; GFX11-NEXT:    v_mul_f32_e64 v0, s2, 0xc0c00000
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mul_f32 v0, s2, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1] dlc
@@ -1097,7 +1097,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mul_f16_e64 v0, 0xc600, s2
+; GFX10-NEXT:    v_mul_f16_e64 v0, s2, 0xc600
 ; GFX10-NEXT:    v_mul_f16_e32 v0, s2, v0
 ; GFX10-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -1110,7 +1110,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.l, 0xc600, s2
+; GFX11-TRUE16-NEXT:    v_mul_f16_e64 v0.l, s2, 0xc600
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, s2, v0.l
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
@@ -1124,7 +1124,7 @@ define amdgpu_kernel void @fmul_x2_xn3_f16(ptr addrspace(1) %out, i16 zeroext %x
 ; GFX11-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mul_f16_e64 v0, 0xc600, s2
+; GFX11-FAKE16-NEXT:    v_mul_f16_e64 v0, s2, 0xc600
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v0, s2, v0
 ; GFX11-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1] dlc
