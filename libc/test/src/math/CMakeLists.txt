@@ -1381,6 +1381,8 @@ add_fp_unittest(
     libc.src.math.exp2
     libc.src.__support.math.exp2_double_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(

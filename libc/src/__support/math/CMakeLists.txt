@@ -4204,7 +4204,6 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.common
     libc.src.__support.frac128
-    libc.src.__support.frac64
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
