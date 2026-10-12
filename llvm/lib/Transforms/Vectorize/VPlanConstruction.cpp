@@ -292,6 +292,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
 
+      assert(!isa<InsertValueInst>(Inst) &&
+             "legality must reject aggregate-producing insertvalue");
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
       SmallVector<VPValue *, 4> VPOperands;
