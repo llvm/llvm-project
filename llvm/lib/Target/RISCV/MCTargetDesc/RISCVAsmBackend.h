@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -23,6 +24,7 @@ class raw_ostream;
 
 class RISCVAsmBackend : public MCAsmBackend {
 protected:
+  const RISCVMCOptions &CLOpts;
   const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;

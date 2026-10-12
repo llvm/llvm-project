@@ -1064,6 +1064,19 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
              getFullRateInstrCost();
   }
 
+  // Each f32 lane is rounded and the halves are packed in pairs. A packed
+  // conversion rounds a pair at once and true16 writes either half.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      SrcVTy && Opcode == Instruction::FPTrunc && ST->has16BitInsts() &&
+      SrcVTy->getElementType()->isFloatTy() &&
+      Dst->getScalarType()->isHalfTy()) {
+    const unsigned NElts = SrcVTy->getNumElements();
+    const unsigned Ops = ST->hasCvtPkF16F32Inst()   ? divideCeil(NElts, 2)
+                         : ST->useRealTrue16Insts() ? NElts
+                                                    : NElts + NElts / 2;
+    return InstructionCost(Ops) * getFullRateInstrCost();
+  }
+
   const int ISD = TLI->InstructionOpcodeToISD(Opcode);
   switch (ISD) {
   case ISD::SINT_TO_FP:
@@ -1098,22 +1111,39 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   if (IsIntToFP) {
-    const unsigned ExtOps = UsesInt64 && SrcBits < 64 ? (IsSigned ? 2 : 1) : 0;
+    // A scalar load of a whole number of bytes that is not a power of two is
+    // split and its high part load extends the source. A constant address
+    // space or invariant global load aligned to 4 bytes may be widened instead
+    // and then still needs the extension. So does a buffer fat pointer load.
+    const auto *Load =
+        I && Src->isIntegerTy() && I->getOperand(0)->getType() == Src
+            ? dyn_cast<LoadInst>(I->getOperand(0))
+            : nullptr;
+    const unsigned AS = Load ? Load->getPointerAddressSpace() : 0;
+    const bool LoadMayWiden =
+        Load && Load->getAlign() >= Align(4) &&
+        (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+         (AS == AMDGPUAS::GLOBAL_ADDRESS &&
+          Load->hasMetadata(LLVMContext::MD_invariant_load)));
+    const bool LoadExtends = Load && Load->isSimple() && Load->hasOneUse() &&
+                             !LoadMayWiden &&
+                             AS != AMDGPUAS::BUFFER_FAT_POINTER &&
+                             AS != AMDGPUAS::BUFFER_STRIDED_POINTER &&
+                             SrcBits % 8 == 0 && !isPowerOf2_32(SrcBits);
+    const unsigned ExtOps =
+        UsesInt64 && SrcBits < 64 && !LoadExtends ? (IsSigned ? 2 : 1) : 0;
     if (FPTy->isBFloatTy()) {
-      const bool NarrowLanes =
-          SrcBits >= 8 && SrcBits < 32 && isa<FixedVectorType>(Src);
-      if (!NarrowLanes && SrcBits != 8 && SrcBits != 16 && SrcBits != 32 &&
-          !UsesInt64)
+      if (SrcBits < 8 || (SrcBits > 32 && !UsesInt64))
         return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
       // Each integer is converted to f32 first.
       InstructionCost FloatCost =
           Scale(UsesInt64 ? ExtOps + (IsSigned ? 12 : 8) : 1);
-      if (NarrowLanes) {
-        auto *FloatTy =
-            FixedVectorType::get(Type::getFloatTy(Dst->getContext()), NElts);
-        FloatCost = getCastInstrCost(Opcode, FloatTy, Src, CCH, CostKind);
-      }
+      if (SrcBits < 32)
+        FloatCost = getCastInstrCost(
+            Opcode, Dst->getWithNewType(Type::getFloatTy(Dst->getContext())),
+            Src, CCH, CostKind, I);
 
       // Native rounding can convert a pair. With 16 bit instructions the
       // expansion extracts the low significand bit, adds the rounding bias,
@@ -1185,6 +1215,35 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       if (SrcBits < 16 && ST->has16BitInsts())
         ++PerElt;
       return Scale(PerElt);
+    }
+
+    // A narrow scalar source is extended before the conversion. An unsigned
+    // byte is converted straight out of its register, and a signed one with
+    // SDWA. A source wider than a byte but narrower than 16 bits is masked
+    // or sign extended first. Without 16 bit instructions a half result is
+    // rounded from f32.
+    if (SrcBits >= 8 && SrcBits < 32) {
+      if (LoadExtends) {
+        if (FPTy->isDoubleTy())
+          return Scale(0, 1);
+        return Scale(FPTy->isHalfTy() ? 2 : 1);
+      }
+      const bool Narrow = SrcBits > 8 && SrcBits < 16;
+      const bool SignExtend16 = IsSigned && Narrow && ST->has16BitInsts();
+      if (FPTy->isDoubleTy())
+        return Scale(1 + 2 * SignExtend16, 1);
+      if (SrcBits > 16)
+        return Scale(FPTy->isHalfTy() ? 3 : 2);
+      if (FPTy->isHalfTy() && ST->has16BitInsts())
+        return Scale(Narrow                           ? (IsSigned ? 3 : 2)
+                     : SrcBits == 8 && !ST->hasSDWA() ? 2
+                                                      : 1);
+      const InstructionCost FloatCost =
+          SignExtend16                ? Scale(ST->hasSDWA() ? 3 : 4)
+          : Narrow                    ? Scale(2)
+          : SrcBits == 8 && !IsSigned ? Scale(1)
+                                      : Scale(ST->hasSDWA() ? 1 : 2);
+      return FPTy->isHalfTy() ? FloatCost + Scale(1) : FloatCost;
     }
 
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
@@ -1394,7 +1453,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     case Intrinsic::amdgcn_workitem_id_z: {
       const Function *F = Intrinsic->getFunction();
       bool HasUniformYZ =
-          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequitezUniformYZ=*/true);
+          ST->hasWavefrontsEvenlySplittingXDim(*F, /*RequiresUniformYZ=*/true);
       std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
           *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
       return !HasUniformYZ && (!ThisDimSize || *ThisDimSize != 1);
@@ -1457,16 +1516,19 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   }
   using namespace llvm::PatternMatch;
   uint64_t C;
-  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C))) ||
-      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                      m_ConstantInt(C)))) {
+  auto MatchTidXCall = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  auto MaybeMaskedTidX =
+      m_CombineOr(m_c_And(MatchTidXCall, m_Constant()), MatchTidXCall);
+  auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);
+  auto MaybeMaskedCastTidX =
+      m_CombineOr(m_c_And(MaybeCastTidX, m_Constant()), MaybeCastTidX);
+  if (match(V, m_LShr(MaybeMaskedCastTidX, m_ConstantInt(C))))
     return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
-  }
 
-  Value *Mask;
-  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
-                       m_Value(Mask)))) {
+  Constant *Mask;
+  if (match(V, m_c_And(
+                   m_CastOrSelf(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>()),
+                   m_Constant(Mask)))) {
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            XDimDoesntResetWithinWaves;

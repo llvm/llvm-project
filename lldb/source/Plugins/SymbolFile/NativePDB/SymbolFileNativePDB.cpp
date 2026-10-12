@@ -9,6 +9,7 @@
 #include "SymbolFileNativePDB.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
@@ -1049,13 +1050,14 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   if (sym.kind() == S_CONSTANT)
     return CreateConstantSymbol(var_id, sym);
 
+  ModuleSP module_sp = GetObjectFile()->GetModule();
   lldb::ValueType scope = eValueTypeInvalid;
   TypeIndex ti;
   llvm::StringRef name;
   lldb::addr_t addr = 0;
-  uint16_t section = 0;
-  uint32_t offset = 0;
+  SegmentOffset so;
   bool is_external = false;
+  DWARFExpression location_expr;
   switch (sym.kind()) {
   case S_GDATA32:
     is_external = true;
@@ -1071,9 +1073,12 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     scope = (sym.kind() == S_GDATA32) ? eValueTypeVariableGlobal
                                       : eValueTypeVariableStatic;
     name = ds.Name;
-    section = ds.Segment;
-    offset = ds.DataOffset;
+    so = SegmentOffset(ds.Segment, ds.DataOffset);
     addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
+    location_expr =
+        MakeGlobalLocationExpression(ds.Segment, ds.DataOffset, module_sp);
     break;
   }
   case S_GTHREAD32:
@@ -1089,10 +1094,13 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
     }
     ti = tlds.Type;
     name = tlds.Name;
-    section = tlds.Segment;
-    offset = tlds.DataOffset;
+    so = SegmentOffset(tlds.Segment, tlds.DataOffset);
     addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
     scope = eValueTypeVariableThreadLocal;
+    if (addr == LLDB_INVALID_ADDRESS)
+      return nullptr;
+    location_expr =
+        MakeGlobalThreadLocalLocationExpression(tlds.DataOffset, module_sp);
     break;
   }
   default:
@@ -1122,20 +1130,18 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
       ast_builder->EnsureVariable(var_id);
   }
 
-  ModuleSP module_sp = GetObjectFile()->GetModule();
-  DWARFExpressionList location(
-      module_sp, MakeGlobalLocationExpression(section, offset, module_sp),
-      nullptr);
+  DWARFExpressionList location(module_sp, location_expr, nullptr);
 
-  std::string global_name("::");
-  global_name += name;
+  llvm::StringRef mangled_name = FindMangledSymbol(so).value_or("");
+  if (!Mangled::IsMangledName(mangled_name))
+    mangled_name = {};
   bool artificial = false;
   bool location_is_constant_data = false;
   bool static_member = false;
   VariableSP var_sp = std::make_shared<Variable>(
-      toOpaqueUid(var_id), name.str().c_str(), global_name.c_str(), type_sp,
-      scope, comp_unit.get(), ranges, &decl, location, is_external, artificial,
-      location_is_constant_data, static_member);
+      toOpaqueUid(var_id), name.str().c_str(), mangled_name.str().c_str(),
+      type_sp, scope, comp_unit.get(), ranges, &decl, location, is_external,
+      artificial, location_is_constant_data, static_member);
 
   return var_sp;
 }
@@ -2218,8 +2224,14 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
   CacheGlobalBaseNames();
 
+  llvm::StringRef context;
+  llvm::StringRef basename;
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
+                                                      context, basename))
+    basename = name.GetStringRef();
+
   std::vector<uint32_t> results;
-  m_global_variable_base_names.GetValues(name, results);
+  m_global_variable_base_names.GetValues(ConstString(basename), results);
 
   size_t n_matches = 0;
   for (uint32_t gid : results) {
@@ -2231,6 +2243,9 @@ void SymbolFileNativePDB::FindGlobalVariables(
 
     VariableSP var = GetOrCreateGlobalVariable(global);
     if (!var)
+      continue;
+    if (!context.empty() &&
+        !var->GetName().GetStringRef().contains(name.GetStringRef()))
       continue;
     variables.AddVariable(var);
 
@@ -2433,7 +2448,8 @@ SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
     case SymbolKind::S_LDATA32:
     case SymbolKind::S_GTHREAD32:
     case SymbolKind::S_LTHREAD32: {
-      if (VariableSP var = GetOrCreateGlobalVariable(global))
+      VariableSP var = GetOrCreateGlobalVariable(global);
+      if (var && var->GetSymbolContextScope() == &comp_unit)
         variables.AddVariable(var);
       break;
     }

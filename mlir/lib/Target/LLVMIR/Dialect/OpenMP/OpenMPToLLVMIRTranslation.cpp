@@ -1999,7 +1999,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
   llvm::BasicBlock *allocaBB = allocaIP.getNodeParent();
   llvm::Instruction *allocaTerminator = allocaBB->getTerminator();
   splitBB(allocaTerminator->getIterator(), true,
-          allocaTerminator->getStableDebugLoc(), "omp.region.after_alloca");
+          allocaTerminator->getDebugLoc(), "omp.region.after_alloca");
   // Update the allocaTerminator since the alloca block was split above.
   allocaTerminator = allocaBB->getTerminator();
   // The new terminator is an uncondition branch created by the splitBB above.
@@ -2014,7 +2014,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
     allocatorTerminator = allocatorBB->getTerminator();
     afterAllocatorAllocations = splitBB(
         allocatorTerminator->getIterator(), true,
-        allocatorTerminator->getStableDebugLoc(), "omp.region.after_allocate");
+        allocatorTerminator->getDebugLoc(), "omp.region.after_allocate");
     allocatorTerminator = allocatorBB->getTerminator();
     assert(allocatorTerminator->getNumSuccessors() == 1 &&
            "This is an unconditional branch created by splitBB");
@@ -2025,7 +2025,7 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
     guard.emplace(builder);
   builder.SetInsertPoint(allocaTerminator);
 
-  llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
+  llvm::DataLayout dataLayout = builder.getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -2131,30 +2131,28 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
   return afterAllocatorAllocations ? afterAllocatorAllocations : afterAllocas;
 }
 
-/// This can't always be determined statically, but when we can, it is good to
-/// avoid generating compiler-added barriers which will deadlock the program.
-static bool opIsInSingleThread(mlir::Operation *op) {
-  for (mlir::Operation *parent = op->getParentOp(); parent != nullptr;
+/// A compiler-generated barrier is unsafe when only part of the current team
+/// can reach it. This cannot always be determined statically (e.g. across a
+/// function call), but the enclosing OpenMP constructs can rule it out.
+static bool opMightBeSafeForBarriers(mlir::Operation *op) {
+  for (mlir::Operation *parent = op; parent != nullptr;
        parent = parent->getParentOp()) {
-    if (mlir::isa<omp::SingleOp, omp::CriticalOp>(parent))
+    // An inner parallel construct creates a new team, even when it is nested
+    // inside a construct that only some threads of the outer team encounter.
+    if (mlir::isa<omp::ParallelOp>(parent))
       return true;
 
-    // e.g.
-    // omp.single {
-    //   omp.parallel {
-    //     op
-    //   }
-    // }
-    if (mlir::isa<omp::ParallelOp>(parent))
+    if (mlir::isa<omp::SingleOp, omp::CriticalOp, omp::MaskedOp, omp::MasterOp,
+                  omp::SectionOp>(parent))
       return false;
   }
-  return false;
+  return true;
 }
 
 static LogicalResult
 emitPrivatizationBarrier(mlir::Operation *op, llvm::IRBuilderBase &builder,
                          LLVM::ModuleTranslation &moduleTranslation) {
-  if (opIsInSingleThread(op))
+  if (!opMightBeSafeForBarriers(op))
     return success();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
@@ -2947,8 +2945,7 @@ void TaskContextStructManager::generateTaskContextStruct() {
   structTy = llvm::StructType::get(moduleTranslation.getLLVMContext(),
                                    privateVarTypes);
 
-  llvm::DataLayout dataLayout =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::DataLayout dataLayout = builder.getDataLayout();
   llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
   llvm::Value *allocSize =
       builder.CreateTypeSize(intPtrTy, dataLayout.getTypeAllocSize(structTy));
@@ -3271,8 +3268,7 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
 
   // Heap-allocate the kmp_depend_info array so we don't risk
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
-  llvm::DataLayout dataLayout =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::DataLayout dataLayout = builder.getDataLayout();
   llvm::Value *allocSize = builder.CreateTypeSize(
       ompBuilder.SizeTy, dataLayout.getTypeAllocSize(dependInfoTy));
   llvm::Value *depArray =
@@ -6004,8 +6000,7 @@ static void emitComplexAtomicCmpXchg(llvm::IRBuilderBase &builder,
                                      llvm::AtomicOrdering failOrdering,
                                      bool isWeak, llvm::Value *&oldComplex,
                                      llvm::Value *&cmpOk) {
-  const llvm::DataLayout &DL =
-      builder.GetInsertBlock()->getModule()->getDataLayout();
+  const llvm::DataLayout &DL = builder.getDataLayout();
   unsigned totalBits = DL.getTypeStoreSizeInBits(complexTy).getFixedValue();
   llvm::IntegerType *intTy =
       llvm::IntegerType::get(builder.getContext(), totalBits);
@@ -6939,9 +6934,7 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Type *type = globalValue->getValueType();
-  llvm::TypeSize typeSize =
-      builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
-          type);
+  llvm::TypeSize typeSize = builder.getDataLayout().getTypeStoreSize(type);
   llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedValue());
   llvm::Value *callInst = ompBuilder->createCachedThreadPrivate(
       ompLoc, globalValue, size, global.getSymName() + ".cache");
@@ -7418,6 +7411,12 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   return mapType;
 }
 
+static StringRef getMapClauseName(omp::MapInfoOp mapOp) {
+  if (StringAttr name = mapOp.getNameAttr())
+    return name.getValue();
+  return {};
+}
+
 static void collectMapDataFromMapOperands(
     MapInfoData &mapData, SmallVectorImpl<Value> &mapVars,
     LLVM::ModuleTranslation &moduleTranslation, DataLayout &dl,
@@ -7500,7 +7499,8 @@ static void collectMapDataFromMapOperands(
     // TODO: set HasAttachPtr from Flang for pointee-storage entries.
     mapData.HasAttachPtr.push_back(false);
     mapData.Names.push_back(LLVM::createMappingInformation(
-        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+        getMapClauseName(mapOp)));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     if (mapOp.getMapperId())
       mapData.Mappers.push_back(
@@ -7570,7 +7570,8 @@ static void collectMapDataFromMapOperands(
         // TODO: set HasAttachPtr from Flang for pointee-storage entries.
         mapData.HasAttachPtr.push_back(false);
         mapData.Names.push_back(LLVM::createMappingInformation(
-            mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+            mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+            getMapClauseName(mapOp)));
         mapData.DevicePointers.push_back(devInfoTy);
         mapData.Mappers.push_back(nullptr);
         mapData.IsAMapping.push_back(false);
@@ -7632,7 +7633,8 @@ static void collectMapDataFromMapOperands(
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
-        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder(),
+        getMapClauseName(mapOp)));
     mapData.DevicePointers.push_back(
         isDevicePtr ? llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer
                     : llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
@@ -8015,7 +8017,8 @@ static void mapParentWithMembers(
   combinedInfo.Mappers.emplace_back(
       parentMapper && !parentClause.getPartialMap() ? parentMapper : nullptr);
   combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-      mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+      mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+      getMapClauseName(cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
   combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
 
   // Calculate size of the parent object being mapped based on the
@@ -8112,7 +8115,9 @@ static void mapParentWithMembers(
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+          getMapClauseName(
+              cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
       combinedInfo.BasePointers.emplace_back(
           mapData.BasePointers[mapDataIndex]);
       combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIndex]);
@@ -8154,7 +8159,9 @@ static void mapParentWithMembers(
         combinedInfo.DevicePointers.emplace_back(
             llvm::OpenMPIRBuilder::DeviceInfoTy::None);
         combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-            mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+            mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+            getMapClauseName(
+                cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
         combinedInfo.BasePointers.emplace_back(
             mapData.BasePointers[mapDataIndex]);
         combinedInfo.Mappers.emplace_back(nullptr);
@@ -8168,7 +8175,7 @@ static void mapParentWithMembers(
         // (e.g. if lowAddr happens to be the first member), which isn't
         // correct, even if the runtimes is sometimes fine with it so, in these
         // scenarios we select the types size instead.
-        llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
+        llvm::DataLayout dataLayout = builder.getDataLayout();
         auto sizeSel = builder.CreateSelect(
             builder.CreateICmpNE(builder.getInt64(0), sizeCalc), sizeCalc,
             isPtrMap ? builder.getInt64(dataLayout.getPointerSize())
@@ -8185,7 +8192,9 @@ static void mapParentWithMembers(
       combinedInfo.DevicePointers.emplace_back(
           llvm::OpenMPIRBuilder::DeviceInfoTy::None);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
-          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
+          mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder,
+          getMapClauseName(
+              cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]))));
       combinedInfo.BasePointers.emplace_back(
           mapData.BasePointers[mapDataIndex]);
       combinedInfo.Mappers.emplace_back(nullptr);

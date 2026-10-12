@@ -503,7 +503,7 @@ bool CGPassManager::runOnModule(Module &M) {
   // Walk the callgraph in bottom-up SCC order.
   scc_iterator<CallGraph*> CGI = scc_begin(&CG);
 
-  CallGraphSCC CurSCC(CG, &CGI);
+  CallGraphSCC CurSCC(CG);
   while (!CGI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
@@ -572,34 +572,6 @@ bool CGPassManager::doFinalization(CallGraph &CG) {
     }
   }
   return Changed;
-}
-
-//===----------------------------------------------------------------------===//
-// CallGraphSCC Implementation
-//===----------------------------------------------------------------------===//
-
-/// This informs the SCC and the pass manager that the specified
-/// Old node has been deleted, and New is to be used in its place.
-void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
-  assert(Old != New && "Should not replace node with self");
-  for (unsigned i = 0; ; ++i) {
-    assert(i != Nodes.size() && "Node not in SCC");
-    if (Nodes[i] != Old) continue;
-    if (New)
-      Nodes[i] = New;
-    else
-      Nodes.erase(Nodes.begin() + i);
-    break;
-  }
-
-  // Update the active scc_iterator so that it doesn't contain dangling
-  // pointers to the old CallGraphNode.
-  scc_iterator<CallGraph*> *CGI = (scc_iterator<CallGraph*>*)Context;
-  CGI->ReplaceNode(Old, New);
-}
-
-void CallGraphSCC::DeleteNode(CallGraphNode *Old) {
-  ReplaceNode(Old, /*New=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
