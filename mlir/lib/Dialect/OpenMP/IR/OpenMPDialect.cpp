@@ -3485,19 +3485,15 @@ static void getPrivatisationEffects(
   MutableOperandRange privateVars = op.getPrivateVarsMutable();
   auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
   Block::BlockArgListType privateArgs = iface.getPrivateBlockArgs();
-  for (auto entry : llvm::zip_equal(privateVars, privateArgs, *privateSyms)) {
-    OpOperand &original = std::get<0>(entry);
-    BlockArgument privateCopy = std::get<1>(entry);
-
-    effects.emplace_back(MemoryEffects::Allocate::get(), privateCopy);
-    effects.emplace_back(MemoryEffects::Free::get(), privateCopy);
-    // private variables may read the original as a mold
+  for (auto [sourceVar, privateVar, privateSym] : llvm::zip_equal(privateVars, privateArgs, *privateSyms)) {
+    effects.emplace_back(MemoryEffects::Allocate::get(), privateVar);
+    effects.emplace_back(MemoryEffects::Free::get(), privateVar);
+    // private variables may read the sourceVar as a mold
     // firstprivate variables do it regardless
-    effects.emplace_back(MemoryEffects::Read::get(), &original);
+    effects.emplace_back(MemoryEffects::Read::get(), &sourceVar);
 
-    auto privateSym = cast<SymbolRefAttr>(std::get<2>(entry));
     auto privatiser =
-        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, privateSym);
+        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, cast<SymbolRefAttr>(privateSym));
     // RecursiveMemoryEffects only covers regions nested in the directive, not
     // symbol-referenced regions, user defined types have arbitrary recipe
     // bodies. Default to a conservative model of read and write to arbitrary
@@ -3516,10 +3512,10 @@ getLastprivateEffects(OpType op,
   auto iface = cast<BlockArgOpenMPOpInterface>(op.getOperation());
   // We cannot determine if the variable is lastprivate, so assume all private
   // variables are.
-  for (auto entry : llvm::zip_equal(op.getPrivateVarsMutable(),
+  for (auto [sourceVar, privateVar] : llvm::zip_equal(op.getPrivateVarsMutable(),
                                     iface.getPrivateBlockArgs())) {
-    effects.emplace_back(MemoryEffects::Read::get(), std::get<1>(entry));
-    effects.emplace_back(MemoryEffects::Write::get(), &std::get<0>(entry));
+    effects.emplace_back(MemoryEffects::Read::get(), privateVar);
+    effects.emplace_back(MemoryEffects::Write::get(), &sourceVar);
   }
 }
 
@@ -3530,18 +3526,15 @@ getReductionEffects(Operation *op, MutableOperandRange reductionVars,
                     ArrayRef<BlockArgument> reductionArgs,
                     std::optional<ArrayAttr> reductionSyms,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  for (auto entry : llvm::zip_equal(reductionVars, reductionArgs)) {
-    OpOperand &original = std::get<0>(entry);
-    BlockArgument privateAccumulator = std::get<1>(entry);
-
+  for (auto [sourceVar, privateAccumulator] : llvm::zip_equal(reductionVars, reductionArgs)) {
     effects.emplace_back(MemoryEffects::Allocate::get(), privateAccumulator);
     effects.emplace_back(MemoryEffects::Free::get(), privateAccumulator);
 
     effects.emplace_back(MemoryEffects::Read::get(), privateAccumulator);
     effects.emplace_back(MemoryEffects::Write::get(), privateAccumulator);
 
-    effects.emplace_back(MemoryEffects::Read::get(), &original);
-    effects.emplace_back(MemoryEffects::Write::get(), &original);
+    effects.emplace_back(MemoryEffects::Read::get(), &sourceVar);
+    effects.emplace_back(MemoryEffects::Write::get(), &sourceVar);
   }
 
   if (reductionSyms) {
