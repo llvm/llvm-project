@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
   p = malloc(s);
   sleep(1);
   fprintf(stderr, "memset\n");
-  memset(p, 1, s);
+  for (int i = 0; i < s; i += 1024 * 1024)
+    memset((char *)p + i, 1, 1024 * 1024);
   sleep(1);
   fprintf(stderr, "free\n");
   free(p);
