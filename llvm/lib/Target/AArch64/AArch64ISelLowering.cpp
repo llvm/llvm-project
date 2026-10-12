@@ -25299,6 +25299,77 @@ static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
                      DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
 }
 
+static int getNeonFCMLARotation(unsigned IID) {
+  switch (IID) {
+  default:
+    return -1;
+  case Intrinsic::aarch64_neon_vcmla_rot0:
+    return 0;
+  case Intrinsic::aarch64_neon_vcmla_rot90:
+    return 1;
+  case Intrinsic::aarch64_neon_vcmla_rot180:
+    return 2;
+  case Intrinsic::aarch64_neon_vcmla_rot270:
+    return 3;
+  }
+}
+
+static bool isDuplicatedComplexOperand(SDValue Op) {
+  if (Op.getOpcode() != ISD::BITCAST)
+    return false;
+
+  SDValue Dup = Op.getOperand(0);
+  switch (Op.getSimpleValueType().SimpleTy) {
+  default:
+    return false;
+  case MVT::v4f16:
+    return Dup.getOpcode() == AArch64ISD::DUPLANE32 &&
+           Dup.getValueType() == MVT::v2i32;
+  case MVT::v8f16:
+    return Dup.getOpcode() == AArch64ISD::DUPLANE32 &&
+           Dup.getValueType() == MVT::v4i32;
+  case MVT::v4f32:
+    return Dup.getOpcode() == AArch64ISD::DUPLANE64 &&
+           Dup.getValueType() == MVT::v2i64;
+  }
+}
+
+// A pair of FCMLAs with orthogonal rotations represents a complex multiply
+// (possibly with one operand conjugated), so the multiplicands can be swapped.
+// Canonicalize a duplicated LHS to the RHS, where the existing instruction
+// patterns can select indexed FCMLAs.
+static SDValue performNeonFCMLACombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  int SecondRotation = getNeonFCMLARotation(getIntrinsicID(N));
+  assert(SecondRotation >= 0 && "Unexpected FCMLA intrinsic");
+
+  SDValue First = N->getOperand(1);
+  if (First.getOpcode() != ISD::INTRINSIC_WO_CHAIN || !First->hasOneUse())
+    return SDValue();
+
+  int FirstRotation = getNeonFCMLARotation(getIntrinsicID(First.getNode()));
+  if (FirstRotation < 0 || (FirstRotation & 1) == (SecondRotation & 1))
+    return SDValue();
+
+  SDValue LHS = N->getOperand(2);
+  SDValue RHS = N->getOperand(3);
+  if (First.getOperand(2) != LHS || First.getOperand(3) != RHS ||
+      !isDuplicatedComplexOperand(LHS) || isDuplicatedComplexOperand(RHS))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue NewFirst =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(First), First.getValueType(),
+                  First.getOperand(0), First.getOperand(1), RHS, LHS);
+  NewFirst->setFlags(First->getFlags());
+
+  SDValue Result =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getValueType(0),
+                  N->getOperand(0), NewFirst, RHS, LHS);
+  Result->setFlags(N->getFlags());
+  return Result;
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -25307,6 +25378,11 @@ static SDValue performIntrinsicCombine(SDNode *N,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_neon_vcmla_rot0:
+  case Intrinsic::aarch64_neon_vcmla_rot90:
+  case Intrinsic::aarch64_neon_vcmla_rot180:
+  case Intrinsic::aarch64_neon_vcmla_rot270:
+    return performNeonFCMLACombine(N, DCI);
   case Intrinsic::aarch64_neon_tbx1:
   case Intrinsic::aarch64_neon_tbx2:
   case Intrinsic::aarch64_neon_tbx3:
