@@ -3277,6 +3277,51 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   return true;
 }
 
+static bool isRightShiftBitTestKnownToTerminate(Value *X, Value *BitPos,
+                                                BasicBlock *Preheader,
+                                                const DataLayout &DL,
+                                                DominatorTree *DT) {
+  using namespace PatternMatch;
+
+  auto *Pos = dyn_cast<ConstantInt>(BitPos);
+  unsigned Bitwidth = X->getType()->getScalarSizeInBits();
+  if (!Pos || Bitwidth == 1 || Pos->getValue().uge(Bitwidth))
+    return false;
+
+  SimplifyQuery SQ(DL, DT, /*AC=*/nullptr, Preheader->getTerminator());
+  if (!isKnownNonZero(X, SQ))
+    return false;
+  if (Pos->isZero())
+    return true;
+
+  // The guard must rule out set bits below BitPos; those bits can never
+  // reach the tested position when X shifts right.
+  BasicBlock *GuardBB = Preheader->getSinglePredecessor();
+  if (!GuardBB)
+    return false;
+  auto *Guard = dyn_cast<CondBrInst>(GuardBB->getTerminator());
+  if (!Guard)
+    return false;
+
+  CmpPredicate Pred;
+  Value *LHS;
+  if (!match(Guard->getCondition(), m_ICmp(Pred, m_Value(LHS), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  const APInt *Mask;
+  if (!match(LHS, m_c_And(m_Specific(X), m_APInt(Mask))))
+    return false;
+
+  BasicBlock *ZeroSuccessor =
+      Guard->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 0 : 1);
+  if (ZeroSuccessor != Preheader)
+    return false;
+
+  APInt LowBits = APInt::getLowBitsSet(Bitwidth, Pos->getZExtValue());
+  return (*Mask & LowBits) == LowBits;
+}
+
 /// Look for the following loop:
 /// \code
 ///   entry:
@@ -3360,36 +3405,10 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   Type *Ty = X->getType();
   unsigned Bitwidth = Ty->getScalarSizeInBits();
 
-  // A right shift can only reach a set bit at BitPos if some bit at or above
-  // BitPos is set. Require X to be nonzero and a precondition checking that
-  // the bits below BitPos are zero, so the loop is known to terminate.
-  if (IsRightShift) {
-    auto *Pos = dyn_cast<ConstantInt>(BitPos);
-    if (!Pos || Bitwidth == 1 || Pos->getValue().uge(Bitwidth))
-      return false;
-    SimplifyQuery SQ(*DL, DT, /*AC=*/nullptr, LoopPreheaderBB->getTerminator());
-    APInt LowBits = APInt::getLowBitsSet(Bitwidth, Pos->getZExtValue());
-    if (!isKnownNonZero(X, SQ))
-      return false;
-    if (!LowBits.isZero()) {
-      BasicBlock *Pred = LoopPreheaderBB->getSinglePredecessor();
-      auto *BI = Pred ? dyn_cast<CondBrInst>(Pred->getTerminator()) : nullptr;
-      CmpPredicate P;
-      const APInt *Mask;
-      if (!BI ||
-          !PatternMatch::match(
-              BI->getCondition(),
-              PatternMatch::m_ICmp(
-                  P,
-                  PatternMatch::m_c_And(PatternMatch::m_Specific(X),
-                                        PatternMatch::m_APInt(Mask)),
-                  PatternMatch::m_Zero())) ||
-          (P != ICmpInst::ICMP_EQ && P != ICmpInst::ICMP_NE) ||
-          ((P == ICmpInst::ICMP_EQ) !=
-           (BI->getSuccessor(0) == LoopPreheaderBB)) ||
-          (*Mask & LowBits) != LowBits)
-        return false;
-    }
+  // A right shift must be guaranteed to reach a set bit at BitPos.
+  if (IsRightShift && !isRightShiftBitTestKnownToTerminate(
+                          X, BitPos, LoopPreheaderBB, *DL, DT)) {
+    return false;
   }
 
   TargetTransformInfo::TargetCostKind CostKind =
@@ -3485,16 +3504,16 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // A left shift by LoopTripCount is poison if the count equals Bitwidth.
   // This can happen when BitPos is the highest bit and X is one, so use a
   // single additional shift unless the larger shift is known to be safe.
-  if (IsRightShift)
+  if (IsRightShift) {
     NewXNext = Builder.CreateLShr(NewX, ConstantInt::get(Ty, 1));
-  else if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
-           PatternMatch::match(
-               BitPos,
-               PatternMatch::m_SpecificInt_ICMP(
-                   ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
-                                            Ty->getScalarSizeInBits() - 1))))
+  } else if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
+             PatternMatch::match(BitPos,
+                                 PatternMatch::m_SpecificInt_ICMP(
+                                     ICmpInst::ICMP_NE,
+                                     APInt(Ty->getScalarSizeInBits(),
+                                           Ty->getScalarSizeInBits() - 1)))) {
     NewXNext = Builder.CreateShl(X, LoopTripCount);
-  else {
+  } else {
     // Otherwise, just additionally shift by one. It's the smallest solution,
     // alternatively, we could check that NewX is INT_MIN (or BitPos is )
     // and select 0 instead.
