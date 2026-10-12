@@ -505,13 +505,30 @@ struct DynBlockMemConfTy {
 };
 } // namespace
 
+/// Allocate device memory that a single launch uses. Unlike
+/// GenericDeviceTy::dataAlloc, the plugin context caches it for reuse.
+static llvm::Expected<void *> allocLaunchMemory(GenericDeviceTy &GenericDevice,
+                                                uint64_t Size) {
+  auto AllocOrErr = GenericDevice.Plugin.getDefaultContext(GenericDevice)
+                        .allocate(GenericDevice, Size, /*HostPtr=*/nullptr,
+                                  TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+  if (Size && !*AllocOrErr)
+    return createError(ErrorCode::BackendFailure,
+                       "failed to allocate %" PRIu64
+                       " bytes of launch memory from device allocator",
+                       Size);
+  return *AllocOrErr;
+}
+
 /// Prepare the block memory buffer requested for the kernel and execute the
 /// specified fallback if necessary.
 static llvm::Expected<DynBlockMemConfTy>
 prepareBlockMemory(GenericDeviceTy &GenericDevice,
                    const KernelLaunchInfoTy &KernelEnv, uint32_t DynCGroupMem,
                    DynCGroupMemFallbackType DynCGroupMemFallback,
-                   uint32_t NumBlocks) {
+                   uint64_t NumBlocks) {
 
   // If the fallback is abort, don't try to adjust the block memory size.
   if (DynCGroupMemFallback == DynCGroupMemFallbackType::Abort)
@@ -534,9 +551,8 @@ prepareBlockMemory(GenericDeviceTy &GenericDevice,
       DynBlockMemSize = 0;
     } else {
       // Get global memory as fallback.
-      auto AllocOrErr = GenericDevice.dataAlloc(
-          NumBlocks * DynBlockMemSize,
-          /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+      auto AllocOrErr = allocLaunchMemory(
+          GenericDevice, NumBlocks * uint64_t(DynBlockMemSize));
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       DynFallbackPtr = *AllocOrErr;
@@ -550,7 +566,8 @@ static void freeAfterSynchronization(GenericDeviceTy &GenericDevice,
                                      AsyncInfoTy &AsyncInfo, void *Ptr,
                                      TargetAllocTy Kind) {
   AsyncInfo.addPostProcessingFunction([&GenericDevice, Ptr, Kind]() -> int {
-    if (auto Err = GenericDevice.dataDelete(Ptr, Kind)) {
+    if (auto Err = GenericDevice.Plugin.getDefaultContext(GenericDevice)
+                       .deallocate(GenericDevice, Ptr, Kind)) {
       REPORT() << "Failure to free device memory " << Ptr << ": "
                << toString(std::move(Err));
       return OFFLOAD_FAIL;
@@ -586,9 +603,8 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
   if (!NeedsReductionBuffer && !DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
-  auto AllocOrErr = GenericDevice.dataAlloc(
-      sizeof(KernelLaunchEnvironmentTy),
-      /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+  auto AllocOrErr =
+      allocLaunchMemory(GenericDevice, sizeof(KernelLaunchEnvironmentTy));
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
@@ -608,9 +624,8 @@ static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
 
   if (NeedsReductionBuffer) {
     // Use number of teams many buffer elements.
-    auto ReductionAllocOrErr = GenericDevice.dataAlloc(
-        uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0,
-        /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+    auto ReductionAllocOrErr = allocLaunchMemory(
+        GenericDevice, uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0);
     if (!ReductionAllocOrErr)
       return ReductionAllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *ReductionAllocOrErr;
@@ -892,7 +907,7 @@ prepareDynamicLaunchState(GenericDeviceTy &GenericDevice,
                           KernelLaunchArgsTy &LaunchArgs, uint32_t DynCGroupMem,
                           DynCGroupMemFallbackType DynCGroupMemFallback,
                           void **DynPtrSlot, AsyncInfoTy &AsyncInfo) {
-  uint32_t NumBlocksTotal = LaunchArgs.UserNumBlocks[0] *
+  uint64_t NumBlocksTotal = uint64_t(LaunchArgs.UserNumBlocks[0]) *
                             LaunchArgs.UserNumBlocks[1] *
                             LaunchArgs.UserNumBlocks[2];
   auto DynBlockMemConfOrErr =
