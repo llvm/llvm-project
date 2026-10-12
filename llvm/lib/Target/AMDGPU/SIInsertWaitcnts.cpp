@@ -389,6 +389,7 @@ public:
   AMDGPU::InstCounterType MaxCounter;
   bool IsExpertMode = false;
   bool FuncUsesAsyncCnt = false;
+  bool FuncUsesTensorCnt = false;
   const bool TgSplit;
 
   SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
@@ -2635,6 +2636,14 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
     Wait.set(AMDGPU::ASYNC_CNT, 0);
 
+  // Barriers do not drain tensor transfers (CDNA5 ISA), and GFX1250 frontends
+  // bypass asyncmark tracking, leaving them invisible above. Set after
+  // simplifyWaitcnt, which would otherwise strip the untracked counter.
+  if (FuncUsesTensorCnt && ST.hasGFX1250Insts() &&
+      ST.getGeneration() != AMDGPUSubtarget::GFX13 &&
+      (TII.isBarrierStart(Opc) || Opc == AMDGPU::S_BARRIER_WAIT))
+    Wait.set(AMDGPU::TENSOR_CNT, 0);
+
   if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
@@ -3516,6 +3525,12 @@ bool SIInsertWaitcnts::run() {
   FuncUsesAsyncCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
     return llvm::any_of(MBB, [](const MachineInstr &MI) {
       return SIInstrInfo::usesASYNC_CNT(MI) && !MI.isMetaInstruction();
+    });
+  });
+
+  FuncUsesTensorCnt = llvm::any_of(MF, [](const MachineBasicBlock &MBB) {
+    return llvm::any_of(MBB, [](const MachineInstr &MI) {
+      return SIInstrInfo::usesTENSOR_CNT(MI) && !MI.isMetaInstruction();
     });
   });
 
