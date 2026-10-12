@@ -1,4 +1,7 @@
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -O2 -debug-info-kind=standalone %s -o - | FileCheck %s --check-prefix=OPT
+! RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s --check-prefix=NOSLOT
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck %s --check-prefix=NOSLOT
 
 subroutine array(a, lb, n)
   integer :: lb, n
@@ -40,3 +43,20 @@ end subroutine
 ! CHECK-DAG: ![[LEN]] = !DILocalVariable(name: "._QFchar_lenEc1"{{.*}}flags: DIFlagArtificial)
 ! CHECK-DAG: !DILocalVariable(name: "c"{{.*}}type: ![[CTY:[0-9]+]])
 ! CHECK-DAG: ![[CTY]] = !DIStringType(stringLength: ![[LEN]], encoding: DW_ATE_ASCII)
+
+! The slots are only made at -O0. Above it a bound is described by its value,
+! as it was before, so a debugger has to find that value in a register.
+! OPT-LABEL: define void @array_(
+! OPT:         #dbg_value({{.*}}![[OPT_LB:[0-9]+]], !DIExpression
+! OPT:         #dbg_value({{.*}}![[OPT_COUNT:[0-9]+]], !DIExpression
+! OPT-LABEL: define void @char_len_(
+! OPT:         #dbg_value({{.*}}![[OPT_LEN:[0-9]+]], !DIExpression
+
+! OPT-DAG: ![[OPT_LB]] = !DILocalVariable(name: "._QFarrayEa2"{{.*}}flags: DIFlagArtificial)
+! OPT-DAG: ![[OPT_COUNT]] = !DILocalVariable(name: "._QFarrayEa1"{{.*}}flags: DIFlagArtificial)
+! OPT-DAG: ![[OPT_LEN]] = !DILocalVariable(name: "._QFchar_lenEc1"{{.*}}flags: DIFlagArtificial)
+
+! A slot exists only to describe a variable, so neither is made when no
+! variables are asked for.
+! NOSLOT-NOT: #dbg_declare
+! NOSLOT-NOT: #dbg_value
