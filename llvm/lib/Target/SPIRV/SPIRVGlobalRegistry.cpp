@@ -1380,6 +1380,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getResultType(Register VReg,
   if (!MF)
     MF = CurMF;
   MachineInstr *Instr = getVRegDef(MF->getRegInfo(), VReg);
+  // PHIs only get a result type operand when they are lowered to OpPhi.
+  if (Instr->isPHI())
+    return getSPIRVTypeForVReg(VReg, MF);
   return getSPIRVTypeForVReg(Instr->getOperand(1).getReg(), MF);
 }
 
