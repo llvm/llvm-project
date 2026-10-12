@@ -256,6 +256,10 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the AArch64 Backend
 
 * Added support for C2-Pro and C2-Ultra CPUs.
+* Added support for hardening return address signing against PACMAN attacks.
+  Functions with the `"sign-return-address-harden"="load-return-address"`
+  attribute perform a load from the return address before returning, reducing the
+  cache side channel used to guess pointer authentication codes.
 
 * Assembler/disassembler support has been added for Armv9.8-A (2026)
   architecture extensions.

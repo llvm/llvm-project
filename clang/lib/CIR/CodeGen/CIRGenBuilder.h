@@ -833,6 +833,13 @@ public:
     return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
   }
 
+  cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,
+                                         mlir::Value matrix, mlir::Value rowIdx,
+                                         mlir::Value columnIdx) {
+    return cir::MatrixInsertOp::create(*this, loc, value, matrix, rowIdx,
+                                       columnIdx);
+  }
+
   cir::MatrixColumnMajorLoadOp createMatrixColumnMajorLoad(mlir::Location loc,
                                                            mlir::Type resultTy,
                                                            mlir::Value value,
@@ -840,6 +847,16 @@ public:
                                                            bool isVolatile) {
     return cir::MatrixColumnMajorLoadOp::create(*this, loc, resultTy, value,
                                                 stride, isVolatile);
+  }
+
+  /// Multiply an MxK matrix by a KxN matrix, producing an MxN matrix.
+  cir::MatrixMultiplyOp createMatrixMultiply(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto lhsTy = mlir::cast<cir::MatrixType>(lhs.getType());
+    auto rhsTy = mlir::cast<cir::MatrixType>(rhs.getType());
+    auto resultTy = cir::MatrixType::get(
+        lhsTy.getElementType(), lhsTy.getNumRows(), rhsTy.getNumColumns());
+    return cir::MatrixMultiplyOp::create(*this, loc, resultTy, lhs, rhs);
   }
 
   cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
