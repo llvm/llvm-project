@@ -52,3 +52,28 @@ define void @doubleelements_partial_reduction() {
 
   ret void
 }
+
+define void @scalable_to_fixed_partial_reduction() {
+; CHECK-LABEL: 'scalable_to_fixed_partial_reduction'
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v16i8 = call <16 x i8> @llvm.vector.partial.reduce.add.v16i8.nxv16i8(<16 x i8> poison, <vscale x 16 x i8> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v8i16 = call <8 x i16> @llvm.vector.partial.reduce.add.v8i16.nxv8i16(<8 x i16> poison, <vscale x 8 x i16> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v4i32 = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.nxv4i32(<4 x i32> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v2i64 = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.nxv2i64(<2 x i64> poison, <vscale x 2 x i64> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v8f16 = call <8 x half> @llvm.vector.partial.reduce.fadd.v8f16.nxv8f16(<8 x half> poison, <vscale x 8 x half> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v8bf16 = call <8 x bfloat> @llvm.vector.partial.reduce.fadd.v8bf16.nxv8bf16(<8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v4f32 = call <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.nxv4f32(<4 x float> poison, <vscale x 4 x float> poison)
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %v2f64 = call <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.nxv2f64(<2 x double> poison, <vscale x 2 x double> poison)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %v16i8 = call <16 x i8> @llvm.vector.partial.reduce.add(<16 x i8> poison, <vscale x 16 x i8> poison)
+  %v8i16 = call <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16> poison, <vscale x 8 x i16> poison)
+  %v4i32 = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> poison, <vscale x 4 x i32> poison)
+  %v2i64 = call <2 x i64> @llvm.vector.partial.reduce.add(<2 x i64> poison, <vscale x 2 x i64> poison)
+
+  %v8f16 = call <8 x half> @llvm.vector.partial.reduce.fadd(<8 x half> poison, <vscale x 8 x half> poison)
+  %v8bf16 = call <8 x bfloat> @llvm.vector.partial.reduce.fadd(<8 x bfloat> poison, <vscale x 8 x bfloat> poison)
+  %v4f32 = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> poison, <vscale x 4 x float> poison)
+  %v2f64 = call <2 x double> @llvm.vector.partial.reduce.fadd(<2 x double> poison, <vscale x 2 x double> poison)
+
+  ret void
+}

@@ -2577,6 +2577,11 @@ public:
     case Intrinsic::vector_partial_reduce_fadd: {
       VectorType *AccTy = cast<VectorType>(ICA.getArgTypes()[0]);
       VectorType *InTy = cast<VectorType>(ICA.getArgTypes()[1]);
+      // TODO: See if something better can be done for scalable-to-fixed
+      //       partial reductions.
+      if (AccTy->isScalableTy() != InTy->isScalableTy())
+        return InstructionCost::getInvalid();
+
       unsigned Opcode = 0;
       switch (IID) {
       default:
