@@ -4,6 +4,15 @@
 // RUN:   | FileCheck --check-prefix=LLVM %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=LLVM %s
+// RUN: %clang_cc1 -triple spir64 -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefix=SPIR %s
+// RUN: %clang_cc1 -triple spir64 -x hip -fcuda-is-device -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefix=SPIR %s
+
+// SPIR-DAG: @tab = externally_initialized constant [2 x i32]
+// SPIR-DAG: @dev = externally_initialized global i32 3
+// SPIR-DAG: @_ZZ10static_fmtiE3fmt = internal constant [3 x i8]
+// SPIR-DAG: @_ZZ10get_sharedvE2sh = internal global [4 x i32]
 
 #define __device__ __attribute__((device))
 #define __constant__ __attribute__((constant))
