@@ -1157,9 +1157,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     } else {
       MPM.addPass(PB.buildPerModuleDefaultPipeline(Level));
     }
-  } else if (TargetTriple.isSPIRV() &&
-             TargetTriple.getVendor() == llvm::Triple::VendorType::AMD &&
-             mapToLevel(CodeGenOpts) > OptimizationLevel::O1) {
+  } else if (mapToLevel(CodeGenOpts) > OptimizationLevel::O0 &&
+             CodeGenOpts.AMDGCNSPIRVSizeOptimization) {
+    assert(TargetTriple.isSPIRV() &&
+           TargetTriple.getVendor() == llvm::Triple::VendorType::AMD &&
+           "Invalid target triple!");
     addAMDGCNSPIRVSizeOptimizationPasses(MPM);
   }
 
