@@ -1076,7 +1076,8 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     // the map even if we end up deleting newly created phi below since we can't
     // possibly have a constant value if we recursed.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = {/*GetPtrIdx=*/nullptr, HandlePhi.get(), /*OffsetIdx=*/nullptr};
+      VisitedPhis[Phi] = {/*GetPtrIdx=*/nullptr, HandlePhi.get(),
+                          /*OffsetIdx=*/nullptr};
     else if (Phi->getType()->isPointerTy())
       VisitedPhis[Phi] = {GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
 
@@ -1119,7 +1120,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     if (HasOffset) {
       if (Value *ConstantIdx = OffsetPhi->hasConstantValue()) {
         OffsetIdx = ConstantIdx;
-	OffsetPhi->replaceAllUsesWith(OffsetIdx);
+        OffsetPhi->replaceAllUsesWith(OffsetIdx);
       } else {
         OffsetIdx = OffsetPhi.release();
         Builder.Insert(OffsetIdx);
