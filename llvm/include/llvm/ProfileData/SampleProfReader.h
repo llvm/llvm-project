@@ -987,11 +987,7 @@ protected:
   /// Read bytes from the input buffer pointed by `Data` and decode them into
   /// \p M. `Data` will be advanced to the end of the read bytes when this
   /// function returns. Returns error if any.
-  /// If \p Merge is true, counts for types already present in \p M are
-  /// accumulated (used when several profile locations are collapsed into one
-  /// by FS-discriminator masking); otherwise a duplicate type is diagnosed and
-  /// ignored.
-  std::error_code readVTableTypeCountMap(TypeCountMap &M, bool Merge);
+  std::error_code readVTableTypeCountMap(TypeCountMap &M);
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
