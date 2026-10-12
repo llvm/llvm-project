@@ -12,13 +12,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i8), [[UV1:%[0-9]+]]:_(i8), [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[COPY]](i32)
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i8>) = G_BUILD_VECTOR [[UV]](i8), [[UV1]](i8), [[DEF]](i8), [[DEF]](i8), [[DEF]](i8), [[DEF]](i8), [[DEF]](i8), [[DEF]](i8)
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<8 x i8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<8 x i8>) = G_SHUFFLE_VECTOR [[BUILD_VECTOR]](<8 x i8>), [[DEF1]], shufflemask(1, 0, 1, 0, undef, undef, undef, undef)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x i16>) = G_ANYEXT [[SHUF]](<8 x i8>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<4 x i16>), [[UV5:%[0-9]+]]:_(<4 x i16>) = G_UNMERGE_VALUES [[ANYEXT]](<8 x i16>)
-    ; CHECK-NEXT: $d0 = COPY [[UV4]](<4 x i16>)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i16) = G_ANYEXT [[UV1]](i8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i16) = G_ANYEXT [[UV]](i8)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i16>) = G_BUILD_VECTOR [[ANYEXT]](i16), [[ANYEXT1]](i16), [[ANYEXT]](i16), [[ANYEXT1]](i16)
+    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %1:_(i32) = COPY $w0
     %30:_(i8), %31:_(i8), %32:_(i8), %33:_(i8) = G_UNMERGE_VALUES %1(i32)

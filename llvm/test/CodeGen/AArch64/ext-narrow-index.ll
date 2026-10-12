@@ -236,17 +236,10 @@ entry:
 }
 
 define <8 x i8> @i8_zero_off22(<16 x i8> %arg1) {
-; CHECK-SD-LABEL: i8_zero_off22:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: i8_zero_off22:
-; CHECK-GISEL:       // %bb.0: // %entry
-; CHECK-GISEL-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-GISEL-NEXT:    ext v0.16b, v0.16b, v0.16b, #6
-; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: i8_zero_off22:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <16 x i8> %arg1, <16 x i8> zeroinitializer, <8 x i32> <i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
   ret <8 x i8> %shuffle
