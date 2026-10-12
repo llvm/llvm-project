@@ -431,10 +431,8 @@ public:
   std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
-  ExplodedNode *addTransitionImpl(ProgramStateRef State,
-                                 bool MarkAsSink,
-                                 ExplodedNode *P = nullptr,
-                                 const ProgramPointTag *Tag = nullptr) {
+  ExplodedNode *addTransitionImpl(ProgramStateRef State, bool MarkAsSink,
+                                  ExplodedNode *P, const ProgramPointTag *Tag) {
     // The analyzer may stop exploring if it sees a state it has previously
     // visited ("cache out"). The early return here is a defensive check to
     // prevent accidental caching out by checker API clients. Unless there is a
