@@ -503,3 +503,114 @@ define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
   %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %ctpop
 }
+
+define i32 @ctpop_add_no_common_bits_shifted(i32 %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted(
+; CHECK-NEXT:    [[LO:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[LO]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X]], 4
+; CHECK-NEXT:    [[HI:%.*]] = and i32 [[S]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[HI]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[C0]], [[C1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lo = and i32 %x, 15
+  %c0 = call i32 @llvm.ctpop.i32(i32 %lo)
+  %s = lshr i32 %x, 4
+  %hi = and i32 %s, 15
+  %c1 = call i32 @llvm.ctpop.i32(i32 %hi)
+  %r = add i32 %c0, %c1
+  ret i32 %r
+}
+
+define i32 @ctpop_add_no_common_bits_shifted_trunc(i64 %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_trunc(
+; CHECK-NEXT:    [[LO:%.*]] = and i64 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[LO]])
+; CHECK-NEXT:    [[T0:%.*]] = trunc nuw nsw i64 [[C0]] to i32
+; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[X]], 8
+; CHECK-NEXT:    [[HI:%.*]] = and i64 [[S]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[HI]])
+; CHECK-NEXT:    [[T1:%.*]] = trunc nuw nsw i64 [[C1]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[T0]], [[T1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lo = and i64 %x, 15
+  %c0 = call i64 @llvm.ctpop.i64(i64 %lo)
+  %t0 = trunc i64 %c0 to i32
+  %s = lshr i64 %x, 8
+  %hi = and i64 %s, 15
+  %c1 = call i64 @llvm.ctpop.i64(i64 %hi)
+  %t1 = trunc i64 %c1 to i32
+  %r = add i32 %t0, %t1
+  ret i32 %r
+}
+
+define i32 @ctpop_add_no_common_bits_shifted_chain(i32 %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_chain(
+; CHECK-NEXT:    [[LO:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[LO]])
+; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[X]], 4
+; CHECK-NEXT:    [[MID:%.*]] = and i32 [[S1]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[MID]])
+; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[HI:%.*]] = and i32 [[S2]], 15
+; CHECK-NEXT:    [[C2:%.*]] = call range(i32 0, 5) i32 @llvm.ctpop.i32(i32 [[HI]])
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[C0]], [[C1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[A]], [[C2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %lo = and i32 %x, 15
+  %c0 = call i32 @llvm.ctpop.i32(i32 %lo)
+  %s1 = lshr i32 %x, 4
+  %mid = and i32 %s1, 15
+  %c1 = call i32 @llvm.ctpop.i32(i32 %mid)
+  %s2 = lshr i32 %x, 8
+  %hi = and i32 %s2, 15
+  %c2 = call i32 @llvm.ctpop.i32(i32 %hi)
+  %a = add i32 %c0, %c1
+  %r = add i32 %a, %c2
+  ret i32 %r
+}
+
+; Negative test, the bits overlap and are counted twice
+
+define i64 @ctpop_add_no_common_bits_shifted_overlap(i64 %x) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_shifted_overlap(
+; CHECK-NEXT:    [[LO:%.*]] = and i64 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[LO]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[X]], 2
+; CHECK-NEXT:    [[HI:%.*]] = and i64 [[S]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[HI]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[C0]], [[C1]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %lo = and i64 %x, 15
+  %c0 = call i64 @llvm.ctpop.i64(i64 %lo)
+  %s = lshr i64 %x, 2
+  %hi = and i64 %s, 15
+  %c1 = call i64 @llvm.ctpop.i64(i64 %hi)
+  %r = add i64 %c0, %c1
+  ret i64 %r
+}
+
+; Negative test, summing bits from two different sources
+
+define i64 @ctpop_add_no_common_bits_different_source(i64 %x, i64 %y) {
+; CHECK-LABEL: @ctpop_add_no_common_bits_different_source(
+; CHECK-NEXT:    [[LO:%.*]] = and i64 [[X:%.*]], 15
+; CHECK-NEXT:    [[C0:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[LO]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i64 [[Y:%.*]], 4
+; CHECK-NEXT:    [[HI:%.*]] = and i64 [[S]], 15
+; CHECK-NEXT:    [[C1:%.*]] = call range(i64 0, 5) i64 @llvm.ctpop.i64(i64 [[HI]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[C0]], [[C1]]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %lo = and i64 %x, 15
+  %c0 = call i64 @llvm.ctpop.i64(i64 %lo)
+  %s = lshr i64 %y, 4
+  %hi = and i64 %s, 15
+  %c1 = call i64 @llvm.ctpop.i64(i64 %hi)
+  %r = add i64 %c0, %c1
+  ret i64 %r
+}
