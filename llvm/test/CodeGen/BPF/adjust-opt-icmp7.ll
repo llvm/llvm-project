@@ -161,10 +161,14 @@ define dso_local i32 @foo(ptr noundef %0, i16 noundef zeroext %1) #0 {
 }
 
 ; CHECK-LABEL: foo:
-; CHECK:       .LBB0_5:
-; CHECK-NEXT:    r[[REG:[0-9]+]] += 1
-; CHECK-NEXT:    if r[[REG]] >= r{{[0-9]+}} goto .LBB0_7
-; CHECK-NEXT:  .LBB0_6:
+; CHECK:       .LBB0_3:
+; CHECK-NEXT:    r[[NEXT:[0-9]+]] = r[[REG:[0-9]+]]
+; CHECK-NEXT:    r[[NEXT]] += 1
+; CHECK-NEXT:    if r[[REG]] > 14 goto .LBB0_6
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    r[[REG]] = r[[NEXT]]
+; CHECK-NEXT:    if r[[REG]] >= r{{[0-9]+}} goto .LBB0_6
+; CHECK-NEXT:  # %bb.5:
 ; CHECK:         call copy_chunk
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
