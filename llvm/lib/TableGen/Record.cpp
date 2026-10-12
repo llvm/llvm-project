@@ -32,7 +32,6 @@
 #include "llvm/TableGen/TGTimer.h"
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -72,7 +71,7 @@ struct detail::RecordKeeperImpl {
 
   UniquingSet<ArgumentInit> TheArgumentInitPool;
   UniquingSet<BitsInit> TheBitsInitPool;
-  std::map<int64_t, IntInit *> TheIntInitPool;
+  DenseMap<int64_t, IntInit *> TheIntInitPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitStringPool;
   StringMap<const StringInit *, BumpPtrAllocator &> StringInitCodePool;
   UniquingSet<ListInit> TheListInitPool;
