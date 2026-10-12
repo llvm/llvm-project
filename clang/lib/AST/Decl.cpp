@@ -3875,6 +3875,11 @@ unsigned FunctionDecl::getNumParams() const {
   return FPT ? FPT->getNumParams() : 0;
 }
 
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
+}
+
 void FunctionDecl::setParams(ASTContext &C,
                              ArrayRef<ParmVarDecl *> NewParamInfo) {
   assert(!ParamInfo && "Already has param info!");
