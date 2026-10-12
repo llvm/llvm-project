@@ -194,6 +194,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
       New->setUsedWithInAlloca(AI.isUsedWithInAlloca());
+      New->copyMetadata(AI);
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
       return IC.replaceInstUsesWith(AI, New);

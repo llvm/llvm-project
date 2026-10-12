@@ -194,9 +194,9 @@ define float @i32_icmp_ne_f32_val(i32 signext %s, float %f0, float %f1) nounwind
 ; 32R6:       # %bb.0: # %entry
 ; 32R6-NEXT:    sltu $1, $zero, $4
 ; 32R6-NEXT:    negu $1, $1
+; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    mtc1 $5, $f1
 ; 32R6-NEXT:    mtc1 $6, $f2
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.s $f0, $f2, $f1
 ;
@@ -248,8 +248,8 @@ define double @i32_icmp_ne_f64_val(i32 signext %s, double %f0, double %f1) nounw
 ; 32R6-NEXT:    mthc1 $7, $f1
 ; 32R6-NEXT:    sltu $1, $zero, $4
 ; 32R6-NEXT:    negu $1, $1
-; 32R6-NEXT:    ldc1 $f2, 16($sp)
 ; 32R6-NEXT:    mtc1 $1, $f0
+; 32R6-NEXT:    ldc1 $f2, 16($sp)
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f2, $f1
 ;
@@ -669,6 +669,7 @@ define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3)
 ; 32R6-NEXT:    mthc1 $7, $f0
 ; 32R6-NEXT:    ldc1 $f1, 16($sp)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
+; 32R6-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.s $f0, $f14, $f12
 ;
@@ -689,6 +690,7 @@ define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3)
 ; 64R6-LABEL: f64_fcmp_ogt_f32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f15, $f14
+; 64R6-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.s $f0, $f13, $f12
 entry:
