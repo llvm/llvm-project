@@ -1108,7 +1108,10 @@ static void EscapeStringForDiagnostic(StringRef Str,
       assert(Begin == CodepointEnd &&
              "we must be further along in the string now");
 
-      if (llvm::sys::unicode::isPrintable(CodepointValue) ||
+      // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
+      // hyphen in most terminals.
+      if (CodepointValue == 0x00AD ||
+          llvm::sys::unicode::isPrintable(CodepointValue) ||
           (!ForCodepoint && llvm::sys::unicode::isFormatting(CodepointValue))) {
         OutStream << (ForCodepoint ? "'" : "")
                   << StringRef(reinterpret_cast<const char *>(CodepointBegin),

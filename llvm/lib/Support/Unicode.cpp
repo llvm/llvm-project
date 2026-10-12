@@ -25,15 +25,10 @@ extern const UnicodeCharSet::CharRanges GeneratedCombiningCharacterRanges;
 extern const UnicodeCharSet::CharRanges GeneratedDoubleWidthCharacterRanges;
 
 /// Unicode code points of the categories L, M, N, P, S and Zs are considered
-/// printable.
-/// In addition, U+00AD SOFT HYPHEN is also considered printable, as
-/// it's actually displayed on most terminals. \return true if the character is
-/// considered printable.
+/// printable.  \return true if the character is considered printable.
 bool isPrintable(int UCS) {
   static const UnicodeCharSet Printables(GeneratedPrintableRanges);
-  // Clang special cases 0x00AD (SOFT HYPHEN) which is rendered as an actual
-  // hyphen in most terminals.
-  return UCS == 0x00AD || Printables.contains(UCS);
+  return Printables.contains(UCS);
 }
 
 /// Unicode code points of the Cf category are considered

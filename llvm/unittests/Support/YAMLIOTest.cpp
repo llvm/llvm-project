@@ -3024,16 +3024,16 @@ TEST(YAMLIO, TestEscaped) {
   TestEscaped("parameter 'параметр' is unused",
               "\"parameter 'параметр' is unused\"");
 
-  // String with embedded non-printable multibyte UTF-8 sequence (U+200B
-  // zero-width space). The thing to test here is that we emit a
-  // unicode-scalar level escape like \uNNNN (at the YAML level), and don't
-  // just pass the UTF-8 byte sequence through as with quoted printables.
+  // String with embedded non-printable multibyte UTF-8 sequence (U+00AD soft
+  // hyphen and U+200B zero-width space). The thing to test here is that we
+  // emit a unicode-scalar level escape like \uNNNN (at the YAML level), and
+  // don't just pass the UTF-8 byte sequence through as with quoted printables.
   {
-    const unsigned char foobar[10] = {'f', 'o', 'o',
-                                      0xE2, 0x80, 0x8B, // UTF-8 of U+200B
-                                      'b', 'a', 'r',
-                                      0x0};
-    TestEscaped((char const *)foobar, "\"foo\\u200Bbar\"");
+    const unsigned char foobar[15] = {
+        'f', 'o', 'o', 0xC2, 0xAD,       // UTF-8 of U+00AD
+        'b', 'a', 'r', 0xE2, 0x80, 0x8B, // UTF-8 of U+200B
+        'b', 'a', 'z', 0x0};
+    TestEscaped((char const *)foobar, "\"foo\\u00ADbar\\u200Bbaz\"");
   }
 }
 
