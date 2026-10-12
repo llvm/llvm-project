@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck %s
 
 define i64 @i64_test(i64 %i) nounwind readnone {
   %loc = alloca i64, addrspace(5)
