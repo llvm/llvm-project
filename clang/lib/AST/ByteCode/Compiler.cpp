@@ -624,15 +624,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_BaseToDerived: {
     if (!this->delegate(SubExpr))
       return false;
-    unsigned DerivedOffset =
-        collectBaseOffset(SubExpr->getType(), E->getType());
 
-    const Type *TargetType = E->getType().getTypePtr();
-    if (TargetType->isPointerOrReferenceType())
-      TargetType = TargetType->getPointeeType().getTypePtr();
-    return this->emitGetPtrDerivedPop(DerivedOffset,
-                                      /*NullOK=*/E->getType()->isPointerType(),
-                                      TargetType, E);
+    auto unwrapPointerType = [](const Type *T) -> const Type * {
+      if (T->isPointerOrReferenceType())
+        return T->getPointeeType().getTypePtr();
+      return T;
+    };
+
+    bool NullOK = false;
+    const Type *FinalType = E->getType().getTypePtr();
+    if (FinalType->isPointerOrReferenceType()) {
+      NullOK = true;
+      FinalType = FinalType->getPointeeType().getTypePtr();
+    }
+
+    for (const CXXBaseSpecifier *B :
+         llvm::drop_begin(llvm::reverse(E->path()))) {
+      const Type *TargetType = unwrapPointerType(B->getType().getTypePtr());
+      if (!this->emitGetPtrDerivedPop(NullOK, TargetType, FinalType, E))
+        return false;
+    }
+
+    return this->emitGetPtrDerivedPop(NullOK, FinalType, FinalType, E);
   }
 
   case CK_FloatingCast: {
