@@ -223,8 +223,9 @@ define double @pow_intrinsic_twothirds_fpmath(double %x) {
   ret double %pow
 }
 
-; Long double is fp128 in InstCombine tests (see pow-exp.ll), not x86_fp80.
-; Exponent is 2/3 in fp128 precision (2.0L/3.0L), not an extended double 2/3.
+; fp128 long double folds. The exponent is 2/3 in fp128 precision.
+; x86_fp80 and ppc_fp128 do not. Long double that is IEEE double is just
+; the double type, covered by the double tests above.
 define fp128 @pow_intrinsic_twothirds_f128(fp128 %x) {
 ; CHECK-LABEL: @pow_intrinsic_twothirds_f128(
 ; CHECK-NEXT:    [[CBRTL:%.*]] = call nnan ninf nsz afn fp128 @cbrtl(fp128 [[X:%.*]])
@@ -243,6 +244,26 @@ define fp128 @powl_libcall_twothirds_f128(fp128 %x) {
 ;
   %pow = call nnan ninf nsz afn fp128 @powl(fp128 %x, fp128 0xL55555555555555553FFE555555555555)
   ret fp128 %pow
+}
+
+; x86_fp80 long double is not rewritten to cbrt(x) * cbrt(x).
+define x86_fp80 @pow_intrinsic_twothirds_fp80(x86_fp80 %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_fp80(
+; CHECK-NEXT:    [[POW:%.*]] = call nnan ninf nsz afn x86_fp80 @llvm.pow.f80(x86_fp80 [[X:%.*]], x86_fp80 f0x3FFEAAAAAAAAAAAAAAAB)
+; CHECK-NEXT:    ret x86_fp80 [[POW]]
+;
+  %pow = call nnan ninf nsz afn x86_fp80 @llvm.pow.f80(x86_fp80 %x, x86_fp80 0xK3FFEAAAAAAAAAAAAAAAB)
+  ret x86_fp80 %pow
+}
+
+; ppc_fp128 long double is not rewritten to cbrt(x) * cbrt(x).
+define ppc_fp128 @pow_intrinsic_twothirds_ppcf128(ppc_fp128 %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_ppcf128(
+; CHECK-NEXT:    [[POW:%.*]] = call nnan ninf nsz afn ppc_fp128 @llvm.pow.ppcf128(ppc_fp128 [[X:%.*]], ppc_fp128 f0x3C855555555555563FE5555555555555)
+; CHECK-NEXT:    ret ppc_fp128 [[POW]]
+;
+  %pow = call nnan ninf nsz afn ppc_fp128 @llvm.pow.ppcf128(ppc_fp128 %x, ppc_fp128 0xM3FE55555555555553C85555555555556)
+  ret ppc_fp128 %pow
 }
 
 ; Negative test: 'afn' alone is not enough; the fold requires nnan/ninf/nsz too.
@@ -287,6 +308,8 @@ define double @pow_intrinsic_twothirds_nonexact(double %x) {
 declare double @llvm.pow.f64(double, double) #0
 declare float @llvm.pow.f32(float, float) #0
 declare fp128 @llvm.pow.f128(fp128, fp128) #0
+declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) #0
+declare ppc_fp128 @llvm.pow.ppcf128(ppc_fp128, ppc_fp128) #0
 declare double @pow(double, double)
 declare float @powf(float, float)
 declare fp128 @powl(fp128, fp128)
