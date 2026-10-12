@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -enable-epilogue-vectorization \
 ; RUN:   -epilogue-vectorization-force-VF=2 -S %s | FileCheck %s
 
-; We duplicate VPI::ReductionStartVector when CSE'ing.
+; We CSE the reduction start vector, but duplicate it in the epilogue loop.
 define i32 @cse_reduction_start_vector_multiple_users(ptr %a, i64 %n) {
 ; CHECK-LABEL: define i32 @cse_reduction_start_vector_multiple_users(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
