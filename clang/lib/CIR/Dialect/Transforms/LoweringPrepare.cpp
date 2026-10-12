@@ -446,6 +446,8 @@ struct LoweringPreparePass
     args[2] = cir::GetGlobalOp::create(
         builder, loc, builder.getPointerTo(handle.getSymType()),
         handle.getSymName());
+    // TODO(cir): set the runtime calling convention on the __cxa_atexit call.
+    assert(!cir::MissingFeatures::opFuncCallingConv());
     return builder.createCallOp(loc, fnAtExit, args);
   }
 
@@ -484,6 +486,9 @@ struct LoweringPreparePass
                             bool isLocalVarDecl, mlir::Value guardPtr,
                             cir::PointerType guardPtrTy, bool threadsafe) {
     auto loc = globalOp->getLoc();
+
+    // TODO(cir): set the runtime calling convention on the __cxa_guard_* calls.
+    assert(!cir::MissingFeatures::opFuncCallingConv());
 
     // The semantics of dynamic initialization of variables with static or
     // thread storage duration depends on whether they are declared at
@@ -756,6 +761,8 @@ static mlir::Value buildComplexBinOpLibCall(
     libFunc = pass.buildRuntimeFunction(builder, libFuncName, loc, libFuncTy);
   }
 
+  // TODO(cir): set the runtime calling convention to this call.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   cir::CallOp call =
       builder.createCallOp(loc, libFunc, {lhsReal, lhsImag, rhsReal, rhsImag});
   return call.getResult();
@@ -1347,7 +1354,9 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
       mlir::cast<cir::GetGlobalOp>(dtorBlock.getOperations().front());
   builder.setInsertionPointAfter(origGGop);
   mlir::Value ggopResult = origGGop.getResult();
-  dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult);
+  dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult,
+                                  /*attrs=*/{}, /*argAttrs=*/{},
+                                  /*resAttrs=*/{}, dtorFunc.getCallingConv());
 
   // Add a yield after the call.
   auto finalYield = cir::YieldOp::create(builder, op.getLoc());
@@ -1830,13 +1839,18 @@ void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
           builder, aliasLoc, cir::CmpOpKind::ne, funcLoad, nullCheck);
       cir::IfOp::create(builder, aliasLoc, cmp, /*withElseRegion=*/false,
                         [&](mlir::OpBuilder &, mlir::Location loc) {
-                          builder.createCallOp(aliasLoc, initAlias, {});
+                          builder.createCallOp(aliasLoc, initAlias, {},
+                                               /*attrs=*/{},
+                                               /*argAttrs=*/{}, /*resAttrs=*/{},
+                                               initAlias.getCallingConv());
                           cir::YieldOp::create(builder, aliasLoc);
                         });
     } else {
       // If this IS a definition, we know the alias exists, so we can just emit
       // a call to it.
-      builder.createCallOp(aliasLoc, initAlias, {});
+      builder.createCallOp(aliasLoc, initAlias, {}, /*attrs=*/{},
+                           /*argAttrs=*/{}, /*resAttrs=*/{},
+                           initAlias.getCallingConv());
     }
   }
   cir::GetGlobalOp get = builder.createGetGlobal(op, /*tls=*/true);
@@ -2016,7 +2030,8 @@ void LoweringPreparePass::lowerGetGlobalOp(GetGlobalOp op) {
   cir::CallOp call = builder.createCallOp(
       wrapperFunc.getLoc(),
       mlir::FlatSymbolRefAttr::get(wrapperFunc.getSymNameAttr()),
-      wrapperFunc.getFunctionType().getReturnType(), {});
+      wrapperFunc.getFunctionType().getReturnType(), {}, /*attrs=*/{},
+      /*argAttrs=*/{}, /*resAttrs=*/{}, wrapperFunc.getCallingConv());
   op->replaceAllUsesWith(call);
   op.erase();
 }
@@ -2169,7 +2184,8 @@ void LoweringPreparePass::buildCXXGlobalTlsFunc() {
   // Emit the body of the guarded spot.
   builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
   for (cir::FuncOp initFunc : globalThreadLocalInitializers)
-    builder.createCallOp(loc, initFunc, {});
+    builder.createCallOp(loc, initFunc, {}, /*attrs=*/{}, /*argAttrs=*/{},
+                         /*resAttrs=*/{}, initFunc.getCallingConv());
   cir::YieldOp::create(builder, loc);
 
   builder.setInsertionPointAfter(ifOperation);
@@ -2197,7 +2213,9 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
                                         fnType, linkage);
   builder.setInsertionPointToStart(fn.addEntryBlock());
   for (cir::FuncOp init : initializers)
-    builder.createCallOp(init.getLoc(), init, {});
+    builder.createCallOp(init.getLoc(), init, {}, /*attrs=*/{},
+                         /*argAttrs=*/{}, /*resAttrs=*/{},
+                         init.getCallingConv());
   cir::ReturnOp::create(builder, fn.getLoc());
   globalCtorList.emplace_back(fnName, priority);
   return fn;

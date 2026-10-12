@@ -669,13 +669,17 @@ public:
   bool usesCFIForEH() const {
     return (ExceptionsType == ExceptionHandling::DwarfCFI ||
             ExceptionsType == ExceptionHandling::ARM ||
-            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
+            ExceptionsType == ExceptionHandling::ZOS ||
+            (ExceptionsType == ExceptionHandling::WinEH && usesWindowsCFI()));
   }
 
+  /// Returns true if the object format describes unwind information with
+  /// Windows SEH unwind opcodes (.seh_* directives, .pdata and .xdata).
+  /// Whether a function uses that encoding also depends on the exception
+  /// model; see MachineFunction::usesWindowsUnwindInfo().
   bool usesWindowsCFI() const {
-    return ExceptionsType == ExceptionHandling::WinEH &&
-           (WinEHEncodingType != WinEH::EncodingType::Invalid &&
-            WinEHEncodingType != WinEH::EncodingType::X86);
+    return WinEHEncodingType != WinEH::EncodingType::Invalid &&
+           WinEHEncodingType != WinEH::EncodingType::X86;
   }
 
   /// Returns true if the exception tables reference the per-invoke EH labels

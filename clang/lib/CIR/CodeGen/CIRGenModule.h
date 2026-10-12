@@ -470,6 +470,10 @@ public:
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
 
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
+
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
   ///
