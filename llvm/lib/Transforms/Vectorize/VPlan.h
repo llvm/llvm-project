@@ -1473,8 +1473,8 @@ public:
   unsigned getOpcode() const { return Opcode; }
 
   /// Add \p Op as operand of this VPInstruction. Only supported for AnyOf,
-  /// ComputeReductionResult, BuildVector, ExtractLane, ExtractLastActive,
-  /// FirstActiveLane, LastActiveLane.
+  /// ComputeReductionResult, BuildVector, ExtractLane,
+  /// ExtractLastActive, FirstActiveLane, LastActiveLane.
   void addOperand(VPValue *Op);
 
   /// Generate the instruction.

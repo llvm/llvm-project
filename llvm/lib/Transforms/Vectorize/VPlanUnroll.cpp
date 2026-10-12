@@ -846,10 +846,11 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   }
 
   // Create a BuildVector in successor block for every VPPhi in (first lane's)
-  // exiting block having vector uses. All their operands are initialized to
-  // poison and will be replaced when processing each clone, except for the
-  // operand of the first lane which is set here. BuildVectors are recorded to
-  // be replaced later by chains of insert-element and widen phis.
+  // exiting block having vector uses. All their
+  // operands are initialized to poison and will be replaced when processing
+  // each clone, except for the operand of the first lane which set here.
+  // BuildVectors are recorded to be replaced later by chains of insert-element
+  // and widen phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
   for (auto &R : FirstLaneExiting->phis()) {
@@ -857,7 +858,8 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     if (vputils::onlyFirstLaneUsed(Phi))
       continue;
 
-    VPValue *Poison = Plan.getPoison(Phi->getScalarType());
+    Type *ScalarTy = Phi->getScalarType();
+    VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
     BuildVectors.push_back(BV);

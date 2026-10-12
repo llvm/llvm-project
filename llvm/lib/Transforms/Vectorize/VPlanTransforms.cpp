@@ -591,13 +591,11 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   if (RecipeWithoutMask->getScalarType()->isStructTy())
     Defs = to_vector(RecipeWithoutMask->users());
   for (VPUser *U : Defs) {
-    auto *Def = cast<VPSingleDefRecipe>(U);
+    auto *Def = cast<VPReplicateRecipe>(U);
     assert((Def == RecipeWithoutMask ||
-            vputils::getOpcode(Def) == Instruction::ExtractValue) &&
+            Def->getOpcode() == Instruction::ExtractValue) &&
            "only extracts can use a predicated struct");
     Def->moveBefore(*Pred, Pred->end());
-    cast<VPIRMetadata>(static_cast<VPRecipeBase *>(Def))
-        ->clearExecutionFrequency();
     if (Def->user_empty())
       continue;
     auto *PHIRecipe = new VPPredInstPHIRecipe(Def, Def->getDebugLoc());
@@ -818,9 +816,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!vputils::isSingleScalar(Def) && !vputils::onlyFirstLaneUsed(Def))
         continue;
 
-      // The aggregate of a widened ExtractValue is a struct of vectors, whose
-      // lanes cannot be extracted.
-      if (!RepR && vputils::getOpcode(Def) == Instruction::ExtractValue)
+      // TODO: Support scalarizing ExtractValue.
+      if (match(Def,
+                m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
       auto *Clone = VPBuilder::createSingleScalarOp(
