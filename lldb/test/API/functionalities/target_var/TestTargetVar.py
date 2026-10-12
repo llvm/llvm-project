@@ -14,7 +14,6 @@ class targetCommandTestCase(TestBase):
     @skipIfDarwinEmbedded  # needs x86_64
     @skipIf(debug_info="gmodules")  # not relevant
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def testTargetVarExpr(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")

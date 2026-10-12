@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
 @requireExpressionEvaluation
 class CStringsTestCase(TestBase):
     def test_with_run_command(self):
