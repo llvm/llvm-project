@@ -91,7 +91,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -106,15 +105,6 @@ using namespace llvm;
 
 STATISTIC(NumInsertedNops, "Number of nops inserted");
 STATISTIC(LongBranches, "Number of long branches.");
-
-static cl::opt<bool>
-    SkipLongBranch("skip-mips-long-branch", cl::init(false),
-                   cl::desc("MIPS: Skip branch expansion pass."), cl::Hidden);
-
-static cl::opt<bool>
-    ForceLongBranch("force-mips-long-branch", cl::init(false),
-                    cl::desc("MIPS: Expand all branches to long format."),
-                    cl::Hidden);
 
 namespace {
 
@@ -868,7 +858,7 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
   if (STI->inMips16Mode())
     return false;
 
-  if (SkipLongBranch)
+  if (STI->getCLOpts().skip_mips_long_branch)
     return false;
 
   bool EverMadeChange = false, MadeChange = true;
@@ -931,7 +921,7 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
 
   MFp = &MF;
 
-  ForceLongBranchFirstPass = ForceLongBranch;
+  ForceLongBranchFirstPass = STI->getCLOpts().force_mips_long_branch;
   // Run these at least once.
   bool longBranchChanged = handlePossibleLongBranch();
   bool forbiddenSlotChanged = handleForbiddenSlot();

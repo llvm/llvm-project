@@ -38,7 +38,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -56,32 +55,6 @@ STATISTIC(UsefulSlots, "Number of delay slots filled with instructions that"
                        " are not NOP.");
 STATISTIC(R5900ShortLoopNops, "Number of delay slots left as NOP for R5900 "
                               "short loop fix");
-
-static cl::opt<bool> DisableDelaySlotFiller(
-  "disable-mips-delay-filler",
-  cl::init(false),
-  cl::desc("Fill all delay slots with NOPs."),
-  cl::Hidden);
-
-static cl::opt<bool> DisableForwardSearch(
-  "disable-mips-df-forward-search",
-  cl::init(true),
-  cl::desc("Disallow MIPS delay filler to search forward."),
-  cl::Hidden);
-
-static cl::opt<bool> DisableSuccBBSearch(
-  "disable-mips-df-succbb-search",
-  cl::init(true),
-  cl::desc("Disallow MIPS delay filler to search successor basic blocks."),
-  cl::Hidden);
-
-static cl::opt<bool> DisableBackwardSearch(
-  "disable-mips-df-backward-search",
-  cl::init(false),
-  cl::desc("Disallow MIPS delay filler to search backward."),
-  cl::Hidden);
-
-extern cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy;
 
 namespace {
 
@@ -279,6 +252,7 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &F) override {
       TM = &F.getTarget();
+      CLOpts = &F.getSubtarget<MipsSubtarget>().getCLOpts();
       bool Changed = false;
       for (auto MBB = F.begin(); MBB != F.end();) {
         auto curMBB = MBB;
@@ -364,6 +338,7 @@ namespace {
     bool terminateSearch(const MachineInstr &Candidate) const;
 
     const TargetMachine *TM = nullptr;
+    const MipsOptions *CLOpts = nullptr;
   };
 
 } // end anonymous namespace
@@ -768,7 +743,7 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(
 
     // Delay slot filling is disabled at -O0, in microMIPS32R6, or for R5900
     // short loop branches.
-    if (!DisableDelaySlotFiller &&
+    if (!CLOpts->disable_mips_delay_filler &&
         (TM->getOptLevel() != CodeGenOptLevel::None) &&
         !(InMicroMipsMode && STI.hasMips32r6()) && !SkipForFixR5900) {
 
@@ -776,8 +751,8 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(
       const auto BranchInfo =
           BranchInformation(I, MBB.end(), FirstNextMBBInstr);
 
-      if (MipsCompactBranchPolicy.getValue() != CB_Always ||
-           !TII->getEquivalentCompactForm(I)) {
+      if (CLOpts->compact_branches != CompactBranchPolicy::Always ||
+          !TII->getEquivalentCompactForm(I)) {
         if (searchBackward(MBB, *I, BranchInfo)) {
           LLVM_DEBUG(dbgs() << DEBUG_TYPE ": found instruction for delay slot"
                                           " in backwards search.\n");
@@ -827,7 +802,8 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(
     // form of the CTI. For indirect jumps this will not require inserting a
     // NOP and for branches will hopefully avoid requiring a NOP.
     if ((InMicroMipsMode ||
-         (STI.hasMips32r6() && MipsCompactBranchPolicy != CB_Never)) &&
+         (STI.hasMips32r6() &&
+          CLOpts->compact_branches != CompactBranchPolicy::Never)) &&
         TII->getEquivalentCompactForm(I)) {
       I = replaceWithCompactBranch(MBB, I, I->getDebugLoc());
       Changed = true;
@@ -929,7 +905,7 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
 bool MipsDelaySlotFiller::searchBackward(
     MachineBasicBlock &MBB, MachineInstr &Slot,
     const BranchInformation &BranchInfo) const {
-  if (DisableBackwardSearch)
+  if (CLOpts->disable_mips_df_backward_search)
     return false;
 
   auto *Fn = MBB.getParent();
@@ -957,7 +933,7 @@ bool MipsDelaySlotFiller::searchForward(
     MachineBasicBlock &MBB, Iter Slot,
     const BranchInformation &BranchInfo) const {
   // Can handle only calls.
-  if (DisableForwardSearch || !Slot->isCall())
+  if (CLOpts->disable_mips_df_forward_search || !Slot->isCall())
     return false;
 
   RegDefsUses RegDU(*MBB.getParent()->getSubtarget().getRegisterInfo());
@@ -982,7 +958,7 @@ bool MipsDelaySlotFiller::searchForward(
 bool MipsDelaySlotFiller::searchSuccBBs(
     MachineBasicBlock &MBB, Iter Slot,
     const BranchInformation &BranchInfo) const {
-  if (DisableSuccBBSearch)
+  if (CLOpts->disable_mips_df_succbb_search)
     return false;
 
   MachineBasicBlock *SuccBB = selectSuccBB(MBB);
