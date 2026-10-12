@@ -1,31 +1,24 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
-; Write without Alloc.
-; CHECK: llvm.raw.sections entry operand 2 is not a valid combination of section flags
-; CHECK-NEXT: !{!"__mydata", i32 8, i32 2, !"data"}
+; Lowest non-zero bit.
+; CHECK: llvm.raw.sections entry operand 2 must be zero (flags are reserved for future use)
+; CHECK-NEXT: !{!"__mydata", i32 8, i32 1, !"data"}
 
-; Exec without Alloc.
-; CHECK: llvm.raw.sections entry operand 2 is not a valid combination of section flags
-; CHECK-NEXT: !{!"__mydata", i32 8, i32 4, !"data"}
+; Higher bit.
+; CHECK: llvm.raw.sections entry operand 2 must be zero (flags are reserved for future use)
+; CHECK-NEXT: !{!"__mydata", i32 8, i32 8, !"data"}
 
-; Write combined with Exec.
-; CHECK: llvm.raw.sections entry operand 2 is not a valid combination of section flags
-; CHECK-NEXT: !{!"__mydata", i32 8, i32 7, !"data"}
+; Wider integer type.
+; CHECK: llvm.raw.sections entry operand 2 must be zero (flags are reserved for future use)
+; CHECK-NEXT: !{!"__mydata", i32 8, i64 4294967296, !"data"}
 
-; Exclude combined with Alloc.
-; CHECK: llvm.raw.sections entry operand 2 is not a valid combination of section flags
-; CHECK-NEXT: !{!"__mydata", i32 8, i32 9, !"data"}
+; CHECK-NOT: llvm.raw.sections
 
-; Unknown flag bit.
-; CHECK: llvm.raw.sections entry operand 2 is not a valid combination of section flags
-; CHECK-NEXT: !{!"__mydata", i32 8, i32 16, !"data"}
+!llvm.raw.sections = !{!0, !1, !2, !3, !4}
 
-!llvm.raw.sections = !{!0, !1, !2, !3, !4, !5}
-
-; Valid: Alloc only.
-!0 = !{!"__mydata", i32 8, i32 1, !"data"}
-!1 = !{!"__mydata", i32 8, i32 2, !"data"}
-!2 = !{!"__mydata", i32 8, i32 4, !"data"}
-!3 = !{!"__mydata", i32 8, i32 7, !"data"}
-!4 = !{!"__mydata", i32 8, i32 9, !"data"}
-!5 = !{!"__mydata", i32 8, i32 16, !"data"}
+; Valid: zero flags.
+!0 = !{!"__mydata", i32 8, i32 0, !"data"}
+!1 = !{!"__mydata", i32 8, i64 0, !"data"}
+!2 = !{!"__mydata", i32 8, i32 1, !"data"}
+!3 = !{!"__mydata", i32 8, i32 8, !"data"}
+!4 = !{!"__mydata", i32 8, i64 4294967296, !"data"}

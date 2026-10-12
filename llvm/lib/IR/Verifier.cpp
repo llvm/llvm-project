@@ -2004,9 +2004,9 @@ void Verifier::visitModuleRawSections() {
           "llvm.raw.sections entry operand 2 must be an integer "
           "(flags)",
           N);
-    if (!Module::isValidRawSectionFlags(FlagsCI->getZExtValue())) {
-      CheckFailed("llvm.raw.sections entry operand 2 is not a valid "
-                  "combination of section flags",
+    if (FlagsCI->getZExtValue() != 0) {
+      CheckFailed("llvm.raw.sections entry operand 2 must be zero (flags are "
+                  "reserved for future use)",
                   N);
       continue;
     }
