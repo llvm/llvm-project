@@ -1105,6 +1105,18 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f16:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.store.format",
+               cir::VoidType::get(builder.getContext()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f16:
+    return emitBuiltinWithOneOverloadedType<4>(
+               expr, "amdgcn.raw.ptr.buffer.load.format",
+               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b32:
@@ -1116,34 +1128,26 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.add")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fadd")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fmin")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32:
-  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
+    return emitBuiltinWithOneOverloadedType<5>(
+               expr, "amdgcn.raw.ptr.buffer.atomic.fmax")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
                expr, "amdgcn.s.prefetch.data",
