@@ -511,8 +511,8 @@ private:
     // and swap TJumpOffset and FJumpOffset (&& becomes ||, || becomes &&).
     std::function<bool(const MachineInstr &)> Pred;
     bool Neg; // Neg of Pred is calculated before jump
-    unsigned TJumpOffset;
-    unsigned FJumpOffset;
+    size_t TJumpOffset;
+    size_t FJumpOffset;
   };
 
   SmallVector<Elt, 8> Expression;
@@ -525,8 +525,8 @@ public:
   };
 
   bool operator()(const MachineInstr &MI) const {
-    unsigned Idx = 0;
-    unsigned ResultIdx = static_cast<unsigned>(Expression.size());
+    size_t Idx = 0;
+    size_t ResultIdx = Expression.size();
     bool Result;
     do {
       Result = Expression[Idx].Pred(MI);
@@ -553,8 +553,8 @@ public:
   Predicate operator&&(const Predicate &RHS) const {
     SmallVector<Elt, 8> AndExpression = Expression;
 
-    unsigned RHSSize = static_cast<unsigned>(RHS.Expression.size());
-    unsigned ResultIdx = static_cast<unsigned>(Expression.size());
+    size_t RHSSize = RHS.Expression.size();
+    size_t ResultIdx = Expression.size();
     for (unsigned i = 0; i < ResultIdx; ++i) {
       // LHS results in false, whole expression results in false.
       if (i + AndExpression[i].FJumpOffset == ResultIdx)
@@ -569,8 +569,8 @@ public:
   Predicate operator||(const Predicate &RHS) const {
     SmallVector<Elt, 8> OrExpression = Expression;
 
-    unsigned RHSSize = static_cast<unsigned>(RHS.Expression.size());
-    unsigned ResultIdx = static_cast<unsigned>(Expression.size());
+    size_t RHSSize = RHS.Expression.size();
+    size_t ResultIdx = Expression.size();
     for (unsigned i = 0; i < ResultIdx; ++i) {
       // LHS results in true, whole expression results in true.
       if (i + OrExpression[i].TJumpOffset == ResultIdx)

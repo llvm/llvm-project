@@ -1710,7 +1710,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                               ImplicitArgRegs);
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = static_cast<unsigned>(CCInfo.getStackSize());
+  uint64_t NumBytes = CCInfo.getStackSize();
 
   // If Callee is a reg, since it is used by a target specific
   // instruction, it must have a register class matching the

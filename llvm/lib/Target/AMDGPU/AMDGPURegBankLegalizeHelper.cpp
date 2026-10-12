@@ -383,7 +383,7 @@ bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
   LLT OffsetTy = LLT::integer(static_cast<unsigned>(PtrTy.getSizeInBits()));
   SmallVector<Register, 4> LoadPartRegs;
 
-  unsigned ByteOffset = 0;
+  uint64_t ByteOffset = 0;
   for (LLT PartTy : LLTBreakdown) {
     Register BasePlusOffset;
     if (ByteOffset == 0) {
@@ -396,7 +396,7 @@ bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
     auto *OffsetMMO = MF.getMachineMemOperand(&BaseMMO, ByteOffset, PartTy);
     auto LoadPart = B.buildLoad({DstRB, PartTy}, BasePlusOffset, *OffsetMMO);
     LoadPartRegs.push_back(LoadPart.getReg(0));
-    ByteOffset += static_cast<unsigned>(PartTy.getSizeInBytes());
+    ByteOffset += PartTy.getSizeInBytes();
   }
 
   if (!MergeTy.isValid()) {
@@ -1350,8 +1350,8 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
 
   // N.B. The setreg will be later folded into s_round_mode on supported
   // targets.
-  uint32_t BothRoundHwReg = static_cast<uint32_t>(
-      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4));
+  uint64_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   B.buildIntrinsic(Intrinsic::amdgcn_s_setreg, ArrayRef<DstOp>(),
                    /*HasSideEffects=*/true, /*isConvergent=*/false)
       .addImm(static_cast<int16_t>(BothRoundHwReg))
@@ -1366,8 +1366,8 @@ bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
 bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
 
-  uint32_t BothRoundHwReg = static_cast<uint32_t>(
-      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4));
+  uint64_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
   auto GetReg =
       B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {SgprRB_I32},
                        /*HasSideEffects=*/true, /*isConvergent=*/false)
