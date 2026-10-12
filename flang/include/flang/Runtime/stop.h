@@ -44,6 +44,23 @@ void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line);
 
+// The NUL-terminated message contains only %lld conversions and %% escapes.
+// A fixed argument list also permits calls from device code; unused values
+// are ignored.
+RT_OFFLOAD_API_GROUP_BEGIN
+NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserErrorValues)(
+    const char *message, const char *source, int line, long long v0,
+    long long v1, long long v2, long long v3);
+
+// The same NUL-terminated restricted format with an arbitrary number of values.
+// The number of %lld conversions must equal count; values may be null when
+// count is zero. This fallback allocates its formatted message only on the
+// fatal path.
+NORETURN RT_API_ATTRS void RTNAME(ReportFatalUserErrorValueArray)(
+    const char *message, const char *source, int line, size_t count,
+    const long long *values);
+RT_OFFLOAD_API_GROUP_END
+
 FORTRAN_EXTERN_C_END
 
 #endif // FORTRAN_RUNTIME_STOP_H_
