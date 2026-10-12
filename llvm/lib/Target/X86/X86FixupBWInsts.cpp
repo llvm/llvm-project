@@ -481,7 +481,8 @@ void X86FixupBWInstImpl::eliminateRedundantZeroExtends(MachineBasicBlock &MBB) {
       // Reading %ah and friends does not read the part of the super register
       // that is known to hold the whole value, so insist on the low bits.
       if (getX86SubSuperRegister(SrcSuper, ReadBits) == Src &&
-          It != Known.end() && It->second <= ReadBits) {
+      if (It != Known.end() && It->second <= ReadBits &&
+          getX86SubSuperRegister(SrcSuper, ReadBits) == Src) {
 
         if (Dst == SrcSuper) {
           // The extend writes back the value that is already in the register.
