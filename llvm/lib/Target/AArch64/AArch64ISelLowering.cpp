@@ -20196,6 +20196,14 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
     if (isa<ScalableVectorType>(Ty)) {
       EVT VT = getValueType(DL, Ty);
+
+      if (I) {
+        if (User *U = I->getUniqueUndroppableUser()) {
+          if (isa<ZExtInst, SExtInst>(U))
+            VT = getValueType(DL, U->getType());
+        }
+      }
+
       LLVMContext &Ctx = Ty->getContext();
       TargetLowering::LegalizeTypeAction Action = getTypeAction(Ctx, VT);
 
