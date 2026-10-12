@@ -6085,7 +6085,6 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
-
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
