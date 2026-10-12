@@ -2502,7 +2502,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::FADD, VT, Expand);
+      setOperationAction(ISD::FSUB, VT, Expand);
+      setOperationAction(ISD::FMUL, VT, Expand);
+      setOperationAction(ISD::FDIV, VT, Expand);
     }
+    setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
+    addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+  }
+
+  if (!Subtarget.useSoftFloat() &&
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                          ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
                          ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
@@ -2511,24 +2521,30 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
-    setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
-    addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasBWI() &&
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
+    setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
+    setOperationAction(ISD::FADD, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FSUB, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FMUL, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FDIV, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
+  }
+
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16() &&
+      Subtarget.useAVX512Regs()) {
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                          ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
                          ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
-    setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
-    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
-    setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v32bf16, Legal);
-    setOperationAction(ISD::CONCAT_VECTORS, MVT::v32bf16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
