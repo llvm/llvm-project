@@ -28,9 +28,9 @@ constexpr bool test() {
 
   // Integers
   assert(std::format("{}", 42) == "42");
-  assert(std::format("{}", 42, 3.0) == "42");  // 3.0 is stored but never formatted
-  // assert(std::format("{}", -42) == "-42");
-  // assert(std::format("{:x}", 255u) == "ff");
+  assert(std::format("{}", 42, 3.0) == "42"); // 3.0 is stored but never formatted
+  assert(std::format("{}", -42) == "-42");
+  assert(std::format("{:x}", 255u) == "ff");
   // assert(std::format("{:>5}", 42) == "   42");
 
   // bool and char
