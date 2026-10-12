@@ -9,6 +9,8 @@ Members:
     OffloadKind:      OFK_Cuda
   - ImageKind:        IMG_Cubin
     OffloadKind:      OFK_HIP
+  - ImageKind:        IMG_Object
+    OffloadKind:      OFK_OpenACC
   - ImageKind:        IMG_Fatbinary
   - ImageKind:        IMG_PTX
   - ImageKind:        999
@@ -27,6 +29,9 @@ Members:
 # CHECK-NEXT:     Flags:           0
 # CHECK-NEXT:   - ImageKind:       IMG_Cubin
 # CHECK-NEXT:     OffloadKind:     OFK_HIP
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT:   - ImageKind:       IMG_Object
+# CHECK-NEXT:     OffloadKind:     OFK_OpenACC
 # CHECK-NEXT:     Flags:           0
 # CHECK-NEXT:   - ImageKind:       IMG_Fatbinary
 # CHECK-NEXT:     OffloadKind:     OFK_None
