@@ -517,8 +517,7 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// it adds a guard variable to functions that call alloca regardless of size
 /// and to functions with an alloca that the frontend marked as a "GS buffer"
 /// using "stack-protector" metadata, but it does not consider a variable's
-/// address being taken, and it never protects a function that takes a variable
-/// argument list. Deciding what a GS buffer is needs source-level type
+/// address being taken. Deciding what a GS buffer is needs source-level type
 /// information that lowering to IR does not preserve, which is why that part
 /// of the heuristic lives in the frontend.
 ///
@@ -569,10 +568,6 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
   } else {
     return false;
   }
-
-  // MSVC's /GS does not protect functions that take a variable argument list.
-  if (GSBuffer && F->isVarArg())
-    return false;
 
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {

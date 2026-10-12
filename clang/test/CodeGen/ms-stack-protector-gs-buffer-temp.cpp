@@ -8,6 +8,7 @@
 // RUN:     | FileCheck %s
 
 struct Buf { char b[16]; };
+struct SmallBuf { char b[8]; };  // passed in a register, unlike Buf
 struct Ctor { char b[16]; Ctor(); };
 struct Dtor { char b[16]; ~Dtor(); };
 struct CopyCtor { char b[16]; CopyCtor(); CopyCtor(const CopyCtor &); };
@@ -84,6 +85,15 @@ void pass_no_copy() { takeNoCopy(NoCopy()); }
 // CHECK:         call void @llvm.memcpy{{.*}}(ptr {{[^,]*}}%[[COPY]],
 // CHECK:         call void @"?use@@YAXPEBX@Z"(ptr {{[^,]*}}%[[COPY]])
 void param(Buf b) { use(&b); }
+
+// A parameter small enough to arrive in registers is spilled by the prologue to
+// a slot of this frame's own, which the guard already covers. Nothing has to be
+// relocated, but it is still a declared object and still gets classified.
+// CHECK-LABEL: @"?param_in_register@@YAXUSmallBuf@@@Z"
+// CHECK:         alloca %struct.SmallBuf, align 1, !stack-protector ![[LARGE_TRIV]]
+// CHECK-NOT:     call void @llvm.memcpy
+// CHECK:       }
+void param_in_register(SmallBuf b) { use(&b); }
 
 // A parameter that is not a GS buffer is left where it is.
 // CHECK-LABEL: @"?param_int@@YAXH@Z"

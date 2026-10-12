@@ -3046,16 +3046,29 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
     ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
 
-    // An indirectly passed parameter lives in storage the caller allocated, so
-    // this frame's stack guard does not cover it. When it is a GS buffer,
-    // relocate it the way cl.exe does. Only `byval` and plain `indirect` own
-    // their storage; for `byref` the callee's writes are visible to the caller,
-    // so a copy would change behaviour.
-    if (MarkGSBuffers && !CurFuncIsThunk && isa<ParmVarDecl>(&D) &&
-        ArgInfo.isIndirect() &&
-        CurFnInfo->getExtParameterInfo(ArgNo - 1).getABI() ==
+    // A by-value parameter is an object the source declared, so cl.exe
+    // classifies it. Where it lives decides what has to happen for this
+    // frame's guard to cover it.
+    if (MarkGSBuffers && !CurFuncIsThunk && isa<ParmVarDecl>(&D)) {
+      if (ArgInfo.isIndirect()) {
+        // The caller allocated the storage, so the guard does not reach it.
+        // When it is a GS buffer, relocate it the way cl.exe does. Only
+        // `byval` and plain `indirect` own their storage; for `byref` the
+        // callee's writes are visible to the caller, so a copy would change
+        // behaviour.
+        if (CurFnInfo->getExtParameterInfo(ArgNo - 1).getABI() ==
             ParameterABI::Ordinary)
-      DeclPtr = EmitGSBufferParamCopy(D, DeclPtr);
+          DeclPtr = EmitGSBufferParamCopy(D, DeclPtr);
+      } else if (isa<llvm::AllocaInst>(
+                     DeclPtr.getBasePointer()->stripPointerCasts())) {
+        // The argument arrived in registers and the prologue spilled it to a
+        // slot of this frame's own, which the guard already covers. Nothing
+        // needs moving, but it still has to be classified: without this an
+        // aggregate small enough to be passed in registers would be missed.
+        EmitGSBufferStackProtectorMD(
+            DeclPtr.getBasePointer()->stripPointerCasts(), Ty);
+      }
+    }
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 

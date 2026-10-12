@@ -4,7 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -O2 \
 // RUN:     -stack-protector 4 -emit-llvm %s -o - | FileCheck %s --check-prefix=GS
 //
-// MSVC does not insert buffer security checks when optimizations are disabled.
+// Disabling optimizations does not disable the checks: cl.exe emits them at
+// /Od just as it does at /O1 and /O2.
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions \
 // RUN:     -stack-protector 4 -emit-llvm %s -o - | FileCheck %s --check-prefix=NOOPT
 //
@@ -24,9 +25,11 @@ void plain(void) { char buf[64]; use(buf); }
 // STRONG: define dso_local void @safe() {{.*}}#[[#SSAFE:]] {
 __declspec(safebuffers) void safe(void) { char buf[64]; use(buf); }
 
+// __declspec(safebuffers) opts out at -O0 too.
+// NOOPT:  define dso_local void @safe() #[[#SAFE:]] {
+
 // __declspec(strict_gs_check) asks for a cookie in a greater number of
-// functions, so it opts back out of the narrower GS-buffer rules and is not
-// suppressed at -O0.
+// functions, so it opts back out of the narrower GS-buffer rules.
 // GS:     define dso_local void @strict() {{.*}}#[[#STRICT:]] {
 // NOOPT:  define dso_local void @strict() #[[#STRICT:]] {
 __declspec(strict_gs_check) void strict(void) { char buf[64]; use(buf); }
@@ -38,9 +41,9 @@ __declspec(strict_gs_check) void strict(void) { char buf[64]; use(buf); }
 // GS:      attributes #[[#SAFE]] = { nounwind "min-legal-vector-width"
 // GS:      attributes #[[#STRICT]] = { nounwind sspstrong {{.*}}"stack-protector-buffer-size"="8" "target-features"
 
-// At -O0 the GS-buffer default produces no stack protector attribute at all,
-// so @plain shares an attribute group with @safe.
-// NOOPT:   attributes #[[#PLAIN]] = { noinline nounwind optnone "min-legal-vector-width"
+// -O0 gets the same attributes, marker included.
+// NOOPT:   attributes #[[#PLAIN]] = { noinline nounwind optnone sspstrong {{.*}}"stack-protector-buffer-size"="8" "stack-protector-gs-buffer"="true" "target-features"
+// NOOPT:   attributes #[[#SAFE]] = { noinline nounwind optnone "min-legal-vector-width"
 // NOOPT:   attributes #[[#STRICT]] = { noinline nounwind optnone sspstrong {{.*}}"stack-protector-buffer-size"="8" "target-features"
 
 // -stack-protector 2 keeps the GCC-compatible strong heuristic: no marker.

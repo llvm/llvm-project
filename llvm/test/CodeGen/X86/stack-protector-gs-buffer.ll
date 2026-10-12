@@ -182,21 +182,32 @@ define void @strong_sret() #2 {
   ret void
 }
 
-;; --- Exclusions --------------------------------------------------------------
+;; --- Varargs -----------------------------------------------------------------
 
-; MSVC never protects a function that takes a variable argument list, even one
-; holding an obvious GS buffer.
+; A function that takes a variable argument list is protected like any other;
+; cl.exe does the same.
 ; CHECK-LABEL: variadic:
-; CHECK-NOT:     __security_cookie
-; CHECK:       .seh_endproc
+; CHECK:         __security_cookie
 define void @variadic(i32 %n, ...) #0 {
   %a = alloca [64 x i8], !stack-protector !2
   call void @use(ptr %a)
   ret void
 }
 
-; sspreq overrides the heuristic entirely, so the varargs exclusion does not
-; apply.
+; Taking a variable argument list is not on its own a reason to protect, so an
+; unmarked alloca in one still does not require a protector.
+; CHECK-LABEL: variadic_unmarked:
+; CHECK-NOT:     __security_cookie
+; CHECK:       .seh_endproc
+define void @variadic_unmarked(i32 %n, ...) #0 {
+  %a = alloca [64 x i8]
+  call void @use(ptr %a)
+  ret void
+}
+
+;; --- Other modes -------------------------------------------------------------
+
+; sspreq overrides the heuristic entirely.
 ; CHECK-LABEL: sspreq_wins:
 ; CHECK:         __security_cookie
 define void @sspreq_wins(i32 %n, ...) #1 {

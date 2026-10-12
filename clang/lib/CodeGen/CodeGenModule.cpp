@@ -1170,12 +1170,6 @@ bool CodeGenModule::useMSVCGSBufferHeuristic(const Decl *D) const {
 
 std::optional<llvm::Attribute::AttrKind>
 CodeGenModule::StackProtectorAttribute(const Decl *D) const {
-  // MSVC does not insert buffer security checks when optimizations are
-  // disabled. __declspec(strict_gs_check) is an explicit per-function opt-in,
-  // so it still applies at -O0.
-  if (useMSVCGSBufferHeuristic(D) && CodeGenOpts.OptimizationLevel == 0)
-    return std::nullopt;
-
   if (D && D->hasAttr<NoStackProtectorAttr>())
     ; // Do nothing.
   else if (D && D->hasAttr<StrictGuardStackCheckAttr>() &&

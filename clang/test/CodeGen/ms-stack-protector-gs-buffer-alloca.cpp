@@ -4,13 +4,15 @@
 // not preserve.
 //
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -O2 \
-// RUN:     -stack-protector 4 -emit-llvm %s -o - | FileCheck %s
+// RUN:     -disable-llvm-passes -stack-protector 4 -emit-llvm %s -o - \
+// RUN:   | FileCheck %s
 //
 // The classification is only emitted for the /GS heuristic: the GCC-compatible
 // levels infer it from the IR type instead. The one exception is an explicit
 // opt-out, which is not a classification.
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -O2 \
-// RUN:     -stack-protector 2 -emit-llvm %s -o - | FileCheck %s --check-prefix=STRONG
+// RUN:     -disable-llvm-passes -stack-protector 2 -emit-llvm %s -o - \
+// RUN:   | FileCheck %s --check-prefix=STRONG
 //
 // STRONG-NOT: = !{i32 1}
 // STRONG-NOT: = !{i32 2}
@@ -211,16 +213,17 @@ void holds_reference(int &x) { HoldsReference s(x); use(&s); }
 
 //--- _alloca ------------------------------------------------------------------
 
-// A buffer allocated by _alloca is a GS buffer whatever its size. The element
-// count that lets the backend recognise one does not survive a constant-sized
-// alloca being folded to an array type, so it is marked here too.
+// A buffer allocated by _alloca is a GS buffer whatever its size. An alloca
+// with an element count is one the backend recognises on its own, but a
+// constant count does not stay one for long -- InstCombine folds it into the
+// allocated type -- so the classification is recorded here as well.
 // CHECK-LABEL: @"?alloca_large@@YAXXZ"
-// CHECK:         alloca [64 x i8], align 16, !stack-protector ![[LARGE_NT:[0-9]+]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE_NT:[0-9]+]]
 void alloca_large() { use(_alloca(64)); }
 
 // Below ssp-buffer-size, but still a GS buffer: _alloca has no threshold.
 // CHECK-LABEL: @"?alloca_small@@YAXXZ"
-// CHECK:         alloca [3 x i8], align 16, !stack-protector ![[SMALL_NT:[0-9]+]]
+// CHECK:         alloca i8, i64 3, align 16, !stack-protector ![[SMALL_NT:[0-9]+]]
 void alloca_small() { use(_alloca(3)); }
 
 // CHECK-LABEL: @"?alloca_dynamic@@YAXH@Z"
@@ -228,7 +231,7 @@ void alloca_small() { use(_alloca(3)); }
 void alloca_dynamic(int n) { use(_alloca(n)); }
 
 // CHECK-LABEL: @"?alloca_with_align@@YAXXZ"
-// CHECK:         alloca [64 x i8], align 16, !stack-protector ![[LARGE_NT]]
+// CHECK:         alloca i8, i64 64, align 16, !stack-protector ![[LARGE_NT]]
 void alloca_with_align() { use(__builtin_alloca_with_align(64, 128)); }
 
 //--- Left to the backend ------------------------------------------------------
