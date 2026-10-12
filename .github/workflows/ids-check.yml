@@ -117,4 +117,4 @@ jobs:
       - name: Build and test libLLVM.so
         shell: bash
         run: |
-          cmake --build ./llvm-project/build --target check-llvm
+          cmake --build ./llvm-project/build --target check-llvm --config Release
