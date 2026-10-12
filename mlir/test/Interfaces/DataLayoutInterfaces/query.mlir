@@ -39,6 +39,7 @@ func.func @no_layout_builtin() {
   // CHECK: size = 16
   "test.data_layout_query"() : () -> vector<4xi32>
   // CHECK: alignment = 16
+  // CHECK: alloc_size = {minimal_size = 16 : index, scalable}
   // CHECK: bitsize = {minimal_size = 128 : index, scalable}
   // CHECK: index = 0
   // CHECK: preferred = 16
