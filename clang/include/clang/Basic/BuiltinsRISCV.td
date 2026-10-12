@@ -261,6 +261,12 @@ def pmerge_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned ch
 def pmerge_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, _Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 def pmerge_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, _Vector<2, unsigned int>, _Vector<2, unsigned int>)">;
 
+// Scalar Averaging Addition and Subtraction
+def aadd_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def aaddu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+def asub_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
+def asubu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t)">;
+
 // Scalar Multiply High
 def mulh_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
 def mulhr_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;
