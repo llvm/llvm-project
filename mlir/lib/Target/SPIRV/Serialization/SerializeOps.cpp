@@ -268,6 +268,16 @@ LogicalResult Serializer::processFuncParameter(spirv::FuncOp op) {
     // Process decoration attributes of arguments.
     auto funcOp = cast<FunctionOpInterface>(*op);
     for (auto argAttr : funcOp.getArgAttrs(idx)) {
+      if (argAttr.getName() == "spirv.alignment" ||
+          argAttr.getName() == "spirv.func_param_attr") {
+        auto decoration = argAttr.getName() == "spirv.alignment"
+                              ? Decoration::Alignment
+                              : Decoration::FuncParamAttr;
+        if (failed(processDecorationAttr(op.getLoc(), argValueID, decoration,
+                                         argAttr.getValue())))
+          return failure();
+        continue;
+      }
       if (argAttr.getName() != DecorationAttr::name)
         continue;
 

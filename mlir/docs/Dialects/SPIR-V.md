@@ -242,6 +242,54 @@ decorated for memory layouting purpose (e.g., `ArrayStride`, `Offset`, etc.);
 scalar/vector types are required to be uniqued in SPIR-V. Therefore, we can just
 encode them directly in the dialect-specific type.
 
+### Function parameter decorations
+
+Decorations on `OpFunctionParameter` are represented by argument attributes on
+`spirv.func`. In addition to `spirv.decoration`, function parameters support:
+
+* `spirv.alignment`: a signless `i32` integer attribute holding the unsigned
+  32-bit `Alignment` literal. The parameter must have a SPIR-V pointer type.
+  Values with the high bit set print using a negative spelling without changing
+  the bit pattern.
+* `spirv.func_param_attr`: a non-empty array of
+  `#spirv.function_parameter_attribute<...>` enum attributes. Each element
+  represents one `FuncParamAttr` decoration. The supported core values are `Zext`,
+  `Sext`, `ByVal`, `Sret`, `NoAlias`, `NoCapture`, `NoWrite`, and `NoReadWrite`.
+
+For example, a pointer parameter can carry alignment, aliasing, and access
+information together:
+
+```mlir
+spirv.func @read(%p: !spirv.ptr<f32, CrossWorkgroup> {
+  spirv.alignment = 16 : i32,
+  spirv.decoration = #spirv.decoration<Restrict>,
+  spirv.func_param_attr = [#spirv.function_parameter_attribute<NoCapture>,
+                           #spirv.function_parameter_attribute<NoWrite>]
+}) "None" {
+  spirv.Return
+}
+```
+
+Serialization emits a separate `OpDecorate` for each function parameter
+attribute and preserves their order. Deserialization rejects unsupported
+parameter decorations, even when supported decorations are also present.
+`FuncParamAttr` on function return values is not yet supported and is diagnosed,
+as is any other target that is not an `OpFunctionParameter`.
+
+As required by the [SPIR-V specification, section 3.2.18](
+https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_a_id_function_parameter_attribute_a_function_parameter_attribute),
+duplicate function parameter attributes and the combination of `Zext` with
+`Sext` are invalid. The dialect requires integer parameters for `Zext` and
+`Sext`. The other supported attributes require pointer parameters, and `Sret`
+additionally requires the first parameter.
+
+`Alignment` is also preserved on module-scope variables, using an unprefixed
+`alignment` attribute on `spirv.GlobalVariable`:
+
+```mlir
+spirv.GlobalVariable @buffer {alignment = 16 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+```
+
 ## Types
 
 Theoretically we can define all SPIR-V types using MLIR extensible type system,

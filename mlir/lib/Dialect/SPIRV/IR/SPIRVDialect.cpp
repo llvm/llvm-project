@@ -1097,6 +1097,56 @@ static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
          << symbol << "' attribute on region argument";
 }
 
+/// Verifies the FuncParamAttr decorations of a function parameter.
+static LogicalResult verifyFunctionParameterAttributes(Location loc, Type type,
+                                                       unsigned index,
+                                                       Attribute attr) {
+  auto attrs = dyn_cast<ArrayAttr>(attr);
+  if (!attrs || attrs.empty() ||
+      !llvm::all_of(attrs,
+                    llvm::IsaPred<spirv::FunctionParameterAttributeAttr>))
+    return emitError(loc,
+                     "'spirv.func_param_attr' must be a non-empty array of "
+                     "spirv::FunctionParameterAttributeAttr");
+
+  SmallVector<spirv::FunctionParameterAttribute, 8> seen;
+  bool hasZext = false, hasSext = false;
+  for (Attribute element : attrs) {
+    auto value =
+        cast<spirv::FunctionParameterAttributeAttr>(element).getValue();
+    if (llvm::is_contained(seen, value))
+      return emitError(loc, "duplicate function parameter attribute '")
+             << spirv::stringifyFunctionParameterAttribute(value) << "'";
+    seen.push_back(value);
+
+    switch (value) {
+    case spirv::FunctionParameterAttribute::Zext:
+    case spirv::FunctionParameterAttribute::Sext:
+      if (!isa<IntegerType>(type))
+        return emitError(loc, "function parameter attribute '")
+               << spirv::stringifyFunctionParameterAttribute(value)
+               << "' requires an integer parameter";
+      hasZext |= value == spirv::FunctionParameterAttribute::Zext;
+      hasSext |= value == spirv::FunctionParameterAttribute::Sext;
+      break;
+    default:
+      if (!isa<spirv::PointerType>(type))
+        return emitError(loc, "function parameter attribute '")
+               << spirv::stringifyFunctionParameterAttribute(value)
+               << "' requires a pointer parameter";
+      if (value == spirv::FunctionParameterAttribute::Sret && index != 0)
+        return emitError(loc,
+                         "function parameter attribute 'Sret' requires the "
+                         "first parameter");
+      break;
+    }
+  }
+  if (hasZext && hasSext)
+    return emitError(loc, "function parameter attributes 'Zext' and 'Sext' are "
+                          "mutually exclusive");
+  return success();
+}
+
 LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
                                                      unsigned regionIndex,
                                                      unsigned argIndex,
@@ -1105,6 +1155,20 @@ LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
   Type argType = funcOp.getArgumentTypes()[argIndex];
+
+  if (attribute.getName() == "spirv.alignment") {
+    auto alignment = dyn_cast<IntegerAttr>(attribute.getValue());
+    if (!alignment || !alignment.getType().isSignlessInteger(32))
+      return op->emitError(
+          "'spirv.alignment' must be a 32-bit signless integer "
+          "attribute");
+    if (!isa<spirv::PointerType>(argType))
+      return op->emitError("'spirv.alignment' requires a pointer parameter");
+    return success();
+  }
+  if (attribute.getName() == "spirv.func_param_attr")
+    return verifyFunctionParameterAttributes(op->getLoc(), argType, argIndex,
+                                             attribute.getValue());
 
   return verifyRegionAttribute(op->getLoc(), argType, attribute);
 }
