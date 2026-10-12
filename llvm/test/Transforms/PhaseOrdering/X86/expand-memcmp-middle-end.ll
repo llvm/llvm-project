@@ -15,22 +15,6 @@ declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)
 ; Two memcmp calls with a shared first argument. After expansion in the
 ; middle-end, further IR optimizations should be able to optimize the expanded code.
 define i1 @redundant_memcmp_loads(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
-; OPT-LABEL: define i1 @redundant_memcmp_loads(
-; OPT-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], ptr readonly captures(none) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
-; OPT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 1
-; OPT-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP1]])
-; OPT-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP2]])
-; OPT-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP3]], i32 [[TMP4]])
-; OPT-NEXT:    [[TMP6:%.*]] = load i32, ptr [[X]], align 1
-; OPT-NEXT:    [[TMP7:%.*]] = load i32, ptr [[Z]], align 1
-; OPT-NEXT:    [[TMP8:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP6]])
-; OPT-NEXT:    [[TMP9:%.*]] = tail call i32 @llvm.bswap.i32(i32 [[TMP7]])
-; OPT-NEXT:    [[TMP10:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP8]], i32 [[TMP9]])
-; OPT-NEXT:    [[TMP11:%.*]] = or i32 [[TMP10]], [[TMP5]]
-; OPT-NEXT:    [[RESULT:%.*]] = icmp eq i32 [[TMP11]], 0
-; OPT-NEXT:    ret i1 [[RESULT]]
-;
 ; CHECK-LABEL: define i1 @redundant_memcmp_loads(
 ; CHECK-SAME: ptr readonly captures(none) [[X:%.*]], ptr readonly captures(none) [[Y:%.*]], ptr readonly captures(none) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X]], align 1
