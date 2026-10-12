@@ -641,13 +641,7 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 
 // Return negative, zero, or positive, if LHS is less than, equal to, or greater
 // than RHS, respectively. A three-way result allows recursive comparisons to be
-// more efficient.
-//
-// The result is a total order: it returns 0 iff LHS == RHS. Uses are ordered
-// by
-//  1. use flags, if the underlying SCEV is the same,
-//  2. canonical SCEVs if they are different and one of them is not canonical
-//  3. the SCEV type and operands.
+// more efficient. The result is a total order.
 static int CompareSCEVComplexity(const LoopInfo *const LI, SCEVUse LHS,
                                  SCEVUse RHS, DominatorTree &DT) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
