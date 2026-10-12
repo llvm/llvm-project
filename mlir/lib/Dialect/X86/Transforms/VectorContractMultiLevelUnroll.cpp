@@ -31,6 +31,10 @@ static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
 namespace {
 // Shared state for the pattern match and IR transformation.
 struct MLUCandidate {
+  MLUCandidate(const x86::MultiLevelUnrollOptions &options,
+               vector::ContractionOp contract)
+      : options(options), contract(contract) {}
+
   // Native shapes and supported data types for operands and the accumulator are
   // determined based on the feature flags in the options struct.
   const x86::MultiLevelUnrollOptions &options;
@@ -812,7 +816,7 @@ struct VectorContractMultiLevelUnroll
     if (contract->hasAttr(nativeShapeAttrName))
       return failure();
 
-    MLUCandidate candidate({options, contract});
+    MLUCandidate candidate(options, contract);
     if (failed(matchCanonicalMatmul(candidate, rewriter)) ||
         failed(matchShapesAndTypes(candidate, rewriter)) ||
         failed(matchAccumulationLoop(candidate, rewriter)))
