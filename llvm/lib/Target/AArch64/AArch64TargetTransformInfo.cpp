@@ -7408,8 +7408,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
                  LT.second.getVectorNumElements(), 32) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 64) ||
-       isEXTMask(Mask, LT.second.getVectorNumElements(), UnusedRev, Unused) ||
-       isSingletonEXTMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       ((LT.second.is64BitVector() || LT.second.is128BitVector()) &&
+        (isEXTMask(Mask, LT.second.getVectorNumElements(), UnusedRev, Unused) ||
+         isSingletonEXTMask(Mask, LT.second.getVectorNumElements(), Unused))) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))
