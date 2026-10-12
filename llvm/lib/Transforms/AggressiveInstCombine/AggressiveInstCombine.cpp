@@ -1017,7 +1017,7 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
   return true;
 }
 
-// Recognise ctpops table lookups:
+// Recognise ctpop table lookups:
 //
 // %gep = getelementptr [256 x i8], ptr @ctpop.table, i32 0, i8 %x
 // %ctpop = load i8, ptr %gep
