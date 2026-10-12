@@ -175,6 +175,29 @@ define void @stp_far_offset_q_4k_aligned(ptr %p, <2 x i64> %v0, <2 x i64> %v1) {
   ret void
 }
 
+; The preceding SUBXri that defines the pair's base register can be folded
+; with the base-adjust ADDXri: sub x8, x0, #4096 + add x9, x8, #3696 merges
+; into sub x8, x0, #400, saving one instruction.
+define void @stp_far_offset_merge_sub(ptr %p, i32 %v0, i32 %v1) {
+; ENABLED-LABEL: stp_far_offset_merge_sub:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[TMP:[0-9]+]], x0, #400
+; ENABLED-NEXT:    stp w1, w2, [x[[TMP]]]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: stp_far_offset_merge_sub:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     stp w
+; DISABLED-NOT:     stp x
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  store i32 %v0, ptr %g0
+  store i32 %v1, ptr %g1
+  ret void
+}
+
 ; A third store reads the base register BETWEEN the two paired stores.
 ; The fold must be blocked: rewriting the SUBXri would change the base
 ; for the interleaved store, causing a miscompile.
@@ -223,6 +246,31 @@ define void @stp_far_offset_can_split_no_fold(ptr %p, i32 %v0, i32 %v1) {
 ; DISABLED:        ret
   %g0 = getelementptr i32, ptr %p, i64 3073
   %g1 = getelementptr i32, ptr %p, i64 3074
+  store i32 %v0, ptr %g0
+  store i32 %v1, ptr %g1
+  ret void
+}
+
+; When the combined constant from folding the preceding ADDXri with the
+; base-adjust offset cannot be encoded as a single ADDXri (low 12 bits are
+; non-zero), the fold splits it: the 4096-aligned part goes into the
+; rewritten def (shift=12), and the remainder is absorbed by the pair's
+; own 7-bit signed scaled immediate.
+define void @stp_far_offset_merge_residual(ptr %p, i32 %v0, i32 %v1) {
+; ENABLED-LABEL: stp_far_offset_merge_residual:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    add x[[TMP:[0-9]+]], x0, #4, lsl #12 // =16384
+; ENABLED-NEXT:    stp w1, w2, [x[[TMP]], #4]
+; ENABLED-NEXT:    ret
+;
+; DISABLED-LABEL: stp_far_offset_merge_residual:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     stp w
+; DISABLED-NOT:     stp x
+; DISABLED:        ret
+  %base = getelementptr i8, ptr %p, i64 4096
+  %g0 = getelementptr i8, ptr %base, i64 12292
+  %g1 = getelementptr i8, ptr %base, i64 12296
   store i32 %v0, ptr %g0
   store i32 %v1, ptr %g1
   ret void

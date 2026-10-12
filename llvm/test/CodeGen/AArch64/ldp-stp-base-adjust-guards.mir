@@ -6,6 +6,55 @@
 # See: base-adjust-decision-points.md
 
 ---
+# D15: DefMI has FrameSetup flag -> tryMergeBaseAdjust must reject.
+# The preceding SUBXri is a prologue stack adjustment (sub sp, sp, #16).
+# Folding it would corrupt the stack frame / CFI.
+# CHECK-LABEL: name: d15_framesetup_defmi_rejected
+name: d15_framesetup_defmi_rejected
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $sp = frame-setup SUBXri $sp, 16, 0
+    $w8 = LDRWui $sp, 100
+    $w9 = LDRWui $sp, 101
+    STRWui killed $w8, $x0, 0
+    STRWui killed $w9, $x0, 1
+    RET undef $lr
+
+# ENABLED-LABEL: name: d15_framesetup_defmi_rejected
+# ENABLED-NOT: LDP
+# DISABLED-LABEL: name: d15_framesetup_defmi_rejected
+# DISABLED-NOT: LDP
+...
+
+---
+# D17 positive: No interleaved reader between FirstMI and PairedMI ->
+# tryMergeBaseAdjust should fold the preceding SUBXri.
+# SUBXri x8,x0,#1,#12 (= -4096); LDRWui [x8,#924] / [x8,#925]
+# CombinedOffset = -4096 + 3696 = -400 -> SUBXri x8,x0,#400
+name: d17_no_interleaved_folds
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $x8 = SUBXri $x0, 1, 12
+    $w9 = LDRWui $x8, 924 :: (load (s32))
+    $w10 = LDRWui killed $x8, 925 :: (load (s32))
+    STRWui killed $w9, undef $x8, 0
+    STRWui killed $w10, undef $x8, 0
+    RET undef $lr
+
+# ENABLED-LABEL: name: d17_no_interleaved_folds
+# ENABLED: SUBXri $x0, 400, 0
+# ENABLED: LDPWi $x8, 0
+# DISABLED-LABEL: name: d17_no_interleaved_folds
+# DISABLED-NOT: LDPWi
+...
+
+---
 # D6 positive: Reg1 overlaps BaseReg but NO interleaved reader between
 # FirstMI and PairedMI -> Reg1ClobbersBase is false (UsedRegUnits.available
 # is true), so the pair is still accepted. This is the `ldp Rt1, Rt2, [Rt1]`
@@ -33,6 +82,67 @@ body:             |
 # ENABLED: LDPWi
 # DISABLED-LABEL: name: d6_reg1_overlaps_base_no_interleaved_pairs
 # DISABLED-NOT: LDPWi
+...
+
+---
+# D20: CombinedOffset can't be encoded or split in tryMergeBaseAdjust ->
+# fold rejected, but pair still forms via fallback (standalone ADDXri with
+# the original encodable ByteOffset). This verifies that fold failure does
+# NOT prevent pairing — the gate (D3/D5) already guaranteed ByteOffset is
+# encodable, so the fallback ADDXri is always valid.
+# ByteOffset = 924*4 = 3696 (canEncodeAddXriImm = true, passes gate).
+# DefMI = ADDXri $x0, 5, 12 (=20480). CombinedOffset = 20480+3696 = 24176.
+# canEncode(24176)? 24176 & 0xFFF = 3696 -> no.
+# trySplitForPair(24176, 4): R=3696, 3696/4=924 > 63 -> fail.
+# R-4096=-400, -400/4=-100 < -64 -> fail. Split fails -> fold rejected.
+# Fallback: ADDXri $x8, 3696, 0 (ByteOffset=3696, canEncode=true).
+name: d20_split_fails_fallback_pairs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $x8 = ADDXri $x0, 5, 12
+    $w9 = LDRWui $x8, 924 :: (load (s32))
+    $w10 = LDRWui killed $x8, 925 :: (load (s32))
+    STRWui killed $w9, undef $x8, 0
+    STRWui killed $w10, undef $x8, 0
+    RET undef $lr
+
+# ENABLED-LABEL: name: d20_split_fails_fallback_pairs
+# ENABLED: ADDXri $x0, 5, 12
+# ENABLED: ADDXri $x8, 3696, 0
+# ENABLED: LDPWi
+# DISABLED-LABEL: name: d20_split_fails_fallback_pairs
+# DISABLED-NOT: LDPWi
+...
+
+---
+# D18 positive: Pair writes BaseReg (i64 load into x8, where x8 is also the
+# base) -> PairWritesBaseReg = true -> Zone2 check skipped. The preceding
+# SUBXri is folded. No interleaved reader, so Zone1 also passes.
+# SUBXri x8,x0,#1,#12 (= -4096); LDRXui x9,[x8,#100] / LDRXui x8,[x8,#101]
+# Here PairedMI's dest x8 == BaseReg x8, so PairWritesBaseReg = true.
+# CombinedOffset = -4096 + 100*8 = -4096 + 800 = -3296.
+# canEncode(3296) = true (3296 <= 4095) -> fold succeeds, no split needed.
+name: d18_pair_writes_base_skips_zone2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+
+    $x8 = SUBXri $x0, 1, 12
+    $x9 = LDRXui $x8, 100 :: (load (s64))
+    $x8 = LDRXui killed $x8, 101 :: (load (s64))
+    STRXui killed $x9, undef $x8, 0
+    STRXui killed $x8, undef $x8, 0
+    RET undef $lr
+
+# ENABLED-LABEL: name: d18_pair_writes_base_skips_zone2
+# ENABLED: SUBXri $x0, 3296, 0
+# ENABLED: LDPXi
+# DISABLED-LABEL: name: d18_pair_writes_base_skips_zone2
+# DISABLED-NOT: LDPXi
 ...
 
 ---
