@@ -118,18 +118,20 @@ sure you don't forget anything:
 
 ## The review process
 
-After uploading your patch, you should see that the "libc++" review group is automatically
-added as a reviewer for your patch. Once the group is marked as having approved your patch,
-you can commit it. However, if you get an approval very quickly for a significant patch,
-please try to wait a couple of business days before committing to give the opportunity for
-other reviewers to chime in. If you need someone else to commit the patch for you, please
-mention it and provide your `Name <email@domain>` for us to attribute the commit properly.
+Submit your change as a pull request to [LLVM on GitHub](https://github.com/llvm/llvm-project).
+The `@llvm/reviewers-libcxx` team is automatically requested for review through
+[CODEOWNERS](https://github.com/llvm/llvm-project/blob/main/.github/CODEOWNERS).
+Once your pull request has the required approvals, you can merge it. However, if
+you get an approval very quickly for a significant change, please try to wait a
+couple of business days before merging to give other reviewers an opportunity to
+chime in. If you need someone else to merge the pull request for you, please ask
+explicitly and ensure your commits have the correct author name and email.
 
-Note that the rule for accepting as the "libc++" review group is to wait for two members
-of the group to have approved the patch, excluding the patch author. This is not a hard
-rule -- for very simple patches, use your judgement. The ["libc++" review group](https://reviews.llvm.org/project/members/64/)
-consists of frequent libc++ contributors with a good understanding of the project's
-guidelines -- if you would like to be added to it, please reach out on Discord.
+Wait for two members of the libc++ review team to approve the pull request,
+excluding the author. This is not a hard rule -- for very simple changes,
+use your judgement. The review team consists of frequent libc++ contributors with
+a good understanding of the project's guidelines -- if you would like to be added
+to it, please reach out on Discord.
 
 Some tips:
 
