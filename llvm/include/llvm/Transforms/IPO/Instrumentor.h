@@ -425,7 +425,7 @@ struct LLVM_ABI InstrumentationConfig {
   Constant *getGlobalString(StringRef S, InstrumentorIRBuilderTy &IIRB) {
     Constant *&V = GlobalStringsMap[SS.save(S)];
     if (!V) {
-      auto &M = *IIRB.IRB.GetInsertBlock()->getModule();
+      auto &M = *IIRB.IRB.getModule();
       V = IIRB.IRB.CreateGlobalString(
           S, getRTName() + ".str",
           M.getDataLayout().getDefaultGlobalsAddressSpace(), &M);
@@ -527,7 +527,7 @@ struct InstrumentationOpportunity {
       return nullptr;
 
     Changed = true;
-    const DataLayout &DL = IIRB.IRB.GetInsertBlock()->getDataLayout();
+    const DataLayout &DL = IIRB.IRB.getDataLayout();
     IRTCallDescription IRTCallDesc(*this, getRetTy(V->getContext()));
     auto *CI = IRTCallDesc.createLLVMCall(V, IConf, IIRB, DL, ICaches);
     return CI;

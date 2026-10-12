@@ -157,7 +157,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   if (!Predecessor)
     return false;
 
-  auto DL = ExitBlock->getModule()->getDataLayout();
+  auto DL = ExitBlock->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(Predecessor);
   auto *SimpleValOrNull = simplifyCmpInst(
       Pred, IVStart, RHS, {DL, /*TLI*/ nullptr, DT, /*AC*/ nullptr, BI});

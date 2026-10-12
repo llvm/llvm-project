@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -89,9 +90,28 @@ public:
       ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
           ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
+
+  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                             QualType qt, mlir::Location loc) const override;
 };
 
 } // namespace
+
+// The bit pattern of null in non-generic AS is unspecified for SPIR(-V), so
+// materialize it via an address space cast from null in generic AS.
+mlir::Value
+CommonSPIRTargetCIRGenInfo::getNullPointer(CIRGenModule &cgm,
+                                           cir::PointerType ptrTy, QualType qt,
+                                           mlir::Location loc) const {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  if (!CodeGenUtils::spirNullPointerNeedsGenericCast(qt, cgm.getTriple()))
+    return builder.getNullPtr(ptrTy, loc);
+
+  cir::PointerType genericPtrTy =
+      builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
+  return builder.createAddrSpaceCast(loc, builder.getNullPtr(genericPtrTy, loc),
+                                     ptrTy);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt) {

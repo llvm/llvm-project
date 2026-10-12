@@ -873,7 +873,7 @@ public:
   };
 
   /// Returns the dynamic AST node parent map context.
-  ParentMapContext &getParentMapContext();
+  ParentMapContext &getParentMapContext() { return *ParentMapCtx; }
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
   // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.

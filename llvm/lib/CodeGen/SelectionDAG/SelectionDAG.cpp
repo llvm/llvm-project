@@ -5353,10 +5353,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return std::min(Tmp, Tmp2) - 1;
   case ISD::MUL: {
     // The output of the Mul can be at most twice the valid bits in the inputs.
-    unsigned SignBitsOp0 = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned SignBitsOp0 =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (SignBitsOp0 == 1)
       break;
-    unsigned SignBitsOp1 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    unsigned SignBitsOp1 =
+        ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (SignBitsOp1 == 1)
       break;
     unsigned OutValidBits =
@@ -5379,7 +5381,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::TRUNCATE: {
     // Check if the sign bits of source go down as far as the truncated value.
     unsigned NumSrcBits = Op.getOperand(0).getScalarValueSizeInBits();
-    unsigned NumSrcSignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    unsigned NumSrcSignBits =
+        ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (NumSrcSignBits > (NumSrcBits - VTBits))
       return NumSrcSignBits - (NumSrcBits - VTBits);
     break;
@@ -10552,10 +10555,14 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
+    MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
     TargetLowering::ArgListTy Args;
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
-    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(getAnyExtOrTrunc(Src, dl, IntVT),
+                      Type::getIntNTy(Ctx, LibInfo->getIntSize()),
+                      LibInfo->getExtAttrForI32Param());
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
+
     CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
@@ -14574,7 +14581,8 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     if (AlignBits)
-      return commonAlignment(Align(1ull << std::min(31U, AlignBits)), GVOffset);
+      return commonAlignment(Align::fromLog2(std::min(31U, AlignBits)),
+                             GVOffset);
   }
 
   // If this is a direct reference to a stack slot, use information about the

@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"

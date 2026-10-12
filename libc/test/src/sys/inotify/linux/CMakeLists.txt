@@ -1,0 +1,73 @@
+add_custom_target(libc_sys_inotify_unittests)
+
+add_libc_test(
+  inotify_init_test
+  SUITE
+    libc_sys_inotify_unittests
+  SRCS
+    inotify_init_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_resource_macros
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  inotify_init1_test
+  SUITE
+    libc_sys_inotify_unittests
+  SRCS
+    inotify_init1_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_inotify_macros
+    libc.src.errno.errno
+    libc.src.sys.inotify.inotify_init1
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  inotify_add_watch_test
+  SUITE
+    libc_sys_inotify_unittests
+  SRCS
+    inotify_add_watch_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_inotify_macros
+    libc.src.errno.errno
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  inotify_rm_watch_test
+  SUITE
+    libc_sys_inotify_unittests
+  SRCS
+    inotify_rm_watch_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_inotify_macros
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.sys.inotify.inotify_add_watch
+    libc.src.sys.inotify.inotify_init
+    libc.src.sys.inotify.inotify_rm_watch
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

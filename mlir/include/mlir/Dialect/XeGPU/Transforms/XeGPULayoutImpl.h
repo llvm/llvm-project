@@ -41,6 +41,10 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
+/// Sink `xegpu.convert_layout` ops past the elementwise operations they feed,
+/// so that an elementwise op runs in the coarser layout.
+void sinkElementwiseConversions(OpBuilder &builder, Operation *target);
+
 /// Callable returning the propagated layout for a given Value, used by the
 /// layout-propagation helpers below.
 using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;

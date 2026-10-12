@@ -140,11 +140,10 @@ exit:
   ret void
 }
 
-;; Vectorizeable, needs work on exit condition recipe collection.
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !18 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
-; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects
-; CHECK-REMARK:      foo.c:50:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body, !dbg !19
 
@@ -895,7 +894,7 @@ define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereference
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
 ; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
 ; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported conditional memory operations
-; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
 ; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported conditional memory operations
 entry:
   br label %for.body, !dbg !67

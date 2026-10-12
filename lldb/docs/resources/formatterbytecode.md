@@ -146,37 +146,40 @@ For security reasons the list of functions callable with `call` is predefined. T
 Method is one of a predefined set of *Selectors*.
 
 ```{eval-rst}
-====  ===============================  ======================================================  ======================================
-Sel.  Mnemonic                         Stack Effect                                            Description
-----  -------------------------------  ------------------------------------------------------  --------------------------------------
-0x00  ``summary``                       ``(Object @summary -> String)``                         ``SBValue::GetSummary``
-0x01  ``type_summary``                  ``(Object @type_summary -> String)``                    ``SBValue::GetTypeSummary``
-0x10  ``get_num_children``              ``(Object @get_num_children -> UInt)``                  ``SBValue::GetNumChildren``
-0x11  ``get_child_at_index``            ``(Object UInt @get_child_at_index -> Object)``         ``SBValue::GetChildAtIndex``
-0x12  ``get_child_with_name``           ``(Object String @get_child_with_name -> Object)``      ``SBValue::GetChildMemberWithName``
-0x13  ``get_child_index``               ``(Object String @get_child_index -> UInt)``            ``SBValue::GetChildIndex``
-0x14  ``get_parent``                    ``(Object @get_parent -> Object)``                      ``SBValue::GetParent``
-0x15  ``get_type``                      ``(Object @get_type -> Type)``                          ``SBValue::GetType``
-0x16  ``get_template_argument_type``    ``(Object UInt @get_template_argument_type -> Type)``   ``SBValue::GetTemplateArgumentType``
-0x17  ``cast``                          ``(Object Type @cast -> Object)``                       ``SBValue::Cast``
-0x18  ``get_synthetic_value``           ``(Object @get_synthetic_value -> Object)``             ``SBValue::GetSyntheticValue``
-0x19  ``get_non_synthetic_value``       ``(Object @get_non_synthetic_value -> Object)``         ``SBValue::GetNonSyntheticValue``
-0x20  ``get_value``                     ``(Object @get_value -> Object)``                       ``SBValue::GetValue``
-0x21  ``get_value_as_unsigned``         ``(Object @get_value_as_unsigned -> UInt)``             ``SBValue::GetValueAsUnsigned``
-0x22  ``get_value_as_signed``           ``(Object @get_value_as_signed -> Int)``                ``SBValue::GetValueAsSigned``
-0x23  ``get_value_as_address``          ``(Object @get_value_as_address -> UInt)``              ``SBValue::GetValueAsAddress``
-0x24  ``clone``                         ``(Object String @clone -> Object)``                    ``SBValue::Clone``
-0x40  ``read_memory_byte``              ``(UInt @read_memory_byte -> UInt)``                    ``Target::ReadMemory``
-0x41  ``read_memory_uint32``            ``(UInt @read_memory_uint32 -> UInt)``                  ``Target::ReadMemory``
-0x42  ``read_memory_int32``             ``(UInt @read_memory_int32 -> Int)``                    ``Target::ReadMemory``
-0x43  ``read_memory_uint64``            ``(UInt @read_memory_uint64 -> UInt)``                  ``Target::ReadMemory``
-0x44  ``read_memory_int64``             ``(UInt @read_memory_int64 -> Int)``                    ``Target::ReadMemory``
-0x45  ``read_memory_address``           ``(UInt @read_memory_uint64 -> UInt)``                  ``Target::ReadMemory``
-0x46  ``read_memory``                   ``(UInt Type @read_memory -> Object)``                  ``Target::ReadMemory``
-0x50  ``fmt``                           ``(String arg0 ... @fmt -> String)``                    ``llvm::format``
-0x51  ``sprintf``                       ``(String arg0 ... sprintf -> String)``                 ``sprintf``
-0x52  ``strlen``                        ``(String strlen -> String)``                           ``strlen in bytes``
-====  ===============================  ======================================================  ======================================
+====  ===============================  ====================================================================  ======================================
+Sel.  Mnemonic                         Stack Effect                                                          Description
+----  -------------------------------  --------------------------------------------------------------------  --------------------------------------
+0x00  ``summary``                      ``(Object @summary -> String)``                                       ``SBValue::GetSummary``
+0x01  ``type_summary``                 ``(Object @type_summary -> String)``                                  ``SBValue::GetTypeSummary``
+0x10  ``get_num_children``             ``(Object @get_num_children -> Integer)``                             ``SBValue::GetNumChildren``
+0x11  ``get_child_at_index``           ``(Object Integer @get_child_at_index -> Object)``                    ``SBValue::GetChildAtIndex``
+0x12  ``get_child_with_name``          ``(Object String @get_child_with_name -> Object)``                    ``SBValue::GetChildMemberWithName``
+0x13  ``get_child_index``              ``(Object String @get_child_index -> Integer)``                       ``SBValue::GetChildIndex``
+0x14  ``get_parent``                   ``(Object @get_parent -> Object)``                                    ``SBValue::GetParent``
+0x15  ``get_type``                     ``(Object @get_type -> Type)``                                        ``SBValue::GetType``
+0x16  ``get_template_argument_type``   ``(Type Integer @get_template_argument_type -> Type)``                ``SBValue::GetTemplateArgumentType``
+0x17  ``cast``                         ``(Object Type @cast -> Object)``                                     ``SBValue::Cast``
+0x18  ``get_synthetic_value``          ``(Object @get_synthetic_value -> Object)``                           ``SBValue::GetSyntheticValue``
+0x19  ``get_non_synthetic_value``      ``(Object @get_non_synthetic_value -> Object)``                       ``SBValue::GetNonSyntheticValue``
+0x20  ``get_value``                    ``(Object @get_value -> Object)``                                     ``SBValue::GetValue``
+0x21  ``get_value_as_unsigned``        ``(Object @get_value_as_unsigned -> Integer)``                        ``SBValue::GetValueAsUnsigned``
+0x22  ``get_value_as_signed``          ``(Object @get_value_as_signed -> Integer)``                          ``SBValue::GetValueAsSigned``
+0x23  ``get_value_as_address``         ``(Object @get_value_as_address -> Integer)``                         ``SBValue::GetValueAsAddress``
+0x24  ``clone``                        ``(Object String @clone -> Object)``                                  ``SBValue::Clone``
+0x25  ``get_pointee_type``             ``(Type @get_pointee_type -> Type)``                                  ``SBType::GetPointeeType``
+0x26  ``get_byte_size``                ``(Type @get_byte_size -> Integer)``                                  ``SBType::GetByteSize``
+0x27  ``create_child_at_offset``       ``(Object String Integer Type @create_child_at_offset -> Object)``    ``SBValue::CreateChildAtOffset``
+0x40  ``read_memory_byte``             ``(UInt @read_memory_byte -> UInt)``                                  ``Target::ReadMemory``
+0x41  ``read_memory_uint32``           ``(UInt @read_memory_uint32 -> UInt)``                                ``Target::ReadMemory``
+0x42  ``read_memory_int32``            ``(UInt @read_memory_int32 -> Int)``                                  ``Target::ReadMemory``
+0x43  ``read_memory_uint64``           ``(UInt @read_memory_uint64 -> UInt)``                                ``Target::ReadMemory``
+0x44  ``read_memory_int64``            ``(UInt @read_memory_int64 -> Int)``                                  ``Target::ReadMemory``
+0x45  ``read_memory_address``          ``(UInt @read_memory_uint64 -> UInt)``                                ``Target::ReadMemory``
+0x46  ``read_memory``                  ``(UInt Type @read_memory -> Object)``                                ``Target::ReadMemory``
+0x50  ``fmt``                          ``(String arg0 ... @fmt -> String)``                                  ``llvm::format``
+0x51  ``sprintf``                      ``(String arg0 ... sprintf -> String)``                               ``sprintf``
+0x52  ``strlen``                       ``(String strlen -> Integer)``                                        ``strlen in bytes``
+====  ===============================  ====================================================================  ======================================
 ```
 
 ### Dictionary objects
@@ -217,11 +220,11 @@ Expression programs are embedded into an `.lldbformatters` section (an evolution
 - Version number (ULEB128)
 - Remaining size of the record (minus the header) (ULEB128)
 
-The version number is increased whenever an incompatible change is made. Adding new opcodes or selectors is not an incompatible change since consumers can unambiguously detect this and report an error.
+The version number is increased whenever an incompatible change is made, either to the layout of the record, or to the formatter ABI (see [Calling conventions](#calling-conventions)). Adding new opcodes or selectors is not an incompatible change since consumers can unambiguously detect this and report an error.
 
 Space between two records may be padded with NULL bytes.
 
-In version 1, a record consists of a dictionary key, which is a type name or regex.
+A record consists of a dictionary key, which is a type name or regex.
 
 - Length of the key in bytes (ULEB128)
 - The key (UTF-8)
@@ -238,30 +241,63 @@ This is followed by one or more dictionary values that immediately follow each o
 - Length of the program (ULEB128)
 - The program bytecode
 
+### Calling conventions
+
+A record's version number (see [Embedding](#embedding)) also determines the calling convention of its methods. This includes how `self` (aka `this`) is represented. This section describes version 2; see [Version 1](#version-1) for the differences in version 1.
+
+The runtime owns `self`, a `Dictionary` that starts out empty. The runtime passes a reference to `self` as the first argument to every method except `@summary`, followed by that method's arguments (if any). Methods may modify `self` in place, and do not return it. The runtime's ownership of `self` ensures modifications to the `Dictionary` are visible to subsequent method calls.
+
 The possible function signatures are:
 
 ```{eval-rst}
-=========  ========================= ==============================
+=========  ========================= ==============================================
 Signature    Mnemonic                Stack Effect
----------  ------------------------- ------------------------------
+---------  ------------------------- ----------------------------------------------
+  0x00      ``@summary``              ``(Object -> ... String)``
+  0x01      ``@init``                 ``(Dictionary Object -> ...)``
+  0x02      ``@get_num_children``     ``(Dictionary -> ... Integer)``
+  0x03      ``@get_child_index``      ``(Dictionary String -> ... Integer)``
+  0x04      ``@get_child_at_index``   ``(Dictionary Integer -> ... Object)``
+  0x05      ``@get_value``            ``(Dictionary -> ... String)``
+  0x06      ``@update``               ``(Dictionary -> ... Integer)``
+=========  ========================= ==============================================
+```
+
+The `@init` method must only be used for one time setup work. Any computation that needs to be reperformed should happen in `@update`. If not specified, initialization will save the given Object to the `self` dictionary using the idiomatic key `"valobj"`.
+
+The `@update` method performs computation that may change over the course of a value's lifetime, such as interpreting a value's state, and (re)computing children. The return value is an `Integer`, where 1 means the previously computed children can be reused, and 0 means they must be refetched.
+
+While it is more efficient to store multiple programs per type key, this is not a requirement. LLDB will merge all entries. If there are conflicts the result is undefined.
+
+### Execution model
+
+Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with the method's arguments, as listed in the signature table in [Calling conventions](#calling-conventions).
+
+### Error handling
+
+Errors are unrecoverable, the entire expression will fail if any kind of error is encountered.
+
+## Version 1
+
+Version 1 records use the same record layout as version 2 (see [Embedding](#embedding)), but an older calling convention:
+
+- There is no `self` dictionary. Instead, `self` is whatever is left on the data stack after `@init` and `@update` run. Nothing constrains its shape: it can be zero, one, or many values (written `Object+` below), and it is passed to the other methods in place of the `Dictionary`.
+- If `@init` is not specified, `self` is the given Object.
+- The `@update` reply is optional. If `@update` does not leave an `Integer` 0 or 1 (or a `UInt` or `Int` 0 or 1) on top of the data stack, the children are refetched.
+- Selectors use the deprecated `UInt` and `Int` types in place of `Integer`: `get_num_children`, `get_child_index`, `get_value_as_unsigned`, `get_value_as_address`, and `strlen` return a `UInt`, `get_value_as_signed` returns an `Int`, and `get_child_at_index` and `get_template_argument_type` take a `UInt` index.
+
+The version 1 function signatures are:
+
+```{eval-rst}
+=========  ========================= ==============================================
+Signature    Mnemonic                Stack Effect
+---------  ------------------------- ----------------------------------------------
   0x00      ``@summary``              ``(Object -> String)``
   0x01      ``@init``                 ``(Object -> Object+)``
   0x02      ``@get_num_children``     ``(Object+ -> UInt)``
   0x03      ``@get_child_index``      ``(Object+ String -> UInt)``
   0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``
   0x05      ``@get_value``            ``(Object+ -> String)``
-  0x06      ``@update``               ``(Object+ -> Object+)``
-=========  ========================= ==============================
+  0x06      ``@update``               ``(Object+ -> Object+ [Integer])``
+=========  ========================= ==============================================
 ```
-
-If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to `@get_child_at_index` can avoid recomputing shared information, for example.
-
-While it is more efficient to store multiple programs per type key, this is not a requirement. LLDB will merge all entries. If there are conflicts the result is undefined.
-
-### Execution model
-
-Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with one Object or the result of the `@init` function (`Object+` in the table above).
-
-### Error handling
-
-In version 1 errors are unrecoverable, the entire expression will fail if any kind of error is encountered.

@@ -19,5 +19,5 @@ module use_mod1
       !$acc end serial
     end subroutine
     !CHECK: }
-    !CHECK: func.func private @_QMmod1Pcallee(!fir.ref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>{{.*}}}
+    !CHECK: func.func private @_QMmod1Pcallee(!fir.ref<i32>) attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
 end module

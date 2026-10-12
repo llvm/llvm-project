@@ -449,6 +449,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sync
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sync
+)
+
+add_entrypoint_object(
   sysconf
   ALIAS
   DEPENDS

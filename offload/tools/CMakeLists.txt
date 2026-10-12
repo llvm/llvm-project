@@ -6,11 +6,17 @@ file(RELATIVE_PATH offload_libdir_relpath
      "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_TOOLS_INSTALL_DIR}"
      "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_INSTALL_LIBDIR}")
 set(OFFLOAD_TOOLS_INSTALL_RPATH "$ORIGIN/${offload_libdir_relpath}")
-if(LLVM_LINK_LLVM_DYLIB)
+if(LLVM_LINK_LLVM_DYLIB OR LLVM_ENABLE_SHARED_LIBS)
   file(RELATIVE_PATH llvm_libdir_relpath
        "${CMAKE_INSTALL_PREFIX}/${OFFLOAD_TOOLS_INSTALL_DIR}"
        "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
   list(APPEND OFFLOAD_TOOLS_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
+endif()
+
+set(OFFLOAD_TOOLS_BUILD_RPATH "$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  list(APPEND OFFLOAD_TOOLS_BUILD_RPATH
+       "$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}")
 endif()
 
 function(add_offload_tool name)
@@ -29,6 +35,7 @@ function(add_offload_tool name)
 
   set_target_properties(${name} PROPERTIES
                         RUNTIME_OUTPUT_DIRECTORY "${LLVM_RUNTIME_OUTPUT_INTDIR}"
+                        BUILD_RPATH "${OFFLOAD_TOOLS_BUILD_RPATH}"
                         INSTALL_RPATH "${OFFLOAD_TOOLS_INSTALL_RPATH}")
 
   # Multilib builds share the output and install paths with the base build.

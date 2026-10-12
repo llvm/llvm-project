@@ -277,7 +277,7 @@ static bool tryToFindPtrOriginImpl(
         }
       }
 
-      if (isSafePtrType(call->getType()))
+      if (call->isPRValue() && isSafePtrType(call->getType()))
         return callback(E, /*IsSafe=*/true,
                         OriginDependsOnFullExpressionTemporary,
                         PtrIsLifetimeBoundToOrigin);

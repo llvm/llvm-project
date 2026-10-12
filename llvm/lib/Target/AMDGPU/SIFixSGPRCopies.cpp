@@ -201,10 +201,6 @@ char SIFixSGPRCopiesLegacy::ID = 0;
 
 char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
 
-FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
-  return new SIFixSGPRCopiesLegacy();
-}
-
 static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
 getCopyRegClasses(const MachineInstr &Copy,
                   const SIRegisterInfo &TRI,

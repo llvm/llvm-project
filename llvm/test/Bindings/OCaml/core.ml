@@ -297,21 +297,40 @@ let test_constants () =
   ignore (define_global "const_trunc" (const_trunc (const_add foldbomb five)
                                                i8_type) m);
   ignore (define_global "const_ptrtoint" (const_ptrtoint
-    (const_gep i8_type (const_null (pointer_type context))
-               [| const_int i32_type 1 |])
+    (const_ptradd (const_null (pointer_type context)) (const_int i32_type 1)
+                   GEPNoWrapFlags.none)
     i32_type) m);
   ignore (define_global "const_inttoptr" (const_inttoptr (const_add foldbomb five)
                                                   void_ptr) m);
   ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
-  (* CHECK: const_gep{{.*}}getelementptr
+  (* CHECK: const_ptradd = global ptr getelementptr (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds = global ptr
+   * CHECK-SAME: getelementptr inbounds (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_inbounds_nuw = global ptr
+   * CHECK-SAME: getelementptr inbounds nuw (i8, ptr @FoldBomb, i64 5)
+   * CHECK: const_ptradd_from_indices = global ptr
+   * CHECK-SAME: getelementptr nusw (i8, ptr @FoldBomb, i32 20)
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
+  ignore (define_global "const_ptradd"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.none) m);
+  ignore (define_global "const_ptradd_inbounds"
+          (const_ptradd foldbomb_gv five GEPNoWrapFlags.inbounds) m);
+  ignore (define_global "const_ptradd_inbounds_nuw"
+          (const_ptradd foldbomb_gv five
+           (GEPNoWrapFlags.inbounds lor GEPNoWrapFlags.nuw)) m);
+  ignore (define_global "const_ptradd_from_indices"
+          (Option.get (const_ptradd_from_indices (data_layout m) i32_type
+                       foldbomb_gv [| five |] GEPNoWrapFlags.nusw))
           m);
+  assert (Option.is_none (const_ptradd_from_indices (data_layout m) i32_type
+                          foldbomb_gv
+                          [| (const_ptrtoint foldbomb_gv i32_type) |]
+                          GEPNoWrapFlags.none));
   let zero = const_int i32_type 0 in
   let one  = const_int i32_type 1 in
   ignore (define_global "const_extractelement" (const_extractelement
