@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=aarch64-pc-windows-msvc -O1 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-pc-windows-msvc -O3 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-pc-windows-msvc -verify-machineinstrs -filetype=obj -o %t < %s
-; RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=OBJ
+; RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=OBJ
 
 ; OBJ-LABEL: <empty_entry>:
-; OBJ-NEXT:  {{[0-9a-f]+}}: {{[0-9a-f]+}} nop
-; OBJ-NEXT:  {{[0-9a-f]+}}: {{[0-9a-f]+}} ldr w8, [x0]
+; OBJ-NEXT:  0: nop
+; OBJ-NEXT:  4: ldr w8, [x0]
 ; OBJ:       b.lo 0x4 <empty_entry+0x4>
 
 ; The entry block becomes empty after register allocation. The loop backedge
