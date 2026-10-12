@@ -85,7 +85,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "EVENT_TEST"} {
 // CHECK:  %[[VAL_33:.*]] = fir.address_of(@_QQclX{{[0-9a-f]+}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
 // CHECK:  %c16_i32 = arith.constant 16 : i32
 // CHECK:  %[[VAL_34:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> !fir.box<none>
-// CHECK:  %[[VAL_35:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,80>>) -> !fir.ref<i8>
+// CHECK:  %[[VAL_35:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,{{[0-9]+}}>>) -> !fir.ref<i8>
 // CHECK:  fir.call @_FortranAInitialize(%[[VAL_34]], %[[VAL_35]], %c16_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:  %[[VAL_36:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:  %[[VAL_37:.*]] = fir.absent !fir.ref<i32>
