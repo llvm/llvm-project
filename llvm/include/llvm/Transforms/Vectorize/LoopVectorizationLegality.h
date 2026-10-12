@@ -724,6 +724,7 @@ private:
 
   /// Holds the widest induction type encountered.
   IntegerType *WidestIndTy = nullptr;
+
   /// Vectorization requirements that will go through late-evaluation.
   LoopVectorizationRequirements *Requirements;
 

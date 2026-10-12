@@ -2496,6 +2496,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 bool llvm::collectCompressedPtrs(
     DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
+  assert(L.isInnermost() && "Expected innermost loop!");
   const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
   ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
