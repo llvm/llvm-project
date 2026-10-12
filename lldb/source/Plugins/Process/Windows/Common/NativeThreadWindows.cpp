@@ -95,6 +95,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
 
     } while (previous_suspend_count > 1);
     m_state = eStateRunning;
+    m_single_stepping = resume_state == eStateStepping;
   }
 
   return Status();
@@ -193,4 +194,8 @@ Status NativeThreadWindows::SetHardwareBreakpoint(lldb::addr_t addr,
 
 Status NativeThreadWindows::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   return Status::FromErrorString("unimplemented.");
+}
+
+StructuredData::ObjectSP NativeThreadWindows::GetExtendedInfo() const {
+  return m_host_thread.GetNativeThread().GetExtendedInfo();
 }

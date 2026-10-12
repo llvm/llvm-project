@@ -665,6 +665,8 @@ public:
 
   LLVMContext &getContext() const { return F.getContext(); }
 
+  Module &getModule() const { return *F.getParent(); }
+
   /// Test if values of the given type are analyzable within the SCEV
   /// framework. This primarily includes integer types, and it can optionally
   /// include pointer types if the ScalarEvolution class has access to
@@ -2610,6 +2612,9 @@ private:
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
   SCEVUnknown *FirstUnknown = nullptr;
+
+  /// OrderID to assign to the next SCEVUnknown created.
+  unsigned NextUnknownOrderID = 0;
 };
 
 /// Analysis pass that exposes the \c ScalarEvolution for a function.

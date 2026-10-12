@@ -1525,3 +1525,49 @@ entry:
   %c2 = icmp ule i64 %s, %b
   ret i1 %c2
 }
+
+; 2 * %x <= 2 * %y + 1 implies %x <= %y for integers.
+define i1 @shl_gcd_tighten(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_gcd_tighten(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[B_1:%.*]] = add nuw i8 [[B]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[A]], [[B_1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %a = shl nuw i8 %x, 1
+  %b = shl nuw i8 %y, 1
+  %b.1 = add nuw i8 %b, 1
+  %c.1 = icmp ule i8 %a, %b.1
+  call void @llvm.assume(i1 %c.1)
+  %t.1 = icmp ule i8 %x, %y
+  %f.1 = icmp ugt i8 %x, %y
+  %res = xor i1 %t.1, %f.1
+  ret i1 %res
+}
+
+; 2 * %x <= 2 * %y + 1 does not imply %x < %y.
+define i1 @shl_gcd_tighten_not_strict(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_gcd_tighten_not_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = shl nuw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = shl nuw i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[B_1:%.*]] = add nuw i8 [[B]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[A]], [[B_1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C_2]]
+;
+entry:
+  %a = shl nuw i8 %x, 1
+  %b = shl nuw i8 %y, 1
+  %b.1 = add nuw i8 %b, 1
+  %c.1 = icmp ule i8 %a, %b.1
+  call void @llvm.assume(i1 %c.1)
+  %c.2 = icmp ult i8 %x, %y
+  ret i1 %c.2
+}

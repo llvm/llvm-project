@@ -3914,7 +3914,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
 
   if (GetContext().directive == llvm::omp::Directive::OMPD_task) {
     if (auto *detachClause{FindClause(llvm::omp::Clause::OMPC_detach)}) {
-      if (version == 50 || version == 51) {
+      if (version < 52) {
         // OpenMP 5.0: 2.10.1 Task construct restrictions
         CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_detach,
             {llvm::omp::Clause::OMPC_mergeable});

@@ -175,8 +175,6 @@ public:
     return GCNTrackersOverride.value_or(UseGCNTrackers);
   }
 
-  GCNSchedStageID getNextStage() const;
-
   GCNDownwardRPTracker *getDownwardTracker() { return &DownwardTracker; }
 
   GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }

@@ -47,7 +47,7 @@ extern int \U0001E4D0; // 𞓐 NAG MUNDARI LETTER O - Added in Unicode 15
 extern int \u{2EBF0};  // CJK UNIFIED IDEOGRAPH-2EBF0 - Added in Unicode 15.1
 extern int \u{10D5A};   // GARAY CAPITAL LETTER DA - Added in Unicode 16.0
 extern int \u{16EBE};   // BERIA ERFE SMALL LETTER EH - Added in Unicode 17.0
-extern int \u{16D80};   // CHISOI LETTER A - Added in Unicode 18.0
+extern int \u{18E00};   // JURCHEN CHARACTER-18E00 - Added in Unicode 18.0
 extern int a\N{TANGSA LETTER GA};
 extern int a\N{ZWJ};
 extern int a\N{TANGSALETTERGA}; // expected-error {{'TANGSALETTERGA' is not a valid Unicode character name}} \

@@ -627,3 +627,14 @@ bool AMDGPUCombinerHelper::matchShiftKnownGeHalfWidth(
 
   return true;
 }
+
+bool AMDGPUCombinerHelper::matchBinopWith32BitMask(Register X,
+                                                   Register Y) const {
+  // If both operands are constants, constant_fold_binop can fold the whole
+  // binop to a single constant, which is strictly better than narrowing it
+  // into two s32 ops. Bail so the fold is not preempted.
+  if (getIConstantVRegValWithLookThrough(X, MRI) &&
+      getIConstantVRegValWithLookThrough(Y, MRI))
+    return false;
+  return matchConstantIs32BitMask(X) || matchConstantIs32BitMask(Y);
+}

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -33,9 +33,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "bounds-checking"
-
-static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
-                                  cl::desc("Use one trap block per function"));
 
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
@@ -48,7 +45,7 @@ public:
   NoSanitizeInserter() = default;
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (!NoSanitizeMD)
       NoSanitizeMD = MDNode::get(I->getContext(), {});
@@ -206,7 +203,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts);
+  ObjectSizeOffsetEvaluator ObjSizeEval(*F.getParent(), &TLI, EvalOpts);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
@@ -286,7 +283,9 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     // local-bounds. Make sure to change that too.
     if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
       TrapCall->setCallingConv(CallingConv::PreserveAll);
-    if (!MayReturn && SingleTrapBB && !DebugTrapBB)
+    if (!MayReturn &&
+        InstrumentationOptions::Global.bounds_checking_single_trap &&
+        !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 
     return TrapBB;

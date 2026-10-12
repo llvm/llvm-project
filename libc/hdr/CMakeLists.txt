@@ -206,6 +206,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_inotify_macros
+  HDRS
+    sys_inotify_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_inotify_macros
+)
+
+add_proxy_header_library(
   sys_ioctl_macros
   HDRS
     sys_ioctl_macros.h

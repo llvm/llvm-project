@@ -17,11 +17,12 @@ namespace {
 class FormatterBytecodeTest : public ::testing::Test {};
 } // namespace
 
-static bool Interpret(std::vector<uint8_t> code, DataStack &data) {
+static bool Interpret(std::vector<uint8_t> code, DataStack &data,
+                      uint32_t version = 1) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
-  if (auto error = Interpret(control, data, sig_summary)) {
+  if (auto error = Interpret(control, data, sig_summary, version)) {
 #ifndef NDEBUG
     llvm::errs() << llvm::toString(std::move(error)) << '\n';
 #else
@@ -39,7 +40,7 @@ static llvm::Error InterpretFail(std::vector<uint8_t> code) {
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
   DataStack data;
-  return Interpret(control, data, sig_summary);
+  return Interpret(control, data, sig_summary, /*version=*/1);
 }
 
 TEST_F(FormatterBytecodeTest, StackOps) {
@@ -485,6 +486,14 @@ TEST_F(FormatterBytecodeTest, CallOps) {
     data.Push(std::string{"hello"});
     ASSERT_TRUE(Interpret({op_lit_selector, sel_strlen, op_call}, data));
     ASSERT_EQ(data.Pop<uint64_t>(), 5u);
+  }
+  {
+    // Version 2 selectors return Integer instead of UInt.
+    DataStack data;
+    data.Push(std::string{"hello"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_strlen, op_call}, data,
+                          /*version=*/2));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(5));
   }
   {
     DataStack data;

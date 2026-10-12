@@ -1,4 +1,4 @@
-# RUN: llc -mtriple aarch64-linux-gnu -emit-call-site-info -start-after=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -mtriple aarch64-linux-gnu -emit-call-site-info -start-after=live-debug-values -filetype=obj -o - %s \
 # RUN:     | llvm-dwarfdump - | FileCheck %s
 
 --- |

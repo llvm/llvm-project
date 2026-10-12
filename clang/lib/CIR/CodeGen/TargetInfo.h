@@ -27,16 +27,6 @@
 
 namespace clang::CIRGen {
 
-/// isEmptyFieldForLayout - Return true if the field is "empty", that is,
-/// either a zero-width bit-field or an isEmptyRecordForLayout.
-bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
-
-/// isEmptyRecordForLayout - Return true if a structure contains only empty
-/// base classes (per  isEmptyRecordForLayout) and fields (per
-/// isEmptyFieldForLayout). Note, C++ record fields are considered empty
-/// if the [[no_unique_address]] attribute would have made them empty.
-bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
-
 /// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
 /// zero-width bit-field or an (array of) empty record(s).  An unnamed
 /// bit-field wider than zero bits is not empty: it is storage the classifier
@@ -79,6 +69,11 @@ public:
     return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
                                           cir::LangAddressSpace::Default);
   }
+
+  /// Get the CIR value of a null pointer of type \p ptrTy, where \p qt is the
+  /// source pointer type.
+  virtual mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
+                                     QualType qt, mlir::Location loc) const;
 
   virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
     return nullptr;
@@ -184,10 +179,6 @@ public:
 
 std::unique_ptr<TargetCIRGenInfo>
 createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
-
-/// Check if AMDGPU protected visibility is required.
-bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
-                                       cir::VisibilityKind visibility);
 
 /// Set AMDGPU-specific function attributes for HIP kernels.
 void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,

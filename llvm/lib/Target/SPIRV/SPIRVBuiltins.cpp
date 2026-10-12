@@ -805,23 +805,30 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                               GR->getSPIRVTypeID(Call->ReturnType));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  StringRef Name = Call->Builtin->name();
+  // The registry prefixes atomic_fetch_min/max with "s_" or "u_".
+  bool IsOCL20 =
+      Name.contains("atomic_fetch_") || Name.starts_with("atomic_exchange");
+  SPIRV::Scope::Scope DefaultScope =
+      IsOCL20 ? SPIRV::Scope::Device : SPIRV::Scope::Workgroup;
   Register ScopeRegister =
       Call->Arguments.size() >= 4 ? Call->Arguments[3] : Register();
 
   assert(Call->Arguments.size() <= 4 &&
          "Too many args for explicit atomic RMW");
-  ScopeRegister = buildScopeReg(ScopeRegister, SPIRV::Scope::Workgroup,
-                                MIRBuilder, GR, MRI);
+  ScopeRegister =
+      buildScopeReg(ScopeRegister, DefaultScope, MIRBuilder, GR, MRI);
 
   Register PtrRegister = Call->Arguments[0];
   SPIRV::MemorySemantics::MemorySemantics Ordering =
-      SPIRV::MemorySemantics::None;
+      IsOCL20 ? SPIRV::MemorySemantics::SequentiallyConsistent
+              : SPIRV::MemorySemantics::None;
   unsigned StorageClassSem = SPIRV::MemorySemantics::None;
-  if (Call->Arguments.size() >= 3) {
+  if (Call->Arguments.size() >= 3)
     Ordering = getMemOrdering(Call->Arguments[2], MRI);
+  if (IsOCL20 || Call->Arguments.size() >= 3)
     StorageClassSem =
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-  }
   Register MemSemanticsReg =
       buildMemSemanticsReg(Ordering, StorageClassSem, MIRBuilder, GR);
   Register ValueReg = Call->Arguments[1];
@@ -3169,16 +3176,20 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
     uint64_t NumElem = ConstOp.getCImm()->getValue().getZExtValue();
 
     Register LocalSizeArrayReg = Call->Arguments[LocalSizeElemPtrIdx];
+    SPIRVTypeInst PointeeTy =
+        GR->getPointeeType(GR->getSPIRVTypeForVReg(LocalSizeArrayReg));
+    bool IsArrayPtr = PointeeTy && PointeeTy->getOpcode() == SPIRV::OpTypeArray;
 
     for (unsigned i = 0; i < NumElem; ++i) {
       Register Reg = MRI->createVirtualRegister(&SPIRV::pIDRegClass);
       auto GEPInst = MIRBuilder.buildIntrinsic(
           Intrinsic::spv_gep, ArrayRef<Register>{Reg}, true, false);
       GEPInst
-          .addImm(0)                                        // In bound.
-          .addUse(LocalSizeArrayReg)                        // Base pointer.
-          .addUse(buildConstantIntReg32(0, MIRBuilder, GR)) // Indices.
-          .addUse(buildConstantIntReg32(i, MIRBuilder, GR));
+          .addImm(0)                  // In bound.
+          .addUse(LocalSizeArrayReg); // Base pointer.
+      if (IsArrayPtr)
+        GEPInst.addUse(buildConstantIntReg32(0, MIRBuilder, GR));
+      GEPInst.addUse(buildConstantIntReg32(i, MIRBuilder, GR));
       LocalSizes.push_back(Reg);
     }
   }
@@ -3691,6 +3702,13 @@ mapBuiltinToOpcode(StringRef DemangledCall,
     return std::make_tuple(-1, 0, 0);
   }
   return std::make_tuple(-1, 0, 0);
+}
+
+bool isBuiltin(StringRef DemangledCall,
+               SPIRV::InstructionSet::InstructionSet Set) {
+  SmallVector<Register> Args;
+  return lookupBuiltin(DemangledCall, Set, Register(), nullptr, Args) !=
+         nullptr;
 }
 
 /// Checks that scalar/vector numeric arguments of \p Call match the types

@@ -284,13 +284,13 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; IPRA-LABEL: test_loop:
 ; IPRA:       # %bb.0:
 ; IPRA-NEXT:    subq $72, %rsp
-; IPRA-NEXT:    movl %edi, %eax
 ; IPRA-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; IPRA-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movl %edi, %eax
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    testl %edi, %edi
 ; IPRA-NEXT:    jg .LBB2_4

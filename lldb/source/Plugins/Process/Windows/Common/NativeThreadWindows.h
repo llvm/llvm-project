@@ -28,6 +28,11 @@ public:
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);
 
+  /// Whether the current resume single-steps this thread.
+  bool IsSingleStepping() const { return m_single_stepping; }
+
+  void ClearSingleStepping() { m_single_stepping = false; }
+
   std::string GetName() override;
 
   lldb::StateType GetState() override { return m_state; }
@@ -48,6 +53,8 @@ public:
 
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
+  StructuredData::ObjectSP GetExtendedInfo() const override;
+
   void SetStopReason(ThreadStopInfo stop_info, std::string description);
 
   const HostThread &GetHostThread() { return m_host_thread; }
@@ -55,6 +62,7 @@ public:
 protected:
   lldb::StateType m_state = lldb::StateType::eStateInvalid;
   std::string m_name;
+  bool m_single_stepping = false;
   std::unique_ptr<NativeRegisterContextWindows> m_reg_context_up;
   // Cache address and index of the watchpoints and hardware breakpoints since
   // the register context does not.

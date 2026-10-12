@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -63,7 +64,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/GVNValueTable.h"
@@ -86,26 +86,6 @@ STATISTIC(NumStoresHoisted, "Number of stores hoisted");
 STATISTIC(NumStoresRemoved, "Number of stores removed");
 STATISTIC(NumCallsHoisted, "Number of calls hoisted");
 STATISTIC(NumCallsRemoved, "Number of calls removed");
-
-static cl::opt<int>
-    MaxHoistedThreshold("gvn-max-hoisted", cl::Hidden, cl::init(-1),
-                        cl::desc("Max number of instructions to hoist "
-                                 "(default unlimited = -1)"));
-
-static cl::opt<int> MaxNumberOfBBSInPath(
-    "gvn-hoist-max-bbs", cl::Hidden, cl::init(4),
-    cl::desc("Max number of basic blocks on the path between "
-             "hoisting locations (default = 4, unlimited = -1)"));
-
-static cl::opt<int> MaxDepthInBB(
-    "gvn-hoist-max-depth", cl::Hidden, cl::init(100),
-    cl::desc("Hoist instructions from the beginning of the BB up to the "
-             "maximum specified depth (default = 100, unlimited = -1)"));
-
-static cl::opt<int>
-    MaxChainLength("gvn-hoist-max-chain-length", cl::Hidden, cl::init(10),
-                   cl::desc("Maximum length of dependent chains to hoist "
-                            "(default = 10, unlimited = -1)"));
 
 namespace llvm {
 
@@ -244,7 +224,7 @@ class GVNHoist {
 public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
            MemorySSA *MSSA)
-      : DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
+      : Opts(ScalarOptions::Global), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
     MSSA->ensureOptimizedUses();
   }
@@ -260,6 +240,7 @@ public:
   unsigned int rank(const Value *V) const;
 
 private:
+  const ScalarOptions &Opts;
   GVNValueTable VN;
   DominatorTree *DT;
   PostDominatorTree *PDT;
@@ -522,7 +503,8 @@ bool GVNHoist::run(Function &F) {
 
   // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
   while (true) {
-    if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
+    if (Opts.gvn_hoist_max_chain_length != -1 &&
+        ++ChainLength >= Opts.gvn_hoist_max_chain_length)
       return Res;
 
     auto HoistStat = hoistExpressions(F);
@@ -757,7 +739,7 @@ bool GVNHoist::valueAnticipable(CHIArgs C, Instruction *TI) const {
 
 void GVNHoist::checkSafety(CHIArgs C, BasicBlock *BB, GVNHoist::InsKind K,
                            SmallVectorImpl<CHIArg> &Safe) {
-  int NumBBsOnAllPaths = MaxNumberOfBBSInPath;
+  int NumBBsOnAllPaths = Opts.gvn_hoist_max_bbs;
   const Instruction *T = BB->getTerminator();
   for (auto CHI : C) {
     Instruction *Insn = CHI.I;
@@ -1154,7 +1136,8 @@ std::pair<unsigned, unsigned> GVNHoist::hoistExpressions(Function &F) {
       }
       // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
       // deeper may increase the register pressure and compilation time.
-      if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
+      if (Opts.gvn_hoist_max_depth != -1 &&
+          InstructionNb++ >= Opts.gvn_hoist_max_depth)
         break;
 
       // Do not value number terminator instructions.

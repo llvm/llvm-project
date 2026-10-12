@@ -4042,6 +4042,8 @@ def Weak : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[IFunc, Weak]>;
+
 def WeakImport : InheritableAttr {
   let Spellings = [Clang<"weak_import">];
   let Documentation = [Undocumented];
@@ -5100,7 +5102,9 @@ def ReleaseHandle : InheritableParamAttr {
 }
 
 def UnsafeBufferUsage : InheritableAttr {
-  let Spellings = [Clang<"unsafe_buffer_usage">];
+  let Spellings = [Clang<"unsafe_buffer_usage">,
+                   Clang<"unsafe_buffer_usage_in_container">];
+  let Args = [StringArgument<"Category", 1>];
   let Subjects = SubjectList<[Function, Field]>;
   let Documentation = [UnsafeBufferUsageDocs];
 }
@@ -5375,6 +5379,20 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"groupshared">];
   let Subjects = SubjectList<[Var]>;
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
+}
+
+def HLSLInterpolationModifiersArgument : UnsignedArgument<"Modifiers"> {
+  let Fake = 1;
+}
+
+def HLSLInterpolationModifier : InheritableAttr {
+  let Spellings = [CustomKeyword<"nointerpolation">, CustomKeyword<"linear">,
+                   CustomKeyword<"centroid">, CustomKeyword<"noperspective">,
+                   CustomKeyword<"sample">, CustomKeyword<"center">];
+  let Args = [HLSLInterpolationModifiersArgument];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLInterpolationModifierDocs];
 }
 
 def HLSLParamModifier : ParameterABIAttr {

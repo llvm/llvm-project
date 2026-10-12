@@ -224,15 +224,9 @@ bool NVPTXInstrInfo::invertPredicateBranchInstr(MachineBasicBlock &MBB) const {
 
 static bool isIntegerSetp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case NVPTX::SETP_i16rr:
-  case NVPTX::SETP_i16ri:
-  case NVPTX::SETP_i16ir:
-  case NVPTX::SETP_i32rr:
-  case NVPTX::SETP_i32ri:
-  case NVPTX::SETP_i32ir:
-  case NVPTX::SETP_i64rr:
-  case NVPTX::SETP_i64ri:
-  case NVPTX::SETP_i64ir:
+  case NVPTX::SETP_i16:
+  case NVPTX::SETP_i32:
+  case NVPTX::SETP_i64:
     return true;
   default:
     return false;
@@ -241,14 +235,10 @@ static bool isIntegerSetp(const MachineInstr &MI) {
 
 static bool isScalarFloatSetp(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case NVPTX::SETP_bf16rr:
-  case NVPTX::SETP_f16rr:
-  case NVPTX::SETP_f32rr:
-  case NVPTX::SETP_f32ri:
-  case NVPTX::SETP_f32ir:
-  case NVPTX::SETP_f64rr:
-  case NVPTX::SETP_f64ri:
-  case NVPTX::SETP_f64ir:
+  case NVPTX::SETP_bf16:
+  case NVPTX::SETP_f16:
+  case NVPTX::SETP_f32:
+  case NVPTX::SETP_f64:
     return true;
   default:
     return false;
