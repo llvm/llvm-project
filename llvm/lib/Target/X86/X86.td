@@ -2126,9 +2126,10 @@ def : ProcModel<"alderlake", AlderlakePModel,
 // FIXME: Use Gracemont Schedule Model when it is ready.
 def : ProcModel<"gracemont", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.GRTTuning>;
-def : ProcModel<"sierraforest", AlderlakePModel, ProcessorFeatures.SRFFeatures,
-                ProcessorFeatures.GRTTuning>;
-def : ProcessorAlias<"grandridge", "sierraforest">;
+foreach P = ["sierraforest", "grandridge"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.SRFFeatures,
+                  ProcessorFeatures.GRTTuning>;
+}
 def : ProcModel<"raptorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"meteorlake", AlderlakePModel,
@@ -2140,9 +2141,10 @@ def : ProcModel<"arrowlake-s", AlderlakePModel,
 def : ProcessorAlias<"arrowlake_s", "arrowlake-s">;
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
-                ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
-def : ProcessorAlias<"wildcatlake", "pantherlake">;
+foreach P = ["pantherlake", "wildcatlake"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.PTLFeatures,
+                  ProcessorFeatures.ADLTuning>;
+}
 def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
                 ProcessorFeatures.NVLTuning>;
 
