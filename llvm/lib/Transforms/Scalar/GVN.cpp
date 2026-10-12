@@ -3194,7 +3194,7 @@ bool GVNPassImpl::processLoad(LoadInst *L) {
 // Attempt to process masked loads which have loaded from
 // masked stores with the same mask
 bool GVNPassImpl::processMaskedLoad(IntrinsicInst *I) {
-  [[maybe_unused]] BatchAAResults BatchAA(*AA);
+  BatchAAResults BatchAA(*AA);
   Instruction *DepInst = nullptr;
   MemoryLocation LoadLoc = MemoryLocation::getForArgument(I, 0, TLI);
 
