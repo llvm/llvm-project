@@ -33221,6 +33221,22 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                              : AtomicExpansionKind::LLSC;
 }
 
+TargetLowering::AtomicExpansionKind
+AArch64TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  if (auto *VT = dyn_cast<FixedVectorType>(LI->getType());
+      VT && VT->getNumElements() > 1)
+    return AtomicExpansionKind::CastToInteger;
+  return TargetLowering::shouldCastAtomicLoadInIR(LI);
+}
+
+TargetLowering::AtomicExpansionKind
+AArch64TargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  if (auto *VT = dyn_cast<FixedVectorType>(SI->getValueOperand()->getType());
+      VT && VT->getNumElements() > 1)
+    return AtomicExpansionKind::CastToInteger;
+  return TargetLowering::shouldCastAtomicStoreInIR(SI);
+}
+
 // Return true if the atomic operation expansion will lower to use a library
 // call, and is thus ineligible to use an LLSC expansion.
 static bool rmwOpMayLowerToLibcall(const AArch64Subtarget &Subtarget,

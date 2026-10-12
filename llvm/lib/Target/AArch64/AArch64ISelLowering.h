@@ -368,6 +368,10 @@ public:
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldCastAtomicStoreInIR(StoreInst *SI) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
