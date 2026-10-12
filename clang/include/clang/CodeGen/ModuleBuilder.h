@@ -113,6 +113,9 @@ public:
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.
   llvm::Module* StartModule(llvm::StringRef ModuleName, llvm::LLVMContext &C);
+
+  llvm::Module *StartModule(llvm::StringRef ModuleName, llvm::LLVMContext &C,
+                            const CodeGenOptions &CGO);
 };
 
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.
