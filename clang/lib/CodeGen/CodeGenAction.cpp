@@ -575,6 +575,24 @@ void CodeGenAction::ExecuteAction() {
     TheModule->setTargetTriple(Triple(TargetOpts.Triple));
   }
 
+  llvm::ExceptionHandling ExceptionModel =
+      CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
+  if (ExceptionModel != llvm::ExceptionHandling::Default) {
+    StringRef ModelName = llvm::getExceptionModelName(ExceptionModel);
+    if (auto *Existing = cast_or_null<llvm::MDString>(
+            TheModule->getModuleFlag("exception-model"))) {
+      if (Existing->getString() != ModelName) {
+        Diagnostics.Report(diag::err_fe_exception_model_mismatch)
+            << ModelName << Existing->getString();
+        return;
+      }
+    } else {
+      TheModule->addModuleFlag(
+          llvm::Module::Error, "exception-model",
+          llvm::MDString::get(TheModule->getContext(), ModelName));
+    }
+  }
+
   EmbedObject(TheModule.get(), CodeGenOpts, CI.getVirtualFileSystem(),
               Diagnostics);
   EmbedBitcode(TheModule.get(), CodeGenOpts, *MainFile);
@@ -599,9 +617,8 @@ void CodeGenAction::ExecuteAction() {
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
     return;
 
-  // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
-  // true here because the valued names are needed for reading textual IR.
-  Ctx.setDiscardValueNames(false);
+  // Textual IR needs value names while parsing; discard new names afterwards.
+  Ctx.setDiscardValueNames(CodeGenOpts.DiscardValueNames);
   Ctx.setDiagnosticHandler(Result.createDiagnosticHandler());
 
   Ctx.setDefaultTargetCPU(TargetOpts.CPU);

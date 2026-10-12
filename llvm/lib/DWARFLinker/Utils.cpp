@@ -8,11 +8,35 @@
 
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include <limits>
 #include <map>
 
 namespace llvm {
 namespace dwarf_linker {
+
+bool hasImplicitAddressLocation(const DWARFDie &Die) {
+  std::optional<DWARFFormValue> Location = Die.find(dwarf::DW_AT_location);
+  if (!Location)
+    return false;
+
+  std::optional<ArrayRef<uint8_t>> Block = Location->getAsBlock();
+  if (!Block)
+    return false;
+
+  DWARFUnit *U = Die.getDwarfUnit();
+  DataExtractor Data(*Block, U->getContext().isLittleEndian());
+  DWARFExpression Expression(Data, U->getAddressByteSize(),
+                             U->getFormParams().Format);
+  return !Expression.isMemoryLocation() &&
+         any_of(Expression, [](const DWARFExpression::Operation &Op) {
+           return !Op.isError() && (Op.getCode() == dwarf::DW_OP_addr ||
+                                    Op.getCode() == dwarf::DW_OP_addrx);
+         });
+}
 
 void buildStmtSeqOffsetToFirstRowIndex(
     const DWARFDebugLine::LineTable &LT,

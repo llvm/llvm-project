@@ -572,6 +572,21 @@ static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
   return true;
 }
 
+/// Returns true if \p I does not use a swifterror value, otherwise reports a
+/// vectorization failure for \p TheLoop and returns false.
+/// TODO: Allow unmasked uniform accesses through loop-invariant swifterror
+/// pointers once memory operations on them are guaranteed to stay scalar.
+static bool canVectorizeSwiftErrorUses(Instruction &I,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop) {
+  if (none_of(I.operands(), [](Value *Op) { return Op->isSwiftError(); }))
+    return true;
+  reportVectorizationFailure("Found a use of a swifterror value",
+                             "swifterror value cannot be vectorized",
+                             "CantVectorizeSwiftError", ORE, TheLoop, &I);
+  return false;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -582,8 +597,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
+    // Uses of swifterror values must remain scalar.
     for (Instruction &I : *BB) {
-      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop))
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop) &&
+          canVectorizeSwiftErrorUses(I, ORE, TheLoop))
         continue;
       if (!DoExtraAnalysis)
         return false;
@@ -911,6 +928,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     return false;
   } // end of PHI handling
 
+  if (!canVectorizeSwiftErrorUses(I, ORE, TheLoop))
+    return false;
+
   // We handle calls that:
   //   * Have a mapping to an IR intrinsic.
   //   * Have a vector version available.
@@ -1017,34 +1037,48 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
 /// Find histogram operations that match high-level code in loops:
 /// \code
-/// buckets[indices[i]]+=step;
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val);
 /// \endcode
+/// Where UpdateOp can be add, sub, uadd.sat, umax, or umin.
 ///
 /// It matches a pattern starting from \p HSt, which Stores to the 'buckets'
-/// array the computed histogram. It uses a BinOp to sum all counts, storing
-/// them using a loop-variant index Load from the 'indices' input array.
+/// array the computed histogram. It uses an update instruction to update all
+/// counts, storing them using a loop-variant index Load from the 'indices'
+/// input array.
 ///
 /// On successful matches it updates the STATISTIC 'HistogramsDetected',
 /// regardless of hardware support. When there is support, it additionally
-/// stores the BinOp/Load pairs in \p HistogramCounts, as well the pointers
+/// stores the UpdateOp/Load pairs in \p HistogramCounts, as well the pointers
 /// used to update histogram in \p HistogramPtrs.
 static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
                           const PredicatedScalarEvolution &PSE,
                           SmallVectorImpl<HistogramInfo> &Histograms) {
 
-  // Store value must come from a Binary Operation.
+  // Store value must come from an update operation (binary op or intrinsic).
   Instruction *HPtrInstr = nullptr;
-  BinaryOperator *HBinOp = nullptr;
-  if (!match(HSt, m_Store(m_BinOp(HBinOp), m_Instruction(HPtrInstr))))
+  Instruction *HUpdateOp = nullptr;
+  if (!match(HSt, m_Store(m_Instruction(HUpdateOp), m_Instruction(HPtrInstr))))
     return false;
 
-  // BinOp must be an Add or a Sub modifying the bucket value by a
-  // loop invariant amount.
+  // The update operation must modify the bucket value by a loop invariant
+  // amount. Supported operations: add, sub, uadd.sat, umax, umin.
   // FIXME: We assume the loop invariant term is on the RHS.
   //        Fine for an immediate/constant, but maybe not a generic value?
   Value *HIncVal = nullptr;
-  if (!match(HBinOp, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HBinOp, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))))
+  HistogramUpdateKind UpdateKind;
+  auto Bucket = m_Load(m_Specific(HPtrInstr));
+  if (match(HUpdateOp, m_Add(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::Add;
+  else if (match(HUpdateOp, m_Sub(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::Sub;
+  else if (match(HUpdateOp,
+                 m_Intrinsic<Intrinsic::uadd_sat>(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UAddSat;
+  else if (match(HUpdateOp, m_UMax(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UMax;
+  else if (match(HUpdateOp, m_UMin(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UMin;
+  else
     return false;
 
   // Make sure the increment value is loop invariant.
@@ -1086,19 +1120,19 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 
   // Ensure we'll have the same mask by checking that all parts of the histogram
   // (gather load, update, scatter store) are in the same block.
-  LoadInst *IndexedLoad = cast<LoadInst>(HBinOp->getOperand(0));
+  LoadInst *IndexedLoad = cast<LoadInst>(HUpdateOp->getOperand(0));
   BasicBlock *LdBB = IndexedLoad->getParent();
-  if (LdBB != HBinOp->getParent() || LdBB != HSt->getParent())
+  if (LdBB != HUpdateOp->getParent() || LdBB != HSt->getParent())
     return false;
 
   // The bucket value and its update must not be used outside the histogram.
-  if (!IndexedLoad->hasOneUse() || !HBinOp->hasOneUse())
+  if (!IndexedLoad->hasOneUse() || !HUpdateOp->hasOneUse())
     return false;
 
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
   // Store the operations that make up the histogram.
-  Histograms.emplace_back(IndexedLoad, HBinOp, HSt);
+  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt, UpdateKind);
   return true;
 }
 
@@ -1270,39 +1304,40 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
   // If the EnableStrictReductions flag is set, first check if we have any
   // Exact FP induction vars, which we cannot vectorize.
   if (!EnableStrictReductions ||
-      any_of(getInductionVars(), [&](auto &Induction) -> bool {
-        InductionDescriptor IndDesc = Induction.second;
-        return IndDesc.getExactFPMathInst();
-      }))
+      any_of(getInductionVars().values(),
+             [](const InductionDescriptor &IndDesc) -> bool {
+               return IndDesc.getExactFPMathInst();
+             }))
     return false;
 
   // We can now only vectorize if all reductions with Exact FP math also
   // have the isOrdered flag set, which indicates that we can move the
   // reduction operations in-loop.
-  return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
-  }));
+  return (all_of(getReductionVars().values(),
+                 [](const RecurrenceDescriptor &RdxDesc) -> bool {
+                   return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
+                 }));
 }
 
 bool LoopVectorizationLegality::isInvariantStoreOfReduction(StoreInst *SI) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return RdxDesc.IntermediateStore == SI;
-  });
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  return RdxDesc.IntermediateStore == SI;
+                });
 }
 
 bool LoopVectorizationLegality::isInvariantAddressOfReduction(Value *V) {
-  return any_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    if (!RdxDesc.IntermediateStore)
-      return false;
+  return any_of(getReductionVars().values(),
+                [&](const RecurrenceDescriptor &RdxDesc) -> bool {
+                  if (!RdxDesc.IntermediateStore)
+                    return false;
 
-    ScalarEvolution *SE = PSE.getSE();
-    Value *InvariantAddress = RdxDesc.IntermediateStore->getPointerOperand();
-    return V == InvariantAddress ||
-           SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
-  });
+                  ScalarEvolution *SE = PSE.getSE();
+                  Value *InvariantAddress =
+                      RdxDesc.IntermediateStore->getPointerOperand();
+                  return V == InvariantAddress ||
+                         SE->getSCEV(V) == SE->getSCEV(InvariantAddress);
+                });
 }
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {

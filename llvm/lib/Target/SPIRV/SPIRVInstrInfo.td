@@ -324,6 +324,8 @@ def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
 
 def OpVariableLengthArrayINTEL: Op<5818, (outs ID:$res), (ins TYPE:$type, ID:$length),
                   "$res = OpVariableLengthArrayINTEL $type $length">;
+def OpUntypedVariableLengthArrayINTEL: Op<6244, (outs ID:$res), (ins TYPE:$type, TYPE:$elementType, ID:$length),
+                  "$res = OpUntypedVariableLengthArrayINTEL $type $elementType $length">;
 def OpSaveMemoryINTEL: Op<5819, (outs ID:$res), (ins TYPE:$type),
                   "$res = OpSaveMemoryINTEL $type">;
 def OpRestoreMemoryINTEL: Op<5820, (outs), (ins ID:$ptr),

@@ -8,17 +8,13 @@
 define { i64, i64 } @pack_i16x8(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_i16x8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_4_P:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 4
-; CHECK-NEXT:    [[Y_4_P:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[Y]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[X_4_P]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i16>, ptr [[Y_4_P]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP7]], <4 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
@@ -109,17 +105,13 @@ entry:
 define { i64, i64 } @pack_i8x16(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_i8x16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_8_P:%.*]] = getelementptr inbounds i8, ptr [[X:%.*]], i64 8
-; CHECK-NEXT:    [[Y_8_P:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[Y:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.smin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, ptr [[X_8_P]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x i8>, ptr [[Y_8_P]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[TMP7]], <8 x i8> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i8> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;

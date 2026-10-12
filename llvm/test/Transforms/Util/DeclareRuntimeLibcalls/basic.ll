@@ -13,57 +13,57 @@ define float @sinf(float %x) {
 
 ; CHECK: declare void @_Unwind_Resume(...)
 
-; CHECK: declare void @__memcpy_chk(...)
-; CHECK: declare void @__memmove_chk(...)
-; CHECK: declare void @__memset_chk(...)
+; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
+; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
+; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
 
 ; CHECK: declare void @__umodti3(...)
 
-; CHECK: declare void @acosf(...)
+; CHECK: declare float @acosf(float)
 
 ; CHECK: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
 
-; CHECK: declare void @fdim(...)
-; CHECK: declare void @fdimf(...)
-; CHECK: declare void @fdiml(...)
+; CHECK: declare double @fdim(double, double)
+; CHECK: declare float @fdimf(float, float)
+; CHECK: declare double @fdiml(double, double)
 
 ; CHECK: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
 
 ; CHECK: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 
-; CHECK: declare void @nan(...)
-; CHECK: declare void @nanf(...)
-; CHECK: declare void @nanl(...)
+; CHECK: declare double @nan(ptr)
+; CHECK: declare float @nanf(ptr)
+; CHECK: declare double @nanl(ptr)
 
-; CHECK: declare void @nexttoward(...)
-; CHECK: declare void @nexttowardf(...)
-; CHECK: declare void @nexttowardl(...)
+; CHECK: declare double @nexttoward(double, double)
+; CHECK: declare float @nexttowardf(float, double)
+; CHECK: declare double @nexttowardl(double, double)
 
-; CHECK: declare void @remainder(...)
-; CHECK: declare void @remainderf(...)
-; CHECK: declare void @remainderl(...)
+; CHECK: declare double @remainder(double, double)
+; CHECK: declare float @remainderf(float, float)
+; CHECK: declare double @remainderl(double, double)
 
-; CHECK: declare void @remquo(...)
-; CHECK: declare void @remquof(...)
-; CHECK: declare void @remquol(...)
+; CHECK: declare double @remquo(double, double, ptr)
+; CHECK: declare float @remquof(float, float, ptr)
+; CHECK: declare double @remquol(double, double, ptr)
 
-; CHECK: declare void @scalbln(...)
-; CHECK: declare void @scalblnf(...)
-; CHECK: declare void @scalblnl(...)
+; CHECK: declare double @scalbln(double, i32)
+; CHECK: declare float @scalblnf(float, i32)
+; CHECK: declare double @scalblnl(double, i32)
 
-; CHECK: declare void @scalbn(...)
-; CHECK: declare void @scalbnf(...)
-; CHECK: declare void @scalbnl(...)
+; CHECK: declare double @scalbn(double, i32)
+; CHECK: declare float @scalbnf(float, i32)
+; CHECK: declare double @scalbnl(double, i32)
 
 ; CHECK: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 
 ; CHECK: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
 
-; CHECK: declare void @tgamma(...)
-; CHECK: declare void @tgammaf(...)
-; CHECK: declare void @tgammal(...)
+; CHECK: declare double @tgamma(double)
+; CHECK: declare float @tgammaf(float)
+; CHECK: declare double @tgammal(double)
 
-; CHECK: declare void @truncl(...)
+; CHECK: declare double @truncl(double)
 
 ; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
