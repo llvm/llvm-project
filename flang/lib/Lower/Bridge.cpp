@@ -4581,6 +4581,10 @@ private:
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
               *std::get<Fortran::parser::Name>(assoc.t).symbol;
+          if (Fortran::evaluate::IsCoarray(
+                  Fortran::semantics::GetAssociationRoot(sym)))
+            TODO(toLocation(),
+                 "coarray: associating coarray entity in associate construct.");
           const Fortran::lower::SomeExpr &selector =
               *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
           addSymbol(sym, genAssociateSelector(selector, stmtCtx));
@@ -5020,6 +5024,11 @@ private:
           for (auto &symbol : typeCaseScopes[typeGuardIdx]->GetSymbols()) {
             if (symbol->GetUltimate()
                     .detailsIf<Fortran::semantics::AssocEntityDetails>()) {
+              if (Fortran::evaluate::IsCoarray(
+                      Fortran::semantics::GetAssociationRoot(symbol)))
+                TODO(loc, "coarray: associating coarray entity in select type "
+                          "construct.");
+
               addSymbol(symbol, exv);
               break;
             }

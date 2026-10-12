@@ -30,10 +30,10 @@ end program
 ! COARRAY: fir.store %c1_i64 to %[[VAL_4]] : !fir.ref<i64>
 ! COARRAY: %[[VAL_5:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! COARRAY: %[[VAL_6:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! COARRAY: mif.alloc_coarray %[[VAL_3]] lcobounds %[[VAL_5]] ucobounds %[[VAL_6]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-! COARRAY: %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>)
-! COARRAY: %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "me", uniq_name = "_QFEme"}
-! COARRAY: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEme"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! COARRAY: mif.alloc_coarray %[[VAL_3]] lcobounds %[[VAL_5]] ucobounds %[[VAL_6]] uniq_name("_QFEdata_ready") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! COARRAY: %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFEdata_ready") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>)
+! COARRAY: %[[VAL_8:.*]] = fir.alloca i32 <{bindc_name = "me", uniq_name = "_QFEme"}>
+! COARRAY: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] uniq_name("_QFEme") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! COARRAY: %[[VAL_10:.*]] = mif.this_image : () -> i32
 ! COARRAY: hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
 ! COARRAY: %[[VAL_11:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>

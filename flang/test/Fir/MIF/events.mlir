@@ -13,10 +13,10 @@ func.func @_QQmain() attributes {fir.bindc_name = "EVENT_TEST"} {
     fir.store %c1_i64 to %4 : !fir.ref<i64>
     %5 = fir.embox %1 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
     %6 = fir.embox %0 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-    mif.alloc_coarray %3 lcobounds %5 ucobounds %6 {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-    %7 = fir.declare %3 {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>
-    %8 = fir.alloca i32 {bindc_name = "me", uniq_name = "_QFEme"}
-    %9 = fir.declare %8 {uniq_name = "_QFEme"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    mif.alloc_coarray %3 lcobounds %5 ucobounds %6 uniq_name("_QFEdata_ready") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+    %7 = fir.declare %3 uniq_name("_QFEdata_ready") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{_QM__fortran_builtinsT__builtin_event_type.__m1:i64,_QM__fortran_builtinsT__builtin_event_type.__m2:i64,_QM__fortran_builtinsT__builtin_event_type.__m3:i64,_QM__fortran_builtinsT__builtin_event_type.__m4:i64,_QM__fortran_builtinsT__builtin_event_type.__m5:i64,_QM__fortran_builtinsT__builtin_event_type.__m6:i64,_QM__fortran_builtinsT__builtin_event_type.__m7:i64,_QM__fortran_builtinsT__builtin_event_type.__m8:i64}>>, corank:1>>
+    %8 = fir.alloca i32 <{bindc_name = "me", uniq_name = "_QFEme"}>
+    %9 = fir.declare %8 uniq_name("_QFEme") : (!fir.ref<i32>) -> !fir.ref<i32>
     %10 = mif.this_image : () -> i32
     fir.store %10 to %9 : !fir.ref<i32>
     %11 = fir.load %9 : !fir.ref<i32>
@@ -82,8 +82,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "EVENT_TEST"} {
 // CHECK:  %[[VAL_31:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> !fir.ref<!fir.box<none>>
 // CHECK:  %[[VAL_32:.*]] = fir.convert %[[VAL_30]] : (i64) -> !fir.llvm_ptr<i8>
 // CHECK:  fir.call @_FortranAAllocatableSetBaseAddr(%[[VAL_31]], %[[VAL_32]]) : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-// CHECK:  %[[VAL_33:.*]] = fir.address_of(@_QQclXc6b86460de27409454bc24fe92413d46) : !fir.ref<!fir.char<1,80>>
-// CHECK:  %c80 = arith.constant 80 : index
+// CHECK:  %[[VAL_33:.*]] = fir.address_of(@_QQclX{{[0-9a-f]+}}) : !fir.ref<!fir.char<1,{{[0-9]+}}>>
 // CHECK:  %c16_i32 = arith.constant 16 : i32
 // CHECK:  %[[VAL_34:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> !fir.box<none>
 // CHECK:  %[[VAL_35:.*]] = fir.convert %[[VAL_33]] : (!fir.ref<!fir.char<1,80>>) -> !fir.ref<i8>
@@ -91,9 +90,9 @@ func.func @_QQmain() attributes {fir.bindc_name = "EVENT_TEST"} {
 // CHECK:  %[[VAL_36:.*]] = fir.absent !fir.box<!fir.char<1,?>>
 // CHECK:  %[[VAL_37:.*]] = fir.absent !fir.ref<i32>
 // CHECK:  fir.call @_QMprifPprif_sync_all(%[[VAL_37]], %[[VAL_36]], %[[VAL_36]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
-// CHECK:  %[[VAL_38:.*]] = fir.declare %[[VAL_13]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
-// CHECK:  %[[VAL_39:.*]] = fir.alloca i32 {bindc_name = "me", uniq_name = "_QFEme"}
-// CHECK:  %[[VAL_40:.*]] = fir.declare %[[VAL_39]] {uniq_name = "_QFEme"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:  %[[VAL_38:.*]] = fir.declare %[[VAL_13]] uniq_name("_QFEdata_ready") : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
+// CHECK:  %[[VAL_39:.*]] = fir.alloca i32 <{bindc_name = "me", uniq_name = "_QFEme"}>
+// CHECK:  %[[VAL_40:.*]] = fir.declare %[[VAL_39]] uniq_name("_QFEme") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_41:.*]] = fir.absent !fir.ref<none>
 // CHECK:  fir.call @_QMprifPprif_this_image_no_coarray(%[[VAL_41]], %[[VAL_5]]) : (!fir.ref<none>, !fir.ref<i32>) -> ()
 // CHECK:  %[[VAL_42:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>

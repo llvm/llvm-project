@@ -1266,7 +1266,6 @@ struct MIFAllocCoarrayOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    mlir::Type i32Ty = builder.getI32Type();
     mlir::Type i64Ty = builder.getI64Type();
     mlir::Type ptrTy = getBuiltinCptrType(builder, loc);
     mlir::Type refTy = builder.getRefType(builder.getNoneType());
