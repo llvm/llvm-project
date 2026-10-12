@@ -81,6 +81,51 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
+def fir_AssertOp : fir_Op<"assert", [
+    AttrSizedOperandSegments,
+    TypesMatchWith<"result types match guarded operand types", "guarded",
+                   "results", "$_self">,
+    MemoryEffects<[MemWrite<FortranRuntimeResource>]>]> {
+  let summary = "check a condition and guard values used by subsequent operations";
+  let description = [{
+    If `condition` is true, each result equals the corresponding `guarded`
+    operand. Otherwise, execution terminates through the Fortran runtime,
+    reporting `message` at the operation's source location. The message may
+    contain `%lld` directives, one for each integer or index operand
+    in `values`, and `%%` for a literal percent sign. Diagnostic values are
+    interpreted as signed integers and must fit in 64 bits.
+
+    Consumers of the results depend on the check. The operation is deliberately
+    not speculatable or a view: looking through it in a rewrite would discard
+    that dependence. Analyses may inspect the guarded operands. Its write to
+    a non-addressable runtime resource preserves checks without obstructing
+    memory optimizations.
+
+    Guard array bases and scalar operands used by the protected computation.
+    FIR users of shape and slice metadata may require direct constructor
+    operands; guard the underlying extents or indices before constructing that
+    metadata instead.
+  }];
+  let arguments = (ins I1:$condition, fir_RuntimeCheckKindAttr:$kind,
+                       StrAttr:$message,
+                       Variadic<AnySignlessIntegerOrIndex>:$values,
+                       Variadic<AnyType>:$guarded);
+  let results = (outs Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    $condition `,` enum($kind) `,` $message
+    (`values` `(` $values^ `:` type($values) `)`)?
+    (`guard` `(` $guarded^ `:` type($guarded) `)`)? attr-dict
+  }];
+  let builders = [OpBuilder<(ins "mlir::Value":$condition,
+      "fir::RuntimeCheckKind":$kind, "llvm::StringRef":$message,
+      "mlir::ValueRange":$values, "mlir::ValueRange":$guarded), [{
+    build($_builder, $_state, guarded.getTypes(), condition, kind, message,
+          values, guarded);
+  }]>];
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
 def fir_AllocaOp : fir_Op<"alloca", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
