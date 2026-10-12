@@ -2400,25 +2400,11 @@ SymbolFileNativePDB::GetContextForTypedef(PdbGlobalSymId id) {
   if (!parsed_name)
     return {{CompilerContextKind::Typedef, ConstString(udt_or_err->Name)}};
 
-  // The scopes of a typedef are namespaces, unless there is a record with the
-  // same qualified name.
+  // Typedefs nested in a record are LF_NESTTYPE members of its field list, not
+  // S_UDT symbols, so every scope of an S_UDT is a namespace.
   std::vector<CompilerContext> ctx;
-  std::string scope_name;
-  for (llvm::StringRef scope : parsed_name->scope) {
-    if (!scope_name.empty())
-      scope_name += "::";
-    scope_name += scope;
-
-    CompilerContextKind kind = CompilerContextKind::Namespace;
-    for (TypeIndex ti : m_index->tpi().findRecordsByName(scope_name)) {
-      CVType cvt = m_index->tpi().getType(ti);
-      if (IsTagRecord(cvt)) {
-        kind = CVTagRecord::create(cvt).contextKind();
-        break;
-      }
-    }
-    ctx.emplace_back(kind, ConstString(scope));
-  }
+  for (llvm::StringRef scope : parsed_name->scope)
+    ctx.emplace_back(CompilerContextKind::Namespace, ConstString(scope));
   ctx.emplace_back(CompilerContextKind::Typedef,
                    ConstString(parsed_name->basename));
   return ctx;
