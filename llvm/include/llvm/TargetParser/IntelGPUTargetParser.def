@@ -21,9 +21,8 @@
 //     IGCA_FEATURE_SETS - Token naming the IGCA feature sets the device
 //                         implements: Core (none), Compute ("c"),
 //                         Render ("r"), ComputeExact ("ca") or
-//                         RenderExact ("ra"). It is a token rather than the
-//                         suffix itself so that a typo is a build error;
-//                         getIGCAName maps it onto the spelling.
+//                         RenderExact ("ra"). It is a token, so a misspelled
+//                         one such as Compte fails to build.
 //
 //   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_FEATURE_SETS)
 //     A compatibility name that covers several minor versions, e.g. "xe-dg2",
