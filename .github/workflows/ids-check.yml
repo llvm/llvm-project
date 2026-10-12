@@ -65,7 +65,7 @@ jobs:
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
                 -D LLVM_BUILD_LLVM_DYLIB_VIS=ON \
                 -D LLVM_LINK_LLVM_DYLIB=ON \
-                -G $CMAKE_GENERATOR
+                -G "$CMAKE_GENERATOR"
 
       - name: Build minimal LLVM and run ids
         if: runner.os != 'Windows'
