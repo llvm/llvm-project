@@ -6393,7 +6393,7 @@ void VPlanTransforms::convertToStridedAccesses(
     return {cast<VPWidenLoadRecipe>(R)->getScalarType(),
             Intrinsic::experimental_vp_strided_load};
   };
-  // Replace \p MemR's recipe (a VPWidenStoreRecipe or VPWidenLoadRecipe) with
+  // Replace \p MemR's recipe, a VPWidenStoreRecipe or VPWidenLoadRecipe, with
   // a strided-load/store intrinsic recipe using \p NewPtr as the vector
   // pointer and \p StrideInBytes as the stride operand.
   auto ReplaceWithStridedAccess =
@@ -6426,14 +6426,13 @@ void VPlanTransforms::convertToStridedAccesses(
         llvm::find_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
           return IRMemberToRecipe.contains(Member);
         });
-    // Skip dead group
+    // Skip dead group.
     if (It == IG->members().end())
       return false;
+
     VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
     VPRecipeBase *StartR = StartMemR->getAsRecipe();
-
     auto [DataTy, IntrinID] = GetDataTyAndIntrinID(StartR);
-
     unsigned NumOfMembers =
         llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
           return IRMemberToRecipe.contains(Member);
@@ -6455,8 +6454,8 @@ void VPlanTransforms::convertToStridedAccesses(
                                                             Range))
       return false;
 
-    // TODO: legacy cost invalid?
-    // Get stride from the factor of group
+    // ???: Do we still need to invalidate the legacy widening decision?
+    // Get stride from the factor of group.
     VPValue *Addr = StartMemR->getAddr();
     Type *IndexTy = DL.getIndexType(Addr->getScalarType());
     APInt StrideSize(IndexTy->getIntegerBitWidth(),
@@ -6485,7 +6484,8 @@ void VPlanTransforms::convertToStridedAccesses(
     return true;
   });
 
-  // Get who still in a interleaved group
+  // Collect recipes that still belong to an interleave group, so they can be
+  // skipped below.
   SmallPtrSet<VPWidenMemoryRecipe *, 4> InGroups;
   for (const auto *IG : InterleaveGroups)
     for (auto *Member : IG->members())
