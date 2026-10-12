@@ -3494,6 +3494,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     ReferencedBF = BC->getBinaryFunctionContainingAddress(
         Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
 
+  // On AArch64, don't turn an address that is outside the function but within
+  // its padding range into an entry point inside it.
+  if (ReferencedBF && IsAArch64) {
+    const uint64_t End = ReferencedBF->getAddress() + ReferencedBF->getSize();
+    if (Address >= End && !ReferencedBF->isInConstantIsland(Address))
+      ReferencedBF = nullptr;
+  }
+
   if (!IsSectionRelocation) {
     if (BinaryFunction *BF =
             BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
