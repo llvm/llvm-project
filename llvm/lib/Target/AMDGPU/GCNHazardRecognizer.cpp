@@ -2633,15 +2633,18 @@ bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
         return true;
     }
 
-    auto *ValuDst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
-    if (!ValuDst || !ValuDst->isReg())
-      return false;
-
-    // WAR: Trans(I) reads, VALU(MI) writes.
-    Register ValuDef = ValuDst->getReg();
-    for (const MachineOperand &TransUse : I.explicit_uses()) {
-      if (TransUse.isReg() && TRI->regsOverlap(ValuDef, TransUse.getReg()))
-        return true;
+    // WAR: Trans(I) reads, VALU(MI) writes. Check every explicit def:
+    // VOPD duals carry two dests (vdstX/vdstY) and no plain vdst, so a
+    // named vdst lookup misses their WAR hazards (CDNA5 ISA Sec. 5.7.2
+    // needs cover "before its sources can be overwritten").
+    for (const MachineOperand &ValuDef : MI->explicit_operands()) {
+      if (!ValuDef.isReg() || !ValuDef.isDef())
+        continue;
+      for (const MachineOperand &TransUse : I.explicit_uses()) {
+        if (TransUse.isReg() &&
+            TRI->regsOverlap(ValuDef.getReg(), TransUse.getReg()))
+          return true;
+      }
     }
 
     return false;
