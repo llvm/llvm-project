@@ -268,6 +268,14 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: fexecve
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
+      - type: __exec_argv_t
+      - type: __exec_envp_t
   - name: fpathconf
     standards:
       - posix
