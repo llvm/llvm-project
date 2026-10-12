@@ -74,7 +74,7 @@ define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX10-NEXT:    v_min_f32_e64 v0, 0x41200000, v0 clamp
+; GFX10-NEXT:    v_min_f32_e64 v0, v0, 0x41200000 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-LABEL: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true:

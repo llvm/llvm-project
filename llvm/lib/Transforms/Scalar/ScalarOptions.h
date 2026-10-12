@@ -16,6 +16,12 @@
 
 namespace llvm {
 enum class CRCStrategyKind { Disable, Auto, Table, Clmul };
+enum class LoopInterchangeRule {
+  PerLoopCacheAnalysis,
+  PerInstrOrderCost,
+  ForVectorization,
+  Ignore
+};
 enum class MatrixLayoutTy { ColumnMajor, RowMajor };
 } // namespace llvm
 

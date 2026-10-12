@@ -7445,11 +7445,13 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       .addImm(0x3F)
       .setOperandDead(3); // Dead scc
 
-  // MO = ((CntOp & 0x3F) << shAmt) | BarID
+  // MO = ((CntOp & CntMask) << shAmt) | BarID
+  unsigned CntMask =
+      AMDGPU::getBarrierMemberCountBitMask(AMDGPU::getIsaVersion(STI.getCPU()));
   Register TmpReg2 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg2)
       .add(CntOp)
-      .addImm(0x3F)
+      .addImm(CntMask)
       .setOperandDead(3); // Dead scc
 
   Register TmpReg3 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);

@@ -1188,6 +1188,73 @@ define float @ret_fmul_self_negnormal_negsubnormal_mode_ftpz_dapz(float noundef 
   ret float %fmul
 }
 
+; -normal * +normal may underflow to a negative subnormal, which may flush to
+; +0.0 under FTPZ. That has to be accounted for on every path, including the one
+; taken when an operand may be a NaN.
+
+define float @ret_fmul_negnormal_posnormal_or_nan__mode_ieee_ieee(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(snan inf zero sub nnorm) %rhs) #0 {
+; CHECK-LABEL: define nofpclass(snan pinf pzero psub pnorm) float @ret_fmul_negnormal_posnormal_or_nan__mode_ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(snan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul_negnormal_posnormal_or_nan__mode_ftpz_dapz(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(snan inf zero sub nnorm) %rhs) #4 {
+; CHECK-LABEL: define nofpclass(snan pinf psub pnorm) float @ret_fmul_negnormal_posnormal_or_nan__mode_ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(snan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul_negnormal_posnormal_or_nan__mode_dynamic_dynamic(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(snan inf zero sub nnorm) %rhs) #5 {
+; CHECK-LABEL: define nofpclass(snan pinf psub pnorm) float @ret_fmul_negnormal_posnormal_or_nan__mode_dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(snan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+; An exact -0.0 result is produced without rounding, so no output flushing
+; applies and the result stays known negative.
+
+define float @ret_fmul_exact_negzero__mode_ieee_ieee(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan inf norm sub nzero) %rhs) #0 {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_fmul_exact_negzero__mode_ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan inf nzero sub norm) [[RHS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul_exact_negzero__mode_ftpz_dapz(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan inf norm sub nzero) %rhs) #4 {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_fmul_exact_negzero__mode_ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan inf nzero sub norm) [[RHS:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul_exact_negzero__mode_dynamic_dynamic(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan inf norm sub nzero) %rhs) #5 {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) float @ret_fmul_exact_negzero__mode_dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan inf nzero sub norm) [[RHS:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
 attributes #0 = { denormal_fpenv(ieee|ieee) }
 attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { denormal_fpenv(ieee|positivezero) }

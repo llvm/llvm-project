@@ -631,6 +631,12 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
       return $_get(type.getContext(), type,
                    mlir::DenseI32ArrayAttr::get(type.getContext(), path));
     }]>,
+    // Pointer-to-data-member reusing an existing path attribute.
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                       "mlir::DenseI32ArrayAttr":$member_path),
+                                  [{
+      return $_get(type.getContext(), type, member_path);
+    }]>,
   ];
 
   // This attribute gets lowered during CXXABILowering.

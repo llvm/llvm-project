@@ -3306,7 +3306,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
     ExplicitAlignment = llvm::Align(alignment);
   else if (LangOpts.FunctionAlignment)
-    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
+    ExplicitAlignment = llvm::Align::fromLog2(LangOpts.FunctionAlignment);
 
   if (ExplicitAlignment) {
     F->setAlignment(ExplicitAlignment);
