@@ -104,7 +104,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -144,14 +143,13 @@ static const unsigned MaxIVUsers = 200;
 /// the salvaging is not too expensive for the compiler.
 static const unsigned MaxSCEVSalvageExpressionSize = 64;
 
+static bool stressIVChain(const ScalarOptions &Opts) {
 #ifndef NDEBUG
-// Stress test IV chain generation.
-static cl::opt<bool> StressIVChain(
-  "stress-ivchain", cl::Hidden, cl::init(false),
-  cl::desc("Stress test LSR IV chains"));
+  return Opts.stress_ivchain;
 #else
-static bool StressIVChain = false;
+  return false;
 #endif
+}
 
 namespace {
 
@@ -3055,10 +3053,6 @@ static const SCEV *getExprBase(const SCEV *S) {
 bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
                                     const SCEV *IncExpr,
                                     ScalarEvolution &SE) {
-  // Aggressively form chains when -stress-ivchain.
-  if (StressIVChain)
-    return true;
-
   // Do not replace a constant offset from IV head with a nonconstant IV
   // increment.
   if (!isa<SCEVConstant>(IncExpr)) {
@@ -3085,9 +3079,6 @@ static bool isProfitableChain(IVChain &Chain,
                               SmallPtrSetImpl<Instruction *> &Users,
                               ScalarEvolution &SE,
                               const TargetTransformInfo &TTI) {
-  if (StressIVChain)
-    return true;
-
   if (!Chain.hasIncs())
     return false;
 
@@ -3179,7 +3170,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
     // are expressions that operate on the same unscaled SCEVUnknown. This
     // "base" will be canceled by the subsequent getMinusSCEV call. Checking
     // first avoids creating extra SCEV expressions.
-    if (!StressIVChain && Chain.ExprBase != OperExprBase)
+    if (!stressIVChain(Opts) && Chain.ExprBase != OperExprBase)
       continue;
 
     Value *PrevIV = getWideOperand(Chain.Incs.back().IVOperand);
@@ -3196,7 +3187,9 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
     if (isa<SCEVCouldNotCompute>(IncExpr) || !SE.isLoopInvariant(IncExpr, L))
       continue;
 
-    if (Chain.isProfitableIncrement(OperExpr, IncExpr, SE)) {
+    // Aggressively form chains when -stress-ivchain.
+    if (stressIVChain(Opts) ||
+        Chain.isProfitableIncrement(OperExpr, IncExpr, SE)) {
       LastIncExpr = IncExpr;
       break;
     }
@@ -3206,7 +3199,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
   if (ChainIdx == NChains) {
     if (isa<PHINode>(UserInst))
       return;
-    if (NChains >= MaxChains && !StressIVChain) {
+    if (NChains >= MaxChains && !stressIVChain(Opts)) {
       LLVM_DEBUG(dbgs() << "IV Chain Limit\n");
       return;
     }
@@ -3352,7 +3345,8 @@ void LSRInstance::CollectChains() {
   unsigned ChainIdx = 0;
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
-    if (!isProfitableChain(IVChainVec[UsersIdx],
+    if (!stressIVChain(Opts) &&
+        !isProfitableChain(IVChainVec[UsersIdx],
                            ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
       continue;
     // Preserve the chain at UsesIdx.
@@ -6330,7 +6324,7 @@ LSRInstance::LSRInstance(const ScalarOptions &Opts, Loop *L, IVUsers &IU,
   // registers.
   // FIXME: add profitable chain optimization for other kinds major cost, for
   // example number of instructions.
-  if (TTI.isNumRegsMajorCostOfLSR() || StressIVChain)
+  if (TTI.isNumRegsMajorCostOfLSR() || stressIVChain(Opts))
     CollectChains();
   CollectInterestingTypesAndFactors();
   CollectFixupsAndInitialFormulae();
