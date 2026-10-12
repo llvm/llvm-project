@@ -506,7 +506,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     writeDst(Ctx.registers(), *Dst, Result, Is64);
     // SCC is the result compared against zero, which storeSCC does for a
     // value wider than the single bit SCC holds.
-    Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+    Ctx.registers().storeSCC(Ctx.B, Result);
     return Error::success();
   }
 
@@ -524,8 +524,10 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<Value *> Old = Is64 ? Op.dstValue64() : Op.dstValue();
     if (!Old)
       return Old.takeError();
-    Value *Moved = Ctx.B.CreateSelect(Ctx.registers().regFile().loadSCC(Ctx.B),
-                                      *Src, *Old, "s_cmov");
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
+    Value *Moved = Ctx.B.CreateSelect(*Scc, *Src, *Old, "s_cmov");
     writeDst(Ctx.registers(), *Dst, Moved, Is64);
     return Error::success();
   }
@@ -705,7 +707,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result =
         Reduces ? emitQuadMask(Ctx.B, *Src) : emitWholeQuadMask(Ctx.B, *Src);
     writeDst(Ctx.registers(), *Dst, Result, Is64);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+    Ctx.registers().storeSCC(Ctx.B, Result);
     return Error::success();
   }
 
@@ -728,7 +730,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     Value *OldExec = Ctx.registers().readExec();
     Value *NewExec = emitMaskCombine(Ctx.B, *Combine, *Src, OldExec);
     Ctx.registers().storeExec(NewExec);
-    Ctx.registers().regFile().storeSCC(Ctx.B, NewExec);
+    Ctx.registers().storeSCC(Ctx.B, NewExec);
     writeDst(Ctx.registers(), *Dst,
              Combine->Destination == MaskDestination::NewExec ? NewExec
                                                               : OldExec,
@@ -748,7 +750,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result = Ctx.B.CreateBinaryIntrinsic(Intrinsic::abs, *Src,
                                                 Ctx.B.getFalse(), {}, "s_abs");
     Ctx.registers().writeReg32(*Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+    Ctx.registers().storeSCC(Ctx.B, Result);
     return Error::success();
   }
 
@@ -774,7 +776,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
         Ctx.B.CreateUnaryIntrinsic(Intrinsic::ctpop, Counted, {}, "s_bcnt");
     Value *Result = Ctx.B.CreateZExtOrTrunc(Count, Ctx.B.getInt32Ty());
     Ctx.registers().writeReg32(*Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+    Ctx.registers().storeSCC(Ctx.B, Result);
     return Error::success();
   }
 
@@ -975,7 +977,7 @@ Error handleSOP1(RaiseContext &Ctx, const DecodedInst &Di,
   // wider than the hardware does and costs a raised kernel nothing here.
   case CanonicalOp::S_ALLOC_VGPR:
     emitMemoryWaitAll(Ctx);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Ctx.B.getTrue());
+    Ctx.registers().storeSCC(Ctx.B, Ctx.B.getTrue());
     return Error::success();
 
   // Spends issue slots and leaves nothing behind that a later instruction can

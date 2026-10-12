@@ -79,6 +79,16 @@ public:
   llvm::Expected<llvm::Value *> readOp32(const DecodedInst &Di, unsigned OpIdx);
   // Read the operand at OpIdx as a 64-bit value, pairing adjacent registers.
   llvm::Expected<llvm::Value *> readOp64(const DecodedInst &Di, unsigned OpIdx);
+  // Store an SCC value known not to depend on a source-image address.
+  void storeSCC(llvm::IRBuilder<> &B, llvm::Value *V);
+
+  // Store an SCC value computed from a source-image address. Reads of this
+  // value are refused because relocation may change it.
+  void storeSourceImageSCC(llvm::IRBuilder<> &B, llvm::Value *V);
+
+  // Read SCC, refusing it when its value may depend on a source-image address.
+  llvm::Expected<llvm::Value *> readSCC(const DecodedInst &Di);
+
   // Read the SGPR at Idx, or the pair based there, naming the register by
   // index rather than by an operand. Di is the instruction the read serves,
   // which a refusal names.
@@ -360,6 +370,11 @@ private:
       uint64_t NextOffset;
     };
     std::optional<SourceImageCarryState> SourceImageCarry;
+    // Whether this block last wrote SCC from a source-image address.
+    bool SccFromSourceImage = false;
+
+    // Whether this block wrote SCC, hiding any value from a predecessor.
+    bool DefinedScc = false;
     // SGPRs this block has written an ordinary value to, and which therefore
     // hold what this block put there rather than whatever a predecessor left.
     llvm::DenseSet<unsigned> DefinedSgprs;
@@ -418,6 +433,13 @@ private:
   // backwards runs them in, so a read can precede the instruction whose
   // address it observes.
   llvm::SmallVector<DeferredSourceImageRead> DeferredSourceImageReads;
+
+  // Whether any block wrote an SCC value derived from a source-image address.
+  // A block that has not written SCC must not trust an inherited value.
+  bool SourceImageSccWritten = false;
+
+  // Whether SCC may still contain a value derived from a source-image address.
+  bool sccMayHoldSourceImageBit();
 };
 
 } // namespace COMGR::transpiler

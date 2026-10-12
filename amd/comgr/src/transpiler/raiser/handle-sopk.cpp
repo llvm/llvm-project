@@ -95,7 +95,7 @@ Error handleImmediateSopk(RaiseContext &Ctx, const DecodedInst &Di,
           Intrinsic::sadd_with_overflow, {Ctx.B.getInt32Ty()}, {*Source, *Imm});
       Result = Ctx.B.CreateExtractValue(Pair, 0, "addk");
       Value *Overflow = Ctx.B.CreateExtractValue(Pair, 1, "addk_scc");
-      Ctx.registers().regFile().storeSCC(Ctx.B, Overflow);
+      Ctx.registers().storeSCC(Ctx.B, Overflow);
     } else {
       Result = Ctx.B.CreateMul(*Source, *Imm, "mulk");
     }
@@ -141,7 +141,7 @@ Error handleImmediateSopk(RaiseContext &Ctx, const DecodedInst &Di,
     return unsupportedInstruction(Ctx, Di);
   }
   Value *Condition = Ctx.B.CreateICmp(Predicate, *Source, *Imm, "cmpk");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Condition);
+  Ctx.registers().storeSCC(Ctx.B, Condition);
   return Error::success();
 }
 

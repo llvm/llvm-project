@@ -111,11 +111,12 @@ struct OperandResolver {
   llvm::Expected<llvm::Value *> srcWaveMaskI1(unsigned I) {
     return Ctx.registers().readOpWaveMaskI1(Di, srcIdx(I));
   }
-  // Value of the I-th source, which must be an immediate.
+  // Return the source constant, including constants represented as
+  // expressions.
   int64_t srcImm(unsigned I) {
-    unsigned Index = srcIdx(I);
-    assert(Di.isImm(Index) && "source operand must be an immediate");
-    return Di.getImm(Index);
+    std::optional<int64_t> Constant = evalOperandAsConst(Di.Inst, srcIdx(I));
+    assert(Constant && "source operand must be a constant");
+    return *Constant;
   }
 
   // Register the I-th destination names.

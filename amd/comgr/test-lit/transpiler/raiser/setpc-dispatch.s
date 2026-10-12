@@ -192,7 +192,9 @@ dispatch_atcap_kernel:
 	.rept 16
 	s_get_pc_i64 s[10:11]
 	s_add_u32 s10, s10, atcap_join + 4 * atcap_index - .
-	s_cbranch_scc0 atcap_join
+; EXEC rather than SCC, which the add above leaves holding a carry the loader
+; can change.
+	s_cbranch_execz atcap_join
 	.set atcap_index, atcap_index + 1
 	.endr
 atcap_join:
@@ -238,7 +240,7 @@ dispatch_overcap_kernel:
 	.rept 17
 	s_get_pc_i64 s[10:11]
 	s_add_u32 s10, s10, overcap_join + 4 * overcap_index - .
-	s_cbranch_scc0 overcap_join
+	s_cbranch_execz overcap_join
 	.set overcap_index, overcap_index + 1
 	.endr
 overcap_join:
@@ -259,7 +261,7 @@ capture_clobber_kernel:
 ; branching to what the paths left.
 	s_get_pc_i64 s[12:13]
 	s_add_u32 s12, s12, clobber_target-.
-	s_cbranch_scc0 clobber_join
+	s_cbranch_execz clobber_join
 clobber_join:
 	s_mov_b32 s12, 0
 ; REFUSE: unsupported-instruction-form: s_set_pc_i64 {{.+}} :: reads s[12:13], which some path writes without computing a source offset in it
@@ -277,7 +279,7 @@ undecoded_kernel:
 ; instruction starts at.
 	s_get_pc_i64 s[10:11]
 	s_add_u32 s10, s10, 2
-	s_cbranch_scc0 undecoded_join
+	s_cbranch_execz undecoded_join
 undecoded_join:
 ; REFUSE: unsupported-instruction-form: s_set_pc_i64 {{.+}} :: reaches source offset 0x{{.+}}, which no decoded instruction starts at
 	s_set_pc_i64 s[10:11]

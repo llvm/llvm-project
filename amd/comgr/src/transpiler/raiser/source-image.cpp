@@ -73,7 +73,8 @@ Expected<std::optional<uint64_t>> sourceImageSgprPairAddr(RaiseContext &Ctx,
 Expected<std::optional<uint64_t>> sourceImageOperandAddr(RaiseContext &Ctx,
                                                          const DecodedInst &Di,
                                                          unsigned Index) {
-  if (Di.isImm(Index))
+  // Only registers can name tracked source-image addresses.
+  if (!Di.isReg(Index))
     return std::nullopt;
   Expected<ParsedReg> Reg = Ctx.registers().parseReg(Di, Index);
   if (!Reg)

@@ -210,11 +210,15 @@ Error handleSOPP(RaiseContext &Ctx, const DecodedInst &Di,
 
     RegisterState &Regs = Ctx.registers();
     Value *Taken = nullptr;
-    if (Di.CanonOp == CanonicalOp::S_CBRANCH_SCC0)
-      Taken = Ctx.B.CreateNot(Regs.regFile().loadSCC(Ctx.B), "scc0");
-    else if (Di.CanonOp == CanonicalOp::S_CBRANCH_SCC1)
-      Taken = Regs.regFile().loadSCC(Ctx.B);
-    else if (Di.CanonOp == CanonicalOp::S_CBRANCH_VCCZ)
+    if (Di.CanonOp == CanonicalOp::S_CBRANCH_SCC0 ||
+        Di.CanonOp == CanonicalOp::S_CBRANCH_SCC1) {
+      Expected<Value *> Scc = Regs.readSCC(Di);
+      if (!Scc)
+        return Scc.takeError();
+      Taken = Di.CanonOp == CanonicalOp::S_CBRANCH_SCC0
+                  ? Ctx.B.CreateNot(*Scc, "scc0")
+                  : *Scc;
+    } else if (Di.CanonOp == CanonicalOp::S_CBRANCH_VCCZ)
       Taken = Regs.emitVccIsZero();
     else if (Di.CanonOp == CanonicalOp::S_CBRANCH_VCCNZ)
       Taken = Ctx.B.CreateNot(Regs.emitVccIsZero(), "vccnz");

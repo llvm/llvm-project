@@ -11,6 +11,7 @@
 #include "transpiler/decoder/amdgpu-formats.h"
 #include "transpiler/decoder/mc-state.h"
 #include "transpiler/raiser/raise_failure.h"
+#include "transpiler/raiser/source-image.h"
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/MathExtras.h"
@@ -135,8 +136,54 @@ Error handleIntegerCompare(RaiseContext &Ctx, OperandResolver &Op,
   if (!Src1)
     return Src1.takeError();
   Value *Result = Ctx.B.CreateICmp(Pred, *Src0, *Src1, "scmp");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+  Ctx.registers().storeSCC(Ctx.B, Result);
   return Error::success();
+}
+
+// Resolve a comparison involving a known source-image address without reading
+// it as a register in the raised kernel. Return false when the comparison
+// cannot be resolved from constants.
+Expected<bool> compareSourceImageAddr(RaiseContext &Ctx, const DecodedInst &Di,
+                                      OperandResolver &Op, bool IsEqual) {
+  std::optional<uint64_t> Known[2];
+  bool IsSourceAddress[2] = {};
+  bool AnyAddress = false;
+  for (unsigned I = 0; I != 2; ++I) {
+    unsigned Index = Op.srcIdx(I);
+    Expected<std::optional<uint64_t>> Address =
+        sourceImageOperandAddr(Ctx, Di, Index);
+    if (!Address)
+      return Address.takeError();
+    if (*Address) {
+      Known[I] = **Address;
+      IsSourceAddress[I] = true;
+      AnyAddress = true;
+      continue;
+    }
+    if (std::optional<int64_t> Constant = evalOperandAsConst(Di.Inst, Index))
+      Known[I] = static_cast<uint64_t>(*Constant);
+  }
+  // An unknown operand stays on the ordinary path, which refuses the source
+  // address read instead of guessing at the result.
+  if (!AnyAddress || !Known[0] || !Known[1])
+    return false;
+
+  // A nonzero absolute comparison can change when the code is relocated.
+  // Comparing a valid code address with zero remains relocation-independent.
+  if (IsSourceAddress[0] != IsSourceAddress[1]) {
+    unsigned ConstantIndex = IsSourceAddress[0] ? 1 : 0;
+    if (*Known[ConstantIndex] != 0)
+      return false;
+    // A loaded code object never sits at address zero, so this comparison is
+    // settled without using the relocatable source address.
+    Ctx.registers().storeSCC(Ctx.B, Ctx.B.getInt1(!IsEqual));
+    return true;
+  }
+
+  bool Equal = *Known[0] == *Known[1];
+  Value *Scc = Ctx.B.getInt1(Equal == IsEqual);
+  Ctx.registers().storeSCC(Ctx.B, Scc);
+  return true;
 }
 
 // Raise a 64-bit integer comparison and write its result to SCC.
@@ -149,7 +196,7 @@ Error handleInteger64Compare(RaiseContext &Ctx, OperandResolver &Op,
   if (!Src1)
     return Src1.takeError();
   Value *Result = Ctx.B.CreateICmp(Pred, *Src0, *Src1, "scmp64");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+  Ctx.registers().storeSCC(Ctx.B, Result);
   return Error::success();
 }
 
@@ -176,7 +223,7 @@ Error handleFloatCompare(RaiseContext &Ctx, OperandResolver &Op,
   Value *Float1 = Ctx.B.CreateBitCast(Bits1, FloatTy, "scmpf_src");
   Value *Result = Ctx.B.CreateFCmp(Pred, Float0, Float1,
                                    FloatTy->isHalfTy() ? "scmpf16" : "scmpf");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Result);
+  Ctx.registers().storeSCC(Ctx.B, Result);
   return Error::success();
 }
 
@@ -195,7 +242,7 @@ Error handleBitCompare32(RaiseContext &Ctx, OperandResolver &Op,
   Value *Bit = Ctx.B.CreateShl(Ctx.B.getInt32(1), Amount, "bitcmp_bit");
   Value *Masked = Ctx.B.CreateAnd(*Src0, Bit, "bitcmp_mask");
   Value *Scc = Ctx.B.CreateICmp(Pred, Masked, Ctx.B.getInt32(0), "bitcmp");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Scc);
+  Ctx.registers().storeSCC(Ctx.B, Scc);
   return Error::success();
 }
 
@@ -216,7 +263,7 @@ Error handleBitCompare64(RaiseContext &Ctx, OperandResolver &Op,
   Value *Bit = Ctx.B.CreateShl(Ctx.B.getInt64(1), Amount, "bitcmp_bit");
   Value *Masked = Ctx.B.CreateAnd(*Src0, Bit, "bitcmp_mask");
   Value *Scc = Ctx.B.CreateICmp(Pred, Masked, Ctx.B.getInt64(0), "bitcmp");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Scc);
+  Ctx.registers().storeSCC(Ctx.B, Scc);
   return Error::success();
 }
 
@@ -228,10 +275,17 @@ Error handleSOPC(RaiseContext &Ctx, const DecodedInst &Di,
   if (std::optional<CmpInst::Predicate> Pred = integerPredicate(Di.CanonOp))
     return handleIntegerCompare(Ctx, Op, *Pred);
 
-  if (Di.CanonOp == CanonicalOp::S_CMP_EQ_U64)
-    return handleInteger64Compare(Ctx, Op, CmpInst::ICMP_EQ);
-  if (Di.CanonOp == CanonicalOp::S_CMP_LG_U64)
-    return handleInteger64Compare(Ctx, Op, CmpInst::ICMP_NE);
+  if (Di.CanonOp == CanonicalOp::S_CMP_EQ_U64 ||
+      Di.CanonOp == CanonicalOp::S_CMP_LG_U64) {
+    const bool IsEqual = Di.CanonOp == CanonicalOp::S_CMP_EQ_U64;
+    Expected<bool> Settled = compareSourceImageAddr(Ctx, Di, Op, IsEqual);
+    if (!Settled)
+      return Settled.takeError();
+    if (*Settled)
+      return Error::success();
+    return handleInteger64Compare(
+        Ctx, Op, IsEqual ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE);
+  }
 
   if (std::optional<CmpInst::Predicate> Pred = floatPredicate(Di.CanonOp))
     return handleFloatCompare(Ctx, Op, *Pred, isFloat16Compare(Di.CanonOp));

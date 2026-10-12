@@ -133,8 +133,12 @@ static std::optional<ScalarLoadInfo> scalarLoadInfo(CanonicalOp Operation) {
 // encoding that carries the slot but does not use it spells the operand NOREG.
 static Expected<bool>
 scalarOffsetIsZero(RaiseContext &Ctx, const DecodedInst &Di, unsigned Index) {
-  if (Di.isImm(Index))
-    return Di.getImm(Index) == 0;
+  // Resolve expressions before parsing the operand as a register.
+  if (std::optional<int64_t> Constant = evalOperandAsConst(Di.Inst, Index))
+    return *Constant == 0;
+  if (!Di.isReg(Index))
+    return unsupported(Ctx, Di,
+                       "scalar offset is neither a constant nor a register");
   Expected<ParsedReg> Register = Ctx.registers().parseReg(Di, Index);
   if (!Register)
     return Register.takeError();

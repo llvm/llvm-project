@@ -52,8 +52,9 @@ Expected<std::optional<uint64_t>> sourceImageResult(RaiseContext &Ctx,
   std::optional<uint64_t> Displacement[2];
   for (unsigned I = 0; I != 2; ++I) {
     unsigned Index = Op.srcIdx(I);
-    if (Di.isImm(Index)) {
-      Displacement[I] = Di.getImm(Index);
+    // A literal can decode as an immediate or an absolute expression.
+    if (std::optional<int64_t> Constant = evalOperandAsConst(Di.Inst, Index)) {
+      Displacement[I] = static_cast<uint64_t>(*Constant);
       continue;
     }
     Expected<std::optional<uint64_t>> Address =
@@ -96,10 +97,18 @@ Expected<std::optional<uint64_t>> sourceImageResult(RaiseContext &Ctx,
 // with s_addc_u32. Each half is recomputed from the address the pair already
 // holds, so the pair goes on naming a place in the source image instead of the
 // read being refused. The halves wrap into one another, which is how a
-// displacement reaching backwards is written. Return false when the
-// instruction is not such a displacement, leaving it to the arithmetic path.
+// displacement reaching backwards is written.
+//
+// s_add_i32 also displaces the low half, but sets signed overflow in SCC
+// instead of an unsigned carry. It does not form a 64-bit add, so it records no
+// carry for s_addc_u32 and accepts only displacements that leave the unchanged
+// high half correct.
+//
+// Return false when the instruction is not such a displacement, leaving it to
+// the arithmetic path.
 Expected<bool> displaceSourceImageHalf(RaiseContext &Ctx, const DecodedInst &Di,
                                        OperandResolver &Op, bool IsHighHalf) {
+  const bool IsSignedAdd = Di.CanonOp == CanonicalOp::S_ADD_I32;
   Expected<ParsedReg> Dst = Op.dst();
   if (!Dst)
     return Dst.takeError();
@@ -143,20 +152,36 @@ Expected<bool> displaceSourceImageHalf(RaiseContext &Ctx, const DecodedInst &Di,
   }
 
   uint64_t Half = IsHighHalf ? *Address >> 32 : *Address & 0xffffffff;
-  uint64_t Sum = Half + static_cast<uint32_t>(*Displacement) + CarryIn;
+  uint32_t Addend = static_cast<uint32_t>(*Displacement);
+  uint64_t Sum = Half + Addend + CarryIn;
   uint32_t Result = static_cast<uint32_t>(Sum);
+  bool CarryOut = Sum >> 32;
+  // For s_add_i32, the high half stays unchanged, so the add only displaces
+  // the pair if it stays inside the half it is written to: a positive add must
+  // not carry out of the low half, and a negative add must carry out to
+  // account for its sign extension. An add that escapes its half leaves the
+  // pair naming no address in the source program either, so the one the raise
+  // records would disagree with the half the source actually meant to move.
+  const bool Backwards = Addend >> 31;
+  if (IsSignedAdd && CarryOut != Backwards)
+    return false;
   uint64_t Moved = IsHighHalf ? (static_cast<uint64_t>(Result) << 32) |
                                     (*Address & 0xffffffff)
                               : (*Address & 0xffffffff00000000) | Result;
 
-  // Writing either half drops the address the pair held, so the displaced
-  // address is recorded once the write is done.
+  // Preserve the source-image address after updating the written half.
   Ctx.registers().writeReg32(*Dst,
                              ConstantInt::get(Ctx.B.getInt32Ty(), Result));
   Ctx.registers().recordSourceImageSgprPairAddr(PairBaseIdx, Moved);
-  bool CarryOut = Sum >> 32;
-  Ctx.registers().regFile().storeSCC(Ctx.B, Ctx.B.getInt1(CarryOut));
-  if (!IsHighHalf)
+  // s_add_i32 sets SCC on signed overflow; unsigned adds use the carry. Both
+  // answer for the half the ELF file records rather than the one the loader
+  // produces, so the bit is written as the source image makes it and reads of
+  // it are refused.
+  bool Overflow = ((Half >> 31) & 1) == (Addend >> 31) &&
+                  ((Half >> 31) & 1) != (Result >> 31);
+  Value *Scc = Ctx.B.getInt1(IsSignedAdd ? Overflow : CarryOut);
+  Ctx.registers().storeSourceImageSCC(Ctx.B, Scc);
+  if (!IsHighHalf && !IsSignedAdd)
     Ctx.registers().recordSourceImageCarry(PairBaseIdx, CarryOut,
                                            Di.Offset + Di.sizeInBytes());
   return true;
@@ -208,7 +233,7 @@ void storeNonzeroScc(RaiseContext &Ctx, Value *Result,
                      const Twine &Name = "scc") {
   Constant *Zero = Constant::getNullValue(Result->getType());
   Value *Nonzero = Ctx.B.CreateICmpNE(Result, Zero, Name);
-  Ctx.registers().regFile().storeSCC(Ctx.B, Nonzero);
+  Ctx.registers().storeSCC(Ctx.B, Nonzero);
 }
 
 // Set SCC if any lane in MaskI1 is active.
@@ -219,7 +244,7 @@ void storeWaveMaskScc(RaiseContext &Ctx, Value *MaskI1, const Twine &Name) {
       Ctx.Projection.emitCurrentSourceWaveMask(Ctx.B, Mask, Name + "_mask");
   Value *Any = Ctx.B.CreateICmpNE(
       SourceMask, ConstantInt::get(SourceMask->getType(), 0), Name);
-  Ctx.registers().regFile().storeSCC(Ctx.B, Any);
+  Ctx.registers().storeSCC(Ctx.B, Any);
 }
 
 // A bitwise operation applied to scalar values and wave-mask shadows.
@@ -356,7 +381,7 @@ Error handleLshlAdd(RaiseContext &Ctx, OperandResolver &Op, unsigned Shift,
   Ctx.registers().writeReg32(Args->Dst, Result);
   Value *Carry =
       Ctx.B.CreateICmpUGT(Wide, Ctx.B.getInt64(UINT32_MAX), Name + "_carry");
-  Ctx.registers().regFile().storeSCC(Ctx.B, Carry);
+  Ctx.registers().storeSCC(Ctx.B, Carry);
   return Error::success();
 }
 
@@ -374,7 +399,7 @@ Error handleOverflowingBinary32(RaiseContext &Ctx, OperandResolver &Op,
   Value *Result = Ctx.B.CreateExtractValue(Pair, 0, ResultName);
   Value *Overflow = Ctx.B.CreateExtractValue(Pair, 1, OverflowName);
   Ctx.registers().writeReg32(Args->Dst, Result);
-  Ctx.registers().regFile().storeSCC(Ctx.B, Overflow);
+  Ctx.registers().storeSCC(Ctx.B, Overflow);
   return Error::success();
 }
 
@@ -450,9 +475,16 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     return handleOverflowingBinary32(Ctx, Op, Intrinsic::uadd_with_overflow,
                                      "add", "add_carry");
   }
-  case CanonicalOp::S_ADD_I32:
+  case CanonicalOp::S_ADD_I32: {
+    Expected<bool> Displaced =
+        displaceSourceImageHalf(Ctx, Di, Op, /*IsHighHalf=*/false);
+    if (!Displaced)
+      return Displaced.takeError();
+    if (*Displaced)
+      return Error::success();
     return handleOverflowingBinary32(Ctx, Op, Intrinsic::sadd_with_overflow,
                                      "add", "add_overflow");
+  }
   case CanonicalOp::S_SUB_U32:
     return handleOverflowingBinary32(Ctx, Op, Intrinsic::usub_with_overflow,
                                      "sub", "sub_borrow");
@@ -469,8 +501,10 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<BinaryOperands> Args = Op.readBinary32();
     if (!Args)
       return Args.takeError();
-    Value *Scc = Ctx.registers().regFile().loadSCC(Ctx.B);
-    Value *CarryIn = Ctx.B.CreateZExt(Scc, Ctx.B.getInt32Ty(), "carry_in");
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
+    Value *CarryIn = Ctx.B.CreateZExt(*Scc, Ctx.B.getInt32Ty(), "carry_in");
     Value *First =
         Ctx.B.CreateIntrinsic(Intrinsic::uadd_with_overflow,
                               {Ctx.B.getInt32Ty()}, {Args->Src0, Args->Src1});
@@ -482,15 +516,17 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *SecondCarry = Ctx.B.CreateExtractValue(Second, 1);
     Value *Carry = Ctx.B.CreateOr(FirstCarry, SecondCarry, "addc_carry");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Carry);
+    Ctx.registers().storeSCC(Ctx.B, Carry);
     return Error::success();
   }
   case CanonicalOp::S_SUBB_U32: {
     Expected<BinaryOperands> Args = Op.readBinary32();
     if (!Args)
       return Args.takeError();
-    Value *Scc = Ctx.registers().regFile().loadSCC(Ctx.B);
-    Value *BorrowIn = Ctx.B.CreateZExt(Scc, Ctx.B.getInt32Ty(), "borrow_in");
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
+    Value *BorrowIn = Ctx.B.CreateZExt(*Scc, Ctx.B.getInt32Ty(), "borrow_in");
     Value *First =
         Ctx.B.CreateIntrinsic(Intrinsic::usub_with_overflow,
                               {Ctx.B.getInt32Ty()}, {Args->Src0, Args->Src1});
@@ -503,7 +539,7 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *SecondBorrow = Ctx.B.CreateExtractValue(Second, 1);
     Value *Borrow = Ctx.B.CreateOr(FirstBorrow, SecondBorrow, "subb_borrow");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Borrow);
+    Ctx.registers().storeSCC(Ctx.B, Borrow);
     return Error::success();
   }
 
@@ -606,7 +642,7 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result =
         Ctx.B.CreateSelect(Condition, Args->Src0, Args->Src1, "min");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Condition);
+    Ctx.registers().storeSCC(Ctx.B, Condition);
     return Error::success();
   }
   case CanonicalOp::S_MIN_U32: {
@@ -617,7 +653,7 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result =
         Ctx.B.CreateSelect(Condition, Args->Src0, Args->Src1, "min");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Condition);
+    Ctx.registers().storeSCC(Ctx.B, Condition);
     return Error::success();
   }
   case CanonicalOp::S_MAX_I32: {
@@ -628,7 +664,7 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result =
         Ctx.B.CreateSelect(Condition, Args->Src0, Args->Src1, "max");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Condition);
+    Ctx.registers().storeSCC(Ctx.B, Condition);
     return Error::success();
   }
   case CanonicalOp::S_MAX_U32: {
@@ -639,7 +675,7 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Value *Result =
         Ctx.B.CreateSelect(Condition, Args->Src0, Args->Src1, "max");
     Ctx.registers().writeReg32(Args->Dst, Result);
-    Ctx.registers().regFile().storeSCC(Ctx.B, Condition);
+    Ctx.registers().storeSCC(Ctx.B, Condition);
     return Error::success();
   }
 
@@ -698,8 +734,11 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
       Expected<std::optional<ParsedReg>> SrcReg = Op.srcReg(0);
       if (!SrcReg)
         return SrcReg.takeError();
+      // An operand that resolves to no constant names no field, so it fails
+      // the match rather than standing in as one.
       if (*SrcReg && (**SrcReg).RegKind == ParsedReg::TTMP &&
-          (**SrcReg).BaseIdx == 8 && Op.srcImm(1) == 0x50019 &&
+          (**SrcReg).BaseIdx == 8 &&
+          evalOperandAsConst(Di.Inst, Op.srcIdx(1)) == 0x50019 &&
           Ctx.registers().isTTMP8EntryValueAvailable()) {
         if (!Ctx.Projection.SourceSTI.hasFeature(
                 AMDGPU::FeatureArchitectedSGPRs))
@@ -817,8 +856,10 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<BinaryOperands> Args = Op.readBinary32();
     if (!Args)
       return Args.takeError();
-    Value *Scc = Ctx.registers().regFile().loadSCC(Ctx.B);
-    Value *Result = Ctx.B.CreateSelect(Scc, Args->Src0, Args->Src1, "cselect");
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
+    Value *Result = Ctx.B.CreateSelect(*Scc, Args->Src0, Args->Src1, "cselect");
     Ctx.registers().writeReg32(Args->Dst, Result);
     return Error::success();
   }
@@ -826,9 +867,11 @@ Error handleSOP2(RaiseContext &Ctx, const DecodedInst &Di,
     Expected<BinaryOperands> Args = Op.readBinary64();
     if (!Args)
       return Args.takeError();
-    Value *Scc = Ctx.registers().regFile().loadSCC(Ctx.B);
+    Expected<Value *> Scc = Ctx.registers().readSCC(Di);
+    if (!Scc)
+      return Scc.takeError();
     Value *Result =
-        Ctx.B.CreateSelect(Scc, Args->Src0, Args->Src1, "cselect64");
+        Ctx.B.CreateSelect(*Scc, Args->Src0, Args->Src1, "cselect64");
     Ctx.registers().writeReg64(Args->Dst, Result);
     return Error::success();
   }
