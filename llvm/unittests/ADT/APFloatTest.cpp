@@ -1429,6 +1429,30 @@ TEST(APFloatTest, ExactDecimalStringsDirectedRounding) {
   }
 }
 
+TEST(APFloatTest, InexactDecimalStringsDirectedRounding) {
+  // This decimal is just above 0x4792EDAAA478AD1E. An approximation on the
+  // other side of that boundary must not be accepted for directed rounding.
+  for (bool Negative : {false, true}) {
+    std::string Input = std::string(Negative ? "-" : "") + "629003483e28";
+    for (auto RM : {APFloat::rmTowardZero, APFloat::rmTowardPositive,
+                    APFloat::rmTowardNegative}) {
+      SCOPED_TRACE(Input);
+      SCOPED_TRACE(static_cast<unsigned>(RM));
+      bool RoundAway = Negative ? RM == APFloat::rmTowardNegative
+                                : RM == APFloat::rmTowardPositive;
+      APFloat Expected(APFloat::IEEEdouble(),
+                       APInt(64, 0x4792EDAAA478AD1E + RoundAway));
+      if (Negative)
+        Expected.changeSign();
+      APFloat Value(APFloat::IEEEdouble());
+      auto Status = Value.convertFromString(Input, RM);
+      ASSERT_TRUE(!!Status);
+      EXPECT_EQ(*Status, APFloat::opInexact);
+      EXPECT_TRUE(Value.bitwiseIsEqual(Expected));
+    }
+  }
+}
+
 TEST(APFloatTest, DecimalStringsUseLargePowersOfFive) {
   // These values are just below one, so they cannot take the early obvious
   // underflow path. The number of fractional digits is the power passed to
