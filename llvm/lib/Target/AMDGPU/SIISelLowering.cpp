@@ -15167,8 +15167,9 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   }
 
   if (VT == MVT::i32) {
+    bool LHSIsBoolExt = isBoolSGPRExt(LHS);
     bool RHSIsBoolExt = isBoolSGPRExt(RHS);
-    if (RHSIsBoolExt || isBoolSGPRExt(LHS)) {
+    if (LHSIsBoolExt || RHSIsBoolExt) {
       // and x, (sext/anyext cc from i1) => select cc, x, 0
       // Any-extended bits can be chosen to match sign extension.
       if (!RHSIsBoolExt)
