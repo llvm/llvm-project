@@ -4838,8 +4838,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     }
   }
 
+  if (TypeOld->isInvalidDecl())
+    return New->setInvalidDecl();
+
   VarDecl *MostRecent = TypeOld->getMostRecentDecl();
-  if (MostRecent != TypeOld) {
+  if (MostRecent != TypeOld && !MostRecent->isInvalidDecl()) {
     MergeVarDeclTypes(New, MostRecent,
                       mergeTypeWithPrevious(*this, New, MostRecent, Previous));
     if (New->isInvalidDecl())

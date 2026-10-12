@@ -3567,7 +3567,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // Dig out the initializer, and use the declaration which it's attached to.
   // FIXME: We should eventually check whether the variable has a reachable
   // initializing declaration.
-  const Expr *Init = VD->getAnyInitializer(VD);
+  const VarDecl *InitDecl = VD;
+  const Expr *Init = VD->getAnyInitializer(InitDecl);
   // P2280R4 struck the restriction that variable of reference type should have
   // a preceding initialization.
   // Used to be C++20 [expr.const]p5.12:
@@ -3581,6 +3582,20 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
       NoteLValueLocation(Info, Base);
     }
     return false;
+  }
+
+  if (Init) {
+    if (InitDecl->isInvalidDecl())
+      return false;
+
+    QualType InitType =
+        Info.Ctx.getCanonicalType(InitDecl->getType()).getUnqualifiedType();
+    QualType VDType =
+        Info.Ctx.getCanonicalType(VD->getType()).getUnqualifiedType();
+    if (InitType != VDType && !Info.Ctx.typesAreCompatible(InitType, VDType))
+      return false;
+
+    VD = InitDecl;
   }
 
   // P2280R4 struck the initialization requirement for variables of reference
