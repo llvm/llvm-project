@@ -33,11 +33,15 @@ static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
   case VectorLibrary::NoLibrary:
     break;
   case VectorLibrary::Accelerate:
+    return RuntimeLibrary::accelerate;
   case VectorLibrary::DarwinLibSystemM:
+    return RuntimeLibrary::darwin_libsystem_m;
   case VectorLibrary::LIBMVEC:
+    return RuntimeLibrary::libmvec;
   case VectorLibrary::MASSV:
+    return RuntimeLibrary::massv;
   case VectorLibrary::SVML:
-    return RuntimeLibrary::UnknownLibrary;
+    return RuntimeLibrary::svml;
   case VectorLibrary::SLEEFGNUABI:
     return RuntimeLibrary::sleefgnuabi;
   case VectorLibrary::ArmPL:
