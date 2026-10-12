@@ -93,7 +93,8 @@ public:
 
   bool sourceIeeeMode() const { return SourceIeeeMode; }
 
-  /// Source SRAM ECC setting, or nothing when the code object permits either.
+  /// Source SRAM ECC setting, or nothing when either execution mode is
+  /// possible.
   std::optional<bool> sourceSramEcc() const { return SourceSramEcc; }
 
   /// Require masked bits to be provably zero after register promotion.

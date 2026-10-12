@@ -91,6 +91,34 @@ TEST_F(RaiseContextTest, ResolvesBlocksBySourceOffset) {
   EXPECT_EQ(Env->Ctx->lookupBB(KKernelStartOffset), Start);
 }
 
+TEST_F(RaiseContextTest, SourceSramEcc) {
+  for (StringRef Cpu : {"gfx1250", "gfx942"}) {
+    Expected<MCState> State = initMCState(Cpu);
+    ASSERT_TRUE(static_cast<bool>(State)) << toString(State.takeError());
+    for (std::optional<bool> Setting :
+         {std::optional<bool>(), std::optional<bool>(false),
+          std::optional<bool>(true)}) {
+      ContextEnvironment Context(*State);
+      Expected<RaiseContext> Result = RaiseContext::create(
+          Context.B, Context.Projection, *State, Context.SetPc,
+          Context.PairedSplitBarriers, KernelMeta(), {}, 0, {},
+          KKernelStartOffset, 0, Setting);
+      if (Cpu == "gfx1250" && Setting == false) {
+        ASSERT_FALSE(static_cast<bool>(Result));
+        handleAllErrors(Result.takeError(), [](const RaiseFailure &Failure) {
+          EXPECT_EQ(Failure.reason(), RaiseFailureReason::BadInput);
+          EXPECT_EQ(Failure.detail(),
+                    "gfx1250 source does not support disabling SRAM ECC");
+        });
+        continue;
+      }
+      ASSERT_TRUE(static_cast<bool>(Result)) << toString(Result.takeError());
+      EXPECT_EQ(Result->sourceSramEcc(),
+                Cpu == "gfx1250" ? std::optional<bool>(true) : Setting);
+    }
+  }
+}
+
 TEST_F(RaiseContextTest, RequiredBitsFollowRegisterPromotion) {
   DecodedInst Instruction;
   AllocaInst *Word = Env->B.CreateAlloca(Env->B.getInt32Ty());

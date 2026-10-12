@@ -92,11 +92,11 @@
 ; LOOP: in kernel 'buffer_refuse'
 ; LOOP-SAME: swizzled buffer descriptors are not modeled
 
-; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=CASE=16 -filetype=obj %s -o %t.16.o
+; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -mattr=-sramecc -defsym=CASE=16 -filetype=obj %s -o %t.16.o
 ; RUN: %ld.lld -shared %t.16.o -o %t.16.hsaco
 ; RUN: not %transpile_cli %t.16.hsaco --target-isa=gfx942 --emit-ir 2>&1 | %FileCheck %s --check-prefix=ECC
 ; ECC: in kernel 'buffer_refuse'
-; ECC-SAME: D16 load requires a source SRAM ECC setting or a zero untouched half
+; ECC-SAME: gfx1250 source does not support disabling SRAM ECC
 
 ; RUN: %llvm-mc -triple=amdgpu12.50-amd-amdhsa -defsym=CASE=17 -filetype=obj %s -o %t.17.o
 ; RUN: %ld.lld -shared %t.17.o -o %t.17.hsaco
