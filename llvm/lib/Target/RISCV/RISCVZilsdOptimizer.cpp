@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 
@@ -46,14 +45,6 @@ using namespace llvm;
 
 STATISTIC(NumLDFormed, "Number of LD instructions formed");
 STATISTIC(NumSDFormed, "Number of SD instructions formed");
-
-static cl::opt<bool>
-    EnableZilsdOpt("riscv-zilsd-opt", cl::Hidden, cl::init(true),
-                   cl::desc("Enable Zilsd load/store optimization"));
-
-static cl::opt<unsigned> MaxRescheduleDistance(
-    "riscv-zilsd-max-reschedule-distance", cl::Hidden, cl::init(10),
-    cl::desc("Maximum distance for rescheduling load/store instructions"));
 
 namespace {
 
@@ -130,10 +121,9 @@ INITIALIZE_PASS_END(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
 
 bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
 
-  if (!EnableZilsdOpt || skipFunction(MF.getFunction()))
-    return false;
-
   STI = &MF.getSubtarget<RISCVSubtarget>();
+  if (!STI->getCLOpts().zilsd_opt || skipFunction(MF.getFunction()))
+    return false;
 
   // Only run on RV32 with Zilsd extension
   if (STI->is64Bit() || !STI->hasStdExtZilsd())
@@ -334,7 +324,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     unsigned Distance = MI1IsLater ? MI2LocMap[MI1] - MI2LocMap[MI0]
                                    : MI2LocMap[MI0] - MI2LocMap[MI1];
     if (!isSafeToMove(MoveInstr, TargetInstr, !IsLoad) ||
-        Distance > MaxRescheduleDistance)
+        Distance > STI->getCLOpts().zilsd_max_reschedule_distance)
       continue;
 
     // Move the instruction to the target position

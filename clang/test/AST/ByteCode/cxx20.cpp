@@ -1544,3 +1544,23 @@ namespace InvalidVirtualCall {
                        // both-note {{declared here}}
   };
 }
+
+namespace FailInTrivialCopy {
+
+  struct S {
+    S &operator=(const S &) = default;
+    int val; // ref-note {{subobject declared here}}
+  };
+
+  constexpr bool foo() {
+    S s1; // expected-note {{declared here}}
+    S s2{42};
+    s2 = s1; // expected-note {{read of uninitialized object}} \
+             // ref-note {{subobject 'val' is not initialized}} \
+             // both-note {{in call to}}
+    return true;
+  }
+
+  static_assert(foo(), ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+}

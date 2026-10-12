@@ -617,7 +617,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 3, v6
 ; GFX10-NEXT:    v_add_co_u32 v0, s0, s34, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s35, 0, s0
-; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2800, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x2800
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX10-NEXT:    ; =>This Loop Header: Depth=1
@@ -652,7 +652,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx2 v[30:31], v[10:11], off
 ; GFX10-NEXT:    global_load_dwordx2 v[32:33], v[26:27], off
-; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, 0x10000, v4
+; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v5, vcc_lo
 ; GFX10-NEXT:    s_addk_i32 s1, 0x2000
 ; GFX10-NEXT:    s_cmp_lt_u32 s1, 0x400000
@@ -833,7 +833,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, s0, s34, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s35, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2800, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 0x2800
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:  .LBB1_1: ; %for.cond.preheader
 ; GFX11-NEXT:    ; =>This Loop Header: Depth=1
@@ -870,7 +870,7 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b64 v[22:23], v[22:23], off
 ; GFX11-NEXT:    global_load_b64 v[28:29], v[28:29], off offset:2048
-; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, 0x10000, v4
+; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v4, 0x10000
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v5, vcc_lo
 ; GFX11-NEXT:    s_addk_i32 s1, 0x2000

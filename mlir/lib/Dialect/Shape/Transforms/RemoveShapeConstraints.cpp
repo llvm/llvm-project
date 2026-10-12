@@ -25,7 +25,7 @@ namespace {
 class RemoveCstrBroadcastableOp
     : public OpRewritePattern<shape::CstrBroadcastableOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(shape::CstrBroadcastableOp op,
                                 PatternRewriter &rewriter) const override {
@@ -36,7 +36,7 @@ public:
 
 class RemoveCstrEqOp : public OpRewritePattern<shape::CstrEqOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(shape::CstrEqOp op,
                                 PatternRewriter &rewriter) const override {
