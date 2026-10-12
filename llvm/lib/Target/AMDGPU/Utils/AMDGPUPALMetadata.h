@@ -214,7 +214,6 @@ private:
   // helper for the public wrapper functions that request Major or Minor
   unsigned getPALVersion(unsigned idx);
 
-  bool setFromLegacyBlob(StringRef Blob);
   bool setFromMsgPackBlob(StringRef Blob);
   void toLegacyBlob(std::string &Blob);
   void toMsgPackBlob(std::string &Blob);
