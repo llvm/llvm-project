@@ -18,7 +18,8 @@ namespace COMGR {
 struct DataAction;
 struct DataSet;
 
-llvm::ArrayRef<unsigned char> getDeviceLibrariesIdentifier();
+// Build-time SHA-256 over all embedded content used by the compilation cache.
+llvm::ArrayRef<unsigned char> getEmbeddedContentIdentifier();
 llvm::StringRef getOpenCLCBaseHeaderContents();
 llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>
 getDeviceLibraries();

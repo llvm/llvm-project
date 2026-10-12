@@ -34,6 +34,15 @@ file(GLOB_RECURSE embedded_files
      "${CLANG_RESOURCE_DIR}/lib/amd*/*.bc"
      "${CLANG_RESOURCE_DIR}/lib/amd*/*.a")
 
+# Get the paths relative to the resource directory, so the
+# compile-time content identifier is independent of the absolute build
+# location.
+set(embedded_files_rel "")
+foreach(abs_file ${embedded_files})
+  file(RELATIVE_PATH rel_file ${INC_DIR} ${abs_file})
+  list(APPEND embedded_files_rel ${rel_file})
+endforeach()
+
 # Clear values from the same scope before branching. include() shares the
 # caller's variable scope; without resetting, a prior set of
 # resource_directory_object_archive could survive when COMGR_USE_INCBIN is on
@@ -239,17 +248,20 @@ list(APPEND TARGETS_DEFS "#undef AMD_DEVICE_LIBS_FUNCTION")
 list(JOIN TARGETS_DEFS "\n" TARGETS_DEFS)
 file(GENERATE OUTPUT ${GEN_LIBRARY_DEFS_INC_FILE} CONTENT "${TARGETS_DEFS}")
 
-# compute the sha256 of the device libraries to detect changes and pass them to comgr (used by the cache)
+# Build-time SHA-256 over all embedded content (device libraries and
+# clang resource directory), passed to Comgr so the compilation cache
+# invalidates when it changes
 find_package(Python3 REQUIRED Interpreter)
-set(DEVICE_LIBS_ID_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/device-libs-id.py")
-set(DEVICE_LIBS_ID_HEADER ${INC_DIR}/libraries_sha.inc)
-add_custom_command(OUTPUT ${DEVICE_LIBS_ID_HEADER}
-    COMMAND ${Python3_EXECUTABLE} ${DEVICE_LIBS_ID_SCRIPT} --varname DEVICE_LIBS_ID --output ${DEVICE_LIBS_ID_HEADER} --parent-directory ${INC_DIR} ${TARGETS_HEADERS_FILENAME}
-    DEPENDS ${DEVICE_LIBS_ID_SCRIPT} ${TARGETS_HEADERS_REALPATH}
-    COMMENT "Generating ${INC_DIR}/libraries_sha.inc"
+set(EMBEDDED_CONTENT_ID_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/device-libs-id.py")
+set(EMBEDDED_CONTENT_ID_HEADER ${INC_DIR}/embedded_content_sha.inc)
+
+add_custom_command(OUTPUT ${EMBEDDED_CONTENT_ID_HEADER}
+    COMMAND ${Python3_EXECUTABLE} ${EMBEDDED_CONTENT_ID_SCRIPT} --varname EMBEDDED_CONTENT_ID --output ${EMBEDDED_CONTENT_ID_HEADER} --parent-directory ${INC_DIR} ${TARGETS_HEADERS_FILENAME} ${embedded_files_rel}
+    DEPENDS ${EMBEDDED_CONTENT_ID_SCRIPT} ${TARGETS_HEADERS_REALPATH} ${embedded_files}
+    COMMENT "Generating ${EMBEDDED_CONTENT_ID_HEADER}"
 )
-set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/libraries_sha.inc)
-add_custom_target(libraries_sha_header DEPENDS ${INC_DIR}/libraries_sha.inc)
-add_dependencies(amd_comgr libraries_sha_header)
+set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${EMBEDDED_CONTENT_ID_HEADER})
+add_custom_target(embedded_content_sha_header DEPENDS ${EMBEDDED_CONTENT_ID_HEADER})
+add_dependencies(amd_comgr embedded_content_sha_header)
 
 include_directories(${INC_DIR})

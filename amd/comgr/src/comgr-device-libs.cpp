@@ -25,13 +25,13 @@ using namespace llvm;
 namespace COMGR {
 
 namespace {
+#include "embedded_content_sha.inc"
 #include "libraries.inc"
-#include "libraries_sha.inc"
 #include "opencl-c-base.inc"
 } // namespace
 
-ArrayRef<unsigned char> getDeviceLibrariesIdentifier() {
-  return DEVICE_LIBS_ID;
+ArrayRef<unsigned char> getEmbeddedContentIdentifier() {
+  return EMBEDDED_CONTENT_ID;
 }
 
 StringRef getOpenCLCBaseHeaderContents() {
