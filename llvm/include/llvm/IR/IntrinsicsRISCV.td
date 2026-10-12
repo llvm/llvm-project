@@ -2156,6 +2156,16 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
+  // Scalar Averaging Addition and Subtraction. On RV64 these map to the
+  // packed paadd.w family on the low words.
+  class RVPScalarBinaryIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_aadd_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_aaddu_u32 : RVPScalarBinaryIntrinsic;
+  def int_riscv_asub_i32  : RVPScalarBinaryIntrinsic;
+  def int_riscv_asubu_u32 : RVPScalarBinaryIntrinsic;
+
   // Scalar Multiply High. On RV32 these map to the M-extension mulh
   // instructions and the P-extension mulhr instructions.
   class RVPScalarMulHighIntrinsic
