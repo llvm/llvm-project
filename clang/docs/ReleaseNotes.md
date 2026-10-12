@@ -119,6 +119,13 @@ features cannot lower the translation-unit ABI level;
   for homogeneous aggregate classification.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
 
+- On Windows targets using the Microsoft record layout, `#pragma pack` no longer
+  reduces the alignment of fields of vector type (e.g. `__m128`) or of x87
+  80-bit `long double` (with `-mlong-double-80`), including when such fields
+  are nested in structs or arrays. This matches MSVC and fixes misaligned
+  accesses to these fields. `__attribute__((packed))` on the field or the
+  enclosing record still reduces the alignment. (#GH208256)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -308,6 +315,14 @@ features cannot lower the translation-unit ABI level;
   based on the source file path of declarations. The filter uses glob-style
   matching on the presumed source location (accounting for macro expansions
   and `#line` directives). (#GH194210)
+
+- Added the AArch64 option `-mharden-pac-ret=load-return-address` to harden
+  return address signing against PACMAN attacks. The option requires return
+  address signing to be enabled and emits a load from the return address before
+  returning, reducing the cache side channel used to guess pointer
+  authentication codes. See
+  {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
+  for more information.
 
 ### Deprecated Compiler Flags
 
@@ -596,6 +611,8 @@ features cannot lower the translation-unit ABI level;
   `operator delete`, since such a delete expression never invokes the
   destructor. (#GH65524)
 
+- Suggest missing `typename` prefixes to dependent packs within template arguments. (#GH75248)
+
 - Fixed a false-positive `-Wshadow` warning when a variable in an
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
@@ -614,7 +631,7 @@ features cannot lower the translation-unit ABI level;
   keyword, such as when deferring the last statement of a block; when
   used as the body of a conditional; or when it immediately precedes
   a `break`/`continue` statement or a `return` with no argument.
- 
+
 - Clang now diagnoses arrays whose size is deduced from an initializer list when they exceed the maximum object size
 
 - Added `-Wunsafe-buffer-usage-main-argv` as a diagnostic group under
@@ -926,6 +943,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure in partial ordering of function templates whose
   parameters use pack-indexed template template parameters (`TT...[N]<int>`)
   with different template parameter lists. (#GH228870)
+
+- Fixed a use-after-free when parsing a non-type template parameter with a
+  constrained placeholder type (such as `C auto`) whose default argument
+  contains a lambda. (#GH230539)
 
 #### Bug Fixes to AST Handling
 
