@@ -291,7 +291,7 @@ static void reconstructCommon(CallInst *Call, GetElementPtrInst *GEP, T *Insn,
   Insn->setOrdering((AtomicOrdering)getOperandAsUnsigned(Call, 2 + Delta));
   Insn->setSyncScopeID(getOperandAsUnsigned(Call, 3 + Delta));
   unsigned AlignShiftValue = getOperandAsUnsigned(Call, 4 + Delta);
-  Insn->setAlignment(Align(1ULL << AlignShiftValue));
+  Insn->setAlignment(Align::fromLog2(AlignShiftValue));
   GEP->setDebugLoc(Call->getDebugLoc());
   Insn->setDebugLoc(Call->getDebugLoc());
   Insn->setAAMetadata(Call->getAAMetadata());

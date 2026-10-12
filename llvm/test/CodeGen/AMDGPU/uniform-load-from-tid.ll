@@ -169,6 +169,26 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}divergent_mask_threadid:
+; GCN: global_load_dword
+
+; OPT-LABEL: @divergent_mask_threadid
+; OPT: %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4{{$}}
+define amdgpu_kernel void @divergent_mask_threadid(ptr addrspace(1) align 4 %in, ptr addrspace(1) align 4 %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
+entry:
+  %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %lane = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %mask = shl i32 -1, %lane
+  %masked = and i32 %lid, %mask
+  %div = lshr i32 %masked, 5
+  %div4 = zext i32 %div to i64
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(1) %in, i64 %div4
+  %load = load i32, ptr addrspace(1) %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %div4
+  store i32 %load, ptr addrspace(1) %arrayidx2, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 !0 = !{i32 64, i32 1, i32 1}

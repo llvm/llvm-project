@@ -10496,10 +10496,14 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   } else {
     RTLIB::LibcallImpl MemsetImpl = Libcalls->getLibcallImpl(RTLIB::MEMSET);
 
+    MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
     TargetLowering::ArgListTy Args;
     Args.emplace_back(Dst, PointerType::getUnqual(Ctx));
-    Args.emplace_back(Src, Src.getValueType().getTypeForEVT(Ctx));
+    Args.emplace_back(getAnyExtOrTrunc(Src, dl, IntVT),
+                      Type::getIntNTy(Ctx, LibInfo->getIntSize()),
+                      LibInfo->getExtAttrForI32Param());
     Args.emplace_back(Size, DL.getIntPtrType(Ctx));
+
     CLI.setLibCallee(Libcalls->getLibcallImplCallingConv(MemsetImpl),
                      Dst.getValueType().getTypeForEVT(Ctx),
                      getExternalSymbol(MemsetImpl, TLI->getPointerTy(DL)),
@@ -14515,7 +14519,8 @@ MaybeAlign SelectionDAG::InferPtrAlign(SDValue Ptr) const {
     llvm::computeKnownBits(GV, Known, getDataLayout());
     unsigned AlignBits = Known.countMinTrailingZeros();
     if (AlignBits)
-      return commonAlignment(Align(1ull << std::min(31U, AlignBits)), GVOffset);
+      return commonAlignment(Align::fromLog2(std::min(31U, AlignBits)),
+                             GVOffset);
   }
 
   // If this is a direct reference to a stack slot, use information about the

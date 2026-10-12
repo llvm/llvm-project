@@ -1204,10 +1204,11 @@ MutableOperandRange CallOp::getArgOperandsMutable() {
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
 /// debug-info-bearing function has a debug location attached to it. This
 /// mirrors an LLVM IR verifier.
-static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
+template <typename OpTy>
+static LogicalResult verifyCallOpDebugInfo(OpTy callOp, LLVMFuncOp callee) {
   if (callee.isExternal())
     return success();
-  auto parentFunc = callOp->getParentOfType<FunctionOpInterface>();
+  auto parentFunc = callOp->template getParentOfType<FunctionOpInterface>();
   if (!parentFunc)
     return success();
 
@@ -1298,35 +1299,37 @@ static LogicalResult verifyOperandBundles(OpType &op) {
 
 LogicalResult CallOp::verify() { return verifyOperandBundles(*this); }
 
-LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  if (failed(verifyCallOpVarCalleeType(*this)))
+template <typename OpTy>
+static LogicalResult
+verifyCallOpSymbolUses(OpTy callOp, SymbolTableCollection &symbolTable) {
+  if (failed(verifyCallOpVarCalleeType(callOp)))
     return failure();
-
   // Type for the callee, we'll get it differently depending if it is a direct
   // or indirect call.
   Type fnType;
 
   // If this is an indirect call, the callee attribute is missing.
-  FlatSymbolRefAttr calleeName = getCalleeAttr();
+  FlatSymbolRefAttr calleeName = callOp.getCalleeAttr();
   if (!calleeName) {
     // Note: `verifyCallOpVarCalleeType` has already checked that there is a
     // callee operand.
-    auto ptrType = llvm::dyn_cast<LLVMPointerType>(getOperand(0).getType());
+    auto ptrType =
+        llvm::dyn_cast<LLVMPointerType>(callOp.getOperand(0).getType());
     if (!ptrType)
-      return emitOpError("indirect call expects a pointer as callee: ")
-             << getOperand(0).getType();
+      return callOp.emitOpError("indirect call expects a pointer as callee: ")
+             << callOp.getOperand(0).getType();
 
     // Nothing else to verify: an indirect callee cannot be resolved.
     return success();
   } else {
     Operation *callee =
-        symbolTable.lookupNearestSymbolFrom(*this, calleeName.getAttr());
+        symbolTable.lookupNearestSymbolFrom(callOp, calleeName.getAttr());
     if (!callee)
-      return emitOpError()
+      return callOp.emitOpError()
              << "'" << calleeName.getValue()
              << "' does not reference a symbol in the current scope";
     if (auto fn = dyn_cast<LLVMFuncOp>(callee)) {
-      if (failed(verifyCallOpDebugInfo(*this, fn)))
+      if (failed(verifyCallOpDebugInfo(callOp, fn)))
         return failure();
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
@@ -1335,9 +1338,9 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       // Aliases can alias functions, so calling through an alias is valid.
       // The function type is determined by the call's operands and result
       // types.
-      fnType = getCalleeFunctionType();
+      fnType = callOp.getCalleeFunctionType();
     } else {
-      return emitOpError()
+      return callOp.emitOpError()
              << "'" << calleeName.getValue()
              << "' does not reference a valid LLVM function, IFunc, or alias";
     }
@@ -1345,29 +1348,33 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   LLVMFunctionType funcType = llvm::dyn_cast<LLVMFunctionType>(fnType);
   if (!funcType)
-    return emitOpError("callee does not have a functional type: ") << fnType;
+    return callOp.emitOpError("callee does not have a functional type: ")
+           << fnType;
 
-  if (funcType.isVarArg() && !getVarCalleeType())
-    return emitOpError() << "missing var_callee_type attribute for vararg call";
+  if (funcType.isVarArg() && !callOp.getVarCalleeType())
+    return callOp.emitOpError()
+           << "missing var_callee_type attribute for vararg call";
 
   // Verify the result types. These checks are more specific than what
   // `verifyCallOpInterface` can report, so they are run first.
-  if (getNumResults() == 0 &&
+  if (callOp.getNumResults() == 0 &&
       !llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
-    return emitOpError() << "expected function call to produce a value";
+    return callOp.emitOpError() << "expected function call to produce a value";
 
-  if (getNumResults() != 0 &&
+  if (callOp.getNumResults() != 0 &&
       llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
-    return emitOpError()
+    return callOp.emitOpError()
            << "calling function with void result must not produce values";
 
-  if (getNumResults() > 1)
-    return emitOpError()
+  if (callOp.getNumResults() > 1)
+    return callOp.emitOpError()
            << "expected LLVM function call to produce 0 or 1 result";
 
-  if (getNumResults() && getResult().getType() != funcType.getReturnType())
-    return emitOpError() << "result type mismatch: " << getResult().getType()
-                         << " != " << funcType.getReturnType();
+  if (callOp.getNumResults() &&
+      callOp.getResult().getType() != funcType.getReturnType())
+    return callOp.emitOpError()
+           << "result type mismatch: " << callOp.getResult().getType()
+           << " != " << funcType.getReturnType();
 
   // Verify that the operand types match the callee. Note that this does not
   // need to special-case a variadic callee: the variadic arguments are not
@@ -1375,8 +1382,12 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   SmallVector<Type, 1> calleeResultTypes;
   if (!llvm::isa<LLVM::LLVMVoidType>(funcType.getReturnType()))
     calleeResultTypes.push_back(funcType.getReturnType());
-  return call_interface_impl::verifyCallOpInterface(*this, funcType.getParams(),
-                                                    calleeResultTypes);
+  return call_interface_impl::verifyCallOpInterface(
+      callOp, funcType.getParams(), calleeResultTypes);
+}
+
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallOpSymbolUses(*this, symbolTable);
 }
 
 void CallOp::print(OpAsmPrinter &p) {
@@ -1692,10 +1703,11 @@ MutableOperandRange InvokeOp::getArgOperandsMutable() {
                                           getArgOperandsImpl(*this).size());
 }
 
-LogicalResult InvokeOp::verify() {
-  if (failed(verifyCallOpVarCalleeType(*this)))
-    return failure();
+LogicalResult InvokeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallOpSymbolUses(*this, symbolTable);
+}
 
+LogicalResult InvokeOp::verify() {
   Block *unwindDest = getUnwindDest();
   if (unwindDest->empty())
     return emitError("must have at least one operation in unwind destination");
@@ -2170,7 +2182,7 @@ namespace {
 ///   ...
 ///   %e999 = llvm.extractvalue %i999[999]
 struct ResolveExtractValueSource : public OpRewritePattern<InsertValueOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertValueOp insertOp,
                                 PatternRewriter &rewriter) const override {

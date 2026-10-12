@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "slotindexes"
+#define DEBUG_TYPE "slot-indexes"
 
 AnalysisKey SlotIndexesAnalysis::Key;
 

@@ -63,15 +63,6 @@ bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
 
 void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                            const SDNode *N) const {
-  switch (N->getOpcode()) {
-  default:
-    break;
-  case X86ISD::INSERTQI:
-  case X86ISD::EXTRQI:
-    // result #0 must have type v2i64, but has type v16i8/v8i16
-    return;
-  }
-
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 
   switch (N->getOpcode()) {

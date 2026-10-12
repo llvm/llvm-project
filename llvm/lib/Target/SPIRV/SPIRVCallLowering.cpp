@@ -205,6 +205,13 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Use the recorded pointee type for declarations.
+  if (F.isDeclaration())
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVPointerType(
+          ElemTy, MIRBuilder,
+          addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
+
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
   return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
@@ -451,6 +458,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                       SPIRV::Decoration::ReferencedIndirectlyINTEL, {});
     }
   }
+
+  if (MDNode *FuncMD = F.getMetadata("spirv.Decorations"))
+    buildOpSpirvDecorations(FuncVReg, MIRBuilder, FuncMD, *ST);
 
   return true;
 }

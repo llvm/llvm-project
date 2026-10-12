@@ -133,7 +133,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
     unsigned TrailZ =
         std::min(Known.countMinTrailingZeros(), +Value::MaxAlignmentExponent);
-    return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+    return Align::fromLog2(std::min(Known.getBitWidth() - 1, TrailZ));
   };
 
   // Propagate alignment between loads and stores that originate from the

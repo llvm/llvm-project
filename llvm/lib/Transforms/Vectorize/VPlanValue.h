@@ -440,6 +440,9 @@ public:
     return Operands[N];
   }
 
+  /// Returns the last operand.
+  VPValue *getLastOperand() const { return Operands.back(); }
+
   void setOperand(unsigned I, VPValue *New) {
     assert((!Operands[I]->getScalarType() || !New->getScalarType() ||
             Operands[I]->getScalarType() == New->getScalarType()) &&

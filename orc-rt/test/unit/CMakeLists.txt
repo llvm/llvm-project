@@ -63,6 +63,7 @@ add_orc_rt_unittest(SupportTests
   support/RTTITest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
+  support/SymbolLookupSetTest.cpp
   support/WrapperFunctionBufferTest.cpp
   support/bind-test.cpp
   support/bit-test.cpp
@@ -73,6 +74,7 @@ add_orc_rt_unittest(SupportTests
 
   support/sps/SPSAllocActionTest.cpp
   support/sps/SPSMemoryFlagsTest.cpp
+  support/sps/SPSSymbolLookupSetTest.cpp
   support/sps/SPSWrapperFunctionBufferTest.cpp
   support/sps/SPSWrapperFunctionTest.cpp
   support/sps/SimplePackedSerializationTest.cpp
@@ -130,6 +132,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/sps/CallSPSCITest.cpp
   bedrock/sps/MemoryAccessSPSCITest.cpp
   bedrock/sps/NativeDylibManagerSPSCITest.cpp
+  bedrock/sps/SessionSPSCITest.cpp
   bedrock/sps/SimpleNativeMemoryMapSPSCITest.cpp
   bedrock/sps/SimpleRemoteCATest.cpp
 

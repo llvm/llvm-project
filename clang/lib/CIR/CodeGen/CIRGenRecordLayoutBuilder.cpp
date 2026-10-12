@@ -22,8 +22,8 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -249,7 +249,31 @@ struct CIRRecordLowering final {
       cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                          "getStorageType for bitfields");
     }
+    if (hasBoolVectorStorageAlignMismatch(type))
+      cirGenTypes.getCGModule().errorNYI(
+          fieldDecl->getSourceRange(),
+          "getStorageType for bool vector whose storage integer is aligned "
+          "differently from the vector");
     return type;
+  }
+
+  /// Whether \p type, or the innermost element type of an array \p type, is a
+  /// bool vector whose storage integer is aligned differently from the
+  /// vector.  A bool vector is stored as an integer with one bit per element,
+  /// at least a byte wide.  The vector is aligned to its own size, so an
+  /// integer with the same alignment also has the same allocation size.
+  /// Classic CodeGen lays a mismatched member out as that integer and fills
+  /// the difference with padding bytes, which this layout does not do yet.
+  bool hasBoolVectorStorageAlignMismatch(mlir::Type type) {
+    while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(type))
+      type = arrTy.getElementType();
+    auto vecTy = mlir::dyn_cast<cir::VectorType>(type);
+    if (!vecTy || !mlir::isa<cir::BoolType>(vecTy.getElementType()))
+      return false;
+    auto storageTy =
+        mlir::IntegerType::get(type.getContext(), vecTy.getBoolStorageWidth());
+    return dataLayout.layout.getTypeABIAlignment(storageTy) !=
+           dataLayout.layout.getTypeABIAlignment(vecTy);
   }
 
   uint64_t getFieldBitOffset(const FieldDecl *fieldDecl) {

@@ -66,10 +66,10 @@ to its capacity and uses that size. This means the SSO buffer of
 
 Libc++ implements `std::is_debugger_present()` differently depending on the host platform:
 
-- Linux: `/proc/self/status` is read for the `TracerPid` entry and returns true if it is not equal to 0.
+- Linux: `/proc/self/status` is read for the `TracerPid` entry and if it is equal to 0, returns `false`.
   Otherwise, the command name of the tracer PID is looked up, and a best effort is made to identify whether
-  its process name is a recognized debugger: "gdb", "gdbserver" or "lldb-server". False is returned if the process'
-  name is not in this list.
+  the tracer process' name is a recognized debugger: "gdb", "gdbserver" or "lldb-server". False is returned
+  if it is not in this list.
 
 - Darwin & FreeBSD: `sysctl` is called to retrieve the current process information and check if the `P_TRACED`
   flag is set in the returned info.
@@ -80,6 +80,8 @@ Libc++ implements `std::is_debugger_present()` differently depending on the host
   `pstatus_t` structure, then checks if the `STRC` flag is set in `pstatus_t::pr_flag`.
 
 - Windows: Calls `IsDebuggerPresent()`.
+
+- Default: Returns `false`.
 
 It is also defined as a weak symbol in the library to allow it to be replaceable, as per the standard, so a user may
 redefine it with their own implementation.

@@ -1,5 +1,5 @@
 
-# RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -run-pass=livedebugvalues %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -run-pass=live-debug-values %s -o - | FileCheck %s
 
 #
 # This test is for the problem from https://bugs.llvm.org/show_bug.cgi?id=38714.

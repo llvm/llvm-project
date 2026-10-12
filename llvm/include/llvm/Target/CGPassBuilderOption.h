@@ -55,7 +55,6 @@ struct CGPassBuilderOption {
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;
-  bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
   bool EnableTailMerge = true;
   /// Enable LoopTermFold immediately after LSR.

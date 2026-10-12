@@ -42,11 +42,16 @@ void struct_dest(int cmp, int v) {
   // expected-note@*:* 8 {{candidate function}}
 }
 
-// The out parameter is a reference, so it cannot bind across types.
 void mismatched_orig_type(int cmp, int v) {
+  uint orig;
+  InterlockedCompareExchange(gs_i32, cmp, v, orig);
+  // expected-warning@-1{{implicit conversion changes signedness: 'int' to 'uint'}}
+}
+
+void float_orig_type(int cmp, int v) {
   float orig;
-  InterlockedCompareExchange(gs_i32, cmp, v, orig); // expected-error{{no matching function for call to 'InterlockedCompareExchange'}}
-  // expected-note@*:* 8 {{candidate function}}
+  InterlockedCompareExchange(gs_i32, cmp, v, orig);
+  // expected-warning@-1{{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
 void direct_too_few(int cmp, int v) {

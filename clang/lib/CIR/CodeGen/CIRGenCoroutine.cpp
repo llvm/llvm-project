@@ -155,8 +155,16 @@ static mlir::LogicalResult
 emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
                        Stmt *body,
                        const CIRGenFunction::LexicalScope *currLexScope) {
-  if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
-    return mlir::failure();
+  {
+    // Destroy the body's local variables, and the temporaries they extend, when
+    // the body ends, before the fall-through handler, the implicit
+    // `co_return;`, calls return_void(). The body stays in the current lexical
+    // scope so that a co_return at its top level is recorded in currLexScope.
+    CIRGenFunction::RunCleanupsScope bodyScope(cgf);
+    if (cgf.emitStmt(body, /*useCurrentScope=*/true).failed())
+      return mlir::failure();
+  }
+
   // Note that classic codegen checks CanFallthrough by looking into the
   // availability of the insert block which is kinda brittle and unintuitive,
   // seems to be related with how landing pads are handled.
@@ -248,7 +256,14 @@ cir::CoroFreeOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
 
 cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
-  return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
+  return cir::CoroSizeOp::create(cgm.getBuilder(), loc,
+                                 convertType(e->getType()));
+}
+
+cir::CoroAlignOp CIRGenFunction::emitCoroAlignBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroAlignOp::create(cgm.getBuilder(), loc,
+                                  convertType(e->getType()));
 }
 
 cir::CoroPromiseOp
@@ -285,6 +300,16 @@ CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
 cir::CoroNoopOp CIRGenFunction::emitCoroNoopBuiltinCall(const CallExpr *e) {
   mlir::Location loc = getLoc(e->getBeginLoc());
   return cir::CoroNoopOp::create(cgm.getBuilder(), loc);
+}
+
+cir::CoroSuspendOp
+CIRGenFunction::emitCoroSuspendBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  llvm::SmallVector<mlir::Value, 2> args;
+  args.push_back(cir::TokenNoneOp::create(builder, loc));
+  args.push_back(emitScalarExpr(e->getArg(0)));
+
+  return cir::CoroSuspendOp::create(cgm.getBuilder(), loc, args);
 }
 
 static mlir::LogicalResult

@@ -42,7 +42,7 @@ Inherits I2 {{1,2,3},{1.1, 2.2, 3.3}, 4, 5, 6};
 // OGCG: @I2 = global { i32, i32, i32, float, float, float, i32, i32, i32 } { i32 1, i32 2, i32 3, float {{.*}}, float {{.*}}, float {{.*}}, i32 4, i32 5, i32 6 }, align 4
 
 VirtualInherits VI;
-// CIR-BEFORE: cir.global external @VI = ctor : !rec_VirtualInherits {
+// CIR-BEFORE: cir.global external @VI = #cir.zero : !rec_VirtualInherits ctor {
 // CIR-BEFORE:   %[[GET_GLOB:.*]] = cir.get_global @VI : !cir.ptr<!rec_VirtualInherits>
 // CIR-BEFORE:   cir.call @_ZN15VirtualInheritsC1Ev(%[[GET_GLOB]]) nothrow : (!cir.ptr<!rec_VirtualInherits> {llvm.align = 8 : i64, llvm.dereferenceable = 20 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR-BEFORE: } align(8) ast(#cir.var.decl.ast)
