@@ -7,12 +7,18 @@
 
 #define __device__ __attribute__((device))
 #define __constant__ __attribute__((constant))
+#define __shared__ __attribute__((shared))
 
 // CIR-DAG: cir.global {{.*}} target_address_space(1) @tab
 // CIR-DAG: cir.global {{.*}} target_address_space(1) @_ZZ10static_fmtiE3fmt
 // LLVM-DAG: @tab = addrspace(1) externally_initialized constant [2 x i32] [i32 1, i32 2]
+// CIR-DAG: cir.global {{.*}} target_address_space(1) @dev
+// CIR-DAG: cir.global {{.*}} target_address_space(3) @_ZZ10get_sharedvE2sh
 // LLVM-DAG: @_ZZ10static_fmtiE3fmt = internal addrspace(1) constant [3 x i8] c"%d\00"
+// LLVM-DAG: @dev = addrspace(1) externally_initialized global i32 3
+// LLVM-DAG: @_ZZ10get_sharedvE2sh = internal addrspace(3) global [4 x i32]
 __constant__ int tab[2] = {1, 2};
+__device__ int dev = 3;
 
 // CIR-LABEL: cir.func{{.*}} @_Z10static_fmti
 // CIR: %[[G:.*]] = cir.get_global @_ZZ10static_fmtiE3fmt : !cir.ptr<!cir.array<!s8i x 3>, target_address_space(1)>
@@ -32,6 +38,11 @@ __device__ const char *static_fmt(int i) {
 // LLVM-LABEL: define{{.*}} ptr addrspace(4) @_Z7get_tabv
 // LLVM: addrspacecast (ptr addrspace(1) @tab to ptr addrspace(4))
 __device__ const int *get_tab() { return tab; }
+
+__device__ int get_shared() {
+  __shared__ int sh[4];
+  return dev + sh[0];
+}
 
 // An explicit opencl_constant qualifier keeps UniformConstant.
 // LLVM-LABEL: define{{.*}} i32 @_Z6get_ocPU3AS2i(ptr addrspace(2)
