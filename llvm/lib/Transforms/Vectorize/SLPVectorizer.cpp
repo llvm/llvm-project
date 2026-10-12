@@ -453,14 +453,52 @@ public:
              BS->ReadyInsts.empty() &&
              "Scheduler still refers to the previous candidate");
     }
+    ScalarToTreeEntries.clear();
+    DeletedNodes.clear();
+    TransformedToGatherNodes.clear();
+    InstrElementSize.clear();
+    PostponedGathers.clear();
+    MergedLoopBTCs.clear();
     Candidate.clear();
   }
 
   unsigned getTreeSize() const { return Candidate.VectorizableTree.size(); }
 
+  /// Returns the size of the current tree, stopping at gathers
+  /// For instance, even though we continue adding tree entries after
+  /// a split node, this function stops counting at the split node
+  /// since it is a gather. This matches the behavior of MinBWs
+  /// computation.
+  unsigned getTreeSizeExcludingGathers() const {
+    unsigned Cnt = 0;
+    SmallBitVector GatherTreeNodes(Candidate.VectorizableTree.size(), false);
+    for (unsigned NodeIdx : seq<unsigned>(Candidate.VectorizableTree.size())) {
+      auto &TE = Candidate.VectorizableTree[NodeIdx];
+      if (DeletedNodes.contains(TE.get()))
+        continue;
+      auto IsGather = [&](TreeEntry *TE) {
+        return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
+               GatherTreeNodes.test(TE->Idx);
+      };
+      if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
+          (TE->UserTreeIndex.UserTE && (IsGather(TE->UserTreeIndex.UserTE)))) {
+        GatherTreeNodes.set(NodeIdx);
+        continue;
+      }
+      ++Cnt;
+    }
+    return Cnt;
+  }
+
   /// Returns true if the tree gathers any scalars other than constants.
   bool hasNonConstantGathers() const {
-    return Candidate.hasNonConstantGathers();
+    return any_of(Candidate.VectorizableTree,
+                  [&](const std::unique_ptr<TreeEntry> &TE) {
+                    return !DeletedNodes.contains(TE.get()) &&
+                           (TE->isGather() ||
+                            TransformedToGatherNodes.contains(TE.get())) &&
+                           !allConstant(TE->Scalars);
+                  });
   }
 
   /// Returns the base graph size, before any transformations.
@@ -720,7 +758,32 @@ public:
   /// \p S is the common opcode of \p VL when one exists; an empty \p S means
   /// the values have no common opcode (mixed buildvector/gather candidates).
   bool hasSameNode(const InstructionsState &S, ArrayRef<Value *> VL) const {
-    return Candidate.hasSameNode(S, VL);
+    auto IsSame = [&](const TreeEntry *TE) { return TE->isSame(VL); };
+    if (S) {
+      // Any vectorized or gather entry equal to VL must contain S.getMainOp()
+      // (the representative instruction, which is also the recorded scalar
+      // for copyable-elements bundles), so probing the MainOp-indexed maps
+      // is sufficient and avoids scanning the whole tree.
+      return any_of(getTreeEntries(S.getMainOp()), IsSame) ||
+             any_of(Candidate.ValueToGatherNodes.lookup(S.getMainOp()), IsSame);
+    }
+    // No common opcode: only gather entries can match. Each non-constant
+    // value in VL has to be in the gather entry's scalar list and is
+    // therefore present in ValueToGatherNodes. Probe by VL members instead
+    // of scanning the whole tree (O(tree) -> O(|VL|)).
+    SmallPtrSet<const TreeEntry *, 4> Visited;
+    for (Value *V : VL) {
+      // Constants/poisons are not tracked in ValueToGatherNodes.
+      if (isConstant(V))
+        continue;
+      for (const TreeEntry *TE : Candidate.ValueToGatherNodes.lookup(V)) {
+        if (!Visited.insert(TE).second)
+          continue;
+        if (IsSame(TE))
+          return true;
+      }
+    }
+    return false;
   }
 
   /// Registers non-vectorizable sequence of loads
@@ -848,7 +911,7 @@ public:
 
             auto AllUsersVectorized = [U1, U2, this](Value *V) {
               return llvm::all_of(V->users(), [U1, U2, this](Value *U) {
-                return U == U1 || U == U2 || R.Candidate.isVectorized(U);
+                return U == U1 || U == U2 || R.isVectorized(U);
               });
             };
             return AllUsersVectorized(V1) && AllUsersVectorized(V2);
@@ -868,10 +931,9 @@ public:
       }
 
       auto CheckSameEntryOrFail = [&]() {
-        if (ArrayRef<TreeEntry *> TEs1 = R.Candidate.getTreeEntries(V1);
-            !TEs1.empty()) {
+        if (ArrayRef<TreeEntry *> TEs1 = R.getTreeEntries(V1); !TEs1.empty()) {
           SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
-          if (ArrayRef<TreeEntry *> TEs2 = R.Candidate.getTreeEntries(V2);
+          if (ArrayRef<TreeEntry *> TEs2 = R.getTreeEntries(V2);
               !TEs2.empty() &&
               any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
             return LookAheadHeuristics::ScoreSplatLoads;
@@ -1990,7 +2052,7 @@ public:
         continue;
       auto *I = cast<Instruction>(V);
       salvageDebugInfo(*I);
-      ArrayRef<TreeEntry *> Entries = Candidate.getTreeEntries(I);
+      ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       for (Use &U : I->operands()) {
         if (auto *OpI = dyn_cast<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
@@ -2113,8 +2175,26 @@ public:
     return Candidate.NonScheduledFirst.contains(V);
   }
 
+  /// Check if \p V is a peeled reassociated scalar still owned by a live
+  /// (non-deleted, non-gathered) tree entry.
+  bool isReassocScalarVectorized(const Value *V) const {
+    auto It = Candidate.ReassocScalarToTreeEntries.find(V);
+    return It != Candidate.ReassocScalarToTreeEntries.end() &&
+           any_of(It->second, [&](const TreeEntry *E) {
+             return !DeletedNodes.contains(E) &&
+                    !TransformedToGatherNodes.contains(E);
+           });
+  }
+
   /// Check if the value is vectorized in the tree.
-  bool isVectorized(const Value *V) const { return Candidate.isVectorized(V); }
+  bool isVectorized(const Value *V) const {
+    assert(V && "V cannot be nullptr.");
+    if (isReassocScalarVectorized(V))
+      return true;
+    return any_of(getTreeEntries(V), [&](const TreeEntry *E) {
+      return !DeletedNodes.contains(E) && !TransformedToGatherNodes.contains(E);
+    });
+  }
 
   /// Returns true if the role of \p I is already decided by its user: a deleted
   /// user was folded into some other vector by an earlier attempt.
@@ -2204,6 +2284,11 @@ private:
   /// users, whose fusion is accounted for by the tree, are not returned.
   std::pair<Instruction *, InstructionCost>
   getFMulFusingUser(Instruction *I, bool InTree = true) const;
+
+  /// \returns true if the fadd/fsub \p U, fused with its fmul operand by the
+  /// backend, is a vectorized tree scalar whose lane is priced as fmuladd.
+  /// Peeled reassociated scalars are priced as plain fadd/fsub.
+  bool isFusedVectorizedFAddSub(Instruction *U) const;
 
   /// \returns the scalar cost of the fmul lanes of \p TE that are priced as
   /// fused into their vectorized fadd/fsub users. If the node is turned into a
@@ -3078,11 +3163,9 @@ private:
           Last->addCopyableElement(V);
           continue;
         }
-        auto It = Candidate.ScalarToTreeEntries.find(V);
-        if (It == Candidate.ScalarToTreeEntries.end()) {
-          Candidate.ScalarToTreeEntries.try_emplace(V)
-              .first->getSecond()
-              .push_back(Last);
+        auto It = ScalarToTreeEntries.find(V);
+        if (It == ScalarToTreeEntries.end()) {
+          ScalarToTreeEntries.try_emplace(V).first->getSecond().push_back(Last);
           (void)Processed.insert(V);
         } else if (Processed.insert(V).second) {
           assert(!is_contained(It->getSecond(), Last) &&
@@ -3135,6 +3218,41 @@ private:
     return Last;
   }
 
+#ifndef NDEBUG
+  /// Debug printer.
+  LLVM_DUMP_METHOD void dumpVectorizableTree() const {
+    for (unsigned Id = 0, IdE = Candidate.VectorizableTree.size(); Id != IdE;
+         ++Id) {
+      Candidate.VectorizableTree[Id]->dump();
+      if (TransformedToGatherNodes.contains(
+              Candidate.VectorizableTree[Id].get()))
+        dbgs() << "[[TRANSFORMED TO GATHER]]";
+      else if (DeletedNodes.contains(Candidate.VectorizableTree[Id].get()))
+        dbgs() << "[[DELETED NODE]]";
+      dbgs() << "\n";
+    }
+  }
+#endif
+
+  /// Get list of vector entries, associated with the value \p V.
+  ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
+    assert(V && "V cannot be nullptr.");
+    auto It = ScalarToTreeEntries.find(V);
+    if (It == ScalarToTreeEntries.end())
+      return {};
+    return It->getSecond();
+  }
+
+  /// Returns first vector node for value \p V, matching values \p VL.
+  TreeEntry *getSameValuesTreeEntry(Value *V, ArrayRef<Value *> VL,
+                                    bool SameVF = false) const {
+    assert(V && "V cannot be nullptr.");
+    for (TreeEntry *TE : ScalarToTreeEntries.lookup(V))
+      if ((!SameVF || TE->getVectorFactor() == VL.size()) && TE->isSame(VL))
+        return TE;
+    return nullptr;
+  }
+
   /// Contains all the outputs of legality analysis for a list of values to
   /// vectorize.
   class ScalarsVectorizationLegality {
@@ -3171,6 +3289,28 @@ private:
       bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
       SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo,
       SmallVectorImpl<int> &ReuseShuffleIndices);
+
+  /// Maps a specific scalar to its tree entry(ies).
+  SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarToTreeEntries;
+
+  /// List of deleted non-profitable nodes.
+  SmallPtrSet<const TreeEntry *, 8> DeletedNodes;
+
+  /// List of nodes, transformed to gathered, with their conservative
+  /// gather/buildvector cost estimation.
+  SmallDenseMap<const TreeEntry *, InstructionCost> TransformedToGatherNodes;
+
+  /// Maps a value to the proposed vectorizable size.
+  SmallDenseMap<Value *, unsigned> InstrElementSize;
+
+  /// List of gather nodes, depending on other gather/vector nodes, which should
+  /// be emitted after the vector instruction emission process to correctly
+  /// handle order of the vector instructions and shuffles.
+  SetVector<const TreeEntry *> PostponedGathers;
+
+  /// Per-depth SCEVs trip counts at every loop level where the tree builder has
+  /// joined diverging sibling loops.
+  SmallVector<const SCEV *> MergedLoopBTCs;
 
   /// Maps the loops to their loop nests.
   SmallDenseMap<const Loop *, SmallVector<const Loop *>> LoopToLoopNest;
@@ -3241,11 +3381,11 @@ private:
   void verifyCandidateOwnership() const;
 #endif
 
-  /// Owns the graph and the state discarded before building a new candidate.
+  /// Owns the graph and its candidate-local state.
   /// Keep this object in place while its entries exist: TreeEntry::Container
   /// refers to its graph.
-  /// Analysis caches, search history and reusable block scheduling storage
-  /// remain in BoUpSLP and survive a candidate reset.
+  /// Shared tree state remains in BoUpSLP, alongside analysis caches, search
+  /// history and reusable block scheduling storage.
   class CandidateState {
     friend class BoUpSLP;
 
@@ -3260,25 +3400,12 @@ private:
     /// after the candidate state that refers to them.
     TreeEntry::VecTreeTy VectorizableTree;
 
-    /// Maps a specific scalar to its tree entry(ies).
-    SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarToTreeEntries;
-
-    /// List of deleted non-profitable nodes.
-    SmallPtrSet<const TreeEntry *, 8> DeletedNodes;
-
-    /// List of nodes, transformed to gathered, with their conservative
-    /// gather/buildvector cost estimation.
-    SmallDenseMap<const TreeEntry *, InstructionCost> TransformedToGatherNodes;
-
     /// Maps the operand index and entry to the corresponding tree entry.
     SmallDenseMap<std::pair<const TreeEntry *, unsigned>, TreeEntry *>
         OperandsToTreeEntry;
 
     /// Scalars, used in split vectorize nodes.
     SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarsInSplitNodes;
-
-    /// Maps a value to the proposed vectorizable size.
-    SmallDenseMap<Value *, unsigned> InstrElementSize;
 
     /// A list of scalars that we found that we need to keep as scalars.
     ValueSet MustGather;
@@ -3307,11 +3434,6 @@ private:
     /// Keeps the mapping between the last instructions and their insertion
     /// points, which is an instruction-after-the-last-instruction.
     SmallDenseMap<const Instruction *, Instruction *> LastInstructionToPos;
-
-    /// List of gather nodes, depending on other gather/vector nodes, which
-    /// should be emitted after the vector instruction emission process to
-    /// correctly handle order of the vector instructions and shuffles.
-    SetVector<const TreeEntry *> PostponedGathers;
 
     using ValueToGatherNodesMap =
         DenseMap<Value *, SmallSetVector<const TreeEntry *, 4>>;
@@ -3348,10 +3470,6 @@ private:
     /// The loop nest, used to check if only a single loop nest is vectorized,
     /// not multiple, to avoid side-effects from the loop-aware cost model.
     SmallVector<const Loop *> CurrentLoopNest;
-
-    /// Per-depth SCEVs trip counts at every loop level where the tree builder
-    /// has joined diverging sibling loops.
-    SmallVector<const SCEV *> MergedLoopBTCs;
 
     /// Data to model and emit the runtime alias checks.
     struct RuntimeAliasCheckInfo {
@@ -3501,112 +3619,10 @@ private:
              getRootNode().State == TreeEntry::Vectorize;
     }
 
-    /// Returns the size of the current tree, stopping at gathers
-    /// For instance, even though we continue adding tree entries after
-    /// a split node, this function stops counting at the split node
-    /// since it is a gather. This matches the behavior of MinBWs
-    /// computation.
-    unsigned getTreeSizeExcludingGathers() const {
-      unsigned Cnt = 0;
-      SmallBitVector GatherTreeNodes(VectorizableTree.size(), false);
-      for (unsigned NodeIdx : seq<unsigned>(VectorizableTree.size())) {
-        auto &TE = VectorizableTree[NodeIdx];
-        if (DeletedNodes.contains(TE.get()))
-          continue;
-        auto IsGather = [&](TreeEntry *TE) {
-          return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
-                 GatherTreeNodes.test(TE->Idx);
-        };
-        if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
-            (TE->UserTreeIndex.UserTE &&
-             (IsGather(TE->UserTreeIndex.UserTE)))) {
-          GatherTreeNodes.set(NodeIdx);
-          continue;
-        }
-        ++Cnt;
-      }
-      return Cnt;
-    }
-
-    /// Returns true if the tree gathers any scalars other than constants.
-    bool hasNonConstantGathers() const {
-      return any_of(VectorizableTree,
-                    [&](const std::unique_ptr<TreeEntry> &TE) {
-                      return !DeletedNodes.contains(TE.get()) &&
-                             (TE->isGather() ||
-                              TransformedToGatherNodes.contains(TE.get())) &&
-                             !allConstant(TE->Scalars);
-                    });
-    }
-
-    /// Checks whether some existing tree entry has scalars equal to \p VL.
-    /// \p S is the common opcode of \p VL when one exists; an empty \p S means
-    /// the values have no common opcode (mixed buildvector/gather candidates).
-    bool hasSameNode(const InstructionsState &S, ArrayRef<Value *> VL) const {
-      auto IsSame = [&](const TreeEntry *TE) { return TE->isSame(VL); };
-      if (S) {
-        // Any vectorized or gather entry equal to VL must contain S.getMainOp()
-        // (the representative instruction, which is also the recorded scalar
-        // for copyable-elements bundles), so probing the MainOp-indexed maps
-        // is sufficient and avoids scanning the whole tree.
-        return any_of(getTreeEntries(S.getMainOp()), IsSame) ||
-               any_of(ValueToGatherNodes.lookup(S.getMainOp()), IsSame);
-      }
-      // No common opcode: only gather entries can match. Each non-constant
-      // value in VL has to be in the gather entry's scalar list and is
-      // therefore present in ValueToGatherNodes. Probe by VL members instead
-      // of scanning the whole tree (O(tree) -> O(|VL|)).
-      SmallPtrSet<const TreeEntry *, 4> Visited;
-      for (Value *V : VL) {
-        // Constants/poisons are not tracked in ValueToGatherNodes.
-        if (isConstant(V))
-          continue;
-        for (const TreeEntry *TE : ValueToGatherNodes.lookup(V)) {
-          if (!Visited.insert(TE).second)
-            continue;
-          if (IsSame(TE))
-            return true;
-        }
-      }
-      return false;
-    }
-
     /// Checks if the given value is gathered in one of the nodes.
     bool isAnyGathered(const SmallDenseSet<Value *> &Vals) const {
       return any_of(MustGather, [&](Value *V) { return Vals.contains(V); });
     }
-    /// Check if \p V is a peeled reassociated scalar still owned by a live
-    /// (non-deleted, non-gathered) tree entry.
-    bool isReassocScalarVectorized(const Value *V) const {
-      auto It = ReassocScalarToTreeEntries.find(V);
-      return It != ReassocScalarToTreeEntries.end() &&
-             any_of(It->second, [&](const TreeEntry *E) {
-               return !DeletedNodes.contains(E) &&
-                      !TransformedToGatherNodes.contains(E);
-             });
-    }
-
-    /// \returns true if the fadd/fsub \p U, fused with its fmul operand by the
-    /// backend, is a vectorized tree scalar whose lane is priced as fmuladd.
-    /// Peeled reassociated scalars are priced as plain fadd/fsub.
-    bool isFusedVectorizedFAddSub(Instruction *U) const {
-      return any_of(getTreeEntries(U), [&](const TreeEntry *TE) {
-        return !DeletedNodes.contains(TE) &&
-               !TransformedToGatherNodes.contains(TE);
-      });
-    }
-
-    /// Check if the value is vectorized in the tree.
-    bool isVectorized(const Value *V) const {
-      assert(V && "V cannot be nullptr.");
-      if (isReassocScalarVectorized(V))
-        return true;
-      return any_of(getTreeEntries(V), [&](const TreeEntry *E) {
-        return !DeletedNodes.contains(E) &&
-               !TransformedToGatherNodes.contains(E);
-      });
-    }
-
     /// \returns the graph entry for the \p Idx operand of the \p E entry.
     const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const {
       TreeEntry *Op = OperandsToTreeEntry.at({E, Idx});
@@ -3618,29 +3634,6 @@ private:
           getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
     }
 
-#ifndef NDEBUG
-    /// Debug printer.
-    LLVM_DUMP_METHOD void dumpVectorizableTree() const {
-      for (unsigned Id = 0, IdE = VectorizableTree.size(); Id != IdE; ++Id) {
-        VectorizableTree[Id]->dump();
-        if (TransformedToGatherNodes.contains(VectorizableTree[Id].get()))
-          dbgs() << "[[TRANSFORMED TO GATHER]]";
-        else if (DeletedNodes.contains(VectorizableTree[Id].get()))
-          dbgs() << "[[DELETED NODE]]";
-        dbgs() << "\n";
-      }
-    }
-#endif
-
-    /// Get list of vector entries, associated with the value \p V.
-    ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
-      assert(V && "V cannot be nullptr.");
-      auto It = ScalarToTreeEntries.find(V);
-      if (It == ScalarToTreeEntries.end())
-        return {};
-      return It->getSecond();
-    }
-
     /// Get list of split vector entries, associated with the value \p V.
     ArrayRef<TreeEntry *> getSplitTreeEntries(Value *V) const {
       assert(V && "V cannot be nullptr.");
@@ -3648,16 +3641,6 @@ private:
       if (It == ScalarsInSplitNodes.end())
         return {};
       return It->getSecond();
-    }
-
-    /// Returns first vector node for value \p V, matching values \p VL.
-    TreeEntry *getSameValuesTreeEntry(Value *V, ArrayRef<Value *> VL,
-                                      bool SameVF = false) const {
-      assert(V && "V cannot be nullptr.");
-      for (TreeEntry *TE : ScalarToTreeEntries.lookup(V))
-        if ((!SameVF || TE->getVectorFactor() == VL.size()) && TE->isSame(VL))
-          return TE;
-      return nullptr;
     }
 
     /// Checks if any of \p Entries is an internal gather of a splat gather
@@ -3691,9 +3674,6 @@ private:
     /// allocations. Block scheduling must be invalidated first.
     /// TODO: Revisit reconstruction and measure the compile-time difference.
     void clear() {
-      ScalarToTreeEntries.clear();
-      DeletedNodes.clear();
-      TransformedToGatherNodes.clear();
       OperandsToTreeEntry.clear();
       ScalarsInSplitNodes.clear();
       MustGather.clear();
@@ -3721,14 +3701,11 @@ private:
       BaseGraphSize = 1;
       CastMaxMinBWSizes.reset();
       ExtraBitWidthNodes.clear();
-      InstrElementSize.clear();
       UserIgnoreList = nullptr;
       NarrowedChainInsts.clear();
-      PostponedGathers.clear();
       ValueToGatherNodes.clear();
       TreeEntryToStridedPtrInfoMap.clear();
       CurrentLoopNest.clear();
-      MergedLoopBTCs.clear();
       // Destroy the entries after dropping all candidate references to them.
       VectorizableTree.clear();
     }
@@ -4431,7 +4408,7 @@ private:
       if (ScheduleCopyableDataMap.empty())
         return false;
       SmallDenseMap<TreeEntry *, unsigned> PotentiallyReorderedEntriesCount;
-      ArrayRef<TreeEntry *> Entries = SLP.Candidate.getTreeEntries(User);
+      ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
       if (Entries.empty())
         return false;
       unsigned CurNumOps = 0;
@@ -5160,7 +5137,7 @@ private:
         SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
         SmallVector<ScheduleBundle *> Bundles;
         Instruction *In = SD->getInst();
-        ArrayRef<TreeEntry *> Entries = R.Candidate.getTreeEntries(In);
+        ArrayRef<TreeEntry *> Entries = R.getTreeEntries(In);
         if (!Entries.empty()) {
           for (TreeEntry *TE : make_filter_range(Entries, [&](TreeEntry *TE) {
                  return isa<ExtractValueInst, ExtractElementInst, CallBase>(
@@ -5212,10 +5189,9 @@ private:
           // against double counting by the per-operand use counter.
           if (isa<ScheduleCopyableData>(SD) ||
               (ScheduleCopyableDataMap.empty() &&
-               none_of(R.Candidate.getTreeEntries(In),
-                       [&](const TreeEntry *TE) {
-                         return TE->isExpandedBinOp(In);
-                       }))) {
+               none_of(R.getTreeEntries(In), [&](const TreeEntry *TE) {
+                 return TE->isExpandedBinOp(In);
+               }))) {
             ProcessBundleMember(SD, isa<ScheduleCopyableData>(SD) ? &Bundle
                                                                   : SDBundles);
             continue;
@@ -5223,9 +5199,10 @@ private:
           SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
           SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
                                                    SDBundles.end());
-          for (TreeEntry *TE : make_filter_range(
-                   R.Candidate.getTreeEntries(In),
-                   [&](TreeEntry *TE) { return !TE->isCopyableElement(In); })) {
+          for (TreeEntry *TE :
+               make_filter_range(R.getTreeEntries(In), [&](TreeEntry *TE) {
+                 return !TE->isCopyableElement(In);
+               })) {
             if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
                 In->getNumOperands() != TE->getNumOperands() &&
                 !TE->hasReassocScalars())
@@ -5894,8 +5871,7 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
   auto IsAnyPointerUsedOutGraph =
       any_of(make_isa_range<Instruction>(PointerOps), [&](Instruction *I) {
         return any_of(I->users(), [&](User *U) {
-          return !Candidate.isVectorized(U) &&
-                 !Candidate.MustGather.contains(U);
+          return !isVectorized(U) && !Candidate.MustGather.contains(U);
         });
       });
 
@@ -5921,7 +5897,7 @@ bool BoUpSLP::isWidenedStridedLoad(const TreeEntry *E) const {
   if (E->State != TreeEntry::StridedVectorize ||
       E->getOpcode() != Instruction::Load)
     return false;
-  const StridedPtrInfo &SPtrInfo = TreeEntryToStridedPtrInfoMap.at(E);
+  const StridedPtrInfo &SPtrInfo = Candidate.TreeEntryToStridedPtrInfoMap.at(E);
   return SPtrInfo.Ty->getNumElements() != E->Scalars.size();
 }
 
@@ -7149,7 +7125,7 @@ bool BoUpSLP::isProfitableToReorder() const {
                           TE->getOpcode() == Instruction::SExt))) &&
                        (Candidate.getRootNode().getVectorFactor() > TinyVF ||
                         !TE->isGather() || none_of(TE->Scalars, [&](Value *V) {
-                          return !isConstant(V) && Candidate.isVectorized(V);
+                          return !isConstant(V) && isVectorized(V);
                         }));
               })) >= Candidate.VectorizableTree.size() - ReorderedSplitsCnt)
         return false;
@@ -7809,7 +7785,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                    (OpTE->ReorderIndices.empty() && TE->isSame(OpTE->Scalars))))
                 Res.insert(TE->UserTreeIndex.UserTE);
             }
-            for (const TreeEntry *TE : Candidate.getTreeEntries(Root)) {
+            for (const TreeEntry *TE : getTreeEntries(Root)) {
               if (TE != OpTE && TE->UserTreeIndex &&
                   TE->getVectorFactor() == OpTE->getVectorFactor() &&
                   TE->Scalars.size() == OpTE->Scalars.size() &&
@@ -7837,8 +7813,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                 continue;
               const TreeEntry *Op = Candidate.getOperandEntry(TE, Idx);
               if (Op->isGather() && Op->hasState()) {
-                const TreeEntry *VecOp = Candidate.getSameValuesTreeEntry(
-                    Op->getMainOp(), Op->Scalars);
+                const TreeEntry *VecOp =
+                    getSameValuesTreeEntry(Op->getMainOp(), Op->Scalars);
                 if (VecOp)
                   Op = VecOp;
               }
@@ -8083,7 +8059,7 @@ Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
 
 void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
-  const size_t NumVectScalars = Candidate.ScalarToTreeEntries.size() + 1;
+  const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
   // Peeled scalars still claimed by the tree (gathered, listed in some
   // entry's scalars, or modeled as a copyable element, which is emitted as
@@ -8092,7 +8068,7 @@ void BoUpSLP::buildExternalUses(
   Candidate.KeptReassocScalars.clear();
   SmallVector<const Value *, 8> KeptWorklist;
   for (const auto &[V, Owners] : Candidate.ReassocScalarToTreeEntries)
-    if ((isGathered(V) || !Candidate.getTreeEntries(V).empty() ||
+    if ((isGathered(V) || !getTreeEntries(V).empty() ||
          any_of(Owners,
                 [V = V](const TreeEntry *TE) {
                   return TE->isCopyableElement(const_cast<Value *>(V));
@@ -8112,8 +8088,8 @@ void BoUpSLP::buildExternalUses(
 
     // No need to handle users of gathered values.
     if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize ||
-        Candidate.DeletedNodes.contains(Entry) ||
-        Candidate.TransformedToGatherNodes.contains(Entry))
+        DeletedNodes.contains(Entry) ||
+        TransformedToGatherNodes.contains(Entry))
       continue;
 
     // For each lane:
@@ -8165,7 +8141,7 @@ void BoUpSLP::buildExternalUses(
         // Peeled reassociated scalars are subsumed by the flattened node and
         // erased during vectorization, not external users. Kept ones survive
         // and their uses of erased scalars become extracts like any other.
-        if (Candidate.isReassocScalarVectorized(UserInst) &&
+        if (isReassocScalarVectorized(UserInst) &&
             !Candidate.KeptReassocScalars.contains(UserInst)) {
           LLVM_DEBUG(dbgs() << "SLP: \tInternal (reassociated) user will be "
                                "removed:"
@@ -8174,10 +8150,10 @@ void BoUpSLP::buildExternalUses(
         }
 
         // Skip in-tree scalars that become vectors
-        if (ArrayRef<TreeEntry *> UseEntries = Candidate.getTreeEntries(U);
+        if (ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
             any_of(UseEntries, [this](const TreeEntry *UseEntry) {
-              return !Candidate.DeletedNodes.contains(UseEntry) &&
-                     !Candidate.TransformedToGatherNodes.contains(UseEntry);
+              return !DeletedNodes.contains(UseEntry) &&
+                     !TransformedToGatherNodes.contains(UseEntry);
             })) {
           // Some in-tree scalars will remain as scalar in vectorized
           // instructions. If that is the case, the one in FoundLane will
@@ -8186,8 +8162,8 @@ void BoUpSLP::buildExternalUses(
                  isa<LoadInst, StoreInst>(UserInst)) ||
                 isa<CallInst>(UserInst)) ||
               all_of(UseEntries, [&](TreeEntry *UseEntry) {
-                if (Candidate.DeletedNodes.contains(UseEntry) ||
-                    Candidate.TransformedToGatherNodes.contains(UseEntry))
+                if (DeletedNodes.contains(UseEntry) ||
+                    TransformedToGatherNodes.contains(UseEntry))
                   return true;
                 return UseEntry->State == TreeEntry::ScatterVectorize ||
                        !doesInTreeUserNeedToExtract(
@@ -8235,8 +8211,8 @@ void BoUpSLP::buildExternalUses(
   for (const auto &[StridedTE, SPtrInfo] :
        Candidate.TreeEntryToStridedPtrInfoMap)
     if (SPtrInfo.StrideSCEV && !SPtrInfo.StrideVal &&
-        !Candidate.DeletedNodes.contains(StridedTE) &&
-        !Candidate.TransformedToGatherNodes.contains(StridedTE))
+        !DeletedNodes.contains(StridedTE) &&
+        !TransformedToGatherNodes.contains(StridedTE))
       Strides.emplace_back(SPtrInfo.StrideSCEV,
                            StridedTE->getMainOp()->getParent());
   if (Strides.empty())
@@ -8244,8 +8220,8 @@ void BoUpSLP::buildExternalUses(
   for (const std::unique_ptr<TreeEntry> &TEPtr : Candidate.VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
     if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize ||
-        Candidate.DeletedNodes.contains(Entry) ||
-        Candidate.TransformedToGatherNodes.contains(Entry))
+        DeletedNodes.contains(Entry) ||
+        TransformedToGatherNodes.contains(Entry))
       continue;
     for (Instruction *Scalar : make_isa_range<Instruction>(Entry->Scalars)) {
       if (Entry->isCopyableElement(Scalar) ||
@@ -8301,7 +8277,7 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
           !isValidElementType(SI->getValueOperand()->getType(), Opts.slp_revec))
         continue;
       // Skip entry if already
-      if (Candidate.isVectorized(U))
+      if (isVectorized(U))
         continue;
 
       Value *Ptr = getUnderlyingObject(SI->getPointerOperand(),
@@ -8443,12 +8419,12 @@ void BoUpSLP::verifyCandidateOwnership() const {
     if (const TreeEntry *UserTE = TE->UserTreeIndex.UserTE)
       VerifyEntry(UserTE);
 
-  for (const auto &P : Candidate.ScalarToTreeEntries)
+  for (const auto &P : ScalarToTreeEntries)
     for (const TreeEntry *TE : P.second)
       VerifyEntry(TE);
-  for (const TreeEntry *TE : Candidate.DeletedNodes)
+  for (const TreeEntry *TE : DeletedNodes)
     VerifyEntry(TE);
-  for (const auto &P : Candidate.TransformedToGatherNodes)
+  for (const auto &P : TransformedToGatherNodes)
     VerifyEntry(P.first);
   for (const auto &P : Candidate.OperandsToTreeEntry) {
     VerifyEntry(P.first.first);
@@ -8462,7 +8438,7 @@ void BoUpSLP::verifyCandidateOwnership() const {
       VerifyEntry(TE);
   for (const auto &P : Candidate.EntryToLastInstruction)
     VerifyEntry(P.first);
-  for (const TreeEntry *TE : Candidate.PostponedGathers)
+  for (const TreeEntry *TE : PostponedGathers)
     VerifyEntry(TE);
   for (const auto &P : Candidate.ValueToGatherNodes)
     for (const TreeEntry *TE : P.second)
@@ -8767,7 +8743,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               for (User *U : LI->users()) {
                 if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
                   continue;
-                for (const TreeEntry *UTE : Candidate.getTreeEntries(U)) {
+                for (const TreeEntry *UTE : getTreeEntries(U)) {
                   for (int I : seq<int>(UTE->getNumOperands())) {
                     if (all_of(UTE->getOperand(I), [LI](Value *V) {
                           return V == LI || isa<PoisonValue>(V);
@@ -8875,7 +8851,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           for (const std::pair<LoadInst *, int64_t> &L :
                make_filter_range(LocalLoadsDists,
                                  [&](const std::pair<LoadInst *, int64_t> &L) {
-                                   return !Candidate.isVectorized(L.first);
+                                   return !isVectorized(L.first);
                                  })) {
             assert(LastDist >= L.second &&
                    "Expected first distance always not less than second");
@@ -8927,10 +8903,9 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           for (ArrayRef<Value *> Slice : make_first_range(Results)) {
             LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
                               << Slice.size() << ")\n");
-            if (any_of(Slice,
-                       [&](Value *V) { return Candidate.isVectorized(V); })) {
+            if (any_of(Slice, [&](Value *V) { return isVectorized(V); })) {
               for (Value *L : Slice)
-                if (!Candidate.isVectorized(L))
+                if (!isVectorized(L))
                   SortedNonVectorized.push_back(cast<LoadInst>(L));
               continue;
             }
@@ -8969,7 +8944,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                         any_of(E->Scalars, [&, Slice = Slice](Value *V) {
                           if (isa<Constant>(V))
                             return false;
-                          if (Candidate.isVectorized(V))
+                          if (isVectorized(V))
                             return true;
                           const auto &Nodes =
                               Candidate.ValueToGatherNodes.at(V);
@@ -9070,7 +9045,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               for (unsigned I = 0, E = Slice.size(); I < E; I += VF) {
                 ArrayRef<Value *> SubSlice =
                     Slice.slice(I, std::min(VF, E - I));
-                if (Candidate.isVectorized(SubSlice.front()))
+                if (isVectorized(SubSlice.front()))
                   continue;
                 // Check if the subslice is to be-vectorized entry, which is not
                 // equal to entry.
@@ -9578,7 +9553,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
           if (!EI)
             return true;
           Value *Op = EI->getOperand(0);
-          if (Candidate.isVectorized(Op))
+          if (isVectorized(Op))
             return true;
           auto *OpI = dyn_cast<Instruction>(Op);
           return OpI && OpI->isTerminator();
@@ -9676,7 +9651,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return all_of(VL, [&](Value *V) {
         if (isa<PoisonValue>(V))
           return true;
-        return any_of(Candidate.getTreeEntries(V), [&](const TreeEntry *TE) {
+        return any_of(getTreeEntries(V), [&](const TreeEntry *TE) {
           return TE->Idx >= *Candidate.GatheredLoadsEntriesFirst;
         });
       });
@@ -11903,7 +11878,7 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
     // as cheap shuffles of the source vector.
     if (!I ||
         isa<ExtractElementInst, InsertElementInst, ShuffleVectorInst>(I) ||
-        I->getType()->isVoidTy() || Candidate.isVectorized(I) || isDeleted(I) ||
+        I->getType()->isVoidTy() || isVectorized(I) || isDeleted(I) ||
         (Candidate.UserIgnoreList && Candidate.UserIgnoreList->contains(I)))
       continue;
     // Scheduling new memory bundles in a to-be-versioned tree records extra
@@ -12088,7 +12063,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   const bool IsPHIWithLoop =
       S.getOpcode() == Instruction::PHI &&
       LI->getLoopFor(S.getMainOp()->getParent()) != nullptr;
-  for (TreeEntry *E : Candidate.getTreeEntries(S.getMainOp())) {
+  for (TreeEntry *E : getTreeEntries(S.getMainOp())) {
     if (E->isSame(VL)) {
       LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
                         << ".\n");
@@ -12097,8 +12072,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
     SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
     if (all_of(VL, [&](Value *V) {
           return isa<PoisonValue>(V) || Values.contains(V) ||
-                 (IsPHIWithLoop && isa<PHINode>(V) &&
-                  Candidate.isVectorized(V));
+                 (IsPHIWithLoop && isa<PHINode>(V) && isVectorized(V));
         })) {
       LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
       return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
@@ -12148,7 +12122,7 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
               return isa<ExtractElementInst>(U.get());
             }))
           continue;
-        if (Candidate.isVectorized(I))
+        if (isVectorized(I))
           Vectorized.clearBit(Idx);
         else if (!I->hasOneUser() &&
                  !areAllUsersVectorized(I, Candidate.UserIgnoreList))
@@ -12447,8 +12421,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     auto AddNode = [&](ArrayRef<Value *> Op, unsigned Idx) {
       InstructionsState S = getSameOpcode(Op, *TLI);
       if (S && (isa<LoadInst>(S.getMainOp()) ||
-                Candidate.getSameValuesTreeEntry(S.getMainOp(), Op,
-                                                 /*SameVF=*/true))) {
+                getSameValuesTreeEntry(S.getMainOp(), Op,
+                                       /*SameVF=*/true))) {
         // Build gather node for loads, they will be gathered later.
         TE->CombinedEntriesWithIndices.emplace_back(
             Candidate.VectorizableTree.size(), Idx == 0 ? 0 : Op1.size());
@@ -12596,10 +12570,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           ++CommonLen;
         }
         auto ValidateMergedBTCs = [&](unsigned StartDepth) -> bool {
-          unsigned EndDepth = std::min<unsigned>(
-              NewLoopNest.size(), Candidate.MergedLoopBTCs.size());
+          unsigned EndDepth =
+              std::min<unsigned>(NewLoopNest.size(), MergedLoopBTCs.size());
           for (unsigned D = StartDepth; D < EndDepth; ++D) {
-            const SCEV *Constraint = Candidate.MergedLoopBTCs[D];
+            const SCEV *Constraint = MergedLoopBTCs[D];
             if (!Constraint)
               continue;
             const SCEV *NewBTC = SE->getBackedgeTakenCount(NewLoopNest[D]);
@@ -12641,9 +12615,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
             BailOutToGather();
             return;
           }
-          if (Candidate.MergedLoopBTCs.size() <= CommonLen)
-            Candidate.MergedLoopBTCs.resize(CommonLen + 1, nullptr);
-          Candidate.MergedLoopBTCs[CommonLen] = BecA;
+          if (MergedLoopBTCs.size() <= CommonLen)
+            MergedLoopBTCs.resize(CommonLen + 1, nullptr);
+          MergedLoopBTCs[CommonLen] = BecA;
           Candidate.CurrentLoopNest.truncate(CommonLen);
         } else if (NewLoopNest.size() > Candidate.CurrentLoopNest.size()) {
           if (!ValidateMergedBTCs(Candidate.CurrentLoopNest.size())) {
@@ -13478,8 +13452,7 @@ bool BoUpSLP::areAllUsersVectorized(
     Instruction *I, const SmallDenseSet<Value *> *VectorizedVals) const {
   return (I->hasOneUse() && (!VectorizedVals || VectorizedVals->contains(I))) ||
          all_of(I->users(), [this](User *U) {
-           return Candidate.isVectorized(U) ||
-                  isVectorLikeInstWithConstOps(U) ||
+           return isVectorized(U) || isVectorLikeInstWithConstOps(U) ||
                   (isa<ExtractElementInst>(U) &&
                    Candidate.MustGather.contains(U));
          });
@@ -13548,7 +13521,7 @@ BoUpSLP::getFMulFusingUser(Instruction *I, bool InTree) const {
   if (getFusableFMulOperand(U, *TTI) != I ||
       (InTree &&
        ((Candidate.UserIgnoreList && Candidate.UserIgnoreList->contains(U)) ||
-        any_of(Candidate.getTreeEntries(U), [](const TreeEntry *TE) {
+        any_of(getTreeEntries(U), [](const TreeEntry *TE) {
           return TE->CombinedOp == TreeEntry::FMulAdd;
         }))))
     return {nullptr, InstructionCost::getInvalid()};
@@ -13556,6 +13529,12 @@ BoUpSLP::getFMulFusingUser(Instruction *I, bool InTree) const {
   InstructionCost FMACost =
       canConvertToFMA(U, InstructionsState(U, U), *DT, *DL, *TTI, *TLI, *this);
   return {FMACost.isValid() ? U : nullptr, FMACost};
+}
+
+bool BoUpSLP::isFusedVectorizedFAddSub(Instruction *U) const {
+  return any_of(getTreeEntries(U), [&](const TreeEntry *TE) {
+    return !DeletedNodes.contains(TE) && !TransformedToGatherNodes.contains(TE);
+  });
 }
 
 InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
@@ -13570,7 +13549,7 @@ InstructionCost BoUpSLP::getUnfusedFMulsPenalty(const TreeEntry &TE) const {
         (TE.hasCopyableElements() && TE.isCopyableElement(I)))
       continue;
     if (Instruction *U = getFMulFusingUser(I).first;
-        U && Candidate.isFusedVectorizedFAddSub(U))
+        U && isFusedVectorizedFAddSub(U))
       Penalty += getUnfusedBinOpCost(I, *TTI, *TLI, CostKind);
   }
   return Penalty;
@@ -13588,8 +13567,8 @@ bool BoUpSLP::bypassesInstCountCheck(InstructionCost TreeCost) const {
   PoorThroughputOpCache Cache;
   return any_of(Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &Ptr) {
     const TreeEntry &TE = *Ptr;
-    return TE.hasState() && !Candidate.DeletedNodes.contains(&TE) && !TE.isGather() &&
-           !Candidate.TransformedToGatherNodes.contains(&TE) &&
+    return TE.hasState() && !DeletedNodes.contains(&TE) && !TE.isGather() &&
+           !TransformedToGatherNodes.contains(&TE) &&
            TE.State != TreeEntry::CombinedVectorize &&
            isPoorThroughputOp(Opts, TE.getMainOp(), *TTI, *TLI, Cache,
                               CostKind);
@@ -13600,7 +13579,7 @@ bool BoUpSLP::collectGatherUserOps(
     const TreeEntry &E, SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const {
   UserOps.clear();
   for (const auto &TE :
-       make_filter_range(VectorizableTree, [&](const auto &TE) {
+       make_filter_range(Candidate.VectorizableTree, [&](const auto &TE) {
          return !DeletedNodes.contains(TE.get());
        })) {
     if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
@@ -13619,7 +13598,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
   for (const std::unique_ptr<TreeEntry> &Ptr : Candidate.VectorizableTree) {
     const TreeEntry &TE = *Ptr;
-    if (Candidate.DeletedNodes.contains(&TE))
+    if (DeletedNodes.contains(&TE))
       continue;
     // CombinedVectorize entries (e.g. the fmul child of an FMulAdd, or the
     // cmp child of a MinMax select) are absorbed into the parent on both
@@ -13634,7 +13613,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
     if (HasTreeLoop && Scale <= 1)
       continue;
     unsigned Count = 0;
-    if (TE.isGather() || Candidate.TransformedToGatherNodes.contains(&TE)) {
+    if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
       // Count extractelement scalars in gathers - they exist in the scalar
       // code regardless of vectorization. ExtractElement instructions
       // become free when the vector input is used directly.
@@ -13701,7 +13680,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
             // fmuladd. A vectorized fadd/fsub user lane already accounts for
             // the fusion.
             Instruction *U = getFMulFusingUser(I).first;
-            if (U && !Candidate.isFusedVectorizedFAddSub(U)) {
+            if (U && !isFusedVectorizedFAddSub(U)) {
               assert(Count > 0 && "Underflow in scalar inst count (fma)");
               --Count;
             }
@@ -13720,8 +13699,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   // with the multiplication node, the same way as the scalar fmas.
   auto IsFusedAlt = [&](const TreeEntry &TE) {
     if (!TE.hasState() || TE.State != TreeEntry::Vectorize ||
-        Candidate.DeletedNodes.contains(&TE) ||
-        Candidate.TransformedToGatherNodes.contains(&TE) ||
+        DeletedNodes.contains(&TE) || TransformedToGatherNodes.contains(&TE) ||
         !TE.isAltShuffle() || TE.hasReassocScalars() ||
         !TE.getMainOp()->getType()->isFloatingPointTy() ||
         !TE.getOperations().isAddSubLikeOp())
@@ -13748,7 +13726,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   SmallDenseMap<Value *, uint64_t, 4> GatherExtractSourceVecs;
   for (const std::unique_ptr<TreeEntry> &Ptr : Candidate.VectorizableTree) {
     const TreeEntry &TE = *Ptr;
-    if (Candidate.DeletedNodes.contains(&TE))
+    if (DeletedNodes.contains(&TE))
       continue;
     if (TE.State == TreeEntry::CombinedVectorize)
       continue;
@@ -13756,15 +13734,15 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
     if (HasTreeLoop && Scale <= 1)
       continue;
     unsigned Count = 0;
-    if (TE.isGather() || Candidate.TransformedToGatherNodes.contains(&TE)) {
+    if (TE.isGather() || TransformedToGatherNodes.contains(&TE)) {
       if (TE.hasState()) {
         if (const TreeEntry *E =
-                Candidate.getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
+                getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
             E && E != &TE && E->getVectorFactor() == TE.getVectorFactor())
           continue;
         SmallVector<Value *> RevScalars(TE.Scalars.rbegin(), TE.Scalars.rend());
         if (const TreeEntry *E =
-                Candidate.getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
+                getSameValuesTreeEntry(TE.getMainOp(), RevScalars);
             E && E->getVectorFactor() == TE.getVectorFactor()) {
           Total = SaturatingAdd(Total, Scale);
           continue;
@@ -13959,7 +13937,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     size_t Key = 1, Idx = 1;
     if (auto *Inst = dyn_cast<Instruction>(V);
         Inst && !isa<ExtractElementInst, LoadInst, CastInst>(V) &&
-        !isDeleted(Inst) && !Candidate.isVectorized(V)) {
+        !isDeleted(Inst) && !isVectorized(V)) {
       std::tie(Key, Idx) = generateKeySubkey(V, TLI, GenerateLoadsSubkey,
                                              /*AllowAlternate=*/false);
       ++NumInstructions;
@@ -14714,10 +14692,10 @@ void BoUpSLP::transformNodes() {
   };
   auto CheckForSameVectorNodes = [&](const TreeEntry &E) {
     if (E.hasState()) {
-      if (ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(E.getMainOp());
+      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(E.getMainOp());
           !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
             return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
-              ArrayRef<TreeEntry *> VTEs = Candidate.getTreeEntries(V);
+              ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
               return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
                 return is_contained(TEs, TE);
               });
@@ -14803,9 +14781,9 @@ void BoUpSLP::transformNodes() {
           ArrayRef<Value *> Slice = VL.slice(Cnt, SliceVF);
           // If any instruction is vectorized already - do not try again.
           // Reuse the existing node, if it fully matches the slice.
-          if ((Processed.test(Cnt) || Candidate.isVectorized(Slice.front())) &&
-              !Candidate.getSameValuesTreeEntry(Slice.front(), Slice,
-                                                /*SameVF=*/true))
+          if ((Processed.test(Cnt) || isVectorized(Slice.front())) &&
+              !getSameValuesTreeEntry(Slice.front(), Slice,
+                                      /*SameVF=*/true))
             continue;
           // Constant already handled effectively - skip.
           if (allConstant(Slice))
@@ -14908,7 +14886,7 @@ void BoUpSLP::transformNodes() {
           if (const auto *It = find_if(Slice, IsaPred<Instruction>);
               It != Slice.end()) {
             // If any instruction is vectorized already - do not try again.
-            SameTE = Candidate.getSameValuesTreeEntry(*It, Slice);
+            SameTE = getSameValuesTreeEntry(*It, Slice);
           }
           unsigned PrevSize = Candidate.VectorizableTree.size();
           [[maybe_unused]] unsigned PrevEntriesSize =
@@ -15286,15 +15264,14 @@ void BoUpSLP::transformNodes() {
         ((E.hasState() && E.getOpcode() == Instruction::Load) ||
          (!E.hasState() && any_of(make_isa_range<LoadInst>(E.Scalars),
                                   [&](LoadInst *LI) {
-                                    return !Candidate.isVectorized(LI) &&
-                                           !isDeleted(LI);
+                                    return !isVectorized(LI) && !isDeleted(LI);
                                   }))) &&
         !isSplat(E.Scalars)) {
       for (Value *V : E.Scalars) {
         auto *LI = dyn_cast<LoadInst>(V);
         if (!LI)
           continue;
-        if (isDeleted(LI) || Candidate.isVectorized(LI) || !LI->isSimple())
+        if (isDeleted(LI) || isVectorized(LI) || !LI->isSimple())
           continue;
         gatherPossiblyVectorizableLoads(
             *this, V, *DL, *SE, *TTI,
@@ -15729,8 +15706,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (DstSz > SrcSz)
           CastOpcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
         TTI::CastContextHint CCH = TTI::CastContextHint::None;
-        if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(V);
-            TEs.size() == 1)
+        if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(V); TEs.size() == 1)
           CCH = R.getCastContextHint(*TEs.front());
         return TTI.getCastInstrCost(
             CastOpcode, VectorType::get(ScalarTy, VecTy->getElementCount()),
@@ -15959,16 +15935,16 @@ public:
         auto *EE = cast<ExtractElementInst>(V);
         VecBase = EE->getVectorOperand();
         UniqueBases.insert(VecBase);
-        ArrayRef<TreeEntry *> VEs = R.Candidate.getTreeEntries(V);
+        ArrayRef<TreeEntry *> VEs = R.getTreeEntries(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
             any_of(VEs,
                    [&](const TreeEntry *TE) {
-                     return R.Candidate.DeletedNodes.contains(TE) ||
-                            R.Candidate.TransformedToGatherNodes.contains(TE);
+                     return R.DeletedNodes.contains(TE) ||
+                            R.TransformedToGatherNodes.contains(TE);
                    }) ||
             (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
-             !R.Candidate.isVectorized(EE) &&
+             !R.isVectorized(EE) &&
              count_if(E->Scalars, [&](Value *V) { return V == EE; }) !=
                  count_if(E->UserTreeIndex.UserTE->Scalars,
                           [&](Value *V) { return V == EE; })) ||
@@ -16235,7 +16211,7 @@ public:
     if (R.Candidate.UserIgnoreList &&
         (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
       for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
-        if (CheckedExtracts.insert(I).second && !R.Candidate.isVectorized(I) &&
+        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
             R.areAllUsersVectorized(I, &VectorizedVals))
           Cost -= isa<CastInst>(I)
                       ? TTI.getCastInstrCost(I->getOpcode(), I->getType(),
@@ -16396,8 +16372,7 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
     if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
             matchGatheredExtractedFields(TE.Scalars, *DL)) {
       Value *Src = std::get<0>(*Fields);
-      if (ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(Src);
-          !TEs.empty())
+      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(Src); !TEs.empty())
         return getCastContextHint(*TEs.front());
       if (isa<LoadInst>(Src))
         return TTI::CastContextHint::Normal;
@@ -16778,7 +16753,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
   const InstructionCost SpillsReloads =
       getVectorSpillReloadCost(E, ScalarTy, VecTy, FinalVecTy, CostKind);
-  if (E->isGather() || Candidate.TransformedToGatherNodes.contains(E)) {
+  if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
     if (isa<InsertElementInst, InsertValueInst>(VL[0]))
@@ -16873,13 +16848,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   for (unsigned I = 0; I < Sz; ++I) {
     if (isa<Instruction>(UniqueValues[I]) &&
         !E->isCopyableElement(UniqueValues[I]) &&
-        Candidate.getTreeEntries(UniqueValues[I]).front() == E)
+        getTreeEntries(UniqueValues[I]).front() == E)
       continue;
     UsedScalars.set(I);
   }
   auto GetCastContextHint = [&](Value *V) {
-    if (ArrayRef<TreeEntry *> OpTEs = Candidate.getTreeEntries(V);
-        OpTEs.size() == 1)
+    if (ArrayRef<TreeEntry *> OpTEs = getTreeEntries(V); OpTEs.size() == 1)
       return getCastContextHint(*OpTEs.front());
     InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI);
     if (SrcState && SrcState.getOpcode() == Instruction::Load &&
@@ -17035,7 +17009,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                          Instruction *VI) {
     InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this);
     Instruction *FMul = getFusableFMulOperand(VI, TTI);
-    if (!Cost.isValid() || !FMul || Candidate.isVectorized(FMul))
+    if (!Cost.isValid() || !FMul || isVectorized(FMul))
       return Cost;
     InstructionCost FMulCost = getUnfusedBinOpCost(FMul, TTI, *TLI, CostKind);
     return Cost > FMulCost ? Cost - FMulCost : InstructionCost(TTI::TCC_Free);
@@ -17047,7 +17021,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto [U, FMACost] = getFMulFusingUser(VI);
     if (!U)
       return InstructionCost::getInvalid();
-    if (Candidate.isFusedVectorizedFAddSub(U))
+    if (isFusedVectorizedFAddSub(U))
       return InstructionCost(TTI::TCC_Free);
     InstructionCost FAddCost = getUnfusedBinOpCost(U, TTI, *TLI, CostKind);
     return FMACost > FAddCost ? FMACost - FAddCost
@@ -17065,7 +17039,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Operands[I] = Op;
       }
       if (const TreeEntry *OpTE =
-              Candidate.getSameValuesTreeEntry(Operands.front(), Operands))
+              getSameValuesTreeEntry(Operands.front(), Operands))
         if (CountedOps.insert(OpTE).second &&
             !OpTE->ReuseShuffleIndices.empty())
           ScalarCost += TTI::TCC_Basic * (OpTE->ReuseShuffleIndices.size() -
@@ -17334,7 +17308,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       VecOpcode = Instruction::UIToFP;
     }
     const bool IsSExtBack = VecOpcode == Instruction::UIToFP &&
-                            SrcIt != MinBWs.end() && SrcIt->second.second;
+                            SrcIt != Candidate.MinBWs.end() && SrcIt->second.second;
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       assert(Idx == 0 && "Expected 0 index only");
       return TTI->getCastInstrCost(Opcode, VL0->getType(),
@@ -18895,8 +18869,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       // Vectorized calls, represented as vector intrinsics, do not impact spill
       // cost.
       if (const auto *CB = dyn_cast<CallBase>(&*PrevInstIt);
-          CB && !NoCallIntrinsicOrDoesNotReturn(CB) &&
-          !Candidate.isVectorized(CB)) {
+          CB && !NoCallIntrinsicOrDoesNotReturn(CB) && !isVectorized(CB)) {
         for (const Instruction *LastInst : LastInstsInRange)
           CheckedInstructions.try_emplace(LastInst, &*PrevInstIt, 0);
         return false;
@@ -18983,8 +18956,7 @@ InstructionCost BoUpSLP::getSpillCost() {
         continue;
       for (const Instruction &I : *BB) {
         const auto *CB = dyn_cast<CallBase>(&I);
-        if (!CB || NoCallIntrinsicOrDoesNotReturn(CB) ||
-            Candidate.isVectorized(CB))
+        if (!CB || NoCallIntrinsicOrDoesNotReturn(CB) || isVectorized(CB))
           continue;
         LoopBodyHasNonVecCall.try_emplace(L, true);
         return true;
@@ -19117,8 +19089,8 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
 
     // Find the real vector entry reused by this perfect-diamond gather.
-    const TreeEntry *SameTE = Candidate.getSameValuesTreeEntry(
-        LookupValue, Gather->Scalars, /*SameVF=*/true);
+    const TreeEntry *SameTE =
+        getSameValuesTreeEntry(LookupValue, Gather->Scalars, /*SameVF=*/true);
     if (!SameTE || SameTE == Gather || SameTE->State != TreeEntry::Vectorize ||
         ScalarOrPseudoEntries.contains(SameTE) || !SameTE->UserTreeIndex)
       return false;
@@ -19235,7 +19207,7 @@ InstructionCost BoUpSLP::getSpillCost() {
                        ->getIncomingBlock(Op->UserTreeIndex.EdgeIdx);
         OpLastInst = OpParent->getTerminator();
         for (Instruction *Inst : make_isa_range<Instruction>(Op->Scalars)) {
-          if (Candidate.isVectorized(Inst)) {
+          if (isVectorized(Inst)) {
             OpParent = Inst->getParent();
             OpLastInst = Inst;
             break;
@@ -19531,9 +19503,8 @@ void BoUpSLP::detectBooleanizedNodes() {
         (TE->UserTreeIndex.UserTE &&
          !IsSafeBoolUser(TE->UserTreeIndex.UserTE,
                          TE->UserTreeIndex.EdgeIdx)) ||
-        !all_of(TE->Scalars, [&](Value *V) {
-          return Candidate.getTreeEntries(V).size() == 1;
-        }))
+        !all_of(TE->Scalars,
+                [&](Value *V) { return getTreeEntries(V).size() == 1; }))
       continue;
     Type *WideTy = nullptr;
     bool Bail = false;
@@ -19608,7 +19579,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // The V-only-dependent part of the predicate. Same V is commonly seen in
   // multiple TEs (shared scalars), so cache the result across calls.
   // DeletedNodes is read-only during this cost loop, so caching is safe.
-  const size_t NumVectScalars = Candidate.ScalarToTreeEntries.size() + 1;
+  const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   SmallDenseMap<Value *, bool> ExternalUseVCache;
   auto IsExternallyUsedV = [&](Value *V) {
     auto [It, Inserted] = ExternalUseVCache.try_emplace(V);
@@ -19632,17 +19603,15 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
           return false;
         if (match(U, m_Store(m_Specific(I), m_Value())))
           return false;
-        ArrayRef<TreeEntry *> Entries = Candidate.getTreeEntries(U);
+        ArrayRef<TreeEntry *> Entries = getTreeEntries(U);
         if (Entries.empty() && !Candidate.MustGather.contains(U))
           return true;
-        if (any_of(Entries, [&](TreeEntry *TE) {
-              return Candidate.DeletedNodes.contains(TE);
-            }))
+        if (any_of(Entries,
+                   [&](TreeEntry *TE) { return DeletedNodes.contains(TE); }))
           return true;
-        return any_of(Candidate.ValueToGatherNodes.lookup(U),
-                      [&](const TreeEntry *TE) {
-                        return Candidate.DeletedNodes.contains(TE);
-                      });
+        return any_of(
+            Candidate.ValueToGatherNodes.lookup(U),
+            [&](const TreeEntry *TE) { return DeletedNodes.contains(TE); });
       });
     }
     It->second = Res;
@@ -19674,7 +19643,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     if (TE.hasState() &&
         (TE.isGather() || TE.State == TreeEntry::SplitVectorize)) {
       if (const TreeEntry *E =
-              Candidate.getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
+              getSameValuesTreeEntry(TE.getMainOp(), TE.Scalars);
           E && E->getVectorFactor() == TE.getVectorFactor()) {
         // Some gather nodes might be absolutely the same as some vectorizable
         // nodes after reordering, need to handle it.
@@ -19812,7 +19781,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         };
     for (const std::unique_ptr<TreeEntry> &Ptr : Candidate.VectorizableTree) {
       TreeEntry &TE = *Ptr;
-      if (Candidate.DeletedNodes.contains(&TE))
+      if (DeletedNodes.contains(&TE))
         continue;
       // Combined subnodes are not costed on their own (their cost is 0), but
       // must be included into the ancestors' subtree node lists, so that they
@@ -19830,7 +19799,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4> Visited;
     for (TreeEntry *TE :
          make_filter_range(GatheredLoadsNodes, [&](TreeEntry *TE) {
-           return !Candidate.DeletedNodes.contains(TE);
+           return !DeletedNodes.contains(TE);
          })) {
       InstructionCost TotalCost = std::get<0>(SubtreeCosts[TE->Idx]);
       InstructionCost Cost = std::get<1>(SubtreeCosts[TE->Idx]);
@@ -19838,7 +19807,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         const auto Nodes = Candidate.ValueToGatherNodes.lookup(V);
         for (const TreeEntry *BVTE :
              make_filter_range(Nodes, [&](const TreeEntry *BVTE) {
-               return !Candidate.DeletedNodes.contains(BVTE);
+               return !DeletedNodes.contains(BVTE);
              }))
           UpdateParentNodes(BVTE, TE, TotalCost, Cost, Visited,
                             /*AddToList=*/false);
@@ -19864,7 +19833,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       const auto Nodes = Candidate.ValueToGatherNodes.lookup(V);
       for (const TreeEntry *BVE :
            make_filter_range(Nodes, [&](const TreeEntry *BVE) {
-             return !Candidate.DeletedNodes.contains(BVE);
+             return !DeletedNodes.contains(BVE);
            })) {
         DemandedElts.setBit(Pos);
         ValuesToInsert.try_emplace(BVE).first->second.push_back(V);
@@ -19919,11 +19888,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         continue;
       // Too many users - the scalar is extracted anyway.
       if (I->hasNUsesOrMore(UsesLimit) || any_of(I->users(), [&](User *U) {
-            return none_of(
-                Candidate.getTreeEntries(U), [&](const TreeEntry *UseTE) {
-                  return !Candidate.DeletedNodes.contains(UseTE) &&
-                         !Candidate.TransformedToGatherNodes.contains(UseTE);
-                });
+            return none_of(getTreeEntries(U), [&](const TreeEntry *UseTE) {
+              return !DeletedNodes.contains(UseTE) &&
+                     !TransformedToGatherNodes.contains(UseTE);
+            });
           }))
         ExtractElts.setBit(TE->findLaneForValue(I));
     }
@@ -19952,11 +19920,11 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       CurrentGathersCost += NodesCosts.lookup(BVE);
     KeepCost += CurrentGathersCost;
     // Re-cost the gather nodes with the subtree tentatively deleted.
-    Candidate.DeletedNodes.insert(TE);
+    DeletedNodes.insert(TE);
     SmallVector<TreeEntry *> TempDeleted;
     for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx])) {
       TreeEntry *Child = Candidate.VectorizableTree[Idx].get();
-      if (Candidate.DeletedNodes.insert(Child).second)
+      if (DeletedNodes.insert(Child).second)
         TempDeleted.push_back(Child);
     }
     DroppedGathersCost = 0;
@@ -19965,9 +19933,9 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
            return NodesCosts.contains(P.first);
          }))
       DroppedGathersCost += RecostEntry(BVE);
-    Candidate.DeletedNodes.erase(TE);
+    DeletedNodes.erase(TE);
     for (TreeEntry *Child : TempDeleted)
-      Candidate.DeletedNodes.erase(Child);
+      DeletedNodes.erase(Child);
     // On a cost tie prefer dropping the subtree: the reusing gathers
     // materialize the scalars at the same price with fewer instructions.
     return KeepCost < DroppedGathersCost;
@@ -19976,18 +19944,18 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // remaining subtrees are checked against the costs with it deleted.
   auto SyncGatherCosts = [&](const ValuesToInsertTy &ValuesToInsert) {
     for (const auto &[BVE, _] : ValuesToInsert)
-      if (!Candidate.DeletedNodes.contains(BVE))
+      if (!DeletedNodes.contains(BVE))
         NodesCosts[BVE] = RecostEntry(BVE);
   };
   // Deletes the subtree. The per-node costs are erased eagerly only where the
   // total is recomputed from them right after the deletion.
   auto DeleteSubtree = [&](TreeEntry *TE, bool EraseCosts) {
-    Candidate.DeletedNodes.insert(TE);
+    DeletedNodes.insert(TE);
     if (EraseCosts)
       NodesCosts.erase(TE);
     for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx])) {
       TreeEntry *Child = Candidate.VectorizableTree[Idx].get();
-      Candidate.DeletedNodes.insert(Child);
+      DeletedNodes.insert(Child);
       if (EraseCosts)
         NodesCosts.erase(Child);
     }
@@ -19996,7 +19964,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   auto DropDeadGatheredLoads = [&](bool EraseCosts) {
     for (TreeEntry *TE :
          make_filter_range(GatheredLoadsNodes, [&](TreeEntry *TE) {
-           return !Candidate.DeletedNodes.contains(TE);
+           return !DeletedNodes.contains(TE);
          })) {
       ValuesToInsertTy ValuesToInsert;
       if (!FindDemandedElts(TE, ValuesToInsert).isZero())
@@ -20009,9 +19977,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   auto DropUnprofitableSplatSubtrees = [&](bool EraseCosts) {
     bool Dropped = false;
     for (TreeEntry *TE : make_filter_range(
-             Candidate.SplatGatheredScalarsRoots, [&](TreeEntry *TE) {
-               return !Candidate.DeletedNodes.contains(TE);
-             })) {
+             Candidate.SplatGatheredScalarsRoots,
+             [&](TreeEntry *TE) { return !DeletedNodes.contains(TE); })) {
       ValuesToInsertTy ValuesToInsert;
       InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
       if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
@@ -20073,13 +20040,12 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // priced from them if the trimming is reverted.
   const SmallDenseMap<const TreeEntry *, InstructionCost> OrigNodesCosts =
       NodesCosts;
-  const SmallPtrSet<const TreeEntry *, 8> OrigDeletedNodes =
-      Candidate.DeletedNodes;
+  const SmallPtrSet<const TreeEntry *, 8> OrigDeletedNodes = DeletedNodes;
   bool Changed = false;
   bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
-    if (TE->isGather() || TE->Idx == 0 || Candidate.DeletedNodes.contains(TE) ||
+    if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
         isa<StructType>(getValueType(TE->Scalars.front(), Opts.slp_revec)) ||
         // Splat subtree roots are decided by the keep/drop check below: their
         // scalars are materialized in the reusing splat gathers, not in a
@@ -20123,11 +20089,11 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       Worklist.pop();
       continue;
     }
-    if (!Candidate.TransformedToGatherNodes.empty()) {
+    if (!TransformedToGatherNodes.empty()) {
       for (unsigned Idx : std::get<2>(Worklist.top().second)) {
-        auto It = Candidate.TransformedToGatherNodes.find(
+        auto It = TransformedToGatherNodes.find(
             Candidate.VectorizableTree[Idx].get());
-        if (It != Candidate.TransformedToGatherNodes.end()) {
+        if (It != TransformedToGatherNodes.end()) {
           TotalSubtreeCost -= std::get<0>(SubtreeCosts[Idx]);
           SubtreeCost -= std::get<1>(SubtreeCosts[Idx]);
           TotalSubtreeCost += It->second;
@@ -20179,8 +20145,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     if ((!TE->hasState() || !TE->isAltShuffle()) &&
         all_of(TE->Scalars, [&](Value *V) {
           return (TE->hasCopyableElements() && TE->isCopyableElement(V)) ||
-                 isConstant(V) || isGathered(V) ||
-                 Candidate.getTreeEntries(V).size() > 1;
+                 isConstant(V) || isGathered(V) || getTreeEntries(V).size() > 1;
         }))
       GatherCost *= 2;
     // The fmuls, priced as fused into their vectorized fadd/fsub users, stay
@@ -20233,17 +20198,17 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
                         << std::get<0>(Worklist.top().second)
                         << " and gather cost " << GatherCost << ".\n");
       if (TE->UserTreeIndex) {
-        Candidate.TransformedToGatherNodes.try_emplace(TE, GatherCost);
+        TransformedToGatherNodes.try_emplace(TE, GatherCost);
         NodesCosts.erase(TE);
       } else {
-        Candidate.DeletedNodes.insert(TE);
-        Candidate.TransformedToGatherNodes.erase(TE);
+        DeletedNodes.insert(TE);
+        TransformedToGatherNodes.erase(TE);
         NodesCosts.erase(TE);
       }
       for (unsigned Idx : Nodes) {
         TreeEntry &ChildTE = *Candidate.VectorizableTree[Idx];
-        Candidate.DeletedNodes.insert(&ChildTE);
-        Candidate.TransformedToGatherNodes.erase(&ChildTE);
+        DeletedNodes.insert(&ChildTE);
+        TransformedToGatherNodes.erase(&ChildTE);
         NodesCosts.erase(&ChildTE);
       }
       Changed = true;
@@ -20279,8 +20244,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       return C;
     };
     auto DropReusedSubtree = [&](TreeEntry *TE, bool DeadOnly) {
-      if (Candidate.DeletedNodes.contains(TE) ||
-          Candidate.TransformedToGatherNodes.contains(TE))
+      if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
         return false;
       ValuesToInsertTy ValuesToInsert;
       const bool IsDead = FindDemandedElts(TE, ValuesToInsert).isZero();
@@ -20336,9 +20300,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     // unprofitable ones instead of letting them reject the whole tree.
     InstructionCost TotalCost = std::get<1>(SubtreeCosts.front());
     for (TreeEntry *TE : make_filter_range(
-             Candidate.SplatGatheredScalarsRoots, [&](TreeEntry *TE) {
-               return !Candidate.DeletedNodes.contains(TE);
-             })) {
+             Candidate.SplatGatheredScalarsRoots,
+             [&](TreeEntry *TE) { return !DeletedNodes.contains(TE); })) {
       ValuesToInsertTy ValuesToInsert;
       InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
       if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
@@ -20365,9 +20328,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // while the surviving gathers can materialize the splatted scalars
   // directly. Drop the subtree if it does not pay off.
   for (TreeEntry *TE : make_filter_range(
-           Candidate.SplatGatheredScalarsRoots, [&](TreeEntry *TE) {
-             return !Candidate.DeletedNodes.contains(TE);
-           })) {
+           Candidate.SplatGatheredScalarsRoots,
+           [&](TreeEntry *TE) { return !DeletedNodes.contains(TE); })) {
     ValuesToInsertTy ValuesToInsert;
     InstructionCost CurrentGathersCost, DroppedGathersCost;
     if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
@@ -20384,8 +20346,8 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // extracts are cheaper than gathers.
   for (TreeEntry *TE :
        make_filter_range(GatheredLoadsNodes, [&](TreeEntry *TE) {
-         return !Candidate.DeletedNodes.contains(TE) &&
-                !Candidate.TransformedToGatherNodes.contains(TE);
+         return !DeletedNodes.contains(TE) &&
+                !TransformedToGatherNodes.contains(TE);
        })) {
     SubtreesToDelete.insert(TE);
     // All loads are removed from gathered? Need to delete the subtree.
@@ -20412,21 +20374,20 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   for (std::unique_ptr<TreeEntry> &TE : Candidate.VectorizableTree) {
     if (TE->UserTreeIndex &&
         SubtreesToDelete.contains(TE->UserTreeIndex.UserTE)) {
-      Candidate.DeletedNodes.insert(TE.get());
+      DeletedNodes.insert(TE.get());
       NodesCosts.erase(TE.get());
       SubtreesToDelete.insert(TE.get());
     }
     if (SubtreesToDelete.contains(TE.get()))
-      Candidate.DeletedNodes.insert(TE.get());
+      DeletedNodes.insert(TE.get());
   }
 
   for (std::unique_ptr<TreeEntry> &TE : Candidate.VectorizableTree) {
-    if (!TE->UserTreeIndex &&
-        Candidate.TransformedToGatherNodes.contains(TE.get())) {
+    if (!TE->UserTreeIndex && TransformedToGatherNodes.contains(TE.get())) {
       assert(TE->getOpcode() == Instruction::Load && "Expected load only.");
       continue;
     }
-    if (Candidate.DeletedNodes.contains(TE.get()))
+    if (DeletedNodes.contains(TE.get()))
       continue;
     // Gather costs depend on the set of vectorized nodes available for
     // reuse, which changes during trimming, so recalculate them for all
@@ -20451,25 +20412,25 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   // trimming fold in the gathered loads they reuse, and the gathers inside a
   // subtree change their price once their reuse sources are dropped.
   auto ComputeRestoredCost = [&]() {
-    Candidate.DeletedNodes = OrigDeletedNodes;
-    Candidate.TransformedToGatherNodes.clear();
+    DeletedNodes = OrigDeletedNodes;
+    TransformedToGatherNodes.clear();
     NodesCosts = OrigNodesCosts;
     if (!Candidate.SplatGatheredScalarsRoots.empty()) {
       for (const std::unique_ptr<TreeEntry> &TE : Candidate.VectorizableTree)
-        if (TE->isGather() && !Candidate.DeletedNodes.contains(TE.get()))
+        if (TE->isGather() && !DeletedNodes.contains(TE.get()))
           NodesCosts[TE.get()] = RecostEntry(TE.get());
       DropUnprofitableSplatSubtrees(/*EraseCosts=*/false);
       // Dropping the splat subtrees may leave the gathered loads subtrees
       // built for them without surviving gather users.
       DropDeadGatheredLoads(/*EraseCosts=*/false);
-      for (const TreeEntry *TE : Candidate.DeletedNodes)
+      for (const TreeEntry *TE : DeletedNodes)
         NodesCosts.erase(TE);
     }
     return SumNodesCosts();
   };
   const InstructionCost TrimmedCost = NewCost + LoadsExtractsCost;
-  auto TrimmedDeletedNodes = Candidate.DeletedNodes;
-  auto TrimmedTransformedNodes = Candidate.TransformedToGatherNodes;
+  auto TrimmedDeletedNodes = DeletedNodes;
+  auto TrimmedTransformedNodes = TransformedToGatherNodes;
   auto TrimmedNodesCosts = NodesCosts;
   const InstructionCost RestoredCost = ComputeRestoredCost();
   LLVM_DEBUG(dbgs() << "SLP: Trimmed tree cost = " << TrimmedCost
@@ -20479,16 +20440,15 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   if (Reverted) {
     NewCost = RestoredCost;
   } else {
-    Candidate.DeletedNodes = std::move(TrimmedDeletedNodes);
-    Candidate.TransformedToGatherNodes = std::move(TrimmedTransformedNodes);
+    DeletedNodes = std::move(TrimmedDeletedNodes);
+    TransformedToGatherNodes = std::move(TrimmedTransformedNodes);
     NodesCosts = std::move(TrimmedNodesCosts);
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
     if (Candidate.VectorizableTree.size() >= 2 &&
         Candidate.getRootNode().hasState() &&
         Candidate.getRootNode().getOpcode() == Instruction::InsertElement &&
-        Candidate.TransformedToGatherNodes.contains(
-            Candidate.VectorizableTree[1].get()))
+        TransformedToGatherNodes.contains(Candidate.VectorizableTree[1].get()))
       return InstructionCost::getInvalid();
     if (Candidate.VectorizableTree.size() >= 3 &&
         Candidate.getRootNode().hasState() &&
@@ -20498,8 +20458,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         (Candidate.VectorizableTree[1]->getOpcode() == Instruction::ZExt ||
          Candidate.VectorizableTree[1]->getOpcode() == Instruction::SExt ||
          Candidate.VectorizableTree[1]->getOpcode() == Instruction::Trunc) &&
-        Candidate.TransformedToGatherNodes.contains(
-            Candidate.VectorizableTree[2].get()))
+        TransformedToGatherNodes.contains(Candidate.VectorizableTree[2].get()))
       return InstructionCost::getInvalid();
   }
   TrimAuxSubtreesForInstCount(NewCost, /*UseCurrentNodeCosts=*/true);
@@ -20623,7 +20582,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // external uses.
   constexpr unsigned CostLimit = 100;
   if (Cost >= -getCostThreshold() + CostLimit &&
-      (Candidate.VectorizableTree.size() - Candidate.DeletedNodes.size()) *
+      (Candidate.VectorizableTree.size() - DeletedNodes.size()) *
               Candidate.getRootNode().getVectorFactor() <
           CostLimit)
     return Cost;
@@ -20784,8 +20743,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                 return areTwoInsertFromSameBuildVector(
                     VU, VecInsert, [this](InsertElementInst *II) -> Value * {
                       Value *Op0 = II->getOperand(0);
-                      if (Candidate.isVectorized(II) &&
-                          !Candidate.isVectorized(Op0))
+                      if (isVectorized(II) && !isVectorized(Op0))
                         return nullptr;
                       return Op0;
                     });
@@ -20907,7 +20865,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       auto *Inst = cast<Instruction>(EU.Scalar);
       InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
       auto OperandIsScalar = [&](Value *V) {
-        if (!Candidate.isVectorized(V)) {
+        if (!isVectorized(V)) {
           // Some extractelements might be not vectorized, but
           // transformed into shuffle and removed from the function,
           // consider it here.
@@ -20925,7 +20883,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         if (auto *Op = dyn_cast<Instruction>(CI->getOperand(0));
             Op && all_of(Op->operands(), OperandIsScalar)) {
           InstructionCost OpCost =
-              (Candidate.isVectorized(Op) && !ValueToExtUses->contains(Op))
+              (isVectorized(Op) && !ValueToExtUses->contains(Op))
                   ? TTI->getInstructionCost(Op, CostKind)
                   : 0;
           if (ScalarCost + OpCost <= ExtraCost) {
@@ -20952,7 +20910,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                               PHIUser->getParent() != Candidate.getRootNode()
                                                           .getMainOp()
                                                           ->getParent()) &&
-                             !Candidate.isVectorized(U);
+                             !isVectorized(U);
                     }) &&
             count_if(Entry->Scalars, [&](Value *V) {
               return ValueToExtUses->contains(V);
@@ -21078,10 +21036,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // instead of extractelement.
   for (Value *V : ScalarOpsFromCasts) {
     Candidate.ExternalUsesAsOriginalScalar.insert(V);
-    if (ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(V); !TEs.empty()) {
+    if (ArrayRef<TreeEntry *> TEs = getTreeEntries(V); !TEs.empty()) {
       const auto *It = find_if_not(TEs, [&](TreeEntry *TE) {
-        return Candidate.TransformedToGatherNodes.contains(TE) ||
-               Candidate.DeletedNodes.contains(TE);
+        return TransformedToGatherNodes.contains(TE) ||
+               DeletedNodes.contains(TE);
       });
       if (It != TEs.end()) {
         const TreeEntry *UserTE = *It;
@@ -21646,22 +21604,20 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     SmallPtrSet<const TreeEntry *, 4> VToTEs;
     SmallVector<const TreeEntry *> GatherNodes(
         Candidate.ValueToGatherNodes.lookup(V).takeVector());
-    if (Candidate.TransformedToGatherNodes.contains(TE)) {
+    if (TransformedToGatherNodes.contains(TE)) {
       auto IsLiveUserGather = [&](TreeEntry *E) {
-        return TE != E && Candidate.TransformedToGatherNodes.contains(E) &&
+        return TE != E && TransformedToGatherNodes.contains(E) &&
                E->UserTreeIndex && !E->UserTreeIndex.UserTE->isGather();
       };
       for (TreeEntry *E : make_filter_range(Candidate.getSplitTreeEntries(V),
                                             IsLiveUserGather))
         GatherNodes.push_back(E);
       for (TreeEntry *E :
-           make_filter_range(Candidate.getTreeEntries(V), IsLiveUserGather))
+           make_filter_range(getTreeEntries(V), IsLiveUserGather))
         GatherNodes.push_back(E);
-    } else if (const TreeEntry *E =
-                   Candidate.getSameValuesTreeEntry(V, TE->Scalars);
+    } else if (const TreeEntry *E = getSameValuesTreeEntry(V, TE->Scalars);
                E && !TEUserNeedsEmitFirst &&
-               Candidate.TransformedToGatherNodes.contains(E) &&
-               E->UserTreeIndex &&
+               TransformedToGatherNodes.contains(E) && E->UserTreeIndex &&
                E->UserTreeIndex.UserTE == TE->UserTreeIndex.UserTE &&
                !E->UserTreeIndex.UserTE->isGather()) {
       // Regular gathers reuse only perfectly matched transformed nodes of the
@@ -21672,7 +21628,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     for (const TreeEntry *TEPtr :
          make_filter_range(GatherNodes, [&](const TreeEntry *TEPtr) {
            return TEPtr != TE && TEPtr->Idx != 0 &&
-                  !Candidate.DeletedNodes.contains(TEPtr);
+                  !DeletedNodes.contains(TEPtr);
          })) {
       assert(any_of(TEPtr->Scalars,
                     [&](Value *V) { return GatheredScalars.contains(V); }) &&
@@ -21759,8 +21715,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         !VTEs.empty()) {
       const auto *It = find_if(VTEs, [&](const TreeEntry *MTE) {
         return MTE != TE && MTE != TEUseEI.UserTE &&
-               !Candidate.DeletedNodes.contains(MTE) &&
-               !Candidate.TransformedToGatherNodes.contains(MTE);
+               !DeletedNodes.contains(MTE) &&
+               !TransformedToGatherNodes.contains(MTE);
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
@@ -21776,11 +21732,10 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         VToTEs.insert(VTE);
       }
     }
-    if (ArrayRef<TreeEntry *> VTEs = Candidate.getTreeEntries(V);
-        !VTEs.empty()) {
+    if (ArrayRef<TreeEntry *> VTEs = getTreeEntries(V); !VTEs.empty()) {
       const auto *It = find_if(VTEs, [&, MainTE = TE](const TreeEntry *TE) {
-        return TE != MainTE && !Candidate.DeletedNodes.contains(TE) &&
-               !Candidate.TransformedToGatherNodes.contains(TE);
+        return TE != MainTE && !DeletedNodes.contains(TE) &&
+               !TransformedToGatherNodes.contains(TE);
       });
       if (It != VTEs.end()) {
         const TreeEntry *VTE = *It;
@@ -21990,7 +21945,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     if (!Inserted)
       return It->second;
     auto *I = dyn_cast<Instruction>(V);
-    bool Res = I && !IsSplatOrUndefs && !Candidate.isVectorized(I) &&
+    bool Res = I && !IsSplatOrUndefs && !isVectorized(I) &&
                !isVectorLikeInstWithConstOps(I) &&
                !areAllUsersVectorized(I, Candidate.UserIgnoreList) &&
                isSimple(I);
@@ -22263,7 +22218,7 @@ BoUpSLP::isGatherShuffledEntry(
        (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
        isSplat(TE->Scalars) ||
        (TE->hasState() &&
-        Candidate.getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars))))
+        getSameValuesTreeEntry(TE->getMainOp(), TE->Scalars))))
     return {};
   unsigned SliceSize = getPartNumElems(PWSz, NumParts);
   SmallVector<std::optional<TTI::ShuffleKind>> Res;
@@ -22463,8 +22418,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   if (E->State == TreeEntry::SplitVectorize) {
     Res = FindLastInst();
-    if (ArrayRef<TreeEntry *> Entries = Candidate.getTreeEntries(Res);
-        !Entries.empty()) {
+    if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
       for (auto *E : Entries) {
         auto *I = dyn_cast_if_present<Instruction>(E->VectorizedValue);
         if (!I)
@@ -22652,7 +22606,7 @@ Value *BoUpSLP::gather(
   for (int I = 0, E = VL.size(); I < E; ++I) {
     if (auto *Inst = dyn_cast<Instruction>(VL[I]))
       if ((CheckPredecessor(Inst->getParent(), Builder.GetInsertBlock()) ||
-           Candidate.isVectorized(Inst) ||
+           isVectorized(Inst) ||
            (L && (!Root || L->isLoopInvariant(Root)) && L->contains(Inst))) &&
           PostponedIndices.insert(I).second)
         PostponedInsts.emplace_back(Inst, I);
@@ -22673,7 +22627,7 @@ Value *BoUpSLP::gather(
           isa_and_nonnull<SExtInst, ZExtInst>(CI)) {
         Value *Op = CI->getOperand(0);
         if (auto *IOp = dyn_cast<Instruction>(Op);
-            !IOp || !(isDeleted(IOp) || Candidate.isVectorized(IOp)))
+            !IOp || !(isDeleted(IOp) || isVectorized(IOp)))
           V = Op;
       }
       Scalar = Builder.CreateIntCast(
@@ -22699,10 +22653,10 @@ Value *BoUpSLP::gather(
     CSEBlocks.insert(InsElt->getParent());
     // Add to our 'need-to-extract' list.
     if (isa<Instruction>(V)) {
-      ArrayRef<TreeEntry *> Entries = Candidate.getTreeEntries(V);
+      ArrayRef<TreeEntry *> Entries = getTreeEntries(V);
       const auto *It = find_if(Entries, [&](const TreeEntry *E) {
-        return !Candidate.TransformedToGatherNodes.contains(E) &&
-               !Candidate.DeletedNodes.contains(E);
+        return !TransformedToGatherNodes.contains(E) &&
+               !DeletedNodes.contains(E);
       });
       if (It != Entries.end()) {
         // Find which lane we need to extract.
@@ -22993,8 +22947,7 @@ public:
         continue;
       auto *EI = cast<ExtractElementInst>(VL[I]);
       VecBase = EI->getVectorOperand();
-      if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecBase);
-          !TEs.empty())
+      if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecBase); !TEs.empty())
         VecBase = TEs.front()->VectorizedValue;
       assert(VecBase && "Expected vectorized value.");
       UniqueBases.insert(VecBase);
@@ -23003,21 +22956,19 @@ public:
       if (!EI->hasOneUse() ||
           R.Candidate.ExternalUsesAsOriginalScalar.contains(EI) ||
           (E->UserTreeIndex && E->UserTreeIndex.EdgeIdx == UINT_MAX &&
-           !R.Candidate.isVectorized(EI) &&
+           !R.isVectorized(EI) &&
            count_if(E->Scalars, [&](Value *V) { return V == EI; }) !=
                count_if(E->UserTreeIndex.UserTE->Scalars,
                         [&](Value *V) { return V == EI; })) ||
           (NumParts != 1 && count(VL, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
-            ArrayRef<TreeEntry *> UTEs = R.Candidate.getTreeEntries(U);
+            ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
-                   any_of(
-                       UTEs,
-                       [&](const TreeEntry *TE) {
-                         return R.Candidate.DeletedNodes.contains(TE) ||
-                                R.Candidate.TransformedToGatherNodes.contains(
-                                    TE);
-                       }) ||
+                   any_of(UTEs,
+                          [&](const TreeEntry *TE) {
+                            return R.DeletedNodes.contains(TE) ||
+                                   R.TransformedToGatherNodes.contains(TE);
+                          }) ||
                    (isa<GetElementPtrInst>(U) &&
                     !R.areAllUsersVectorized(cast<Instruction>(U))) ||
                    (!UTEs.empty() &&
@@ -23061,7 +23012,7 @@ public:
               return S;
             Value *VecOp =
                 cast<ExtractElementInst>(std::get<0>(D))->getVectorOperand();
-            if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecOp);
+            if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecOp);
                 !TEs.empty())
               VecOp = TEs.front()->VectorizedValue;
             assert(VecOp && "Expected vectorized value.");
@@ -23073,8 +23024,7 @@ public:
              return std::get<1>(P) != PoisonMaskElem;
            })) {
         Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
-        if (ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(VecOp);
-            !TEs.empty())
+        if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(VecOp); !TEs.empty())
           VecOp = TEs.front()->VectorizedValue;
         assert(VecOp && "Expected vectorized value.");
         VecOp = castToScalarTyElem(VecOp);
@@ -23278,10 +23228,10 @@ public:
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
       // A vectorized source scalar is erased; extract it for the bitcast.
-      ArrayRef<TreeEntry *> TEs = R.Candidate.getTreeEntries(Src);
+      ArrayRef<TreeEntry *> TEs = R.getTreeEntries(Src);
       const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
-        return R.Candidate.TransformedToGatherNodes.contains(TE) ||
-               R.Candidate.DeletedNodes.contains(TE);
+        return R.TransformedToGatherNodes.contains(TE) ||
+               R.DeletedNodes.contains(TE);
       });
       if (It != TEs.end())
         R.Candidate.ExternalUses.emplace_back(Src, I, **It,
@@ -23433,7 +23383,7 @@ std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
 template <typename BVTy, typename ResTy, typename... Args>
 ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                   Args &...Params) {
-  assert((E->isGather() || Candidate.TransformedToGatherNodes.contains(E)) &&
+  assert((E->isGather() || TransformedToGatherNodes.contains(E)) &&
          "Expected gather node.");
   unsigned VF = E->getVectorFactor();
 
@@ -23443,7 +23393,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
       E->CombinedEntriesWithIndices.size());
   if (E->State == TreeEntry::SplitVectorize &&
-      Candidate.TransformedToGatherNodes.contains(E)) {
+      TransformedToGatherNodes.contains(E)) {
     SubVectors.clear();
   } else {
     // Clear values, to be replaced by insertvector instructions.
@@ -23558,16 +23508,16 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
            make_filter_range(enumerate(ExtractMask), [](const auto &P) {
              return P.value() != PoisonMaskElem;
            })) {
-        if (ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(
-                cast<ExtractElementInst>(StoredGS[P.index()])
-                    ->getVectorOperand());
+        if (ArrayRef<TreeEntry *> TEs =
+                getTreeEntries(cast<ExtractElementInst>(StoredGS[P.index()])
+                                   ->getVectorOperand());
             !TEs.empty())
           ExtractEntries.append(TEs.begin(), TEs.end());
       }
       if (std::optional<ResTy> Delayed =
               ShuffleBuilder.needToDelay(E, ExtractEntries)) {
         // Delay emission of gathers which are not ready yet.
-        Candidate.PostponedGathers.insert(E);
+        PostponedGathers.insert(E);
         // Postpone gather emission, will be emitted after the end of the
         // process to keep correct order.
         return *Delayed;
@@ -23592,10 +23542,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         (((E->hasState() && E->getOpcode() == Instruction::Load) ||
           any_of(E->Scalars, IsaPred<LoadInst>)) &&
          any_of(make_isa_range<LoadInst>(E->Scalars),
-                [this](LoadInst *LI) { return Candidate.isVectorized(LI); })) ||
+                [this](LoadInst *LI) { return isVectorized(LI); })) ||
         (E->hasState() && E->isAltShuffle()) ||
-        all_of(E->Scalars,
-               [this](Value *V) { return Candidate.isVectorized(V); }) ||
+        all_of(E->Scalars, [this](Value *V) { return isVectorized(V); }) ||
         isSplat(E->Scalars) ||
         (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2)) {
       GatherShuffles = isGatherShuffledEntry(E, GatheredScalars, Mask, Entries,
@@ -23613,7 +23562,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       if (std::optional<ResTy> Delayed =
               ShuffleBuilder.needToDelay(E, Entries)) {
         // Delay emission of gathers which are not ready yet.
-        Candidate.PostponedGathers.insert(E);
+        PostponedGathers.insert(E);
         // Postpone gather emission, will be emitted after the end of the
         // process to keep correct order.
         return *Delayed;
@@ -23747,7 +23696,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       // non-poisonous, or by freezing the incoming scalar value first.
       auto *It = find_if(Scalars, [this, E](Value *V) {
         return !isa<UndefValue>(V) &&
-               (Candidate.isVectorized(V) || isGuaranteedNotToBePoison(V, AC) ||
+               (isVectorized(V) || isGuaranteedNotToBePoison(V, AC) ||
                 (E->UserTreeIndex && any_of(V->uses(), [E](const Use &U) {
                    // Check if the value already used in the same operation in
                    // one of the nodes already.
@@ -23802,7 +23751,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             continue;
           auto *EI = cast<ExtractElementInst>(StoredGS[I]);
           Value *VecOp = EI->getVectorOperand();
-          if (ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(VecOp);
+          if (ArrayRef<TreeEntry *> TEs = getTreeEntries(VecOp);
               !TEs.empty() && TEs.front()->VectorizedValue)
             VecOp = TEs.front()->VectorizedValue;
           if (!Vec1) {
@@ -23948,7 +23897,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               // Estimate the cost of splatting + shuffle and compare with
               // insert + shuffle.
               Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
-              if (isa<ExtractElementInst>(V) || Candidate.isVectorized(V))
+              if (isa<ExtractElementInst>(V) || isVectorized(V))
                 return false;
               InstructionCost SplatCost = TTI->getVectorInstrCost(
                   Instruction::InsertElement, VecTy, CostKind, /*Index=*/0,
@@ -24042,7 +23991,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
   // Do not do this for split vectorize node, marked to be gathers/buildvectors.
   if (E->State != TreeEntry::SplitVectorize ||
-      !Candidate.TransformedToGatherNodes.contains(E)) {
+      !TransformedToGatherNodes.contains(E)) {
     for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
       (void)vectorizeTree(Candidate.VectorizableTree[EIdx].get());
   }
@@ -24078,7 +24027,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   if (E->VectorizedValue)
     return E->VectorizedValue;
   auto *VecTy = getWidenedType(ScalarTy, E->Scalars.size());
-  if (E->isGather() || Candidate.TransformedToGatherNodes.contains(E)) {
+  if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     // Set insert point for non-reduction initial nodes.
     if (E->hasState() && E->Idx == 0 && !Candidate.UserIgnoreList)
       setInsertPointAfterBundle(E);
@@ -24492,15 +24441,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         auto Res = VisitedBBs.try_emplace(IBB, I);
         if (!Res.second) {
           TreeEntry *OpTE = Candidate.getOperandEntry(E, I);
-          if (OpTE->isGather() || Candidate.DeletedNodes.contains(OpTE) ||
-              Candidate.TransformedToGatherNodes.contains(OpTE)) {
+          if (OpTE->isGather() || DeletedNodes.contains(OpTE) ||
+              TransformedToGatherNodes.contains(OpTE)) {
             Value *VecOp = NewPhi->getIncomingValue(Res.first->getSecond());
             NewPhi->addIncoming(VecOp, IBB);
             assert(!OpTE->VectorizedValue && "Expected no vectorized value.");
             OpTE->VectorizedValue = VecOp;
             // The combined nodes of the reused gather node still must be
             // emitted.
-            if (OpTE->isGather() && !Candidate.DeletedNodes.contains(OpTE))
+            if (OpTE->isGather() && !DeletedNodes.contains(OpTE))
               for (auto [EIdx, _] : OpTE->CombinedEntriesWithIndices)
                 (void)vectorizeTree(Candidate.VectorizableTree[EIdx].get());
             continue;
@@ -24803,7 +24752,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             getWidenedType(OrigSrcScalarTy, E->Scalars.size());
         InVec =
             Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
-      } else if (VecOpcode == Instruction::UIToFP && SrcIt != MinBWs.end() &&
+      } else if (VecOpcode == Instruction::UIToFP && SrcIt != Candidate.MinBWs.end() &&
                  SrcIt->second.second) {
         auto *OrigSrcVectorTy =
             getWidenedType(CI->getSrcTy(), E->Scalars.size());
@@ -26116,7 +26065,7 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
     for (Instruction *OpI : make_isa_range<Instruction>(I.operands())) {
       bool DefinedInBody =
           OpI->getParent() == BB && !isa<PHINode>(OpI) && !OpI->isTerminator();
-      if (!DefinedInBody && Candidate.isVectorized(OpI))
+      if (!DefinedInBody && isVectorized(OpI))
         return false;
     }
   }
@@ -26207,8 +26156,7 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   // terminator (moved into the continuation block) and by the block's PHIs
   // (via the loop latch) count as outside.
   for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
-         return !isa<PHINode>(&I) && !I.isTerminator() &&
-                Candidate.isVectorized(&I);
+         return !isa<PHINode>(&I) && !I.isTerminator() && isVectorized(&I);
        })) {
     if (any_of(I.users(), [&](User *U) {
           auto *UI = dyn_cast<Instruction>(U);
@@ -26471,7 +26419,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   for (const std::unique_ptr<TreeEntry> &TE : Candidate.VectorizableTree) {
     // Need to generate insertion point for loads nodes of the bitcast/bswap
     // ops.
-    if (TE->isGather() || Candidate.DeletedNodes.contains(TE.get()) ||
+    if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
         TE->State == TreeEntry::SplitVectorize ||
         (TE->State == TreeEntry::CombinedVectorize &&
          (TE->CombinedOp == TreeEntry::ReducedBitcast ||
@@ -26506,7 +26454,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   for (const std::unique_ptr<TreeEntry> &TE :
        make_filter_range(Candidate.VectorizableTree,
                          [&](const std::unique_ptr<TreeEntry> &TE) {
-                           return !Candidate.DeletedNodes.contains(TE.get());
+                           return !DeletedNodes.contains(TE.get());
                          })) {
     if (TE->isGather() && !TE->VectorizedValue && TE->UserTreeIndex.UserTE &&
         TE->UserTreeIndex.UserTE->hasState() &&
@@ -26537,8 +26485,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // gathered loads, which skip entries that already have a vector value.
   for (TreeEntry *TE : make_filter_range(
            Candidate.SplatGatheredScalarsRoots, [&](TreeEntry *TE) {
-             return !Candidate.DeletedNodes.contains(TE) &&
-                    !TE->VectorizedValue;
+             return !DeletedNodes.contains(TE) && !TE->VectorizedValue;
            }))
     (void)vectorizeTree(TE);
   // Emit gathered loads first to emit better code for the users of those
@@ -26546,7 +26493,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   for (const std::unique_ptr<TreeEntry> &TE :
        make_filter_range(Candidate.VectorizableTree,
                          [&](const std::unique_ptr<TreeEntry> &TE) {
-                           return !Candidate.DeletedNodes.contains(TE.get());
+                           return !DeletedNodes.contains(TE.get());
                          })) {
     if (Candidate.GatheredLoadsEntriesFirst.has_value() &&
         TE->Idx >= *Candidate.GatheredLoadsEntriesFirst &&
@@ -26560,8 +26507,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   (void)vectorizeTree(&Candidate.getRootNode());
   // Run through the list of postponed gathers and emit them, replacing the temp
   // emitted allocas with actual vector instructions.
-  ArrayRef<const TreeEntry *> PostponedNodes =
-      Candidate.PostponedGathers.getArrayRef();
+  ArrayRef<const TreeEntry *> PostponedNodes = PostponedGathers.getArrayRef();
   DenseMap<Value *, SmallVector<TreeEntry *>> PostponedValues;
   for (const TreeEntry *E : PostponedNodes) {
     auto *TE = const_cast<TreeEntry *>(E);
@@ -26608,8 +26554,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
              "Expected integer vector types only.");
       std::optional<bool> IsSigned;
       for (Value *V : TE->Scalars) {
-        if (Candidate.isVectorized(V)) {
-          for (const TreeEntry *MNTE : Candidate.getTreeEntries(V)) {
+        if (isVectorized(V)) {
+          for (const TreeEntry *MNTE : getTreeEntries(V)) {
             auto It = Candidate.MinBWs.find(MNTE);
             if (It != Candidate.MinBWs.end()) {
               IsSigned = IsSigned.value_or(false) || It->second.second;
@@ -26785,8 +26731,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                      ES && isa<Instruction>(Vec)) {
             Value *V = ES->getVectorOperand();
             auto *IVec = cast<Instruction>(Vec);
-            if (ArrayRef<TreeEntry *> ETEs = Candidate.getTreeEntries(V);
-                !ETEs.empty())
+            if (ArrayRef<TreeEntry *> ETEs = getTreeEntries(V); !ETEs.empty())
               V = ETEs.front()->VectorizedValue;
             if (auto *IV = dyn_cast<Instruction>(V);
                 !IV || IV == Vec || IV->getParent() != IVec->getParent() ||
@@ -26885,7 +26830,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                [&, TTI = TTI](llvm::User *U) {
                  if (Candidate.ExternalUsesAsOriginalScalar.contains(U))
                    return true;
-                 ArrayRef<TreeEntry *> UseEntries = Candidate.getTreeEntries(U);
+                 ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
                  return !UseEntries.empty() &&
                         (E->State == TreeEntry::Vectorize ||
                          E->State == TreeEntry::StridedVectorize ||
@@ -27160,8 +27105,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
 
     // No need to handle users of gathered values.
     if (Entry->isGather() || Entry->State == TreeEntry::SplitVectorize ||
-        Candidate.DeletedNodes.contains(Entry) ||
-        Candidate.TransformedToGatherNodes.contains(Entry))
+        DeletedNodes.contains(Entry) ||
+        TransformedToGatherNodes.contains(Entry))
       continue;
 
     if (Entry->CombinedOp == TreeEntry::ReducedBitcast ||
@@ -27205,7 +27150,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
 
           // It is legal to delete users in the ignorelist.
-          assert((Candidate.isVectorized(U) ||
+          assert((isVectorized(U) ||
                   (Candidate.UserIgnoreList &&
                    Candidate.UserIgnoreList->contains(U)) ||
                   (isa_and_nonnull<Instruction>(U) &&
@@ -27230,7 +27175,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
         LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
         // Single-use peeled scalars are consumed by this entry or a sibling
         // in the same chain.
-        assert((Candidate.isVectorized(U) ||
+        assert((isVectorized(U) ||
                 (Candidate.UserIgnoreList &&
                  Candidate.UserIgnoreList->contains(U)) ||
                 (isa_and_nonnull<Instruction>(U) &&
@@ -27297,7 +27242,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // Clear up reduction references, if any.
   if (Candidate.UserIgnoreList) {
     for (Instruction *I : RemovedInsts) {
-      ArrayRef<TreeEntry *> Entries = Candidate.getTreeEntries(I);
+      ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       // Dead intermediate vector instructions collected above have no tree
       // entry - nothing to unlink here.
       if (Entries.empty())
@@ -27368,7 +27313,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   BatchAA.emplace(*AA);
 
   Builder.ClearInsertionPoint();
-  Candidate.InstrElementSize.clear();
+  InstrElementSize.clear();
 
   const TreeEntry &RootTE = Candidate.getRootNode();
   Value *Vec = RootTE.VectorizedValue;
@@ -27614,7 +27559,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (isUsedOutsideBlock(V)) {
           for (Instruction *I :
                make_isa_range<Instruction>(cast<Instruction>(V)->operands()))
-            return SLP->Candidate.isVectorized(I) && I->getNextNode() == V;
+            return SLP->isVectorized(I) && I->getNextNode() == V;
         }
         return false;
       }))
@@ -27653,7 +27598,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             if (EI.UserTE->hasCopyableElements() &&
                 EI.UserTE->isCopyableElement(V))
               return false;
-            ArrayRef<TreeEntry *> Entries = SLP->Candidate.getTreeEntries(V);
+            ArrayRef<TreeEntry *> Entries = SLP->getTreeEntries(V);
             return any_of(Entries, [](const TreeEntry *TE) {
               return TE->doesNotNeedToSchedule() && TE->UserTreeIndex &&
                      TE->UserTreeIndex.UserTE->hasState() &&
@@ -27697,7 +27642,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             !doesNotNeedToBeScheduled(I))
           return false;
         return any_of(
-            SLP->VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            SLP->Candidate.VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
               return TE.get() != EI.UserTE && !TE->isGather() &&
                      TE->hasCopyableElements() && TE->isCopyableElement(I) &&
                      TE->getMainOp()->getParent() == I->getParent() &&
@@ -28308,7 +28253,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
           continue;
         unsigned ExtraDeps = 1;
         // Increment twice, since the operand was expanded in binop.
-        for (const TreeEntry *UserTE : SLP->Candidate.getTreeEntries(U)) {
+        for (const TreeEntry *UserTE : SLP->getTreeEntries(U)) {
           if (UserTE->isExpandedBinOp(U))
             ++ExtraDeps;
         }
@@ -28627,8 +28572,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
   // and schedule the scalars as separate instructions: they keep their
   // original order and stay close to their users.
   auto IsTrimmed = [&](const TreeEntry *TE) {
-    return Candidate.DeletedNodes.contains(TE) ||
-           Candidate.TransformedToGatherNodes.contains(TE);
+    return DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE);
   };
   const size_t NumBundles = BS->ScheduledBundlesList.size();
   SmallPtrSet<const ScheduleData *, 16> ClearedSDs;
@@ -28737,8 +28681,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
     if (ScheduleData *SD = BS->getScheduleData(I)) {
       // The bundles of the trimmed nodes are cancelled, check the first
       // remaining node only.
-      [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs =
-          Candidate.getTreeEntries(I);
+      [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs = getTreeEntries(I);
       [[maybe_unused]] const auto *SDTEIt = find_if_not(SDTEs, IsTrimmed);
       assert((isVectorLikeInstWithConstOps(SD->getInst()) ||
               SDTEIt == SDTEs.end() || (*SDTEIt)->doesNotNeedToSchedule() ||
@@ -28857,8 +28800,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   if (auto *IVI = dyn_cast<InsertValueInst>(V))
     return getVectorElementSize(IVI->getOperand(1));
 
-  auto E = Candidate.InstrElementSize.find(V);
-  if (E != Candidate.InstrElementSize.end())
+  auto E = InstrElementSize.find(V);
+  if (E != InstrElementSize.end())
     return E->second;
 
   // If V is not a store, we can traverse the expression tree to find loads
@@ -28942,7 +28885,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   }
 
   for (Instruction *I : Visited)
-    Candidate.InstrElementSize[I] = Width;
+    InstrElementSize[I] = Width;
 
   return Width;
 }
@@ -28978,7 +28921,7 @@ bool BoUpSLP::collectValuesToDemote(
   auto IsPotentiallyTruncated = [&](Value *V, unsigned &BitWidth) -> bool {
     if (isa<PoisonValue>(V))
       return true;
-    if (Candidate.getTreeEntries(V).size() > 1)
+    if (getTreeEntries(V).size() > 1)
       return false;
     // For lat shuffle of sext/zext with many uses need to check the extra bit
     // for unsigned values, otherwise may have incorrect casting for reused
@@ -29017,7 +28960,7 @@ bool BoUpSLP::collectValuesToDemote(
     if (Res && E.isGather()) {
       if (E.hasState()) {
         if (const TreeEntry *SameTE =
-                Candidate.getSameValuesTreeEntry(E.getMainOp(), E.Scalars))
+                getSameValuesTreeEntry(E.getMainOp(), E.Scalars))
           if (collectValuesToDemote(*SameTE, IsProfitableToDemoteRoot, BitWidth,
                                     ToDemote, Visited, NodesToKeepBWs,
                                     MaxDepthLevel, IsProfitableToDemote,
@@ -29050,14 +28993,14 @@ bool BoUpSLP::collectValuesToDemote(
   if (E.isGather() || !Visited.insert(&E).second ||
       any_of(E.Scalars, [&](Value *V) {
         return !isa<Constant>(V) && all_of(V->users(), [&](User *U) {
-          return isa<InsertElementInst>(U) && !Candidate.isVectorized(U);
+          return isa<InsertElementInst>(U) && !isVectorized(U);
         });
       }))
     return FinalAnalysis();
 
   if (any_of(E.Scalars, [&](Value *V) {
         return !isa<Constant>(V) && !all_of(V->users(), [=](User *U) {
-          return Candidate.isVectorized(U) ||
+          return isVectorized(U) ||
                  (E.Idx == 0 && Candidate.UserIgnoreList &&
                   Candidate.UserIgnoreList->contains(U)) ||
                  (!isa<CmpInst>(U) && U->getType()->isSized() &&
@@ -29456,7 +29399,7 @@ void BoUpSLP::computeMinimumValueSizes() {
 
   // Analyzed the reduction already and not profitable - exit.
   if (IsAnalyzedMinBWVal(Candidate.VectorizableTree[NodeIdx]->Scalars.front(),
-                         Candidate.getTreeSizeExcludingGathers()))
+                         getTreeSizeExcludingGathers()))
     return;
 
   SmallVector<unsigned> ToDemote;
@@ -29473,7 +29416,7 @@ void BoUpSLP::computeMinimumValueSizes() {
           return V->hasOneUse() || isa<Constant>(V) ||
                  (!V->hasNUsesOrMore(UsesLimit) &&
                   none_of(V->users(), [&](User *U) {
-                    ArrayRef<TreeEntry *> TEs = Candidate.getTreeEntries(U);
+                    ArrayRef<TreeEntry *> TEs = getTreeEntries(U);
                     const TreeEntry *UserTE = E.UserTreeIndex.UserTE;
                     if (TEs.empty() || is_contained(TEs, UserTE))
                       return false;
@@ -29518,7 +29461,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (!TreeRootIT)
       return 0u;
 
-    unsigned SizeExGathers = Candidate.getTreeSizeExcludingGathers();
+    unsigned SizeExGathers = getTreeSizeExcludingGathers();
     if (any_of(E.Scalars,
                [&](Value *V) { return IsAnalyzedMinBWVal(V, SizeExGathers); }))
       return 0u;
@@ -29766,7 +29709,7 @@ void BoUpSLP::computeMinimumValueSizes() {
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
       if (Candidate.UserIgnoreList) {
-        unsigned Sz = Candidate.getTreeSizeExcludingGathers();
+        unsigned Sz = getTreeSizeExcludingGathers();
         for (Value *V : TreeRoot)
           AnalyzedMinBWVals.insert_or_assign(V, Sz);
       }
