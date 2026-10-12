@@ -7,6 +7,8 @@ add_header_library(
   utils
   HDRS
     utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
