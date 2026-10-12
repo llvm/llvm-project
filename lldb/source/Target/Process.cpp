@@ -3736,10 +3736,21 @@ lldb::addr_t Process::FindInMemory(lldb::addr_t low, lldb::addr_t high,
 Status Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp) {
   Status error;
 
+  // Let the private state thread finish handling pending events first, since
+  // it may resume the process.
+  if (PrivateStateThreadIsRunning() &&
+      !m_current_private_state_thread_sp->IsOnThread(
+          Host::GetCurrentThread())) {
+    PausePrivateStateThread();
+    ResumePrivateStateThread();
+  }
+
   // Check both the public & private states here.  If we're hung evaluating an
   // expression, for instance, then the public state will be stopped, but we
-  // still need to interrupt.
-  if (GetPublicState() == eStateRunning || GetPrivateState() == eStateRunning) {
+  // still need to interrupt. Use the state the private state thread handled,
+  // since the private state is already stopped while it handles the stop.
+  if (GetPublicState() == eStateRunning ||
+      m_last_handled_private_state == eStateRunning) {
     Log *log = GetLog(LLDBLog::Process);
     LLDB_LOGF(log, "Process::%s() About to stop.", __FUNCTION__);
 
@@ -4278,6 +4289,11 @@ void Process::HandlePrivateEvent(EventSP &event_sp) {
 
   const StateType new_state =
       Process::ProcessEventData::GetStateFromEvent(event_sp.get());
+  llvm::scope_exit update_handled_state([&] {
+    m_last_handled_private_state =
+        ProcessEventData::GetRestartedFromEvent(event_sp.get()) ? eStateRunning
+                                                                : new_state;
+  });
 
 #ifdef LLDB_SIMULATE_SLOW_STOPS
   // Simulate a slow machine that takes a long time to process an internal
