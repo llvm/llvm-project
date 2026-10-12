@@ -1323,7 +1323,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
     SlotIndex ExtIdx = LIS->InsertMachineInstrInMaps(*ExtMI);
 
     // Drop the dead EFLAGS def MI had; the replacement does not define EFLAGS.
-    LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
+    if (MI.definesRegister(X86::EFLAGS, &RI))
+      LIS->removePhysRegDefAt(X86::EFLAGS, NewIdx.getRegSlot());
 
     LIS->getInterval(InRegLEA);
     LIS->getInterval(OutRegLEA);
@@ -1974,7 +1975,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     SlotIndex Idx = LIS->getInstructionIndex(MI);
     LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
 
-    LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
+    if (MI.definesRegister(X86::EFLAGS, &RI))
+      LIS->removePhysRegDefAt(X86::EFLAGS, Idx.getRegSlot());
     if (SrcReg)
       LIS->getInterval(SrcReg);
     if (SrcReg2)
@@ -7779,7 +7781,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (I) {
     unsigned Opcode = I->DstOp;
     if (Alignment <
-        Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
+        Align::fromLog2((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT))
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {

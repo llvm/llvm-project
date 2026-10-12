@@ -15,6 +15,7 @@
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/Mangling.h"
+#include "orc-rt/support/SymbolLookupSet.h"
 #include "orc-rt/support/move_only_function.h"
 
 #include <algorithm>
@@ -114,6 +115,31 @@ public:
     Symbols.merge(Other.Symbols);
 
     return Error::success();
+  }
+
+  /// Looks up each name in LS, returning one result per element, in the same
+  /// order. Names in LS are linker-level and are used as written (unlike
+  /// count() and at(), no mangling is applied).
+  ///
+  /// Missing symbols are reported as described by SymbolLookupResult: a missing
+  /// weakly referenced symbol yields a null address, and a missing required
+  /// symbol yields an empty optional.
+  SymbolLookupResult lookup(const SymbolLookupSet &LS) const noexcept {
+    SymbolLookupResult Result;
+    Result.reserve(LS.size());
+    for (auto &[Name, Flags] : LS) {
+      auto I = Symbols.find(Name);
+      if (I != Symbols.end())
+        Result.push_back(I->second);
+      else if (Flags == SymbolLookupFlags::WeaklyReferencedSymbol)
+        Result.push_back(nullptr);
+      else {
+        assert(Flags == SymbolLookupFlags::RequiredSymbol);
+        Result.push_back(std::nullopt);
+      }
+    }
+
+    return Result;
   }
 
 private:

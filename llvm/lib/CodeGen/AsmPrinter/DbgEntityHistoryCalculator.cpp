@@ -500,6 +500,10 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       if (MI.isMetaInstruction())
         continue;
 
+      // There are no register locations for this instruction to clobber.
+      if (RegVars.empty())
+        continue;
+
       // Other instructions may clobber registers which describe some variables.
       for (const MachineOperand &MO : MI.operands()) {
         if (MO.isReg() && MO.isDef() && MO.getReg()) {

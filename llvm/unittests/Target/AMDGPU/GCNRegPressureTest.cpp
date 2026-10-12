@@ -50,7 +50,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerEndOnDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -119,7 +119,7 @@ body:             |
 )";
   EXPECT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("DownwardTrackerAllDbgVal");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
 
   // MBB1 live-in pressure is equivalent to MBB0 live-out pressure.
   MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
@@ -166,7 +166,7 @@ body:             |
 )";
   ASSERT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("BumpDownwardPressureLastUseAfterCommit");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
 
@@ -217,7 +217,7 @@ body:             |
 )";
   ASSERT_TRUE(parseMIR(MIR));
   MachineFunction &MF = getMF("BumpDownwardPressureUseAndRedef");
-  const LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
 

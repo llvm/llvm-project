@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu9.00 -mattr=-flat-for-global < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global < %s | FileCheck --check-prefix=GCN %s
 
 ; indexing of vectors.
 
@@ -12,7 +12,9 @@ declare hidden void @foo()
 ; GCN-NEXT: s_set_gpr_idx_off
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @insertelement_with_call(ptr addrspace(1) %ptr, i32 %idx) #0 {
-  %vec = load <16 x i32>, ptr addrspace(1) %ptr
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ptr.tid = getelementptr inbounds <16 x i32>, ptr addrspace(1) %ptr, i32 %tid
+  %vec = load <16 x i32>, ptr addrspace(1) %ptr.tid
   %i6 = insertelement <16 x i32> %vec, i32 8, i32 %idx
   call void @foo()
   store <16 x i32> %i6, ptr addrspace(1) null

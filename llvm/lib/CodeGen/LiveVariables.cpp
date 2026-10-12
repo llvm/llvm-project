@@ -99,8 +99,10 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
                                                   true/*IsImp*/));
 
   // Remember this use.
-  for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+  for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
     PhysRegUse[SubReg] = &MI;
+    TrackedRegs.set(SubReg);
+  }
 }
 
 /// FindLastRefOrPartRef - Return the last reference or partial reference of
@@ -201,8 +203,10 @@ void LiveVariables::HandlePhysRegKill(Register Reg, MachineInstr *MI) {
         PhysRegDef[Reg.id()]->addOperand(
             MachineOperand::CreateReg(SubReg, true /*IsDef*/, true /*IsImp*/));
       if (!FindLastRefOrPartRef(SubReg)) {
-        for (MCPhysReg SS : TRI->subregs_inclusive(SubReg))
+        for (MCPhysReg SS : TRI->subregs_inclusive(SubReg)) {
           PhysRegUse[SS] = LastRefOrPartRef;
+          TrackedRegs.set(SS);
+        }
       }
       for (MCPhysReg SS : TRI->subregs(SubReg))
         PartUses.erase(SS);
@@ -229,7 +233,7 @@ void LiveVariables::HandleRegMask(const MachineOperand &MO, unsigned NumRegs) {
   // Call HandlePhysRegKill() for all live registers clobbered by Mask.
   // Clobbered registers are always dead, sp there is no need to use
   // HandlePhysRegDef().
-  for (unsigned Reg = 1; Reg != NumRegs; ++Reg) {
+  for (unsigned Reg : TrackedRegs.set_bits()) {
     // Skip dead regs.
     if (!PhysRegDef[Reg] && !PhysRegUse[Reg])
       continue;
@@ -285,6 +289,7 @@ void LiveVariables::UpdatePhysRegDefs(MachineInstr &MI,
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
       PhysRegDef[SubReg] = &MI;
       PhysRegUse[SubReg] = nullptr;
+      TrackedRegs.set(SubReg);
     }
   }
 }
@@ -358,9 +363,9 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
 
   // Loop over PhysRegDef / PhysRegUse, killing any registers that are
   // available at the end of the basic block.
-  for (unsigned i = 0; i != NumRegs; ++i)
-    if ((PhysRegDef[i] || PhysRegUse[i]) && !LiveOuts.count(i))
-      HandlePhysRegDef(i, nullptr);
+  for (unsigned Reg : TrackedRegs.set_bits())
+    if ((PhysRegDef[Reg] || PhysRegUse[Reg]) && !LiveOuts.count(Reg))
+      HandlePhysRegDef(Reg, nullptr);
 }
 
 void LiveVariables::analyze(MachineFunction &mf) {
@@ -376,12 +381,17 @@ void LiveVariables::analyze(MachineFunction &mf) {
   const unsigned NumRegs = TRI->getNumSupportedRegs(mf);
   PhysRegDef.assign(NumRegs, nullptr);
   PhysRegUse.assign(NumRegs, nullptr);
+  TrackedRegs.clear();
+  TrackedRegs.resize(NumRegs);
 
   for (MachineBasicBlock &MBB : mf) {
     runOnBlock(&MBB, NumRegs);
 
-    PhysRegDef.assign(NumRegs, nullptr);
-    PhysRegUse.assign(NumRegs, nullptr);
+    for (unsigned Reg : TrackedRegs.set_bits()) {
+      PhysRegDef[Reg] = nullptr;
+      PhysRegUse[Reg] = nullptr;
+    }
+    TrackedRegs.reset();
   }
 
   for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
@@ -394,4 +404,5 @@ void LiveVariables::analyze(MachineFunction &mf) {
 
   PhysRegDef.clear();
   PhysRegUse.clear();
+  TrackedRegs.clear();
 }
