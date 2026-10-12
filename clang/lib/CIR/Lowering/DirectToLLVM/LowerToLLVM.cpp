@@ -4564,6 +4564,19 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
     module->setAttr(mlir::LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                     asmAttr);
 
+  if (auto framePointerAttr = module->getAttrOfType<cir::FramePointerKindAttr>(
+          cir::CIRDialect::getModuleFramePointerAttrName())) {
+    mlir::OpBuilder builder(module.getContext());
+    builder.setInsertionPointToEnd(module.getBody());
+    auto flag = mlir::LLVM::ModuleFlagAttr::get(
+        module.getContext(), mlir::LLVM::ModFlagBehavior::Max,
+        builder.getStringAttr("frame-pointer"),
+        builder.getI32IntegerAttr(static_cast<int32_t>(
+            convertFramePointerKind(framePointerAttr.getValue()))));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr({flag}));
+  }
+
   lowerOpenCLModuleMetadataAttrs(module);
 }
 

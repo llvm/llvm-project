@@ -1471,29 +1471,35 @@ def CIR_FramePointerKindAttr
   let summary = "Encodes the frame pointer kind for a function or a module.";
 
   let description = [{
-    This mirrors the FramePointerKind enum of the LLVM dialect.  On a
-    `cir.func` it is the `frame_pointer` attribute and lowers to the
-    `frame-pointer` function attribute in LLVM IR.  As the value of the
-    module attribute `cir.frame_pointer` it lowers to the `frame-pointer`
-    module flag, which LLVM gives to the functions it synthesizes.  A
-    function or module without the attribute behaves as `none`.
+    A frame pointer is a register that holds the address of the current
+    function's frame record, so that debuggers, profilers and stack
+    unwinders can walk the call stack by following the chain of frame
+    records.  Eliminating it frees the register for other uses.  The frame
+    pointer kind says which functions must keep one:
 
-    `none` lets the frame pointer be eliminated.  `all` keeps the frame
-    pointer, and `non_leaf` keeps it if the function calls other functions.
-    `reserved` lets the frame pointer be eliminated but keeps its register
-    from being used for anything else, so the register either points to a
-    valid frame record for the current function or is left unmodified.
-    `non_leaf_no_reserve` is `non_leaf`, except that a leaf function may use
-    the frame pointer register as a general-purpose register.
+    - `none`: the frame pointer may be eliminated and its register used for
+      other purposes.
+    - `non_leaf`: functions that call other functions keep the frame
+      pointer.  A leaf function may eliminate it, but may not use its
+      register for anything else.
+    - `all`: every function keeps the frame pointer.
+    - `reserved`: the frame pointer may be eliminated, but its register is
+      not used for anything else, so it either points to a valid frame
+      record for the current function or is left unmodified.
+    - `non_leaf_no_reserve`: like `non_leaf`, except that a leaf function
+      may use the frame pointer register as a general-purpose register.
+
+    The kind is a minimum: the code generator may keep a frame pointer that
+    the kind allows it to eliminate.  On a function the attribute applies
+    to that function.  On the module it applies to the functions LLVM
+    creates after CIR is lowered, such as sanitizer constructors.  A
+    function or module without the attribute behaves as `none`.
 
     Example:
 
     ```
     module attributes {cir.frame_pointer = #cir.frame_pointer<all>} {
       cir.func private @f() attributes {frame_pointer = #cir.frame_pointer<all>}
-      cir.func private @g() attributes {
-        frame_pointer = #cir.frame_pointer<non_leaf>
-      }
     }
     ```
   }];
