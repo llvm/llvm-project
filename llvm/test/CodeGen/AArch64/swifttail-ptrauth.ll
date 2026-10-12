@@ -364,3 +364,93 @@ exit:
   tail call swifttailcc void @callee_stack0()
   ret void
 }
+
+declare void @shrink_wrapped_callee()
+@var = global i64 0
+
+define swifttailcc void @shrink_wrapped(i32 %c, i64 %a, i64 %b, i64 %c2, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h, i64 %i) "branch-protection-pauth-lr" "sign-return-address"="non-leaf" "frame-pointer"="all" uwtable(async) {
+; CHECK-LABEL: shrink_wrapped:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cbz w0, .LBB4_2
+; CHECK-NEXT:  // %bb.1:
+
+; COMPAT-NEXT:   hint #39
+; COMPAT-NEXT: .Ltmp4:
+; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp4
+
+; V83A-NEXT:     hint #39
+; V83A-NEXT:   .Ltmp4:
+; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp4
+
+; V9A-NEXT:    .Ltmp4:
+; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp4
+
+; PAUTH-NEXT:    paciasp
+; PAUTH-NEXT:    .cfi_negate_ra_state
+
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    bl shrink_wrapped_callee
+; CHECK-NEXT:    .cfi_def_cfa wsp, 16
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset -16
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    .cfi_restore w29
+; CHECK-NEXT:    sub x16, sp, #16
+
+; COMPAT-NEXT:   mov x17, x30
+; COMPAT-NEXT:   adrp x15, .Ltmp4
+; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp4
+; COMPAT-NEXT:   hint #39
+; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
+
+; V83A-NEXT:     mov x17, x30
+; V83A-NEXT:     adrp x15, .Ltmp4
+; V83A-NEXT:     add x15, x15, :lo12:.Ltmp4
+; V83A-NEXT:     hint #39
+; V83A-NEXT:     autia1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
+
+; V9A-NEXT:      mov x17, x30
+; V9A-NEXT:      adrp x15, .Ltmp4
+; V9A-NEXT:      add x15, x15, :lo12:.Ltmp4
+; V9A-NEXT:      autia171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
+
+; PAUTH-NEXT:    autia x30, x16
+; PAUTH-NEXT:    .cfi_negate_ra_state
+
+; CHECK-NEXT:  .LBB4_2: // %exit
+; CHECK-NEXT:    adrp x8, :got:var
+; CHECK-NEXT:    mov w9, #42 // =0x2a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:var]
+; CHECK-NEXT:    str x9, [x8]
+; CHECK-NEXT:    ret
+
+; MIR-LABEL:  name: shrink_wrapped
+; MIR-COMPAT:   frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-V9A:      frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x17, implicit-def $x16, implicit-def $x15{{$}}
+; MIR-PAUTH:    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp, implicit-def $x16{{$}}
+entry:
+  %t = icmp eq i32 %c, 0
+  br i1 %t, label %exit, label %then
+then:
+  call void @shrink_wrapped_callee()
+  br label %exit
+exit:
+  store i64 42, ptr @var
+  ret void
+}
