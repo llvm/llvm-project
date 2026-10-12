@@ -29,13 +29,13 @@ namespace llvm::orc::rt::sps_ci {
 /// The executor-side dylib-manager instance. This is a data symbol -- passed
 /// as the first argument to each call below -- not a wrapper to call.
 inline constexpr SymbolNameSpec NativeDylibManagerInstanceName =
-    SymbolNameSpec::verbatim("orc_rt_ci_NativeDylibManager_Instance");
+    SymbolNameSpec::c("orc_rt_ci_NativeDylibManager_Instance");
 
 /// Open the dylib at the given path with the given mode flags; returns a
 /// handle to it.
 struct DylibMgrOpen {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_NativeDylibManager_load");
+      SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_load");
   using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>(
       shared::SPSExecutorAddr, shared::SPSString, uint64_t);
 };
@@ -43,7 +43,7 @@ struct DylibMgrOpen {
 /// Resolve the given lookup set within the given dylib.
 struct DylibMgrResolve {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_NativeDylibManager_lookup");
+      SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_lookup");
   using SPSSig = shared::SPSExpected<
       shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorAddr>>>(
       shared::SPSExecutorAddr, shared::SPSExecutorAddr,

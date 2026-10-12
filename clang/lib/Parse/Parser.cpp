@@ -74,11 +74,10 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
       Actions(actions), Diags(PP.getDiagnostics()), StackHandler(Diags),
       GreaterThanIsOperator(true), ColonIsSacred(false),
-      InMessageExpression(false), ParsingInObjCContainer(false),
-      TemplateParameterDepth(0) {
+      ParsingGenericAssociationType(false), InMessageExpression(false),
+      ParsingInObjCContainer(false), TemplateParameterDepth(0) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
-  Tok.startToken();
-  Tok.setKind(tok::eof);
+  Tok = Token::createEof();
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;

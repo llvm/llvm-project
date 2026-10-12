@@ -497,6 +497,16 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
   if (auto *Expansion = dyn_cast<PackExpansionType>(ParamType))
     ParamType = Expansion->getPattern();
 
+  // FIXME: It's not clear how deduction of a parameter of reference type from
+  // an argument should be performed. For now, we just make the argument have
+  // the same kind of reference type as the parameter.
+  if (ParamType->isReferenceType()) {
+    ValueType = ValueType.getNonReferenceType();
+    ValueType = ParamType->isRValueReferenceType()
+                    ? S.Context.getRValueReferenceType(ValueType)
+                    : S.Context.getLValueReferenceType(ValueType);
+  }
+
   return DeduceTemplateArgumentsByTypeMatch(
       S, TemplateParams, ParamType, ValueType, Info, Deduced,
       TDF_SkipNonDependent | TDF_IgnoreQualifiers,
@@ -6023,11 +6033,19 @@ getMoreSpecializedTrailingPackTieBreaker(
   ArrayRef<TemplateArgument> As1 = TST1->template_arguments(),
                              As2 = TST2->template_arguments();
   const TemplateArgument &TA1 = As1.back(), &TA2 = As2.back();
-  bool IsPack = TA1.getKind() == TemplateArgument::Pack;
-  assert(IsPack == (TA2.getKind() == TemplateArgument::Pack));
-  if (!IsPack)
+  // C++26 [temp.deduct.partial]p11:
+  //   If, after considering the above, function template F is at least as
+  //   specialized as function template G and vice-versa, and if G has a
+  //   trailing function parameter pack for which F does not have a
+  //   corresponding parameter, and if F does not have a trailing function
+  //   parameter pack, then F is more specialized than G.
+  bool IsPack1 = TA1.getKind() == TemplateArgument::Pack;
+  bool IsPack2 = TA2.getKind() == TemplateArgument::Pack;
+  if (IsPack1 != IsPack2)
+    return IsPack1 ? MoreSpecializedTrailingPackTieBreakerResult::More
+                   : MoreSpecializedTrailingPackTieBreakerResult::Less;
+  if (!IsPack1 || As1.size() != As2.size())
     return MoreSpecializedTrailingPackTieBreakerResult::Equal;
-  assert(As1.size() == As2.size());
 
   unsigned PackSize1 = TA1.pack_size(), PackSize2 = TA2.pack_size();
   bool IsPackExpansion1 =

@@ -246,12 +246,18 @@ bool ThreadPlanSingleThreadTimeout::HandleEvent(Event *event_ptr) {
 
 void ThreadPlanSingleThreadTimeout::HandleTimeout() {
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(
-      log,
-      "ThreadPlanSingleThreadTimeout::HandleTimeout() send async interrupt.");
-  m_state = State::AsyncInterrupt;
-
   // Private state thread will only send async interrupt
   // in running state so no need to check state here.
-  m_process.SendAsyncInterrupt(&GetThread());
+  if (m_process.GetPrivateState() == eStateRunning) {
+    LLDB_LOGF(
+        log,
+        "ThreadPlanSingleThreadTimeout::HandleTimeout() send async interrupt.");
+      m_process.SendAsyncInterrupt(&GetThread());
+
+    m_state = State::AsyncInterrupt;
+  } else {
+    LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout::HandleTimeout() process "
+                   "already stopped - didn't send interrupt");
+  }
+
 }

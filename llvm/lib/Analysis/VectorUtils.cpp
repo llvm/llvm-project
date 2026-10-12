@@ -123,6 +123,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::clmul:
+  case Intrinsic::pdep:
+  case Intrinsic::pext:
   case Intrinsic::smulh:
   case Intrinsic::umulh:
     return true;
@@ -1328,7 +1330,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
 
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
                                               getLoadStoreAlignment(&I));
     }
@@ -1587,7 +1589,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+                     /*ShouldCheckWrap=*/true)
             .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "

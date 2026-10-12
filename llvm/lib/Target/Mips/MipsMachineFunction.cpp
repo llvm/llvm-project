@@ -9,19 +9,13 @@
 #include "MipsMachineFunction.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsSubtarget.h"
-#include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-FixGlobalBaseReg("mips-fix-global-base-reg", cl::Hidden, cl::init(true),
-                 cl::desc("Always use $gp as the global base register."));
 
 MachineFunctionInfo *
 MipsFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -38,7 +32,6 @@ bool MipsFunctionInfo::globalBaseRegSet() const {
 
 static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
   auto &STI = MF.getSubtarget<MipsSubtarget>();
-  auto &TM = static_cast<const MipsTargetMachine &>(MF.getTarget());
 
   if (STI.inMips16Mode())
     return Mips::CPU16RegsRegClass;
@@ -46,7 +39,7 @@ static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
   if (STI.inMicroMipsMode())
     return Mips::GPRMM16RegClass;
 
-  if (TM.getABI().IsN64())
+  if (STI.getABI().IsN64())
     return Mips::GPR64RegClass;
 
   return Mips::GPR32RegClass;
@@ -77,16 +70,17 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   DebugLoc DL;
   const TargetRegisterClass *RC;
-  const MipsABIInfo &ABI =
-      static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI();
+  const MipsABIInfo &ABI = MF.getSubtarget<MipsSubtarget>().getABI();
   RC = (ABI.IsN64()) ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
 
   Register V0 = RegInfo.createVirtualRegister(RC);
   Register V1 = RegInfo.createVirtualRegister(RC);
 
+  MCRegister T9 = ABI.getTempRegPtr(9);
+
   if (ABI.IsN64()) {
-    MF.getRegInfo().addLiveIn(Mips::T9_64);
-    MBB.addLiveIn(Mips::T9_64);
+    MF.getRegInfo().addLiveIn(T9);
+    MBB.addLiveIn(T9);
 
     // lui $v0, %hi(%neg(%gp_rel(fname)))
     // daddu $v1, $v0, $t9
@@ -94,8 +88,7 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi64), V0)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0)
-        .addReg(Mips::T9_64);
+    BuildMI(MBB, I, DL, TII.get(Mips::DADDu), V1).addReg(V0).addReg(T9);
     BuildMI(MBB, I, DL, TII.get(Mips::DADDiu), GlobalBaseReg).addReg(V1)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
     return;
@@ -113,8 +106,8 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     return;
   }
 
-  MF.getRegInfo().addLiveIn(Mips::T9);
-  MBB.addLiveIn(Mips::T9);
+  MF.getRegInfo().addLiveIn(T9);
+  MBB.addLiveIn(T9);
 
   if (ABI.IsN32()) {
     // lui $v0, %hi(%neg(%gp_rel(fname)))
@@ -123,7 +116,7 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
     const GlobalValue *FName = &MF.getFunction();
     BuildMI(MBB, I, DL, TII.get(Mips::LUi), V0)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_HI);
-    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(Mips::T9);
+    BuildMI(MBB, I, DL, TII.get(Mips::ADDu), V1).addReg(V0).addReg(T9);
     BuildMI(MBB, I, DL, TII.get(Mips::ADDiu), GlobalBaseReg).addReg(V1)
         .addGlobalAddress(FName, 0, MipsII::MO_GPOFF_LO);
     return;
@@ -151,16 +144,16 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   MF.getRegInfo().addLiveIn(Mips::V0);
   MBB.addLiveIn(Mips::V0);
   BuildMI(MBB, I, DL, TII.get(Mips::ADDu), GlobalBaseReg)
-      .addReg(Mips::V0).addReg(Mips::T9);
+      .addReg(Mips::V0)
+      .addReg(T9);
 }
 
 void MipsFunctionInfo::createEhDataRegsFI(MachineFunction &MF) {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   for (int &I : EhDataRegFI) {
     const TargetRegisterClass &RC =
-        static_cast<const MipsTargetMachine &>(MF.getTarget()).getABI().IsN64()
-            ? Mips::GPR64RegClass
-            : Mips::GPR32RegClass;
+        MF.getSubtarget<MipsSubtarget>().getABI().IsN64() ? Mips::GPR64RegClass
+                                                          : Mips::GPR32RegClass;
 
     I = MF.getFrameInfo().CreateStackObject(TRI.getSpillSize(RC),
                                             TRI.getSpillAlign(RC), false);

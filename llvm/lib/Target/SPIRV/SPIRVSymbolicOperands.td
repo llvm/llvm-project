@@ -645,6 +645,7 @@ defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_A
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
 defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
+defm UntypedVariableLengthArrayINTEL : CapabilityOperand<6243, 0, 0, [SPV_INTEL_variable_length_array], [VariableLengthArrayINTEL, UntypedPointersKHR]>;
 defm LongVectorEXT : CapabilityOperand<5425, 0, 0, [SPV_EXT_long_vector], []>;
 
 //===----------------------------------------------------------------------===//
@@ -1406,7 +1407,7 @@ defm LinkageAttributes : DecorationOperand<41, 0, 0, [], [Linkage]>;
 defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;
 defm Alignment : DecorationOperand<44, 0, 0, [], [Kernel]>;
-defm MaxByteOffset : DecorationOperand<45, 0, 0, [], [Addresses]>;
+defm MaxByteOffset : DecorationOperand<45, 0x10100, 0, [], [Addresses]>;
 defm AlignmentId : DecorationOperand<46, 0, 0, [], [Kernel]>;
 defm MaxByteOffsetId : DecorationOperand<47, 0, 0, [], [Addresses]>;
 defm NoSignedWrap : DecorationOperand<4469, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;

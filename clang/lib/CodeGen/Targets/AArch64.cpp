@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace clang;
@@ -1191,13 +1192,6 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           CharUnits::fromQuantity(8), AllowHigherAlign, Slot);
 }
 
-static bool isStreamingCompatible(const FunctionDecl *F) {
-  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
-    return T->getAArch64SMEAttributes() &
-           FunctionType::SME_PStateSMCompatibleMask;
-  return false;
-}
-
 // Report an error if an argument or return value of type Ty would need to be
 // passed in a floating-point register.
 static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
@@ -1233,74 +1227,37 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-enum class ArmSMEInlinability : uint8_t {
-  Ok = 0,
-  ErrorCalleeRequiresNewZA = 1 << 0,
-  ErrorCalleeRequiresNewZT0 = 1 << 1,
-  WarnIncompatibleStreamingModes = 1 << 2,
-  ErrorIncompatibleStreamingModes = 1 << 3,
-
-  IncompatibleStreamingModes =
-      WarnIncompatibleStreamingModes | ErrorIncompatibleStreamingModes,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ErrorIncompatibleStreamingModes),
-};
-
-/// Determines if there are any Arm SME ABI issues with inlining \p Callee into
-/// \p Caller. Returns the issue (if any) in the ArmSMEInlinability bit enum.
-static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
-                                                const FunctionDecl *Callee) {
-  bool CallerIsStreaming =
-      IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
-  bool CalleeIsStreaming =
-      IsArmStreamingFunction(Callee, /*IncludeLocallyStreaming=*/true);
-  bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
-  bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
-
-  ArmSMEInlinability Inlinability = ArmSMEInlinability::Ok;
-
-  if (!CalleeIsStreamingCompatible &&
-      (CallerIsStreaming != CalleeIsStreaming || CallerIsStreamingCompatible)) {
-    if (CalleeIsStreaming)
-      Inlinability |= ArmSMEInlinability::ErrorIncompatibleStreamingModes;
-    else
-      Inlinability |= ArmSMEInlinability::WarnIncompatibleStreamingModes;
-  }
-  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>()) {
-    if (NewAttr->isNewZA())
-      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZA;
-    if (NewAttr->isNewZT0())
-      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZT0;
-  }
-
-  return Inlinability;
-}
-
 void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
     const FunctionDecl *Callee) const {
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  ArmSMEInlinability Inlinability = GetArmSMEInlinability(Caller, Callee);
+  CodeGenUtils::ArmSMEInlinability Inlinability =
+      CodeGenUtils::getArmSMEInlinability(Caller, Callee);
 
-  if ((Inlinability & ArmSMEInlinability::IncompatibleStreamingModes) !=
-      ArmSMEInlinability::Ok)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::IncompatibleStreamingModes) !=
+      CodeGenUtils::ArmSMEInlinability::Ok)
     CGM.getDiags().Report(
         CallLoc,
-        (Inlinability & ArmSMEInlinability::ErrorIncompatibleStreamingModes) ==
-                ArmSMEInlinability::ErrorIncompatibleStreamingModes
+        (Inlinability &
+         CodeGenUtils::ArmSMEInlinability::ErrorIncompatibleStreamingModes) ==
+                CodeGenUtils::ArmSMEInlinability::
+                    ErrorIncompatibleStreamingModes
             ? diag::err_function_always_inline_attribute_mismatch
             : diag::warn_function_always_inline_attribute_mismatch)
         << Caller->getDeclName() << Callee->getDeclName() << "streaming";
 
-  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
-      ArmSMEInlinability::ErrorCalleeRequiresNewZA)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
+      CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
         << Callee->getDeclName();
 
-  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
-      ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
+  if ((Inlinability &
+       CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
+      CodeGenUtils::ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_zt0)
         << Callee->getDeclName();
 }
@@ -1339,7 +1296,8 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
 bool AArch64TargetCodeGenInfo::wouldInliningViolateFunctionCallABI(
     const FunctionDecl *Caller, const FunctionDecl *Callee) const {
   return Caller && Callee &&
-         GetArmSMEInlinability(Caller, Callee) != ArmSMEInlinability::Ok;
+         CodeGenUtils::getArmSMEInlinability(Caller, Callee) !=
+             CodeGenUtils::ArmSMEInlinability::Ok;
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,

@@ -147,6 +147,88 @@ in-memory element representation they operate on is declared in
 
 [SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
 
+### Prefix-Stable Packing
+
+Prefix-stable packing is used for signatures that connect programmable shader
+stages or carry patch constant data. Elements are visited in declaration order
+and placed at the first compatible location in the 32-row by 4-column register
+space. Once an element is placed it is never moved, so appending elements to a
+signature does not change the locations assigned to its existing prefix.
+
+Elements can share unused components in a row when all applicable packing
+constraints are satisfied:
+
+- Every element in a row must have a compatible interpolation mode.
+- When native 16-bit types are enabled, every element in a row must have the
+  same component width. Without native 16-bit types, min-precision values
+  occupy 32-bit components.
+- Within each row, elements are ordered by category: arbitrary values first,
+  followed by system values, and then system-generated values. For example, a
+  system value can never be packed to the left of an arbitrary value.
+  Indexed tessellation factors follow these categories in the component
+  ordering. Clip/cull values occupy dedicated rows as described below.
+- A system value or system generated value cannot be placed in a dynamically
+  indexed row. A dynamically indexed row is a row within the range covered by
+  a multi-row element, where the row is selected using a dynamic index.
+
+Some semantic interpretations require additional handling:
+
+- `SV_ClipDistance` and `SV_CullDistance` are packed only with each other in
+  dedicated rows. Together they may occupy at most eight components across at
+  most two rows. The rows must be adjacent when a clip or cull element spans
+  multiple rows. Otherwise, clip and cull rows do not need to be adjacent.
+- A multi-row tessellation factor is searched for only in the last column.
+  Arbitrary values may fill the columns to its left, even when declared after
+  the factor. A single-row tessellation factor is ordered and packed as a
+  system value instead.
+- Geometry shader output streams are packed independently.
+
+For example:
+
+```hlsl
+struct VSOut {
+  float3 A[3] : A;
+  float1x2 B  : B;
+  float2 C    : C;
+  float D     : D;
+};
+```
+
+Assuming `B` has column-major matrix orientation, the signature is allocated
+as:
+
+```text
+reg0: A[0].xyz | B[0][0].w
+reg1: A[1].xyz | B[0][1].w
+reg2: A[2].xyz | D.w
+reg3: C.xy     | unused.zw
+```
+
+### Optimized Packing
+
+Optimized packing partitions eligible elements into groups and packs the groups
+in this order:
+
+1. Arbitrary and system-value elements that occupy a full register.
+2. Multi-row tessellation factors, which are restricted to the last column.
+3. Arbitrary elements.
+4. System-value elements, including single-row tessellation factors.
+5. `SV_ClipDistance` and `SV_CullDistance` elements.
+6. System-generated-value elements.
+
+Within each group, elements are ordered first by the numeric value of their
+interpolation mode, then by decreasing row count, then by decreasing column
+count, and finally by increasing signature ID.
+
+Unlike prefix-stable packing, optimized packing does not reserve whole rows for
+clip/cull values. They may share compatible rows with other values following the
+same constraints.
+
+This is a greedy optimized ordering rather than an exhaustive search for a
+minimum-row layout. Reordering can reduce the number of rows occupied, but
+means that appending an element may change locations assigned to existing
+elements.
+
 ### Stacked Packing
 
 Stacked packing is used for a vertex shader input signature. Eligible elements

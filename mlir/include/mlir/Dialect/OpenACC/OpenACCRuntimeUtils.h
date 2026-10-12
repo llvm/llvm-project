@@ -19,6 +19,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Region.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -132,12 +133,19 @@ public:
   void setAsyncNoValueRuntimeValue(int64_t runtimeValue);
   int64_t getAsyncNoValueRuntimeValue() const;
 
+  /// Materialize the target-specific binary descriptor passed to
+  /// `__tgt_acc_declare`. The default is a null pointer.
+  using DeclareBinaryDescriptorFn = std::function<Value(Location, OpBuilder &)>;
+  void setDeclareBinaryDescriptorFn(DeclareBinaryDescriptorFn fn);
+  Value createDeclareBinaryDescriptor(Location loc, OpBuilder &builder) const;
+
 private:
   DenseMap<RuntimeFunction, std::string> overrides;
   DenseMap<DeviceType, int64_t> deviceTypeRuntimeValues;
   DenseMap<MapFlags, int64_t> mapFlagRuntimeValues;
   FunctionDisplayNameFn functionDisplayNameFn;
   MapFlagsPostProcessFn mapFlagsPostProcessFn;
+  DeclareBinaryDescriptorFn declareBinaryDescriptorFn;
   // Default to the encodings used by openacc.h (`acc_async_sync` /
   // `acc_async_noval`).
   int64_t asyncSyncRuntimeValue = -1;

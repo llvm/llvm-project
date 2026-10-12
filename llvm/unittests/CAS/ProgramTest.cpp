@@ -144,9 +144,9 @@ TEST_F(CASProgramTest, MappedFileRegionArenaTest) {
 
   ASSERT_FALSE(ExecutionFailed) << Error;
   ASSERT_NE(PI.Pid, sys::ProcessInfo::InvalidPid) << "Invalid process id";
-  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/5, &Error);
-  ASSERT_TRUE(PI.ReturnCode == 0);
-  ASSERT_TRUE(Error.empty());
+  PI = llvm::sys::Wait(PI, /*SecondsToWait=*/10, &Error);
+  ASSERT_TRUE(Error.empty()) << Error;
+  ASSERT_EQ(PI.ReturnCode, 0);
 
   // Clean up after both processes finish testing.
   sys::fs::remove(FilePath);

@@ -539,12 +539,12 @@ define <2 x i64> @sdiv_exact_negated_dividend_constant_divisor_vec(<2 x i64> %x)
   ret <2 x i64> %div
 }
 
-; Can't negate signed min vector element.
-
+; Negating the signed min divisor wraps back to itself. If the dividend is
+; signed min, the source is poison due to the nsw negation, so producing 1
+; in the result is a valid refinement.
 define <2 x i8> @sdiv_exact_negated_dividend_constant_divisor_vec_overflow(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_exact_negated_dividend_constant_divisor_vec_overflow(
-; CHECK-NEXT:    [[DIV1:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 -128, i8 42>
-; CHECK-NEXT:    [[DIV:%.*]] = sub nsw <2 x i8> zeroinitializer, [[DIV1]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 -128, i8 -42>
 ; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %neg = sub nsw <2 x i8> zeroinitializer, %x

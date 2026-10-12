@@ -424,8 +424,10 @@ bool isUnlimitedPolymorphicType(mlir::Type ty) {
 }
 
 bool isRecordWithAllocatableMember(mlir::Type ty) {
+  ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (fir::isAllocatableType(memTy))
         return true;
       // A record type cannot recursively include itself as a direct member.
@@ -1710,7 +1712,12 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       return result;
     auto [compSize, compAlign] = *result;
     if (character.hasConstantLen())
-      compSize *= character.getLen();
+      // Use the code unit's allocation stride (aligned store size) rather than
+      // the bare store size.  Under kind mappings like a1:24 (i24, 3-byte
+      // store, 4-byte stride), multiplying by the store size under-counts the
+      // total byte footprint; using alignTo(compSize, compAlign) matches what
+      // LLVM allocates for each code unit.
+      compSize = llvm::alignTo(compSize, compAlign) * character.getLen();
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;

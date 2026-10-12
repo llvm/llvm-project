@@ -12,10 +12,9 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    ands x11, x8, x9
 ; CHECK-NEXT:    b.eq .LBB0_6
 ; CHECK-NEXT:  // %bb.2: // %for.body.us.preheader
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x11, x2, x11, lsl #1
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mov x12, #4 // =0x4
@@ -47,43 +46,43 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    add x18, x16, x14
 ; CHECK-NEXT:    add x3, x17, #8
 ; CHECK-NEXT:    add x4, x17, #16
-; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    ld1b { z5.b }, p0/z, [x16, x15]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
-; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x12, lsl #1]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
-; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x13, lsl #1]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
+; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x12, lsl #1]
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
+; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x13, lsl #1]
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #1, mul vl]
 ; CHECK-NEXT:    str z4, [x16]
 ; CHECK-NEXT:    ldr z4, [x18, #1, mul vl]
-; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #1, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #2, mul vl]
 ; CHECK-NEXT:    str z4, [x16, #1, mul vl]
 ; CHECK-NEXT:    ldr z4, [x18, #2, mul vl]
-; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #2, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #3, mul vl]
 ; CHECK-NEXT:    str z4, [x16, #2, mul vl]
 ; CHECK-NEXT:    ldr z4, [x18, #3, mul vl]
-; CHECK-NEXT:    fmad z4.h, p1/m, z0.h, z5.h
+; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    ldr z5, [x17, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z1.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
 ; CHECK-NEXT:    ldr z5, [x3, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z2.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
 ; CHECK-NEXT:    ldr z5, [x4, #3, mul vl]
-; CHECK-NEXT:    fmla z4.h, p1/m, z5.h, z3.h
+; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    str z4, [x16, #3, mul vl]
 ; CHECK-NEXT:    incb x16, all, mul #4
 ; CHECK-NEXT:    cmp x16, x11

@@ -12,6 +12,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -1461,16 +1462,15 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
         JITDylibSearchOrder({{JD, JITDylibLookupFlags::MatchAllSymbols}}),
         std::move(Names), SymbolState::Ready,
         [&, JD](Expected<SymbolMap> Result) {
-          {
-            std::lock_guard<std::mutex> Lock(LookupMutex);
-            --Count;
-            if (Result) {
-              assert(!CompoundResult.count(JD) &&
-                     "Duplicate JITDylib in lookup?");
-              CompoundResult[JD] = std::move(*Result);
-            } else
-              CompoundErr =
-                  joinErrors(std::move(CompoundErr), Result.takeError());
+          std::lock_guard<std::mutex> Lock(LookupMutex);
+          --Count;
+          if (Result) {
+            assert(!CompoundResult.count(JD) &&
+                   "Duplicate JITDylib in lookup?");
+            CompoundResult[JD] = std::move(*Result);
+          } else {
+            CompoundErr =
+                joinErrors(std::move(CompoundErr), Result.takeError());
           }
           CV.notify_one();
         },
@@ -1856,64 +1856,81 @@ ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name,
   return lookup(SearchOrder, intern(Name), RequiredState);
 }
 
-Error ExecutionSession::registerJITDispatchHandlers(
-    JITDylib &JD, JITDispatchHandlerAssociationMap WFs) {
+Error ExecutionSession::registerCallControllerHandlers(
+    JITDylib &JD, std::vector<CallControllerHandlerBinding> Hs) {
+
+  // Mangle and intern the tag names, and take the handlers.
+  Mangler Mangle(getTargetTriple());
+  DenseMap<SymbolStringPtr, CallControllerHandlerFn> Handlers;
+  SymbolLookupSet LookupSet;
+  for (auto &H : Hs) {
+    auto TagName = Mangle.withMangledNameDo(
+        [&](StringRef N) { return intern(N); }, H.getName());
+    auto Handler = H.takeHandler();
+    assert(Handler && "CallControllerHandler implementation missing");
+    if (!Handlers.try_emplace(TagName, std::move(Handler)).second)
+      return make_error<StringError>(
+          "Duplicate call-controller handler binding for tag " + *TagName,
+          inconvertibleErrorCode());
+    LookupSet.add(std::move(TagName), H.getLookupFlags());
+  }
 
   auto TagSyms = lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
-                        SymbolLookupSet::fromMapKeys(
-                            WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+                        std::move(LookupSet));
   if (!TagSyms)
     return TagSyms.takeError();
 
   // Associate tag addresses with implementations.
-  std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
+  std::lock_guard<std::mutex> Lock(CallControllerHandlersMutex);
 
   // Check that no tags are being overwritten.
   for (auto &[TagName, TagSym] : *TagSyms) {
     auto TagAddr = TagSym.getAddress();
-    if (JITDispatchHandlers.count(TagAddr))
+    if (CallControllerHandlers.count(TagAddr))
       return make_error<StringError>("Tag " + formatv("{0:x}", TagAddr) +
                                          " (for " + *TagName +
                                          ") already registered",
                                      inconvertibleErrorCode());
   }
 
-  // At this point we're guaranteed to succeed. Install the handlers.
+  // At this point we're guaranteed to succeed. Install the handlers. Handlers
+  // for weakly referenced tags that weren't found are dropped.
   for (auto &[TagName, TagSym] : *TagSyms) {
     auto TagAddr = TagSym.getAddress();
-    auto I = WFs.find(TagName);
-    assert(I != WFs.end() && I->second &&
-           "JITDispatchHandler implementation missing");
-    JITDispatchHandlers[TagAddr] =
-        std::make_shared<JITDispatchHandlerFunction>(std::move(I->second));
+    auto I = Handlers.find(TagName);
+    assert(I != Handlers.end() && "No handler for tag in lookup result");
+    CallControllerHandlers[TagAddr] =
+        std::make_unique<CallControllerHandlerFn>(std::move(I->second));
     LLVM_DEBUG({
-      dbgs() << "Associated function tag \"" << *TagName << "\" ("
-             << formatv("{0:x}", TagAddr) << ") with handler\n";
+      dbgs() << "Registered call-controller handler for tag \"" << *TagName
+             << "\" (" << formatv("{0:x}", TagAddr) << ")\n";
     });
   }
 
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(
-    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+void ExecutionSession::runCallControllerHandler(
+    CallControllerReturnFn Return, ExecutorAddr HandlerFnTagAddr,
     shared::WrapperFunctionBuffer ArgBytes) {
 
-  std::shared_ptr<JITDispatchHandlerFunction> F;
+  // Handlers are never removed, so H remains valid after the lock is
+  // released.
+  CallControllerHandlerFn *H = nullptr;
   {
-    std::lock_guard<std::mutex> Lock(JITDispatchHandlersMutex);
-    auto I = JITDispatchHandlers.find(HandlerFnTagAddr);
-    if (I != JITDispatchHandlers.end())
-      F = I->second;
+    std::lock_guard<std::mutex> Lock(CallControllerHandlersMutex);
+    auto I = CallControllerHandlers.find(HandlerFnTagAddr);
+    if (I != CallControllerHandlers.end())
+      H = I->second.get();
   }
 
-  if (F)
-    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
-  else
-    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
-        ("No function registered for tag " +
+  if (!H)
+    return Return(shared::WrapperFunctionBuffer::createOutOfBandError(
+        ("No call-controller handler registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));
+
+  (*H)(std::move(Return), std::move(ArgBytes));
 }
 
 void ExecutionSession::dump(raw_ostream &OS) {

@@ -26,13 +26,10 @@ namespace llvm {
 
 class MipsTargetMachine : public CodeGenTargetMachineImpl {
   bool isLittle;
-  std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  // Selected ABI
-  MipsABIInfo ABI;
-  const MipsSubtarget *Subtarget;
+  bool IsJIT;
+  // Used to initialize module-wide object-file policy.
   MipsSubtarget DefaultSubtarget;
-  MipsSubtarget NoMips16Subtarget;
-  MipsSubtarget Mips16Subtarget;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<MipsSubtarget>> SubtargetMap;
 
@@ -46,16 +43,7 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  const MipsSubtarget *getSubtargetImpl() const {
-    if (Subtarget)
-      return Subtarget;
-    return &DefaultSubtarget;
-  }
-
   const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
-
-  /// Reset the subtarget for the Mips target.
-  void resetSubtarget(MachineFunction *MF);
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
@@ -69,7 +57,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Mips doesn't have any special address spaces so we just reserve
     // the first 256 for software use (e.g. OpenCL) and treat casts
     // between them as noops.
@@ -77,7 +66,7 @@ public:
   }
 
   bool isLittleEndian() const { return isLittle; }
-  const MipsABIInfo &getABI() const { return ABI; }
+  bool isJIT() const { return IsJIT; }
 };
 
 /// Mips32/64 big endian target machine.

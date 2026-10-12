@@ -64,8 +64,6 @@ protected:
   static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);
   static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
                                      SDNodeFlags Flags);
-  SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
-                                SDNodeFlags Flags) const;
   SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
   std::pair<SDValue, SDValue> getScaledLogInput(SelectionDAG &DAG,
                                                 const SDLoc SL, SDValue Op,
@@ -73,7 +71,6 @@ protected:
 
   SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFLOG10(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
@@ -142,7 +139,6 @@ protected:
   getConstantNegateCost(const ConstantFPSDNode *C) const;
 
   bool isConstantCostlierToNegate(SDValue N) const;
-  bool isConstantCheaperToNegate(SDValue N) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -157,7 +153,6 @@ protected:
   /// Return 64-bit value Op as two 32-bit integers.
   std::pair<SDValue, SDValue> split64BitValue(SDValue Op,
                                               SelectionDAG &DAG) const;
-  SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector type into two parts. The first part is a power of two
@@ -181,7 +176,6 @@ protected:
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG, bool sign) const;

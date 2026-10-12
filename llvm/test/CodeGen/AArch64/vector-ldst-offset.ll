@@ -1741,7 +1741,7 @@ define [2 x ptr] @v1f64_postidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-LABEL: v1f64_postidx_same_size:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    ld1 { v0.1d }, [x0], #8
-; CHECK-BE-NEXT:    st1 { v0.1d }, [x1], #8
+; CHECK-BE-NEXT:    str d0, [x1], #8
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-LE-SA-LABEL: v1f64_postidx_same_size:
@@ -1793,9 +1793,7 @@ define [2 x ptr] @v1f64_preidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-LABEL: v1f64_preidx_same_size:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    ldr d0, [x0, #8]!
-; CHECK-BE-NEXT:    mov x8, x1
-; CHECK-BE-NEXT:    add x1, x1, #8
-; CHECK-BE-NEXT:    str d0, [x8, #8]
+; CHECK-BE-NEXT:    str d0, [x1, #8]!
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-LE-SA-LABEL: v1f64_preidx_same_size:
@@ -1844,9 +1842,7 @@ define [2 x ptr] @v1f64_postidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-LABEL: v1f64_postidx_different_size:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    ldr d0, [x0], #16
-; CHECK-BE-NEXT:    mov x8, x1
-; CHECK-BE-NEXT:    add x1, x1, #16
-; CHECK-BE-NEXT:    str d0, [x8]
+; CHECK-BE-NEXT:    str d0, [x1], #16
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-LE-SA-LABEL: v1f64_postidx_different_size:
@@ -1898,9 +1894,7 @@ define [2 x ptr] @v1f64_preidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-BE-LABEL: v1f64_preidx_different_size:
 ; CHECK-BE:       // %bb.0: // %entry
 ; CHECK-BE-NEXT:    ldr d0, [x0, #16]!
-; CHECK-BE-NEXT:    mov x8, x1
-; CHECK-BE-NEXT:    add x1, x1, #16
-; CHECK-BE-NEXT:    str d0, [x8, #16]
+; CHECK-BE-NEXT:    str d0, [x1, #16]!
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-LE-SA-LABEL: v1f64_preidx_different_size:

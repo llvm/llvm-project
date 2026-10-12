@@ -233,6 +233,7 @@ struct DylinkSection : CustomSection {
   std::vector<DylinkImportInfo> ImportInfo;
   std::vector<DylinkExportInfo> ExportInfo;
   std::vector<StringRef> RuntimePath;
+  StringRef TargetArch;
 };
 
 struct NameSection : CustomSection {
@@ -261,6 +262,7 @@ struct LinkingSection : CustomSection {
   std::vector<SegmentInfo> SegmentInfos;
   std::vector<InitFunction> InitFunctions;
   std::vector<Comdat> Comdats;
+  StringRef TargetArch;
 };
 
 struct ProducersSection : CustomSection {

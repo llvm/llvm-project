@@ -473,10 +473,7 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 8
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[B]], i64 1)
-; CHECK-NEXT:    [[TMP16:%.*]] = freeze i64 [[TMP15]]
-; CHECK-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP16]], i64 [[A]])
-; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[UMIN4]], 3
+; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[UMIN10]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 8
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC_1]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]

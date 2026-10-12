@@ -30,7 +30,7 @@ Base::~Base() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR-NEXT:store ptr getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
-// OGCG-NEXT:   store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV4Base, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG-NEXT:   store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV4Base, i64 16), ptr %[[THIS]]
 // LLVM-NEXT:   call void @_Z13some_functionv()
 // LLVM-NEXT:   ret void
 
@@ -47,7 +47,7 @@ Derived::~Derived() { some_function(); }
 // CIR-NEXT:     cir.call @_Z13some_functionv()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -59,7 +59,7 @@ Derived::~Derived() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV7Derived, i64 16), ptr %[[THIS]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV7Derived, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV7Derived, i64 16), ptr %[[THIS]]
 // LLVM-NEXT:   call void @_Z13some_functionv()
 // LLVM:        call void @_ZN4BaseD2Ev(ptr {{.*}}%[[THIS]])
 // LLVM:        ret void
@@ -81,7 +81,7 @@ FinalDerived::~FinalDerived() { some_function(); }
 // CIR-NEXT:     cir.call @_Z13some_functionv()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_FinalDerived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_FinalDerived> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -110,7 +110,7 @@ TrivialDtor::~TrivialDtor() {}
 // CIR-NEXT:   cir.cleanup.scope {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_TrivialDtor> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:     %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_TrivialDtor> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:     cir.call @_ZN4BaseD2Ev(%[[BASE_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -147,19 +147,19 @@ MultiBase::~MultiBase() { some_function(); }
 // CIR-NEXT:       %[[MOTHER_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.store{{.*}} %[[MOTHER_VPTR]], %[[MOTHER_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR-NEXT:       %[[FATHER_VPTR:.*]] = cir.vtable.address_point(@_ZTV9MultiBase, address_point = <index = 1, offset = 2>) : !cir.vptr
-// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Father>
 // CIR-NEXT:       %[[FATHER_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[FATHER_ADDR]] : !cir.ptr<!rec_Father> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.store{{.*}} %[[FATHER_VPTR]], %[[FATHER_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR-NEXT:       cir.call @_Z13some_functionv()
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } cleanup normal {
-// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR-NEXT:       %[[FATHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Father>
 // CIR-NEXT:       cir.call @_ZN6FatherD2Ev(%[[FATHER_ADDR]])
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     }
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } cleanup normal {
-// CIR-NEXT:     %[[MOTHER_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_MultiBase> nonnull [0] -> !cir.ptr<!rec_Mother>
+// CIR-NEXT:     %[[MOTHER_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_MultiBase> -> !cir.ptr<!rec_Mother>
 // CIR-NEXT:     cir.call @_ZN6MotherD2Ev(%[[MOTHER_ADDR]])
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   }
@@ -169,10 +169,10 @@ MultiBase::~MultiBase() { some_function(); }
 // LLVM:        %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:        %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV9MultiBase, i64 16), ptr %[[THIS]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV9MultiBase, i32 0, i32 0, i32 2), ptr %[[THIS]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV9MultiBase, i64 16), ptr %[[THIS]]
 // LLVM:        %[[FATHER_ADDR:.*]] = getelementptr {{.*}}i8, ptr %[[THIS]], i{{32|64}} 8
 // LLVMCIR:     store ptr getelementptr inbounds nuw (i8, ptr @_ZTV9MultiBase, i64 48), ptr %[[FATHER_ADDR]]
-// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV9MultiBase, i32 0, i32 1, i32 2), ptr %[[FATHER_ADDR]]
+// OGCG:        store ptr getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV9MultiBase, i64 48), ptr %[[FATHER_ADDR]]
 // LLVM:        call void @_Z13some_functionv()
 // LLVM:        call void @_ZN6FatherD2Ev(ptr {{.*}})
 // LLVM:        call void @_ZN6MotherD2Ev(ptr {{.*}}%[[THIS]])

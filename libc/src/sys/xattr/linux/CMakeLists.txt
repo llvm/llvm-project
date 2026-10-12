@@ -1,4 +1,94 @@
 add_entrypoint_object(
+  fgetxattr
+  SRCS
+    fgetxattr.cpp
+  HDRS
+    ../fgetxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fgetxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getxattr
+  SRCS
+    getxattr.cpp
+  HDRS
+    ../getxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  lgetxattr
+  SRCS
+    lgetxattr.cpp
+  HDRS
+    ../lgetxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lgetxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fsetxattr
+  SRCS
+    fsetxattr.cpp
+  HDRS
+    ../fsetxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fsetxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  setxattr
+  SRCS
+    setxattr.cpp
+  HDRS
+    ../setxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  lsetxattr
+  SRCS
+    lsetxattr.cpp
+  HDRS
+    ../lsetxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.lsetxattr
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   flistxattr
   SRCS
     flistxattr.cpp
@@ -9,6 +99,7 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 

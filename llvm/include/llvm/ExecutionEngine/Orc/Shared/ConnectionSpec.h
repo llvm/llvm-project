@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // A ConnectionSpec describes one connection a process should establish with
-// its peer, e.g. "tcp:connect=localhost:20000" or "fd=3".
+// its peer, e.g. "tcp:connect=localhost:20000" or "socket:adopt=3".
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,22 +26,23 @@ namespace llvm::orc {
 ///
 ///   <transport>[:<action>]=<descriptor>
 ///
-/// E.g. "fd=3", "tcp:connect=localhost:20000", "tcp:listen=[::1]:0". Such
-/// strings typically reach a process as a command-line argument, but nothing
-/// in the grammar or the parser assumes that.
+///   transport   what kind of thing the descriptor names: "tcp" for a host:port
+///               endpoint, "socket" for a handle this process already holds.
+///   action      what this process does with it: "connect", "listen", or
+///               "adopt" for a handle it was handed.
+///   descriptor  the thing itself, in whatever syntax the transport defines.
 ///
-/// A spec describes what the process reading it does, so the two ends of one
-/// connection carry different specs: an executor told "tcp:listen=:0" pairs
-/// with a controller told "tcp:connect=<host>:<port>".
+/// E.g. "tcp:connect=localhost:20000", "tcp:listen=[::1]:0", "socket:adopt=3".
 ///
-/// The parser only checks punctuation: the transport and action names are
-/// opaque tokens, and the descriptor's syntax is entirely up to the
-/// transport. Splitting the action from the transport is confined to the
-/// text before the first '=', which lets a descriptor contain ':' and '='
-/// unescaped (e.g. "tcp:listen=[::1]:0", "unix:listen=/tmp/a=b.sock").
+/// A spec says what the process reading it does, so the two ends of one
+/// connection carry different specs: an executor told
+/// "tcp:connect=<host>:<port>" pairs with a controller told "tcp:listen=:0".
 ///
-/// All three fields are preserved verbatim, so callers matching a transport
-/// or action name against a known set do so case-sensitively.
+/// Parsing checks punctuation only: transport and action are opaque tokens, the
+/// descriptor's syntax belongs to the transport, and all three fields are kept
+/// verbatim -- so a caller matching a name against a known set does so
+/// case-sensitively. Only the text before the first '=' is searched for the
+/// ':', which lets a descriptor hold ':' and '=' unescaped.
 class ConnectionSpec {
 public:
   /// Parses Spec as <transport>[:<action>]=<descriptor>.
@@ -50,12 +51,11 @@ public:
   /// The transport name, e.g. "tcp". Never empty.
   StringRef getTransport() const { return Transport; }
 
-  /// The action name, e.g. "listen" or "connect". May be empty: direction is
-  /// degenerate for some transports (an inherited socket fd is already
-  /// connected), so single-mode transports omit it.
+  /// The action name, e.g. "connect" or "adopt". May be empty.
   StringRef getAction() const { return Action; }
 
-  /// The transport-specific address. May be empty (e.g. "fd=").
+  /// The thing the transport names, in whatever syntax that transport defines.
+  /// Opaque here: the parser neither splits nor validates it. May be empty.
   StringRef getDescriptor() const { return Descriptor; }
 
   /// Rebuilds the original connection string, e.g. "tcp:connect=host:port".

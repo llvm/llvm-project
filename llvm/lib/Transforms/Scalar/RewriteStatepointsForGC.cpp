@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/RewriteStatepointsForGC.h"
+#include "ScalarOptions.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -77,22 +78,6 @@
 
 using namespace llvm;
 
-// Print the liveset found at the insert location
-static cl::opt<bool> PrintLiveSet("spp-print-liveset", cl::Hidden,
-                                  cl::init(false));
-static cl::opt<bool> PrintLiveSetSize("spp-print-liveset-size", cl::Hidden,
-                                      cl::init(false));
-
-// Print out the base pointers for debugging
-static cl::opt<bool> PrintBasePointers("spp-print-base-pointers", cl::Hidden,
-                                       cl::init(false));
-
-// Cost threshold measuring when it is profitable to rematerialize value instead
-// of relocating it
-static cl::opt<unsigned>
-RematerializationThreshold("spp-rematerialization-threshold", cl::Hidden,
-                           cl::init(6));
-
 #ifdef EXPENSIVE_CHECKS
 static bool ClobberNonLive = true;
 #else
@@ -102,13 +87,6 @@ static bool ClobberNonLive = false;
 static cl::opt<bool, true> ClobberNonLiveOverride("rs4gc-clobber-non-live",
                                                   cl::location(ClobberNonLive),
                                                   cl::Hidden);
-
-static cl::opt<bool>
-    AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
-                                   cl::Hidden, cl::init(true));
-
-static cl::opt<bool> RematDerivedAtUses("rs4gc-remat-derived-at-uses",
-                                        cl::Hidden, cl::init(true));
 
 /// The IR fed into RewriteStatepointsForGC may have had attributes and
 /// metadata implying dereferenceability that are no longer valid/correct after
@@ -227,12 +205,13 @@ using RematCandTy = MapVector<Value *, RematerizlizationCandidateRecord>;
 
 } // end anonymous namespace
 
-static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
+static ArrayRef<Use> getDeoptBundleOperands(const ScalarOptions &Opts,
+                                            const CallBase *Call) {
   std::optional<OperandBundleUse> DeoptBundle =
       Call->getOperandBundle(LLVMContext::OB_deopt);
 
   if (!DeoptBundle) {
-    assert(AllowStatepointWithNoDeoptInfo &&
+    assert(Opts.rs4gc_allow_statepoint_with_no_deopt_info &&
            "Found non-leaf call without deopt info!");
     return {};
   }
@@ -311,17 +290,18 @@ static std::string suffixed_name_or(Value *V, StringRef Suffix,
 // given instruction. Values defined by that instruction are not considered
 // live.  Values used by that instruction are considered live.
 static void analyzeParsePointLiveness(
-    DominatorTree &DT, GCPtrLivenessData &OriginalLivenessData, CallBase *Call,
+    const ScalarOptions &Opts, DominatorTree &DT,
+    GCPtrLivenessData &OriginalLivenessData, CallBase *Call,
     PartiallyConstructedSafepointRecord &Result, GCStrategy *GC) {
   StatepointLiveSetTy LiveSet;
   findLiveSetAtInst(Call, OriginalLivenessData, LiveSet, GC);
 
-  if (PrintLiveSet) {
+  if (Opts.spp_print_liveset) {
     dbgs() << "Live Variables:\n";
     for (Value *V : LiveSet)
       dbgs() << " " << V->getName() << " " << *V << "\n";
   }
-  if (PrintLiveSetSize) {
+  if (Opts.spp_print_liveset_size) {
     dbgs() << "Safepoint For: " << Call->getCalledOperand()->getName() << "\n";
     dbgs() << "Number live values: " << LiveSet.size() << "\n";
   }
@@ -1875,7 +1855,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
            UnwindBlock->getUniquePredecessor() &&
            "can't safely insert in this block!");
 
-    Builder.SetInsertPoint(UnwindBlock, UnwindBlock->getFirstInsertionPt());
+    Builder.SetInsertPoint(UnwindBlock->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(II->getDebugLoc());
 
     // Attach exceptional gc relocates to the landingpad.
@@ -1890,7 +1870,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
            NormalDest->getUniquePredecessor() &&
            "can't safely insert in this block!");
 
-    Builder.SetInsertPoint(NormalDest, NormalDest->getFirstInsertionPt());
+    Builder.SetInsertPoint(NormalDest->getFirstInsertionPt());
 
     // gc relocates will be generated later as if it were regular call
     // statepoint
@@ -2243,14 +2223,16 @@ static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
 }
 
 static void findLiveReferences(
-    Function &F, DominatorTree &DT, ArrayRef<CallBase *> toUpdate,
+    const ScalarOptions &Opts, Function &F, DominatorTree &DT,
+    ArrayRef<CallBase *> toUpdate,
     MutableArrayRef<struct PartiallyConstructedSafepointRecord> records,
     GCStrategy *GC) {
   GCPtrLivenessData OriginalLivenessData;
   computeLiveInValues(DT, F, OriginalLivenessData, GC);
   for (size_t i = 0; i < records.size(); i++) {
     struct PartiallyConstructedSafepointRecord &info = records[i];
-    analyzeParsePointLiveness(DT, OriginalLivenessData, toUpdate[i], info, GC);
+    analyzeParsePointLiveness(Opts, DT, OriginalLivenessData, toUpdate[i], info,
+                              GC);
   }
 }
 
@@ -2411,10 +2393,10 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
 // This can be beneficial when derived pointer is live across many
 // statepoints, but uses are rare.
 static void rematerializeLiveValuesAtUses(
-    RematCandTy &RematerizationCandidates,
+    const ScalarOptions &Opts, RematCandTy &RematerizationCandidates,
     MutableArrayRef<PartiallyConstructedSafepointRecord> Records,
     PointerToBaseTy &PointerToBase) {
-  if (!RematDerivedAtUses)
+  if (!Opts.rs4gc_remat_derived_at_uses)
     return;
 
   SmallVector<Instruction *, 32> LiveValuesToBeDeleted;
@@ -2426,7 +2408,7 @@ static void rematerializeLiveValuesAtUses(
     Instruction *Cand = cast<Instruction>(It.first);
     auto &Record = It.second;
 
-    if (Record.Cost >= RematerializationThreshold)
+    if (Record.Cost >= Opts.spp_rematerialization_threshold)
       continue;
 
     if (Cand->user_empty())
@@ -2531,7 +2513,7 @@ static void rematerializeLiveValuesAtUses(
 // to relocate. Remove this values from the live set, rematerialize them after
 // statepoint and record them in "Info" structure. Note that similar to
 // relocated values we don't do any user adjustments here.
-static void rematerializeLiveValues(CallBase *Call,
+static void rematerializeLiveValues(const ScalarOptions &Opts, CallBase *Call,
                                     PartiallyConstructedSafepointRecord &Info,
                                     PointerToBaseTy &PointerToBase,
                                     RematCandTy &RematerizationCandidates,
@@ -2554,7 +2536,7 @@ static void rematerializeLiveValues(CallBase *Call,
       Cost *= 2;
 
     // If it's too expensive - skip it.
-    if (Cost >= RematerializationThreshold)
+    if (Cost >= Opts.spp_rematerialization_threshold)
       continue;
 
     // Remove value from the live set
@@ -2645,8 +2627,8 @@ static bool inlineGetBaseAndOffset(Function &F,
   return Changed;
 }
 
-static bool insertParsePoints(Function &F, DominatorTree &DT,
-                              TargetTransformInfo &TTI,
+static bool insertParsePoints(const ScalarOptions &Opts, Function &F,
+                              DominatorTree &DT, TargetTransformInfo &TTI,
                               SmallVectorImpl<CallBase *> &ToUpdate,
                               DefiningValueMapTy &DVCache,
                               IsKnownBaseMapTy &KnownBases) {
@@ -2682,7 +2664,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   for (CallBase *Call : ToUpdate) {
     SmallVector<Value *, 64> DeoptValues;
 
-    for (Value *Arg : GetDeoptBundleOperands(Call)) {
+    for (Value *Arg : getDeoptBundleOperands(Opts, Call)) {
       assert(!isUnhandledGCPointerType(Arg->getType(), GC.get()) &&
              "support for FCA unimplemented");
       if (isHandledGCPointerType(Arg->getType(), GC.get()))
@@ -2696,7 +2678,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 
   // A) Identify all gc pointers which are statically live at the given call
   // site.
-  findLiveReferences(F, DT, ToUpdate, Records, GC.get());
+  findLiveReferences(Opts, F, DT, ToUpdate, Records, GC.get());
 
   /// Global mapping from live pointers to a base-defining-value.
   PointerToBaseTy PointerToBase;
@@ -2706,7 +2688,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     PartiallyConstructedSafepointRecord &info = Records[i];
     findBasePointers(DT, DVCache, ToUpdate[i], info, PointerToBase, KnownBases);
   }
-  if (PrintBasePointers) {
+  if (Opts.spp_print_base_pointers) {
     errs() << "Base Pairs (w/o Relocation):\n";
     for (auto &Pair : PointerToBase) {
       errs() << " derived ";
@@ -2749,7 +2731,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // not the key issue.
   recomputeLiveInValues(F, DT, ToUpdate, Records, PointerToBase, GC.get());
 
-  if (PrintBasePointers) {
+  if (Opts.spp_print_base_pointers) {
     errs() << "Base Pairs: (w/Relocation)\n";
     for (auto Pair : PointerToBase) {
       errs() << " derived ";
@@ -2788,10 +2770,10 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // some values instead of relocating them. This is purely an optimization and
   // does not influence correctness.
   // First try rematerialization at uses, then after statepoints.
-  rematerializeLiveValuesAtUses(RematerizationCandidates, Records,
+  rematerializeLiveValuesAtUses(Opts, RematerizationCandidates, Records,
                                 PointerToBase);
   for (size_t i = 0; i < Records.size(); i++)
-    rematerializeLiveValues(ToUpdate[i], Records[i], PointerToBase,
+    rematerializeLiveValues(Opts, ToUpdate[i], Records[i], PointerToBase,
                             RematerizationCandidates, TTI);
 
   // We need this to safely RAUW and delete call or invoke return values that
@@ -3030,8 +3012,9 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   assert(!F.isDeclaration() && !F.empty() &&
          "need function body to rewrite statepoints in");
   assert(shouldRewriteStatepointsIn(F) && "mismatch in rewrite decision");
+  const ScalarOptions &Opts = ScalarOptions::Global;
 
-  auto NeedsRewrite = [&TLI](Instruction &I) {
+  auto NeedsRewrite = [&](Instruction &I) {
     if (const auto *Call = dyn_cast<CallBase>(&I)) {
       if (isa<GCStatepointInst>(Call))
         return false;
@@ -3045,7 +3028,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
+      if (!Opts.rs4gc_allow_statepoint_with_no_deopt_info &&
+          !Call->hasDeoptState()) {
         assert(isa<AnyMemTransferInst>(Call) &&
                cast<AnyMemTransferInst>(Call)->isAtomic() &&
                "Don't expect any other calls here!");
@@ -3171,8 +3155,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
     MadeChange |= inlineGetBaseAndOffset(F, Intrinsics, DVCache, KnownBases);
 
   if (!ParsePointNeeded.empty())
-    MadeChange |=
-        insertParsePoints(F, DT, TTI, ParsePointNeeded, DVCache, KnownBases);
+    MadeChange |= insertParsePoints(Opts, F, DT, TTI, ParsePointNeeded, DVCache,
+                                    KnownBases);
 
   return MadeChange;
 }

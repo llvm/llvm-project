@@ -360,6 +360,9 @@ def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
                                           "Support AVX10.2 instruction",
                                           [FeatureAVX10_2]>;
+def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
+                                           "Support AVX10 V2 AUX instructions",
+                                           [FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -525,6 +528,11 @@ def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
 def TuningSlowVecMaskStore
     : SubtargetFeature<"slow-vec-mask-store", "IsVecMaskStoreSlow", "true",
                         "Vector mask store instruction is slow",
+                        [], InlineIgnore>;
+
+def TuningSlowVecCompressStore
+    : SubtargetFeature<"slow-vec-compress-store", "IsVecCompressStoreSlow", "true",
+                        "Vector compress store instruction is slow",
                         [], InlineIgnore>;
 
 // FIXME: This should not apply to CPUs that do not have SSE.
@@ -1736,6 +1744,7 @@ def ProcessorFeatures {
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
+                                                TuningSlowVecCompressStore,
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
@@ -1762,8 +1771,9 @@ def ProcessorFeatures {
                                                 TuningTZCNTFalseDeps,
                                                 TuningBLSFalseDeps
                                                 ];
+  list<SubtargetFeature> ZN5RemoveTuning = [TuningSlowVecCompressStore];
   list<SubtargetFeature> ZN5Tuning =
-    !listconcat(ZN4Tuning, ZN5AdditionalTuning);
+    !listremove(!listconcat(ZN4Tuning, ZN5AdditionalTuning), ZN5RemoveTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,

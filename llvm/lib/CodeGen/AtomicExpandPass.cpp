@@ -106,6 +106,7 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+  void expandAtomicSubToAdd(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
   insertRMWLLSCLoop(IRBuilderBase &Builder, Type *ResultTy, Value *Addr,
@@ -181,9 +182,8 @@ struct ReplacementIRBuilder
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
       : IRBuilder(
-            I->getContext(), InstSimplifyFolder(DL),
+            I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    SetInsertPoint(I);
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
@@ -246,6 +246,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
     case LLVMContext::MD_tbaa:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_access_group:
@@ -759,6 +760,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *Addr = SI->getPointerOperand();
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
+  copyMetadataForAtomic(*NewSI, *SI);
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
@@ -815,6 +817,28 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
 
   if (NeedBitcast)
     NewLoaded = Builder.CreateBitCast(NewLoaded, OrigTy);
+}
+
+void AtomicExpandImpl::expandAtomicSubToAdd(AtomicRMWInst *AI) {
+  ReplacementIRBuilder Builder(AI, *DL);
+  AtomicRMWInst::BinOp NewOp;
+  Value *NewVal;
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Sub:
+    NewOp = AtomicRMWInst::Add;
+    NewVal = Builder.CreateNeg(AI->getValOperand(), "neg");
+    break;
+  case AtomicRMWInst::FSub:
+    NewOp = AtomicRMWInst::FAdd;
+    NewVal = Builder.CreateFNeg(AI->getValOperand(), "fneg");
+    break;
+  default:
+    llvm_unreachable("unsupported atomicrmw expansion");
+  }
+
+  AI->setOperation(NewOp);
+  AI->setOperand(1, NewVal);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
@@ -885,6 +909,9 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitCmpArithAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    expandAtomicSubToAdd(AI);
+    return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
   case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
@@ -1469,7 +1496,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   // (50/50) to prevent misleading optimizations.
   setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return Loaded;
 }
 
@@ -1709,7 +1736,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // succeeded or not. We expose this to later passes by converting any
   // subsequent "icmp eq/ne %loaded, %oldval" into a use of an appropriate
   // PHI.
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   PHINode *LoadedExit =
       Builder.CreatePHI(UnreleasedLoad->getType(), 2, "loaded.exit");
   LoadedExit->addIncoming(LoadedTryStore, SuccessBB);
@@ -1722,7 +1749,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // a type wider than the one in the cmpxchg instruction.
   Value *LoadedFull = LoadedExit;
 
-  Builder.SetInsertPoint(ExitBB, std::next(Success->getIterator()));
+  Builder.SetInsertPoint(std::next(Success->getIterator()));
   Value *Loaded = extractMaskedValue(Builder, LoadedFull, PMV);
 
   // Look for any users of the cmpxchg that are just comparing the loaded value
@@ -1875,7 +1902,7 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // to prevent misleading optimizations.
   setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB->begin());
   return NewLoaded;
 }
 

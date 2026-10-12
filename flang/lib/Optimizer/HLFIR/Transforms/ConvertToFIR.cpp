@@ -440,13 +440,8 @@ public:
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
     // is verbatim.
-    llvm::SmallSet<llvm::StringRef, 8> elidedAttrs;
-    for (const mlir::NamedAttribute &firAttr : firDeclareOp->getAttrs())
-      elidedAttrs.insert(firAttr.getName());
-    elidedAttrs.insert(declareOp.getSkipReboxAttrName());
-    for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-      if (!elidedAttrs.contains(attr.getName()))
-        firDeclareOp->setAttr(attr.getName(), attr.getValue());
+    firDeclareOp->setDiscardableAttrs(
+        declareOp->getDiscardableAttrDictionary());
 
     auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;

@@ -1391,9 +1391,19 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   ///
   /// We model such elidable calls with the 'builtin' attribute.
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
-  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn &&
-      Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+  if (CalleeDecl->isReplaceableGlobalAllocationFunction() && Fn) {
+    if (Fn->hasFnAttribute(llvm::Attribute::NoBuiltin))
+      CallOrInvoke->addFnAttr(llvm::Attribute::Builtin);
+
+    // A sane operator new does not read or write accessible memory.
+    if (CGF.CGM.getCodeGenOpts().AssumeSaneOperatorNew &&
+        CalleeDecl->getDeclName().isAnyOperatorNew()) {
+      // FIXME: inaccessiblemem could cause issues if LTO makes the
+      // previously inaccessible memory accessible after linking.
+      CallOrInvoke->setMemoryEffects(
+          llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
+              llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
+    }
   }
 
   return RV;

@@ -34,12 +34,15 @@ using namespace llvm::offload;
 Error_t Malloc(void **DevPtr, size_t Size) {
   ThreadStateTy &ThreadState = ThreadStateTy::get();
   ol_device_handle_t Device = ThreadState.getDefaultDevice();
-  ol_result_t Result = olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, DevPtr);
+  ol_context_handle_t Context = StateTy::get().getContext();
+  ol_result_t Result =
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, DevPtr);
   return convertAndSetLastError(Result);
 }
 
 Error_t Free(void *DevPtr) {
-  ol_result_t Result = olMemFree(DevPtr);
+  ol_context_handle_t Context = StateTy::get().getContext();
+  ol_result_t Result = olMemFree(Context, DevPtr);
   return convertAndSetLastError(Result);
 }
 
@@ -121,7 +124,8 @@ Error_t SetDevice(int DeviceNo) {
 Error_t HostAlloc(void **Ptr, size_t Size, unsigned int Flags) {
   ThreadStateTy &ThreadState = ThreadStateTy::get();
   ol_device_handle_t Device = ThreadState.getDefaultDevice();
-  ol_result_t Result = olMemAllocHost(Device, Size, Ptr);
+  ol_context_handle_t Context = StateTy::get().getContext();
+  ol_result_t Result = olMemAllocHost(Context, Device, Size, Ptr);
   return convertAndSetLastError(Result);
 }
 
@@ -130,7 +134,8 @@ Error_t MallocHost(void **Ptr, size_t Size) {
 }
 
 Error_t FreeHost(void *Ptr) {
-  ol_result_t Result = olMemFree(Ptr);
+  ol_context_handle_t Context = StateTy::get().getContext();
+  ol_result_t Result = olMemFree(Context, Ptr);
   return convertAndSetLastError(Result);
 }
 

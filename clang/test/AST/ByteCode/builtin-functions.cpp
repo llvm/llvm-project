@@ -2040,9 +2040,9 @@ namespace WithinLifetime {
     constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
                                    // both-note {{reference to temporary is not a constant expression}} \
                                    // both-note {{temporary created here}} \
-                                   // ref-note {{declared here}}
-    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
-                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+                                   // both-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
+                                                        // both-note {{initializer of 'temp' is not a constant expression}}
   }
 }
 
@@ -2152,4 +2152,14 @@ namespace SubCb {
 namespace ReduceMin {
   typedef float v4f __attribute__((__vector_size__(16)));
   static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
+}
+
+namespace Rejected {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    __builtin_alloca(10 / 0); // both-note 2{{subexpression not valid in a constant expression}} \
+                              // both-warning {{division by zero is undefined}}
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }

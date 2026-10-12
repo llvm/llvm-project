@@ -179,6 +179,7 @@ resources/lldbdap-contributing
 resources/build
 resources/test
 resources/qemu-testing
+resources/wasm-testing
 resources/debugging
 resources/fuzzing
 ```

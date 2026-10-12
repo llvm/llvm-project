@@ -212,7 +212,8 @@ bool Pointer::operator==(const Pointer &P) const {
 
   switch (StorageKind) {
   case Storage::Int:
-    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+    return P.Int.Value == Int.Value && P.Int.getType() == Int.getType() &&
+           P.Offset == Offset;
   case Storage::Block:
     return P.view() == view();
   case Storage::Fn:
@@ -250,17 +251,16 @@ bool Pointer::operator==(const Pointer &P) const {
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
-  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
   if (isZero())
-    return APValue(APValue::LValueBase(), CharUnits::Zero(), Path,
+    return APValue(APValue::LValueBase(), CharUnits::Zero(), {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/true);
 
   switch (StorageKind) {
   case Storage::Int:
     return APValue(static_cast<const Expr *>(nullptr),
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
-                   Path,
+                   {},
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   case Storage::Block:
     // See below.
@@ -280,15 +280,35 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   } break;
-  case Storage::String:
+  case Storage::String: {
+    llvm::SmallVector<APValue::LValuePathEntry, 1> Path;
     if (Offset != 0 || Str.Decayed)
       Path.push_back(APValue::LValuePathEntry::ArrayIndex(Offset));
 
     return APValue(APValue::LValueBase(Str.Base),
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
   case Storage::Opaque: {
-    if (!Opaque.Base.getType()->isPointerType()) {
+    bool ValidBase = Opaque.hasValidBase() || this->Offset <= 1;
+
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+
+    auto LValueOffset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue::LValueBase Base;
+    if (const Expr *E = Opaque.Base.asExpr())
+      Base = E;
+    else
+      Base = Opaque.Base.asValueDecl();
+
+    // For valid bases, assemble the LValuePath.
+    APValue Result;
+    if (ValidBase) {
+      llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
       for (const PointerPathEntry &Entry : Opaque.path()) {
         switch (Entry.Kind) {
         case PointerPathEntry::Field:
@@ -306,21 +326,13 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
           break;
         }
       }
-    }
-    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    size_t ElemSize = 0;
-    if (validType(Opaque.getFieldType()))
-      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
-    auto Offset =
-        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
 
-    APValue::LValueBase Base;
-    if (const Expr *E = Opaque.Base.asExpr())
-      Base = E;
-    else
-      Base = Opaque.Base.asValueDecl();
-    APValue Result =
-        APValue(Base, Offset, Path, Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+      Result = APValue(Base, LValueOffset, Path, Opaque.isOnePastEnd(),
+                       /*IsNullPtr=*/false);
+
+    } else {
+      Result = APValue(Base, LValueOffset, APValue::NoLValuePath{});
+    }
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
     return Result;
   }
@@ -334,9 +346,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     Base = VD;
   else if (const auto *E = Desc->asExpr()) {
     if (block()->isDynamic()) {
-      QualType AllocatedType = getDeclPtr().getFieldDesc()->getDataType(ASTCtx);
-      DynamicAllocLValue DA(*block()->DynAllocId);
-      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+      DynamicAllocLValue DA(*block()->DynAllocId, Desc->getDynAllocKind());
+      Base =
+          APValue::LValueBase::getDynamicAlloc(DA, Desc->getDataType(ASTCtx));
     } else {
       Base = E;
     }
@@ -358,6 +370,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   // Build the path into the object.
   bool OnePastEnd = isOnePastEnd() && !isZeroSizeArray();
 
+  llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
   PtrView Ptr = view();
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -477,7 +490,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
   } break;
   case Storage::Int:
-    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.Ty << "}";
+    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.getType()
+       << ", " << (Int.isNull() ? "null" : "nonnull") << '}';
     break;
   case Storage::Fn:
     OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
@@ -713,28 +727,6 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   return toAPValue(Ctx).getAsString(Ctx, Ty);
 }
 
-bool Pointer::isInitialized() const {
-  if (!isBlockPointer())
-    return true;
-
-  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
-      Offset == BS.Base) {
-    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
-  assert(BS.Pointee && "Cannot check if null pointer was initialized");
-  const Descriptor *Desc = getFieldDesc();
-  assert(Desc);
-  if (Desc->isPrimitiveArray())
-    return isElementInitialized(getIndex());
-
-  if (asBlockPointer().Base == 0)
-    return true;
-  // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
-}
-
 bool PtrView::isElementInitialized(unsigned Index) const {
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
@@ -815,6 +807,12 @@ void PtrView::setLifeState(Lifetime L) const {
 }
 
 void PtrView::initialize() const {
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
+
   if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
     auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
@@ -841,6 +839,12 @@ void PtrView::initializeElement(unsigned Index) const {
     return;
 
   assert(Index < getFieldDesc()->getNumElems());
+
+  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
+  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
+  // initialized the scope via an InitScope op.
+  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
+    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())
@@ -1319,8 +1323,12 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 }
 
 const VarDecl *Pointer::getRootVarDecl() const {
+  return dyn_cast_if_present<VarDecl>(getRootValueDecl());
+}
+
+const ValueDecl *Pointer::getRootValueDecl() const {
   if (isBlockPointer())
-    return getDeclDesc()->asVarDecl();
+    return getDeclDesc()->asValueDecl();
   if (isOpaquePointer())
     return Opaque.getBaseDecl();
   return nullptr;
@@ -1361,16 +1369,21 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
 
-  return IntPointer{FD->getType().getTypePtr(), this->Value + FieldOffset};
+  uint64_t NewValue = this->Value + FieldOffset;
+  return IntPointer{{FD->getType().getTypePtr(), NewValue == 0}, NewValue};
 }
 
 IntPointer IntPointer::baseCast(const interp::Context &Ctx,
                                 unsigned BaseOffset) const {
-  if (!Ty)
+  if (!getType())
     return *this;
 
   QualType CurType = getPointeeType();
   if (CurType.isNull() || !CurType->isRecordType())
+    return *this;
+
+  // null pointers stay null during a cast, per conv.ptr
+  if (Value == 0)
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
@@ -1391,7 +1404,8 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
   QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                               std::nullopt, RD, false);
-  return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};
+  uint64_t NewValue = Value + BaseLayoutOffset.getQuantity();
+  return {{T.getTypePtr(), NewValue == 0}, NewValue};
 }
 
 std::optional<size_t>
@@ -1566,4 +1580,11 @@ bool OpaquePointer::isOnePastEndOrElementPastEnd() const {
   }
 
   return false;
+}
+
+bool OpaquePointer::hasValidBase() const {
+  if (const VarDecl *VD = Base.asVarDecl())
+    return !VD->hasExternalStorage();
+
+  return !Base.getType()->isPointerType();
 }

@@ -828,6 +828,11 @@ static std::unique_ptr<llvm::MemoryBuffer>
 getInputBufferForModule(CompilerInstance &CI, Module *M) {
   FileManager &FileMgr = CI.getFileManager();
 
+  // Merge in directories the requesting instance enumerated on this module's
+  // behalf.
+  for (StringRef Dir : CI.getInheritedDirectoryDependencies())
+    M->addDirectoryDependency(Dir);
+
   // Collect the set of #includes we need to build the module.
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();
@@ -1027,10 +1032,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (CI.getFrontendOpts().ModulesEmbedAllFiles)
     CI.getSourceManager().setAllFilesAreTransient(true);
 
-  // IR files bypass the rest of initialization.
-  if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    if (!hasIRSupport()) {
-      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+  // IR files (LLVM IR or ClangIR) bypass the rest of initialization.
+  Language InputLang = Input.getKind().getLanguage();
+  if (InputLang == Language::LLVM_IR || InputLang == Language::CIR) {
+    bool IsCIR = InputLang == Language::CIR;
+    if (IsCIR ? !hasCIRSupport() : !hasIRSupport()) {
+      CI.getDiagnostics().Report(IsCIR ? diag::err_ast_action_on_cir
+                                       : diag::err_ast_action_on_llvm_ir)
           << Input.getFile();
       return false;
     }
@@ -1542,6 +1550,9 @@ bool WrapperFrontendAction::hasASTFileSupport() const {
 }
 bool WrapperFrontendAction::hasIRSupport() const {
   return WrappedAction->hasIRSupport();
+}
+bool WrapperFrontendAction::hasCIRSupport() const {
+  return WrappedAction->hasCIRSupport();
 }
 bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();

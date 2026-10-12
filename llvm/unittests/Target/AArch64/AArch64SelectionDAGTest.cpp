@@ -49,7 +49,7 @@ protected:
     M = parseAssemblyString(Assembly, SMError, Context);
     if (!M)
       report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     F = M->getFunction("f");
     if (!F)
@@ -1518,6 +1518,34 @@ TEST_F(AArch64SelectionDAGTest,
   KnownBits KnownAVGCEILS = DAG->computeKnownBits(AVGCEILS);
   EXPECT_EQ(KnownAVGCEILS.Zero, Zeroes);
   EXPECT_EQ(KnownAVGCEILS.One, Ones);
+}
+
+// Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
+TEST_F(AArch64SelectionDAGTest, computeKnownBits_FABS) {
+  SDLoc Loc;
+  SDValue UnknownI32 = DAG->getCopyFromReg(
+      DAG->getEntryNode(), Loc, Register::index2VirtReg(1), MVT::i32);
+  SDValue UnknownF32 = DAG->getBitcast(MVT::f32, UnknownI32);
+
+  SDValue FAbsUnknown = DAG->getNode(ISD::FABS, Loc, MVT::f32, UnknownF32);
+  KnownBits Known = DAG->computeKnownBits(FAbsUnknown);
+  EXPECT_FALSE(Known.hasConflict());
+  EXPECT_EQ(Known.Zero, APInt(32, 0x80000000));
+  EXPECT_EQ(Known.One, APInt(32, 0x00000000));
+
+  // Ensure that when the operand's sign bit is known to be 1, ISD::FABS clears
+  // Known.One's sign bit in addition to setting Known.Zero's sign bit.
+  SDValue WithOnes = DAG->getNode(ISD::OR, Loc, MVT::i32, UnknownI32,
+                                  DAG->getConstant(0x80000001, Loc, MVT::i32));
+  SDValue WithZerosAndOnes =
+      DAG->getNode(ISD::AND, Loc, MVT::i32, WithOnes,
+                   DAG->getConstant(0xfffffffd, Loc, MVT::i32));
+  SDValue NegF32 = DAG->getBitcast(MVT::f32, WithZerosAndOnes);
+  SDValue FAbsNeg = DAG->getNode(ISD::FABS, Loc, MVT::f32, NegF32);
+  Known = DAG->computeKnownBits(FAbsNeg);
+  EXPECT_FALSE(Known.hasConflict());
+  EXPECT_EQ(Known.Zero, APInt(32, 0x80000002));
+  EXPECT_EQ(Known.One, APInt(32, 0x00000001));
 }
 
 // Piggy-backing on the AArch64 tests to verify

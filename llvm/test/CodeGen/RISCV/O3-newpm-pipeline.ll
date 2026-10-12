@@ -65,9 +65,10 @@
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
-; CHECK-NEXT:     process-imp-defs
+; CHECK-NEXT:     process-implicit-defs
 ; CHECK-NEXT:     unreachable-mbb-elimination
 ; CHECK-NEXT:     require<live-vars>
+; CHECK-NEXT:     require<live-intervals>
 ; CHECK-NEXT:     require<machine-loops>
 ; CHECK-NEXT:     phi-node-elimination
 ; CHECK-NEXT:     two-address-instruction

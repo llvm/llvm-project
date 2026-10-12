@@ -36,6 +36,28 @@
 using namespace lldb_private;
 using namespace minidump;
 
+/// Wrap raw stream contents in a single-stream minidump. Unlike yaml2obj, this
+/// leaves the location descriptors inside the stream untouched, so they can
+/// point anywhere.
+static std::string MakeMinidump(StreamType type, llvm::StringRef contents) {
+  Header header = {};
+  header.Signature = Header::MagicSignature;
+  header.Version = Header::MagicVersion;
+  header.NumberOfStreams = 1;
+  header.StreamDirectoryRVA = sizeof(Header);
+
+  Directory directory = {};
+  directory.Type = type;
+  directory.Location.RVA = sizeof(Header) + sizeof(Directory);
+  directory.Location.DataSize = contents.size();
+
+  std::string data;
+  data.append(reinterpret_cast<const char *>(&header), sizeof(header));
+  data.append(reinterpret_cast<const char *>(&directory), sizeof(directory));
+  data.append(contents);
+  return data;
+}
+
 class MinidumpParserTest : public testing::Test {
 public:
   SubsystemRAII<FileSystem> subsystems;
@@ -59,6 +81,10 @@ public:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "convertYAML() failed");
 
+    return SetUpFromData(data);
+  }
+
+  llvm::Error SetUpFromData(llvm::StringRef data) {
     auto data_buffer_sp =
         std::make_shared<DataBufferHeap>(data.data(), data.size());
     auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
@@ -910,4 +936,46 @@ Streams:
   EXPECT_THAT_EXPECTED(
       parser->GetMinidumpFile().getString(filtered_modules[1]->ModuleNameRVA),
       llvm::HasValue("/tmp/b"));
+}
+
+TEST_F(MinidumpParserTest, GetModuleUUIDOutOfRangeCvRecord) {
+  minidump::Module module = {};
+  module.BaseOfImage = 0x1000;
+  module.SizeOfImage = 0x1000;
+  module.CvRecord.RVA = 0xf0000000;
+  module.CvRecord.DataSize = sizeof(llvm::support::ulittle32_t);
+
+  std::string stream;
+  llvm::support::ulittle32_t module_count(1);
+  stream.append(reinterpret_cast<const char *>(&module_count),
+                sizeof(module_count));
+  stream.append(reinterpret_cast<const char *>(&module), sizeof(module));
+
+  ASSERT_THAT_ERROR(SetUpFromData(MakeMinidump(StreamType::ModuleList, stream)),
+                    llvm::Succeeded());
+
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
+  ASSERT_EQ(1u, modules.size());
+  EXPECT_FALSE(parser->GetModuleUUID(&modules[0]).IsValid());
+}
+
+TEST_F(MinidumpParserTest, GetThreadContextOutOfRange) {
+  minidump::Thread thread = {};
+  thread.ThreadId = 0x3e81;
+  // The sum of the two fields wraps around in 32 bits.
+  thread.Context.RVA = 0xfffffff0;
+  thread.Context.DataSize = 0x20;
+
+  std::string stream;
+  llvm::support::ulittle32_t thread_count(1);
+  stream.append(reinterpret_cast<const char *>(&thread_count),
+                sizeof(thread_count));
+  stream.append(reinterpret_cast<const char *>(&thread), sizeof(thread));
+
+  ASSERT_THAT_ERROR(SetUpFromData(MakeMinidump(StreamType::ThreadList, stream)),
+                    llvm::Succeeded());
+
+  llvm::ArrayRef<minidump::Thread> threads = parser->GetThreads();
+  ASSERT_EQ(1u, threads.size());
+  EXPECT_TRUE(parser->GetThreadContext(threads[0]).empty());
 }

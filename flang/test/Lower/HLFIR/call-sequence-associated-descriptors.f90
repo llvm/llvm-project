@@ -23,14 +23,14 @@ contains
     call takes_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_1(
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_1Ex"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMbindc_seq_assocFtest_char_1Ex") : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shift %[[VAL_8]], %[[VAL_8]] : (index, index) -> !fir.shift<2>
 ! CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_6]]#0(%[[VAL_9]]) : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<10x20x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_11:.*]]:3 = hlfir.associate %[[VAL_7]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]]#0 uniq_name("_QMbindc_seq_assocFtakes_charEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i32) -> i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : i64
@@ -56,7 +56,7 @@ contains
     call takes_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_copy_in_copy_out(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_copy_in_copy_outEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMbindc_seq_assocFtest_char_copy_in_copy_outEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:3 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, i1)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
@@ -64,7 +64,7 @@ contains
 ! CHECK:           %[[VAL_6:.*]] = fir.rebox %[[VAL_3]]#0(%[[VAL_5]]) : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]]#0 uniq_name("_QMbindc_seq_assocFtakes_charEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i64
@@ -91,7 +91,7 @@ contains
     call takes_char_assumed_size(x)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_assumed_size(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_assumed_sizeEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMbindc_seq_assocFtest_char_assumed_sizeEx") : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_2:.*]]:3 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, i1)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shift %[[VAL_3]], %[[VAL_3]] : (index, index) -> !fir.shift<2>
@@ -123,7 +123,7 @@ contains
     call takes_optional_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_optional_char(
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMbindc_seq_assocFtest_optional_charEx"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMbindc_seq_assocFtest_optional_charEx") fortran_attrs<optional> : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) -> i1
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_9:.*]] = fir.if %[[VAL_7]] -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) {
@@ -138,7 +138,7 @@ contains
 ! CHECK:           %[[VAL_14:.*]]:3 = hlfir.associate %[[VAL_8]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_15:.*]] = fir.if %[[VAL_7]] -> (!fir.box<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_14]]#0 {uniq_name = "_QMbindc_seq_assocFtakes_optional_charEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_14]]#0 uniq_name("_QMbindc_seq_assocFtakes_optional_charEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i64
@@ -186,10 +186,10 @@ contains
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_1(
 ! CHECK-SAME:                                             %[[VAL_0:.*]]: !fir.class<!fir.array<10x20xnone>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_1Ex"} : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpoly_seq_assocFtest_poly_1Ex") : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#0 uniq_name("_QMpoly_seq_assocFtakes_polyEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : i64
@@ -214,11 +214,11 @@ contains
     call takes_poly(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_copy_in_copy_out(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_copy_in_copy_outEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpoly_seq_assocFtest_poly_copy_in_copy_outEx") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:3 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.class<!fir.array<?x?xnone>>, !fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> (!fir.class<!fir.array<?x?xnone>>, i1, i1)
 ! CHECK:           %[[VAL_4:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]#0 uniq_name("_QMpoly_seq_assocFtakes_polyEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i64
@@ -244,7 +244,7 @@ contains
     call takes_poly_assumed_size(x)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_assumed_size(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_assumed_sizeEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpoly_seq_assocFtest_poly_assumed_sizeEx") : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           %[[VAL_2:.*]]:3 = hlfir.copy_in %[[VAL_1]]#0 to %[[TMP_BOX:.*]] : (!fir.class<!fir.array<?x?xnone>>, !fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> (!fir.class<!fir.array<?x?xnone>>, i1, i1)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : i64
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -271,7 +271,7 @@ contains
     call takes_optional_poly(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_optional_poly(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMpoly_seq_assocFtest_optional_polyEx"} : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMpoly_seq_assocFtest_optional_polyEx") fortran_attrs<optional> : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.class<!fir.array<10x20xnone>>) -> i1
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_4:.*]] = fir.if %[[VAL_2]] -> (!fir.class<!fir.array<10x20xnone>>) {
@@ -282,7 +282,7 @@ contains
 ! CHECK:           }
 ! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_3]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_7:.*]] = fir.if %[[VAL_2]] -> (!fir.class<!fir.array<?xnone>>) {
-! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]]#0 {uniq_name = "_QMpoly_seq_assocFtakes_optional_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]]#0 uniq_name("_QMpoly_seq_assocFtakes_optional_polyEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i64

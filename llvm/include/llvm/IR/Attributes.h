@@ -721,6 +721,16 @@ public:
     return addAttributesAtIndex(C, ArgNo + FirstArgIndex, B);
   }
 
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddParamAttribute(LLVMContext &C, unsigned ArgNo,
+                         Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addParamAttribute(C, ArgNo, Kind);
+    return *this;
+  }
+
   /// Remove the specified attribute at the specified index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   [[nodiscard]] LLVM_ABI AttributeList removeAttributeAtIndex(

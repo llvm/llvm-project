@@ -12,6 +12,8 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -21,7 +23,6 @@
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
@@ -76,12 +77,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     // Save the function pointer.
     Func = reinterpret_cast<KernelTy *>(Global.getPtr());
 
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
-
-    // Set the maximum number of threads to a single.
-    MaxNumThreads = 1;
     return Plugin::success();
   }
 
@@ -145,7 +140,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   ~GenELF64DeviceTy() {}
 
   /// Initialize the device, which is a no-op
-  Error initImpl(GenericPluginTy &Plugin) override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin,
+                 GenericProfilerTy *ProfilerPtr) override {
+    return Plugin::success();
+  }
 
   /// Unload the binary image
   ///
@@ -488,6 +486,53 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
     return Plugin::success();
   }
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
+                            GenericProfilerTy *ProfilerPtr) override {
+    auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
+                                              Alignment, ProfilerPtr);
+    if (!PtrOrErr)
+      return PtrOrErr.takeError();
+    void *Ptr = *PtrOrErr;
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
+    return Ptr;
+  }
+
+  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                   GenericProfilerTy *ProfilerPtr) override {
+    {
+      std::lock_guard<std::mutex> Lock(AllocsMutex);
+      Allocs.erase(Ptr);
+    }
+    return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    auto It = Allocs.upper_bound(const_cast<void *>(Ptr));
+    if (It == Allocs.begin())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    --It;
+    void *Base = It->first;
+    const Entry &E = It->second;
+    if (reinterpret_cast<const char *>(Ptr) >=
+        reinterpret_cast<char *>(Base) + E.Size)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    return PluginAllocInfoTy{E.Device, E.Kind, Base, E.Size};
+  }
+
+private:
+  struct Entry {
+    GenericDeviceTy *Device;
+    TargetAllocTy Kind;
+    size_t Size;
+  };
+  std::map<void *, Entry> Allocs;
+  std::mutex AllocsMutex;
 };
 
 /// Class implementing the plugin functionalities for GenELF64.

@@ -272,6 +272,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  renameat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.renameat
+)
+
+add_entrypoint_object(
   fdopen
   ALIAS
   DEPENDS
@@ -283,6 +290,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.tmpfile
+)
+
+add_entrypoint_object(
+  tmpnam
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpnam
 )
 
 # These entrypoints have multiple potential implementations.

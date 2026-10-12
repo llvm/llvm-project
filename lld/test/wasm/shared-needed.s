@@ -35,6 +35,7 @@ data:
 # SO1:      Sections:
 # SO1-NEXT:   - Type:            CUSTOM
 # SO1-NEXT:     Name:            dylink.0
+# SO1-NEXT:     TargetArch:      wasm32
 # SO1-NEXT:     MemorySize:      0
 # SO1-NEXT:     MemoryAlignment: 0
 # SO1-NEXT:     TableSize:       0
@@ -45,6 +46,7 @@ data:
 # SO2:      Sections:
 # SO2-NEXT:   - Type:            CUSTOM
 # SO2-NEXT:     Name:            dylink.0
+# SO2-NEXT:     TargetArch:      wasm32
 # SO2-NEXT:     MemorySize:      4
 # SO2-NEXT:     MemoryAlignment: 2
 # SO2-NEXT:     TableSize:       0

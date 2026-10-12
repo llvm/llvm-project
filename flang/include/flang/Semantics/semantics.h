@@ -56,6 +56,10 @@ class Symbol;
 class CommonBlockMap;
 using CommonBlockList = std::vector<std::pair<SymbolRef, std::size_t>>;
 
+namespace omp {
+struct SemanticOverrides;
+}
+
 using ConstructNode = std::variant<const parser::AssociateConstruct *,
     const parser::BlockConstruct *, const parser::CaseConstruct *,
     const parser::ChangeTeamConstruct *, const parser::CriticalConstruct *,
@@ -287,6 +291,9 @@ public:
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
+  // Like FindScope(), but returns null rather than dying when the source is
+  // not in the scope index, as is the case while it is still being built.
+  const Scope *FindScopeIfAny(parser::CharBlock) const;
   void UpdateScopeIndex(Scope &, parser::CharBlock);
   void DumpScopeIndex(llvm::raw_ostream &) const;
 
@@ -366,6 +373,11 @@ public:
   // behavior.
   CommonBlockList GetCommonBlocks() const;
 
+  // True when any structured OpenACC data construct maps an object, which is
+  // what makes it worth looking for such a mapping at a call site.
+  void NoteOpenACCDataMapping() { anyOpenACCDataMapping_ = true; }
+  bool AnyOpenACCDataMapping() const { return anyOpenACCDataMapping_; }
+
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
   void NoteUsedSymbol(const Symbol &);
@@ -402,6 +414,8 @@ public:
   bool IsRecordedBranchTarget(parser::CharBlock statementPosition) const {
     return branchTargets_.find(statementPosition) != branchTargets_.end();
   }
+
+  omp::SemanticOverrides &GetOmpSemanticOverrides();
 
 private:
   struct ScopeIndexComparator {
@@ -463,6 +477,8 @@ private:
   UnorderedSymbolSet isDefined_;
   UnorderedSymbolSet isUsed_;
   std::set<const parser::AccObject *> accObjectDuplicates_;
+  bool anyOpenACCDataMapping_{false};
+  std::unique_ptr<omp::SemanticOverrides> ompOverrides_;
   std::list<ProgramTree> programTrees_;
 };
 

@@ -862,3 +862,46 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytesDisabled) {
   Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
   EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size2);
 }
+
+TEST(ScudoSecondaryTest, ReleaseIntervalGreaterThanCurrentTime) {
+  scudo::u64 CurTime = scudo::getMonotonicTimeFast();
+  scudo::u64 CurTimeMs = CurTime / 1000000;
+  if (CurTimeMs >= INT32_MAX) {
+    TEST_SKIP(
+        "Machine uptime too high to test release interval > current time");
+  }
+
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Set the interval to a value larger than the current time so that
+  // no release should occur.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, INT32_MAX);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  // Set the first u32 value to a non-zero value.
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()) = 10;
+
+  Info.storeMemMap(Info.MemMaps[0]);
+
+  // If the release was not skipped, the underflow in (Time - IntervalTime)
+  // would cause this entry to be released and zeroed.
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 10U);
+
+  scudo::ScopedString Str;
+  Info.Cache->getStats(&Str);
+  EXPECT_NE(strstr(Str.data(), "ReleaseToOsSkips: 1,"), nullptr);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()) = 20;
+
+  Info.storeMemMap(Info.MemMaps[1]);
+
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 10U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()), 20U);
+
+  Str.clear();
+  Info.Cache->getStats(&Str);
+  EXPECT_NE(strstr(Str.data(), "ReleaseToOsSkips: 2,"), nullptr);
+}

@@ -966,7 +966,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        // The array is not required to be NUL terminated, so ask for the
+        // The array is not required to be null-terminated, so ask for the
         // bytes rather than for a C string. Its data can also be shorter than
         // the array type, as for a DW_AT_const_value string, so clamp the
         // length to what is really there.

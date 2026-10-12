@@ -29,6 +29,7 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ceil(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::copysign(0.0, 0.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fabs(-1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fdim(1.0, 0.0));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::bf16sub(0.0, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdiv(0.0, 1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::floor(1.2));
 static_assert(2.0 == LIBC_NAMESPACE::shared::fmaximum_mag_num(1.0, 2.0));
@@ -121,6 +122,7 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::copysignf(0.0f, 0.0f));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fabsf(-1.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fadd(0.0, 0.0));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fdimf(1.0f, 0.0f));
+static_assert(bfloat16(0.0f) == LIBC_NAMESPACE::shared::bf16subf(0.0f, 0.0f));
 static_assert(2.0f == LIBC_NAMESPACE::shared::fmaximum_mag_numf(1.0f, 2.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::floorf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximumf(0.0f, 0.0f));
@@ -471,6 +473,9 @@ static_assert(0.0f ==
               LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fdivf128(float128(0.0), float128(1.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::bf16subf128(float128(0.0),
+                                                  float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
 
 static_assert(float128(0.0) ==

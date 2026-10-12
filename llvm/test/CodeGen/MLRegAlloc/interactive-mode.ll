@@ -7,7 +7,7 @@
 ; RUN: cp %S/Inputs/interactive_main.py %t.rundir
 ; RUN: %python %t.rundir/interactive_main.py %t.channel-basename \
 ; RUN:    llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release -interactive-model-runner-echo-reply \
-; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %S/Inputs/two-large-fcts.ll -o /dev/null | FileCheck %s
+; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename -regalloc-csr-cost-scale=0 %S/Inputs/two-large-fcts.ll -o /dev/null | FileCheck %s
 
 ;; Make sure we see both contexts. Also sanity-check that the advice is the
 ;; expected one - the index of the first legal register
@@ -21,6 +21,14 @@
 
 ; CHECK:      index_to_evict: 9
 ; CHECK-NEXT: index_to_evict: 10
+
+;; An allocation order longer than the model width is an error.
+;; It fires before any advice is read, so no host is needed.
+; RUN: touch %t.narrow.in
+; RUN: not llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release \
+; RUN:    -regalloc-evict-interactive-channel-base=%t.narrow -mlregalloc-num-allocatable-regs=4 \
+; RUN:    %S/Inputs/two-large-fcts.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=NARROW
+; NARROW: Regalloc: the allocation order is longer than -mlregalloc-num-allocatable-regs=4
 
 ;; Out-of-range priority advice is saturated, not converted.
 

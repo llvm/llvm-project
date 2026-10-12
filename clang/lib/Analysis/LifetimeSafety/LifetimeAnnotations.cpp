@@ -116,11 +116,8 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!AC)
     return;
 
-  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!FD)
-    return;
-
   Args = AC->arguments();
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
 }
 
 std::optional<LifetimeBoundParamInfo>

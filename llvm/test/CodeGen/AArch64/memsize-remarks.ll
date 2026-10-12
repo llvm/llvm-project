@@ -1,4 +1,4 @@
-; RUN: llc %s -pass-remarks-analysis=gisel-irtranslator-memsize -pass-remarks-output=%t.opt.yaml -pass-remarks-filter=gisel-irtranslator-memsize -global-isel -o /dev/null 2>&1 | FileCheck %s --check-prefix=GISEL --implicit-check-not=GISEL
+; RUN: llc %s -pass-remarks-analysis=gisel-ir-translator-memsize -pass-remarks-output=%t.opt.yaml -pass-remarks-filter=gisel-ir-translator-memsize -global-isel -o /dev/null 2>&1 | FileCheck %s --check-prefix=GISEL --implicit-check-not=GISEL
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 source_filename = "memsize.c"
@@ -144,7 +144,7 @@ define void @known_call_with_dereferenceable_bytes(ptr dereferenceable(42) %dst,
 ; GISEL-NOT:  Read Variables:
 ; GISEL-NEXT:  Written Variables: <unknown> (42 bytes).
 ; YAML:       --- !Analysis
-; YAML:       gisel-irtranslator-memsize
+; YAML:       gisel-ir-translator-memsize
 ; YAML:       Name:            MemoryOpIntrinsicCall
 ; YAML-LABEL: Function:        known_call_with_dereferenceable_bytes
 ; YAML-NEXT:  Args:
@@ -176,7 +176,7 @@ define void @known_call_with_dereferenceable_bytes(ptr dereferenceable(42) %dst,
 ; GISEL-NEXT:  Read Variables: <unknown> (314 bytes).
 ; GISEL-NEXT:  Written Variables: <unknown> (42 bytes).
 ; YAML:       --- !Analysis
-; YAML:       gisel-irtranslator-memsize
+; YAML:       gisel-ir-translator-memsize
 ; YAML:       Name:            MemoryOpIntrinsicCall
 ; YAML-LABEL: Function:        known_call_with_dereferenceable_bytes
 ; YAML-NEXT:  Args:
@@ -214,7 +214,7 @@ define void @known_call_with_dereferenceable_bytes(ptr dereferenceable(42) %dst,
 ; GISEL-NEXT:  Read Variables: <unknown> (314 bytes).
 ; GISEL-NEXT:  Written Variables: <unknown> (42 bytes).
 ; YAML:       --- !Analysis
-; YAML:       gisel-irtranslator-memsize
+; YAML:       gisel-ir-translator-memsize
 ; YAML:       Name:            MemoryOpIntrinsicCall
 ; YAML-LABEL: Function:        known_call_with_dereferenceable_bytes
 ; YAML-NEXT:  Args:
@@ -252,7 +252,7 @@ define void @known_call_with_dereferenceable_bytes(ptr dereferenceable(42) %dst,
 ; GISEL-NOT:  Read Variables:
 ; GISEL-NEXT:  Written Variables: <unknown> (42 bytes).
 ; YAML:       --- !Analysis
-; YAML:       gisel-irtranslator-memsize
+; YAML:       gisel-ir-translator-memsize
 ; YAML:       Name:            MemoryOpCall
 ; YAML-LABEL: Function:        known_call_with_dereferenceable_bytes
 ; YAML-NEXT:  Args:
@@ -275,7 +275,7 @@ define void @known_call_with_dereferenceable_bytes(ptr dereferenceable(42) %dst,
 ; GISEL-NEXT:  Read Variables: <unknown> (314 bytes).
 ; GISEL-NEXT:  Written Variables: <unknown> (42 bytes).
 ; YAML:       --- !Analysis
-; YAML:       gisel-irtranslator-memsize
+; YAML:       gisel-ir-translator-memsize
 ; YAML:       Name:            MemoryOpCall
 ; YAML-LABEL: Function:        known_call_with_dereferenceable_bytes
 ; YAML-NEXT:  Args:

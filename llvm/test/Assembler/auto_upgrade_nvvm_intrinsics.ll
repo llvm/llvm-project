@@ -32,6 +32,13 @@ declare i16 @llvm.nvvm.min.us(i16, i16)
 declare i32 @llvm.nvvm.min.ui(i32, i32)
 declare i64 @llvm.nvvm.min.ull(i64, i64)
 
+declare i16 @llvm.nvvm.mulhi.s(i16, i16)
+declare i32 @llvm.nvvm.mulhi.i(i32, i32)
+declare i64 @llvm.nvvm.mulhi.ll(i64, i64)
+declare i16 @llvm.nvvm.mulhi.us(i16, i16)
+declare i32 @llvm.nvvm.mulhi.ui(i32, i32)
+declare i64 @llvm.nvvm.mulhi.ull(i64, i64)
+
 declare i32 @llvm.nvvm.bitcast.f2i(float)
 declare float @llvm.nvvm.bitcast.i2f(i32)
 declare i64 @llvm.nvvm.bitcast.d2ll(double)
@@ -277,6 +284,29 @@ define void @min_max(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
 
 ; CHECK: %r12 = call i64 @llvm.umin.i64(i64 %c1, i64 %c2)
   %r12 = call i64 @llvm.nvvm.min.ull(i64 %c1, i64 %c2)
+
+  ret void
+}
+
+; CHECK-LABEL: @mulhi
+define void @mulhi(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
+; CHECK: %r1 = call i16 @llvm.smulh.i16(i16 %a1, i16 %a2)
+  %r1 = call i16 @llvm.nvvm.mulhi.s(i16 %a1, i16 %a2)
+
+; CHECK: %r2 = call i32 @llvm.smulh.i32(i32 %b1, i32 %b2)
+  %r2 = call i32 @llvm.nvvm.mulhi.i(i32 %b1, i32 %b2)
+
+; CHECK: %r3 = call i64 @llvm.smulh.i64(i64 %c1, i64 %c2)
+  %r3 = call i64 @llvm.nvvm.mulhi.ll(i64 %c1, i64 %c2)
+
+; CHECK: %r4 = call i16 @llvm.umulh.i16(i16 %a1, i16 %a2)
+  %r4 = call i16 @llvm.nvvm.mulhi.us(i16 %a1, i16 %a2)
+
+; CHECK: %r5 = call i32 @llvm.umulh.i32(i32 %b1, i32 %b2)
+  %r5 = call i32 @llvm.nvvm.mulhi.ui(i32 %b1, i32 %b2)
+
+; CHECK: %r6 = call i64 @llvm.umulh.i64(i64 %c1, i64 %c2)
+  %r6 = call i64 @llvm.nvvm.mulhi.ull(i64 %c1, i64 %c2)
 
   ret void
 }
@@ -779,6 +809,30 @@ define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
   %r8 = call half @llvm.nvvm.add.rn.ftz.sat.f16(half %c, half %c)
   %r9 = call <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
   %r10 = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  ret void
+}
+
+define void @nvvm_mul(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.fmul.f32(float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fmul.ftz.f32(float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fmul.f32(float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fmul.ftz.f32(float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fmul.f64(double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fmul.f64(double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fmul.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fmul.ftz.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fmul.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fmul.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.mul.rn.f(float %a, float %a)
+  %r2 = call float @llvm.nvvm.mul.rz.ftz.f(float %a, float %a)
+  %r3 = call float @llvm.nvvm.mul.rm.f(float %a, float %a)
+  %r4 = call float @llvm.nvvm.mul.rp.ftz.f(float %a, float %a)
+  %r5 = call double @llvm.nvvm.mul.rn.d(double %b, double %b)
+  %r6 = call double @llvm.nvvm.mul.rz.d(double %b, double %b)
+  %r7 = call half @llvm.nvvm.mul.rn.sat.f16(half %c, half %c)
+  %r8 = call half @llvm.nvvm.mul.rn.ftz.sat.f16(half %c, half %c)
+  %r9 = call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  %r10 = call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
   ret void
 }
 

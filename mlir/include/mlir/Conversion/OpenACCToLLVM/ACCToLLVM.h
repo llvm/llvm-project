@@ -65,9 +65,10 @@ void populateACCAtomicPatterns(
 void configureACCDataDirectiveConversionLegality(ConversionTarget &target);
 
 /// Populate patterns that lower OpenACC data directives (`acc.data`,
-/// `enter_data`, `exit_data`, `update`) to `__tgt_acc_data_*` runtime calls.
-/// Clauses that can be repeated per device type are taken from the ones that
-/// apply to \p clauseDeviceType. The runtime declarations and globals the
+/// `enter_data`, `exit_data`, `update`, `declare_enter`, `declare_exit`) to
+/// `__tgt_acc_data_*`, `__tgt_acc_declare`, and `__tgt_acc_mirror_*` runtime
+/// calls. Clauses that can be repeated per device type are taken from the ones
+/// that apply to \p clauseDeviceType. The runtime declarations and globals the
 /// patterns add are created in \p globalSymbolRegion and registered in
 /// \p symbolTable.
 void populateACCDataDirectivePatterns(

@@ -294,6 +294,11 @@ class FieldDef:
             raise TypeError(
                 f"only `attribute` field specifier can be used for attribute fields"
             )
+
+        # `Attribute` denotes an unconstrained attribute.
+        if type_ is Attribute:
+            type_ = Any
+
         return AttributeDef(
             name,
             variadicity,

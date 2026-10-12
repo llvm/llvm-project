@@ -1494,8 +1494,20 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
 llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     const ::mlir::DataLayout &dataLayout,
     ::mlir::DataLayoutEntryListRef params) const {
+  // Clang packs a fixed-length bool vector one bit per element and rounds the
+  // vector's size up to a power of two of at least a byte.
+  if (mlir::isa<cir::BoolType>(getElementType()) && !getIsScalable()) {
+    assert(!cir::MissingFeatures::hlsl());
+    return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
+  }
   return llvm::TypeSize::getFixed(
       getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t cir::VectorType::getBoolStorageWidth() const {
+  assert(mlir::isa<cir::BoolType>(getElementType()) &&
+         "only a bool vector is stored as an integer");
+  return std::max<uint64_t>(getSize(), 8);
 }
 
 uint64_t
@@ -1584,6 +1596,34 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getNumRows() * getNumColumns() *
+      dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+mlir::LogicalResult cir::MatrixType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t row, uint64_t column) {
+  if (row == 0)
+    return emitError() << "the number of matrix rows must be non-zero";
+  if (column == 0)
+    return emitError() << "the number of matrix columns must be non-zero";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AddressSpace definitions
 //===----------------------------------------------------------------------===//
 
@@ -1599,32 +1639,32 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::Default:
     return LangAddressSpace::Default;
   case LangAS::opencl_global:
+  case LangAS::sycl_global:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_local:
   case LangAS::cuda_shared:
-    // Local means local among the work-group (OpenCL) or block (CUDA).
+  case LangAS::sycl_local:
+    // Local means local among the work-group (OpenCL, SYCL) or block (CUDA).
     // All threads inside the kernel can access local memory.
     return LangAddressSpace::OffloadLocal;
   case LangAS::cuda_device:
     return LangAddressSpace::OffloadGlobal;
   case LangAS::opencl_constant:
   case LangAS::cuda_constant:
+  case LangAS::sycl_constant:
     return LangAddressSpace::OffloadConstant;
   case LangAS::opencl_private:
+  case LangAS::sycl_private:
     return LangAddressSpace::OffloadPrivate;
   case LangAS::opencl_generic:
+  case LangAS::sycl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+  case LangAS::sycl_global_device:
     return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
-    return LangAddressSpace::OffloadGlobalHost;
-  case LangAS::sycl_global:
-  case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:
-  case LangAS::sycl_local:
-  case LangAS::sycl_private:
-  case LangAS::sycl_generic:
-  case LangAS::sycl_constant:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::ptr32_sptr:
   case LangAS::ptr32_uptr:
   case LangAS::ptr64:

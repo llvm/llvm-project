@@ -7,23 +7,27 @@ declare void @llvm.amdgcn.s.barrier() #1
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: {{^}}signed_ds_offset_addressing_loop:
-; CHECK: BB0_1:
-; CHECK: v_add_i32_e32 [[VADDR:v[0-9]+]],
-; SI-DAG: v_add_i32_e32 [[VADDR1:v[0-9]+]], vcc, 0xc20, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR1]]
-; SI-DAG: v_add_i32_e32 [[VADDR2:v[0-9]+]], vcc, {{s[0-9]+}}, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR2]]
-; SI-DAG: v_add_i32_e32 [[VADDR3:v[0-9]+]], vcc, 0xca0, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR3]]
-; SI-DAG: v_add_i32_e32 [[VADDR4:v[0-9]+]], vcc, 0xca8, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR4]]
-; SI-DAG: v_add_i32_e32 [[VADDR5:v[0-9]+]], vcc, 0xd20, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR5]]
+; CHECK: s_movk_i32 [[BASE:s[0-9]+]], 0xf3e0
+; CHECK: .LBB0_1:
+; CHECK: v_add_i32_e32 [[VADDR:v[0-9]+]], vcc, [[BASE]], v{{[0-9]+}}
 ;
-; CI: v_add_i32_e32 [[VADDRCI:v[0-9]+]], vcc, {{s[0-9]+}}, [[VADDR]]
-; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDRCI]] offset0:8 offset1:10
-; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDRCI]] offset0:40 offset1:42
-; CI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]] offset:3360
+; SI-NEXT: v_add_i32_e32 [[VADDR1:v[0-9]+]], vcc, 0xc20, [[VADDR]]
+; SI-NEXT: v_add_i32_e32 [[VADDR2:v[0-9]+]], vcc, 0xc28, [[VADDR]]
+; SI-NEXT: v_add_i32_e32 [[VADDR3:v[0-9]+]], vcc, 0xca0, [[VADDR]]
+; SI-NEXT: v_add_i32_e32 [[VADDR4:v[0-9]+]], vcc, 0xca8, [[VADDR]]
+; SI-NEXT: v_add_i32_e32 [[VADDR5:v[0-9]+]], vcc, 0xd20, [[VADDR]]
+; SI-NEXT: s_barrier
+; SI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR1]]
+; SI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR2]]
+; SI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR3]]
+; SI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR4]]
+; SI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR5]]
+;
+; CI-NEXT: v_add_i32_e32 [[VADDRCI:v[0-9]+]], vcc, {{s[0-9]+}}, [[VADDR]]
+; CI-NEXT: s_barrier
+; CI-NEXT: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDRCI]] offset0:8 offset1:10
+; CI-NEXT: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDRCI]] offset0:40 offset1:42
+; CI-NEXT: ds_read_b32 v{{[0-9]+}}, [[VADDR]] offset:3360
 ; CHECK: s_endpgm
 define amdgpu_kernel void @signed_ds_offset_addressing_loop(ptr addrspace(1) noalias nocapture %out, ptr addrspace(3) noalias nocapture readonly %lptr, i32 %n) #2 {
 entry:

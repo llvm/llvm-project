@@ -14,20 +14,20 @@
 # RV64Y-C-ZCMP: LLVM ERROR: 'zcmp' is incompatible with rv64y base
 # RV64Y-ZCA-ZCMP: LLVM ERROR: 'zcmp' is incompatible with rv64y base
 
-.attribute arch, "rv64y0p98_zce"
-# ATTR: error: invalid arch name 'rv64y0p98_zce', 'zcmt' is incompatible with rv64y base
+.attribute arch, "rv64y0p910_zce"
+# ATTR: error: invalid arch name 'rv64y0p910_zce', 'zcmt' is incompatible with rv64y base
 
-.attribute arch, "rv32y0p98_zcf"
-# ATTR: error: invalid arch name 'rv32y0p98_zcf', 'zcf' is incompatible with rv32y base
+.attribute arch, "rv32y0p910_zcf"
+# ATTR: error: invalid arch name 'rv32y0p910_zcf', 'zcf' is incompatible with rv32y base
 
-.attribute arch, "rv32y0p98_zclsd"
-# ATTR: error: invalid arch name 'rv32y0p98_zclsd', 'zclsd' is incompatible with rv32y base
+.attribute arch, "rv32y0p910_zclsd"
+# ATTR: error: invalid arch name 'rv32y0p910_zclsd', 'zclsd' is incompatible with rv32y base
 
-.attribute arch, "rv64y0p98_zcd"
-# ATTR: error: invalid arch name 'rv64y0p98_zcd', 'zcd' is incompatible with rv64y base
+.attribute arch, "rv64y0p910_zcd"
+# ATTR: error: invalid arch name 'rv64y0p910_zcd', 'zcd' is incompatible with rv64y base
 
-.attribute arch, "rv64y0p98_c_zcmp"
-# ATTR: error: invalid arch name 'rv64y0p98_c_zcmp', 'zcmp' is incompatible with rv64y base
+.attribute arch, "rv64y0p910_c_zcmp"
+# ATTR: error: invalid arch name 'rv64y0p910_c_zcmp', 'zcmp' is incompatible with rv64y base
 
-.attribute arch, "rv64y0p98_zca_zcmp"
-# ATTR: error: invalid arch name 'rv64y0p98_zca_zcmp', 'zcmp' is incompatible with rv64y base
+.attribute arch, "rv64y0p910_zca_zcmp"
+# ATTR: error: invalid arch name 'rv64y0p910_zca_zcmp', 'zcmp' is incompatible with rv64y base

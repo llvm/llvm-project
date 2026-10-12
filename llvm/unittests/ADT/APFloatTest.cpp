@@ -2522,23 +2522,27 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
 
   for (const fltSemantics *Sem : NoSignSemantics) {
     // The magnitude converts exactly, so the sign is the whole of the loss.
-    APFloat test(-2.0);
+    APFloat test(-1.0);
     bool losesInfo = false;
     APFloat::opStatus status =
         test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_TRUE(losesInfo);
     EXPECT_EQ(status, APFloat::opInexact);
     EXPECT_TRUE(test.isNegative());
-    EXPECT_EQ(-2.0, test.convertToDouble());
+    EXPECT_EQ(-1.0, test.convertToDouble());
+    APInt negBits = test.bitcastToAPInt();
 
     // The same magnitude without the sign has nothing to report.
-    test = APFloat(2.0);
+    test = APFloat(1.0);
     losesInfo = true;
     status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(status, APFloat::opOK);
     EXPECT_FALSE(test.isNegative());
-    EXPECT_EQ(2.0, test.convertToDouble());
+    EXPECT_EQ(1.0, test.convertToDouble());
+
+    // No sign bit exists, so the bits must match the positive magnitude.
+    EXPECT_EQ(test.bitcastToAPInt(), negBits);
   }
 
   // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That

@@ -15,12 +15,13 @@ add_flang_library(FIRTransforms
   CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
-  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFDuplicateDeviceFunc.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
   CUDA/CUFOpConversionLate.cpp
   CUDA/CUFPredefinedVarToGPU.cpp
+  CUDA/CUFSharedTypeInfo.cpp
   CharacterConversion.cpp
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
@@ -51,6 +52,7 @@ add_flang_library(FIRTransforms
   MemoryAllocation.cpp
   MemoryUtils.cpp
   OptimizeArrayRepacking.cpp
+  O0CanonicalizerPass.cpp
   PolymorphicOpConversion.cpp
   SetRuntimeCallAttributes.cpp
   SimplifyFIROperations.cpp
@@ -85,6 +87,7 @@ add_flang_library(FIRTransforms
   MLIR_LIBS
   MLIRAffineUtils
   MLIRAnalysis
+  MLIRControlFlowDialect
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRLLVMCommonConversion
@@ -92,6 +95,7 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIROpenMPDialect
   MLIRTransformUtils
 )

@@ -12,7 +12,7 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
-  set(useful_python_modules psutil packaging cryptography)
+  set(useful_python_modules psutil packaging cryptography.x509)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
@@ -290,7 +290,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
-  LLDB_ENABLE_LZMA
+  LLVM_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
   LLVM_ENABLE_DIA_SDK

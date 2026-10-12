@@ -23,7 +23,7 @@ namespace lldb_private {
 ///     The StateType object to convert.
 ///
 /// \return
-///     A NULL terminated C string that describes \a state. The
+///     A null-terminated C string that describes \a state. The
 ///     returned string comes from constant string buffers and does
 ///     not need to be freed.
 const char *StateAsCString(lldb::StateType state);

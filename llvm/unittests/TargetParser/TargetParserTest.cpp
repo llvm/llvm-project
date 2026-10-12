@@ -50,7 +50,7 @@ const char *ARMArch[] = {
     "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
     "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
     "armv9.4a",    "armv9.5-a", "armv9.5a",     "armv9.6a",    "armv9.6-a",
-    "armv9.7a",    "armv9.7-a",
+    "armv9.7a",    "armv9.7-a", "armv9.8a",     "armv9.8-a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -664,6 +664,8 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.7-a", "generic", "v9.7a",
                           ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(testARMArch("armv9.8-a", "generic", "v9.8a",
+                          ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
       testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
@@ -978,6 +980,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_5A:
     case ARM::ArchKind::ARMV9_6A:
     case ARM::ArchKind::ARMV9_7A:
+    case ARM::ArchKind::ARMV9_8A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1160,6 +1163,8 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("c1-premium", "armv9.3-a"),
                       AArch64CPUTestParams("c1-pro", "armv9.3-a"),
                       AArch64CPUTestParams("c1-ultra", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-pro", "armv9.3-a"),
+                      AArch64CPUTestParams("c2-ultra", "armv9.3-a"),
                       AArch64CPUTestParams("cyclone", "armv8-a"),
                       AArch64CPUTestParams("apple-a7", "armv8-a"),
                       AArch64CPUTestParams("apple-a8", "armv8-a"),
@@ -1294,6 +1299,7 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
     ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
+                      AArch64CPUAliasTestParams({"c1-pro", "c2-pro"}),
                       AArch64CPUAliasTestParams({"apple-a7", "cyclone",
                                                  "apple-a8", "apple-a9"}),
                       AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
@@ -1309,7 +1315,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 101;
+static constexpr unsigned NumAArch64CPUArchs = 103;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1347,6 +1353,7 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.6-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.7-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.8-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1501,6 +1508,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
+      AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
   };
 
   std::vector<StringRef> Features;
@@ -1625,6 +1633,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+tev"));
   EXPECT_TRUE(llvm::is_contained(Features, "+btie"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hinte"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1652,6 +1662,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_8A.ArchFeature], "+v9.8a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
@@ -1682,7 +1693,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   for (const auto *A :
        {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
         &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A,
-        &AArch64::ARMV9_7A})
+        &AArch64::ARMV9_7A, &AArch64::ARMV9_8A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1702,6 +1713,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
   EXPECT_TRUE(AArch64::ARMV9_6A.implies(AArch64::ARMV9_5A));
   EXPECT_TRUE(AArch64::ARMV9_7A.implies(AArch64::ARMV9_6A));
+  EXPECT_TRUE(AArch64::ARMV9_8A.implies(AArch64::ARMV9_7A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
@@ -1804,6 +1816,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"tev", "notev", "+tev", "-tev"},
       {"btie", "nobtie", "+btie", "-btie"},
       {"hinte", "nohinte", "+hinte", "-hinte"},
+      {"cflt", "nocflt", "+cflt", "-cflt"},
+      {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2826,6 +2840,22 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   // A capability feature is queried through the bitset only.
   EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
+  EXPECT_FALSE(HasFeature("gfx906", "sramecc-on-off-modes"));
+  EXPECT_FALSE(HasFeature("gfx1250", "sramecc-on-off-modes"));
+
+  // LDS allocation granularity is queried through the bitset only.
+  EXPECT_FALSE(HasFeature("gfx600", "lds-alloc-granularity-256"));
+  EXPECT_FALSE(HasFeature("gfx900", "lds-alloc-granularity-512"));
+  EXPECT_FALSE(HasFeature("gfx950", "lds-alloc-granularity-1280"));
+  EXPECT_FALSE(HasFeature("gfx1310", "lds-alloc-granularity-1024"));
+  EXPECT_FALSE(HasFeature("gfx1250", "lds-alloc-granularity-2048"));
+
+  // Encoding granularity is also queried through the bitset only.
+  EXPECT_FALSE(HasFeature("gfx600", "lds-encoding-granularity-256"));
+  EXPECT_FALSE(HasFeature("gfx1030", "lds-encoding-granularity-512"));
+  EXPECT_FALSE(HasFeature("gfx950", "lds-encoding-granularity-1280"));
+  EXPECT_FALSE(HasFeature("gfx1310", "lds-encoding-granularity-1024"));
+  EXPECT_FALSE(HasFeature("gfx1250", "lds-encoding-granularity-2048"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2878,6 +2908,69 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1200));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
+}
+
+TEST(TargetParserTest, testAMDGPULDSGranularityFeatures) {
+  auto Has = [](AMDGPU::GPUKind AK, AMDGPU::AMDGPUFeature Feature) {
+    return AMDGPU::getFeatureBitset(AK).test(Feature);
+  };
+  auto CountAlloc = [&Has](AMDGPU::GPUKind AK) {
+    return Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280) +
+           Has(AK, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048);
+  };
+  auto CountEncoding = [&Has](AMDGPU::GPUKind AK) {
+    return Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_256) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1024) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280) +
+           Has(AK, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_2048);
+  };
+
+  // Exactly one granularity of each kind is set per GPU, including generics.
+  SmallVector<StringRef> AllGPUs;
+  AMDGPU::fillValidArchListAMDGCN(AllGPUs, Triple::NoSubArch);
+  for (StringRef Name : AllGPUs) {
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
+    if (!AMDGPU::isPseudoTarget(Kind)) {
+      EXPECT_EQ(CountAlloc(Kind), 1) << Name;
+      EXPECT_EQ(CountEncoding(Kind), 1) << Name;
+    }
+  }
+
+  // The legacy pseudo-targets do not represent hardware.
+  EXPECT_EQ(CountAlloc(AMDGPU::GK_GENERIC), 0);
+  EXPECT_EQ(CountAlloc(AMDGPU::GK_GENERIC_HSA), 0);
+  EXPECT_EQ(CountEncoding(AMDGPU::GK_GENERIC), 0);
+  EXPECT_EQ(CountEncoding(AMDGPU::GK_GENERIC_HSA), 0);
+
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX600, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_256));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX900, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX950, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1310, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1250, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_2048));
+
+  // RDNA2 and later 64 KiB targets allocate 1024 bytes but encode 512-byte
+  // units.
+  for (AMDGPU::GPUKind Kind :
+       {AMDGPU::GK_GFX1030, AMDGPU::GK_GFX1100, AMDGPU::GK_GFX1170,
+        AMDGPU::GK_GFX1200, AMDGPU::GK_GFX10_3_GENERIC,
+        AMDGPU::GK_GFX11_GENERIC, AMDGPU::GK_GFX11_7_GENERIC,
+        AMDGPU::GK_GFX12_GENERIC}) {
+    EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1024));
+    EXPECT_TRUE(Has(Kind, AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_512));
+  }
+
+  // A generic target uses the largest allocation granularity of the GPUs it
+  // covers. gfx9-4-generic therefore uses gfx950's 1280-byte granule.
+  EXPECT_TRUE(
+      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_1280));
+  EXPECT_FALSE(
+      Has(AMDGPU::GK_GFX9_4_GENERIC, AMDGPU::FEAT_LDS_ALLOC_GRANULARITY_512));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX9_4_GENERIC,
+                  AMDGPU::FEAT_LDS_ENCODING_GRANULARITY_1280));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
@@ -3335,6 +3428,50 @@ TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
       65536u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
+  struct {
+    AMDGPU::GPUKind Kind;
+    Triple::SubArchType SubArch;
+    unsigned Alloc;
+    unsigned Encoding;
+  } Cases[] = {
+      {AMDGPU::GK_GFX600, Triple::AMDGPUSubArch600, 256, 256},
+      {AMDGPU::GK_GFX700, Triple::AMDGPUSubArch700, 512, 512},
+      {AMDGPU::GK_GFX900, Triple::AMDGPUSubArch900, 512, 512},
+      {AMDGPU::GK_GFX942, Triple::AMDGPUSubArch942, 512, 512},
+      {AMDGPU::GK_GFX950, Triple::AMDGPUSubArch950, 1280, 1280},
+      {AMDGPU::GK_GFX1010, Triple::AMDGPUSubArch1010, 512, 512},
+      {AMDGPU::GK_GFX1030, Triple::AMDGPUSubArch1030, 1024, 512},
+      {AMDGPU::GK_GFX1100, Triple::AMDGPUSubArch1100, 1024, 512},
+      {AMDGPU::GK_GFX1150, Triple::AMDGPUSubArch1150, 1024, 512},
+      {AMDGPU::GK_GFX1170, Triple::AMDGPUSubArch1170, 1024, 512},
+      {AMDGPU::GK_GFX1200, Triple::AMDGPUSubArch1200, 1024, 512},
+      {AMDGPU::GK_GFX1250, Triple::AMDGPUSubArch1250, 2048, 2048},
+      {AMDGPU::GK_GFX1251, Triple::AMDGPUSubArch1251, 2048, 2048},
+      {AMDGPU::GK_GFX1310, Triple::AMDGPUSubArch1310, 1024, 1024},
+      {AMDGPU::GK_GFX9_4_GENERIC, Triple::AMDGPUSubArch9_4, 1280, 1280},
+      {AMDGPU::GK_GFX10_1_GENERIC, Triple::AMDGPUSubArch10_1, 512, 512},
+      {AMDGPU::GK_GFX10_3_GENERIC, Triple::AMDGPUSubArch10_3, 1024, 512},
+      {AMDGPU::GK_GFX11_GENERIC, Triple::AMDGPUSubArch11, 1024, 512},
+      {AMDGPU::GK_GFX11_7_GENERIC, Triple::AMDGPUSubArch11_7, 1024, 512},
+      {AMDGPU::GK_GFX12_GENERIC, Triple::AMDGPUSubArch12, 1024, 512},
+      {AMDGPU::GK_GFX12_5_GENERIC, Triple::AMDGPUSubArch12_5, 2048, 2048},
+      {AMDGPU::GK_NONE, Triple::NoSubArch, 256, 0},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Case.Kind));
+    EXPECT_EQ(AMDGPU::getLDSAllocGranule(Case.Kind), Case.Alloc);
+    EXPECT_EQ(AMDGPU::getLDSAllocGranule(Case.SubArch), Case.Alloc);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Case.Kind), Case.Encoding);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Case.SubArch), Case.Encoding);
+  }
+
+  for (AMDGPU::GPUKind Kind : {AMDGPU::GK_GENERIC, AMDGPU::GK_GENERIC_HSA}) {
+    EXPECT_EQ(AMDGPU::getLDSAllocGranule(Kind), 256u);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Kind), 0u);
+  }
+}
+
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
@@ -3513,6 +3650,62 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   // A non-AMDGCN triple has no target-id features.
   EXPECT_FALSE(
       TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
+TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
+  using namespace AMDGPU;
+
+  // Existing SRAMECC targets retain their selectable modes, including generic
+  // targets and gfx12.5, where XNACK is hardwired on.
+  for (StringRef GPU :
+       {"gfx906", "gfx908", "gfx90a", "gfx942", "gfx950", "gfx9-4-generic",
+        "gfx1250-strict", "gfx1250", "gfx1251", "gfx12-5-generic"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    const AMDGPUFeatureBitset &Features = getFeatureBitset(Kind);
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
+    EXPECT_TRUE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    // The processor is resolved from the triple subarch.
+    StringRef SubArch = getSubArchName(getSubArch(Kind));
+    Triple TT(SubArch, "amd", "amdhsa");
+    auto Default = TargetID::parse(TT, "");
+    ASSERT_TRUE(Default);
+    EXPECT_EQ(Default->getGPUKind(), Kind);
+    EXPECT_EQ(Default->getSramEccSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(Default->getCanonicalFeatureString(), GPU);
+
+    for (bool Enabled : {false, true}) {
+      StringRef Mode = Enabled ? ":sramecc+" : ":sramecc-";
+      std::string ID = (GPU + Mode).str();
+      TargetIDSetting Setting =
+          Enabled ? TargetIDSetting::On : TargetIDSetting::Off;
+      auto Explicit = TargetID::parse(TT, Mode);
+      ASSERT_TRUE(Explicit);
+      EXPECT_EQ(Explicit->getSramEccSetting(), Setting);
+      EXPECT_EQ(Explicit->getCanonicalFeatureString(), ID);
+      EXPECT_EQ(Explicit->toString(),
+                (SubArch + "-amd-amdhsa-unknown-" + ID).str());
+      EXPECT_EQ(TargetID::createFromSubtargetFeatures(
+                    TT, GPU, Enabled ? "+sramecc" : "-sramecc"),
+                *Explicit);
+    }
+  }
+
+  for (StringRef GPU : {"gfx600", "gfx900", "gfx1100", "gfx1200"}) {
+    SCOPED_TRACE(GPU);
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    EXPECT_FALSE(getFeatureBitset(Kind).test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
+                  .getSramEccSetting(),
+              TargetIDSetting::Unsupported);
+  }
 }
 
 TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {

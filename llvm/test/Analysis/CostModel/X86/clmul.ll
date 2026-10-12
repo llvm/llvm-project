@@ -17,8 +17,8 @@ define void @clmul(i128 %a128, i128 %b128, i64 %a64, i64 %b64, i32 %a32, i32 %b3
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:768 CodeSize:768 Lat:640 SizeLat:640 for: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:59 CodeSize:43 Lat:123 SizeLat:59 for: %call_i64 = call i64 @llvm.clmul.i64(i64 %a64, i64 %b64)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:43 Lat:91 SizeLat:43 for: %call_i32 = call i32 @llvm.clmul.i32(i32 %a32, i32 %b32)
-; NO-PCLMUL-NEXT:  Cost Model: Found costs of 48 for: %call_i16 = call i16 @llvm.clmul.i16(i16 %a16, i16 %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found costs of 24 for: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:26 Lat:53 SizeLat:26 for: %call_i16 = call i16 @llvm.clmul.i16(i16 %a16, i16 %b16)
+; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:13 Lat:25 SizeLat:13 for: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
@@ -34,24 +34,24 @@ define void @clmul_128(<1 x i128> %a128, <1 x i128> %b128, <2 x i64> %a64, <2 x 
 ; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:24 SizeLat:16 for: %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
 ; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:12 SizeLat:8 for: %call_i64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %a64, <2 x i64> %b64)
 ; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:18 SizeLat:16 for: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
-; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:48 Lat:80 SizeLat:48 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
-; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:40 SizeLat:48 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
+; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:26 Lat:62 SizeLat:26 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
+; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:57 Lat:81 SizeLat:57 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
 ; PCLMUL128-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; VPCLMULQDQ-LABEL: 'clmul_128'
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:24 SizeLat:16 for: %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:4 Lat:12 SizeLat:8 for: %call_i64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %a64, <2 x i64> %b64)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:18 SizeLat:16 for: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
-; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:48 Lat:80 SizeLat:48 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
-; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:40 SizeLat:40 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
+; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:26 Lat:62 SizeLat:26 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
+; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:41 Lat:33 SizeLat:57 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul_128'
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:768 CodeSize:768 Lat:640 SizeLat:640 for: %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:139 CodeSize:187 Lat:187 SizeLat:187 for: %call_i64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %a64, <2 x i64> %b64)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:123 CodeSize:139 Lat:155 SizeLat:139 for: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
-; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:48 Lat:80 SizeLat:48 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:40 SizeLat:48 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:26 Lat:62 SizeLat:26 for: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
+; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:57 Lat:81 SizeLat:57 for: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
@@ -75,8 +75,8 @@ define void @clmul_256(<2 x i128> %a128, <2 x i128> %b128, <4 x i64> %a64, <4 x 
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:16 Lat:48 SizeLat:32 for: %call_i128 = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %a128, <2 x i128> %b128)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of 2 for: %call_i64 = call <4 x i64> @llvm.clmul.v4i64(<4 x i64> %a64, <4 x i64> %b64)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of 2 for: %call_i32 = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %a32, <8 x i32> %b32)
-; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:112 Lat:112 SizeLat:160 for: %call_i16 = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a16, <16 x i16> %b16)
-; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:80 Lat:56 SizeLat:96 for: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
+; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:53 CodeSize:62 Lat:89 SizeLat:88 for: %call_i16 = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a16, <16 x i16> %b16)
+; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:49 CodeSize:81 Lat:53 SizeLat:94 for: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
 ; VPCLMULQDQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul_256'

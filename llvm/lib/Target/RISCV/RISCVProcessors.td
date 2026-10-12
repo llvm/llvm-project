@@ -43,6 +43,8 @@ class RISCVTuneInfo {
   bits<32> MaxLoadsPerMemcmpOptSize = 4;
   bits<32> MaxLoadsPerMemcmp = 8;
 
+  bits<8> MaxVectorCoalesceElts = 2;
+
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
 
@@ -60,7 +62,8 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection", "IsJumpExpensive"];
+                "MaxVectorCoalesceElts", "PostRASchedDirection",
+                "IsJumpExpensive"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -729,38 +732,47 @@ def SYNTACORE_SCR7 : RISCVProcessorModel<"syntacore-scr7",
                                                FeatureStdExtZkn],
                                               [TuneNoDefaultUnroll, TunePostRAScheduler]>;
 
+defvar TTAscalonXGFeatures = !listconcat(RVA23S64Features,
+                                         [FeatureStdExtSmaia,
+                                          FeatureStdExtSmmpm,
+                                          FeatureStdExtSmnpm,
+                                          FeatureStdExtSmrnmi,
+                                          FeatureStdExtSmstateen,
+                                          FeatureStdExtSsaia,
+                                          FeatureStdExtSsstrict,
+                                          FeatureStdExtZfbfmin,
+                                          FeatureStdExtZfh,
+                                          FeatureStdExtZkr,
+                                          FeatureStdExtZvbc,
+                                          FeatureStdExtZvfbfmin,
+                                          FeatureStdExtZvfbfwma,
+                                          FeatureStdExtZvfh,
+                                          FeatureStdExtZvl256b,
+                                          FeatureUnalignedScalarMem,
+                                          FeatureUnalignedVectorMem]);
+
+defvar TTAscalonTuneFeatures = [TuneNoDefaultUnroll,
+                                TuneNLogNVRGather,
+                                TuneOptimizedNF2SegmentLoadStore,
+                                TuneOptimizedNF3SegmentLoadStore,
+                                TuneOptimizedNF4SegmentLoadStore,
+                                TuneOptimizedNF5SegmentLoadStore,
+                                TuneOptimizedNF6SegmentLoadStore,
+                                TuneOptimizedNF7SegmentLoadStore,
+                                TuneOptimizedNF8SegmentLoadStore,
+                                TuneOptimizedZeroStrideLoad,
+                                TunePostRAScheduler];
+
 def TENSTORRENT_ASCALON_X : RISCVProcessorModel<"tt-ascalon-x",
                                                 TTAscalonXModel,
-                                                !listconcat(RVA23S64Features,
-                                                [FeatureStdExtSmaia,
-                                                 FeatureStdExtSmmpm,
-                                                 FeatureStdExtSmnpm,
-                                                 FeatureStdExtSmrnmi,
-                                                 FeatureStdExtSmstateen,
-                                                 FeatureStdExtSsaia,
-                                                 FeatureStdExtSsstrict,
-                                                 FeatureStdExtZfbfmin,
-                                                 FeatureStdExtZfh,
-                                                 FeatureStdExtZkr,
-                                                 FeatureStdExtZvbc,
-                                                 FeatureStdExtZvfbfmin,
-                                                 FeatureStdExtZvfbfwma,
-                                                 FeatureStdExtZvfh,
-                                                 FeatureStdExtZvkng,
-                                                 FeatureStdExtZvl256b,
-                                                 FeatureUnalignedScalarMem,
-                                                 FeatureUnalignedVectorMem]),
-                                                [TuneNoDefaultUnroll,
-                                                 TuneNLogNVRGather,
-                                                 TuneOptimizedNF2SegmentLoadStore,
-                                                 TuneOptimizedNF3SegmentLoadStore,
-                                                 TuneOptimizedNF4SegmentLoadStore,
-                                                 TuneOptimizedNF5SegmentLoadStore,
-                                                 TuneOptimizedNF6SegmentLoadStore,
-                                                 TuneOptimizedNF7SegmentLoadStore,
-                                                 TuneOptimizedNF8SegmentLoadStore,
-                                                 TuneOptimizedZeroStrideLoad,
-                                                 TunePostRAScheduler]>;
+                                                !listconcat(TTAscalonXGFeatures,
+                                                            [FeatureStdExtZvkng]),
+                                                TTAscalonTuneFeatures>;
+
+def TENSTORRENT_ASCALON_XG : RISCVProcessorModel<"tt-ascalon-xg",
+                                                 TTAscalonXGModel,
+                                                 TTAscalonXGFeatures,
+                                                 TTAscalonTuneFeatures>;
 
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
@@ -1106,4 +1118,35 @@ def XUANTIE_C920V2 : RISCVProcessorModel<"xt-c920v2",
                                             FeatureUnalignedScalarMem]),
                                          [TuneVXRMPipelineFlush,
                                           TunePostRAScheduler]>;
+
+def GAISLER_GR765 : RISCVProcessorModel<"gaisler-gr765",
+                                        NoSchedModel,
+                                        [Feature64Bit,
+                                         FeatureStdExtI,
+                                         FeatureStdExtZifencei,
+                                         FeatureStdExtZicsr,
+                                         FeatureStdExtZicntr,
+                                         FeatureStdExtZihpm,
+                                         FeatureStdExtM,
+                                         FeatureStdExtA,
+                                         FeatureStdExtF,
+                                         FeatureStdExtD,
+                                         FeatureStdExtC,
+                                         FeatureStdExtB,
+                                         FeatureStdExtZbc,
+                                         FeatureStdExtZcb,
+                                         FeatureStdExtZcmop,
+                                         FeatureStdExtZfa,
+                                         FeatureStdExtZfbfmin,
+                                         FeatureStdExtZfh,
+                                         FeatureStdExtZfhmin,
+                                         FeatureStdExtZic64b,
+                                         FeatureStdExtZicbom,
+                                         FeatureStdExtZicfiss,
+                                         FeatureStdExtZicond,
+                                         FeatureStdExtZimop,
+                                         FeatureStdExtZkn,
+                                         FeatureStdExtZkt],
+                                        [TunePostRAScheduler]>;
+
 // clang-format on

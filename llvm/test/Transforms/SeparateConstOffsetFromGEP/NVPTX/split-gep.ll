@@ -534,13 +534,15 @@ entry:
   ret ptr %ptr2
 }
 
-; Check that we can see through explicit trunc() instruction.
+; The GEP index is sign-extended to pointer size. Do not look through the
+; truncation. This case will be canonicalized by other passes anyway.
 define ptr @trunk_explicit(ptr %ptr, i64 %idx) {
 ; CHECK-LABEL: define ptr @trunk_explicit(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[IDX0:%.*]] = trunc i64 1 to i32
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX0]] to i64
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds [[STRUCT0:%.*]], ptr [[PTR]], i64 [[IDXPROM]], i32 3, i64 [[IDX]], i32 1
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:

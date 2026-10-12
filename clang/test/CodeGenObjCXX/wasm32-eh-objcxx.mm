@@ -1,5 +1,5 @@
 // REQUIRES: webassembly-registered-target
-// RUN: %clang_cc1 -target-feature +exception-handling -triple wasm32-unknown-emscripten -fobjc-runtime=gnustep-2.2 -fexceptions -fobjc-exceptions -fcxx-exceptions -exception-model=wasm -mllvm -wasm-enable-eh -emit-llvm -o - %s | FileCheck --enable-var-scope %s
+// RUN: %clang_cc1 -target-feature +exception-handling -triple wasm32-unknown-emscripten -fobjc-runtime=gnustep-2.2 -fexceptions -fobjc-exceptions -fcxx-exceptions -exception-model=wasm -emit-llvm -o - %s | FileCheck --enable-var-scope %s
 
 struct ThrowingDestructor {
   ~ThrowingDestructor() noexcept(false);
