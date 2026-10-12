@@ -592,6 +592,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  sync_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    sync_test.cpp
+  DEPENDS
+    libc.src.unistd.sync
+)
+
+add_libc_test(
   tcgetpgrp_test
   SUITE
     libc_unistd_unittests
