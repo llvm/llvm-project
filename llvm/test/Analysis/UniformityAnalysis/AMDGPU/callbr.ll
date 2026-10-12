@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu7.00-- -passes='print<uniformity>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Making %c inreg makes it being passed in SGPR -> uniform Check that the
 ; callbr is still marked as divergent due to the call to the non-uniform kill
