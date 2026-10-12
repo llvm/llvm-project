@@ -76,6 +76,7 @@ enum ValueRange {
 
 class FastDivInsertionTask {
   bool IsValidTask = false;
+  bool ShouldBypassConstantDivisor = false;
   Instruction *SlowDivOrRem = nullptr;
   IntegerType *BypassType = nullptr;
   BasicBlock *MainBB = nullptr;
@@ -107,8 +108,8 @@ class FastDivInsertionTask {
 
 public:
   FastDivInsertionTask(Instruction *I, const BypassWidthsTy &BypassWidths,
-                       DomTreeUpdater *DTU, LoopInfo *LI,
-                       BranchProbabilityInfo *BPI);
+                       bool ShouldBypassConstantDivisor, DomTreeUpdater *DTU,
+                       LoopInfo *LI, BranchProbabilityInfo *BPI);
 
   Value *getReplacement(DivCacheTy &Cache);
 };
@@ -117,9 +118,11 @@ public:
 
 FastDivInsertionTask::FastDivInsertionTask(Instruction *I,
                                            const BypassWidthsTy &BypassWidths,
+                                           bool ShouldBypassConstantDivisor,
                                            DomTreeUpdater *DTU, LoopInfo *LI,
                                            BranchProbabilityInfo *BPI)
-    : DTU(DTU), LI(LI), BPI(BPI) {
+    : ShouldBypassConstantDivisor(ShouldBypassConstantDivisor), DTU(DTU),
+      LI(LI), BPI(BPI) {
   switch (I->getOpcode()) {
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -410,11 +413,16 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     return QuotRemPair(ExtDiv, ExtRem);
   }
 
-  if (isa<ConstantInt>(Divisor)) {
+  if (auto *CDivisor = dyn_cast<ConstantInt>(Divisor)) {
     // If the divisor is not a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
-    return std::nullopt;
+    //
+    // Setting ShouldBypassConstantDivisor to true enables the bypass
+    // optimization for constant divisors. However, powers of 2 should
+    // never be bypassed: they lower to a simple shift.
+    if (!ShouldBypassConstantDivisor || CDivisor->getValue().isPowerOf2())
+      return std::nullopt;
   }
 
   // After Constant Hoisting pass, long constants may be represented as
@@ -493,6 +501,7 @@ std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
 /// profitably bypassed and carried out with a shorter, faster divide.
 bool llvm::bypassSlowDivision(BasicBlock *BB,
                               const BypassWidthsTy &BypassWidths,
+                              bool ShouldBypassConstantDivisor,
                               DomTreeUpdater *DTU, LoopInfo *LI,
                               BranchProbabilityInfo *BPI) {
   DivCacheTy PerBBDivCache;
@@ -509,7 +518,8 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     if (I->use_empty())
       continue;
 
-    FastDivInsertionTask Task(I, BypassWidths, DTU, LI, BPI);
+    FastDivInsertionTask Task(I, BypassWidths, ShouldBypassConstantDivisor, DTU,
+                              LI, BPI);
     if (Value *Replacement = Task.getReplacement(PerBBDivCache)) {
       I->replaceAllUsesWith(Replacement);
       I->eraseFromParent();

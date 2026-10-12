@@ -732,6 +732,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   MaxStoresPerMemsetOptSize = MaxStoresPerMemcpyOptSize =
       MaxStoresPerMemmoveOptSize = MaxLoadsPerMemcmpOptSize = 4;
   HasExtractBitsInsn = false;
+  ShouldBypassConstantDivisor = false;
   JumpIsExpensive = JumpIsExpensiveOverride;
   PredictableSelectIsExpensive = false;
   EnableExtLdPromotion = false;
