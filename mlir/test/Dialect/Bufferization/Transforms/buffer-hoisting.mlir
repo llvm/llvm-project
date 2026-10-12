@@ -802,3 +802,20 @@ func.func @unreachable_alloc(%arg0: f32) {
   // CHECK: memref.alloc
   return
 }
+
+// -----
+
+// Hoisting must not introduce a capture into an isolated region.
+// CHECK-LABEL: func @no_hoist_isolated_region(
+//  CHECK-NOT: memref.alloc
+//      CHECK: %[[RESULT:.*]] = "test.isolated_region_branch"
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: "test.isolated_region_yield"(%[[ALLOC]])
+//      CHECK: return %[[RESULT]]
+func.func @no_hoist_isolated_region() -> memref<1xi32> {
+  %result = "test.isolated_region_branch"() ({
+    %buffer = memref.alloc() : memref<1xi32>
+    "test.isolated_region_yield"(%buffer) : (memref<1xi32>) -> ()
+  }) : () -> memref<1xi32>
+  return %result : memref<1xi32>
+}

@@ -74,6 +74,13 @@ between standard floating-point types, integer types and packed low-precision fo
 }];
 }
 
+def DocCatAMDGPUWaveIntrinsics : DocumentationCategory<"Wave Intrinsic Builtins"> {
+  let Content = [{
+These builtins expose wave-level intrinsics that operate across active
+lanes in a wavefront.
+}];
+}
+
 def DocCatAMDGPUPrefetch : DocumentationCategory<"Prefetch Builtins"> {
   let Content = [{
 These builtins provide access to AMDGPU prefetch instructions, including instructions
@@ -653,6 +660,26 @@ nondeterministic value.
 }];
 }
 
+def DocExclusiveScan : Documentation {
+  let Category = DocCatWaveDataExchange;
+  let Content = [{
+Performs an exclusive prefix scan of ``src0`` within a subgroup of lanes. Each
+lane receives the running combination of the ``src0`` values of all earlier
+lanes in its subgroup, walking from the lowest to the highest lane index.
+"Exclusive" means a lane's own ``src0`` is not included in its result, so the
+first (lowest) lane of each subgroup receives the operation's identity value.
+
+``src1`` is a 32-bit subgroup mask: bit N is set when lane N belongs to the same
+subgroup as the current lane.
+
+The combining operation is named by the builtin (``sum``, ``xor``, ``or``,
+``and``, ``min``, ``max``).
+
+In wave64 mode the two 32-lane halves of the wave are scanned independently. The
+builtins are convergent: all lanes of a subgroup must execute them together.
+}];
+}
+
 def DocWMMA_scale16_GFX1250 : Documentation {
   let Category = DocCatWMMA;
   let Content = [{
@@ -982,6 +1009,20 @@ contiguously.
 byte in ``scale`` that contains the scale factor.
 
 This operation is available only for wavefront size 32.
+}];
+}
+
+//===----------------------------------------------------------------------===//
+// Wave Intrinsic Builtins
+//===----------------------------------------------------------------------===//
+
+def DocWaveMatchB32 : Documentation {
+  let Category = DocCatAMDGPUWaveIntrinsics;
+  let Content = [{
+Returns a 32-bit bitmask whose bit N is set iff lane N is active and its
+``src0`` equals the current lane's ``src1``. Passing the same value as both
+operands yields the mask of active lanes sharing that value. In wave64 mode
+each 32-lane half is handled independently.
 }];
 }
 

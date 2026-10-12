@@ -36,6 +36,7 @@
 #include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -2225,7 +2226,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2239,7 +2240,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return CGF.EmitFromMemory(RowVec, E->getType());
+  return RowVec;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -2253,11 +2254,10 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
   llvm::MatrixBuilder MB(Builder);
 
-  Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                       /*IsRowMajor=*/false);
+  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
+                              /*IsRowMajor=*/false);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -2548,36 +2548,46 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
   return true;
 }
 
+template <typename GetElementTy>
+static Value *
+EmitHLSLElementwiseCastToVector(CodeGenFunction &CGF, QualType DestTy,
+                                unsigned NumSrcElements,
+                                GetElementTy GetElement, SourceLocation Loc) {
+  const auto *VecTy = DestTy->castAs<VectorType>();
+  assert(NumSrcElements >= VecTy->getNumElements() &&
+         "Flattened type on RHS must have the same number or more elements "
+         "than vector on LHS.");
+  Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
+  for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
+    auto [Element, ElementTy] = GetElement(I);
+    Value *Cast = CGF.EmitScalarConversion(Element, ElementTy,
+                                           VecTy->getElementType(), Loc);
+    V = CGF.Builder.CreateInsertElement(V, Cast, I);
+  }
+  return V;
+}
+
 // RHS is an aggregate type
 static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
   // Dest is either a vector, constant matrix, or a builtin
-  // if its a vector create a temp alloca to store into and return that
-  if (auto *VecTy = DestTy->getAs<VectorType>()) {
-    assert(LoadList.size() >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have the same number or more elements "
-           "than vector on LHS.");
-    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
-    // write to V.
-    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast =
-          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
-                                   VecTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
-    }
-    return V;
-  }
+  if (DestTy->isVectorType())
+    return EmitHLSLElementwiseCastToVector(
+        CGF, DestTy, LoadList.size(),
+        [&](unsigned I) {
+          RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+          assert(RVal.isScalar() &&
+                 "All flattened source values should be scalars.");
+          return std::pair(RVal.getScalarVal(), LoadList[I].getType());
+        },
+        Loc);
+
   if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
     assert(LoadList.size() >= MatTy->getNumElementsFlattened() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
-
-    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
     llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
@@ -2592,7 +2602,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
         llvm::Value *Cast = CGF.EmitScalarConversion(
             RVal.getScalarVal(), LoadList[LoadIdx].getType(),
             MatTy->getElementType(), Loc);
-        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        unsigned MatrixIdx = MatTy->getColumnMajorFlattenedIndex(Row, Col);
         V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
       }
     }
@@ -3188,6 +3198,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
 
+    if (const auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>()) {
+      assert(DestTy->isVectorType() &&
+             "Matrix elementwise cast destination must be a vector");
+      assert(RV.isScalar() && "Matrix rvalue must have scalar representation");
+      Value *SrcVal = RV.getScalarVal();
+      return EmitHLSLElementwiseCastToVector(
+          CGF, DestTy, SrcMatTy->getNumElementsFlattened(),
+          [&](unsigned I) {
+            unsigned Row = I / SrcMatTy->getNumColumns();
+            unsigned Col = I % SrcMatTy->getNumColumns();
+            unsigned Idx = SrcMatTy->getColumnMajorFlattenedIndex(Row, Col);
+            Value *Element =
+                Builder.CreateExtractElement(SrcVal, Idx, "matrixext");
+            return std::pair(Element, SrcMatTy->getElementType());
+          },
+          Loc);
+    }
+
     Address SrcAddr = Address::invalid();
 
     if (RV.isAggregate()) {
@@ -3527,12 +3555,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     llvm::Value *amt;
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float. If
-      // the input isn't already half, it may be i16.
-      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
-      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
-    }
+    // Another special case: half FP increment should be done via float.
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
+      value = Builder.CreateFPExt(value, CGF.CGM.FloatTy, "incdec.conv");
 
     if (value->getType()->isFloatTy())
       amt = llvm::ConstantFP::get(VMContext,
@@ -3563,12 +3588,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     }
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
-    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
+    if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
       value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
-      value = Builder.CreateBitCast(value, input->getType());
-    }
 
-  // Fixed-point types.
+    // Fixed-point types.
   } else if (type->isFixedPointType()) {
     // Fixed-point types are tricky. In some cases, it isn't possible to
     // represent a 1 or a -1 in the type at all. Piggyback off of
@@ -6381,6 +6404,23 @@ EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
   return {TotalOffset, OffsetOverflows};
 }
 
+// OpenMP section maps pass `section - host_offset`. A GEP of an array-of-arrays
+// from that pointer is not inbounds of the allocation.
+static llvm::GEPNoWrapFlags
+inBoundsGEPFlags(const CodeGenFunction &CGF, const llvm::Value *Ptr,
+                 llvm::Type *SrcTy, bool SignedIndices, bool IsSubtraction) {
+  llvm::GEPNoWrapFlags NW;
+  bool SectionGEP = CGF.getLangOpts().OpenMPIsTargetDevice &&
+                    SrcTy->isArrayTy() &&
+                    SrcTy->getArrayElementType()->isArrayTy() &&
+                    !isa<llvm::AllocaInst>(llvm::getUnderlyingObject(Ptr));
+  if (!SectionGEP)
+    NW = llvm::GEPNoWrapFlags::inBounds();
+  if (!SignedIndices && !IsSubtraction)
+    NW |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  return NW;
+}
+
 Value *
 CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         ArrayRef<Value *> IdxList,
@@ -6388,9 +6428,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
                                         SourceLocation Loc, const Twine &Name) {
   llvm::Type *PtrTy = Ptr->getType();
 
-  llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-  if (!SignedIndices && !IsSubtraction)
-    NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
+  llvm::GEPNoWrapFlags NWFlags =
+      inBoundsGEPFlags(*this, Ptr, ElemTy, SignedIndices, IsSubtraction);
 
   Value *GEPVal = Builder.CreateGEP(ElemTy, Ptr, IdxList, Name, NWFlags);
 
@@ -6501,10 +6540,9 @@ Address CodeGenFunction::EmitCheckedInBoundsGEP(
     bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
     const Twine &Name) {
   if (!SanOpts.has(SanitizerKind::PointerOverflow)) {
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::inBounds();
-    if (!SignedIndices && !IsSubtraction)
-      NWFlags |= llvm::GEPNoWrapFlags::noUnsignedWrap();
-
+    llvm::GEPNoWrapFlags NWFlags =
+        inBoundsGEPFlags(*this, Addr.getBasePointer(), Addr.getElementType(),
+                         SignedIndices, IsSubtraction);
     return Builder.CreateGEP(Addr, IdxList, elementType, Align, Name, NWFlags);
   }
 

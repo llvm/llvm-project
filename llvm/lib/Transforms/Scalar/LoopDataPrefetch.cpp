@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
+#include "ScalarOptions.h"
 #include "llvm/InitializePasses.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -24,7 +25,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -33,25 +33,6 @@
 #define DEBUG_TYPE "loop-data-prefetch"
 
 using namespace llvm;
-
-// By default, we limit this to creating 16 PHIs (which is a little over half
-// of the allocatable register set).
-static cl::opt<bool>
-PrefetchWrites("loop-prefetch-writes", cl::Hidden, cl::init(false),
-               cl::desc("Prefetch write addresses"));
-
-static cl::opt<unsigned>
-    PrefetchDistance("prefetch-distance",
-                     cl::desc("Number of instructions to prefetch ahead"),
-                     cl::Hidden);
-
-static cl::opt<unsigned>
-    MinPrefetchStride("min-prefetch-stride",
-                      cl::desc("Min stride to add prefetches"), cl::Hidden);
-
-static cl::opt<unsigned> MaxPrefetchIterationsAhead(
-    "max-prefetch-iters-ahead",
-    cl::desc("Max number of iterations to prefetch ahead"), cl::Hidden);
 
 STATISTIC(NumPrefetches, "Number of prefetches inserted");
 
@@ -63,7 +44,8 @@ public:
   LoopDataPrefetch(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
                    ScalarEvolution *SE, const TargetTransformInfo *TTI,
                    OptimizationRemarkEmitter *ORE)
-      : AC(AC), DT(DT), LI(LI), SE(SE), TTI(TTI), ORE(ORE) {}
+      : Opts(ScalarOptions::Global), AC(AC), DT(DT), LI(LI), SE(SE), TTI(TTI),
+        ORE(ORE) {}
 
   bool run();
 
@@ -78,30 +60,29 @@ private:
                                 unsigned NumStridedMemAccesses,
                                 unsigned NumPrefetches,
                                 bool HasCall) {
-    if (MinPrefetchStride.getNumOccurrences() > 0)
-      return MinPrefetchStride;
+    if (Opts.min_prefetch_stride)
+      return *Opts.min_prefetch_stride;
     return TTI->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
                                      NumPrefetches, HasCall);
   }
 
   unsigned getPrefetchDistance() {
-    if (PrefetchDistance.getNumOccurrences() > 0)
-      return PrefetchDistance;
+    if (Opts.prefetch_distance)
+      return *Opts.prefetch_distance;
     return TTI->getPrefetchDistance();
   }
 
   unsigned getMaxPrefetchIterationsAhead() {
-    if (MaxPrefetchIterationsAhead.getNumOccurrences() > 0)
-      return MaxPrefetchIterationsAhead;
+    if (Opts.max_prefetch_iters_ahead)
+      return *Opts.max_prefetch_iters_ahead;
     return TTI->getMaxPrefetchIterationsAhead();
   }
 
   bool doPrefetchWrites() {
-    if (PrefetchWrites.getNumOccurrences() > 0)
-      return PrefetchWrites;
-    return TTI->enableWritePrefetching();
+    return valueOr(Opts.loop_prefetch_writes, TTI->enableWritePrefetching());
   }
 
+  const ScalarOptions &Opts;
   AssumptionCache *AC;
   DominatorTree *DT;
   LoopInfo *LI;

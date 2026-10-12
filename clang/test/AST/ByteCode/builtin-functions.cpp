@@ -2153,3 +2153,13 @@ namespace ReduceMin {
   typedef float v4f __attribute__((__vector_size__(16)));
   static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
 }
+
+namespace Rejected {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    __builtin_alloca(10 / 0); // both-note 2{{subexpression not valid in a constant expression}} \
+                              // both-warning {{division by zero is undefined}}
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+}

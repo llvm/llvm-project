@@ -24,6 +24,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/setgroups.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
@@ -266,11 +267,55 @@ public:
 
   [[nodiscard]] LIBC_INLINE size_t size() const { return count; }
 
+  [[nodiscard]] LIBC_INLINE const gid_t *data() const { return buf; }
+
   [[nodiscard]] LIBC_INLINE gid_t operator[](size_t i) const {
     LIBC_ASSERT(i < count);
     return buf[i];
   }
 };
+
+ErrorOr<void> populate_gid_list(cpp::string_view user, gid_t group,
+                                GidList &gid_list, const char *path) {
+  if (!gid_list.push_back(group))
+    return Error(ENOMEM);
+
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
+                                                          : group_file_path);
+  pwd::ScopedDynamicBuffer buffer;
+  struct group entry = {};
+
+  const auto open_res = local_db.setdb();
+  if (open_res.has_value()) {
+    while (true) {
+      const auto next_res = local_db.getnext(&entry, buffer);
+      if (!next_res.has_value()) {
+        if (next_res.error() == ENOMEM)
+          return Error(ENOMEM);
+        break;
+      }
+      if (!next_res.value())
+        break;
+
+      bool is_member = false;
+      if (entry.gr_mem) {
+        for (char **m = entry.gr_mem; *m != nullptr; ++m) {
+          if (cpp::string_view(*m) == user) {
+            is_member = true;
+            break;
+          }
+        }
+      }
+
+      if (is_member && !gid_list.contains(entry.gr_gid)) {
+        if (!gid_list.push_back(entry.gr_gid))
+          return Error(ENOMEM);
+      }
+    }
+  }
+
+  return {};
+}
 
 } // namespace
 
@@ -334,42 +379,9 @@ ErrorOr<size_t> get_group_list(cpp::string_view user, gid_t group,
                                gid_t *groups, size_t ngroups,
                                const char *path) {
   GidList gid_list;
-  if (!gid_list.push_back(group))
-    return Error(ENOMEM);
-
-  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
-                                                          : group_file_path);
-  pwd::ScopedDynamicBuffer buffer;
-  struct group entry = {};
-
-  const auto open_res = local_db.setdb();
-  if (open_res.has_value()) {
-    while (true) {
-      const auto next_res = local_db.getnext(&entry, buffer);
-      if (!next_res.has_value()) {
-        if (next_res.error() == ENOMEM)
-          return Error(ENOMEM);
-        break;
-      }
-      if (!next_res.value())
-        break;
-
-      bool is_member = false;
-      if (entry.gr_mem) {
-        for (char **m = entry.gr_mem; *m != nullptr; ++m) {
-          if (cpp::string_view(*m) == user) {
-            is_member = true;
-            break;
-          }
-        }
-      }
-
-      if (is_member && !gid_list.contains(entry.gr_gid)) {
-        if (!gid_list.push_back(entry.gr_gid))
-          return Error(ENOMEM);
-      }
-    }
-  }
+  const auto res = populate_gid_list(user, group, gid_list, path);
+  if (!res.has_value())
+    return Error(res.error());
 
   const size_t copy_count =
       ngroups < gid_list.size() ? ngroups : gid_list.size();
@@ -377,6 +389,15 @@ ErrorOr<size_t> get_group_list(cpp::string_view user, gid_t group,
     groups[i] = gid_list[i];
 
   return gid_list.size();
+}
+
+ErrorOr<int> init_groups(cpp::string_view user, gid_t group, const char *path) {
+  GidList gid_list;
+  const auto res = populate_gid_list(user, group, gid_list, path);
+  if (!res.has_value())
+    return Error(res.error());
+
+  return linux_syscalls::setgroups(gid_list.size(), gid_list.data());
 }
 
 } // namespace grp

@@ -901,8 +901,7 @@ namespace dynamic_alloc {
   // An array new-expression whose bound is neither given nor deducible from the
   // initializer is ill-formed; the constant evaluator must reject it gracefully
   // rather than crash. See GH200139.
-  static_assert((new int[]())[0] == 0); // expected-error {{cannot determine allocated array size from initializer}} \
-                                        // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert((new int[]())[0] == 0); // expected-error {{cannot determine allocated array size from initializer}}
 
   constexpr bool erroneous_array_bound_nothrow(long long n) {
     int *p = new (std::nothrow) int[n];

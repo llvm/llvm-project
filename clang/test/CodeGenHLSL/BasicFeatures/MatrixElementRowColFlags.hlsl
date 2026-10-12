@@ -13,6 +13,8 @@
 
 
 // CHECK-LABEL: define {{.*}} @_Z16getScalarElementu11matrix_typeILm3ELm2EfE
+// ROW: [[TMP:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// ROW-NEXT: store <6 x float> [[TMP]], ptr
 // CHECK: load <6 x float>, ptr
 // COL-NEXT: extractelement <6 x float> {{.*}}, i32 4
 // ROW-NEXT: extractelement <6 x float> {{.*}}, i32 3
@@ -21,6 +23,8 @@ export float getScalarElement(float3x2 M) {
 }
 
 // CHECK-LABEL: define {{.*}} @_Z18getSwizzleElementsu11matrix_typeILm3ELm2EfE
+// ROW: [[TMP:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// ROW-NEXT: store <6 x float> [[TMP]], ptr
 // CHECK: load <6 x float>, ptr
 // COL-NEXT: shufflevector <6 x float> {{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 3, i32 1, i32 4>
 // ROW-NEXT: shufflevector <6 x float> {{.*}}, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -29,9 +33,35 @@ export float4 getSwizzleElements(float3x2 M) {
 }
 
 // CHECK-LABEL: define {{.*}} @_Z22getZeroBasedSwizzleEltu11matrix_typeILm3ELm2EfE
+// ROW: [[TMP:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
+// ROW-NEXT: store <6 x float> [[TMP]], ptr
 // CHECK: load <6 x float>, ptr
 // COL-NEXT: shufflevector <6 x float> {{.*}}, <6 x float> poison, <2 x i32> <i32 1, i32 3>
 // ROW-NEXT: shufflevector <6 x float> {{.*}}, <6 x float> poison, <2 x i32> <i32 2, i32 1>
 export float2 getZeroBasedSwizzleElt(float3x2 M) {
   return M._m10_m01;
 }
+
+// transpose(m) produces a canonical column-major register value. Matrix
+// element access materializes that prvalue in a matrix-typed temporary, which
+// must use the selected memory layout.
+export float swizzle_prvalue(float2x3 m) {
+  return transpose(m)._m01;
+}
+
+// COL-LABEL: define {{.*}} float @_Z15swizzle_prvalue
+// COL: [[TEMP:%.*]] = alloca [2 x <3 x float>]
+// COL: [[RESULT_COL_MAJOR:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// COL: store <6 x float> [[RESULT_COL_MAJOR]], ptr [[TEMP]]
+// COL: [[FROM_TEMP:%.*]] = load <6 x float>, ptr [[TEMP]]
+// COL: extractelement <6 x float> [[FROM_TEMP]], i32 3
+
+// ROW-LABEL: define {{.*}} float @_Z15swizzle_prvalue
+// ROW: [[TEMP:%.*]] = alloca [3 x <2 x float>]
+// ROW: [[INPUT_ROW_MAJOR:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// ROW: store <6 x float> [[INPUT_ROW_MAJOR]], ptr
+// ROW: [[RESULT_COL_MAJOR:%.*]] = load <6 x float>, ptr
+// ROW: [[RESULT_ROW_MAJOR:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[RESULT_COL_MAJOR]], i32 3, i32 2)
+// ROW: store <6 x float> [[RESULT_ROW_MAJOR]], ptr [[TEMP]]
+// ROW: [[FROM_TEMP:%.*]] = load <6 x float>, ptr [[TEMP]]
+// ROW: extractelement <6 x float> [[FROM_TEMP]], i32 1

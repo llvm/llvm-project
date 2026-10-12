@@ -20,6 +20,11 @@ namespace orc_rt {
 /// Registers the connector for the "socket" transport, whose only action is
 /// "adopt": a stream socket this process was handed, already connected.
 ///
+/// The connector trusts the socket's peer as inherited, so the caller must
+/// ensure that the spec comes from whoever set up the descriptor (normally the
+/// process that started this one), and that the conditions on
+/// VettedPeer::inherited hold.
+///
 /// If the descriptor named by the spec is a socket, the connector takes
 /// ownership of it whether or not the connection succeeds. Otherwise it is left
 /// untouched.

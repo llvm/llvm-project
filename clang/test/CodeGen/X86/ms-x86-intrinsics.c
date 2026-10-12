@@ -158,13 +158,13 @@ __int64 test__mulh(__int64 a, __int64 b) {
   return __mulh(a, b);
 }
 // CHECK-X64-LABEL: define dso_local range(i64 -4611686018427387904, 4611686018427387905) i64 @test__mulh(i64 noundef %a, i64 noundef %b)
-// CHECK-X64: = mul nsw i128 %
+// CHECK-X64: = tail call i64 @llvm.smulh.i64(i64 %a, i64 %b)
 
 unsigned __int64 test__umulh(unsigned __int64 a, unsigned __int64 b) {
   return __umulh(a, b);
 }
 // CHECK-X64-LABEL: define dso_local range(i64 0, -1) i64 @test__umulh(i64 noundef %a, i64 noundef %b)
-// CHECK-X64: = mul nuw i128 %
+// CHECK-X64: = tail call i64 @llvm.umulh.i64(i64 %a, i64 %b)
 
 __int64 test_mul128(__int64 Multiplier,
                     __int64 Multiplicand,

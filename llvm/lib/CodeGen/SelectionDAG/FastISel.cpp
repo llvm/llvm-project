@@ -1984,7 +1984,8 @@ Register FastISel::fastEmitInst_(unsigned MachineInstOpcode,
   Register ResultReg = createResultReg(RC);
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -1996,7 +1997,9 @@ Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
   Op0 = constrainOperandRegClass(II, Op0, II.getNumDefs());
 
   assert(II.getNumDefs() >= 1 && "instruction must define the result");
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg).addReg(Op0);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addReg(Op0)
+      ->setImplicitPhysRegDefsDead();
 
   return ResultReg;
 }
@@ -2013,7 +2016,8 @@ Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
   assert(II.getNumDefs() >= 1 && "instruction must define the result");
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
       .addReg(Op0)
-      .addReg(Op1);
+      .addReg(Op1)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2031,7 +2035,8 @@ Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
       .addReg(Op0)
       .addReg(Op1)
-      .addReg(Op2);
+      .addReg(Op2)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2046,7 +2051,8 @@ Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
   assert(II.getNumDefs() >= 1 && "instruction must define the result");
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
       .addReg(Op0)
-      .addImm(Imm);
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2062,7 +2068,8 @@ Register FastISel::fastEmitInst_rii(unsigned MachineInstOpcode,
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
       .addReg(Op0)
       .addImm(Imm1)
-      .addImm(Imm2);
+      .addImm(Imm2)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2075,7 +2082,8 @@ Register FastISel::fastEmitInst_f(unsigned MachineInstOpcode,
 
   assert(II.getNumDefs() >= 1 && "instruction must define the result");
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
-      .addFPImm(FPImm);
+      .addFPImm(FPImm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2092,7 +2100,8 @@ Register FastISel::fastEmitInst_rri(unsigned MachineInstOpcode,
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
       .addReg(Op0)
       .addReg(Op1)
-      .addImm(Imm);
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2102,7 +2111,9 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   assert(II.getNumDefs() >= 1 && "instruction must define the result");
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg).addImm(Imm);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II, ResultReg)
+      .addImm(Imm)
+      ->setImplicitPhysRegDefsDead();
   return ResultReg;
 }
 
@@ -2229,10 +2240,10 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (!LoadReg)
     return false;
 
-  // We can't fold if this vreg has no uses or more than one use.  Multiple uses
-  // may mean that the instruction got lowered to multiple MIs, or the use of
-  // the loaded value ended up being multiple operands of the result.
-  if (!MRI.hasOneUse(LoadReg))
+  // We can't fold if this vreg has no uses or more than one non-debug use.
+  // Multiple uses may mean that the instruction got lowered to multiple MIs, or
+  // the use of the loaded value ended up being multiple operands of the result.
+  if (!MRI.hasOneNonDBGUse(LoadReg))
     return false;
 
   // If the register has fixups, there may be additional uses through a
@@ -2240,7 +2251,7 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   if (FuncInfo.RegsWithFixups.contains(LoadReg))
     return false;
 
-  MachineRegisterInfo::reg_iterator RI = MRI.reg_begin(LoadReg);
+  MachineRegisterInfo::use_nodbg_iterator RI = MRI.use_nodbg_begin(LoadReg);
   MachineInstr *User = RI->getParent();
 
   // Set the insertion point properly.  Folding the load can cause generation of
@@ -2250,7 +2261,12 @@ bool FastISel::tryToFoldLoad(const LoadInst *LI, const Instruction *FoldInst) {
   FuncInfo.MBB = User->getParent();
 
   // Ask the target to try folding the load.
-  return tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI);
+  if (!tryToFoldLoadIntoMI(User, RI.getOperandNo(), LI))
+    return false;
+
+  // The loaded value no longer lives in LoadReg.
+  MRI.markUsesInDebugValueAsUndef(LoadReg);
+  return true;
 }
 
 bool FastISel::canFoldAddIntoGEP(const User *GEP, const Value *Add) {

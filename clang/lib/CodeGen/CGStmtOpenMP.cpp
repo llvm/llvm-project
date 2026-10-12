@@ -56,6 +56,15 @@ getEffectiveDirectiveKind(const OMPExecutableDirective &S);
 static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
                                         const OMPLoopDirective &S,
                                         OpenMPDirectiveKind DKind) {
+  // 'teams loop' is always emitted as 'distribute', and 'target teams loop'
+  // only becomes 'distribute parallel for' if canBeParallelFor() holds.
+  // Without the inner worksharing loop, there is nothing that would schedule
+  // the iteration space if the outer distribute loop is omitted.
+  if (DKind == OMPD_teams_loop)
+    return false;
+  if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(&S);
+      TTLD && !TTLD->canBeParallelFor())
+    return false;
   // Reduction-only for now. Non-reduction cases might follow in the future, but
   // need more analysis for maximum profit.
   return CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
@@ -2274,7 +2283,7 @@ void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
     CGF.EmitStmt(RegionBodyStmt);
   }
 
-  if (Builder.saveIP().isSet())
+  if (Builder.saveIP().isValid())
     Builder.CreateBr(FiniBB);
 }
 
@@ -2291,7 +2300,7 @@ void CodeGenFunction::OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
     CGF.EmitStmt(RegionBodyStmt);
   }
 
-  if (Builder.saveIP().isSet())
+  if (Builder.saveIP().isValid())
     Builder.CreateBr(FiniBB);
 }
 
@@ -2348,7 +2357,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
-        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+        AllocaInsertPt->getIterator());
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPBuilder.createParallel(
             Builder, AllocaIP, /*DeallocBlocks=*/{}, BodyGenCB, PrivCB, FiniCB,
@@ -4670,7 +4679,7 @@ static void emitOMPForDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
       llvm::OpenMPIRBuilder &OMPBuilder =
           CGM.getOpenMPRuntime().getOMPBuilder();
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
-          CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
+          CGF.AllocaInsertPt->getIterator());
       cantFail(OMPBuilder.applyWorkshareLoop(
           CGF.Builder.getCurrentDebugLocation(), CLI, AllocaIP, NeedsBarrier,
           SchedKind, ChunkSize, /*HasSimdModifier=*/false,
@@ -4958,7 +4967,7 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     CGCapturedStmtInfo CGSI(*ICS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
-        AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+        AllocaInsertPt->getIterator());
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPBuilder.createSections(
             Builder, AllocaIP, SectionCBVector, PrivCB, FiniCB, S.hasCancel(),
@@ -6171,8 +6180,7 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
   if (CGM.getLangOpts().OpenMPIRBuilder && isSupportedByOpenMPIRBuilder(S)) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-    InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
-                           AllocaInsertPt->getIterator());
+    InsertPointTy AllocaIP(AllocaInsertPt->getIterator());
 
     auto BodyGenCB = [&, this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
                                ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
@@ -6764,8 +6772,7 @@ void CodeGenFunction::EmitOMPOrderedStandaloneDirective(
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
-                           AllocaInsertPt->getIterator());
+    InsertPointTy AllocaIP(AllocaInsertPt->getIterator());
     for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
       emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
     for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
@@ -6804,6 +6811,7 @@ void CodeGenFunction::EmitOMPOrderedBlockAssocDirective(
 
       const CapturedStmt *CS = S.getInnermostCapturedStmt();
       if (C) {
+        llvm::BasicBlock *CodeGenBB = CodeGenIP.getNodeParent();
         llvm::BasicBlock *FiniBB = splitBBWithSuffix(
             Builder, /*CreateBranch=*/false, ".ordered.after");
         llvm::SmallVector<llvm::Value *, 16> CapturedVars;
@@ -6812,7 +6820,7 @@ void CodeGenFunction::EmitOMPOrderedBlockAssocDirective(
         assert(S.getBeginLoc().isValid() &&
                "Outlined function call location must be valid.");
         ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
-        OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, *FiniBB,
+        OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenBB, *FiniBB,
                                              OutlinedFn, CapturedVars);
       } else {
         OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(

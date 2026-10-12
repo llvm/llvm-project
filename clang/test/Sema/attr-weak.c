@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify -fsyntax-only %s
 
 extern int f0(void) __attribute__((weak));
 extern int g0 __attribute__((weak));
@@ -28,3 +28,19 @@ extern int pr14946_x  __attribute__((weak)); // expected-error {{weak declaratio
 
 static void pr14946_f(void);
 void pr14946_f(void) __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
+
+// An ifunc declaration is valid on its own, but cannot also be weak.
+void *resolver(void) { return 0; }
+void ifunc_function(void) __attribute__((ifunc("resolver")));
+void ifunc_weak(void) __attribute__((ifunc("resolver"), weak));
+// expected-error@-1 {{'weak' and 'ifunc' attributes are not compatible}}
+// expected-note@-2 {{conflicting attribute is here}}
+
+// A weak attribute inherited from an earlier declaration also conflicts.
+void inherited_weak(void) __attribute__((weak)); // expected-note {{conflicting attribute is here}}
+void inherited_weak(void) __attribute__((ifunc("resolver")));
+// expected-error@-1 {{'ifunc' and 'weak' attributes are not compatible}}
+
+// Adding weak after an ifunc definition is already diagnosed and ignored.
+void late_weak(void) __attribute__((ifunc("resolver"))); // expected-note {{previous definition is here}}
+void late_weak(void) __attribute__((weak)); // expected-warning {{attribute declaration must precede definition}}

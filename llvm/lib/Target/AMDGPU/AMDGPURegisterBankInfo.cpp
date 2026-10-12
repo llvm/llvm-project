@@ -932,7 +932,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   // Update EXEC, save the original EXEC value to VCC.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(NewExec)
-      .addReg(CondReg, RegState::Kill);
+      .addReg(CondReg, RegState::Kill)
+      .setOperandDead(3);
 
   MRI.setSimpleHint(NewExec, CondReg);
 
@@ -942,7 +943,8 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(NewExec);
+      .addReg(NewExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -4733,6 +4735,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_alignbyte:
     case Intrinsic::amdgcn_perm:
     case Intrinsic::amdgcn_prng_b32:
+    case Intrinsic::amdgcn_exclusive_scan_sum_i32:
+    case Intrinsic::amdgcn_exclusive_scan_sum_u32:
+    case Intrinsic::amdgcn_exclusive_scan_xor_b32:
+    case Intrinsic::amdgcn_exclusive_scan_or_b32:
+    case Intrinsic::amdgcn_exclusive_scan_and_b32:
+    case Intrinsic::amdgcn_exclusive_scan_min_i16:
+    case Intrinsic::amdgcn_exclusive_scan_min_u16:
+    case Intrinsic::amdgcn_exclusive_scan_min_i32:
+    case Intrinsic::amdgcn_exclusive_scan_min_u32:
+    case Intrinsic::amdgcn_exclusive_scan_max_i16:
+    case Intrinsic::amdgcn_exclusive_scan_max_u16:
+    case Intrinsic::amdgcn_exclusive_scan_max_i32:
+    case Intrinsic::amdgcn_exclusive_scan_max_u32:
+    case Intrinsic::amdgcn_wave_match_b32:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_sdot2:
     case Intrinsic::amdgcn_udot2:

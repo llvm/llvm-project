@@ -539,9 +539,9 @@ static LogicalResult verifyAttributions(Operation *op,
 static LogicalResult verifyReduceOpAndType(gpu::AllReduceOperation opName,
                                            Type resType) {
   using Kind = gpu::AllReduceOperation;
-  if (llvm::is_contained(
-          {Kind::MINNUMF, Kind::MAXNUMF, Kind::MINIMUMF, Kind::MAXIMUMF},
-          opName)) {
+  if (llvm::is_contained({Kind::MINNUMF, Kind::MAXNUMF, Kind::MINIMUMF,
+                          Kind::MAXIMUMF, Kind::MINIMUMNUMF, Kind::MAXIMUMNUMF},
+                         opName)) {
     if (!isa<FloatType>(resType))
       return failure();
   }
@@ -2219,7 +2219,7 @@ namespace {
 /// ...  gpu.wait ... [%t, ...]  // %t can be removed.
 struct EraseRedundantGpuWaitOpPairs : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {
@@ -2249,7 +2249,7 @@ public:
 /// dependencies nor return any token.
 struct SimplifyGpuWaitOp : public OpRewritePattern<WaitOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WaitOp op,
                                 PatternRewriter &rewriter) const final {

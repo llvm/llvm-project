@@ -282,16 +282,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (Ptr.isPastEnd())
-      return false;
-
     if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
-      return false;
-
-    // Never allow reading from a non-const pointer, unless the memory
-    // has been created in this evaluation.
-    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
     if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))

@@ -973,7 +973,7 @@ static bool isODR(const Function *F) {
 
 static uint64_t getBlockCountForMerging(const BlockFrequencyInfo &BFI,
                                         const BasicBlock *BB) {
-  if (auto Count = BFI.getBlockProfileCount(BB, /*AllowSynthetic=*/true))
+  if (auto Count = BFI.getBlockProfileCount(BB))
     return *Count;
   return 1;
 }

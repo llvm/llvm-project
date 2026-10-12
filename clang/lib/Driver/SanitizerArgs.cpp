@@ -1309,7 +1309,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           HwasanUseAliases);
   }
 
-  if (AllAddedKinds & SanitizerKind::SafeStack) {
+  if (Kinds & SanitizerKind::SafeStack) {
     // SafeStack runtime is built into the system on Android and Fuchsia.
     SafeStackRuntime =
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
@@ -1344,6 +1344,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
+
+  NeedsCopyProfRt =
+      Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;

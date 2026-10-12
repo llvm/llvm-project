@@ -49,6 +49,44 @@ enum class IOType {
   LLVM_MARK_AS_BITMASK_ENUM(PatchConstantOrPrimitive),
 };
 
+// Keywords written on a declaration, before sampling-location precedence and
+// stage/type defaults are applied.
+enum class InterpolationModifier : uint32_t {
+  None = 0,
+  NoInterpolation = 1 << 0,
+  Linear = 1 << 1,
+  NoPerspective = 1 << 2,
+  // Sampling-location bits are ordered by increasing precedence for min/max.
+  Center = 1 << 3,
+  Centroid = 1 << 4,
+  Sample = 1 << 5,
+  LLVM_MARK_AS_BITMASK_ENUM(Sample),
+};
+
+static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
+                  InterpolationModifier::Center <
+                      InterpolationModifier::Centroid &&
+                  InterpolationModifier::Centroid <
+                      InterpolationModifier::Sample,
+              "sampling-location bits must increase in precedence");
+
+// Select the highest-precedence sampling-location bit (sample > centroid >
+// center), ignoring other modifiers. Returns None if no location is explicit,
+// keeping it distinct from Center so diagnostics can detect location overrides.
+LLVM_ABI InterpolationModifier
+getInterpolationSamplingLocation(InterpolationModifier Modifiers);
+
+// Returns Invalid for nointerpolation combined with any other modifier.
+LLVM_ABI dxbc::PSV::InterpolationMode
+getInterpolationMode(InterpolationModifier Modifiers);
+
+// Apply component-type defaults and SV_Position's noperspective requirement.
+// Vertex outputs carry interpolation modes so they pack compatibly with pixel
+// inputs; other signature points do not use interpolation modes.
+LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage, IOType IO);
+
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,

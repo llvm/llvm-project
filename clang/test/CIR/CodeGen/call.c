@@ -72,15 +72,15 @@ void f7(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @f7(){{.*}} {
-// CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
+// CIR:         %[[B:.+]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.store %[[B]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+// CIR-NEXT:    cir.copy %[[B]] align(4) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
-// LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
+// LLVM:         %[[B:.+]] = alloca %struct.Big, align 4
 // LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, align 8
-// LLVM-NEXT:    store %struct.Big %[[B]], ptr %[[SLOT]], align 4
+// LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 4 %[[B]], i64 40, i1 false)
 // LLVM-NEXT:    call void @f5(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 
 // OGCG-LABEL: define{{.*}} void @f7() #0 {

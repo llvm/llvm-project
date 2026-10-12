@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
@@ -77,6 +78,19 @@ public:
   uint64_t getFixedSizeInBitsOrZero() const {
     return SizeInBits.isFixed() ? SizeInBits.getFixedValue() : 0;
   }
+
+  /// Returns the size in bits that the source language gives this type,
+  /// including any padding.
+  ///
+  /// An integer is rounded up to whole bytes.  A _BitInt or a floating-point
+  /// type is rounded up further, to its alignment.  That alignment must be the
+  /// one its size is padded to, not one an aligned attribute raised or lowered.
+  /// A complex type is twice the ABI size of its element type.  A fixed-length
+  /// vector counts an integer element other than a _BitInt at its bit width and
+  /// every other element at its own ABI size, so a bool element takes one bit.
+  /// The total is rounded up to a power of two of at least 8 bits.  Any other
+  /// type returns the size it was created with, and a scalable type returns 0.
+  LLVM_ABI uint64_t getABISizeInBits() const;
 
   Align getAlignment() const { return ABIAlignment; }
 
@@ -306,6 +320,11 @@ public:
   bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
   bool isSVECount() const { return VecKind == VectorKind::SVECount; }
 
+  bool isFixedLengthSVEData() const { return isFixedLength() && isSVEData(); }
+  bool isFixedLengthSVEPredicate() const {
+    return isFixedLength() && isSVEPredicate();
+  }
+
   /// Returns true for any of the AArch64 SVE flavors.
   bool isSVEType() const { return VecKind != VectorKind::Generic; }
 
@@ -495,14 +514,17 @@ public:
     return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
   }
 
-  /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
-  /// modeled with the shape of svbool_t: a scalable vector of 16 one-bit
-  /// elements.
-  const VectorType *getSVECountType(Align ABIAlign) {
+  /// Creates a scalable predicate or count vector.
+  /// Note: The AArch64 __SVCount_t type is opaque, so it is modeled with the
+  /// shape of svbool_t: a scalable vector of 16 one-bit elements.
+  const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
+                                                          VectorKind Kind) {
+    assert((Kind == VectorKind::SVEPredicate || Kind == VectorKind::SVECount) &&
+           "expected predicate or count vector kind");
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
-                         VectorKind::SVECount);
+                         Kind);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,

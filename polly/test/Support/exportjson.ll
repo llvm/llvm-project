@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir -p %t
-; RUN: opt %loadNPMPolly -polly-import-jscop-dir=%t '-passes=polly-custom<export-jscop>' -disable-output < %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-import-jscop-dir=%t '-passes=polly-custom<export-jscop>' -disable-output < %s
 ; RUN: FileCheck %s -input-file %t/exportjson___%entry.split---%return.jscop
 ;
 ; for (int j = 0; j < n; j += 1) {

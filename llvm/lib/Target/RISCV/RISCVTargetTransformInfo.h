@@ -72,6 +72,14 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind) const;
 
+  /// Return the type used to cost vzip.vv, whose LMUL represents the
+  /// interleaved destination EMUL. Return std::nullopt if illegal.
+  std::optional<MVT> getZvzipVZIPCostVT(MVT InterleavedVT) const;
+
+  /// Return the type used to cost vunzipe.v/vunzipo.v, whose LMUL represents
+  /// the interleaved source EMUL. Return std::nullopt if illegal.
+  std::optional<MVT> getZvzipVUNZIPCostVT(MVT InterleavedVT) const;
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),

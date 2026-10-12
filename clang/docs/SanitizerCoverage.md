@@ -530,6 +530,10 @@ SanitizerCoverage: ./a.out.7316.sancov 3 PCs written
 32 a.out.7316.sancov
 ```
 
+Set `print_coverage_summary=0` (for example,
+`ASAN_OPTIONS=coverage=1:print_coverage_summary=0`) to suppress the
+`SanitizerCoverage:` summary line. Coverage files are still written.
+
 Every time you run an executable instrumented with SanitizerCoverage
 one `*.sancov` file is created during the process shutdown.
 If the executable is dynamically linked against instrumented DSOs,

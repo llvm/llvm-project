@@ -97,13 +97,13 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG_TYPE "irtranslator"
+#define DEBUG_TYPE "ir-translator"
 
 using namespace llvm;
 
 static cl::opt<bool>
-    EnableCSEInIRTranslator("enable-cse-in-irtranslator",
-                            cl::desc("Should enable CSE in irtranslator"),
+    EnableCSEInIRTranslator("enable-cse-in-ir-translator",
+                            cl::desc("Should enable CSE in ir-translator"),
                             cl::init(false));
 
 namespace llvm {
@@ -336,6 +336,11 @@ class IRTranslatorImpl {
   bool translateIntrinsic(
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
       ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
+
+  /// Report an intrinsic the subtarget does not support and define its results
+  /// with G_IMPLICIT_DEF. Prevents creating a malformed MIR.
+  bool handleUnsupportedIntrinsic(const CallBase &CB, Intrinsic::ID ID,
+                                  MachineIRBuilder &MIRBuilder);
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
@@ -978,7 +983,7 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
     if (isa<Constant>(Val)) {
       bool Success = translate(cast<Constant>(Val), VRegs->front());
       if (!Success) {
-        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+        OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                    MF->getFunction().getSubprogram(),
                                    &MF->getFunction().getEntryBlock());
         R << "unable to translate constant: " << ore::NV("Type", Val.getType());
@@ -1046,7 +1051,7 @@ Align IRTranslatorImpl::getMemOpAlign(const Instruction &I) {
   if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I))
     return AI->getAlign();
 
-  OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
+  OptimizationRemarkMissed R("gisel-ir-translator", "", &I);
   R << "unable to translate memop: " << ore::NV("Opcode", &I);
   reportTranslationError(*MF, *ORE, R);
   return Align(1);
@@ -2348,16 +2353,22 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
-  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
-  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
-  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
-  if (DstTy->isPointerTy() && SrcTy->isByteTy())
-    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
-  if (SrcTy->isPointerTy() && DstTy->isByteTy())
-    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
+  // The IR only allows pointer/non-pointer bitcasts with byte types, but
+  // G_BITCAST can't convert between pointers and other types. Go through an
+  // integer with the pointer's shape instead: `bitcast <2 x b32> to ptr`
+  // becomes a G_BITCAST to i64 and a G_INTTOPTR.
+  if (SrcTy->isPtrOrPtrVectorTy() != DstTy->isPtrOrPtrVectorTy()) {
+    assert((SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy()) &&
+           "only byte types can be bitcast to or from pointers");
+    Type *PtrIRTy = SrcTy->isPtrOrPtrVectorTy() ? SrcTy : DstTy;
+    LLT IntTy = getLLTForType(*DL->getIntPtrType(PtrIRTy), *DL);
+    Register Src = getOrCreateVReg(*U.getOperand(0));
+    Register Dst = getOrCreateVReg(U);
+    if (MRI->getType(Src) != IntTy && MRI->getType(Dst) != IntTy)
+      Src = MIRBuilder.buildCast(IntTy, Src).getReg(0);
+    MIRBuilder.buildCast(Dst, Src);
+    return true;
+  }
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }
@@ -3024,7 +3035,7 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
     if (ORE->enabled()) {
       if (MemoryOpRemark::canHandle(MI, *LibInfo)) {
-        MemoryOpRemark R(*ORE, "gisel-irtranslator-memsize", *DL, *LibInfo);
+        MemoryOpRemark R(*ORE, "gisel-ir-translator-memsize", *DL, *LibInfo);
         R.visit(MI);
       }
     }
@@ -3577,7 +3588,7 @@ bool IRTranslatorImpl::translateCallBase(const CallBase &CB,
   if (auto *CI = dyn_cast<CallInst>(&CB)) {
     if (ORE->enabled()) {
       if (MemoryOpRemark::canHandle(CI, *LibInfo)) {
-        MemoryOpRemark R(*ORE, "gisel-irtranslator-memsize", *DL, *LibInfo);
+        MemoryOpRemark R(*ORE, "gisel-ir-translator-memsize", *DL, *LibInfo);
         R.visit(CI);
       }
     }
@@ -3664,11 +3675,8 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(Fn, ID, CI.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CI, ID, MIRBuilder);
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
@@ -3679,15 +3687,26 @@ bool IRTranslatorImpl::translateCall(const User &U,
   return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
+bool IRTranslatorImpl::handleUnsupportedIntrinsic(
+    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+  const Function &F = MF->getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+
+  if (!CB.getType()->isVoidTy()) {
+    for (Register Reg : getOrCreateVRegs(CB))
+      MIRBuilder.buildUndef(Reg);
+  }
+
+  return true;
+}
+
 /// Translate a call or callbr to an intrinsic.
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID)) {
-    const Function &F = MF->getFunction();
-    F.getContext().diagnose(
-        DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
-  }
+  if (!MF->getSubtarget().isIntrinsicSupported(ID))
+    return handleUnsupportedIntrinsic(CB, ID, MIRBuilder);
 
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
@@ -3774,9 +3793,10 @@ bool IRTranslatorImpl::findUnwindDestinations(
   bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
   bool IsCoreCLR = Personality == EHPersonality::CoreCLR;
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
+  bool IsWasmD = Personality == EHPersonality::Wasm_D;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
-  if (IsWasmCXX) {
+  if (IsWasmCXX || IsWasmD) {
     // Ignore this for now.
     return false;
   }
@@ -3978,6 +3998,9 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   // supported.
   if (LP.getType()->isTokenTy())
     return true;
+
+  if (!isExceptionPointerAndSelectorType(LP.getType()))
+    return false;
 
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
@@ -5120,7 +5143,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   SPInfo = StackProtectorInfo;
 
   if (CLI->fallBackToDAGISel(*MF)) {
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+    OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower function: "
       << ore::NV("Prototype", F.getFunctionType());
@@ -5184,7 +5207,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   // enableBigEndian()
   if (!DL->isLittleEndian() && !CLI->enableBigEndian()) {
     // Currently we don't properly handle big endian code.
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+    OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to translate in big endian mode";
     reportTranslationError(*MF, *ORE, R);
@@ -5254,7 +5277,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
   }
 
   if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+    OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: "
       << ore::NV("Prototype", F.getFunctionType());
@@ -5297,11 +5320,11 @@ bool IRTranslatorImpl::runOnMachineFunction(
         if (translate(Inst))
           continue;
 
-        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+        OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                    Inst.getDebugLoc(), BB);
         R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
 
-        if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
+        if (ORE->allowExtraAnalysis("gisel-ir-translator")) {
           std::string InstStrStorage;
           raw_string_ostream InstStr(InstStrStorage);
           InstStr << Inst;
@@ -5314,7 +5337,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
       }
 
       if (!finalizeBasicBlock(*BB, MBB)) {
-        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+        OptimizationRemarkMissed R("gisel-ir-translator", "GISelFailure",
                                    BB->getTerminator()->getDebugLoc(), BB);
         R << "unable to translate basic block";
         reportTranslationError(*MF, *ORE, R);

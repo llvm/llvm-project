@@ -28,6 +28,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -442,7 +443,7 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
   B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
-                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
+                 TLI->getAsSizeT(Len + 1, *B.getModule()));
   return Dst;
 }
 
@@ -1274,7 +1275,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1317,7 +1319,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
                                    "memrchr.cmp");
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr,
                                            B.getInt64(Pos), "memrchr.ptr_plus");
-      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1336,10 +1339,13 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
   Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  if (auto *AndSI = dyn_cast<SelectInst>(And))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*AndSI, DEBUG_TYPE);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
       B.CreateInBoundsGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
-  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  return B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                          "memrchr.sel");
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
@@ -2022,11 +2028,19 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Math Library Optimizations
 //===----------------------------------------------------------------------===//
 
+/// Preserve the accuracy requirement of \p Old on the replacement \p New.
+static void copyFPMath(const CallInst &Old, Value *New) {
+  if (auto *NewI = dyn_cast<Instruction>(New))
+    if (MDNode *MD = Old.getMetadata(LLVMContext::MD_fpmath))
+      NewI->setMetadata(LLVMContext::MD_fpmath, MD);
+}
+
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
   Value *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
   NewCall->takeName(CI);
+  copyFPMath(*CI, NewCall);
   return copyFlags(*CI, NewCall);
 }
 
@@ -2035,6 +2049,7 @@ static Value *replaceBinaryCall(CallInst *CI, IRBuilderBase &B,
   Value *NewCall = B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
                                            CI->getArgOperand(1), CI);
   NewCall->takeName(CI);
+  copyFPMath(*CI, NewCall);
   return copyFlags(*CI, NewCall);
 }
 
@@ -2480,6 +2495,15 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
           *NegInf = ConstantFP::getInfinity(Ty, true);
     Value *FCmp = B.CreateFCmpOEQ(Base, NegInf, "isinf");
     Sqrt = B.CreateSelect(FCmp, PosInf, Sqrt);
+    // We assume that the case where x == -infinity is unlikely, so we assign
+    // unlikely branch weights to that arm of the select.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (auto *SqrtSI = dyn_cast<SelectInst>(Sqrt))
+        setBranchWeights(
+            *SqrtSI,
+            {MDBuilder::kUnlikelyBranchWeight, MDBuilder::kLikelyBranchWeight},
+            /*IsExpected=*/false);
+    }
   }
 
   // If the exponent is negative, then get the reciprocal.
@@ -3097,12 +3121,12 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
     // sincos call there.
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(++ArgInst->getIterator());
   } else {
     // Otherwise (e.g. for a constant) the beginning of the function is as
     // good a place as any.
     BasicBlock &EntryBB = B.GetInsertBlock()->getParent()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
+    B.SetInsertPoint(EntryBB.begin());
   }
 
   SinCos = B.CreateCall(Callee, Arg, "sincospi");
@@ -3164,6 +3188,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_coshl:
     return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
 
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+
   case LibFunc_sin:
   case LibFunc_sinf:
   case LibFunc_sinl:
@@ -3172,6 +3200,14 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_sinhf:
   case LibFunc_sinhl:
 
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asinl:
+
+  case LibFunc_asinh:
+  case LibFunc_asinhf:
+  case LibFunc_asinhl:
+
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanl:
@@ -3179,6 +3215,10 @@ Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
   case LibFunc_tanh:
   case LibFunc_tanhf:
   case LibFunc_tanhl:
+
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atanl:
 
   case LibFunc_erf:
   case LibFunc_erff:
@@ -3345,7 +3385,14 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   V = B.CreateIntCast(V, RetType, false);
 
   Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
-  return B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  Value *S = B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  if (ProfcheckDisableMetadataFixes)
+    return S;
+  if (auto *SI = dyn_cast<SelectInst>(S))
+    setBranchWeights(
+        *SI, {MDBuilder::kLikelyBranchWeight, MDBuilder::kUnlikelyBranchWeight},
+        /*IsExpected=*/false);
+  return S;
 }
 
 Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilderBase &B) {

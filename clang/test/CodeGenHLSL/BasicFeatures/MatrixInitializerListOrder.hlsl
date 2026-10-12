@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
-// RUN:   -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefix=CHECK,COL-CHECK
+// RUN:   -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
 // RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s \
-// RUN:   | FileCheck %s --check-prefix=CHECK,ROW-CHECK
+// RUN:   | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
 // Verify that matrix initializer lists produce values in canonical column-major
 // register layout. The initializer list {1,2,3,4,5,6} for a float2x3 (2 rows,
@@ -10,6 +10,31 @@
 //
 // The register value is reordered to col0=[1,4], col1=[2,5], col2=[3,6] =
 // <1,4,2,5,3,6>. Row-major memory layout transposes that value at the store.
+
+constexpr float2x3 make_matrix() {
+  return float2x3(1, 2, 3, 4, 5, 6);
+}
+
+// Bool matrices use i1 elements in registers and i32 elements in memory.
+// CHECK: @_ZL1B = internal global <6 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
+static row_major bool2x3 B =
+    bool2x3(true, false, true, false, true, false);
+
+export bool read_bool_matrix() {
+// CHECK-LABEL: define {{.*}} i1 @_Z16read_bool_matrixv
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x i32>, ptr @_ZL1B
+// CHECK: [[AS_BOOL:%.*]] = icmp ne <6 x i32> [[FROM_MEMORY]], zeroinitializer
+// CHECK: [[IN_REGISTER:%.*]] = call <6 x i1> @llvm.matrix.transpose.v6i1(<6 x i1> [[AS_BOOL]], i32 3, i32 2)
+// CHECK: extractelement <6 x i1> [[IN_REGISTER]], i32 3
+  return B[1][1];
+}
+
+export float2x3 return_constexpr_matrix() {
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z23return_constexpr_matrixv
+// CHECK: ret <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
+  constexpr float2x3 value = make_matrix();
+  return value;
+}
 
 export float test_row0_col2() {
 // CHECK-LABEL: define {{.*}} float @_Z14test_row0_col2v

@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -562,10 +561,22 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "ehscope-entry";
       hasAttributes = true;
     }
+    if (isCleanupFuncletEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "cleanup-funclet-entry";
+      hasAttributes = true;
+    }
+    if (isEHContTarget()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehcont-target";
+      hasAttributes = true;
+    }
     if (getAlignment() != Align(1)) {
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
       hasAttributes = true;
+      if (getMaxBytesForAlignment())
+        os << ", max-bytes-for-alignment " << getMaxBytesForAlignment();
     }
     if (getSectionID() != MBBSectionID(0)) {
       os << (hasAttributes ? ", " : " (");
@@ -1171,9 +1182,10 @@ public:
   }
 };
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
+MachineBasicBlock *
+MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                                     MachineFunctionAnalysisManager *MFAM,
+                                     MachineDomTreeUpdater *MDTU) {
 #define GET_RESULT(RESULT, GETTER, INFIX)                                      \
   [MF, P, MFAM]() {                                                            \
     if (P) {                                                                   \
@@ -1187,15 +1199,15 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   MachineFunction *MF = getParent();
   LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
   SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
-  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
   MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info);
-  return SplitCriticalEdge(Succ, {LIS, Indexes, LV, MLI}, LiveInSets, MDTU);
+  return SplitCriticalEdge(Succ, {LIS, Indexes, MLI}, MDTU);
 #undef GET_RESULT
 }
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
+MachineBasicBlock *
+MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
+                                     const SplitCriticalEdgeAnalyses &Analyses,
+                                     MachineDomTreeUpdater *MDTU) {
   if (!canSplitCriticalEdge(Succ, Analyses.MLI))
     return nullptr;
 
@@ -1223,27 +1235,6 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->insertMBBInMaps(NMBB);
   else if (Analyses.SI)
     Analyses.SI->insertMBBInMaps(NMBB);
-
-  // On some targets like Mips, branches may kill virtual registers. Make sure
-  // that LiveVariables is properly updated after updateTerminator replaces the
-  // terminators.
-  auto *LV = Analyses.LV;
-  // Collect a list of virtual registers killed by the terminators.
-  SmallVector<Register, 4> KilledRegs;
-  if (LV)
-    for (MachineInstr &MI :
-         llvm::make_range(getFirstInstrTerminator(), instr_end())) {
-      for (MachineOperand &MO : MI.all_uses()) {
-        if (MO.getReg() == 0 || !MO.isKill() || MO.isUndef())
-          continue;
-        Register Reg = MO.getReg();
-        if (Reg.isPhysical() || LV->getVarInfo(Reg).removeKill(MI)) {
-          KilledRegs.push_back(Reg);
-          LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
-          MO.setIsKill(false);
-        }
-      }
-    }
 
   SmallVector<Register, 4> UsedRegs;
   if (LIS) {
@@ -1290,34 +1281,24 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
-  // Fix PHI nodes in Succ so they refer to NMBB instead of this.
-  Succ->replacePhiUsesWith(this, NMBB);
+  // Fix PHI nodes in Succ so they refer to NMBB instead of this, and find the
+  // registers used from NMBB in them.
+  SmallSet<Register, 8> PHISrcRegs;
+  for (MachineInstr &MI : Succ->phis()) {
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+      MachineOperand &MBBOp = MI.getOperand(I + 1);
+      if (MBBOp.getMBB() != this)
+        continue;
+      MBBOp.setMBB(NMBB);
+      const MachineOperand &MO = MI.getOperand(I);
+      if (LIS && !MO.isUndef())
+        PHISrcRegs.insert(MO.getReg());
+    }
+  }
 
   // Inherit live-ins from the successor
   for (const auto &LI : Succ->liveins())
     NMBB->addLiveIn(LI);
-
-  // Update LiveVariables.
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  if (LV) {
-    // Restore kills of virtual registers that were killed by the terminators.
-    while (!KilledRegs.empty()) {
-      Register Reg = KilledRegs.pop_back_val();
-      for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
-        if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
-          continue;
-        if (Reg.isVirtual())
-          LV->getVarInfo(Reg).Kills.push_back(&*I);
-        LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
-        break;
-      }
-    }
-    // Update relevant live-through information.
-    if (LiveInSets != nullptr)
-      LV->addNewBlock(NMBB, this, Succ, *LiveInSets);
-    else
-      LV->addNewBlock(NMBB, this, Succ);
-  }
 
   if (LIS) {
     // After splitting the edge and updating SlotIndexes, live intervals may be
@@ -1334,41 +1315,26 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     SlotIndex PrevIndex = StartIndex.getPrevSlot();
     SlotIndex EndIndex = Indexes->getMBBEndIdx(NMBB);
 
-    // Find the registers used from NMBB in PHIs in Succ.
-    SmallSet<Register, 8> PHISrcRegs;
-    for (MachineBasicBlock::instr_iterator
-         I = Succ->instr_begin(), E = Succ->instr_end();
-         I != E && I->isPHI(); ++I) {
-      for (unsigned ni = 1, ne = I->getNumOperands(); ni != ne; ni += 2) {
-        if (I->getOperand(ni+1).getMBB() == NMBB) {
-          MachineOperand &MO = I->getOperand(ni);
-          Register Reg = MO.getReg();
-          PHISrcRegs.insert(Reg);
-          if (MO.isUndef())
-            continue;
-
-          LiveInterval &LI = LIS->getInterval(Reg);
-          VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
-          assert(VNI &&
-                 "PHI sources should be live out of their predecessors.");
-          LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges()) {
-            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
-              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
-          }
-        }
+    for (Register Reg : PHISrcRegs) {
+      LiveInterval &LI = LIS->getInterval(Reg);
+      VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
+      assert(VNI && "PHI sources should be live out of their predecessors.");
+      LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+      for (auto &SR : LI.subranges()) {
+        if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
+          SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
       }
     }
 
-    MachineRegisterInfo *MRI = &getParent()->getRegInfo();
-    for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
-      Register Reg = Register::index2VirtReg(i);
-      if (PHISrcRegs.count(Reg) || !LIS->hasInterval(Reg))
-        continue;
+    auto UpdateLiveOutReg = [&](Register Reg) {
+      if (PHISrcRegs.count(Reg))
+        return true;
+      if (!LIS->hasInterval(Reg))
+        return false;
 
       LiveInterval &LI = LIS->getInterval(Reg);
       if (!LI.liveAt(PrevIndex))
-        continue;
+        return false;
 
       bool isLiveOut = LI.liveAt(LIS->getMBBStartIdx(Succ));
       if (isLiveOut && isLastMBB) {
@@ -1383,9 +1349,28 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
-        for (auto &SR : LI.subranges())
-          SR.removeSegment(StartIndex, EndIndex);
+        // The main range is live across NMBB, but an individual lane need not
+        // be.
+        for (auto &SR : LI.subranges()) {
+          if (SR.liveAt(PrevIndex))
+            SR.removeSegment(StartIndex, EndIndex);
+        }
       }
+      return isLiveOut;
+    };
+
+    if (std::vector<SparseBitVector<>> *LiveOutSets = Analyses.LiveOutSets) {
+      LiveOutSets->resize(MF->getNumBlockIDs());
+      const SparseBitVector<> &LiveOut = (*LiveOutSets)[getNumber()];
+      SparseBitVector<> &NewLiveOut = (*LiveOutSets)[NMBB->getNumber()];
+      for (unsigned Idx : LiveOut) {
+        if (UpdateLiveOutReg(Register::index2VirtReg(Idx)))
+          NewLiveOut.set(Idx);
+      }
+    } else {
+      MachineRegisterInfo *MRI = &getParent()->getRegInfo();
+      for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i)
+        UpdateLiveOutReg(Register::index2VirtReg(i));
     }
 
     // Update all intervals for registers whose uses may have been modified by

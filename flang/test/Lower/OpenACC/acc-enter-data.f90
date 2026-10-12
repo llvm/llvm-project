@@ -618,7 +618,7 @@ subroutine acc_enter_data_derived_type()
   !$acc enter data create(c%data)
 
 
-!CHECK: %[[DATA_COORD:.*]] = hlfir.designate %[[DECLC]]#0{"data"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[DATA_COORD:.*]] = hlfir.designate %[[DECLC]]#0{"data"}   fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[DATA_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) structured(false) name("c%data") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
@@ -643,7 +643,7 @@ subroutine acc_enter_data_single_array_element()
 
 !CHECK-LABEL:   func.func @_QPacc_enter_data_single_array_element() {
 ! CHECK:           fir.allocmem
-! CHECK:           %[[DESIGNATE_3:.*]] = hlfir.designate %{{.*}}{"a"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QFacc_enter_data_single_array_elementTt1{a:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK:           %[[DESIGNATE_3:.*]] = hlfir.designate %{{.*}}{"a"}   fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QFacc_enter_data_single_array_elementTt1{a:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
 ! CHECK-DAG:       %[[CONSTANT_11:.*]] = arith.constant 1 : index
 ! CHECK-DAG:       %[[LOAD_2:.*]] = fir.load %[[DESIGNATE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
 ! CHECK-DAG:       %[[CONSTANT_12:.*]] = arith.constant 0 : index
@@ -676,6 +676,6 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_class(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMmod1Tderived{m:f32}>> {fir.bindc_name = "a"}) {
-! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %0 {{.*}} {uniq_name = "_QFtest_classEa"} : (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)
+! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %0 {{.*}} uniq_name("_QFtest_classEa") : (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmod1Tderived{m:f32}>>, !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)
 ! CHECK: %[[COPYIN:.*]] = acc.copyin var(%[[DECL_ARG0]]#0 : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>) structured(false) name("a") -> !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>
 ! CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !fir.class<!fir.type<_QMmod1Tderived{m:f32}>>)

@@ -306,7 +306,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
-    case Intrinsic::dx_resource_atomic_binop: {
+    case Intrinsic::dx_resource_atomic_binop:
+    case Intrinsic::dx_resource_atomic_compare_exchange: {
       if (II->getType()->isIntegerTy(64)) {
         dxil::ResourceTypeInfo &RTI =
             DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];

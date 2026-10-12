@@ -1,0 +1,13 @@
+RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t-SleepOneSecondTest
+
+# New coverage at t=3s resets the timer; exits at t=6s with 3s stale.
+RUN: %run %t-SleepOneSecondTest -runs=50 -mutate_depth=1 -stale_corpus_timeout=2 2>&1 | FileCheck %s --check-prefix=RESET
+RESET: Done 6 runs in {{[5-7]}} second(s), {{[2-3]}} second(s) without new corpus
+
+# max_total_time=4 triggers at t=5s (only 2s after the t=3s coverage find).
+RUN: %run %t-SleepOneSecondTest -mutate_depth=1 -stale_corpus_timeout=4 -max_total_time=4 2>&1 | FileCheck %s --check-prefix=MAX_TIME
+MAX_TIME: Done 5 runs in {{[4-6]}} second(s), {{[1-2]}} second(s) without new corpus
+
+# fork with new termination condition
+RUN: %run %t-SleepOneSecondTest -runs=50 -stale_corpus_timeout=3 -fork=1 2>&1 | FileCheck %s --check-prefix=FORK
+FORK: INFO: no new corpus for {{[0-9]+}} seconds

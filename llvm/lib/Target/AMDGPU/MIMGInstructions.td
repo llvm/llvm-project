@@ -1403,7 +1403,7 @@ class MIMG_Sampler_nsa_gfx10<mimgopc op, string opcode,
                              string dns="">
   : MIMG_nsa_gfx10<op.GFX10M, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "$vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
 class MIMG_Sampler_nortn_gfx10<mimgopc op, string opcode,
@@ -1421,7 +1421,7 @@ class MIMG_Sampler_nortn_nsa_gfx10<mimgopc op, string opcode,
                          string dns="">
   : MIMG_nsa_gfx10<op.GFX10M, (outs), num_addrs, dns> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " off, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "off, "#AddrAsm, BaseOpcode.HasD16>.ret;
   // Force vdata to VGPR0 as no result will be returned.
   let vdata = 0;
 }
@@ -1440,7 +1440,7 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
   : MIMG_nsa_gfx11<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, [],
                    LastVAddrSize> {
   let InOperandList = MIMG_Sampler_OpList_gfx10p<AddrIns, BaseOpcode.HasD16>.ret;
-  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, " $vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
+  let AsmString = MIMG_Sampler_Asm_gfx10p<opcode, "$vdata, "#AddrAsm, BaseOpcode.HasD16>.ret;
 }
 
 class MIMG_Sampler_nortn_gfx11<mimgopc op, string opcode,
@@ -2346,7 +2346,7 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
 }
 
 multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
-  let AssemblerPredicate = HasTDMInsts, DecoderNamespace = "GFX1250" in {
+  let AssemblerPredicate = isGFX125xOnly, DecoderNamespace = "GFX1250" in {
     foreach DSuffix = ["_d2", "_d4"] in {
       defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
       def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,

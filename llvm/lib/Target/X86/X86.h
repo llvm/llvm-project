@@ -133,7 +133,7 @@ FunctionPass *createX86FixupInstTuningLegacyPass();
 
 /// Return a pass that reduces the size of vector constant pool loads.
 class X86FixupVectorConstantsPass
-    : public OptionalPassInfoMixin<X86FixupInstTuningPass> {
+    : public OptionalPassInfoMixin<X86FixupVectorConstantsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

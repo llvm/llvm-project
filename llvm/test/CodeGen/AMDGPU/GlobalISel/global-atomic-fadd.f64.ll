@@ -26,12 +26,12 @@ define amdgpu_ps void @global_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[V_ADD_F64_e64_]], %subreg.sub0_sub1, [[PHI1]], %subreg.sub2_sub3
   ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (i64) on %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]], [[PHI1]], implicit $exec
-  ; GFX90A-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64_xexec = SI_IF_BREAK [[V_CMP_EQ_U64_e64_]], [[PHI]], implicit-def $scc
-  ; GFX90A-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64_xexec = SI_IF_BREAK [[V_CMP_EQ_U64_e64_]], [[PHI]], implicit-def dead $scc
+  ; GFX90A-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.atomicrmw.end:
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: global_atomic_fadd_f64_no_rtn_atomicrmw
@@ -74,12 +74,12 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[V_ADD_F64_e64_]], %subreg.sub0_sub1, [[PHI1]], %subreg.sub2_sub3
   ; GFX90A-NEXT:   [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic monotonic (i64) on %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]], [[PHI1]], implicit $exec
-  ; GFX90A-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64_xexec = SI_IF_BREAK [[V_CMP_EQ_U64_e64_]], [[PHI]], implicit-def $scc
-  ; GFX90A-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64_xexec = SI_IF_BREAK [[V_CMP_EQ_U64_e64_]], [[PHI]], implicit-def dead $scc
+  ; GFX90A-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.atomicrmw.end:
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]].sub0
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]].sub1
   ; GFX90A-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec

@@ -268,6 +268,8 @@ def int_dx_dot4add_u8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty,
 
 def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 
+def int_dx_isfinite : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_isinf : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
     [llvm_anyfloat_ty], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
@@ -345,6 +347,13 @@ def int_dx_group_memory_barrier
 
 def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
+
+def int_dx_barrier_by_memory_type
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>;
+
+def int_dx_barrier_by_memory_handle
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty],
+                            [IntrConvergent]>;
 
 def int_dx_load_input
     : DefaultAttrsIntrinsic<

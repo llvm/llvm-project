@@ -52,13 +52,12 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm2[0,2],xmm0[1,3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
-; AVX-NEXT:    vmovaps %xmm1, 32(%rax)
-; AVX-NEXT:    vmovaps %ymm0, (%rax)
-; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,3],xmm2[1,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,2],xmm1[0,2]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm2[0,2],xmm0[1,3]
+; AVX-NEXT:    vmovaps %xmm0, 16(%rax)
+; AVX-NEXT:    vmovaps %xmm1, (%rax)
+; AVX-NEXT:    vmovaps %xmm3, 32(%rax)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: store_i32_stride6_vf2:
