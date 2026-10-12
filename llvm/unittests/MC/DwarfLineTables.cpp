@@ -184,3 +184,91 @@ TEST(DwarfLineTables, TestCustomParams2) {
                                dwarf::DW_LNS_copy};
   verifyEncoding(Params, 248, 0, Encoding0);
 }
+
+
+TEST(DwarfLineTables, RootFilePathIdentity) {
+  struct Case {
+    const char *Root;
+    const char *Directory;
+    const char *Name;
+    unsigned Expected;
+  };
+  const Case Cases[] = {
+      {"/build/src/a.c", "/build/src", "a.c", 0},
+      {"/build/src/a.c", "src", "a.c", 0},
+      {"/build/src/a.c", "", "src/a.c", 0},
+      {"src/a.c", "", "/build/src/a.c", 0},
+      {"a.c", "", "a.c", 0},
+      {"a.c", "/build", "a.c", 0},
+      {"a.c", "/other", "a.c", 1},
+      {"a.c", "other", "a.c", 1},
+      {"/build/a.c", "/ignored", "/build/a.c", 0},
+      {"C:\\build\\a.c", "/ignored", "C:\\build\\a.c", 0},
+  };
+  for (const auto &C : Cases) {
+    SCOPED_TRACE(C.Root);
+    SCOPED_TRACE(C.Directory);
+    SCOPED_TRACE(C.Name);
+    MCDwarfLineTableHeader Header;
+    Header.setRootFile("/build", C.Root, std::nullopt, "source text");
+    StringRef Directory = C.Directory, Name = C.Name;
+    EXPECT_EQ(C.Expected, cantFail(Header.tryGetFile(
+                              Directory, Name, std::nullopt, "source text", 5)));
+    // Root spelling and embedded source must survive deduplication.
+    EXPECT_EQ(C.Root, Header.RootFile.Name);
+    EXPECT_EQ("source text", *Header.RootFile.Source);
+  }
+}
+
+TEST(DwarfLineTables, RootFileForeignPathStyles) {
+  MCDwarfLineTableHeader Header;
+  Header.setRootFile("C:\\build", "C:/build/src/a.c", std::nullopt, std::nullopt);
+  StringRef Directory = "src", Name = "a.c";
+  EXPECT_EQ(0u, cantFail(Header.tryGetFile(Directory, Name, std::nullopt,
+                                         std::nullopt, 5)));
+  Directory = "C:\\other\\src";
+  Name = "a.c";
+  EXPECT_EQ(1u, cantFail(Header.tryGetFile(Directory, Name, std::nullopt,
+                                         std::nullopt, 5)));
+
+  // A backslash in a POSIX path is a character, not a separator.
+  MCDwarfLineTableHeader Posix;
+  Posix.setRootFile("/build", "/build/a\\b.c", std::nullopt, std::nullopt);
+  Directory = "/build/a";
+  Name = "b.c";
+  EXPECT_EQ(1u, cantFail(Posix.tryGetFile(Directory, Name, std::nullopt,
+                                        std::nullopt, 5)));
+}
+
+TEST(DwarfLineTables, RootFileChecksumIdentity) {
+  MD5::MD5Result First{}, Second{};
+  Second[0] = 1;
+  for (std::optional<MD5::MD5Result> Checksum :
+       {std::optional<MD5::MD5Result>(First),
+        std::optional<MD5::MD5Result>(Second), std::optional<MD5::MD5Result>()}) {
+    MCDwarfLineTableHeader Header;
+    Header.setRootFile("/build", "/build/a.c", First, std::nullopt);
+    StringRef Directory = "/build", Name = "a.c";
+    EXPECT_EQ(Checksum == First ? 0u : 1u,
+              cantFail(Header.tryGetFile(Directory, Name, Checksum,
+                                         std::nullopt, 5)));
+  }
+}
+
+TEST(DwarfLineTables, ExplicitRootFileAliasKeepsItsNumber) {
+  MCDwarfLineTableHeader Header;
+  Header.setRootFile("/build", "a.c", std::nullopt, std::nullopt);
+  StringRef Directory = "/build", Name = "a.c";
+  EXPECT_EQ(1u, cantFail(Header.tryGetFile(Directory, Name, std::nullopt,
+                                          std::nullopt, 5, 1)));
+  ASSERT_EQ(2u, Header.MCDwarfFiles.size());
+  EXPECT_EQ("a.c", Header.MCDwarfFiles[1].Name);
+}
+
+TEST(DwarfLineTables, DWARF4DoesNotReuseFileZero) {
+  MCDwarfLineTableHeader Header;
+  Header.setRootFile("/build", "/build/a.c", std::nullopt, std::nullopt);
+  StringRef Directory = "/build", Name = "a.c";
+  EXPECT_EQ(1u, cantFail(Header.tryGetFile(Directory, Name, std::nullopt,
+                                          std::nullopt, 4)));
+}
