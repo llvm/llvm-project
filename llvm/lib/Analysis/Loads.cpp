@@ -35,7 +35,7 @@ static bool isAligned(const Value *Base, Align Alignment,
 static bool isDereferenceableAndAlignedPointerViaAssumption(
     const Value *Ptr, Align Alignment, const SimplifyQuery &SQ, bool IgnoreFree,
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
-  if (!SQ.CxtI)
+  if (!SQ.CtxI)
     return false;
   // Look through assumes to see if both dereferenceability and alignment can
   // be proven by an assume if needed.
@@ -45,7 +45,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-        if (!isValidAssumeForContext(Assume, SQ.CxtI, SQ.DT))
+        if (!isValidAssumeForContext(Assume, SQ.CtxI, SQ.DT))
           return false;
         if (RK.AttrKind == Attribute::Alignment) {
           IsAligned |= RK.ArgValue >= Alignment.value();
@@ -54,7 +54,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
           // Dereferenceable information from assumptions is only valid if the
           // value cannot be freed between the assumption and use.
           if (!IsDerefable &&
-              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
+              (!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CtxI, SQ.DT)) &&
               CheckSize(RK))
             IsDerefable = true;
         }
@@ -149,7 +149,7 @@ static bool isDereferenceableAndAlignedPointer(
         DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
       }
 
-      if (!SQ.CxtI || !willNotFreeBetween(DefI, SQ.CxtI))
+      if (!SQ.CtxI || !willNotFreeBetween(DefI, SQ.CtxI, SQ.DT))
         return false;
     }
 
@@ -162,7 +162,7 @@ static bool isDereferenceableAndAlignedPointer(
     // We don't bother handling allocas here, as they aren't speculatable
     // anyway.
     if (I && !isa<AllocaInst>(I))
-      return SQ.CxtI && isValidAssumeForContext(I, SQ.CxtI, SQ.DT);
+      return SQ.CtxI && isValidAssumeForContext(I, SQ.CtxI, SQ.DT);
     return true;
   };
   if (IsKnownDeref()) {
@@ -455,15 +455,16 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                        const APInt &Size,
-                                       const SimplifyQuery &SQ) {
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ)) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, IgnoreFree)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
-    if (!SQ.CxtI || !suppressSpeculativeLoadForSanitizers(*SQ.CxtI))
+    if (!SQ.CtxI || !suppressSpeculativeLoadForSanitizers(*SQ.CtxI))
       return true;
   }
 
-  if (!SQ.CxtI)
+  if (!SQ.CtxI)
     return false;
 
   if (Size.getBitWidth() > 64)
@@ -475,7 +476,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
   // from/to.  If so, the previous load or store would have already trapped,
   // so there is no harm doing an extra load (also, CSE will later eliminate
   // the load entirely).
-  auto BBI = SQ.CxtI->getIterator(), E = SQ.CxtI->getParent()->begin();
+  auto BBI = SQ.CtxI->getIterator(), E = SQ.CtxI->getParent()->begin();
 
   // We can at least always strip pointer casts even though we can't use the
   // base here.
@@ -486,7 +487,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 
     // If we see a free or a call which may write to memory (i.e. which might do
     // a free) the pointer could be marked invalid.
-    if (isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
+    if (!IgnoreFree && isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
         !isa<LifetimeIntrinsic>(BBI))
       return false;
 
@@ -528,13 +529,14 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment,
 }
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
-                                       const SimplifyQuery &SQ) {
+                                       const SimplifyQuery &SQ,
+                                       bool IgnoreFree) {
   TypeSize TySize = SQ.DL.getTypeStoreSize(Ty);
   if (TySize.isScalable())
     return false;
   APInt Size(SQ.DL.getIndexTypeSizeInBits(V->getType()),
              TySize.getFixedValue());
-  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ);
+  return isSafeToLoadUnconditionally(V, Alignment, Size, SQ, IgnoreFree);
 }
 
 /// DefMaxInstsToScan - the default number of maximum instructions

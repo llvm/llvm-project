@@ -3042,10 +3042,20 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
     The operand `x` is the address from where the value is atomically read.
     The operand `v` is the address where the value is stored after reading.
+
+    The operation declares its memory effects per operand: it reads the
+    location designated by `x` and writes the location designated by `v`. It
+    declares no other effect, which models relaxed ordering: the access to the
+    location is atomic, but the operation creates no ordering relationship with
+    accesses to any other location, so those may be moved across it. OpenACC
+    leaves the ordering of the `atomic` construct unspecified - unlike OpenMP
+    it has no memory-ordering clause - so relaxed is the weakest reading
+    consistent with the specification and the one that permits the most
+    optimization.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
-                       OpenACC_PointerLikeType:$v,
+  let arguments = (ins Arg<OpenACC_PointerLikeType, "address atomically read from", [MemRead]>:$x,
+                       Arg<OpenACC_PointerLikeType, "address storing read value", [MemWrite]>:$v,
                        TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
     oilist(
@@ -3069,9 +3079,19 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
     written w.r.t. multiple threads. The evaluation of `expr` need not be
     atomic w.r.t. the write to address. In general, the type(x) must
     dereference to type(expr).
+
+    The operation declares its memory effects per operand: it writes the
+    location designated by `x`. `expr` is a value rather than a location, so
+    it carries no effect. No other effect is declared, which models relaxed
+    ordering: the access to the location is atomic, but the operation creates
+    no ordering relationship with accesses to any other location, so those may
+    be moved across it. OpenACC leaves the ordering of the `atomic` construct
+    unspecified, so relaxed is the weakest reading consistent with the
+    specification and the one that permits the most optimization.
   }];
 
-  let arguments = (ins OpenACC_PointerLikeType:$x,
+  let arguments = (ins Arg<OpenACC_PointerLikeType,
+                           "address atomically written to", [MemWrite]>:$x,
                        AnyType:$expr,
                        Optional<I1>:$ifCond);
   let assemblyFormat = [{
@@ -3822,15 +3842,22 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
-// acc_on_device runtime call
+// 3.2.15 acc_on_device
 //===----------------------------------------------------------------------===//
 
 def OpenACC_OnDeviceOp : OpenACC_Op<"on_device"> {
-  let summary = "acc_on_device intrinsic operation";
+  let summary = "call to the acc_on_device runtime function";
 
   let description = [{
-    Represents a call to the OpenACC `acc_on_device` runtime function.
-    Returns whether the current thread is executing on the given device type.
+    Represents a call to the OpenACC `acc_on_device` runtime function
+    (OpenACC 3.4, section 3.2.15). The result indicates whether execution is
+    on the given device type.
+
+    The call is evaluated at compile time only when device specialization
+    runs and the call is inside the code being specialized. On that path, a
+    compile-time constant device type folds to a constant result. Otherwise
+    the call remains a runtime call. The device type must be one of the
+    defined accelerator types.
 
     Example:
 

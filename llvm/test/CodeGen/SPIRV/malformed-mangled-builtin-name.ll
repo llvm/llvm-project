@@ -1,6 +1,7 @@
 ; A call target with a malformed mangled name must not crash the demangler.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 declare spir_func i64 @"_Z&3gmt_global_idj"(i32)
 

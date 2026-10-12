@@ -35,7 +35,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV64-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; RV64-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV64:       [[VECTOR_EARLY_EXIT]]:
-; RV64-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP5]], i1 false)
+; RV64-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP6]], i1 false)
 ; RV64-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i64 [[FIRST_ACTIVE_LANE]]
 ; RV64-NEXT:    br label %[[EXIT]]
 ; RV64:       [[SCALAR_PH]]:
@@ -82,7 +82,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; RV32-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; RV32-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV32:       [[VECTOR_EARLY_EXIT]]:
-; RV32-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1> [[TMP5]], i1 false)
+; RV32-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1> [[TMP6]], i1 false)
 ; RV32-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[FIRST_ACTIVE_LANE]]
 ; RV32-NEXT:    br label %[[EXIT]]
 ; RV32:       [[SCALAR_PH]]:
@@ -129,7 +129,7 @@ define i32 @early_exit_live_out(ptr align 4 dereferenceable(4096) %p) {
 ; ZVE32X-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; ZVE32X-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; ZVE32X:       [[VECTOR_EARLY_EXIT]]:
-; ZVE32X-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1> [[TMP5]], i1 false)
+; ZVE32X-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1> [[TMP6]], i1 false)
 ; ZVE32X-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 4 x i32> [[WIDE_LOAD]], i32 [[FIRST_ACTIVE_LANE]]
 ; ZVE32X-NEXT:    br label %[[EXIT]]
 ; ZVE32X:       [[SCALAR_PH]]:
@@ -201,7 +201,7 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV64-NEXT:    [[CMP_N:%.*]] = icmp eq i64 132, [[N_VEC]]
 ; RV64-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV64:       [[VECTOR_EARLY_EXIT]]:
-; RV64-NEXT:    [[TMP14:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> [[TMP10]], i1 false)
+; RV64-NEXT:    [[TMP14:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> [[TMP11]], i1 false)
 ; RV64-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], [[TMP14]]
 ; RV64-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 112
 ; RV64-NEXT:    br label %[[EXIT]]
@@ -255,7 +255,7 @@ define i64 @strided_search(ptr align 8 dereferenceable(14784) %p) {
 ; RV32-NEXT:    [[CMP_N:%.*]] = icmp eq i64 132, [[N_VEC]]
 ; RV32-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV32:       [[VECTOR_EARLY_EXIT]]:
-; RV32-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv2i1(<vscale x 2 x i1> [[TMP10]], i1 false)
+; RV32-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.nxv2i1(<vscale x 2 x i1> [[TMP11]], i1 false)
 ; RV32-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
 ; RV32-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], [[TMP15]]
 ; RV32-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 112

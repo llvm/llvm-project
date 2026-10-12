@@ -277,6 +277,10 @@ int main(int argc, char **argv) {
                        << "\' function not found in module.\n";
     return 1;
   }
+  if (EntryFn->isDeclaration()) {
+    WithColor::error() << '\'' << EntryFunc << "\' must be definition.\n";
+    return 1;
+  }
   TargetLibraryInfo TLI(Ctx.getTLIImpl());
   Type *IntTy = IntegerType::get(Ctx.getContext(), TLI.getIntSize());
   Type *PtrTy = PointerType::getUnqual(Ctx.getContext());

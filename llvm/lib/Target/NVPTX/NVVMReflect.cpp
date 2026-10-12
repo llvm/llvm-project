@@ -199,7 +199,7 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
 
   ReplaceInstructionWithConst(Call, NewValue);
 
-  auto &DL = Call->getModule()->getDataLayout();
+  auto &DL = Call->getDataLayout();
   while (!Worklist.empty()) {
     auto *I = Worklist.pop_back_val();
     if (Constant *C = ConstantFoldInstruction(I, DL)) {

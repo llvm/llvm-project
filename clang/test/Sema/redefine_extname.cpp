@@ -22,6 +22,14 @@ int foo_cppfunc() { return 1; } // expected-warning {{#pragma redefine_extname i
 int foo_cppvar = 1; // expected-warning {{#pragma redefine_extname is applicable to external C declarations only; not applied to variable 'foo_cppvar'}}
 // CHECK-DAG: {{@[^ ]*foo_cppvar}}
 
+/// Check that merging variable template declarations does not leave stale
+/// linkage information.
+#pragma redefine_extname a alias
+template <typename>
+static int a; // expected-warning {{#pragma redefine_extname is applicable to external C declarations only; not applied to variable 'a'}}
+template <typename>
+extern int a; // expected-warning {{#pragma redefine_extname is applicable to external C declarations only; not applied to variable 'a'}}
+
 /// Check that the warning goes away when doing it in a namespace.
 /// Such uses are clearly scoped and need no warning (and often can be intentional).
 #pragma redefine_extname foo_nsfunc check_not_bar_nsfunc

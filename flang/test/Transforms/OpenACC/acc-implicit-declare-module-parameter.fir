@@ -18,7 +18,7 @@ func.func @_QMkernel_modPdo_kernel(%arg0: !fir.ref<!fir.array<4xf64>> {fir.bindc
   return
 }
 
-// CHECK: fir.global linkonce_odr @_QMmod_paramsECarr_val({{.*}}) {{{.*}}acc.declare = #acc.declare<dataClause = acc_copyin>{{.*}}} {{.*}}constant : !fir.array<4xf64>
+// CHECK: fir.global linkonce_odr @_QMmod_paramsECarr_val({{.*}}) <{alignment = 64 : i64}> {{{.*}}acc.declare = #acc.declare<dataClause = acc_copyin>{{.*}}} constant : !fir.array<4xf64>
 // CHECK-LABEL: func.func @_QMkernel_modPdo_kernel
 // CHECK: acc.parallel
 // CHECK: fir.address_of(@_QMmod_paramsECarr_val)

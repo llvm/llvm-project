@@ -701,7 +701,7 @@ ParseNames(SectionSP code_section_sp, SectionSP global_section_sp,
         if (*idx >= segments.size())
           continue;
         // Update the segment name.
-        segments[i].name = *name;
+        segments[*idx].name = *name;
       }
 
     } break;

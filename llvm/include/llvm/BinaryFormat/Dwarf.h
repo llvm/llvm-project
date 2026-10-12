@@ -391,6 +391,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Elixir;
   case DW_LNAME_Gleam:
     return DW_LANG_Gleam;
+  case DW_LNAME_Roc:
+    return DW_LANG_Roc;
   }
   return {};
 }
@@ -541,6 +543,8 @@ toDW_LNAME(SourceLanguage language) {
     return {{DW_LNAME_Elixir, 0}};
   case DW_LANG_Gleam:
     return {{DW_LNAME_Gleam, 0}};
+  case DW_LANG_Roc:
+    return {{DW_LNAME_Roc, 0}};
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_CPP_for_OpenCL:
   case DW_LANG_lo_user:
@@ -643,6 +647,7 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_Erlang:
   case DW_LANG_Elixir:
   case DW_LANG_Gleam:
+  case DW_LANG_Roc:
     result = false;
     break;
   }
@@ -734,6 +739,7 @@ inline bool isFortran(SourceLanguage S) {
   case DW_LANG_Erlang:
   case DW_LANG_Elixir:
   case DW_LANG_Gleam:
+  case DW_LANG_Roc:
     result = false;
     break;
   }
@@ -823,6 +829,7 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Erlang:
   case DW_LANG_Elixir:
   case DW_LANG_Gleam:
+  case DW_LANG_Roc:
     return false;
   }
 

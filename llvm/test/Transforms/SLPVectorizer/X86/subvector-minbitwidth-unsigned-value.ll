@@ -8,8 +8,8 @@ define i1 @test(i64 %v1, ptr %v2, i32 %v3, i1 %v4) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[V1]], 40
 ; CHECK-NEXT:    [[TT3:%.*]] = lshr i64 [[V1]], 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TT3]] to i32
 ; CHECK-NEXT:    [[TT2:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TT3]] to i32
 ; CHECK-NEXT:    [[TT1:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TT1]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8> poison, i8 [[TMP3]], i64 0

@@ -391,15 +391,6 @@ public:
     return any_of(IncomingEdges, [&](const auto *E) { return E->Kind == EK; });
   }
 
-  bool hasAnyOutgoingEdges() const { return OutgoingEdges.size(); }
-  bool hasAnyOutgoingEdgesOfKind(EdgeKind EK) const {
-    return any_of(OutgoingEdges, [&](const auto *E) { return E->Kind == EK; });
-  }
-
-  iterator_range<edges_iterator> incoming_edges() const {
-    return IncomingEdges;
-  }
-
   iterator_range<edges_iterator> outgoing_edges() const {
     return OutgoingEdges;
   }

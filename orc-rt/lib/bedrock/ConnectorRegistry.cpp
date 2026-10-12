@@ -34,8 +34,8 @@ Error ConnectorRegistry::registerConnector(std::string Transport,
   return Error::success();
 }
 
-Error ConnectorRegistry::connect(GetAttachInfoFn GetAttachInfo,
-                                 const ConnectionSpec &CS) noexcept {
+Error ConnectorRegistry::connect(const ConnectionSpec &CS, Session &S,
+                                 BootstrapInfo BI) noexcept {
   ConnectorFn *Connector = nullptr;
   {
     std::scoped_lock<std::mutex> Lock(M);
@@ -49,11 +49,7 @@ Error ConnectorRegistry::connect(GetAttachInfoFn GetAttachInfo,
     Connector = &I->second;
   }
 
-  // Run the connector without the lock: it blocks on IO, and may register
-  // further connectors or connect again. The pointer stays good because
-  // unordered_map does not move its elements on insert, and nothing removes
-  // them.
-  return (*Connector)(std::move(GetAttachInfo), CS);
+  return (*Connector)(CS, S, std::move(BI));
 }
 
 } // namespace orc_rt

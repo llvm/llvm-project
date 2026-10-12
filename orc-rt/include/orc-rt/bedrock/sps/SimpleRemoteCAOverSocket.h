@@ -16,14 +16,19 @@
 
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SocketHandle.h"
+#include "orc-rt/bedrock/VettedPeer.h"
 #include "orc-rt/support/Error.h"
 
 #include <memory>
 
 namespace orc_rt {
 
-/// Creates a ControllerAccess that carries SimpleRemote messages over Sock,
-/// taking ownership of it. Sock must be a connected stream socket.
+/// Creates a ControllerAccess that carries SimpleRemote messages over Peer's
+/// socket, taking ownership of it. Fails if the socket is not a stream socket.
+/// The socket must be connected.
+///
+/// Takes a VettedPeer rather than a bare socket because whoever is at the other
+/// end can send this process code to run. See VettedPeer for how to choose.
 ///
 /// The result is ready to hand to Session::attach, which is what starts the
 /// conversation; nothing is sent before then.
@@ -34,7 +39,7 @@ namespace orc_rt {
 /// need something else entirely. The wire format is the same either way, and
 /// matches LLVM's SimpleRemoteEPC.
 Expected<std::shared_ptr<Session::ControllerAccess>>
-createSimpleRemoteCAOverSocket(Session &S, SocketHandle Sock);
+createSimpleRemoteCAOverSocket(Session &S, VettedPeer<SocketHandle> Peer);
 
 } // namespace orc_rt
 

@@ -23,17 +23,17 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MALLOC:%.*]], label [[TMP7:%.*]]
 ; CHECK:       Malloc:
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 0, i32 2), align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 8), align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds ptr addrspace(4), ptr addrspace(4) [[TMP20]], i64 15
-; CHECK-NEXT:    store i32 [[TMP24]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    store i32 [[TMP24]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 12), align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr addrspace(4) [[TMP18]], align 4
-; CHECK-NEXT:    store i32 [[TMP13]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 1, i32 1), align 4
+; CHECK-NEXT:    store i32 [[TMP13]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 16), align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = udiv i32 [[TMP14]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 1
-; CHECK-NEXT:    store i32 [[TMP16]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    store i32 [[TMP16]], ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 20), align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP24]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)

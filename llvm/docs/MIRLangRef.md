@@ -61,7 +61,7 @@ the `-run-pass` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown
 below can be used:
 
-    `# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s`
+    `# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=post-ra-pseudos | FileCheck %s`
 
 The MIR files are target dependent, so they have to be placed in the
 target-specific test directories (`lib/CodeGen/TARGETNAME`). They also need to

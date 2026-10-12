@@ -337,14 +337,14 @@ EOF
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
         --dry-run -vv \
         --git-repo "${MONOREPO_ROOT}" \
-        --libcxx-installation "${INSTALL_DIR}" \
+        --test-config installed-libc++.cfg.in \
         --benchmark-commit HEAD \
         --test-suite-commit HEAD \
         --machine test-tools \
         --compiler "${CXX}" \
         --filter hash.bench.cpp \
         --output "${BUILD_DIR}/report.json" \
-        -- --param optimization=speed
+        -- --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}"
 
     step "Submit a LNT report (dry-run)"
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \

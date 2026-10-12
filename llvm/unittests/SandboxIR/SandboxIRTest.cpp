@@ -1745,21 +1745,20 @@ define void @foo(ptr %ptr) {
 
 TEST_F(SandboxIRTest, Value_stripAndAccumulate) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
-  %gep0 = getelementptr i8, ptr %ptr, i32 0
+define void @foo(ptr %ptr, i32 %val) {
+  %idx = add i32 %val, 1
+  %gep = getelementptr i8, ptr %ptr, i32 %idx
   ret void
 }
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   const DataLayout &DL = M->getDataLayout();
   BasicBlock *LLVMBB = &*LLVMF.begin();
-  auto LLVMIt = LLVMBB->begin();
-  auto *LLVMGEP = &*LLVMIt++;
   sandboxir::Context Ctx(C);
   Ctx.createFunction(&LLVMF);
   auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
-  auto It = BB->begin();
-  auto *GEP = &*It++;
+  auto *LLVMGEP = &*std::next(LLVMBB->begin(), 1);
+  auto *GEP = &*std::next(BB->begin(), 1);
 
   unsigned Bits = DL.getIndexTypeSizeInBits(LLVMGEP->getType());
   APInt Offset(Bits, 0);
@@ -1928,6 +1927,8 @@ define void @bar() {
   EXPECT_EQ(FBar, Ctx.getValue(LLVMFBar));
   // Check getDataLayout().
   EXPECT_EQ(&M->getDataLayout(), &LLVMM->getDataLayout());
+  // Check getTargetTriple().
+  EXPECT_EQ(&M->getTargetTriple(), &LLVMM->getTargetTriple());
   // Check getSourceFileName().
   EXPECT_EQ(M->getSourceFileName(), LLVMM->getSourceFileName());
   // Check getGlobalVariable().
@@ -3268,6 +3269,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(getLoadStoreAddressSpace(NewLd), NewLd->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
+  // Check helper function getLoadStoreAlignment()
+  EXPECT_EQ(getLoadStoreAlignment(NewLd), NewLd->getAlign());
   // Check create(InsertBefore, IsVolatile=true)
   sandboxir::LoadInst *NewVLd = sandboxir::LoadInst::create(
       VLd->getType(), Arg1, Align(8), Ret->getIterator(),

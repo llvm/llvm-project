@@ -6,11 +6,7 @@ define i32 @mul_carry(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_carry(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
 entry:
@@ -38,11 +34,7 @@ define i128 @mul_carry_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @mul_carry_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i128 [[X]] to i256
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[Y]] to i256
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i256 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i256 [[TMP2]], 128
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i256 [[TMP3]] to i128
+; CHECK-NEXT:    [[ADD11:%.*]] = call i128 @llvm.umulh.i128(i128 [[X]], i128 [[Y]])
 ; CHECK-NEXT:    ret i128 [[ADD11]]
 ;
 entry:
@@ -70,11 +62,7 @@ define <4 x i32> @mul_carry_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i32> @mul_carry_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i32> [[X]] to <4 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[Y]] to <4 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <4 x i64> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[TMP2]], splat (i64 32)
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw <4 x i64> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[ADD11:%.*]] = call <4 x i32> @llvm.umulh.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
 ; CHECK-NEXT:    ret <4 x i32> [[ADD11]]
 ;
 entry:
@@ -102,11 +90,7 @@ define i32 @mul_carry_xlyh(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_carry_xlyh(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
 entry:
@@ -133,11 +117,7 @@ define i32 @mul_carry_comm(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @mul_carry_comm(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
 entry:
@@ -469,11 +449,7 @@ define i32 @mul_carry_use_llh(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Y]], 65535
 ; CHECK-NEXT:    [[ADD6:%.*]] = mul nuw i32 [[AND]], [[AND2]]
 ; CHECK-NEXT:    [[SHR10:%.*]] = lshr i32 [[ADD6]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[SHR10]])
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;
@@ -505,11 +481,7 @@ define i32 @mul_carry_use_mulll(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 65535
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Y]], 65535
 ; CHECK-NEXT:    [[MUL4:%.*]] = mul nuw i32 [[AND]], [[AND2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 32
-; CHECK-NEXT:    [[ADD11:%.*]] = trunc nuw i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[ADD11:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i32 [[MUL4]])
 ; CHECK-NEXT:    ret i32 [[ADD11]]
 ;

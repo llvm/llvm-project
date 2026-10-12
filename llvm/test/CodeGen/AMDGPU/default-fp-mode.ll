@@ -20,7 +20,7 @@ define amdgpu_kernel void @test_f64_denormals(ptr addrspace(1) %out0, ptr addrsp
 }
 
 ; GCN-LABEL: {{^}}test_f32_denormals:
-; GCNL: FloatMode: 48
+; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
 define amdgpu_kernel void @test_f32_denormals(ptr addrspace(1) %out0, ptr addrspace(1) %out1) #1 {
   store float 0.0, ptr addrspace(1) %out0

@@ -13,6 +13,7 @@
 #include "lldb/Utility/RegisterType.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace lldb_private;
 
@@ -254,6 +255,7 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
   case RegisterType::eRegisterTypeKindUnion:
     return {};
   }
+  llvm_unreachable("Unhandled RegisterType kind");
 }
 
 std::optional<CompilerType> RegisterTypeBuilderClang::GetExistingCompilerType(

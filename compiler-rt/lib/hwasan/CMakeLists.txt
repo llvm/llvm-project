@@ -236,12 +236,12 @@ function(add_hwasan_runtimes arch use_aliases)
   if(SANITIZER_USE_SYMBOLS)
     add_sanitizer_rt_symbols(${hwasan_runtime}
       ARCHS ${arch}
+      PARENT_TARGET hwasan
       EXTRA hwasan.syms.extra)
     add_sanitizer_rt_symbols(${hwasan_runtime}_cxx
       ARCHS ${arch}
+      PARENT_TARGET hwasan
       EXTRA hwasan.syms.extra)
-    add_dependencies(hwasan ${hwasan_runtime}-${arch}-symbols
-                          ${hwasan_runtime}_cxx-${arch}-symbols)
   endif()
 endfunction()
 

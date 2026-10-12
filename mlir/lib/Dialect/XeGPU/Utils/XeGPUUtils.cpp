@@ -490,6 +490,24 @@ std::optional<std::string> xegpu::getChipStr(Operation *op) {
   return std::nullopt;
 }
 
+FailureOr<int64_t> xegpu::getNumSubgroupsFromBlockSize(Operation *op,
+                                                       int64_t subgroupSize) {
+  auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
+  if (!gpuFunc)
+    return failure();
+  std::optional<ArrayRef<int32_t>> blockSize = gpuFunc.getKnownBlockSize();
+  if (!blockSize)
+    return failure();
+  if (!llvm::all_of(*blockSize, [](int32_t dim) {
+        return dim > 0 && llvm::isPowerOf2_32(dim);
+      }))
+    return failure();
+  int64_t numSubgroups = llvm::product_of(*blockSize) / subgroupSize;
+  if (numSubgroups < 1)
+    return failure();
+  return numSubgroups;
+}
+
 /// Generates element-wise addition ops of two arrays with same length.
 SmallVector<OpFoldResult> xegpu::addElementwise(OpBuilder &builder,
                                                 Location loc,
@@ -846,10 +864,15 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst whose product equals
 // the original dimension. Populates splitDimGroups with groups of dst indices
 // that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
-// true
+// true. Shapes that only insert unit dimensions are  rejected here.
 bool xegpu::matchSplitDimExpansion(
     ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  SmallVector<int64_t> expandedUnitDims;
+  if (matchUnitDimExpansion(src, dst, expandedUnitDims) &&
+      !expandedUnitDims.empty())
+    return false;
+
   // each dim in src can be mapped to one or more dims in dst whose product
   // equals to the src dim
   size_t srcIdx = 0;

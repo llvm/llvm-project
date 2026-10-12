@@ -375,7 +375,6 @@ constexpr const char swift[] = "__swift";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char textCoalNt[] = "__textcoal_nt";
 constexpr const char text[] = "__text";
-constexpr const char threadPtrs[] = "__thread_ptrs";
 constexpr const char threadVars[] = "__thread_vars";
 constexpr const char unwindInfo[] = "__unwind_info";
 constexpr const char weakBinding[] = "__weak_binding";

@@ -1131,8 +1131,12 @@ void DWARFRewriter::updateUnitDebugInfo(
     dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
     dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
     dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
-    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
-    const uint32_t Size = HighPC - LowPC;
+    // DW_AT_high_pc holding an offset from DW_AT_low_pc is a DWARF 4 addition;
+    // before that the attribute is always address.
+    dwarf::Form FormHighPC =
+        Unit.getVersion() >= 4 ? dwarf::DW_FORM_data4 : dwarf::DW_FORM_addr;
+    // Computed before LowPC is possibly replaced by an address table index.
+    const uint64_t Size = HighPC - LowPC;
     // Whatever was generated is not low_pc/high_pc, so will reset to
     // default for size 1.
     if (!LowPCVal || !HighPCVal) {
@@ -1151,15 +1155,20 @@ void DWARFRewriter::updateUnitDebugInfo(
         FormLowPC == dwarf::DW_FORM_GNU_addr_index)
       LowPC = AddressWriter.getIndexFromAddress(LowPC, Unit);
 
+    // The value has to match the class of the form it is written under.
+    const uint64_t HighPCEncoded =
+        FormHighPC == dwarf::DW_FORM_addr ? HighPC : Size;
+
     if (LowPCVal)
       DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
     else
       DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
     if (HighPCVal) {
-      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC,
+                           DIEInteger(HighPCEncoded));
     } else {
       DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
-      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(HighPCEncoded));
     }
   };
 
@@ -1240,10 +1249,18 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal)
-          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        else
-          FunctionRanges.push_back({0, 1});
+        // There is no output range for this DIE, so point it at address 0 and
+        // keep its original size. The stored DW_AT_high_pc is that size only
+        // for non-address forms; for DW_FORM_addr it is the end address.
+        uint64_t OriginalSize = 1;
+        if (LowPCVal && HighPCVal) {
+          if (HighPCVal.getForm() != dwarf::DW_FORM_addr)
+            OriginalSize = HighPCVal.getDIEInteger().getValue();
+          else if (LowPCVal.getForm() == dwarf::DW_FORM_addr)
+            OriginalSize = HighPCVal.getDIEInteger().getValue() -
+                           LowPCVal.getDIEInteger().getValue();
+        }
+        FunctionRanges.push_back({0, OriginalSize});
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {

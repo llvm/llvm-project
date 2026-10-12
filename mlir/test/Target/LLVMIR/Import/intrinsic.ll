@@ -407,6 +407,24 @@ define void @pext_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @smulh_test
+define void @smulh_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
+  ; CHECK:   llvm.intr.smulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = call i32 @llvm.smulh.i32(i32 %0, i32 %1)
+  ; CHECK:   llvm.intr.smulh(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %6 = call <8 x i32> @llvm.smulh.v8i32(<8 x i32> %2, <8 x i32> %3)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @umulh_test
+define void @umulh_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
+  ; CHECK:   llvm.intr.umulh(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  %5 = call i32 @llvm.umulh.i32(i32 %0, i32 %1)
+  ; CHECK:   llvm.intr.umulh(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  %6 = call <8 x i32> @llvm.umulh.v8i32(<8 x i32> %2, <8 x i32> %3)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @maximum_test
 define void @maximum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
   ; CHECK:   llvm.intr.maximum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
@@ -1856,6 +1874,10 @@ declare i32 @llvm.pdep.i32(i32, i32)
 declare <8 x i32> @llvm.pdep.v8i32(<8 x i32>, <8 x i32>)
 declare i32 @llvm.pext.i32(i32, i32)
 declare <8 x i32> @llvm.pext.v8i32(<8 x i32>, <8 x i32>)
+declare i32 @llvm.smulh.i32(i32, i32)
+declare <8 x i32> @llvm.smulh.v8i32(<8 x i32>, <8 x i32>)
+declare i32 @llvm.umulh.i32(i32, i32)
+declare <8 x i32> @llvm.umulh.v8i32(<8 x i32>, <8 x i32>)
 declare float @llvm.maximum.f32(float, float)
 declare <8 x float> @llvm.maximum.v8f32(<8 x float>, <8 x float>)
 declare float @llvm.minimum.f32(float, float)

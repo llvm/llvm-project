@@ -128,3 +128,93 @@ float _Complex pack_indexing_complex() {
 // OGCG:   store float %[[RESULT_IMAG]], ptr %[[RET_IMAG_PTR]], align 4
 // OGCG:   %[[TMP_RET:.*]] = load <2 x float>, ptr %[[RET_VAL]], align 4
 // OGCG:   ret <2 x float> %[[TMP_RET]]
+
+template <typename... T>
+auto &pack_indexing_lvalue_helper(T &...p) {
+  return p...[0];
+}
+
+void pack_indexing_lvalue() {
+  int a = 1;
+  int &ref = pack_indexing_lvalue_helper(a);
+}
+
+// CIR: cir.func {{.*}} @_Z20pack_indexing_lvaluev()
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[CALL_RES:.*]] = cir.call @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(%[[A_ADDR]])
+// CIR:   cir.store{{.*}} %[[CALL_RES]], %[[REF_ADDR]]
+// CIR:   cir.return
+
+// CIR: cir.func {{.*}} @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(%[[ARG0:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!cir.ptr<!s32i> {{.*}})
+// CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   cir.store %[[ARG0]], %[[P_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[P_LOAD:.*]] = cir.load %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:   cir.store %[[P_LOAD]], %[[RET_VAL]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[RET_LOAD:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR:   cir.return %[[RET_LOAD]] : !cir.ptr<!s32i>
+
+// LLVM: define {{.*}} void @_Z20pack_indexing_lvaluev()
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[REF_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[CALL_RES:.*]] = call {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[A_ADDR]])
+// LLVM:   store ptr %[[CALL_RES]], ptr %[[REF_ADDR]], align 8
+// LLVM:   ret void
+
+// LLVM: define {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[ARG0:.*]])
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM:   %[[RET_VAL:.*]] = alloca ptr, align 8
+// LLVM:   store ptr %[[ARG0]], ptr %[[P_ADDR]], align 8
+// LLVM:   %[[P_LOAD:.*]] = load ptr, ptr %[[P_ADDR]], align 8
+// LLVM:   store ptr %[[P_LOAD]], ptr %[[RET_VAL]], align 8
+// LLVM:   %[[RET_LOAD:.*]] = load ptr, ptr %[[RET_VAL]], align 8
+// LLVM:   ret ptr %[[RET_LOAD]]
+
+// OGCG: define {{.*}} void @_Z20pack_indexing_lvaluev()
+// OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
+// OGCG:   %[[REF_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   store i32 1, ptr %[[A_ADDR]], align 4
+// OGCG:   %[[CALL_RES:.*]] = call {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[A_ADDR]])
+// OGCG:   store ptr %[[CALL_RES]], ptr %[[REF_ADDR]], align 8
+// OGCG:   ret void
+
+// OGCG: define {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[ARG0:.*]])
+// OGCG:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   store ptr %[[ARG0]], ptr %[[P_ADDR]], align 8
+// OGCG:   %[[LOAD:.*]] = load ptr, ptr %[[P_ADDR]], align 8
+// OGCG:   ret ptr %[[LOAD]]
+
+struct Agg {
+  int a;
+  int b;
+};
+
+Agg pack_indexing_aggregate() {
+  return pack_indexing(Agg{1, 2}, Agg{3, 4});
+}
+
+// CIR: cir.func {{.*}} @_Z23pack_indexing_aggregatev()
+// CIR:   %[[AGG0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   %[[AGG1:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   cir.call @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+
+// CIR: cir.func {{.*}} @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+// CIR:   %[[P0:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   %[[P1:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   cir.copy %[[P0]] {{.*}} to %[[RET_VAL]] {{.*}} : !cir.ptr<!rec_Agg>
+
+// LLVM: define {{.*}} i64 @_Z23pack_indexing_aggregatev()
+// LLVM:   call i64 @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+
+// LLVM: define {{.*}} i64 @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+// LLVM:   call void @llvm.memcpy.p0.p0.i64
+
+// OGCG: define {{.*}} i64 @_Z23pack_indexing_aggregatev()
+// OGCG:   call i64 @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+
+// OGCG: define {{.*}} i64 @_Z13pack_indexingIJ3AggS0_EEDaDpT_
+// OGCG:   call void @llvm.memcpy.p0.p0.i64
+

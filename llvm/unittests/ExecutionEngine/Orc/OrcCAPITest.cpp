@@ -11,6 +11,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/Target.h"
 #include "gtest/gtest.h"
 
 #include "llvm/Analysis/TargetLibraryInfo.h"

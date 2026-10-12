@@ -323,6 +323,18 @@ static void convertMRI(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
     printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
+
+    // Print the anti-hints.
+    const auto &AntiHints = RegInfo.getRegAllocationAntiHints(Reg);
+    if (!AntiHints.empty()) {
+      std::vector<yaml::FlowStringValue> AntiHintStrings;
+      for (Register AntiHint : AntiHints) {
+        yaml::FlowStringValue AntiHintStr;
+        printRegMIR(AntiHint, AntiHintStr, TRI);
+        AntiHintStrings.push_back(std::move(AntiHintStr));
+      }
+      VReg.AntiHints = std::move(AntiHintStrings);
+    }
     if (VRM) {
       Register Orig = VRM->getPreSplitReg(Reg);
       if (Orig && Orig != Reg) {
@@ -977,7 +989,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
                            const MachineRegisterInfo &MRI, bool PrintDef) {
   LLT TypeToPrint = MI.getTypeToPrint(OpIdx, PrintedTypes, MRI);
   const MachineOperand &Op = MI.getOperand(OpIdx);
-  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx, TRI);
+  std::string MOComment = TII->createMIROperandComment(MI, Op, OpIdx);
 
   switch (Op.getType()) {
   case MachineOperand::MO_Immediate:

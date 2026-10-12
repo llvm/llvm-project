@@ -1244,6 +1244,11 @@ module std {
     export *
   }
 
+  module debugging {
+    header "debugging"
+    export *
+  }
+
   module deque {
     module fwd { header "__fwd/deque.h" }
 
@@ -2470,6 +2475,9 @@ module std {
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"
         export std_core.utility_core.empty
+      }
+      module swap_ranges {
+        header "__pstl/cpu_algos/swap_ranges.h"
       }
       module transform {
         header "__pstl/cpu_algos/transform.h"

@@ -2189,7 +2189,7 @@ bb:
 
 define [4 x float] @constant_aggregate_zero() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) [4 x float] @constant_aggregate_zero
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) [4 x float] @constant_aggregate_zero
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret [4 x float] zeroinitializer
 ;
@@ -2410,7 +2410,7 @@ define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
 
 define [2 x float] @constant_data_array_0() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) [2 x float] @constant_data_array_0
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub nnorm) [2 x float] @constant_data_array_0
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret [2 x float] [float 0.000000e+00, float 1.000000e+00]
 ;
@@ -2419,7 +2419,7 @@ define [2 x float] @constant_data_array_0() {
 
 define [2 x float] @constant_data_array_1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan inf zero sub norm) [2 x float] @constant_data_array_1
+; CHECK-LABEL: define noundef nofpclass(snan inf zero sub norm) [2 x float] @constant_data_array_1
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret [2 x float] [float +qnan, float +qnan]
 ;
@@ -2428,7 +2428,7 @@ define [2 x float] @constant_data_array_1() {
 
 define { float, float } @constant_data_struct_0() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) { float, float } @constant_data_struct_0
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub nnorm) { float, float } @constant_data_struct_0
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float 1.000000e+00 }
 ;
@@ -2437,7 +2437,7 @@ define { float, float } @constant_data_struct_0() {
 
 define { float, float } @constant_data_struct_1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan inf zero sub norm) { float, float } @constant_data_struct_1
+; CHECK-LABEL: define noundef nofpclass(snan inf zero sub norm) { float, float } @constant_data_struct_1
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, float } { float +qnan, float +qnan }
 ;
@@ -2446,7 +2446,7 @@ define { float, float } @constant_data_struct_1() {
 
 define { float, { float, float } } @constant_data_nested_struct() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define { float, { float, float } } @constant_data_nested_struct
+; CHECK-LABEL: define noundef { float, { float, float } } @constant_data_nested_struct
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, { float, float } } { float +qnan, { float, float } { float +qnan, float +qnan } }
 ;
@@ -2455,7 +2455,7 @@ define { float, { float, float } } @constant_data_nested_struct() {
 
 define { float, double } @constant_data_struct_heterogeneous() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define { float, double } @constant_data_struct_heterogeneous
+; CHECK-LABEL: define noundef { float, double } @constant_data_struct_heterogeneous
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, double } { float +qnan, double +qnan }
 ;
@@ -2464,7 +2464,7 @@ define { float, double } @constant_data_struct_heterogeneous() {
 
 define { float, [2 x float] } @constant_data_struct_array() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define { float, [2 x float] } @constant_data_struct_array
+; CHECK-LABEL: define noundef { float, [2 x float] } @constant_data_struct_array
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret { float, [2 x float] } { float +qnan, [2 x float] [float +qnan, float +qnan] }
 ;

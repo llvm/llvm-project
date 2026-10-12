@@ -130,6 +130,14 @@ public:
   }
 };
 
+template <class _ToDuration, class _Rep, class _Period>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration __ceil(const duration<_Rep, _Period>& __d) {
+  _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
+  if (__t < __d)
+    __t = __t + _ToDuration(1);
+  return __t;
+}
+
 #if _LIBCPP_STD_VER >= 17
 template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration floor(const duration<_Rep, _Period>& __d) {
@@ -141,10 +149,7 @@ template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duratio
 
 template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration ceil(const duration<_Rep, _Period>& __d) {
-  _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
-  if (__t < __d)
-    __t = __t + _ToDuration{1};
-  return __t;
+  return chrono::__ceil<_ToDuration>(__d);
 }
 
 template <class _ToDuration, class _Rep, class _Period, enable_if_t<__is_duration_v<_ToDuration>, int> = 0>
@@ -298,8 +303,8 @@ typedef duration<long, ratio<60 * 60> > hours;
 #if _LIBCPP_STD_VER >= 20
 typedef duration<int, ratio<60 * 60 * 24>> days;
 typedef duration<int, ratio<60 * 60 * 24 * 7>> weeks;
-typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24)>> years;
-typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24) / 12>> months;
+typedef duration<int, ratio<31556952>> years; // 365.2425 * 60 * 60 * 24
+typedef duration<int, ratio<2629746>> months; // years / 12
 #endif
 // Duration ==
 

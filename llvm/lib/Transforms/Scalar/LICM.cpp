@@ -37,6 +37,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/Statistic.h"
@@ -76,7 +77,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -116,50 +116,13 @@ STATISTIC(NumIntAssociationsHoisted,
 STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
-/// Memory promotion is enabled by default.
-static cl::opt<bool>
-    DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
-                     cl::desc("Disable memory promotion in LICM pass"));
+unsigned llvm::getLicmMssaOptCap() {
+  return ScalarOptions::Global.licm_mssa_optimization_cap;
+}
 
-static cl::opt<uint32_t> MaxNumUsesTraversed(
-    "licm-max-num-uses-traversed", cl::Hidden, cl::init(8),
-    cl::desc("Max num uses visited for identifying load "
-             "invariance in loop using invariant start (default = 8)"));
-
-static cl::opt<unsigned> FPAssociationUpperLimit(
-    "licm-max-num-fp-reassociations", cl::init(5U), cl::Hidden,
-    cl::desc(
-        "Set upper limit for the number of transformations performed "
-        "during a single round of hoisting the reassociated expressions."));
-
-static cl::opt<unsigned> IntAssociationUpperLimit(
-    "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
-    cl::desc(
-        "Set upper limit for the number of transformations performed "
-        "during a single round of hoisting the reassociated expressions."));
-
-// Experimental option to allow imprecision in LICM in pathological cases, in
-// exchange for faster compile. This is to be removed if MemorySSA starts to
-// address the same issue. LICM calls MemorySSAWalker's
-// getClobberingMemoryAccess, up to the value of the Cap, getting perfect
-// accuracy. Afterwards, LICM will call into MemorySSA's getDefiningAccess,
-// which may not be precise, since optimizeUses is capped. The result is
-// correct, but we may not get as "far up" as possible to get which access is
-// clobbering the one queried.
-cl::opt<unsigned> llvm::SetLicmMssaOptCap(
-    "licm-mssa-optimization-cap", cl::init(100), cl::Hidden,
-    cl::desc("Enable imprecision in LICM in pathological cases, in exchange "
-             "for faster compile. Caps the MemorySSA clobbering calls."));
-
-// Experimentally, memory promotion carries less importance than sinking and
-// hoisting. Limit when we do promotion when using MemorySSA, in order to save
-// compile time.
-cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
-    "licm-mssa-max-acc-promotion", cl::init(250), cl::Hidden,
-    cl::desc("[LICM & MemorySSA] When MSSA in LICM is disabled, this has no "
-             "effect. When MSSA in LICM is enabled, then this is the maximum "
-             "number of accesses allowed to be present in a loop in order to "
-             "enable memory promotion."));
+unsigned llvm::getLicmMssaNoAccForPromotionCap() {
+  return ScalarOptions::Global.licm_mssa_max_acc_promotion;
+}
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
@@ -212,10 +175,10 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
 using PointersAndHasReadsOutsideSet =
     std::pair<SmallSetVector<Value *, 8>, bool>;
-static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
-                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
-                           Loop *L);
+static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
+    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
+    ICFLoopSafetyInfo *SafetyInfo,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -239,10 +202,11 @@ private:
 
 struct LegacyLICMPass : public LoopPass {
   static char ID; // Pass identification, replacement for typeid
-  LegacyLICMPass(
-      unsigned LicmMssaOptCap = SetLicmMssaOptCap,
-      unsigned LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap,
-      bool LicmAllowSpeculation = true)
+  LegacyLICMPass(unsigned LicmMssaOptCap =
+                     ScalarOptions::Global.licm_mssa_optimization_cap,
+                 unsigned LicmMssaNoAccForPromotionCap =
+                     ScalarOptions::Global.licm_mssa_max_acc_promotion,
+                 bool LicmAllowSpeculation = true)
       : LoopPass(ID), LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
                            LicmAllowSpeculation) {
     initializeLegacyLICMPassPass(*PassRegistry::getPassRegistry());
@@ -382,7 +346,8 @@ Pass *llvm::createLICMPass() { return new LegacyLICMPass(); }
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(bool IsSink, Loop &L,
                                                    MemorySSA &MSSA)
-    : SinkAndHoistLICMFlags(SetLicmMssaOptCap, SetLicmMssaNoAccForPromotionCap,
+    : SinkAndHoistLICMFlags(ScalarOptions::Global.licm_mssa_optimization_cap,
+                            ScalarOptions::Global.licm_mssa_max_acc_promotion,
                             IsSink, L, MSSA) {}
 
 llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(
@@ -433,11 +398,22 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // there is currently no general solution for this. Similar issues could also
   // potentially happen in other passes where instructions are being moved
   // across that edge.
-  bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    using namespace PatternMatch;
-    return any_of(make_pointer_range(*BB),
-                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
-  });
+  bool HasCoroSuspendInst = false;
+
+  // AA metadata declared to be local to each iteration cannot be used to infer
+  // alias information when promoting stores.
+  SmallPtrSet<const MDNode *, 4> LoopLocalAliasScopes;
+
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &I : *BB) {
+      using namespace PatternMatch;
+      HasCoroSuspendInst |= match(&I, m_Intrinsic<Intrinsic::coro_suspend>());
+
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        for (const MDOperand &Op : Decl->getScopeList()->operands())
+          LoopLocalAliasScopes.insert(cast<MDNode>(Op.get()));
+    }
+  }
 
   MemorySSAUpdater MSSAU(MSSA);
   SinkAndHoistLICMFlags Flags(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
@@ -478,8 +454,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // make sure we catch that. An additional load may be generated in the
   // preheader for SSA updater, so also avoid sinking when no preheader
   // is available.
-  if (!DisablePromotion && Preheader && L->hasDedicatedExits() &&
-      !Flags.tooManyMemoryAccesses() && !HasCoroSuspendInst) {
+  if (!ScalarOptions::Global.disable_licm_promotion && Preheader &&
+      L->hasDedicatedExits() && !Flags.tooManyMemoryAccesses() &&
+      !HasCoroSuspendInst) {
     // Figure out the loop exits and their insertion points
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L->getUniqueExitBlocks(ExitBlocks);
@@ -494,11 +471,6 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       SmallVector<MemoryAccess *, 8> MSSAInsertPts;
       InsertPts.reserve(ExitBlocks.size());
       MSSAInsertPts.reserve(ExitBlocks.size());
-      for (BasicBlock *ExitBlock : ExitBlocks) {
-        InsertPts.push_back(ExitBlock->getFirstInsertionPt());
-        MSSAInsertPts.push_back(nullptr);
-      }
-
       PredIteratorCache PIC;
 
       // Promoting one set of accesses may make the pointers for another set
@@ -507,8 +479,20 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       bool LocalPromoted;
       do {
         LocalPromoted = false;
+
+        // Recompute the insertion points each time we compute the promotion
+        // candidates, so we don't sink past a store which was promoted in a
+        // previous iteration.
+        InsertPts.clear();
+        MSSAInsertPts.clear();
+        for (BasicBlock *ExitBlock : ExitBlocks) {
+          InsertPts.push_back(ExitBlock->getFirstInsertionPt());
+          MSSAInsertPts.push_back(nullptr);
+        }
+
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
-             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo, L)) {
+             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo,
+                                        LoopLocalAliasScopes, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
               DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
@@ -858,7 +842,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   // one of the uses, and whether it dominates the load instruction.
   for (auto *U : Addr->users()) {
     // Avoid traversing for Load operand with high number of users.
-    if (++UsesVisited > MaxNumUsesTraversed)
+    if (++UsesVisited > ScalarOptions::Global.licm_max_num_uses_traversed)
       return false;
     IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
     // If there are escaping uses of invariant.start instruction, the load maybe
@@ -2035,11 +2019,21 @@ static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
   return false;
 }
 
+/// Returns whether \p N has any operand from the set \p Operands.
+static bool
+hasAnyMDOperandsFrom(const MDNode *N,
+                     const SmallPtrSetImpl<const MDNode *> &Operands) {
+  return N && llvm::any_of(N->operands(), [&](const MDOperand &Op) {
+           return Operands.contains(cast<MDNode>(Op.get()));
+         });
+}
+
 /// Returns the potentially promotable stores with AA tags that are valid along
 /// all non-unwinding execution paths of the loop \p L, which allows for the AA
 /// tags to be used when deciding promotions.
-static SmallPtrSet<const StoreInst *, 8>
-collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
+static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
+    MemorySSA *MSSA, DominatorTree *DT,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   SmallDenseMap<MemoryLocation, SmallVector<const StoreInst *, 1>, 4>
       StoresByLoc;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
@@ -2054,7 +2048,16 @@ collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
   L->getExitingBlocks(ExitingBlocks);
 
   SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
-  for (const auto &Stores : llvm::make_second_range(StoresByLoc)) {
+  for (const auto &Pair : StoresByLoc) {
+    const MemoryLocation &Loc = Pair.first;
+    const SmallVector<const StoreInst *, 1> &Stores = Pair.second;
+
+    // A scope declared inside the loop denotes a different scope on each
+    // iteration, and thus should not be preserved.
+    if (hasAnyMDOperandsFrom(Loc.AATags.Scope, LoopLocalAliasScopes) ||
+        hasAnyMDOperandsFrom(Loc.AATags.NoAlias, LoopLocalAliasScopes))
+      continue;
+
     // Without exiting blocks the loop is never left, and promotion has no
     // exit block to insert a store into either.
     if (llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
@@ -2069,10 +2072,10 @@ collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
 
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
-static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
-                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
-                           Loop *L) {
+static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
+    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
+    ICFLoopSafetyInfo *SafetyInfo,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
@@ -2081,7 +2084,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
   auto HasInvariantAATags = [&](const StoreInst *SI) {
     if (!StoresWithInvariantAATags)
-      StoresWithInvariantAATags = collectStoresWithInvariantAATags(MSSA, DT, L);
+      StoresWithInvariantAATags =
+          collectStoresWithInvariantAATags(MSSA, DT, LoopLocalAliasScopes, L);
     return StoresWithInvariantAATags->contains(SI);
   };
 
@@ -2584,6 +2588,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    ICFLoopSafetyInfo &SafetyInfo,
                                    MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                                    DominatorTree *DT) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   if (!isReassociableOp(&I, Instruction::Mul, Instruction::FMul))
     return false;
   Value *VariantOp = I.getOperand(0);
@@ -2624,8 +2629,8 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
     else
       return false;
     unsigned Limit = I.getType()->isIntOrIntVectorTy()
-                         ? IntAssociationUpperLimit
-                         : FPAssociationUpperLimit;
+                         ? Opts.licm_max_num_int_reassociations
+                         : Opts.licm_max_num_fp_reassociations;
     if (Changes.size() > Limit)
       return false;
   }
@@ -2732,9 +2737,22 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     Flags.mergeFlags(*BO);
     Flags.mergeFlags(*BO0);
     // If `Inv` was not constant-folded, a new Instruction has been created.
-    if (auto *I = dyn_cast<Instruction>(Inv))
-      Flags.applyFlags(*I);
+    auto *InvI = dyn_cast<Instruction>(Inv);
+    if (InvI)
+      Flags.applyFlags(*InvI);
     Flags.applyFlags(*NewBO);
+
+    // The original nsw flags guarantee that LV + C1 + C2 is representable.
+    // If C1 + C2 is representable too, both reassociated adds keep nsw.
+    SimplifyQuery SQ(L.getHeader()->getDataLayout(), DT, AC,
+                     Preheader->getTerminator());
+    if (Opcode == Instruction::Add && Flags.HasNSW && !Flags.HasNUW &&
+        computeOverflowForSignedAdd(C1, C2, SQ) ==
+            OverflowResult::NeverOverflows) {
+      if (InvI)
+        InvI->setHasNoSignedWrap();
+      NewBO->setHasNoSignedWrap();
+    }
   }
 
   BO->replaceAllUsesWith(NewBO);

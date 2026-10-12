@@ -692,8 +692,8 @@ let isCall = 1 in {
   // SP is marked as a use to prevent stack-pointer assignments that appear
   // immediately before calls from potentially appearing dead.
   //
-  // TODO: the imm field can be either 16 or 22 bits in devices with more
-  // than 64k of ROM, fix it once we support the largest devices.
+  // TODO: The imm field can be either 16 or 22 bits in devices with more
+  //       than 64k of ROM, fix it once we support the largest devices.
   let Uses = [SP] in
   def CALLk : F32BRk<0b111, (outs), (ins call_target:$k), "call\t$k",
                      [(AVRcall imm:$k)]>,
@@ -1407,8 +1407,8 @@ def SWAPRd : FRd<0b1001, 0b0100010, (outs GPR8:$rd), (ins GPR8:$src),
                  "swap\t$rd", [(set i8:$rd, (AVRSwap i8:$src))]>;
 
 // IO register bit set/clear operations.
-//: TODO: add patterns when popcount(imm)==2 to be expanded with 2 sbi/cbi
-// instead of in+ori+out which requires one more instr.
+// TODO: Add patterns when popcount(imm)==2 to be expanded with 2 sbi/cbi
+//       instead of in+ori+out which requires one more instr.
 let hasSideEffects = 1, mayStore = 1 in {
   def SBIAb : FIOBIT<0b10, (outs), (ins imm_port5:$addr, i8imm:$b),
                      "sbi\t$addr, $b",
@@ -1526,7 +1526,7 @@ def WDR : F16<0b1001010110101000, (outs), (ins), "wdr", []>;
 // Pseudo instructions for later expansion
 //===----------------------------------------------------------------------===//
 
-//: TODO: Optimize this for wider types AND optimize the following code
+// TODO: Optimize this for wider types AND optimize the following code
 //       compile int foo(char a, char b, char c, char d) {return d+b;}
 //       looks like a missed sext_inreg opportunity.
 def SEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "sext\t$dt, $src",
@@ -1656,8 +1656,9 @@ def CopyZero : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
 
-//: TODO: look in x86InstrCompiler.td for odd encoding trick related to
-// add x, 128 -> sub x, -128. Clang is emitting an eor for this (ldi+eor)
+// TODO: Look in x86InstrCompiler.td for odd encoding trick related to
+//       `add x, 128` -> `sub x, -128`. Clang is emitting an eor for this
+//       (ldi+eor).
 
 // the add instruction always writes the carry flag
 def : Pat<(addc i8 : $src, i8 : $src2), (ADDRdRr i8 : $src, i8 : $src2)>;
@@ -1741,8 +1742,8 @@ def : Pat<(i16(AVRWrapper tblockaddress :$dst)), (LDIWRdK tblockaddress:$dst)>;
 def : Pat<(i8(trunc(AVRlsrwn DLDREGS:$src, (i16 8)))),
           (EXTRACT_SUBREG DREGS:$src, sub_hi)>;
 
-// :FIXME: DAGCombiner produces an shl node after legalization from these seq:
-// BR_JT -> (mul x, 2) -> (shl x, 1)
+// FIXME: DAGCombiner produces an shl node after legalization from these seq:
+//        BR_JT -> (mul x, 2) -> (shl x, 1) .
 def : Pat<(shl i16 : $src1, (i8 1)), (LSLWRd i16 : $src1)>;
 
 // Lowering of 'tst' node to 'TST' instruction.

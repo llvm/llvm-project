@@ -89,6 +89,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_readlane_first:
   case Intrinsic::dx_wave_active_countbits:
   case Intrinsic::dx_wave_ballot:
   case Intrinsic::dx_wave_prefix_bit_count:
@@ -305,7 +306,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
-    case Intrinsic::dx_resource_atomic_binop: {
+    case Intrinsic::dx_resource_atomic_binop:
+    case Intrinsic::dx_resource_atomic_compare_exchange: {
       if (II->getType()->isIntegerTy(64)) {
         dxil::ResourceTypeInfo &RTI =
             DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];

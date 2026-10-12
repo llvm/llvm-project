@@ -184,7 +184,9 @@ void buildPostGPUCommonPassPipeline(
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;
     gpuToModuleBinOptions.compilationTarget = options.binaryFormat;
     gpuToModuleBinOptions.cmdOptions = options.cmdOptions;
-    pm.addPass(createGpuModuleToBinaryPass(std::move(gpuToModuleBinOptions)));
+    std::string skipTarget("skip");
+    if (options.binaryFormat.compare(skipTarget) != 0)
+      pm.addPass(createGpuModuleToBinaryPass(std::move(gpuToModuleBinOptions)));
   }
 }
 } // namespace

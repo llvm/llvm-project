@@ -9,6 +9,7 @@ add_llvm_unittest(ABITests
   IRTypeMapperTest.cpp
   FunctionInfoTest.cpp
   TargetInfoTest.cpp
+  AMDGPUTargetInfoTest.cpp
   X86TargetInfoTest.cpp
   TypesTest.cpp
   )

@@ -17,3 +17,8 @@ module attributes {cir.cl.cxx.version = #cir.cl.version<1, 0>, cir.cl.version = 
 
 // CHECK: module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>, cir.cl.version = #cir.cl.version<3, 0>}
 module attributes {cir.cl.cxx.version = #cir.cl.version<2021, 0>, cir.cl.version = #cir.cl.version<3, 0>} { }
+
+// -----
+
+// CHECK: module attributes {cir.cl.spir.version = #cir.cl.version<1, 2>, cir.cl.version = #cir.cl.version<1, 2>}
+module attributes {cir.cl.spir.version = #cir.cl.version<1, 2>, cir.cl.version = #cir.cl.version<1, 2>} { }

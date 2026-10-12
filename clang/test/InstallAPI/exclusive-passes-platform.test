@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
-; RUN: yaml2obj %t/Xplatform.yaml -o=%t/Xplatform
+; RUN: yaml2obj %t/Xplatform.yaml -o %t/Xplatform
 
 // Check that in zippered mode, a successful pass runs in both macos & maccatalyst.
 ; RUN: clang-installapi %t/inputs.json \

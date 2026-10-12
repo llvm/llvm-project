@@ -56,7 +56,7 @@ TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
 InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
   if (ST->hasSIMD128()) {
     static const CostTblEntry ArithCostTbl[]{
@@ -302,7 +302,7 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
   // Canonicalize the ShuffleKind in case optimizations didn't.
   //  Otherwise, we might end up with the wrong ShuffleKind to match against.
@@ -315,7 +315,7 @@ InstructionCost WebAssemblyTTIImpl::getShuffleCost(
     return 1;
 
   return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index, SubTp,
-                               Args, CxtI);
+                               Args, CtxI);
 }
 
 InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(

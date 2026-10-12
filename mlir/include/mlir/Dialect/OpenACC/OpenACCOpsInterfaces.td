@@ -22,7 +22,7 @@ def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
-        return &$_op.getRegion().front();
+        return &$_raw_op->getRegion(0).front();
       }]>,
   ];
 }
@@ -91,7 +91,7 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
         memory.
       }],
       "bool", "isInDeviceMemory", (ins), [{
-        return ::mlir::cast<::mlir::acc::GlobalVariableOpInterface>($_op)
+        return ::mlir::cast<::mlir::acc::GlobalVariableOpInterface>(*$_raw_op)
             .isDeviceAccessible();
       }]>,
     InterfaceMethod<"Check if the global variable is compiler generated", "bool",
@@ -196,7 +196,7 @@ def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
     InterfaceMethod<"Get the offload region", "::mlir::Region&",
       "getOffloadRegion",
       (ins), [{
-        return $_op.getRegion();
+        return $_raw_op->getRegion(0);
       }]>,
   ];
 }

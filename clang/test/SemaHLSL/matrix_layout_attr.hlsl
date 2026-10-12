@@ -15,6 +15,14 @@ column_major float4x4 cm_mat_arr[3];
 row_major float3x3 rm_mat_arr_2d[2][3];
 column_major float4x4 cm_mat_arr_2d[3][2];
 
+typedef float2x3 MatrixArray[2];
+
+// Invalid: the modifier applies to the array typedef, not its matrix elements.
+// expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
+row_major MatrixArray invalid_row_array;
+// expected-error@+1 {{'column_major' attribute can only be applied to a matrix type}}
+column_major MatrixArray invalid_column_array;
+
 // Valid: on struct fields with matrix type.
 struct S {
   row_major float2x2 mat1;
@@ -43,6 +51,20 @@ column_major float4x4 Col2Row(row_major float4x4 M) {
 }
 
 void bar(row_major float4x4 M, column_major float4x4 M2) {}
+
+// Layout metadata does not create distinct overloads.
+// expected-note@+1 {{previous definition is here}}
+void same_overload(row_major float2x2 M) {}
+// expected-error@+1 {{redefinition of 'same_overload'}}
+void same_overload(column_major float2x2 M) {}
+
+template <typename T>
+T preserve_layout(T M) {
+  return M;
+}
+
+row_major float2x3 substitution_source;
+row_major float2x3 substituted = preserve_layout(substitution_source);
 
 //Invalid: 
 // expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}

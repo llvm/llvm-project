@@ -1,0 +1,174 @@
+# REQUIRES: aarch64-registered-target
+
+## A DW_OP_addrx in a location list can name a data symbol, which the linker
+## moves independently of the code that the list's address ranges cover. Check
+## that each such operand is relocated by the delta of the symbol it names
+## rather than by that of the enclosing function.
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -triple arm64-apple-darwin -filetype=obj %t/t.s -o %t/t.o
+
+# RUN: dsymutil --linker classic -f -y %t/t.map -oso-prepend-path %t \
+# RUN:   -o %t/classic.dwarf
+# RUN: llvm-dwarfdump --debug-info %t/classic.dwarf | FileCheck %s
+
+# RUN: dsymutil --linker parallel -f -y %t/t.map -oso-prepend-path %t \
+# RUN:   -o %t/parallel.dwarf
+# RUN: llvm-dwarfdump --debug-info %t/parallel.dwarf | FileCheck %s
+
+## The ranges move with _f by 0x10000, while _g and _h each move by a delta of
+## their own.
+# CHECK:      DW_TAG_variable
+# CHECK-NEXT:   DW_AT_location (0x{{[0-9a-f]+}}:
+# CHECK-NEXT:     [0x0000000000010004, 0x0000000000010008): DW_OP_addr 0x20000, DW_OP_stack_value
+# CHECK-NEXT:     [0x0000000000010008, 0x0000000000010010): DW_OP_addr 0x30008, DW_OP_stack_value)
+# CHECK-NEXT:   DW_AT_name ("p")
+
+#--- t.map
+---
+triple: 'arm64-apple-darwin'
+objects:
+  - filename: t.o
+    symbols:
+      - { sym: _f, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+      - { sym: _g, objAddr: 0x10, binAddr: 0x20000, size: 0x8 }
+      - { sym: _h, objAddr: 0x18, binAddr: 0x30008, size: 0x8 }
+...
+
+#--- t.s
+	.section	__TEXT,__text,regular,pure_instructions
+	.globl	_f
+	.p2align	2
+_f:
+Lfunc_begin0:
+	nop
+Ltmp0:
+	nop
+Ltmp1:
+	nop
+	ret
+Lfunc_end0:
+
+	.section	__DATA,__data
+	.globl	_g
+	.p2align	3
+_g:
+	.quad	0
+	.globl	_h
+_h:
+	.quad	1
+
+	.section	__DWARF,__debug_abbrev,regular,debug
+Lsection_abbrev:
+	.byte	1                               ; Abbreviation Code
+	.byte	17                              ; DW_TAG_compile_unit
+	.byte	1                               ; DW_CHILDREN_yes
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	17                              ; DW_AT_low_pc
+	.byte	27                              ; DW_FORM_addrx
+	.byte	18                              ; DW_AT_high_pc
+	.byte	6                               ; DW_FORM_data4
+	.byte	115                             ; DW_AT_addr_base
+	.byte	23                              ; DW_FORM_sec_offset
+	.ascii	"\214\001"                      ; DW_AT_loclists_base
+	.byte	23                              ; DW_FORM_sec_offset
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	2                               ; Abbreviation Code
+	.byte	46                              ; DW_TAG_subprogram
+	.byte	1                               ; DW_CHILDREN_yes
+	.byte	17                              ; DW_AT_low_pc
+	.byte	27                              ; DW_FORM_addrx
+	.byte	18                              ; DW_AT_high_pc
+	.byte	6                               ; DW_FORM_data4
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	3                               ; Abbreviation Code
+	.byte	52                              ; DW_TAG_variable
+	.byte	0                               ; DW_CHILDREN_no
+	.byte	2                               ; DW_AT_location
+	.byte	34                              ; DW_FORM_loclistx
+	.byte	3                               ; DW_AT_name
+	.byte	8                               ; DW_FORM_string
+	.byte	0                               ; EOM(1)
+	.byte	0                               ; EOM(2)
+	.byte	0                               ; EOM(3)
+
+	.section	__DWARF,__debug_info,regular,debug
+Lsection_info:
+Lset0 = Ldebug_info_end0-Ldebug_info_start0 ; Length of Unit
+	.long	Lset0
+Ldebug_info_start0:
+	.short	5                               ; DWARF version number
+	.byte	1                               ; DWARF Unit Type
+	.byte	8                               ; Address Size (in bytes)
+	.long	0                               ; Offset Into Abbrev. Section
+	.byte	1                               ; Abbrev [1] DW_TAG_compile_unit
+	.asciz	"t.c"                           ; DW_AT_name
+	.byte	2                               ; DW_AT_low_pc
+Lset1 = Lfunc_end0-Lfunc_begin0             ; DW_AT_high_pc
+	.long	Lset1
+Lset2 = Laddr_table_base0-Lsection_addr     ; DW_AT_addr_base
+	.long	Lset2
+Lset3 = Lloclists_table_base0-Lsection_loclists ; DW_AT_loclists_base
+	.long	Lset3
+	.byte	2                               ; Abbrev [2] DW_TAG_subprogram
+	.byte	2                               ; DW_AT_low_pc
+Lset4 = Lfunc_end0-Lfunc_begin0             ; DW_AT_high_pc
+	.long	Lset4
+	.asciz	"f"                             ; DW_AT_name
+	.byte	3                               ; Abbrev [3] DW_TAG_variable
+	.byte	0                               ; DW_AT_location
+	.asciz	"p"                             ; DW_AT_name
+	.byte	0                               ; End Of Children Mark
+	.byte	0                               ; End Of Children Mark
+Ldebug_info_end0:
+
+	.section	__DWARF,__debug_addr,regular,debug
+Lsection_addr:
+Lset5 = Ldebug_addr_end0-Ldebug_addr_start0 ; Length of contribution
+	.long	Lset5
+Ldebug_addr_start0:
+	.short	5                               ; DWARF version number
+	.byte	8                               ; Address size
+	.byte	0                               ; Segment selector size
+Laddr_table_base0:
+	.quad	_g
+	.quad	_h
+	.quad	Lfunc_begin0
+Ldebug_addr_end0:
+
+	.section	__DWARF,__debug_loclists,regular,debug
+Lsection_loclists:
+Lset6 = Ldebug_list_header_end0-Ldebug_list_header_start0 ; Length
+	.long	Lset6
+Ldebug_list_header_start0:
+	.short	5                               ; Version
+	.byte	8                               ; Address size
+	.byte	0                               ; Segment selector size
+	.long	1                               ; Offset entry count
+Lloclists_table_base0:
+Lset7 = Ldebug_loc0-Lloclists_table_base0
+	.long	Lset7
+Ldebug_loc0:
+	.byte	4                               ; DW_LLE_offset_pair
+	.uleb128 Ltmp0-Lfunc_begin0             ;   starting offset
+	.uleb128 Ltmp1-Lfunc_begin0             ;   ending offset
+	.byte	3                               ; Loc expr size
+	.byte	161                             ; DW_OP_addrx
+	.byte	0                               ;   _g
+	.byte	159                             ; DW_OP_stack_value
+	.byte	4                               ; DW_LLE_offset_pair
+	.uleb128 Ltmp1-Lfunc_begin0             ;   starting offset
+	.uleb128 Lfunc_end0-Lfunc_begin0        ;   ending offset
+	.byte	3                               ; Loc expr size
+	.byte	161                             ; DW_OP_addrx
+	.byte	1                               ;   _h
+	.byte	159                             ; DW_OP_stack_value
+	.byte	0                               ; DW_LLE_end_of_list
+Ldebug_list_header_end0:
+
+.subsections_via_symbols

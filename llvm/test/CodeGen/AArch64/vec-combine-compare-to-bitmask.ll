@@ -2264,12 +2264,11 @@ define i8 @bitmask_v8i32_sve(<8 x i32> %v) vscale_range(2,2) "target-features"="
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    splice z0.s, p0, z0.s, z1.s
-; CHECK-BE-NEXT:    ptrue p0.s
+; CHECK-BE-NEXT:    ptrue p0.h
 ; CHECK-BE-NEXT:    ld1 { v1.8h }, [x8]
 ; CHECK-BE-NEXT:    cmpne p1.s, p0/z, z0.s, #0
 ; CHECK-BE-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK-BE-NEXT:    ptrue p0.h
 ; CHECK-BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-BE-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-BE-NEXT:    and v0.16b, v0.16b, v1.16b

@@ -43,6 +43,11 @@ if config.have_zlib:
 if lit.util.pythonize_bool(config.have_benchmarks):
     config.available_features.add("have-benchmarks")
 
+# Plugins (loadable modules)
+if config.has_plugins and config.llvm_plugin_ext:
+    config.available_features.add("plugins")
+    config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
+
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.

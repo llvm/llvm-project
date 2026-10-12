@@ -875,7 +875,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
-      opts.fixedFormColumns = 1000000;
+      opts.fixedFormColumns = std::nullopt;
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
@@ -905,6 +905,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_fimplicit_none_ext,
                                     clang::options::OPT_fno_implicit_none_ext,
                                     false));
+
+  // -f{no-}implicit-module-prefix
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitModulePrefix,
+      args.hasFlag(clang::options::OPT_fimplicit_module_prefix,
+                   clang::options::OPT_fno_implicit_module_prefix, false));
 
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
@@ -1857,6 +1863,12 @@ bool CompilerInvocation::createFromArgs(
       args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
                    clang::options::OPT_fno_openacc_combined_loop_firstprivate,
                    /*default=*/true));
+
+  // -f[no-]openacc-acc-kernels-do-concurrent-independent
+  invoc.loweringOpts.setOpenACCKernelsDoConcurrentIndependent(args.hasFlag(
+      clang::options::OPT_fopenacc_acc_kernels_do_concurrent_independent,
+      clang::options::OPT_fno_openacc_acc_kernels_do_concurrent_independent,
+      /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());

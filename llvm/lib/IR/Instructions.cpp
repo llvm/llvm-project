@@ -1837,17 +1837,15 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
   if (!isa<VectorType>(V1->getType()) || V1->getType() != V2->getType())
     return false;
 
-  // Make sure the mask elements make sense.
-  int V1Size =
-      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-  for (int Elem : Mask)
-    if (Elem != PoisonMaskElem && Elem >= V1Size * 2)
-      return false;
-
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != PoisonMaskElem) || !all_equal(Mask))
-      return false;
+    return (Mask[0] == 0 || Mask[0] == PoisonMaskElem) && all_equal(Mask);
 
+  // Make sure the mask elements make sense.
+  int64_t MaxMaskSz =
+      cast<FixedVectorType>(V1->getType())->getNumElements() * 2LL;
+  for (int Elem : Mask)
+    if (Elem != PoisonMaskElem && Elem >= MaxMaskSz)
+      return false;
   return true;
 }
 
@@ -1955,7 +1953,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
   return ConstantVector::get(MaskConst);
 }
 
-static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int NumOpElts) {
+static bool isSingleSourceMaskImpl(ArrayRef<int> Mask, int64_t NumOpElts) {
   assert(!Mask.empty() && "Shuffle mask must contain elements");
   bool UsesLHS = false;
   bool UsesRHS = false;
@@ -2630,6 +2628,59 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
     }
   }
   return Agg;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitInsert Class
+//===----------------------------------------------------------------------===//
+BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                             const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Base, Val, Offset) &&
+         "Invalid bitinsert instruction operands!");
+  Op<0>() = Base;
+  Op<1>() = Val;
+  Op<2>() = Offset;
+  setName(Name);
+}
+
+const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
+                                              Value *Offset) {
+  if (!Base->getType()->isByteTy())
+    return "bitinsert base must be a byte type";
+  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
+        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+    return "bitinsert value must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitinsert offset must be i32";
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitExtract Class
+//===----------------------------------------------------------------------===//
+BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                               const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Ty, Src, Offset) &&
+         "Invalid bitextract instruction operands!");
+  Op<0>() = Src;
+  Op<1>() = Offset;
+  setName(Name);
+}
+
+const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
+                                               Value *Offset) {
+  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
+        Ty->isByteTy()))
+    return "bitextract result must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Src->getType()->isByteTy())
+    return "bitextract source must be a byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitextract offset must be i32";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3445,8 +3496,15 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
       return false;
     return SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy();
   case Instruction::BitCast: {
-    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
-    PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
+    Type *SrcScalarTy = SrcTy->getScalarType();
+    if (SrcScalarTy->isTargetExtTy() || !SrcScalarTy->isSingleValueType())
+      return false;
+    Type *DstScalarTy = DstTy->getScalarType();
+    if (DstScalarTy->isTargetExtTy() || !DstScalarTy->isSingleValueType())
+      return false;
+
+    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcScalarTy);
+    PointerType *DstPtrTy = dyn_cast<PointerType>(DstScalarTy);
 
     // BitCast implies a no-op cast of type only. No bits change.
     // However, you can't cast pointers to anything but pointers/bytes.
@@ -4576,6 +4634,14 @@ ExtractElementInst *ExtractElementInst::cloneImpl() const {
 
 InsertElementInst *InsertElementInst::cloneImpl() const {
   return InsertElementInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitInsertInst *BitInsertInst::cloneImpl() const {
+  return BitInsertInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitExtractInst *BitExtractInst::cloneImpl() const {
+  return BitExtractInst::Create(getType(), getOperand(0), getOperand(1));
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {

@@ -3077,7 +3077,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
 
   // Emit the .machine directive on AIX.
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
   XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
   // Walk through the "target-cpu" attribute of functions and use the newest
   // level as the CPU of the module.

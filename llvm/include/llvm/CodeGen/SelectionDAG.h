@@ -2081,6 +2081,13 @@ public:
                                           EVT VT, ArrayRef<SDValue> Ops,
                                           SDNodeFlags Flags = SDNodeFlags());
 
+  /// Constant fold a node with multiple results, returning a MERGE_VALUES of
+  /// the folded results on success.
+  LLVM_ABI SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
+                                          SDVTList VTList,
+                                          ArrayRef<SDValue> Ops,
+                                          SDNodeFlags Flags = SDNodeFlags());
+
   /// Fold floating-point operations when all operands are constants and/or
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -2757,7 +2764,7 @@ public:
   }
 
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
-                                         SDValue InChain, const SDLoc &DLoc);
+                                         SDValue InChain, SDNode *Node);
 
   /// Returns the maximum runtime number of elements in VT if known, or 0
   /// otherwise.

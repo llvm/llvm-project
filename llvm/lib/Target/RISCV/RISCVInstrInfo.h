@@ -204,8 +204,8 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      int64_t &Offset, bool &OffsetIsScalable,
+      LocationSize &Width) const override;
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            int64_t Offset1, bool OffsetIsScalable1,
@@ -216,8 +216,7 @@ public:
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, LocationSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    int64_t &Offset, LocationSize &Width) const;
 
   bool areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                        const MachineInstr &MIb) const override;
@@ -279,14 +278,13 @@ public:
 
   bool simplifyInstruction(MachineInstr &MI) const override;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
-  std::string
-  createMIROperandComment(const MachineInstr &MI, const MachineOperand &Op,
-                          unsigned OpIdx,
-                          const TargetRegisterInfo *TRI) const override;
+  std::string createMIROperandComment(const MachineInstr &MI,
+                                      const MachineOperand &Op,
+                                      unsigned OpIdx) const override;
 
   /// Generate code to multiply the value in DestReg by Amt - handles all
   /// the common optimizations for this idiom, and supports fallback for
@@ -339,43 +337,6 @@ public:
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool isHighLatencyDef(int Opc) const override;
-
-  InstSizeVerifyMode
-  getInstSizeVerifyMode(const MachineInstr &MI) const override {
-    // FIXME: These Xqci instructions can compress from a 6 byte to a 4 byte
-    // instruction but getInstSizeInBytes unilaterally returns 2 for any
-    // compressible instruction.
-    switch (MI.getOpcode()) {
-    case RISCV::QC_E_LW:
-    case RISCV::QC_E_LB:
-    case RISCV::QC_E_LH:
-    case RISCV::QC_E_LBU:
-    case RISCV::QC_E_LHU:
-    case RISCV::QC_E_SW:
-    case RISCV::QC_E_SB:
-    case RISCV::QC_E_SH:
-    case RISCV::QC_E_JAL:
-    case RISCV::QC_E_J:
-    case RISCV::QC_E_LI:
-    case RISCV::QC_E_ADDI:
-    case RISCV::QC_E_ANDI:
-    case RISCV::QC_E_ORI:
-    case RISCV::QC_E_XORI:
-    case RISCV::QC_E_ADDAI:
-    case RISCV::QC_E_ANDAI:
-    case RISCV::QC_E_ORAI:
-    case RISCV::QC_E_XORAI:
-    case RISCV::QC_E_BEQI:
-    case RISCV::QC_E_BNEI:
-    case RISCV::QC_E_BLTI:
-    case RISCV::QC_E_BGEUI:
-    case RISCV::QC_E_BLTUI:
-    case RISCV::QC_E_BGEI:
-      return InstSizeVerifyMode::NoVerify;
-    default:
-      return InstSizeVerifyMode::AllowOverEstimate;
-    }
-  }
 
   /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
   /// or any kind of vector registers when \p LMul is zero.

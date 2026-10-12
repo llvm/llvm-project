@@ -17,6 +17,7 @@
 #include "lsan_allocator.h"
 #include "lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_dl.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
@@ -71,7 +72,10 @@ void ThreadContextLsanBase::ThreadStart(u32 tid, ThreadID os_id,
   thread_registry->StartThread(tid, os_id, thread_type, arg);
 }
 
-void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
+void ThreadFinish() {
+  ClearDlerror();
+  thread_registry->FinishThread(GetCurrentThreadId());
+}
 
 void EnsureMainThreadIDIsCorrect() {
   if (GetCurrentThreadId() == kMainTid)

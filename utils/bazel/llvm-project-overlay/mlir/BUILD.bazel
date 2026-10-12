@@ -450,6 +450,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
@@ -519,6 +520,7 @@ mlir_c_api_cc_library(
         "lib/CAPI/IR/IR.cpp",
         "lib/CAPI/IR/IntegerSet.cpp",
         "lib/CAPI/IR/Pass.cpp",
+        "lib/CAPI/IR/Remarks.cpp",
         "lib/CAPI/IR/Support.cpp",
     ],
     hdrs = [
@@ -537,6 +539,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Interfaces.h",
         "include/mlir-c/Pass.h",
         "include/mlir-c/RegisterEverything.h",
+        "include/mlir-c/Remarks.h",
         "include/mlir-c/Rewrite.h",
         "include/mlir-c/Support.h",
         "include/mlir/CAPI/AffineExpr.h",
@@ -549,6 +552,7 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/Interfaces.h",
         "include/mlir/CAPI/Pass.h",
         "include/mlir/CAPI/Registration.h",
+        "include/mlir/CAPI/Remarks.h",
         "include/mlir/CAPI/Rewrite.h",
         "include/mlir/CAPI/Support.h",
         "include/mlir/CAPI/Utils.h",
@@ -574,7 +578,9 @@ mlir_c_api_cc_library(
         ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
+        ":RemarkStreamer",
         ":TransformsPassIncGen",
+        "//llvm:Remarks",
     ],
 )
 
@@ -1153,6 +1159,7 @@ filegroup(
         "lib/Bindings/Python/IRAttributes.cpp",
         "lib/Bindings/Python/IRCore.cpp",
         "lib/Bindings/Python/IRInterfaces.cpp",
+        "lib/Bindings/Python/IRRemarks.cpp",
         "lib/Bindings/Python/IRTypes.cpp",
         "lib/Bindings/Python/Pass.cpp",
         "lib/Bindings/Python/Rewrite.cpp",
@@ -1849,6 +1856,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":ROCDLDialect",
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
@@ -4058,11 +4066,13 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":SCFDialect",
         ":SCFUtils",
+        ":SideEffectInterfaces",
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":XeGPUDialect",
@@ -5860,6 +5870,7 @@ cc_library(
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":Pass",
+        ":ROCDLDialect",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":Transforms",
@@ -6748,6 +6759,7 @@ cc_library(
     srcs = [
         "lib/Dialect/LLVMIR/IR/ROCDLDialect.cpp",
         "lib/Dialect/LLVMIR/IR/ROCDLOps.h",
+        "lib/Dialect/LLVMIR/IR/ROCDLTargetInfo.cpp",
     ] + gentbl_sharded_op_defs(
         name = "ROCDLOps_sharded_defs",
         shard_count = 8,
@@ -6756,6 +6768,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/LLVMIR/ROCDLDialect.h",
         "include/mlir/Dialect/LLVMIR/ROCDLDialectDecl.h",
+        "include/mlir/Dialect/LLVMIR/ROCDLTargetInfo.h",
     ],
     includes = [
         "include",
@@ -6770,9 +6783,11 @@ cc_library(
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -7554,7 +7569,9 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathTransforms",
         ":Pass",
+        ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
         ":XeVMDialect",
@@ -9512,6 +9529,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":ToLLVMIRTranslation",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -13834,6 +13852,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
+        ":MemorySlotInterfaces",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",

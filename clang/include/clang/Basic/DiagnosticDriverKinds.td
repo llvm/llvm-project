@@ -487,9 +487,6 @@ def warn_drv_dwarf_version_limited_by_target : Warning<
   InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
-def warn_ignoring_fdiscard_for_bitcode : Warning<
-  "ignoring -fdiscard-value-names for LLVM Bitcode">,
-  InGroup<UnusedCommandLineArgument>;
 def warn_drv_input_file_unused : Warning<
   "%0: '%1' input unused%select{ when '%3' is present|}2">,
   InGroup<UnusedCommandLineArgument>;
@@ -576,6 +573,8 @@ def warn_ignoring_verify_debuginfo_preserve_export : Warning<
   InGroup<UnusedCommandLineArgument>;
 def warn_unsupported_branch_protection: Warning <
   "invalid branch protection option '%0' in '%1'">, InGroup<BranchProtection>;
+def warn_harden_pac_ret_requires_pac_ret: Warning<
+  "ignoring '-mharden-pac-ret' as it requires return address signing">, InGroup<UnusedCommandLineArgument>;
 def err_sls_hardening_arm_not_supported : Error<
   "-mharden-sls is only supported on armv7-a or later">;
 def warn_drv_large_data_threshold_invalid_code_model: Warning<

@@ -1,0 +1,75 @@
+macros:
+  LOG_PID:
+    in-latest-posix: ''
+  LOG_CONS:
+    in-latest-posix: ''
+  LOG_NDELAY:
+    in-latest-posix: ''
+  LOG_ODELAY:
+    in-latest-posix: ''
+  LOG_NOWAIT:
+    in-latest-posix: ''
+  LOG_KERN:
+    in-latest-posix: ''
+  LOG_USER:
+    in-latest-posix: ''
+  LOG_MAIL:
+    in-latest-posix: ''
+  LOG_NEWS:
+    in-latest-posix: ''
+  LOG_UUCP:
+    in-latest-posix: ''
+  LOG_DAEMON:
+    in-latest-posix: ''
+  LOG_AUTH:
+    in-latest-posix: ''
+  LOG_CRON:
+    in-latest-posix: ''
+  LOG_LPR:
+    in-latest-posix: ''
+  LOG_LOCAL0:
+    in-latest-posix: ''
+  LOG_LOCAL1:
+    in-latest-posix: ''
+  LOG_LOCAL2:
+    in-latest-posix: ''
+  LOG_LOCAL3:
+    in-latest-posix: ''
+  LOG_LOCAL4:
+    in-latest-posix: ''
+  LOG_LOCAL5:
+    in-latest-posix: ''
+  LOG_LOCAL6:
+    in-latest-posix: ''
+  LOG_LOCAL7:
+    in-latest-posix: ''
+  LOG_MASK:
+    in-latest-posix: ''
+  LOG_UPTO:
+    in-latest-posix: ''
+  LOG_EMERG:
+    in-latest-posix: ''
+  LOG_ALERT:
+    in-latest-posix: ''
+  LOG_CRIT:
+    in-latest-posix: ''
+  LOG_ERR:
+    in-latest-posix: ''
+  LOG_WARNING:
+    in-latest-posix: ''
+  LOG_NOTICE:
+    in-latest-posix: ''
+  LOG_INFO:
+    in-latest-posix: ''
+  LOG_DEBUG:
+    in-latest-posix: ''
+
+functions:
+  closelog:
+    in-latest-posix: ''
+  openlog:
+    in-latest-posix: ''
+  setlogmask:
+    in-latest-posix: ''
+  syslog:
+    in-latest-posix: ''

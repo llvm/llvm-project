@@ -599,7 +599,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Ty, nullptr);
@@ -609,7 +609,7 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Args, CxtI);
+                                         Op2Info, Args, CtxI);
 
   // Fallback to the default implementation.
   InstructionCost Cost = BaseT::getArithmeticInstrCost(
@@ -620,7 +620,7 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 InstructionCost PPCTTIImpl::getShuffleCost(
     TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CtxI,
     TTI::VectorInstrContext VIC) const {
 
   InstructionCost CostFactor =
@@ -1169,19 +1169,28 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
     return Invalid;
   if (Opcode != Instruction::Add)
     return Invalid;
-  if (BinOp && BinOp.value() != Instruction::Mul)
-    return Invalid;
 
   EVT AccVT = TLI->getValueType(DL, AccumType, true);
   if (AccVT != MVT::i32)
-    return Invalid;
-  if (InputTypeA != InputTypeB)
     return Invalid;
 
   Type *ATy = VectorType::get(InputTypeA, VF);
   EVT AVT = TLI->getValueType(DL, ATy, true);
 
   if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (!BinOp) {
+    // It's just an add, so only the LHS type matters. RHS is just 1s.
+    if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
+      return Invalid;
+    // We can do either (sext/-) or (zext/-) for v16i8 and v8i16
+    return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
+  }
+
+  if (BinOp.value() != Instruction::Mul)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
     return Invalid;
   if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
     return Invalid;

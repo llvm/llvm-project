@@ -8,16 +8,22 @@
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "CIRDiagnosticHandler.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Parser/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleLinker.h"
+#include "clang/CodeGenUtils/BackendDiagnosticHandler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -43,6 +49,7 @@ static BackendAction
 getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   switch (Action) {
   case CIRGenAction::OutputType::EmitCIR:
+  case CIRGenAction::OutputType::EmitCIRBC:
     assert(false &&
            "Unsupported output type for getBackendActionFromOutputType!");
     break; // Unreachable, but fall through to report that
@@ -69,6 +76,14 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                                               mlirSaveTempsOutFile, fs);
 }
 
+// Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
+// and CIR printed back from ClangIR input use the same form.
+static void printCIRModule(mlir::ModuleOp MLIRModule, raw_ostream &OS) {
+  mlir::OpPrintingFlags Flags;
+  Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+  MLIRModule->print(OS, Flags);
+}
+
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
@@ -90,6 +105,11 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
   std::optional<CIRDiagnosticHandler> MLIRDiagHandler;
 
+  // Translates LLVM backend diagnostics (raised while lowering CIR to LLVM
+  // IR and while running emitBackendOutput) into clang diagnostics; shared
+  // with classic CodeGen's BackendConsumer.
+  BackendDiagnosticConsumer DiagConsumer;
+
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
                  CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS,
@@ -100,11 +120,13 @@ public:
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
         FEOptions(CI.getFrontendOpts()), CGO(CGO), LLVMCtx(LLVMCtx),
-        LinkModules(LinkModules) {}
+        LinkModules(LinkModules),
+        DiagConsumer(CI.getDiagnostics(), CI.getCodeGenOpts()) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
     Context = &Ctx;
+    DiagConsumer.setSourceManager(&Ctx.getSourceManager());
     Gen->Initialize(Ctx);
     // Install the MLIR diagnostic handler now that CIRGenerator owns its
     // MLIRContext. Lifetime is tied to this consumer, which spans CIRGen,
@@ -157,7 +179,7 @@ public:
       const bool EnableLibOpt =
           FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              MlirModule, MlirCtx, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
               EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
               .failed()) {
@@ -171,11 +193,14 @@ public:
 
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
-      if (OutputStream && MlirModule) {
-        mlir::OpPrintingFlags Flags;
-        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        MlirModule->print(*OutputStream, Flags);
-      }
+      if (OutputStream && MlirModule)
+        printCIRModule(MlirModule, *OutputStream);
+      break;
+    case CIRGenAction::OutputType::EmitCIRBC:
+      if (OutputStream && MlirModule &&
+          failed(mlir::writeBytecodeToFile(MlirModule, *OutputStream)) &&
+          !CI.getDiagnostics().hasErrorOccurred())
+        CI.getDiagnostics().Report(diag::err_cir_bc_write_failed);
       break;
     case CIRGenAction::OutputType::EmitLLVM:
     case CIRGenAction::OutputType::EmitBC:
@@ -202,11 +227,26 @@ public:
       if (CI.getDiagnostics().hasErrorOccurred())
         return;
 
+      // Route LLVM backend diagnostics (optimization remarks, unsupported
+      // features, inline-asm errors, etc.) through clang diagnostics for
+      // the remainder of the LLVM-emitting pipeline.
+      std::unique_ptr<llvm::DiagnosticHandler> OldDiagnosticHandler =
+          LLVMCtx.getDiagnosticHandler();
+      llvm::scope_exit RestoreDiagnosticHandler([&]() {
+        LLVMCtx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
+      });
+      LLVMCtx.setDiagnosticHandler(DiagConsumer.createDiagnosticHandler());
+
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
 
       LLVMModule->setDataLayout(C.getTargetInfo().getDataLayoutString());
+
+      for (llvm::Function &F : LLVMModule->functions())
+        if (const Decl *FD = Gen->getDeclForMangledName(F.getName()))
+          DiagConsumer.addFunctionSourceLocation(
+              F.getName(), FD->getASTContext().getFullLoc(FD->getLocation()));
 
       if (linkInModules(*LLVMModule))
         return;
@@ -214,6 +254,24 @@ public:
       // Embed the offloaded SYCL device binary into the host module.
       if (C.getLangOpts().SYCLIsHost && !CGO.OffloadBinaryToEmbedFile.empty())
         embedSYCLDeviceBinary(*LLVMModule);
+
+      // CUDA, HIP and OpenMP offloading rely on host-side offload entries that
+      // are not emitted on the ClangIR path yet, so embedding their device
+      // objects would produce a host object that cannot be registered.
+      const LangOptions &LangOpts = C.getLangOpts();
+      if (!CGO.OffloadObjects.empty() &&
+          (LangOpts.CUDA || !LangOpts.OMPTargetTriples.empty())) {
+        DiagnosticsEngine &Diags = CI.getDiagnostics();
+        Diags.Report(Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "ClangIR code gen Not Yet Implemented: embedding offload objects "
+            "for CUDA, HIP or OpenMP offloading"));
+        return;
+      }
+
+      // If there is device offloading code embed it in the host now.
+      EmbedObject(LLVMModule.get(), CGO, CI.getVirtualFileSystem(),
+                  CI.getDiagnostics());
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
@@ -223,8 +281,8 @@ public:
     }
   }
 
-  // TODO: share with BackendConsumer::LinkInModules once OG's CurLinkModule
-  // diagnostic-handler indirection is abstracted behind a callback for CIR.
+  // TODO: share with BackendConsumer::LinkInModules once the rest of the
+  // linking logic (not just diagnostics) is unified.
   bool linkInModules(llvm::Module &M) {
     for (auto &LM : LinkModules) {
       assert(LM.Module && "LinkModule does not actually have a module");
@@ -237,6 +295,7 @@ public:
               F, CGO, CI.getLangOpts(), CI.getTargetOpts(), LM.Internalize);
         }
 
+      DiagConsumer.setCurLinkModule(LM.Module.get());
       bool Err;
       if (LM.Internalize) {
         Err = llvm::Linker::linkModules(
@@ -315,12 +374,97 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
 
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
+                CIRGenAction::OutputType Action);
+
+void CIRGenAction::ExecuteAction() {
+  if (getCurrentFileKind().getLanguage() != Language::CIR) {
+    ASTFrontendAction::ExecuteAction();
+    return;
+  }
+
+  CompilerInstance &CI = getCompilerInstance();
+  DiagnosticsEngine &Diags = CI.getDiagnostics();
+  SourceManager &SM = CI.getSourceManager();
+
+  std::unique_ptr<raw_pwrite_stream> OS = CI.takeOutputStream();
+  if (!OS)
+    OS = getOutputStream(CI, getCurrentFileOrBufferName(), Action);
+  if (!OS)
+    return;
+
+  std::optional<llvm::MemoryBufferRef> MainFile =
+      SM.getBufferOrNone(SM.getMainFileID());
+  if (!MainFile)
+    return;
+
+  mlir::MLIRContext MLIRContext;
+  cir::registerAllDialects(MLIRContext);
+
+  // Route parser and verifier errors through clang's diagnostics. Parse
+  // errors point into the .cir input. Verifier errors use the location of
+  // the failing op, which for CIR emitted by CIRGen is a location in the
+  // original source file; that file is not loaded in the SourceManager, so
+  // the handler reports such errors with the original location as text.
+  // TODO: Decide where errors in CIRGen-produced input should point: at the
+  // .cir text, or at the original source.
+  CIRDiagnosticHandler DiagHandler(&MLIRContext, Diags, SM,
+                                   CI.getFileManager());
+
+  mlir::OwningOpRef<mlir::ModuleOp> Module =
+      mlir::parseSourceString<mlir::ModuleOp>(MainFile->getBuffer(),
+                                              mlir::ParserConfig(&MLIRContext),
+                                              MainFile->getBufferIdentifier());
+  if (!Module) {
+    if (!Diags.hasErrorOccurred())
+      Diags.Report(diag::err_invalid_cir);
+    return;
+  }
+
+  // CIR is lowered for the target ABI of its own triple, so a module emitted
+  // for a different target cannot be retargeted by overriding its triple.
+  auto ModuleTriple = mlir::dyn_cast_if_present<mlir::StringAttr>(
+      (*Module)->getAttr(cir::CIRDialect::getTripleAttrName()));
+  if (!ModuleTriple) {
+    Diags.Report(diag::err_cir_input_missing_triple);
+    return;
+  }
+  const std::string &TargetTriple = CI.getTarget().getTriple().str();
+  if (ModuleTriple.getValue() != TargetTriple) {
+    Diags.Report(diag::err_cir_input_triple_mismatch)
+        << ModuleTriple.getValue() << TargetTriple;
+    return;
+  }
+
+  switch (Action) {
+  case OutputType::EmitCIR:
+    // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
+    // been through it, and its lowering passes are not idempotent.
+    printCIRModule(*Module, *OS);
+    break;
+  case OutputType::EmitCIRBC:
+    if (failed(mlir::writeBytecodeToFile(*Module, *OS)) &&
+        !Diags.hasErrorOccurred())
+      Diags.Report(diag::err_cir_bc_write_failed);
+    break;
+  case OutputType::EmitLLVM:
+  case OutputType::EmitBC:
+  case OutputType::EmitObj:
+  case OutputType::EmitAssembly:
+    Diags.Report(diag::err_fe_cir_input_unsupported);
+    break;
+  }
+}
+
+static std::unique_ptr<raw_pwrite_stream>
+getOutputStream(CompilerInstance &CI, StringRef InFile,
                 CIRGenAction::OutputType Action) {
   switch (Action) {
   case CIRGenAction::OutputType::EmitAssembly:
     return CI.createDefaultOutputFile(false, InFile, "s");
   case CIRGenAction::OutputType::EmitCIR:
     return CI.createDefaultOutputFile(false, InFile, "cir");
+  case CIRGenAction::OutputType::EmitCIRBC:
+    return CI.createDefaultOutputFile(true, InFile, "cirbc");
   case CIRGenAction::OutputType::EmitLLVM:
     return CI.createDefaultOutputFile(false, InFile, "ll");
   case CIRGenAction::OutputType::EmitBC:
@@ -351,6 +495,10 @@ EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
 void EmitCIRAction::anchor() {}
 EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
     : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+
+void EmitCIRBCAction::anchor() {}
+EmitCIRBCAction::EmitCIRBCAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitCIRBC, MLIRCtx) {}
 
 void EmitLLVMAction::anchor() {}
 EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)

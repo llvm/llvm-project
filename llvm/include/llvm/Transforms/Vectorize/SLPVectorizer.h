@@ -114,6 +114,11 @@ private:
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
 
+  /// Try to vectorize the poor-throughput instructions \p Candidates as the
+  /// standalone seeds.
+  bool vectorizePoorThroughputSeeds(ArrayRef<Instruction *> Candidates,
+                                    slpvectorizer::BoUpSLP &R);
+
   /// Try to vectorize the standalone seeds \p Seeds in the groups of the
   /// compatible instructions, \p IsLessGroup orders the groups.
   bool vectorizeSeeds(SmallVectorImpl<Value *> &Seeds,
@@ -176,8 +181,10 @@ private:
                         SmallSetVector<Instruction *, 8> &FMACandidates);
 
   /// Scan the basic block and look for patterns that are likely to start
-  /// a vectorization chain.
-  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
+  /// a vectorization chain. The FMA candidates are collected in
+  /// \p FMACandidates for the retry after all the blocks of the function.
+  bool vectorizeChainsInBlock(BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+                              SmallSetVector<Instruction *, 8> &FMACandidates);
 
   std::optional<bool> vectorizeStoreChain(ArrayRef<Value *> Chain,
                                           slpvectorizer::BoUpSLP &R,
