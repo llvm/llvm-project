@@ -59,7 +59,9 @@ void mlir::transform::ApplyMoveAccumulatorForContractLoopPatternsOp::
 
 void mlir::transform::ApplyVectorContractMultiLevelUnrollPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  x86::populateVectorContractMultiLevelUnrollPatterns(patterns, getTarget());
+  x86::MultiLevelUnrollOptions options;
+  options.enableAMX = getEnableAmx();
+  x86::populateVectorContractMultiLevelUnrollPatterns(patterns, options);
 }
 
 //===----------------------------------------------------------------------===//

@@ -99,11 +99,14 @@ def ApplyVectorContractMultiLevelUnrollPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collect patterns that tile and unroll contractions in order to prepare them
     for the nanokernel lowerings.
+
+    The following flags control the decomposition:
+    - `enable_amx`: Prepare for AMX bf16 and int8 tile dot-product
   }];
 
-  let arguments = (ins StrAttr:$target);
+  let arguments = (ins UnitAttr:$enable_amx);
 
-  let assemblyFormat = "`target` `=` $target attr-dict";
+  let assemblyFormat = "(`enable_amx` $enable_amx^)? attr-dict";
 }
 
 #endif // X86_TRANSFORM_OPS

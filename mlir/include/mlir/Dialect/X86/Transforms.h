@@ -115,10 +115,15 @@ void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 void populateMoveAccumulatorForContractLoopPatterns(
     RewritePatternSet &patterns);
 
+// Feature flags to control the multi-level unroll patttern.
+struct MultiLevelUnrollOptions {
+  bool enableAMX = false; // Prepare for AMX bf16 and int8 tile dot-product
+};
+
 // A set of patterns that tile and unroll contractions in order to prepare them
 // for the nanokernel lowerings.
-void populateVectorContractMultiLevelUnrollPatterns(RewritePatternSet &patterns,
-                                                    StringRef target);
+void populateVectorContractMultiLevelUnrollPatterns(
+    RewritePatternSet &patterns, const MultiLevelUnrollOptions &options);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:

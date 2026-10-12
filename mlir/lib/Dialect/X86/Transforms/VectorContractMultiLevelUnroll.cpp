@@ -31,11 +31,9 @@ static constexpr auto nativeShapeAttrName = "x86_vcmlu_native_shape";
 namespace {
 // Shared state for the pattern match and IR transformation.
 struct MLUCandidate {
-  // The CPU feature flag to target with the transformation, in the spelling
-  // used by llvm/include/llvm/TargetParser/X86TargetParser.def, e.g.
-  // "amx-bf16". Determines native shapes and supported data types for operands
-  // and the accumulator.
-  StringRef target;
+  // Native shapes and supported data types for operands and the accumulator are
+  // determined based on the feature flags in the options struct.
+  const x86::MultiLevelUnrollOptions &options;
 
   // Anchor operation.
   vector::ContractionOp contract;
@@ -329,7 +327,6 @@ static LogicalResult matchCanonicalMatmul(MLUCandidate &candidate,
 static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
                                          PatternRewriter &rewriter) {
   vector::ContractionOp contract = candidate.contract;
-  StringRef target = candidate.target;
 
   Type accElemType = candidate.accType.getElementType();
   Type inpElemType = candidate.lhsType.getElementType();
@@ -345,11 +342,9 @@ static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
   int64_t regTileM, regTileN, regTileK;
   int64_t nativeM, nativeN, nativeK, vnni;
 
-  if (target.starts_with("amx")) {
-    if (!((target == "amx-bf16" && inpElemType.isBF16() &&
-           accElemType.isF32()) ||
-          (target == "amx-int8" && inpElemType.isInteger(8) &&
-           accElemType.isInteger(32))))
+  if (candidate.options.enableAMX) {
+    if (!((inpElemType.isBF16() && accElemType.isF32()) ||
+          (inpElemType.isInteger(8) && accElemType.isInteger(32))))
       return rewriter.notifyMatchFailure(
           contract, "unsupported combination of input and accumulator types");
 
@@ -384,7 +379,7 @@ static LogicalResult matchShapesAndTypes(MLUCandidate &candidate,
       regTileK = nativeK;
     }
   } else {
-    return rewriter.notifyMatchFailure(contract, "unsupported target");
+    return rewriter.notifyMatchFailure(contract, "empty target feature set");
   }
 
   candidate.accRegTileType = VectorType::get({regTileM, regTileN}, accElemType);
@@ -804,10 +799,11 @@ namespace {
 // transforming it in place.
 struct VectorContractMultiLevelUnroll
     : public OpRewritePattern<vector::ContractionOp> {
-  VectorContractMultiLevelUnroll(MLIRContext *context, StringRef target,
+  VectorContractMultiLevelUnroll(MLIRContext *context,
+                                 const x86::MultiLevelUnrollOptions &options,
                                  PatternBenefit benefit = 1)
       : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        target(target.str()) {}
+        options(options) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp contract,
                                 PatternRewriter &rewriter) const override {
@@ -816,9 +812,7 @@ struct VectorContractMultiLevelUnroll
     if (contract->hasAttr(nativeShapeAttrName))
       return failure();
 
-    MLUCandidate candidate;
-    candidate.target = target;
-    candidate.contract = contract;
+    MLUCandidate candidate({options, contract});
     if (failed(matchCanonicalMatmul(candidate, rewriter)) ||
         failed(matchShapesAndTypes(candidate, rewriter)) ||
         failed(matchAccumulationLoop(candidate, rewriter)))
@@ -835,15 +829,15 @@ struct VectorContractMultiLevelUnroll
   }
 
 private:
-  std::string target;
+  x86::MultiLevelUnrollOptions options;
 };
 } // namespace
 
 void x86::populateVectorContractMultiLevelUnrollPatterns(
-    RewritePatternSet &patterns, StringRef target) {
-  patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(), target);
-  vector::UnrollVectorOptions options;
-  options.setFilterConstraint(hasNativeShapeAttr);
-  options.setNativeShapeFn(getFromNativeShapeAttr);
-  vector::populateVectorUnrollPatterns(patterns, options);
+    RewritePatternSet &patterns, const MultiLevelUnrollOptions &options) {
+  patterns.add<VectorContractMultiLevelUnroll>(patterns.getContext(), options);
+  vector::UnrollVectorOptions nativeUnrollOptions;
+  nativeUnrollOptions.setFilterConstraint(hasNativeShapeAttr);
+  nativeUnrollOptions.setNativeShapeFn(getFromNativeShapeAttr);
+  vector::populateVectorUnrollPatterns(patterns, nativeUnrollOptions);
 }
