@@ -148,3 +148,33 @@ declare void @fn_write_target_mem_read_write()
 ; CHECK: @fn_all_readwrite
 declare void @fn_all_readwrite()
     memory(readwrite, target_mem: read)
+
+; CHECK: Function Attrs: memory(fpcontrol: read)
+; CHECK: @fn_read_fpcontrol
+declare void @fn_read_fpcontrol()
+    memory(fpcontrol: read)
+
+; CHECK: Function Attrs: memory(fpcontrol: write)
+; CHECK: @fn_write_fpcontrol
+declare void @fn_write_fpcontrol()
+    memory(fpcontrol: write)
+
+; CHECK: Function Attrs: memory(fpstatus: read)
+; CHECK: @fn_read_fpstatus
+declare void @fn_read_fpstatus()
+    memory(fpstatus: read)
+
+; CHECK: Function Attrs: memory(fpstatus: readwrite)
+; CHECK: @fn_readwrite_fpstatus
+declare void @fn_readwrite_fpstatus()
+    memory(fpstatus: readwrite)
+
+; CHECK: Function Attrs: memory(fpcontrol: read, fpstatus: readwrite)
+; CHECK: @fn_read_fpcontrol_readwrite_fpstatus
+declare void @fn_read_fpcontrol_readwrite_fpstatus()
+    memory(fpcontrol: read, fpstatus: readwrite)
+
+; CHECK: Function Attrs: memory(write, fpcontrol: read)
+; CHECK: @fn_read_fpcontrol_write_mem
+declare void @fn_read_fpcontrol_write_mem()
+    memory(write, fpcontrol: read)

@@ -644,13 +644,31 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       OS << getModRefStr(OtherMR);
     }
 
-    bool TargetPrintedForAll = false;
+    bool SkipLocGroup = false;
+    IRMemLocation LastToSkip;
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
-      if (MR == OtherMR)
+      if (MR == OtherMR && !MemoryEffects::isFPEnvMemLoc(Loc))
         continue;
 
-      if (!First && !TargetPrintedForAll)
+      if (SkipLocGroup) {
+        if (Loc == LastToSkip)
+          SkipLocGroup = false;
+        continue;
+      }
+
+      if (MemoryEffects::isFPEnvMemLoc(Loc)) {
+        // If access to a floating-point location is absent, do not print it.
+        if (ME.doesNotAccessFPEnv()) {
+          SkipLocGroup = true;
+          LastToSkip = IRMemLocation::FPStatus;
+          continue;
+        }
+        if (ME.getModRef(Loc) == ModRefInfo::NoModRef)
+          continue;
+      }
+
+      if (!First && !SkipLocGroup)
         OS << ", ";
       First = false;
 
@@ -658,12 +676,10 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       // If more targets are added it should do something like:
       // memory(target_mem:read, target_mem3:none, target_mem5:write).
       if (ME.isTargetMemLoc(Loc) && ME.isTargetMemLocSameForAll()) {
-        if (!TargetPrintedForAll) {
-          OS << "target_mem: ";
-          OS << getModRefStr(MR);
-          TargetPrintedForAll = true;
-        }
-        // Only works when target memories are last to be listed in Location.
+        OS << "target_mem: ";
+        OS << getModRefStr(MR);
+        SkipLocGroup = true;
+        LastToSkip = IRMemLocation::TargetMem1;
         continue;
       }
 
@@ -684,6 +700,12 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::TargetMem1:
         OS << "target_mem1: ";
+        break;
+      case IRMemLocation::FPControl:
+        OS << "fpcontrol: ";
+        break;
+      case IRMemLocation::FPStatus:
+        OS << "fpstatus: ";
         break;
       }
       OS << getModRefStr(MR);
