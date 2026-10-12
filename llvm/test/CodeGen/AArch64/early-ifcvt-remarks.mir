@@ -1,13 +1,22 @@
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt \
 # RUN:   -enable-early-ifcvt-data-dependent \
-# RUN:   -pass-remarks-analysis='early-ifcvt' -o /dev/null %s 2>&1 | FileCheck %s
+# RUN:   -verify-machineinstrs -verify-each -pass-remarks-analysis='early-ifcvt' \
+# RUN:   -o /dev/null %s 2>&1 | FileCheck %s
 
-# Test that we emit an analysis remark when the branch condition is data-dependent
-# (derived from a memory load).
+# Test the reasons for changing the critical-path extension budget.
 
+# CHECK: remark: <unknown>:0:0: branch has a cold edge below 1%, using a critical-path extension budget of 0 cycles
 # CHECK: remark: <unknown>:0:0: branch condition is data-dependent (from memory load), using higher CritLimit of {{[0-9]+}} cycles
 
 --- |
+  define i32 @biased_branch(ptr %counts, i64 %count, i64 %bits, i32 %initial, ptr %out) {
+  entry: br label %loop
+  loop: br label %read
+  read: br label %merge
+  merge: br label %exit
+  exit: ret i32 0
+  }
+
   define i32 @data_dependent_branch(ptr %p, i32 %x, i32 %y) {
     ret i32 0
   }
@@ -41,5 +50,65 @@ body:             |
   bb.2:
     %100:gpr32 = PHI %1, %bb.0, %20, %bb.1
     $w0 = COPY %100
+    RET_ReallyLR implicit $w0
+...
+
+---
+name:            biased_branch
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $x0, $x1, $x2, $w3, $x4
+
+    %16:gpr64 = COPY $x4
+    %15:gpr32 = COPY $w3
+    %14:gpr64 = COPY $x2
+    %13:gpr64 = COPY $x1
+    %12:gpr64 = COPY $x0
+
+  bb.1.loop:
+    successors: %bb.3(0x7fef9fcb), %bb.2(0x00106035)
+
+    %0:gpr64sp = PHI %12, %bb.0, %5, %bb.3
+    %1:gpr64sp = PHI %16, %bb.0, %11, %bb.3
+    %2:gpr64sp = PHI %13, %bb.0, %10, %bb.3
+    %3:gpr32 = PHI %15, %bb.0, %9, %bb.3
+    early-clobber %18:gpr64sp, %19:gpr32 = LDRBBpost %0, 1 :: (load (s8))
+    %4:gpr32 = COPY %19
+    %20:gpr64all = COPY $xzr
+    %17:gpr64all = COPY %20
+    %5:gpr64all = COPY %18
+    CBZW %19, %bb.3
+    B %bb.2
+
+  bb.2.read:
+    successors: %bb.3(0x80000000)
+
+    %21:gpr64 = SUBREG_TO_REG %3, %subreg.sub_32
+    %22:gpr64 = LSLVXr %14, killed %21
+    %23:gpr32 = COPY $wzr
+    %24:gpr32 = SUBSWrr %23, %4, implicit-def dead $nzcv
+    %25:gpr64 = SUBREG_TO_REG killed %24, %subreg.sub_32
+    %26:gpr64 = LSRVXr killed %22, killed %25
+    %6:gpr64all = COPY %26
+    %27:gpr32 = ADDWrr %3, %4
+    %7:gpr32all = COPY %27
+
+  bb.3.merge:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    %8:gpr64 = PHI %17, %bb.1, %6, %bb.2
+    %9:gpr32all = PHI %3, %bb.1, %7, %bb.2
+    early-clobber %28:gpr64sp = STRXpost %8, %1, 8 :: (store (s64))
+    %29:gpr64 = SUBSXri %2, 1, 0, implicit-def $nzcv
+    %10:gpr64all = COPY %29
+    %11:gpr64all = COPY %28
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.4
+
+  bb.4.exit:
+    $w0 = COPY %9
     RET_ReallyLR implicit $w0
 ...
