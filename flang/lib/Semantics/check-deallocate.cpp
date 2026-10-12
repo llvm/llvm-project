@@ -9,6 +9,7 @@
 #include "check-deallocate.h"
 #include "check-allocate.h"
 #include "definable.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -68,6 +69,9 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               } else if (!IsAllocatableOrObjectPointer(symbol)) { // C936
                 context_.Say(source,
                     "Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+              } else if (IsProtectedTarget(*symbol)) { // F'2028 C868
+                context_.Say(source,
+                    "A PROTECTED_TARGET pointer may not be deallocated"_err_en_US);
               } else if (auto whyNot{
                              WhyNotDefinable(source, context_.FindScope(source),
                                  {DefinabilityFlag::PointerDefinition,
@@ -108,6 +112,17 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                     !IsAllocatableOrObjectPointer(symbol)) { // F'2023 C936
                   context_.Say(source,
                       "Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
+                } else if (const Symbol *protectedTarget{
+                               FindProtectedTargetPointerToDefine(*expr,
+                                   context_.foldingContext(),
+                                   ProtectedTargetContext::
+                                       PointerAssociationStatus)}) {
+                  // F'2028 C868, 8.5.16p2
+                  auto &msg{context_.Say(source,
+                      "An object associated with PROTECTED_TARGET pointer "
+                      "'%s' may not be deallocated"_err_en_US,
+                      protectedTarget->name())};
+                  evaluate::AttachDeclaration(msg, *protectedTarget);
                 } else if (auto whyNot{WhyNotDefinable(source,
                                context_.FindScope(source),
                                {DefinabilityFlag::PointerDefinition,

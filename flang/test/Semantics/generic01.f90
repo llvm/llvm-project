@@ -106,3 +106,19 @@ module m4
     print *, abs(1)
   end subroutine
 end module
+
+module m5
+  interface abs
+    module procedure abs_pt_redef
+  end interface
+contains
+  integer function abs_pt_redef(n)
+    integer, intent(in) :: n
+    abs_pt_redef = n
+  end function
+  subroutine test6(p)
+    integer, pointer, protected_target :: p
+    !CHECK: abs_pt_redef(p)
+    print *, abs(p)
+  end subroutine
+end module

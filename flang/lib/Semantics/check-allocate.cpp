@@ -11,6 +11,7 @@
 #include "definable.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
@@ -487,6 +488,28 @@ bool AreSameAllocation(const SomeExpr *root, const SomeExpr *path) {
   }
 }
 
+// The PROTECTED_TARGET pointer that is the allocate-object, or the selector
+// of an associate name that is the allocate-object (F'2028 20.6.7(11)).
+// Other objects associated with such a pointer are subobjects of its target
+// and are not definable (8.5.16p2).
+static const Symbol *FindAllocatedProtectedTargetPointer(const SomeExpr &expr) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr)}) {
+    const Symbol &last{dataRef->GetLastSymbol().GetUltimate()};
+    if (const auto *assoc{last.detailsIf<AssocEntityDetails>()}; assoc &&
+        assoc->expr() &&
+        std::holds_alternative<evaluate::SymbolRef>(dataRef->u)) {
+      if (const Symbol *selector{
+              FindAllocatedProtectedTargetPointer(*assoc->expr())}) {
+        return selector;
+      }
+    }
+    if (IsProtectedTarget(last)) {
+      return &last;
+    }
+  }
+  return nullptr;
+}
+
 bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   if (!ultimate_) {
     CHECK(context.AnyFatalError());
@@ -685,6 +708,19 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   context.CheckIndexVarRedefine(name_);
   const Scope &subpScope{
       GetProgramUnitContaining(context.FindScope(name_.source))};
+  if (allocateObject_.typedExpr && allocateObject_.typedExpr->v &&
+      !allocateInfo_.gotSource) { // F'2028 C869
+    if (const Symbol *protectedTargetPointer{
+            FindAllocatedProtectedTargetPointer(
+                *allocateObject_.typedExpr->v)}) {
+      auto &msg{context.Say(name_.source,
+          "ALLOCATE of object associated with PROTECTED_TARGET pointer '%s' "
+          "requires SOURCE="_err_en_US,
+          protectedTargetPointer->name())};
+      evaluate::AttachDeclaration(msg, *protectedTargetPointer);
+      return false;
+    }
+  }
   if (allocateObject_.typedExpr && allocateObject_.typedExpr->v) {
     DefinabilityFlags flags{DefinabilityFlag::PointerDefinition,
         DefinabilityFlag::AcceptAllocatable};

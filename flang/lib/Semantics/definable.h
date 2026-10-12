@@ -48,6 +48,11 @@ std::optional<parser::Message> WhyNotDefinable(
     parser::CharBlock, const Scope &, DefinabilityFlags, const Symbol &);
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock, const Scope &,
     DefinabilityFlags, const evaluate::Expr<evaluate::SomeType> &);
+// Applies only the F'2028 PROTECTED_TARGET checks (C866, 8.5.16p2), for
+// variable definition contexts that are not otherwise checked.
+std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock, const Scope &, DefinabilityFlags,
+    const evaluate::Expr<evaluate::SomeType> &);
 
 // If a symbol would not be definable in a pure scope, or not be usable as the
 // target of a pointer assignment in a pure scope, return a constant string

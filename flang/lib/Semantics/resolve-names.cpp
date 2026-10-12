@@ -299,6 +299,7 @@ public:
   HANDLE_ATTR_CLASS(Parameter, PARAMETER)
   HANDLE_ATTR_CLASS(Pointer, POINTER)
   HANDLE_ATTR_CLASS(Protected, PROTECTED)
+  HANDLE_ATTR_CLASS(ProtectedTarget, PROTECTED_TARGET)
   HANDLE_ATTR_CLASS(Save, SAVE)
   HANDLE_ATTR_CLASS(Target, TARGET)
   HANDLE_ATTR_CLASS(Value, VALUE)
@@ -1090,6 +1091,7 @@ public:
   bool Pre(const parser::IntrinsicStmt &);
   bool Pre(const parser::OptionalStmt &);
   bool Pre(const parser::ProtectedStmt &);
+  bool Pre(const parser::ProtectedTargetStmt &);
   bool Pre(const parser::ValueStmt &);
   bool Pre(const parser::VolatileStmt &);
   bool Pre(const parser::AllocatableStmt &) {
@@ -6763,6 +6765,9 @@ bool DeclarationVisitor::Pre(const parser::OptionalStmt &x) {
 bool DeclarationVisitor::Pre(const parser::ProtectedStmt &x) {
   return HandleAttributeStmt(Attr::PROTECTED, x.v);
 }
+bool DeclarationVisitor::Pre(const parser::ProtectedTargetStmt &x) {
+  return HandleAttributeStmt(Attr::PROTECTED_TARGET, x.v);
+}
 bool DeclarationVisitor::Pre(const parser::ValueStmt &x) {
   return CheckNotInBlock("VALUE") && // C1107
       HandleAttributeStmt(Attr::VALUE, x.v);
@@ -6833,6 +6838,9 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
   if (CheckDuplicatedAttr(name.source, *symbol, attr)) {
     HandleSaveName(name.source, Attrs{attr});
     SetExplicitAttr(*symbol, attr);
+    if (attr == Attr::PROTECTED_TARGET) {
+      ConvertToObjectEntity(*symbol);
+    }
   }
   return *symbol;
 }
@@ -6873,7 +6881,8 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
       ConvertToProcEntity(symbol);
     } else if (symbol.attrs().HasAny(Attrs{Attr::ALLOCATABLE,
                    Attr::ASYNCHRONOUS, Attr::CONTIGUOUS, Attr::PARAMETER,
-                   Attr::SAVE, Attr::TARGET, Attr::VALUE, Attr::VOLATILE})) {
+                   Attr::PROTECTED_TARGET, Attr::SAVE, Attr::TARGET,
+                   Attr::VALUE, Attr::VOLATILE})) {
       ConvertToObjectEntity(symbol);
     }
     if (attrs.test(Attr::BIND_C)) {
@@ -9346,7 +9355,10 @@ void ConstructVisitor::Post(const parser::SelectRankCaseStmt::Rank &x) {
       CHECK(std::holds_alternative<parser::Default>(x.u));
       // RANK DEFAULT: assumed-rank
       details.set_IsAssumedRank();
-      attrsToKeep |= Attrs{Attr::ALLOCATABLE, Attr::POINTER};
+      // F'2028 11.1.12.3p2: RANK DEFAULT keeps PROTECTED_TARGET, but
+      // RANK(n) does not (11.1.12.3p3).
+      attrsToKeep |=
+          Attrs{Attr::ALLOCATABLE, Attr::POINTER, Attr::PROTECTED_TARGET};
     }
     symbol->attrs() |= selectorAttrs & attrsToKeep;
   }

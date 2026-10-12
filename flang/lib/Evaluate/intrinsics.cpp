@@ -3191,6 +3191,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           if (procPointer) {
             args.emplace_back("mold"s,
                 characteristics::DummyProcedure{common::Clone(*procPointer)});
+            args.back().SetIntent(common::Intent::In);
             fResult.emplace(std::move(*procPointer));
           }
         } else if (auto type{mold->GetType()}) {
@@ -3199,6 +3200,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
               *type, GetShape(context, *mold)};
           args.emplace_back(
               "mold"s, characteristics::DummyDataObject{typeAndShape});
+          args.back().SetIntent(common::Intent::In);
           fResult.emplace(std::move(typeAndShape));
           isAllocatableMold = IsAllocatableDesignator(*mold);
         } else {

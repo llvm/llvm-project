@@ -64,3 +64,36 @@ subroutine test
   !ERROR: Must be a scalar value, but is a rank-1 array
   FORM TEAM (team_number, team, ERRMSG=array_errvar)
 end subroutine
+
+subroutine protected_target_team(p, h, hp, q)
+  use, intrinsic :: iso_fortran_env, only: team_type
+  type :: team_holder
+    type(team_type) :: t
+  end type
+  type :: team_ref
+    type(team_type), pointer, protected_target :: p
+    type(team_type), pointer :: q
+  end type
+  type(team_type), pointer, protected_target :: p
+  type(team_ref) :: h
+  type(team_holder), pointer, protected_target :: hp
+  type(team_type), pointer :: q
+  ! F'2028 C866 and 20.6.7(15): the target of a PROTECTED_TARGET pointer
+  ! may not be a team-variable.
+  !ERROR: Team variable is not definable
+  !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+  FORM TEAM (1, p)
+  !ERROR: Team variable is not definable
+  !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+  FORM TEAM (1, h%p)
+  !ERROR: Team variable is not definable
+  !BECAUSE: The target of PROTECTED_TARGET pointer 'hp' is not definable
+  FORM TEAM (1, hp%t)
+  associate (a => p)
+    !ERROR: Team variable is not definable
+    !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+    FORM TEAM (1, a)
+  end associate
+  FORM TEAM (1, q)
+  FORM TEAM (1, h%q)
+end subroutine

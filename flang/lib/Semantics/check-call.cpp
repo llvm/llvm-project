@@ -67,6 +67,15 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointer(*expr, context.foldingContext())}) {
+      evaluate::AttachDeclaration(
+          messages.Say("Actual argument with PROTECTED_TARGET "
+                       "pointer '%s' requires an explicit "
+                       "interface"_err_en_US,
+              protectedTarget->name()),
+          *protectedTarget);
+    }
     if (const Symbol *base{GetFirstSymbol(*expr)}) {
       context.NoteDefinedSymbol(GetAssociationRoot(*base));
     }
@@ -399,6 +408,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
+  bool dummyIsProtectedTarget{dummy.attrs.test(
+      characteristics::DummyDataObject::Attr::ProtectedTarget)};
   bool dummyIsAllocatableOrPointer{dummyIsAllocatable || dummyIsPointer};
   allowActualArgumentConversions &= !dummyIsAllocatableOrPointer;
   bool typesCompatibleWithIgnoreTKR{
@@ -458,6 +469,36 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       (actualIsAssumedRank && !actualIsPointer && !actualIsAllocatable)};
   bool actualIsPolymorphic{actualType.type().IsPolymorphic()};
   const auto *actualDerived{evaluate::GetDerivedTypeSpec(actualType.type())};
+  if (!scope) {
+    // PROTECTED_TARGET is not a characteristic (15.3.2.2), so C872 and C874
+    // must not affect generic resolution; check only the selected specific.
+  } else if (dummyIsPointer) { // F'2028 C872
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointer(actual, foldingContext,
+                ProtectedTargetContext::PointerAssociationStatus)}) {
+      if (!dummyIsProtectedTarget) {
+        evaluate::AttachDeclaration(
+            messages.Say("Actual argument with "
+                         "PROTECTED_TARGET pointer '%s' may be "
+                         "associated with pointer %s only if "
+                         "it also has the PROTECTED_TARGET "
+                         "attribute"_err_en_US,
+                protectedTarget->name(), dummyName),
+            *protectedTarget);
+      }
+    }
+  } else if (dummy.intent != common::Intent::In) { // F'2028 C874
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointer(actual, foldingContext)}) {
+      evaluate::AttachDeclaration(
+          messages.Say("Actual argument with PROTECTED_TARGET "
+                       "pointer '%s' may be associated with "
+                       "non-pointer %s only if it has "
+                       "INTENT(IN)"_err_en_US,
+              protectedTarget->name(), dummyName),
+          *protectedTarget);
+    }
+  }
   if (typesCompatible) {
     if (isElemental) {
     } else if (dummyIsAssumedRank) {
@@ -1348,7 +1389,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
     const characteristics::Procedure &proc,
     const characteristics::DummyProcedure &dummy, const std::string &dummyName,
-    SemanticsContext &context, bool ignoreImplicitVsExplicit) {
+    SemanticsContext &context, const Scope *scope,
+    bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::CharBlock location{arg.sourceLocation().value_or(messages.at())};
@@ -1480,6 +1522,19 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
       }
     }
     if (dummyIsPointer) {
+      if (const Symbol *protectedTarget{
+              FindProtectedTargetPointer(*expr, foldingContext,
+                  ProtectedTargetContext::PointerAssociationStatus)}) {
+        if (scope) { // not during generic resolution
+          evaluate::AttachDeclaration(
+              messages.Say(
+                  "Actual argument with PROTECTED_TARGET pointer '%s' "
+                  "may not be associated with procedure pointer %s"_err_en_US,
+                  protectedTarget->name(), dummyName),
+              *protectedTarget);
+        }
+        return;
+      }
       if (dummy.intent == common::Intent::In) {
         // need not be definable, can be a target
       } else if (!IsProcedurePointer(*expr)) {
@@ -1769,7 +1824,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
           },
           [&](const characteristics::DummyProcedure &dummy) {
             if (CheckActualArgForLabel(arg)) {
-              CheckProcedureArg(arg, proc, dummy, dummyName, context,
+              CheckProcedureArg(arg, proc, dummy, dummyName, context, scope,
                   ignoreImplicitVsExplicit);
             }
           },

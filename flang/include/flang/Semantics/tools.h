@@ -178,6 +178,9 @@ inline bool IsIntentOut(const Symbol &symbol) {
 inline bool IsProtected(const Symbol &symbol) {
   return symbol.attrs().test(Attr::PROTECTED);
 }
+inline bool IsProtectedTarget(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::PROTECTED_TARGET);
+}
 inline bool IsImpliedDoIndex(const Symbol &symbol) {
   return symbol.owner().kind() == Scope::Kind::ImpliedDos;
 }
@@ -278,6 +281,29 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
 bool CanCUDASymbolBeGlobal(const Symbol &sym);
 
 const Scope *FindCUDADeviceContext(const Scope *);
+
+// PointerDefinition tests the descriptor's containing object, not its target.
+// PointerAssociationStatus also includes the pointer itself for F'2028 C872.
+ENUM_CLASS(
+    ProtectedTargetContext, Target, PointerAssociationStatus, PointerDefinition)
+
+// Finds "a pointer with the PROTECTED_TARGET attribute, or a subobject
+// thereof" (F'2028 C870-C874).  A construct associate name is a distinct
+// entity, so it is not looked through to its selector.  It has the attribute
+// only under RANK DEFAULT, when its selector has it (11.1.12.3); ASSOCIATE
+// and SELECT TYPE associate names lack it (11.1.3.3), and a RANK (n) one may
+// have POINTER but not PROTECTED_TARGET.
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &, evaluate::FoldingContext &,
+    ProtectedTargetContext = ProtectedTargetContext::Target);
+// For variable definition contexts, which extend from an associate name to
+// its selector (F'2028 20.6.7(11)).
+const Symbol *FindProtectedTargetPointerToDefine(const evaluate::DataRef &,
+    evaluate::FoldingContext &,
+    ProtectedTargetContext = ProtectedTargetContext::Target);
+const Symbol *FindProtectedTargetPointerToDefine(
+    const evaluate::Expr<evaluate::SomeType> &, evaluate::FoldingContext &,
+    ProtectedTargetContext = ProtectedTargetContext::Target);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
 bool IsAccessible(const Symbol &, const Scope &);

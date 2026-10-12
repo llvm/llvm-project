@@ -249,10 +249,38 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
   return std::nullopt;
 }
 
+// F'2028 C866 and 8.5.16p2
+static std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock at, const Scope &scope, DefinabilityFlags flags,
+    const evaluate::DataRef &dataRef) {
+  auto &foldingContext{scope.context().foldingContext()};
+  if (flags.test(DefinabilityFlag::PointerDefinition)) {
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointerToDefine(dataRef, foldingContext,
+                ProtectedTargetContext::PointerDefinition)}) {
+      return BlameSymbol(at,
+          IsAllocatable(dataRef.GetLastSymbol().GetUltimate())
+              ? "An allocatable subobject of the target of PROTECTED_TARGET pointer '%s' is not definable"_err_en_US
+              : "A pointer subobject of the target of PROTECTED_TARGET pointer '%s' is not definable"_err_en_US,
+          *protectedTarget);
+    }
+  } else if (const Symbol *protectedTarget{
+                 FindProtectedTargetPointerToDefine(dataRef, foldingContext)}) {
+    return BlameSymbol(at,
+        "The target of PROTECTED_TARGET pointer '%s' is not definable"_err_en_US,
+        *protectedTarget);
+  }
+  return std::nullopt;
+}
+
 // Checks a data-ref
 static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::DataRef &dataRef) {
+  if (auto whyNot{
+          WhyNotDefinableViaProtectedTarget(at, scope, flags, dataRef)}) {
+    return whyNot;
+  }
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
           evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
@@ -270,6 +298,10 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags, const Symbol &original) {
+  if (auto whyNot{WhyNotDefinableViaProtectedTarget(
+          at, scope, flags, evaluate::DataRef{original})}) {
+    return whyNot;
+  }
   auto whyNotBase{WhyNotDefinableBase(at, scope, flags, original,
       /*isWholeSymbol=*/true, /*isComponentPointerTarget=*/false)};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
@@ -326,6 +358,28 @@ public:
 private:
   evaluate::FoldingContext &foldingContext_;
 };
+
+std::optional<parser::Message> WhyNotDefinableViaProtectedTarget(
+    parser::CharBlock at, const Scope &scope, DefinabilityFlags flags,
+    const evaluate::Expr<evaluate::SomeType> &expr) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return WhyNotDefinableViaProtectedTarget(at, scope, flags, *dataRef);
+  } else if (const auto *procDesignator{
+                 std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+    if (const auto *component{procDesignator->GetComponent()}) {
+      return WhyNotDefinableViaProtectedTarget(
+          at, scope, flags, evaluate::DataRef{*component});
+    }
+  } else if (!flags.test(DefinabilityFlag::PointerDefinition)) {
+    if (const Symbol *protectedTarget{FindProtectedTargetPointerToDefine(
+            expr, scope.context().foldingContext())}) {
+      return BlameSymbol(at,
+          "The target of PROTECTED_TARGET pointer '%s' is not definable"_err_en_US,
+          *protectedTarget);
+    }
+  }
+  return std::nullopt;
+}
 
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
@@ -397,6 +451,9 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
+  } else if (auto whyNot{
+                 WhyNotDefinableViaProtectedTarget(at, scope, flags, expr)}) {
+    return whyNot;
   } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};

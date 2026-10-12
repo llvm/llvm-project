@@ -9,6 +9,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -370,6 +371,162 @@ const Symbol *FindExternallyVisibleObject(
     return block;
   }
   return nullptr;
+}
+
+static const Symbol *FindProtectedTargetPointerInDataRef(
+    const evaluate::DataRef &, ProtectedTargetContext, bool,
+    evaluate::FoldingContext &);
+static const Symbol *FindProtectedTargetPointerInNamedEntity(
+    const evaluate::NamedEntity &, ProtectedTargetContext, bool,
+    evaluate::FoldingContext &);
+static const Symbol *FindProtectedTargetPointerInExpr(
+    const evaluate::Expr<evaluate::SomeType> &, ProtectedTargetContext, bool,
+    evaluate::FoldingContext &);
+
+static const Symbol *FindProcedureResultSymbol(
+    const evaluate::ProcedureDesignator &proc) {
+  auto getResultSymbol{[](const Symbol &symbol) -> const Symbol * {
+    if (const auto *subprogram{
+            symbol.GetUltimate().detailsIf<SubprogramDetails>()};
+        subprogram && subprogram->isFunction()) {
+      return &subprogram->result().GetUltimate();
+    }
+    return nullptr;
+  }};
+  if (const Symbol *interface{proc.GetInterfaceSymbol()}) {
+    if (const Symbol *result{getResultSymbol(*interface)}) {
+      return result;
+    }
+  }
+  if (const Symbol *symbol{proc.GetSymbol()}) {
+    return getResultSymbol(*symbol);
+  }
+  return nullptr;
+}
+
+static const Symbol *FindProtectedTargetPointerInSymbol(const Symbol &symbol,
+    ProtectedTargetContext context, bool toDefine,
+    evaluate::FoldingContext &foldingContext) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (const auto *assoc{ultimate.detailsIf<AssocEntityDetails>()}; toDefine &&
+      assoc &&
+      (IsPointer(ultimate) ||
+          context != ProtectedTargetContext::PointerDefinition)) {
+    if (const auto &expr{assoc->expr()}; expr && evaluate::IsVariable(*expr)) {
+      if (const Symbol *fromAssoc{FindProtectedTargetPointerInExpr(*expr,
+              IsPointer(ultimate) ? context : ProtectedTargetContext::Target,
+              toDefine, foldingContext)}) {
+        return fromAssoc;
+      }
+    }
+  }
+  return context != ProtectedTargetContext::PointerDefinition &&
+          IsProtectedTarget(ultimate)
+      ? &ultimate
+      : nullptr;
+}
+
+static const Symbol *FindProtectedTargetPointerInDataRef(
+    const evaluate::DataRef &dataRef, ProtectedTargetContext context,
+    bool toDefine, evaluate::FoldingContext &foldingContext) {
+  return common::visit(
+      common::visitors{
+          [&](const evaluate::SymbolRef &symbol) -> const Symbol * {
+            return FindProtectedTargetPointerInSymbol(
+                *symbol, context, toDefine, foldingContext);
+          },
+          [&](const evaluate::Component &component) -> const Symbol * {
+            const Symbol &ultimate{component.GetLastSymbol().GetUltimate()};
+            if (context != ProtectedTargetContext::PointerDefinition &&
+                IsProtectedTarget(ultimate)) {
+              return &ultimate;
+            }
+            if (context == ProtectedTargetContext::Target &&
+                IsPointer(ultimate)) {
+              return nullptr;
+            }
+            return FindProtectedTargetPointerInDataRef(component.base(),
+                ProtectedTargetContext::Target, toDefine, foldingContext);
+          },
+          [&](const evaluate::ArrayRef &arrayRef) -> const Symbol * {
+            return FindProtectedTargetPointerInNamedEntity(
+                arrayRef.base(), context, toDefine, foldingContext);
+          },
+          [&](const evaluate::CoarrayRef &coarrayRef) -> const Symbol * {
+            return FindProtectedTargetPointerInDataRef(
+                coarrayRef.base(), context, toDefine, foldingContext);
+          },
+      },
+      dataRef.u);
+}
+
+static const Symbol *FindProtectedTargetPointerInNamedEntity(
+    const evaluate::NamedEntity &namedEntity, ProtectedTargetContext context,
+    bool toDefine, evaluate::FoldingContext &foldingContext) {
+  if (const evaluate::SymbolRef *symbol{namedEntity.UnwrapSymbolRef()}) {
+    return FindProtectedTargetPointerInSymbol(
+        symbol->get(), context, toDefine, foldingContext);
+  }
+  return FindProtectedTargetPointerInDataRef(
+      evaluate::DataRef{namedEntity.GetComponent()}, context, toDefine,
+      foldingContext);
+}
+
+static const Symbol *FindProtectedTargetPointerInExpr(
+    const evaluate::Expr<evaluate::SomeType> &expr,
+    ProtectedTargetContext context, bool toDefine,
+    evaluate::FoldingContext &foldingContext) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true, true)}) {
+    return FindProtectedTargetPointerInDataRef(
+        *dataRef, context, toDefine, foldingContext);
+  }
+  if (const auto *procDesignator{
+          std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
+    if (const auto *component{procDesignator->GetComponent()}) {
+      return FindProtectedTargetPointerInDataRef(
+          evaluate::DataRef{*component}, context, toDefine, foldingContext);
+    }
+  }
+  if (const auto *procRef{evaluate::UnwrapProcedureRef(expr)};
+      procRef && context != ProtectedTargetContext::PointerDefinition) {
+    bool resultIsProtectedTarget{false};
+    if (auto characteristics{evaluate::characteristics::Procedure::Characterize(
+            procRef->proc(), foldingContext, /*emitError=*/false)};
+        characteristics && characteristics->functionResult) {
+      resultIsProtectedTarget = characteristics->functionResult->attrs.test(
+          evaluate::characteristics::FunctionResult::Attr::ProtectedTarget);
+    }
+    if (!resultIsProtectedTarget) {
+      if (const Symbol *result{FindProcedureResultSymbol(procRef->proc())}) {
+        resultIsProtectedTarget = IsProtectedTarget(*result);
+      }
+    }
+    if (resultIsProtectedTarget) {
+      return FindProcedureResultSymbol(procRef->proc());
+    }
+  }
+  return nullptr;
+}
+
+const Symbol *FindProtectedTargetPointer(
+    const evaluate::Expr<evaluate::SomeType> &expr,
+    evaluate::FoldingContext &foldingContext, ProtectedTargetContext context) {
+  return FindProtectedTargetPointerInExpr(
+      expr, context, /*toDefine=*/false, foldingContext);
+}
+
+const Symbol *FindProtectedTargetPointerToDefine(
+    const evaluate::DataRef &dataRef, evaluate::FoldingContext &foldingContext,
+    ProtectedTargetContext context) {
+  return FindProtectedTargetPointerInDataRef(
+      dataRef, context, /*toDefine=*/true, foldingContext);
+}
+
+const Symbol *FindProtectedTargetPointerToDefine(
+    const evaluate::Expr<evaluate::SomeType> &expr,
+    evaluate::FoldingContext &foldingContext, ProtectedTargetContext context) {
+  return FindProtectedTargetPointerInExpr(
+      expr, context, /*toDefine=*/true, foldingContext);
 }
 
 const Symbol &BypassGeneric(const Symbol &symbol) {

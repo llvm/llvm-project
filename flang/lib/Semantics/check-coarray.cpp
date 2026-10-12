@@ -347,6 +347,19 @@ static void CheckLockVariable(
   }
 }
 
+// Only the F'2028 PROTECTED_TARGET restrictions are checked here.
+static void CheckProtectedTargetDefinition(SemanticsContext &context,
+    const parser::Variable &var, parser::MessageFixedText &&message) {
+  if (const SomeExpr *expr{GetExpr(context, var)}) {
+    auto at{var.GetSource()};
+    if (auto whyNot{WhyNotDefinableViaProtectedTarget(
+            at, context.FindScope(at), {}, *expr)}) {
+      context.Say(at, std::move(message))
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
+    }
+  }
+}
+
 void CoarrayChecker::Leave(const parser::LockStmt &x) {
   CheckLockVariable(context_, std::get<parser::LockVariable>(x.t));
   bool gotAcquired{false}, gotStat{false}, gotMsg{false};
@@ -364,6 +377,12 @@ void CoarrayChecker::Leave(const parser::LockStmt &x) {
       } else {
         gotAcquired = true;
       }
+      // F'2028 C866, 20.6.7(14)
+      CheckProtectedTargetDefinition(context_,
+          std::get<parser::Scalar<parser::Logical<parser::Variable>>>(
+              lockStat.u)
+              .thing.thing,
+          "ACQUIRED_LOCK variable is not definable"_err_en_US);
     }
   }
 }
@@ -390,6 +409,10 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
   CheckTeamType(
       context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  // F'2028 C866, 20.6.7(15)
+  CheckProtectedTargetDefinition(context_,
+      std::get<parser::TeamVariable>(x.t).thing,
+      "Team variable is not definable"_err_en_US);
   for (const auto &spec :
       std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
     if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {

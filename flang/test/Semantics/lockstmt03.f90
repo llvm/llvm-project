@@ -107,4 +107,35 @@ program test_lock_stmt
     !BECAUSE: 'x' is an INTENT(IN) dummy argument
     unlock(x)
   end
+  subroutine protected_target_acquired(p, h, hp, q)
+    type :: flag_holder
+      logical :: flag
+    end type
+    type :: flag_ref
+      logical, pointer, protected_target :: p
+      logical, pointer :: q
+    end type
+    logical, pointer, protected_target :: p
+    type(flag_ref) :: h
+    type(flag_holder), pointer, protected_target :: hp
+    logical, pointer :: q
+    ! F'2028 C866 and 20.6.7(14): the target of a PROTECTED_TARGET pointer
+    ! may not be an ACQUIRED_LOCK variable.
+    !ERROR: ACQUIRED_LOCK variable is not definable
+    !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+    lock(lock_var, acquired_lock=p)
+    !ERROR: ACQUIRED_LOCK variable is not definable
+    !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+    lock(lock_var, acquired_lock=h%p)
+    !ERROR: ACQUIRED_LOCK variable is not definable
+    !BECAUSE: The target of PROTECTED_TARGET pointer 'hp' is not definable
+    lock(lock_var, acquired_lock=hp%flag)
+    associate (a => p)
+      !ERROR: ACQUIRED_LOCK variable is not definable
+      !BECAUSE: The target of PROTECTED_TARGET pointer 'p' is not definable
+      lock(lock_var, acquired_lock=a)
+    end associate
+    lock(lock_var, acquired_lock=q)
+    lock(lock_var, acquired_lock=h%q)
+  end
 end program test_lock_stmt

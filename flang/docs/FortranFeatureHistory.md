@@ -256,3 +256,13 @@ Features marked with asterisks `*` were gone by FORTRAN IV.
 * IMPLICIT NONE can require explicit EXTERNAL
 * RECURSIVE becomes default; NON_RECURSIVE added
 * DO CONCURRENT locality clauses
+
+## Fortran 2028 draft work items
+* PROTECTED_TARGET attribute and PROTECTED_TARGET statement for data pointers,
+  including semantic constraint checks on definition, allocation, deallocation,
+  pointer assignment, and argument association.
+  In the draft (J3/26-007r1), C864 still prohibits a use-associated
+  nonpointer PROTECTED object as a data-target, while 8.5.16 NOTE 1 shows
+  one associated with a PROTECTED_TARGET pointer. When the pointer has
+  the PROTECTED_TARGET attribute, Flang follows the constraint and reports
+  an error; this check does not cover pointers without that attribute.

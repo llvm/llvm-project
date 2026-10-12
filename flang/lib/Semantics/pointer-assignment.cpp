@@ -207,6 +207,46 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (lhs_ && IsProcedure(*lhs_)) {
     return true;
   }
+  if (lhs_ && !IsProtectedTarget(lhs_->GetUltimate())) {
+    if (const Symbol *protectedTarget{
+            FindProtectedTargetPointer(rhs, foldingContext_)}) {
+      if (pointerComponentLHS_) { // F'2028 C871
+        evaluate::AttachDeclaration(
+            Say("Structure constructor target '%s' has the PROTECTED_TARGET "
+                "attribute; component '%s' must also have the "
+                "PROTECTED_TARGET attribute"_err_en_US,
+                protectedTarget->name(), pointerComponentLHS_->name()),
+            *protectedTarget);
+      } else { // F'2028 C870
+        evaluate::AttachDeclaration(
+            Say("Pointer assignment target '%s' has the PROTECTED_TARGET "
+                "attribute; pointer '%s' must also have the "
+                "PROTECTED_TARGET attribute"_err_en_US,
+                protectedTarget->name(), lhs_->name()),
+            *protectedTarget);
+      }
+      return false;
+    }
+  }
+  if (lhs_ && IsProtectedTarget(lhs_->GetUltimate())) {
+    if (auto symbols{GetSymbolVector(ExtractDataRef(rhs, true, true))};
+        !symbols.empty()) {
+      const Symbol &ultimate{symbols.front()->GetUltimate()};
+      // F'2028 C864 prohibits this association despite the example in
+      // 8.5.16 NOTE 1.
+      if (IsProtected(ultimate) && IsUseAssociated(ultimate, scope_) &&
+          llvm::none_of(symbols,
+              [](const Symbol &symbol) { return IsPointer(symbol); })) {
+        evaluate::AttachDeclaration(Say("Use-associated nonpointer PROTECTED "
+                                        "target '%s' may not be pointer-"
+                                        "assigned through PROTECTED_TARGET "
+                                        "pointer '%s'"_err_en_US,
+                                        ultimate.name(), lhs_->name()),
+            ultimate);
+        return false;
+      }
+    }
+  }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
     if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
@@ -278,6 +318,20 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   if (!funcResult) {
     msg =
         "%s is associated with the non-existent result of reference to procedure"_err_en_US;
+  } else if (lhs_ && !IsProtectedTarget(lhs_->GetUltimate()) &&
+      funcResult->attrs.test(FunctionResult::Attr::ProtectedTarget)) {
+    if (pointerComponentLHS_) { // F'2028 C871
+      Say("Structure constructor target is function '%s' result with the "
+          "PROTECTED_TARGET attribute; component '%s' must also have the "
+          "PROTECTED_TARGET attribute"_err_en_US,
+          funcName, pointerComponentLHS_->name());
+    } else { // F'2028 C870
+      Say("Pointer assignment target is function '%s' result with the "
+          "PROTECTED_TARGET attribute; pointer '%s' must also have the "
+          "PROTECTED_TARGET attribute"_err_en_US,
+          funcName, lhs_->name());
+    }
+    return false;
   } else if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
     msg =

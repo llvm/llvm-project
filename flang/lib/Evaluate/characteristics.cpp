@@ -281,8 +281,10 @@ llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
 }
 
 bool DummyDataObject::operator==(const DummyDataObject &that) const {
-  return type == that.type && attrs == that.attrs && intent == that.intent &&
-      coshape == that.coshape && cudaDataAttr == that.cudaDataAttr;
+  return type == that.type &&
+      CharacteristicAttrs(attrs) == CharacteristicAttrs(that.attrs) &&
+      intent == that.intent && coshape == that.coshape &&
+      cudaDataAttr == that.cudaDataAttr;
 }
 
 static bool IsOkWithSequenceAssociation(
@@ -372,7 +374,8 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   if (!IdenticalSignificantAttrs(attrs, actual.attrs)) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";
-      auto differences{attrs ^ actual.attrs};
+      auto differences{
+          CharacteristicAttrs(attrs) ^ CharacteristicAttrs(actual.attrs)};
       auto sep{": "s};
       differences.IterateOverMembers([&](DummyDataObject::Attr x) {
         *whyNot += sep + std::string{EnumToString(x)};
@@ -439,6 +442,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
               {Attr::VALUE, DummyDataObject::Attr::Value},
               {Attr::VOLATILE, DummyDataObject::Attr::Volatile},
               {Attr::POINTER, DummyDataObject::Attr::Pointer},
+              {Attr::PROTECTED_TARGET, DummyDataObject::Attr::ProtectedTarget},
               {Attr::TARGET, DummyDataObject::Attr::Target},
           });
       result->intent = GetIntent(symbol.attrs());
@@ -1059,8 +1063,8 @@ FunctionResult::FunctionResult(Procedure &&p) : u{std::move(p)} {}
 FunctionResult::~FunctionResult() {}
 
 bool FunctionResult::operator==(const FunctionResult &that) const {
-  return attrs == that.attrs && cudaDataAttr == that.cudaDataAttr &&
-      u == that.u;
+  return CharacteristicAttrs(attrs) == CharacteristicAttrs(that.attrs) &&
+      cudaDataAttr == that.cudaDataAttr && u == that.u;
 }
 
 static std::optional<FunctionResult> CharacterizeFunctionResult(
@@ -1075,6 +1079,8 @@ static std::optional<FunctionResult> CharacterizeFunctionResult(
               {semantics::Attr::ALLOCATABLE, FunctionResult::Attr::Allocatable},
               {semantics::Attr::CONTIGUOUS, FunctionResult::Attr::Contiguous},
               {semantics::Attr::POINTER, FunctionResult::Attr::Pointer},
+              {semantics::Attr::PROTECTED_TARGET,
+                  FunctionResult::Attr::ProtectedTarget},
           });
       result.cudaDataAttr = object->cudaDataAttr();
       return result;
@@ -1195,11 +1201,11 @@ static std::optional<std::string> AreIncompatibleFunctionResultShapes(
 
 bool FunctionResult::IsCompatibleWith(
     const FunctionResult &actual, std::string *whyNot) const {
-  Attrs actualAttrs{actual.attrs};
+  Attrs actualAttrs{CharacteristicAttrs(actual.attrs)};
   if (!attrs.test(Attr::Contiguous)) {
     actualAttrs.reset(Attr::Contiguous);
   }
-  if (attrs != actualAttrs) {
+  if (CharacteristicAttrs(attrs) != actualAttrs) {
     if (whyNot) {
       *whyNot = "function results have incompatible attributes";
     }

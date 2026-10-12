@@ -103,3 +103,26 @@ contains
     i = z
   end
 end
+
+! The right-hand side of a defined assignment is passed enclosed in
+! parentheses (15.4.3.4.3), so a PROTECTED_TARGET pointer there is not the
+! actual argument, C874 does not apply, and the defined assignment is selected.
+module m4
+  type :: t
+    integer :: n
+  end type
+  interface assignment(=)
+    subroutine s4(x, y)
+      import
+      type(t), intent(out) :: x
+      type(t) :: y
+    end
+  end interface
+contains
+  subroutine test(x, p)
+    type(t), intent(out) :: x
+    type(t), pointer, protected_target :: p
+    !CHECK: CALL s4(x,(p))
+    x = p
+  end
+end
