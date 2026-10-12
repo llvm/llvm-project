@@ -11,8 +11,8 @@
 // but an entry block that emits no code lets a branch to the next block (e.g. a
 // loop backedge) target the function's first instruction, which a hotpatch
 // overwrites. Such entry blocks are padded with a NOP, placed after any
-// zero-byte instructions (e.g. an empty Windows prologue). Like on x86, an entry
-// that starts with inline assembly is also padded, since the assembly may
+// zero-byte instructions (e.g. an empty Windows prologue). Like on x86, an
+// entry that starts with inline assembly is also padded, since the assembly may
 // define a branch target.
 //
 // This must run after every pass that may delete instructions, and before
