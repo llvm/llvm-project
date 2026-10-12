@@ -22,7 +22,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 
@@ -75,9 +74,10 @@ static bool isSequentialLoop(Operation *op) {
 static bool
 canHoistFromWhile(scf::WhileOp loop,
                   const BufferViewFlowAnalysis::ValueSetT &aliases) {
-  // Further hoisting across an enclosing loop with unmodeled parallel
-  // execution could share the allocation across iterations.
-  if (!isa<FunctionOpInterface>(loop->getParentOp()))
+  // Require a parent that stops further loop hoisting. Otherwise, the
+  // dominator-based path could move the allocation across an enclosing loop
+  // with unmodeled parallel execution.
+  if (isSequentialLoop(loop->getParentOp()))
     return false;
 
   // Check all aliases, including loop results: memory effects alone do not rule
@@ -90,6 +90,9 @@ canHoistFromWhile(scf::WhileOp loop,
       if (user->getParentOp() != loop && user->getBlock() != loop->getBlock())
         return false;
       if (auto load = dyn_cast<memref::LoadOp>(user)) {
+        // Reusing the allocation across iterations can invalidate invariant
+        // loads if different iterations store different values to the same
+        // location.
         if (load.getInvariant())
           return false;
         continue;

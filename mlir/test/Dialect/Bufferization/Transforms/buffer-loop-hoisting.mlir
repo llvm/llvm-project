@@ -831,6 +831,95 @@ func.func @no_hoist_while_pointer_escape(%addresses: memref<2xindex>) -> index {
 
 // -----
 
+// Hoist before the while without speculating the allocation out of the branch.
+// CHECK-LABEL: func @while_exit_alias_if_parent(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.if
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+func.func @while_exit_alias_if_parent(%run: i1, %condition: i1, %out: memref<index>) {
+  %c0 = arith.constant 0 : index
+  scf.if %run {
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %c0, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %value = memref.load %last[%c0] : memref<1xindex>
+    memref.store %value, %out[] : memref<index>
+  }
+  return
+}
+
+// -----
+
+// The non-loop parent stops further hoisting after crossing the while.
+// CHECK-LABEL: func @while_exit_alias_execute_region_parent(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.execute_region
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+func.func @while_exit_alias_execute_region_parent(%condition: i1, %out: memref<index>) {
+  %c0 = arith.constant 0 : index
+  scf.execute_region {
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %c0, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %value = memref.load %last[%c0] : memref<1xindex>
+    memref.store %value, %out[] : memref<index>
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// Hoisting from the while must preserve a private allocation per parallel
+// iteration.
+// CHECK-LABEL: func @while_exit_alias_parallel_parent(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.parallel
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK: scf.condition{{.*}} %[[ALLOC]]
+// CHECK: memref.load %[[LAST]]
+func.func @while_exit_alias_parallel_parent(%condition: i1, %out: memref<2xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    %last = scf.while () : () -> memref<1xindex> {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      scf.condition(%condition) %buffer : memref<1xindex>
+    } do {
+    ^bb0(%current: memref<1xindex>):
+      scf.yield
+    }
+    %value = memref.load %last[%c0] : memref<1xindex>
+    memref.store %value, %out[%i] : memref<2xindex>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
 // Hoisting into acc.loop would allow a subsequent hoist to share the allocation
 // between parallel iterations. Keep it inside scf.while.
 // CHECK-LABEL: func @no_hoist_while_parallel_acc_parent(
@@ -869,8 +958,8 @@ func.func @no_hoist_while_parallel_acc_parent(%out: memref<2xindex>) {
 
 // -----
 
-// Hoisting with exit aliases requires a loop directly in a function body,
-// even when the enclosing loop is sequential.
+// The fallback requires a parent that stops further loop hoisting.
+// An enclosing sequential loop does not provide that boundary.
 // CHECK-LABEL: func @no_hoist_while_nested_for(
 // CHECK-NOT: memref.alloc
 // CHECK: scf.for
