@@ -7090,7 +7090,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         NDecl = FDecl;
         Fn = DeclRefExpr::Create(
             Context, DRE->getQualifierLoc(), SourceLocation(), FDecl, false,
-            SourceLocation(), Fn->getType() /* BuiltinFnTy */,
+            DRE->getLocation(), Fn->getType() /* BuiltinFnTy */,
             Fn->getValueKind(), FDecl, nullptr, DRE->isNonOdrUse());
       }
     }

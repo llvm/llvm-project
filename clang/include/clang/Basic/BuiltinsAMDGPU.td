@@ -358,8 +358,8 @@ def __builtin_amdgcn_fcmpf : AMDGPUBuiltin<"uint64_t(float, float, _Constant int
 //===----------------------------------------------------------------------===//
 // Flat addressing builtins.
 //===----------------------------------------------------------------------===//
-def __builtin_amdgcn_is_shared : AMDGPUBuiltin<"bool(void const address_space<0> *)", [Const]>;
-def __builtin_amdgcn_is_private : AMDGPUBuiltin<"bool(void const address_space<0> *)", [Const]>;
+def __builtin_amdgcn_is_shared : AMDGPUBuiltin<"bool(void const *)", [Const]>;
+def __builtin_amdgcn_is_private : AMDGPUBuiltin<"bool(void const *)", [Const]>;
 
 //===----------------------------------------------------------------------===//
 // GWS builtins.
