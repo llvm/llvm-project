@@ -9,55 +9,49 @@
 ; Check that a vector value live-out is correctly extracted using vector.splice
 ; and vector.extract. For extracting the last <4 x i32> SegmentTy in a re-vectorised
 ; value, the latter is "spliced right" by the element count of SegmentTy, i.e. 4.
-define <4 x i32> @vector_live_out(ptr noalias %src, i64 %n) {
+define <4 x i32> @vector_live_out(ptr noalias %src) vscale_range(1, 16) {
 ; SVF1-LABEL: define <4 x i32> @vector_live_out(
-; SVF1-SAME: ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; SVF1-SAME: ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVF1-NEXT:  [[ENTRY:.*:]]
-; SVF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SVF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP0]]
-; SVF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; SVF1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; SVF1:       [[VECTOR_PH]]:
-; SVF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP0]]
-; SVF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; SVF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVF1:       [[VECTOR_BODY]]:
 ; SVF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVF1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[INDEX]]
 ; SVF1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP1]], align 16
 ; SVF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
-; SVF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SVF1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SVF1-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; SVF1:       [[MIDDLE_BLOCK]]:
 ; SVF1-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> poison, i32 4)
 ; SVF1-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[TMP3]], i64 0)
-; SVF1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; SVF1-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; SVF1-NEXT:    br label %[[SCALAR_PH:.*]]
 ; SVF1:       [[SCALAR_PH]]:
+; SVF1-NEXT:    ret <4 x i32> [[TMP4]]
 ;
 ; SVF2-LABEL: define <4 x i32> @vector_live_out(
-; SVF2-SAME: ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; SVF2-SAME: ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVF2-NEXT:  [[ENTRY:.*:]]
+; SVF2-NEXT:    br label %[[VECTOR_PH:.*]]
+; SVF2:       [[VECTOR_PH]]:
 ; SVF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
-; SVF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; SVF2:       [[VECTOR_PH]]:
-; SVF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
-; SVF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVF2:       [[VECTOR_BODY]]:
 ; SVF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr [[SRC]], i64 [[INDEX]]
 ; SVF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i32>, ptr [[TMP3]], align 16
 ; SVF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; SVF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; SVF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SVF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; SVF2:       [[MIDDLE_BLOCK]]:
 ; SVF2-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.vector.splice.right.nxv8i32(<vscale x 8 x i32> [[WIDE_LOAD]], <vscale x 8 x i32> poison, i32 4)
 ; SVF2-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv8i32(<vscale x 8 x i32> [[TMP5]], i64 0)
-; SVF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; SVF2-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; SVF2-NEXT:    br label %[[SCALAR_PH:.*]]
 ; SVF2:       [[SCALAR_PH]]:
+; SVF2-NEXT:    ret <4 x i32> [[TMP6]]
 ;
 entry:
   br label %loop
@@ -67,7 +61,7 @@ loop:
   %p = getelementptr inbounds <4 x i32>, ptr %src, i64 %iv
   %v = load <4 x i32>, ptr %p, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:

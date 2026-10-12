@@ -8,9 +8,9 @@
 
 ; Make sure vector loops aren't modified when -vectorize-vector-loops is false.
 
-define void @copy_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
+define void @copy_v4(ptr noalias %dst, ptr noalias %src) vscale_range(1, 16) {
 ; NO-REVEC-LABEL: define void @copy_v4(
-; NO-REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; NO-REVEC-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NO-REVEC-NEXT:  [[ENTRY:.*]]:
 ; NO-REVEC-NEXT:    br label %[[LOOP:.*]]
 ; NO-REVEC:       [[LOOP]]:
@@ -20,7 +20,7 @@ define void @copy_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; NO-REVEC-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[SRC_GEP]], align 16
 ; NO-REVEC-NEXT:    store <4 x i32> [[V]], ptr [[DST_GEP]], align 16
 ; NO-REVEC-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; NO-REVEC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; NO-REVEC-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; NO-REVEC-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; NO-REVEC:       [[EXIT]]:
 ; NO-REVEC-NEXT:    ret void
@@ -35,7 +35,7 @@ loop:
   %v = load <4 x i32>, ptr %src.gep, align 16
   store <4 x i32> %v, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
