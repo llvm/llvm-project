@@ -695,9 +695,9 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     if (Inserted)
       continue;
 
-    // The source profile should not have duplicate vtable records at the same
-    // location. In case duplicate vtables are found, reader can emit a warning
-    // but continue processing the profile.
+    // Without FS discriminators, the source profile should not have duplicate
+    // vtable records at the same location. Emit a warning about duplicate
+    // vtables and continue processing the profile.
     if (!ProfileIsFS) {
       Ctx.diagnose(DiagnosticInfoSampleProfile(
           Buffer->getBufferIdentifier(), 0,
