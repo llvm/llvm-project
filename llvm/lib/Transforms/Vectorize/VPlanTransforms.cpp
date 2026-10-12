@@ -1302,7 +1302,8 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     if (match(A, m_Broadcast(m_VPValue(B))))
       return B;
 
-    if (isa<VPInstruction, VPReplicateRecipe>(A) && vputils::isSingleScalar(A))
+    if (isa<VPIRValue, VPInstruction, VPReplicateRecipe>(A) &&
+        vputils::isSingleScalar(A))
       return A;
 
     if (Plan.hasScalarVFOnly())
