@@ -1299,7 +1299,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
   // Slice off the sought character's high end bits.
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
-  Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
+  Value *CEqS0 =
+      B.CreateICmpEQ(ConstantInt::get(Int8Ty, (unsigned char)Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
@@ -1390,7 +1391,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (Pos != StringRef::npos) {
       // Handle two consecutive sequences of the same characters.
       Value *PosVal = ConstantInt::get(SizeTy, Pos);
-      Value *StrPos = ConstantInt::get(Int8Ty, Str[Pos]);
+      Value *StrPos = ConstantInt::get(Int8Ty, (unsigned char)Str[Pos]);
       Value *CEqSPos = B.CreateICmpEQ(CharVal, StrPos);
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
@@ -1398,7 +1399,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
     }
 
-    Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
+    Value *Str0 = ConstantInt::get(Int8Ty, (unsigned char)Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
