@@ -1,0 +1,74 @@
+# Check that the machine verifier runs at the end of a pipeline that stops
+# before code emission, and that -disable-mir-output-verify suppresses it.
+
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -run-pass=none -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck --check-prefix=RUN-PASS %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -run-pass=none -debug-pass=Structure -filetype=null -disable-mir-output-verify %s 2>&1 | FileCheck --check-prefix=RUN-PASS-NOVERIFY %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -run-pass=none -debug-pass=Structure -filetype=null -disable-verify %s 2>&1 | FileCheck --check-prefix=RUN-PASS %s
+
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null -disable-mir-output-verify %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP-NOVERIFY %s
+
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes %s | FileCheck --check-prefix=NPM-PASSES %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -disable-mir-output-verify %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
+
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null %s | FileCheck --check-prefix=NPM-STOP %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null -disable-mir-output-verify %s | FileCheck --check-prefix=NPM-STOP-NOVERIFY %s
+
+# No extra verifier when one already runs after each pass.
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -run-pass=machine-cp -debug-pass=Structure -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck --check-prefix=RUN-PASS-VERIFY-EACH %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm=false -debug-pass=Structure -filetype=null -verify-machineinstrs %s 2>&1 | FileCheck --check-prefix=LEGACY-STOP-VERIFY-EACH %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -passes=no-op-machine-function -print-pipeline-passes -verify-each %s | FileCheck --check-prefix=NPM-PASSES-NOVERIFY %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -start-before=machine-cp -stop-after=machine-cp -enable-new-pm -print-pipeline-passes -filetype=null -verify-each %s | FileCheck --check-prefix=NPM-STOP-NOVERIFY %s
+
+# RUN-PASS: FunctionPass Manager
+# RUN-PASS-NEXT: Verify generated machine code
+# RUN-PASS-NEXT: MIR Printing Pass
+# RUN-PASS-NEXT: Free MachineFunction
+
+# RUN-PASS-NOVERIFY: FunctionPass Manager
+# RUN-PASS-NOVERIFY-NEXT: MIR Printing Pass
+# RUN-PASS-NOVERIFY-NEXT: Free MachineFunction
+
+# RUN-PASS-VERIFY-EACH: FunctionPass Manager
+# RUN-PASS-VERIFY-EACH-NEXT: Verify generated machine code
+# RUN-PASS-VERIFY-EACH-NEXT: Machine Copy Propagation Pass
+# RUN-PASS-VERIFY-EACH-NEXT: Verify generated machine code
+# RUN-PASS-VERIFY-EACH-NEXT: MIR Printing Pass
+# RUN-PASS-VERIFY-EACH-NEXT: Free MachineFunction
+
+# LEGACY-STOP: FunctionPass Manager
+# LEGACY-STOP-NEXT: Machine Copy Propagation Pass
+# LEGACY-STOP-NEXT: Lazy Machine Block Frequency Analysis
+# LEGACY-STOP-NEXT: Machine Optimization Remark Emitter
+# LEGACY-STOP-NEXT: Stack Frame Layout Analysis
+# LEGACY-STOP-NEXT: Verify generated machine code
+# LEGACY-STOP-NEXT: Free MachineFunction
+
+# LEGACY-STOP-NOVERIFY: FunctionPass Manager
+# LEGACY-STOP-NOVERIFY-NEXT: Machine Copy Propagation Pass
+# LEGACY-STOP-NOVERIFY-NEXT: Lazy Machine Block Frequency Analysis
+# LEGACY-STOP-NOVERIFY-NEXT: Machine Optimization Remark Emitter
+# LEGACY-STOP-NOVERIFY-NEXT: Stack Frame Layout Analysis
+# LEGACY-STOP-NOVERIFY-NEXT: Free MachineFunction
+
+# LEGACY-STOP-VERIFY-EACH: FunctionPass Manager
+# LEGACY-STOP-VERIFY-EACH-NEXT: Verify generated machine code
+# LEGACY-STOP-VERIFY-EACH-NEXT: Machine Copy Propagation Pass
+# LEGACY-STOP-VERIFY-EACH-NEXT: Verify generated machine code
+# LEGACY-STOP-VERIFY-EACH-NEXT: Lazy Machine Block Frequency Analysis
+# LEGACY-STOP-VERIFY-EACH-NEXT: Machine Optimization Remark Emitter
+# LEGACY-STOP-VERIFY-EACH-NEXT: Stack Frame Layout Analysis
+# LEGACY-STOP-VERIFY-EACH-NEXT: Free MachineFunction
+
+# NPM-PASSES: PrintMIRPreparePass,function(machine-function(verify,print))
+# NPM-PASSES-NOVERIFY: PrintMIRPreparePass,function(machine-function(print))
+
+# NPM-STOP: function(machine-function(machine-cp,verify),free-machine-function)
+# NPM-STOP-NOVERIFY: function(machine-function(machine-cp),free-machine-function)
+
+---
+name: f
+body: |
+  bb.0:
+    RET 0
+...

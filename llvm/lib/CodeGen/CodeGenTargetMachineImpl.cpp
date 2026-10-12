@@ -242,6 +242,8 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {
+    if (PassConfig->getMachineVerifierMode() == MachineVerifierMode::End)
+      PM.add(createMachineVerifierPass("At end of pipeline"));
     // MIR printing is redundant with -filetype=null.
     if (FileType != CodeGenFileType::Null)
       PM.add(createPrintMIRPass(Out));
