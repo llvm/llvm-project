@@ -11,6 +11,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -68,6 +69,12 @@ public:
       : mlir::OpBuilder(&mlirContext) {}
   CIRBaseBuilderTy(mlir::OpBuilder &builder) : mlir::OpBuilder(builder) {}
 
+  bool isFPConstrained = false;
+  clang::LangOptions::FPExceptionModeKind defaultConstrainedExcept =
+      clang::LangOptions::FPE_Ignore;
+  llvm::RoundingMode defaultConstrainedRounding =
+      llvm::RoundingMode::NearestTiesToEven;
+
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
     return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(typ, val));
@@ -109,6 +116,11 @@ public:
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(ty)) {
+      assert(bitFieldTy.ownsBytes() &&
+             "a zero-width bit-field takes no initializer");
+      return getZeroInitAttr(bitFieldTy.getStorageType());
+    }
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
@@ -119,6 +131,8 @@ public:
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
       return cir::ZeroAttr::get(vecTy);
+    if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(ty))
+      return cir::ZeroAttr::get(matrixTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -203,6 +217,96 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() const { return isFPConstrained; }
+
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(
+      clang::LangOptions::FPExceptionModeKind newExcept) {
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  clang::LangOptions::FPExceptionModeKind getDefaultConstrainedExcept() const {
+    return defaultConstrainedExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() const {
+    return defaultConstrainedRounding;
+  }
+
+  /// Build the `#cir.fenv` attribute describing the constrained floating-point
+  /// environment currently in effect. This is attached to floating-point
+  /// operations that support it to capture the rounding and exception
+  /// behavior. Returns a null attribute when constrained floating-point is not
+  /// enabled, in which case no attribute should be attached.
+  cir::FenvAttr getConstrainedFPAttr() {
+    if (!isFPConstrained)
+      return {};
+
+    cir::FPDynamicRoundingMode roundingMode;
+    switch (defaultConstrainedRounding) {
+    case llvm::RoundingMode::NearestTiesToEven:
+      roundingMode = cir::FPDynamicRoundingMode::ToNearest;
+      break;
+    case llvm::RoundingMode::TowardNegative:
+      roundingMode = cir::FPDynamicRoundingMode::Downward;
+      break;
+    case llvm::RoundingMode::TowardPositive:
+      roundingMode = cir::FPDynamicRoundingMode::Upward;
+      break;
+    case llvm::RoundingMode::TowardZero:
+      roundingMode = cir::FPDynamicRoundingMode::UpwardZero;
+      break;
+    case llvm::RoundingMode::NearestTiesToAway:
+      roundingMode = cir::FPDynamicRoundingMode::ToNearestAway;
+      break;
+    case llvm::RoundingMode::Dynamic:
+      roundingMode = cir::FPDynamicRoundingMode::Unknown;
+      break;
+    default:
+      llvm_unreachable("unexpected constrained rounding mode");
+    }
+
+    cir::FPExceptionMode exceptMode;
+    bool strictExcept;
+    switch (defaultConstrainedExcept) {
+    case clang::LangOptions::FPE_Ignore:
+      exceptMode = cir::FPExceptionMode::Masked;
+      strictExcept = false;
+      break;
+    case clang::LangOptions::FPE_MayTrap:
+      exceptMode = cir::FPExceptionMode::Unknown;
+      strictExcept = false;
+      break;
+    case clang::LangOptions::FPE_Strict:
+      exceptMode = cir::FPExceptionMode::Unknown;
+      strictExcept = true;
+      break;
+    default:
+      llvm_unreachable("unexpected constrained exception mode");
+    }
+
+    return cir::FenvAttr::get(getContext(), roundingMode, exceptMode,
+                              mlir::BoolAttr::get(getContext(), strictExcept));
+  }
+
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
                                   mlir::Value imag) {
     auto resultComplexTy = cir::ComplexType::get(real.getType());
@@ -222,6 +326,40 @@ public:
     if (auto complexResultType = mlir::dyn_cast<cir::ComplexType>(resultType))
       resultType = complexResultType.getElementType();
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
+  }
+
+  mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFAddOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexAddOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFSubOp::create(*this, loc, lhs, rhs);
+    return cir::ComplexSubOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexMul(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFMulOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexMulOp::create(*this, loc, lhs, rhs);
+  }
+
+  mlir::Value createComplexDiv(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               cir::ComplexRangeKind rangeKind) {
+    auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
+    if (cir::isAnyFloatingPointType(complexTy.getElementType()))
+      return cir::ComplexFDivOp::create(*this, loc, lhs, rhs, rangeKind);
+    return cir::ComplexDivOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
@@ -368,29 +506,31 @@ public:
   /// Get constant address of a global variable as an MLIR attribute.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
                                         cir::GlobalOp globalOp,
-                                        mlir::ArrayAttr indices = {}) {
+                                        mlir::ArrayAttr indices = {},
+                                        bool addressPoint = false) {
     auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
-    return cir::GlobalViewAttr::get(type, symbol, indices);
+    return cir::GlobalViewAttr::get(type, symbol, indices, addressPoint);
   }
 
   /// Get constant address of a global variable as an MLIR attribute.
   /// This overload converts raw int64_t indices to an ArrayAttr.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
                                         cir::GlobalOp globalOp,
-                                        llvm::ArrayRef<int64_t> indices) {
+                                        llvm::ArrayRef<int64_t> indices,
+                                        bool addressPoint = false) {
     llvm::SmallVector<mlir::Attribute> attrs;
     for (int64_t ind : indices)
       attrs.push_back(getI64IntegerAttr(ind));
     mlir::ArrayAttr arAttr = mlir::ArrayAttr::get(getContext(), attrs);
-    return getGlobalViewAttr(type, globalOp, arAttr);
+    return getGlobalViewAttr(type, globalOp, arAttr, addressPoint);
   }
 
   cir::GetGlobalOp createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                                    bool threadLocal = false) {
-    assert(!cir::MissingFeatures::addressSpace());
-    return cir::GetGlobalOp::create(*this, loc,
-                                    getPointerTo(global.getSymType()),
-                                    global.getSymNameAttr(), threadLocal);
+    return cir::GetGlobalOp::create(
+        *this, loc,
+        getPointerTo(global.getSymType(), global.getAddrSpaceAttr()),
+        global.getSymNameAttr(), threadLocal);
   }
 
   cir::GetGlobalOp createGetGlobal(cir::GlobalOp global,
@@ -473,9 +613,12 @@ public:
                            mlir::Type returnType, mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
+    if (callingConv != cir::CallingConv::C)
+      op.setCallingConv(callingConv);
 
     if (!argAttrs.empty()) {
       llvm::SmallVector<mlir::Attribute> argDictAttrs;
@@ -501,10 +644,11 @@ public:
                            mlir::ValueRange operands,
                            llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                            llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                           cir::CallingConv callingConv = cir::CallingConv::C) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        attrs, argAttrs, resAttrs);
+                        attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp
@@ -512,12 +656,13 @@ public:
                        cir::FuncType funcType, mlir::ValueRange operands,
                        llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
                        llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
-                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {},
+                       cir::CallingConv callingConv = cir::CallingConv::C) {
     llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
     resOperands.append(operands.begin(), operands.end());
 
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
-                        resOperands, attrs, argAttrs, resAttrs);
+                        resOperands, attrs, argAttrs, resAttrs, callingConv);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
@@ -744,45 +889,41 @@ public:
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FAddOp::create(*this, loc, lhs, rhs);
+    return cir::FAddOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FSubOp::create(*this, loc, lhs, rhs);
+    return cir::FSubOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FMulOp::create(*this, loc, lhs, rhs);
+    return cir::FMulOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FDivOp::create(*this, loc, lhs, rhs);
+    return cir::FDivOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFRem(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
-    return cir::FRemOp::create(*this, loc, lhs, rhs);
+    return cir::FRemOp::create(*this, loc, lhs, rhs, getConstrainedFPAttr());
   }
 
   mlir::Value createFNeg(mlir::Location loc, mlir::Value operand) {
     assert(cir::isFPOrVectorOfFPType(operand.getType()) &&
            "expected floating-point or vector-of-float type");
     assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
+    // fneg does not raise FP exceptions or depend on the rounding mode, so it
+    // never carries an fenv attribute.
     return cir::FNegOp::create(*this, loc, operand);
   }
 
@@ -794,19 +935,52 @@ public:
     return cir::MaxOp::create(*this, loc, lhs, rhs);
   }
 
-  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
-                           mlir::Value lhs, mlir::Value rhs) {
-    return cir::CmpOp::create(*this, loc, kind, lhs, rhs);
+  mlir::Value createMin(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return cir::MinOp::create(*this, loc, lhs, rhs);
   }
 
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    cir::FenvAttr fenv;
+    if (cir::isAnyFloatingPointType(lhs.getType()))
+      fenv = getConstrainedFPAttr();
+    return cir::CmpOp::create(*this, loc, kind, lhs, rhs, fenv);
+  }
+
+  /// Compares \p lhs and \p rhs element-wise.  Each result element is a
+  /// signed integer of the operand element's bit width.  That is not the
+  /// result an FP80 element needs, so an FP80 compare names its result type
+  /// with the overload below.
   cir::VecCmpOp createVecCompare(mlir::Location loc, cir::CmpOpKind kind,
                                  mlir::Value lhs, mlir::Value rhs) {
     VectorType vecCast = mlir::cast<VectorType>(lhs.getType());
-    IntType integralTy =
-        getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
-    VectorType integralVecTy =
-        cir::VectorType::get(integralTy, vecCast.getSize());
-    return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
+    mlir::Type elemTy = vecCast.getElementType();
+    assert(!(mlir::isa<cir::FPTypeInterface>(elemTy) &&
+             &mlir::cast<cir::FPTypeInterface>(elemTy).getFloatSemantics() ==
+                 &llvm::APFloat::x87DoubleExtended()) &&
+           "an FP80 vector compare must name its result type");
+    IntType integralTy = getSIntNTy(getCIRIntOrFloatBitWidth(elemTy));
+    return createVecCompare(loc,
+                            cir::VectorType::get(integralTy, vecCast.getSize()),
+                            kind, lhs, rhs);
+  }
+
+  /// Compares \p lhs and \p rhs element-wise, producing \p resultTy, which
+  /// must be a vector of integers or bools with as many elements as \p lhs.
+  /// The result element width can then differ from the operand element's
+  /// bit width, as for FP80, whose result elements are 128 bits.
+  cir::VecCmpOp createVecCompare(mlir::Location loc, VectorType resultTy,
+                                 cir::CmpOpKind kind, mlir::Value lhs,
+                                 mlir::Value rhs) {
+    assert(mlir::cast<VectorType>(lhs.getType()).getSize() ==
+               resultTy.getSize() &&
+           cir::isIntOrBoolType(resultTy.getElementType()) &&
+           "vector compare result must be an int or bool vector of the "
+           "operand length");
+    cir::FenvAttr fenv;
+    if (cir::isFPOrVectorOfFPType(lhs.getType()))
+      fenv = getConstrainedFPAttr();
+    return cir::VecCmpOp::create(*this, loc, resultTy, kind, lhs, rhs, fenv);
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {

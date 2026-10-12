@@ -1792,6 +1792,43 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT:        ucvtf sp, s19, #14
 // CHECK-ERROR-NEXT:              ^
 
+// Scale range depends on the integer source: [1, 32] for Wn, [1, 64] for Xn
+        scvtf s0, w0, #0
+        scvtf s0, w0, #33
+        ucvtf s0, w0, #33
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 32]
+// CHECK-ERROR-NEXT:        scvtf s0, w0, #0
+// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 32]
+// CHECK-ERROR-NEXT:        scvtf s0, w0, #33
+// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 32]
+// CHECK-ERROR-NEXT:        ucvtf s0, w0, #33
+// CHECK-ERROR-NEXT:                      ^
+
+        scvtf d0, x0, #0
+        scvtf d0, x0, #65
+        ucvtf d0, x0, #65
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 64]
+// CHECK-ERROR-NEXT:        scvtf d0, x0, #0
+// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 64]
+// CHECK-ERROR-NEXT:        scvtf d0, x0, #65
+// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 64]
+// CHECK-ERROR-NEXT:        ucvtf d0, x0, #65
+// CHECK-ERROR-NEXT:                      ^
+
+// Scale must be an immediate, not a symbol
+        scvtf s0, w0, f0
+        ucvtf d0, x0, f0
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 32]
+// CHECK-ERROR-NEXT:        scvtf s0, w0, f0
+// CHECK-ERROR-NEXT:                      ^
+// CHECK-ERROR-NEXT: error: immediate must be an integer in range [1, 64]
+// CHECK-ERROR-NEXT:        ucvtf d0, x0, f0
+// CHECK-ERROR-NEXT:                      ^
+
 //------------------------------------------------------------------------------
 // Floating-point immediate
 //------------------------------------------------------------------------------

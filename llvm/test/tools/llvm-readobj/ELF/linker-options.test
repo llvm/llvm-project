@@ -62,4 +62,4 @@ Sections:
 ## llvm-readelf doesn't support --elf-linker-options yet.
 # RUN: llvm-readelf --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=READELF
 
-# READELF: printELFLinkerOptions not implemented!
+# READELF: GNU output style is not supported for --elf-linker-options

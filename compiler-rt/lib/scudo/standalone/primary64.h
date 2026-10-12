@@ -194,7 +194,7 @@ private:
   };
   static_assert(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
-  template <bool ConditionVariableEnabled = false>
+  template <bool ConditionVariableEnabled = false, typename Dummy = void>
   class SCOPED_CAPABILITY ScopedFLLockBase {
   public:
     ScopedFLLockBase(HybridMutex &M, UNUSED RegionInfo *Region) ACQUIRE(M)
@@ -210,7 +210,8 @@ private:
     void operator=(const ScopedFLLockBase &) = delete;
   };
 
-  template <> class SCOPED_CAPABILITY ScopedFLLockBase<true> {
+  template <typename Dummy>
+  class SCOPED_CAPABILITY ScopedFLLockBase<true, Dummy> {
   public:
     ScopedFLLockBase(HybridMutex &M, RegionInfo *Region) ACQUIRE(M)
         : Mutex(M), Region(Region) {

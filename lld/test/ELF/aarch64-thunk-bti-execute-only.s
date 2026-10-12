@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld -z nosort-thunks --script=lds a.o -o exe --defsym absolute=0xf0000000
+// RUN: ld.lld --script=lds a.o -o exe --defsym absolute=0xf0000000
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s
 
 //--- asm
@@ -38,20 +38,20 @@ fn1:
   ret
 
 // CHECK-LABEL: <_start>:
-// CHECK-NEXT:  18001000: bl      0x1800100c <__AArch64AbsXOLongThunk_>
-// CHECK-NEXT:            b       0x1800100c <__AArch64AbsXOLongThunk_>
-// CHECK-NEXT:            bl      0x18001020 <__AArch64AbsXOLongThunk_absolute>
+// CHECK-NEXT:  18001000: bl      0x18001020 <__AArch64AbsXOLongThunk_>
+// CHECK-NEXT:            b       0x18001020 <__AArch64AbsXOLongThunk_>
+// CHECK-NEXT:            bl      0x1800100c <__AArch64AbsXOLongThunk_absolute>
 
-// CHECK-LABEL: <__AArch64AbsXOLongThunk_>:
+// CHECK-LABEL: <__AArch64AbsXOLongThunk_absolute>:
 // CHECK-NEXT:  1800100c: mov     x16, #0x0
-// CHECK-NEXT:            movk    x16, #0x3000, lsl #16
+// CHECK-NEXT:            movk    x16, #0xf000, lsl #16
 // CHECK-NEXT:            movk    x16, #0x0, lsl #32
 // CHECK-NEXT:            movk    x16, #0x0, lsl #48
 // CHECK-NEXT:            br      x16
 
-// CHECK-LABEL: <__AArch64AbsXOLongThunk_absolute>:
+// CHECK-LABEL: <__AArch64AbsXOLongThunk_>:
 // CHECK-NEXT:  18001020: mov     x16, #0x0
-// CHECK-NEXT:            movk    x16, #0xf000, lsl #16
+// CHECK-NEXT:            movk    x16, #0x3000, lsl #16
 // CHECK-NEXT:            movk    x16, #0x0, lsl #32
 // CHECK-NEXT:            movk    x16, #0x0, lsl #48
 // CHECK-NEXT:            br      x16

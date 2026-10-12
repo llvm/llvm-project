@@ -1,0 +1,30 @@
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_CORE
+  Machine: EM_X86_64
+  OSABI:   ELFOSABI_LINUX
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x400000
+    Align:    0x1000
+    FileSize: 0
+    MemSize:  0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x401000
+    Align:    0x1000
+    FileSize: 0
+    MemSize:  0x1000
+  - Type:     PT_NOTE
+    FirstSec: .note
+    LastSec:  .note
+Sections:
+  - Name: .note
+    Type: SHT_NOTE
+    Notes:
+      - Name: CORE
+        Type: NT_FILE
+        Desc: 020000000000000000100000000000000000400000000000001040000000000000000000000000000020400000000000003040000000000002000000000000002f746d702f6b65726e656c2e687361636f002f746d702f6b65726e656c2e687361636f00

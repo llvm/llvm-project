@@ -161,22 +161,24 @@ public:
     return AI;
   }
 
-  static ABIArgInfo getSignExtend(QualType Ty, llvm::Type *T = nullptr) {
+  static ABIArgInfo getSignExtend(QualType Ty, llvm::Type *T = nullptr,
+                                  llvm::Type *Padding = nullptr) {
     assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
     auto AI = ABIArgInfo(Extend);
     AI.setCoerceToType(T);
-    AI.setPaddingType(nullptr);
+    AI.setPaddingType(Padding);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
     AI.setSignExt(true);
     return AI;
   }
 
-  static ABIArgInfo getZeroExtend(QualType Ty, llvm::Type *T = nullptr) {
+  static ABIArgInfo getZeroExtend(QualType Ty, llvm::Type *T = nullptr,
+                                  llvm::Type *Padding = nullptr) {
     assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
     auto AI = ABIArgInfo(Extend);
     AI.setCoerceToType(T);
-    AI.setPaddingType(nullptr);
+    AI.setPaddingType(Padding);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
     AI.setZeroExt(true);
@@ -185,11 +187,12 @@ public:
 
   // ABIArgInfo will record the argument as being extended based on the sign
   // of its type. Produces a sign or zero extension.
-  static ABIArgInfo getExtend(QualType Ty, llvm::Type *T = nullptr) {
+  static ABIArgInfo getExtend(QualType Ty, llvm::Type *T = nullptr,
+                              llvm::Type *Padding = nullptr) {
     assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
     if (Ty->hasSignedIntegerRepresentation())
-      return getSignExtend(Ty, T);
-    return getZeroExtend(Ty, T);
+      return getSignExtend(Ty, T, Padding);
+    return getZeroExtend(Ty, T, Padding);
   }
 
   // Struct in register marked explicitly as not needing extension.

@@ -21,12 +21,12 @@ end subroutine
 ! CHECK-LABEL: omp.private {type = private}
 ! CHECK-SAME: @{{.*}} : !fir.box<!fir.heap<!fir.array<?xf64>>> init {
 ! Descriptor must be allocated in managed memory for GPU accessibility.
-! CHECK:          cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> {data_attr = #cuf.cuda<device>}
+! CHECK:          cuf.alloc !fir.box<!fir.heap<!fir.array<?xf64>>> data_attr(device)
 ! Null descriptor must carry allocator_idx = 2.
-! CHECK:          fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 2 : i32}
+! CHECK:          fir.embox %{{.*}}(%{{.*}}) allocator_idx(2)
 ! CHECK:          fir.store
 ! CHECK:        } dealloc {
 ! Managed descriptor must be freed.
-! CHECK:          cuf.free %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {data_attr = #cuf.cuda<device>}
+! CHECK:          cuf.free %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> data_attr(device)
 ! CHECK:        }
 ! CHECK-LABEL: func.func

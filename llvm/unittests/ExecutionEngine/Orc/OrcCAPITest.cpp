@@ -11,6 +11,7 @@
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/LLJITUtils.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/Target.h"
 #include "gtest/gtest.h"
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -593,7 +594,9 @@ TEST_F(OrcCAPITestBase, ExecutionTest) {
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
     FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
            << "): " << toString(E);
-  auto *SumFn = (SumFunctionType)(TestFnAddr);
+  // FIXME: We use ExecutorAddr::toPtr here to sign arm64e pointers. We should
+  //        develop a C API solution for this.
+  auto *SumFn = ExecutorAddr(TestFnAddr).toPtr<SumFunctionType>();
   int32_t Result = SumFn(1, 1);
   ASSERT_EQ(2, Result);
 }

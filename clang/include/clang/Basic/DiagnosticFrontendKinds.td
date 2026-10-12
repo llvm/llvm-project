@@ -146,12 +146,19 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
+def err_fe_cir_input_unsupported : Error<
+    "support for ClangIR input is not yet implemented">;
+def err_invalid_cir : Error<"invalid ClangIR input">;
+def err_cir_input_missing_triple : Error<
+    "missing target triple in ClangIR input">;
+def err_cir_input_triple_mismatch : Error<
+    "target triple '%0' of ClangIR input does not match the target '%1'">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
+   : Error<"invalid exception model '%select{default|none|sjlj|seh|dwarf|wasm|emscripten}0' for target '%1'">;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
@@ -317,7 +324,7 @@ def err_function_always_inline_attribute_mismatch : Error<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes">;
 def warn_function_always_inline_attribute_mismatch : Warning<
   "always_inline function %1 and its caller %0 have mismatching %2 attributes, "
-  "inlining may change runtime behaviour">, InGroup<AArch64SMEAttributes>;
+  "%1 may not be inlined">, InGroup<AArch64SMEAttributes>;
 def err_function_always_inline_new_za : Error<
   "always_inline function %0 has new za state">;
 def err_function_always_inline_new_zt0
@@ -407,6 +414,10 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_cgs_no_proto : Warning<
+  "indirect call to a function with no prototype; generating type metadata for assumed prototype %0 (type string: %1)">,
+  InGroup<DiagGroup<"call-graph-section-no-prototype">>;
+
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,
@@ -442,7 +453,8 @@ def warn_ssaf_source_transformation_unknown_name :
 def warn_ssaf_source_transformation_requires :
   Warning<"option '--ssaf-source-transformation=' requires "
           "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
-          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=}0' "
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=|"
+          "--ssaf-link-unit-id=}0' "
           "to be set">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 
@@ -475,6 +487,10 @@ def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
 
+def err_ast_action_on_cir : Error<
+  "cannot apply AST actions to ClangIR file '%0'">,
+  DefaultFatal;
+
 def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
 
 def err_os_unsupport_riscv_fmv : Error<
@@ -494,6 +510,9 @@ def warn_hlsl_failed_to_embed_source
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;
+def err_fe_exception_model_mismatch
+    : Error<"'-exception-model=%0' does not match the module's exception "
+            "model '%1'">;
 def err_failed_to_open_for_embedding
     : Error<"could not open '%0' for embedding">;
 def err_unsupported_cxx_abi_feature
@@ -550,11 +569,10 @@ def err_member_ptr_requires_complete_type
     : Error<"member pointer representation requires a complete class type for "
             "%0 to perform this expression">;
 
-// ClangIR frontend errors
-def err_cir_to_cir_transform_failed : Error<
-    "CIR-to-CIR transformation failed">, DefaultFatal;
+def warn_dyndbg_unable_to_create_target : Warning<
+    "ignoring -fdynamic-debugging: unable to create target: '%0'">,
+    InGroup<DynamicDebugging>;
 
-def err_cir_verification_failed_pre_passes : Error<
-    "CIR module verification error before running CIR-to-CIR passes">,
-    DefaultFatal;
+def err_dyndbg_no_instrumentation : Error<
+    "'-fdynamic-debugging' unsupported with instrumentation (PGO/code coverage)">;
 }

@@ -11,20 +11,17 @@
 ; CHECK: Invalidating analysis: CycleAnalysis on test1_f
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_f
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_f
-; CHECK: Invalidating analysis: LoopAnalysis on test1_f
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_f
 ; CHECK: Invalidating analysis: EphemeralValuesAnalysis on test1_f
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: CycleAnalysis on test1_g
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_g
-; CHECK: Invalidating analysis: LoopAnalysis on test1_g
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_g
 ; CHECK: Invalidating analysis: EphemeralValuesAnalysis on test1_g
 ; CHECK: Invalidating analysis: CycleAnalysis on test1_h
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_h
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_h
-; CHECK: Invalidating analysis: LoopAnalysis on test1_h
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_h
 ; CHECK: Invalidating analysis: EphemeralValuesAnalysis on test1_h
 ; CHECK-NOT: Invalidating analysis:

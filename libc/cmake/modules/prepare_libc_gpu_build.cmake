@@ -1,19 +1,19 @@
 if(NOT LIBC_TARGET_OS_IS_GPU)
   message(FATAL_ERROR
-          "libc build: Invalid attempt to set up GPU architectures.")
+    "libc build: Invalid attempt to set up GPU architectures.")
 endif()
 
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
-   ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
-   message(WARNING "libc for GPU requires an up-to-date clang. CMake compiler "
-                      "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
-                      " is not 'Clang ${req_ver}'.")
+  ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
+  message(WARNING "libc for GPU requires an up-to-date clang. CMake compiler "
+    "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
+    " is not 'Clang ${req_ver}'.")
 endif()
 if(NOT LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "LLVM_LIBC_FULL_BUILD must be enabled to build libc for "
-                      "GPU.")
+    "GPU.")
 endif()
 
 # Set the required flags globally so standard CMake utilities can compile.
@@ -43,27 +43,27 @@ endif()
 
 set(gpu_test_architecture "")
 if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
-   AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "AMDGPU backend is not available, tests will not be built")
 elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX
-       AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
+    AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "NVPTX backend is not available, tests will not be built")
 elseif(LIBC_GPU_TEST_ARCHITECTURE)
   set(LIBC_GPU_TESTS_DISABLED FALSE)
   set(gpu_test_architecture ${LIBC_GPU_TEST_ARCHITECTURE})
   message(STATUS "Using user-specified GPU architecture for testing: "
-                 "'${gpu_test_architecture}'")
+    "'${gpu_test_architecture}'")
 elseif(PLATFORM_HAS_GPU)
   set(LIBC_GPU_TESTS_DISABLED FALSE)
   set(gpu_test_architecture "native")
   message(STATUS "Using GPU architecture detected on the system for testing: "
-                 "'native'")
+    "'native'")
 else()
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "No GPU architecture detected or provided, tests will not be "
-                 "built")
+    "built")
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 

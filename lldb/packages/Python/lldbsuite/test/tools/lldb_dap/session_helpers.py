@@ -5,6 +5,7 @@ import base64
 import dataclasses
 import logging
 import os
+import re
 import unittest
 from dataclasses import dataclass
 from pathlib import Path
@@ -555,7 +556,7 @@ class _ExpectCommon:
 
     # Checks on the Expression's result or Variable's value.
     startswith: Optional[str] = None
-    matches: Optional[str] = None  # regex applied to .value/.result
+    matches: Optional[str | re.Pattern[str]] = None  # regex applied to .value/.result
     # When set, fetch children via `variablesReference` and verify recursively.
     children: Optional[dict[str, "ExpectVar"]] = None
 
@@ -682,13 +683,6 @@ class DAPTestSession(Session):
                 response.success, True, f"got error response: {response}."
             )
             self.test_case.assertIsInstance(response, EmptyBodyResponse)
-
-            # In VSCode, immediately following 'configurationDone', a
-            # 'threads' request is made to get the initial set of threads,
-            # specifically the main threads id and name.
-            # We issue the threads request to mimic this pattern and prevent
-            # tests that use threads to have the wrong result.
-            self.send_request(ThreadsArgs()).result()
         else:
             self.test_case.assertEqual(response.success, False)
             self.test_case.assertIsInstance(response, ErrorResponse)
@@ -1629,7 +1623,7 @@ class DAPTestSession(Session):
         response = self.send_request(info_args).result()
         return response.body
 
-    def do_restart(self, arguments: LaunchArgs | AttachArgs | None = None):
+    def restart(self, arguments: LaunchArgs | AttachArgs | None = None):
         restart_args = RestartArgs(arguments)
         return self.send_request(restart_args).result()
 

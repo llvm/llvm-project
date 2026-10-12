@@ -9,6 +9,7 @@
 #ifndef MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
 #define MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H
 namespace mlir {
+class DialectRegistry;
 class RewritePatternSet;
 namespace emitc {
 
@@ -19,6 +20,8 @@ enum class LanguageTarget { c99, cpp11 };
 
 void populateConvertMathToEmitCPatterns(RewritePatternSet &patterns,
                                         emitc::LanguageTarget languageTarget);
+
+void registerConvertMathToEmitCInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOEMITC_MATHTOEMITC_H

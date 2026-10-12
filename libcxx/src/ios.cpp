@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/locale.h>
 #include <algorithm>
 #include <atomic>
 #include <ios>

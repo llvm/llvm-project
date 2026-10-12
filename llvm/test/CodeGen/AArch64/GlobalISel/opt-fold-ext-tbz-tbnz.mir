@@ -25,12 +25,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %fold_me:gpr(s64) = G_ZEXT %copy(s32)
-    %and:gpr(s64) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %copy:gpr(i32) = COPY $w0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %fold_me:gpr(i64) = G_ZEXT %copy(i32)
+    %and:gpr(i64) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -57,12 +57,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %fold_me:gpr(s64) = G_ANYEXT %copy(s32)
-    %and:gpr(s64) = G_AND %fold_me, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %copy:gpr(i32) = COPY $w0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %fold_me:gpr(i64) = G_ANYEXT %copy(i32)
+    %and:gpr(i64) = G_AND %fold_me, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -91,13 +91,13 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $h0
-    %copy:gpr(s16) = COPY $h0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %ext1:gpr(s32) = G_ZEXT %copy(s16)
-    %ext2:gpr(s64) = G_ANYEXT %ext1(s32)
-    %and:gpr(s64) = G_AND %ext2, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %copy:gpr(i16) = COPY $h0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %ext1:gpr(i32) = G_ZEXT %copy(i16)
+    %ext2:gpr(i64) = G_ANYEXT %ext1(i32)
+    %and:gpr(i64) = G_AND %ext2, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -129,14 +129,14 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %zero:gpr(s64) = G_CONSTANT i64 0
-    %zext:gpr(s64) = G_ZEXT %copy(s32)
-    %and:gpr(s64) = G_AND %zext, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(ne), %and(s64), %zero
+    %copy:gpr(i32) = COPY $w0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %zero:gpr(i64) = G_CONSTANT i64 0
+    %zext:gpr(i64) = G_ZEXT %copy(i32)
+    %and:gpr(i64) = G_AND %zext, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(ne), %and(i64), %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
-    $x0 = COPY %zext:gpr(s64)
+    $x0 = COPY %zext:gpr(i64)
     RET_ReallyLR implicit $x0

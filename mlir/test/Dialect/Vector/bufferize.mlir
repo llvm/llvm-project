@@ -37,7 +37,7 @@ func.func @transfer_write(%t: tensor<?x?xf32>, %o1: index,
 //  CHECK-SAME:     %[[mask:.*]]: vector<16xi1>, %[[value:.*]]: vector<16xf32>) -> tensor<16x16xf32>
 //       CHECK:   %[[buf:.*]] = bufferization.to_buffer %[[base]] : tensor<16x16xf32> to memref<16x16xf32>
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<16x16xf32>
+//       CHECK:   %[[alloc:.*]] = memref.alloc() alignment = 64 : memref<16x16xf32>
 //       CHECK:   memref.copy %[[buf]], %[[alloc]] : memref<16x16xf32> to memref<16x16xf32>
 //       CHECK:   vector.scatter %[[alloc]][%[[c0]], %[[c0]]] [%[[v]]], %[[mask]], %[[value]] : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
 //       CHECK:   %[[tensor:.*]] = bufferization.to_tensor %[[alloc]] : memref<16x16xf32> to tensor<16x16xf32>

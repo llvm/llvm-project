@@ -4668,3 +4668,362 @@ define i32 @v_extract_v64i32_37(ptr addrspace(1) %ptr) {
   %elt = extractelement <64 x i32> %vec, i32 37
   ret i32 %elt
 }
+
+define amdgpu_gs void @extract_v32i1_bitcast_f32(float %x, ptr addrspace(1) %out) {
+; GPRIDX-LABEL: extract_v32i1_bitcast_f32:
+; GPRIDX:       ; %bb.0:
+; GPRIDX-NEXT:    v_bfe_u32 v4, v0, 1, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v4, 1, v4
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 2, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 3, 1
+; GPRIDX-NEXT:    v_and_or_b32 v4, v0, 1, v4
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 2, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 3, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 4, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 5, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 4, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 5, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 6, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 7, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 6, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 7, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 8, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 9, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 9, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 10, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 11, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 10, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 11, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 12, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 13, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 12, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 13, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 14, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 15, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 14, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 15, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 16, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 17, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 17, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 18, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 19, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 18, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 19, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 20, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 21, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 20, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 21, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 22, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 23, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 22, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 23, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 24, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 25, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 25, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 26, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 27, 1
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 26, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 27, v6
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_bfe_u32 v5, v0, 28, 1
+; GPRIDX-NEXT:    v_bfe_u32 v6, v0, 29, 1
+; GPRIDX-NEXT:    v_lshrrev_b32_e32 v3, 31, v0
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v5, 28, v5
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v6, 29, v6
+; GPRIDX-NEXT:    v_bfe_u32 v0, v0, 30, 1
+; GPRIDX-NEXT:    v_or3_b32 v4, v4, v5, v6
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v0, 30, v0
+; GPRIDX-NEXT:    v_lshlrev_b32_e32 v3, 31, v3
+; GPRIDX-NEXT:    v_or3_b32 v0, v4, v0, v3
+; GPRIDX-NEXT:    v_and_b32_e32 v0, 1, v0
+; GPRIDX-NEXT:    global_store_dword v[1:2], v0, off
+; GPRIDX-NEXT:    s_endpgm
+;
+; MOVREL-LABEL: extract_v32i1_bitcast_f32:
+; MOVREL:       ; %bb.0:
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 1, 1
+; MOVREL-NEXT:    v_and_b32_e32 v4, 1, v0
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 1, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 2, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 2, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 3, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 3, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 4, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 4, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 5, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 5, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 6, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 6, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 7, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 7, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 8, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 9, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 9, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 10, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 10, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 11, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 11, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 12, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 12, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 13, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 13, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 14, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 14, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 15, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 15, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 16, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 17, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 17, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 18, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 18, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 19, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 19, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 20, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 20, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 21, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 21, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 22, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 22, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 23, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 23, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 24, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 25, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 25, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 26, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 26, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 27, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 27, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 28, 1
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 28, v5
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_bfe_u32 v5, v0, 29, 1
+; MOVREL-NEXT:    v_lshrrev_b32_e32 v3, 31, v0
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v5, 29, v5
+; MOVREL-NEXT:    v_bfe_u32 v0, v0, 30, 1
+; MOVREL-NEXT:    v_or_b32_e32 v4, v4, v5
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v0, 30, v0
+; MOVREL-NEXT:    v_or_b32_e32 v0, v4, v0
+; MOVREL-NEXT:    v_lshlrev_b32_e32 v3, 31, v3
+; MOVREL-NEXT:    v_or_b32_e32 v0, v0, v3
+; MOVREL-NEXT:    v_and_b32_e32 v0, 1, v0
+; MOVREL-NEXT:    flat_store_dword v[1:2], v0
+; MOVREL-NEXT:    s_endpgm
+;
+; GFX10-LABEL: extract_v32i1_bitcast_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfe_u32 v3, v0, 1, 1
+; GFX10-NEXT:    v_bfe_u32 v4, v0, 2, 1
+; GFX10-NEXT:    v_bfe_u32 v5, v0, 3, 1
+; GFX10-NEXT:    v_bfe_u32 v6, v0, 4, 1
+; GFX10-NEXT:    v_bfe_u32 v7, v0, 5, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 1, v3
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 3, v5
+; GFX10-NEXT:    v_bfe_u32 v8, v0, 6, 1
+; GFX10-NEXT:    v_bfe_u32 v9, v0, 7, 1
+; GFX10-NEXT:    v_and_or_b32 v3, v0, 1, v3
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 4, v6
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 5, v7
+; GFX10-NEXT:    v_lshlrev_b32_e32 v8, 6, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v9, 7, v9
+; GFX10-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX10-NEXT:    v_bfe_u32 v4, v0, 8, 1
+; GFX10-NEXT:    v_bfe_u32 v5, v0, 9, 1
+; GFX10-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX10-NEXT:    v_bfe_u32 v6, v0, 10, 1
+; GFX10-NEXT:    v_bfe_u32 v7, v0, 11, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 9, v5
+; GFX10-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX10-NEXT:    v_bfe_u32 v8, v0, 12, 1
+; GFX10-NEXT:    v_bfe_u32 v9, v0, 13, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 10, v6
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 11, v7
+; GFX10-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX10-NEXT:    v_bfe_u32 v4, v0, 14, 1
+; GFX10-NEXT:    v_bfe_u32 v5, v0, 15, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v8, 12, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v9, 13, v9
+; GFX10-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX10-NEXT:    v_bfe_u32 v6, v0, 16, 1
+; GFX10-NEXT:    v_bfe_u32 v7, v0, 17, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 14, v4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 15, v5
+; GFX10-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX10-NEXT:    v_bfe_u32 v8, v0, 18, 1
+; GFX10-NEXT:    v_bfe_u32 v9, v0, 19, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 17, v7
+; GFX10-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX10-NEXT:    v_bfe_u32 v4, v0, 20, 1
+; GFX10-NEXT:    v_bfe_u32 v5, v0, 21, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v8, 18, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v9, 19, v9
+; GFX10-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX10-NEXT:    v_bfe_u32 v6, v0, 22, 1
+; GFX10-NEXT:    v_bfe_u32 v7, v0, 23, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 20, v4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 21, v5
+; GFX10-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX10-NEXT:    v_bfe_u32 v8, v0, 24, 1
+; GFX10-NEXT:    v_bfe_u32 v9, v0, 25, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 22, v6
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 23, v7
+; GFX10-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX10-NEXT:    v_bfe_u32 v4, v0, 26, 1
+; GFX10-NEXT:    v_bfe_u32 v5, v0, 27, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v8, 24, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v9, 25, v9
+; GFX10-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX10-NEXT:    v_bfe_u32 v6, v0, 28, 1
+; GFX10-NEXT:    v_bfe_u32 v7, v0, 29, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 26, v4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 27, v5
+; GFX10-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX10-NEXT:    v_bfe_u32 v8, v0, 30, 1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 28, v6
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 29, v7
+; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 31, v0
+; GFX10-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 30, v8
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 31, v0
+; GFX10-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX10-NEXT:    v_or3_b32 v0, v3, v4, v0
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: extract_v32i1_bitcast_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_bfe_u32 v3, v0, 1, 1
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 2, 1
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 3, 1
+; GFX11-NEXT:    v_bfe_u32 v6, v0, 4, 1
+; GFX11-NEXT:    v_bfe_u32 v7, v0, 5, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 1, v3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 2, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 3, v5
+; GFX11-NEXT:    v_bfe_u32 v8, v0, 6, 1
+; GFX11-NEXT:    v_bfe_u32 v9, v0, 7, 1
+; GFX11-NEXT:    v_and_or_b32 v3, v0, 1, v3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 4, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 5, v7
+; GFX11-NEXT:    v_lshlrev_b32_e32 v8, 6, v8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 7, v9
+; GFX11-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 8, 1
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 9, 1
+; GFX11-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX11-NEXT:    v_bfe_u32 v6, v0, 10, 1
+; GFX11-NEXT:    v_bfe_u32 v7, v0, 11, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 9, v5
+; GFX11-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX11-NEXT:    v_bfe_u32 v8, v0, 12, 1
+; GFX11-NEXT:    v_bfe_u32 v9, v0, 13, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 10, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 11, v7
+; GFX11-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 14, 1
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 15, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v8, 12, v8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 13, v9
+; GFX11-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX11-NEXT:    v_bfe_u32 v6, v0, 16, 1
+; GFX11-NEXT:    v_bfe_u32 v7, v0, 17, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 14, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 15, v5
+; GFX11-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX11-NEXT:    v_bfe_u32 v8, v0, 18, 1
+; GFX11-NEXT:    v_bfe_u32 v9, v0, 19, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 17, v7
+; GFX11-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 20, 1
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 21, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v8, 18, v8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 19, v9
+; GFX11-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX11-NEXT:    v_bfe_u32 v6, v0, 22, 1
+; GFX11-NEXT:    v_bfe_u32 v7, v0, 23, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 20, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 21, v5
+; GFX11-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX11-NEXT:    v_bfe_u32 v8, v0, 24, 1
+; GFX11-NEXT:    v_bfe_u32 v9, v0, 25, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 22, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 23, v7
+; GFX11-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX11-NEXT:    v_bfe_u32 v4, v0, 26, 1
+; GFX11-NEXT:    v_bfe_u32 v5, v0, 27, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v8, 24, v8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 25, v9
+; GFX11-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX11-NEXT:    v_bfe_u32 v6, v0, 28, 1
+; GFX11-NEXT:    v_bfe_u32 v7, v0, 29, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 26, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 27, v5
+; GFX11-NEXT:    v_or3_b32 v3, v3, v8, v9
+; GFX11-NEXT:    v_bfe_u32 v8, v0, 30, 1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 28, v6
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 29, v7
+; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 31, v0
+; GFX11-NEXT:    v_or3_b32 v3, v3, v4, v5
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 30, v8
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 31, v0
+; GFX11-NEXT:    v_or3_b32 v3, v3, v6, v7
+; GFX11-NEXT:    v_or3_b32 v0, v3, v4, v0
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX11-NEXT:    s_endpgm
+  %bc = bitcast float %x to <32 x i1>
+  %e = extractelement <32 x i1> %bc, i64 0
+  %z = zext i1 %e to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}

@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t.o
-// RUN: ld.lld -z nosort-thunks %t.o -o %t
+// RUN: ld.lld %t.o -o %t
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
 // RUN: llvm-objdump -d %t --print-imm-hex --start-address=0x80000 --stop-address=0x80010 | FileCheck --check-prefix=CHECK1 %s
@@ -38,11 +38,11 @@ _start:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <tfunc00>:
 // CHECK1-NEXT:    80000:       4770    bx      lr
-// CHECK1-NEXT:    80002:       f37f d7ff       bl      0x1000004 <__Thumbv7ABSLongThunk_tfunc33>
-// CHECK1: <__Thumbv7ABSLongThunk_tfunc05>:
-// CHECK1-NEXT:    80008:       f27f bffa       b.w     0x300000 <tfunc05>
+// CHECK1-NEXT:    80002:       f380 d001       bl      0x1000008 <__Thumbv7ABSLongThunk_tfunc33>
 // CHECK1: <__Thumbv7ABSLongThunk_tfunc00>:
-// CHECK1-NEXT:    8000c:       f7ff bff8       b.w     0x80000 <tfunc00>
+// CHECK1-NEXT:    80008:       f7ff bffa       b.w     0x80000 <tfunc00>
+// CHECK1: <__Thumbv7ABSLongThunk_tfunc05>:
+// CHECK1-NEXT:    8000c:       f27f bff8       b.w     0x300000 <tfunc05>
  FUNCTION 01
 // tfunc02 is within range of tfunc02
  beq.w tfunc02
@@ -52,14 +52,14 @@ _start:
 // CHECK2:  <tfunc01>:
 // CHECK2-NEXT:   100000:       4770    bx      lr
 // CHECK2-NEXT:   100002:       f03f a7fd       beq.w   0x180000 <tfunc02>
-// CHECK2-NEXT:   100006:       f47f a7ff       bne.w   0x80008 <__Thumbv7ABSLongThunk_tfunc05>
+// CHECK2-NEXT:   100006:       f440 8801       bne.w   0x8000c <__Thumbv7ABSLongThunk_tfunc05>
  FUNCTION 02
 // We can reach the Thunk Section created for bne.w tfunc05
  bne.w tfunc05
  beq.w tfunc00
 // CHECK3:        180000:       4770    bx      lr
-// CHECK3-NEXT:   180002:       f440 8001       bne.w   0x80008 <__Thumbv7ABSLongThunk_tfunc05>
-// CHECK3-NEXT:   180006:       f400 8001       beq.w   0x8000c <__Thumbv7ABSLongThunk_tfunc00>
+// CHECK3-NEXT:   180002:       f440 8003       bne.w   0x8000c <__Thumbv7ABSLongThunk_tfunc05>
+// CHECK3-NEXT:   180006:       f400 8003       beq.w   0x80010 <__Thumbv7ABSLongThunk_tfunc00>
  FUNCTION 03
  FUNCTION 04
  FUNCTION 05
@@ -96,14 +96,14 @@ _start:
  FUNCTION 29
  FUNCTION 30
  FUNCTION 31
-// CHECK6:  <__Thumbv7ABSLongThunk_tfunc33>:
-// CHECK6-NEXT:  1000004:       f0ff bffc       b.w     0x1100000 <tfunc33>
-// CHECK6: <__Thumbv7ABSLongThunk_tfunc00>:
-// CHECK6-NEXT:  1000008:       f47f 97fa       b.w     0x80000 <tfunc00>
+// CHECK6:  <__Thumbv7ABSLongThunk_tfunc00>:
+// CHECK6-NEXT:  1000004:       f47f 97fc       b.w     0x80000 <tfunc00>
+// CHECK6: <__Thumbv7ABSLongThunk_tfunc33>:
+// CHECK6-NEXT:  1000008:       f0ff bffa       b.w     0x1100000 <tfunc33>
  FUNCTION 32
  FUNCTION 33
  // We should be able to reach an existing ThunkSection.
  b.w tfunc00
 // CHECK7: <tfunc33>:
 // CHECK7-NEXT:  1100000:       4770            bx      lr
-// CHECK7-NEXT:  1100002:       f700 b801       b.w     0x1000008 <__Thumbv7ABSLongThunk_tfunc00>
+// CHECK7-NEXT:  1100002:       f6ff bfff       b.w     0x1000004 <__Thumbv7ABSLongThunk_tfunc00>

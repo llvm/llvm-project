@@ -7,13 +7,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %1 = fir.alloca !fir.array<3xi64>
     %2 = fir.dummy_scope : !fir.dscope
     %3 = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:3>>
-    %4:2 = hlfir.declare %3 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:3>>)
+    %4:2 = hlfir.declare %3 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:3>>)
     %c3 = arith.constant 3 : index
     %5 = fir.alloca !fir.array<3xi32> {bindc_name = "res1", uniq_name = "_QFEres1"}
     %6 = fir.shape %c3 : (index) -> !fir.shape<1>
-    %7:2 = hlfir.declare %5(%6) {uniq_name = "_QFEres1"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+    %7:2 = hlfir.declare %5(%6) uniq_name("_QFEres1") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
     %8 = fir.alloca i32 {bindc_name = "res2", uniq_name = "_QFEres2"}
-    %9:2 = hlfir.declare %8 {uniq_name = "_QFEres2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %9:2 = hlfir.declare %8 uniq_name("_QFEres2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %10 = fir.absent !fir.box<none>
     %c1_i64 = arith.constant 1 : i64
     %c2_i32 = arith.constant 2 : i32
@@ -37,7 +37,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     fir.store %c1_i64 to %18 : !fir.ref<i64>
     %19 = fir.embox %1 : (!fir.ref<!fir.array<3xi64>>) -> !fir.box<!fir.array<3xi64>>
     %20 = fir.embox %0 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
-    mif.alloc_coarray %4#0 lcobounds %19 ucobounds %20 errmsg %10 {uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>, !fir.box<none>) -> ()
+    mif.alloc_coarray %4#0 lcobounds %19 ucobounds %20 errmsg %10 uniq_name("_QFEa") : (!fir.ref<!fir.box<!fir.heap<i32>, corank:3>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>, !fir.box<none>) -> ()
     %21 = fir.load %4#0 : !fir.ref<!fir.box<!fir.heap<i32>, corank:3>>
     %22 = fir.alloca !fir.array<3xi32>
     %c1_i32 = arith.constant 1 : i32
@@ -56,7 +56,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %28 = fir.coordinate_of %22, %c2_4 : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
     fir.store %27 to %28 : !fir.ref<i32>
     %29 = fir.embox %22 : (!fir.ref<!fir.array<3xi32>>) -> !fir.box<!fir.array<3xi32>>
-    %30:2 = hlfir.declare %29 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<3xi32>>) -> (!fir.box<!fir.array<3xi32>>, !fir.box<!fir.array<3xi32>>)
+    %30:2 = hlfir.declare %29 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<3xi32>>) -> (!fir.box<!fir.array<3xi32>>, !fir.box<!fir.array<3xi32>>)
     %false = arith.constant false
     %31 = hlfir.as_expr %30#0 move %false : (!fir.box<!fir.array<3xi32>>, i1) -> !hlfir.expr<3xi32>
     hlfir.assign %31 to %7#0 : !hlfir.expr<3xi32>, !fir.ref<!fir.array<3xi32>>
@@ -83,7 +83,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %41 = fir.coordinate_of %35, %c2_11 : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
     fir.store %40 to %41 : !fir.ref<i32>
     %42 = fir.embox %35 : (!fir.ref<!fir.array<3xi32>>) -> !fir.box<!fir.array<3xi32>>
-    %43:2 = hlfir.declare %42 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<3xi32>>) -> (!fir.box<!fir.array<3xi32>>, !fir.box<!fir.array<3xi32>>)
+    %43:2 = hlfir.declare %42 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<3xi32>>) -> (!fir.box<!fir.array<3xi32>>, !fir.box<!fir.array<3xi32>>)
     %false_12 = arith.constant false
     %44 = hlfir.as_expr %43#0 move %false_12 : (!fir.box<!fir.array<3xi32>>, i1) -> !hlfir.expr<3xi32>
     hlfir.assign %44 to %7#0 : !hlfir.expr<3xi32>, !fir.ref<!fir.array<3xi32>>

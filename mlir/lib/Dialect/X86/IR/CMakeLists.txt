@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRX86Dialect
 
   DEPENDS
   MLIRX86IncGen
+  MLIRX86InterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

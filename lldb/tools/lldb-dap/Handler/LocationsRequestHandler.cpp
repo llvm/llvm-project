@@ -27,8 +27,7 @@ LocationsRequestHandler::Run(const protocol::LocationsArguments &args) const {
   // We use the lowest bit to distinguish between value location and declaration
   // location
   auto [var_ref, is_value_location] = UnpackLocation(args.locationReference);
-  lldb::SBValue variable =
-      dap.reference_storage.GetVariable(var_ref_t(var_ref));
+  lldb::SBValue variable = dap.reference_storage.GetVariable(var_ref);
   if (!variable.IsValid())
     return llvm::make_error<DAPError>("Invalid variable reference");
 

@@ -82,16 +82,20 @@ public:
   PlaceholderBase(const CXXMethodDecl *MD) : ParamOrMethod(MD) {}
 
   const ParmVarDecl *getParmVarDecl() const {
-    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
+    return dyn_cast<const ParmVarDecl *>(ParamOrMethod);
   }
 
   const CXXMethodDecl *getImplicitThisParent() const {
-    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
+    return dyn_cast<const CXXMethodDecl *>(ParamOrMethod);
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  using KeyTy = llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
+
+  static void Profile(llvm::FoldingSetNodeID &ID, KeyTy ParamOrMethod) {
     ID.AddPointer(ParamOrMethod.getOpaqueValue());
   }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, ParamOrMethod); }
 };
 
 /// Represents the storage location being borrowed, e.g., a specific stack
@@ -134,19 +138,19 @@ public:
   }
 
   const clang::ValueDecl *getAsValueDecl() const {
-    return Base.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Base);
   }
 
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
-    return Base.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+    return dyn_cast<const clang::MaterializeTemporaryExpr *>(Base);
   }
 
   const PlaceholderBase *getAsPlaceholderBase() const {
-    return Base.dyn_cast<const PlaceholderBase *>();
+    return dyn_cast<const PlaceholderBase *>(Base);
   }
 
   const clang::CXXNewExpr *getAsNewAllocation() const {
-    return Base.dyn_cast<const clang::CXXNewExpr *>();
+    return dyn_cast<const clang::CXXNewExpr *>(Base);
   }
 
   bool operator==(const AccessPath &RHS) const {

@@ -1,22 +1,17 @@
 // The mapper maps a struct member (s.x) and a pointee (s.p[0:10]). We pre-map
 // only s.x, then do map(present) on the mapper. The pointee s.p[0:10] is not
-// present, so once PRESENT is propagated to the pointee (a follow-on, at OpenMP
-// >= 6.0) the check must fail; at <= 5.2 present is not propagated, so it would
-// pass.
-//
-// FIXME: This currently run-fails at BOTH versions, because the mapper does not
-// yet emit attach-style maps for the pointee: the combined entry over the whole
-// struct s1 (40016 bytes) triggers an "explicit extension not allowed" error
-// against the 4-byte device allocation of s1.x. Once attach-style maps are
-// emitted for the pointee:
-//   EXPECTED (5.2): the run completes ("done").
-//   EXPECTED (6.0): the present check fails for the absent pointee s1.p[0:10].
+// present, so the propagated present modifier must fail the check -- but only
+// at OpenMP >= 6.0, since present is not propagated to the pointee before then.
+
+// OpenMP <= 5.2: present is not propagated to the pointee, so the run succeeds.
 // RUN: %libomptarget-compile-generic -fopenmp-version=52
-// RUN: %libomptarget-run-fail-generic 2>&1 \
-// RUN: | %fcheck-generic --check-prefixes=CHECK
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic --check-prefixes=CHECK,CHECK-52
+
+// OpenMP 6.0: present is propagated to the pointee; the check fails.
 // RUN: %libomptarget-compile-generic -fopenmp-version=60
 // RUN: %libomptarget-run-fail-generic 2>&1 \
-// RUN: | %fcheck-generic --check-prefixes=CHECK
+// RUN: | %fcheck-generic --check-prefixes=CHECK,CHECK-60
 
 #include <omp.h>
 #include <stdio.h>
@@ -41,21 +36,23 @@ void print_status(void *p, const char *name) {
 int main() {
   s1.p = (int *)&x;
 
+  // CHECK: addr=0x[[#%x,HOST_ADDR:]], size=[[#%u,SIZE:]]
   fprintf(stderr, "addr=%p, size=%ld\n", &s1.p[0], 10 * sizeof(s1.p[0]));
 
 #pragma omp target enter data map(alloc : s1.x)
-  print_status(&s1.x, "x");         // EXPECTED: x is present
-  print_status(&s1.dummy, "dummy"); // EXPECTED: dummy is not present
-  print_status(&s1.p, "p");         // EXPECTED: p is not present
-  print_status(&s1.p[0], "p[0]");   // EXPECTED: p[0] is not present
+  print_status(&s1.x, "x");         // CHECK: x is present
+  print_status(&s1.dummy, "dummy"); // CHECK: dummy is not present
+  print_status(&s1.p, "p");         // CHECK: p is not present
+  print_status(&s1.p[0], "p[0]");   // CHECK: p[0] is not present
 
 #pragma omp target enter data map(present, alloc : s1)
-  // Once attach-style maps are emitted for the pointee, at 5.2 the run
-  // completes past this point; at 6.0 the present check on the absent pointee
-  // s1.p[0:10] fails here.
+  // At 5.2 the run completes past this point; at 6.0 the present check on the
+  // absent pointee s1.p[0:10] fails here.
+  // CHECK-52: done
+  //
   // clang-format off
-  // CHECK: omptarget message: explicit extension not allowed
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK-60: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK-60: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 
   fprintf(stderr, "done\n");

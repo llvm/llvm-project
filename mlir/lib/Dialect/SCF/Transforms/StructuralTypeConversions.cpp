@@ -89,6 +89,14 @@ public:
   std::optional<ForOp> convertSourceOp(ForOp op, OneToNOpAdaptor adaptor,
                                        ConversionPatternRewriter &rewriter,
                                        TypeRange dstTypes) const {
+    // Loop bounds are single operands in the SCF IR. A 1:N conversion may
+    // produce zero or multiple values, in which case this operation cannot be
+    // reconstructed.
+    if (!llvm::hasSingleElement(adaptor.getLowerBound()) ||
+        !llvm::hasSingleElement(adaptor.getUpperBound()) ||
+        !llvm::hasSingleElement(adaptor.getStep()))
+      return std::nullopt;
+
     // Create a empty new op and inline the regions from the old op.
     //
     // This is a little bit tricky. We have two concerns here:
@@ -120,7 +128,7 @@ public:
                                 /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
@@ -141,11 +149,13 @@ public:
   std::optional<IfOp> convertSourceOp(IfOp op, OneToNOpAdaptor adaptor,
                                       ConversionPatternRewriter &rewriter,
                                       TypeRange dstTypes) const {
+    if (!llvm::hasSingleElement(adaptor.getCondition()))
+      return std::nullopt;
 
     IfOp newOp =
         IfOp::create(rewriter, op.getLoc(), dstTypes,
                      llvm::getSingleElement(adaptor.getCondition()), true);
-    newOp->setAttrs(op->getAttrs());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary().getValue());
 
     // We do not need the empty blocks created by rewriter.
     rewriter.eraseBlock(newOp.elseBlock());

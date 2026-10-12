@@ -45,3 +45,37 @@ define <vscale x 4 x i1> @not_fcmp_uge_nxv4f32(<vscale x 4 x float> %a, <vscale 
   %not = xor <vscale x 4 x i1> %icmp, splat (i1 true)
   ret <vscale x 4 x i1> %not
 }
+
+define <vscale x 4 x i1> @invert_icmp(<vscale x 4 x i32> %a, <vscale x 4 x i1> %m0, <vscale x 4 x i1> %m1) {
+; CHECK-LABEL: invert_icmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgt.vi v11, v8, 4
+; CHECK-NEXT:    vmandn.mm v8, v0, v11
+; CHECK-NEXT:    vmand.mm v9, v10, v11
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %c = icmp sgt <vscale x 4 x i32> %a, splat (i32 4)
+  %not = xor <vscale x 4 x i1> %c, splat (i1 true)
+  %lhs = and <vscale x 4 x i1> %m0, %not
+  %rhs = and <vscale x 4 x i1> %m1, %c
+  %or = or <vscale x 4 x i1> %lhs, %rhs
+  ret <vscale x 4 x i1> %or
+}
+
+define <8 x i1> @invert_icmp_fixed(<8 x i32> %a, <8 x i1> %m0, <8 x i1> %m1) {
+; CHECK-LABEL: invert_icmp_fixed:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmsgt.vi v11, v8, 1
+; CHECK-NEXT:    vmandn.mm v8, v0, v11
+; CHECK-NEXT:    vmand.mm v9, v10, v11
+; CHECK-NEXT:    vmor.mm v0, v8, v9
+; CHECK-NEXT:    ret
+  %c = icmp sgt <8 x i32> %a, splat (i32 1)
+  %not = xor <8 x i1> %c, splat (i1 true)
+  %lhs = and <8 x i1> %m0, %not
+  %rhs = and <8 x i1> %m1, %c
+  %or = or <8 x i1> %lhs, %rhs
+  ret <8 x i1> %or
+}

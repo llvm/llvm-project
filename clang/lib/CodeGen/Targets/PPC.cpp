@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -157,7 +158,20 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
     return;
   }
 
-  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+  // Handle feature strings
+  if (Info.Features.size() == 1) {
+    StringRef Feature = Info.Features[0];
+    assert(Feature.starts_with("+") || Feature.starts_with("-"));
+
+    // replace hyphens with underscores
+    std::string MangledName(Feature.drop_front(1));
+    std::replace(MangledName.begin(), MangledName.end(), '-', '_');
+
+    Out << "." << (Feature.starts_with("-") ? "no_" : "") << MangledName;
+    return;
+  }
+
+  llvm_unreachable("Invalid target_clones parameter");
 }
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -710,9 +724,6 @@ public:
 
   bool initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
                                llvm::Value *Address) const override;
-  void emitTargetMetadata(CodeGen::CodeGenModule &CGM,
-                          const llvm::MapVector<GlobalDecl, StringRef>
-                              &MangledDeclNames) const override;
 };
 
 class PPC64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -1038,26 +1049,6 @@ PPC64_SVR4_TargetCodeGenInfo::initDwarfEHRegSizeTable(
   llvm::Value *Address) const {
   return PPC_initDwarfEHRegSizeTable(CGF, Address, /*Is64Bit*/ true,
                                      /*IsAIX*/ false);
-}
-
-void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
-    CodeGen::CodeGenModule &CGM,
-    const llvm::MapVector<GlobalDecl, StringRef> &MangledDeclNames) const {
-  if (CGM.getTypes().isLongDoubleReferenced()) {
-    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-    const auto *flt = &CGM.getTarget().getLongDoubleFormat();
-    StringRef Type;
-    if (flt == &llvm::APFloat::PPCDoubleDouble())
-      Type = "ppc_fp128";
-    else if (flt == &llvm::APFloat::IEEEquad())
-      Type = "fp128";
-    else if (flt == &llvm::APFloat::IEEEdouble())
-      Type = "double";
-
-    if (!Type.empty())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "long-double-type",
-                                    llvm::MDString::get(Ctx, Type));
-  }
 }
 
 bool

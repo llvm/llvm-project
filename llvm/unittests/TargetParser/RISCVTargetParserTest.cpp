@@ -109,7 +109,7 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   RISCV::getAllTuneFeatures(AllTuneFeatures);
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
-  EXPECT_EQ(AllTuneFeatures.size(), 21U);
+  EXPECT_EQ(AllTuneFeatures.size(), 20U);
   for (auto F : {"conditional-cmv-fusion",
                  "disable-latency-sched-heuristic",
                  "disable-misched-load-clustering",
@@ -128,7 +128,6 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
                  "short-forward-branch-iminmax",
                  "short-forward-branch-imul",
                  "short-forward-branch-iload",
-                 "short-forward-branch-imm",
                  "vl-dependent-latency",
                  "vxrm-pipeline-flush"})
     EXPECT_TRUE(is_contained(AllTuneFeatures, F));
@@ -234,12 +233,6 @@ TEST(RISCVTuneFeature, AllProcConfigurableFeatures) {
 
   Result.clear();
   RISCV::getCPUConfigurableTuneFeatures("sifive-x390", Result);
-  EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
-  EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
-  EXPECT_EQ(Result.size(), 2U);
-
-  Result.clear();
-  RISCV::getCPUConfigurableTuneFeatures("sifive-x180", Result);
   EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
   EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
   EXPECT_EQ(Result.size(), 2U);

@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -55,6 +54,12 @@ JITTargetMachineBuilder::createTargetMachine() {
                                    inconvertibleErrorCode());
 
   return std::unique_ptr<TargetMachine>(TM);
+}
+
+Expected<DataLayout>
+JITTargetMachineBuilder::getDefaultDataLayoutForTarget() const {
+  return DataLayout::parse(
+      TT.computeDataLayout(Options.MCOptions.getABIName()));
 }
 
 JITTargetMachineBuilder &JITTargetMachineBuilder::addFeatures(

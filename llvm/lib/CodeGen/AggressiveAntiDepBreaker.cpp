@@ -790,7 +790,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
        I != E; --Count) {
     MachineInstr &MI = *--I;
 
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
 
     LLVM_DEBUG(dbgs() << "Anti: ");
