@@ -158,7 +158,7 @@ public:
       if (!Attr.BranchProtection.empty()) {
         StringRef Error;
         (void)CGM.getTarget().validateBranchProtection(
-            Attr.BranchProtection, Attr.CPU, BPI, CGM.getLangOpts(), Error);
+            Attr, BPI, CGM.getLangOpts(), Error);
         assert(Error.empty());
       }
     }
