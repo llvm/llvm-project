@@ -1608,9 +1608,6 @@ private:
   static constexpr unsigned UsedBit = 4;
   const Init *Value;
 
-  /// Reference locations to this record value.
-  SmallVector<SMRange, 0> ReferenceLocs;
-
   FieldKind getKind() const {
     return FieldKind(TyAndFlags.getInt() & KindMask);
   }
@@ -1656,12 +1653,6 @@ public:
 
   /// Set the value and source location of the field.
   bool setValue(const Init *V, SMLoc NewLoc);
-
-  /// Add a reference to this record value.
-  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
-
-  /// Return the references of this record value.
-  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
 
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
@@ -1714,6 +1705,7 @@ private:
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   mutable SmallVector<SMRange, 0> ReferenceLocs;
+  mutable DenseMap<const Init *, SmallVector<SMRange, 0>> ValueReferenceLocs;
   SmallVector<const Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1753,9 +1745,9 @@ public:
   // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
   // original record. All other fields can be copied normally.
   Record(const Record &O)
-      : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
-        Values(O.Values), Assertions(O.Assertions),
-        DirectSuperClasses(O.DirectSuperClasses),
+      : Name(O.Name), Locs(O.Locs), ValueReferenceLocs(O.ValueReferenceLocs),
+        TemplateArgs(O.TemplateArgs), Values(O.Values),
+        Assertions(O.Assertions), DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
 
@@ -1785,6 +1777,26 @@ public:
 
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
+  /// Add a reference to the value named \p Name.
+  void appendValueReferenceLoc(const Init *Name, SMRange Loc) const {
+    ValueReferenceLocs[Name].push_back(Loc);
+  }
+
+  /// Add the references to the value named \p Name in \p From.
+  void appendValueReferenceLocs(const Record &From, const Init *Name) const {
+    auto It = From.ValueReferenceLocs.find(Name);
+    if (It != From.ValueReferenceLocs.end())
+      llvm::append_range(ValueReferenceLocs[Name], It->second);
+  }
+
+  /// Return the references to the value named \p Name.
+  ArrayRef<SMRange> getValueReferenceLocs(const Init *Name) const {
+    auto It = ValueReferenceLocs.find(Name);
+    if (It == ValueReferenceLocs.end())
+      return {};
+    return It->second;
+  }
 
   // Update a class location when encountering a (re-)definition.
   void updateClassLoc(SMLoc Loc);
