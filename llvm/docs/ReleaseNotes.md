@@ -192,6 +192,13 @@ Makes programs 10x faster by doing Special New Thing.
     replaced with `-fsplit-machine-functions` or
     `-mllvm -function-splitting=all`.
 
+* Merged the `MachineFunctionSplitter` pass into the `BasicBlockSections`
+  pass, which now performs all function splitting: it uses the basic block
+  sections profile where available, and the PGO/AutoFDO profile elsewhere (with
+  `-function-splitting=all`). `createMachineFunctionSplitterPass()` and the
+  `machine-function-splitter` pass name are removed;
+  `createBasicBlockSectionsPass()` takes a `SplitWithPGO` argument instead.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
