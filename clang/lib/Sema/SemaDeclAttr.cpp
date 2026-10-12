@@ -6212,7 +6212,11 @@ makeClusterDimsArgExpr(Sema &S, Expr *E, const CUDAClusterDimsAttr &AL,
     return {};
   }
 
-  return {ConstantExpr::Create(S.getASTContext(), E, APValue(*I)),
+  ExprResult Result = S.DefaultLvalueConversion(E);
+  if (!Result.isUsable())
+    return {};
+
+  return {ConstantExpr::Create(S.getASTContext(), Result.get(), APValue(*I)),
           I->getZExtValue()};
 }
 
