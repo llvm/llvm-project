@@ -3310,7 +3310,7 @@ static bool isRightShiftBitTestKnownToTerminate(Value *X, Value *BitPos,
     return false;
 
   const APInt *Mask;
-  if (!match(LHS, m_c_And(m_Specific(X), m_APInt(Mask))))
+  if (!match(LHS, m_And(m_Specific(X), m_APInt(Mask))))
     return false;
 
   BasicBlock *ZeroSuccessor =
@@ -3501,9 +3501,10 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
     I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
   Value *NewXNext;
-  // A left shift by LoopTripCount is poison if the count equals Bitwidth.
-  // This can happen when BitPos is the highest bit and X is one, so use a
-  // single additional shift unless the larger shift is known to be safe.
+  // Shifting X by LoopTripCount is poison if the count equals Bitwidth.
+  // For right shifts, shift NewX by one instead. For left shifts, this can
+  // happen when BitPos is the highest bit and X is one, so use a single
+  // additional shift unless the larger shift is known to be safe.
   if (IsRightShift) {
     NewXNext = Builder.CreateLShr(NewX, ConstantInt::get(Ty, 1));
   } else if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
