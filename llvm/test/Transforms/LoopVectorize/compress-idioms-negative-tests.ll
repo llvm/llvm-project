@@ -94,11 +94,14 @@ exit:
   ret void
 }
 
-; CHECK: vectorization is not possible
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: In this case the %idx is incremented when %cond.val != 0,
 ; but the store occurs when %cond.val > 100. The store mask does not match the
 ; PHI mask, so the loop is not vectorized.
+;
+; Note: This passes basic legality checks, but is rejected in early VPlan
+; transforms.
 define void @compress_mismatched_mask(ptr noalias %dst, ptr noalias %src, ptr noalias %cond, i64 %n) {
 entry:
   br label %for.body
@@ -136,9 +139,10 @@ exit:
   ret void
 }
 
-; CHECK: vectorization is not possible
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: Simple early exit loop with a compressstore. This fails in VPlan handling for early exits.
+; Note: The conditional induction is legal (this loop is rejected in early exit VPlan transforms).
 define i32 @compress_store_with_early_exit(ptr dereferenceable(1024) %dst, ptr noalias dereferenceable(1024) %src, ptr noalias dereferenceable(1024) %cond, ptr noalias dereferenceable(1024) %exit_cond) {
 entry:
   br label %for.body
@@ -268,9 +272,10 @@ exit:
   ret void
 }
 
-; CHECK: vectorization is not possible
+; CHECK: loop not vectorized: We can vectorize this loop with a compressstore or expandload, but vectorization support is not implemented yet.
 
 ; Negative test: Lowering unpredicated loads/stores to compresstore/expandload is not supported yet.
+; Note: This passes basic legality checks, but is rejected in early VPlan transforms.
 define void @unpredicated_load_of_conditional_induction(ptr noalias %tab, ptr noalias %cond, ptr noalias %out, ptr noalias %flag, i64 %n) {
 entry:
   br label %for.body
@@ -333,4 +338,35 @@ for.inc:
 exit:
   %dst.ptr.lcssa = phi ptr [ %dst.ptr, %for.inc ]
   ret ptr %dst.ptr.lcssa
+}
+
+; CHECK: loop not vectorized: Unsupported user of conditional induction found
+
+; Negative test: `%dst.ptr` uses an i64 stride for an `i32` store.
+define void @compress_store_mismatched_step_and_access_size(ptr writeonly noalias %dst, ptr readonly %src, i32 %c) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %idx = phi i64 [ 0, %entry ], [ %idx.1, %for.inc ]
+  %src.ptr = getelementptr inbounds i32, ptr %src, i64 %iv
+  %load.src = load i32, ptr %src.ptr, align 4
+  %cmp = icmp slt i32 %load.src, %c
+  br i1 %cmp, label %if.then, label %for.inc
+
+if.then:
+  %dst.ptr = getelementptr inbounds i64, ptr %dst, i64 %idx
+  store i32 %load.src, ptr %dst.ptr, align 4
+  %idx.next = add nsw i64 %idx, 1
+  br label %for.inc
+
+for.inc:
+  %idx.1 = phi i64 [ %idx.next, %if.then ], [ %idx, %for.body ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4096
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
 }

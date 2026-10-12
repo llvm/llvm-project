@@ -2494,13 +2494,14 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 }
 
 bool llvm::collectCompressedPtrs(
-    DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
     const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
   assert(L.isInnermost() && "Expected innermost loop!");
   const SCEV *ApproximatePhiSCEV = CondID.getUnconditionalAddRec(SE, L);
   ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
-  auto GetCompressedPtrSCEV = [&](Value *Ptr, Type *AccessTy) -> const SCEV * {
+  auto GetCompressedPtrSCEV = [&](Value *Ptr,
+                                  Type *AccessTy) -> const SCEVAddRecExpr * {
     using namespace SCEVPatternMatch;
     // TODO: Take into account the non-wrap flags of the MD when rewriting the
     // SCEV expressions for pointers. This should allow folding away zext/sext
@@ -2512,11 +2513,12 @@ bool llvm::collectCompressedPtrs(
       return nullptr;
 
     // Check if pointer step equals access size.
-    SCEVUse Step = cast<SCEVAddRecExpr>(PtrSCEV)->getStepRecurrence(SE);
+    const SCEVAddRecExpr *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
+    SCEVUse Step = PtrAddRec->getStepRecurrence(SE);
     if (Step != SE.getSizeOfExpr(Step->getType(), AccessTy))
       return nullptr;
 
-    return PtrSCEV;
+    return PtrAddRec;
   };
 
   SmallSetVector<Use *, 16> Worklist;
@@ -2542,10 +2544,11 @@ bool llvm::collectCompressedPtrs(
         return false;
 
       Value *Ptr = getLoadStorePointerOperand(UserI);
-      const SCEV *PtrSCEV = GetCompressedPtrSCEV(Ptr, getLoadStoreType(UserI));
-      if (!PtrSCEV)
+      const SCEVAddRecExpr *PtrAddRec =
+          GetCompressedPtrSCEV(Ptr, getLoadStoreType(UserI));
+      if (!PtrAddRec)
         return false;
-      CompressedPtrs.insert({Ptr, PtrSCEV});
+      CompressedPtrs.insert({Ptr, PtrAddRec});
       continue;
     }
 

@@ -713,7 +713,7 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 bool LoopVectorizationLegality::addConditionalInduction(
     PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
   ConditionalInductions[Phi] = CondID;
-  DenseMap<Value *, const SCEV *> CompressedPtrsForCondID;
+  DenseMap<Value *, const SCEVAddRecExpr *> CompressedPtrsForCondID;
   if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
                              *PSE.getSE())) {
     reportVectorizationFailure(
@@ -722,9 +722,8 @@ bool LoopVectorizationLegality::addConditionalInduction(
     return false;
   }
 
-  for (auto [Ptr, PtrSCEV] : CompressedPtrsForCondID) {
+  for (auto [Ptr, PtrAddRec] : CompressedPtrsForCondID) {
     LLVM_DEBUG(dbgs() << "LV: Found compressed pointer: " << *Ptr << '\n');
-    auto *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
     assert(PtrAddRec->isAffine() && "Expected affine SCEVAddRecExpr");
     CompressedPtrs[Ptr] = CompressedPtrInfo{Phi, PtrAddRec};
   }
@@ -2033,6 +2032,14 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     reportVectorizationFailure("Cannot vectorize early exit loops with stores "
                                "to loop-invariant addresses",
                                "LoopInvariantStoresInEELoop", ORE, TheLoop);
+    return false;
+  }
+
+  if (hasConditionalInductions()) {
+    reportVectorizationFailure(
+        "We can vectorize this loop with a compressstore or expandload, but "
+        "vectorization support is not implemented yet.",
+        "CantVectorizeConditionalInductionsYet", ORE, TheLoop);
     return false;
   }
 
