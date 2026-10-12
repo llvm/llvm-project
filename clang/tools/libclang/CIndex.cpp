@@ -1560,6 +1560,10 @@ bool CursorVisitor::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   return VisitDeclContext(D);
 }
 
+bool CursorVisitor::VisitExportDecl(ExportDecl *D) {
+  return VisitDeclContext(D);
+}
+
 bool CursorVisitor::VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
   return Visit(TL.getUnqualifiedLoc());
 }
@@ -6323,6 +6327,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("Namespace");
   case CXCursor_LinkageSpec:
     return cxstring::createRef("LinkageSpec");
+  case CXCursor_ModuleExportDecl:
+    return cxstring::createRef("ModuleExportDecl");
   case CXCursor_CXXBaseSpecifier:
     return cxstring::createRef("C++ base class specifier");
   case CXCursor_Constructor:
@@ -8893,6 +8899,7 @@ static CXLanguageKind getDeclLanguage(const Decl *D) {
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::FunctionTemplate:
+  case Decl::Export:
   case Decl::LinkageSpec:
   case Decl::Namespace:
   case Decl::NamespaceAlias:

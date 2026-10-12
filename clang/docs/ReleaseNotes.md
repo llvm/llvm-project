@@ -1161,6 +1161,10 @@ features cannot lower the translation-unit ABI level;
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 - add unary operator handling to `clang_getCursorSpelling()`.
+- `clang_getCursorKind` now reports C++20 module export declarations as
+  `CXCursor_ModuleExportDecl`; previously they surfaced as a childless
+  `CXCursor_UnexposedDecl`, hiding exported declarations from
+  `clang_visitChildren`. (#63425)
 
 ### Code Completion
 
