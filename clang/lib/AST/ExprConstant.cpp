@@ -15631,13 +15631,6 @@ namespace {
                                QualType Type);
     bool VisitStringLiteral(const StringLiteral *E,
                             QualType AllocType = QualType()) {
-      const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(
-          AllocType.isNull() ? E->getType() : AllocType);
-      if (CAT->getZExtSize() > std::numeric_limits<unsigned>::max()) {
-        Info.FFDiag(E->getExprLoc(), diag::note_constexpr_new_too_large)
-            << CAT->getZExtSize();
-        return false;
-      }
       expandStringLiteral(Info, E, Result, AllocType);
       return true;
     }
@@ -15655,6 +15648,13 @@ static bool EvaluateArray(const Expr *E, const LValue &This,
   assert(!E->isValueDependent());
   assert(E->isPRValue() && E->getType()->isArrayType() &&
          "not an array prvalue");
+  if (const auto *CAT = Info.Ctx.getAsConstantArrayType(E->getType())) {
+    if (CAT->getZExtSize() > std::numeric_limits<unsigned>::max()) {
+      Info.FFDiag(E->getExprLoc(), diag::note_constexpr_new_too_large)
+          << CAT->getZExtSize();
+      return false;
+    }
+  }
   return ArrayExprEvaluator(Info, This, Result).Visit(E);
 }
 
@@ -15776,12 +15776,6 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       AllocType.isNull() ? ExprToVisit->getType() : AllocType);
 
   bool Success = true;
-
-  if (CAT->getZExtSize() > std::numeric_limits<unsigned>::max()) {
-    Info.FFDiag(ExprToVisit->getExprLoc(), diag::note_constexpr_new_too_large)
-        << CAT->getZExtSize();
-    return false;
-  }
 
   unsigned NumEltsToInit = Args.size();
   unsigned NumElts = CAT->getZExtSize();
