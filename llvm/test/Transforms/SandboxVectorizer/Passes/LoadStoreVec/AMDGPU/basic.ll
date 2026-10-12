@@ -4,8 +4,8 @@
 define void @basic(ptr %ptr0) {
 ; CHECK-LABEL: define void @basic(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x float>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 4
