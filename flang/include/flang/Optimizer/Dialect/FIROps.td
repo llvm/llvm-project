@@ -1275,7 +1275,8 @@ def fir_BoxAddrOp
   }];
 }
 
-def fir_BoxSetAddrOp : fir_Op<"box_set_addr", []> {
+def fir_BoxSetAddrOp : fir_Op<"box_set_addr",
+  [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "update the base address of a descriptor in memory";
 
   let description = [{
@@ -1283,20 +1284,12 @@ def fir_BoxSetAddrOp : fir_Op<"box_set_addr", []> {
     held in memory at `box_ref`.  All other fields of the descriptor (type,
     rank, attributes, bounds, strides, element size) are left unchanged.
 
-    It is used to re-associate the descriptor of a Cray pointee with the
-    current value of its Cray pointer before each reference of the pointee.
-    Code generation lowers it to a single store into the descriptor, so the
-    update is visible to (and can be optimized by) LLVM, unlike a call to the
-    PointerAssociateScalar runtime function.
-
     ```
       fir.box_set_addr %p to %desc : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
     ```
   }];
 
-  let arguments = (ins AnyReferenceLike:$addr,
-                       Arg<AnyReferenceLike, "descriptor in memory",
-                           [MemRead, MemWrite]>:$box_ref);
+  let arguments = (ins AnyReferenceLike:$addr, AnyReferenceLike:$box_ref);
 
   let assemblyFormat = [{
     $addr `to` $box_ref attr-dict `:` type($addr) `,` type($box_ref)

@@ -357,7 +357,8 @@ private:
         // we have a pointer-compatible value after loading
         // the Cray pointer value.
         mlir::Type refPtrType = builder.getRefType(
-            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())));
+            fir::PointerType::get(fir::dyn_cast_ptrEleTy(ptrAddr.getType())),
+            fir::isa_volatile_type(ptrAddr.getType()));
         mlir::Value cast = builder.createConvert(loc, refPtrType, ptrAddr);
         mlir::Value ptrVal = fir::LoadOp::create(builder, loc, cast);
 

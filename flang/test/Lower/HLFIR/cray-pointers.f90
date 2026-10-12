@@ -396,3 +396,16 @@ end subroutine
 ! CHECK:           fir.call @_QPtakes_character(%[[VAL_18]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine test_volatile_craypointer()
+  real x(10), res
+  pointer (cp, x)
+  volatile :: cp
+  res = x(7)
+end subroutine test_volatile_craypointer
+! CHECK-LABEL:   func.func @_QPtest_volatile_craypointer() {
+! CHECK:           %[[CP:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_volatile_craypointerEcp") fortran_attrs<volatile, cray_pointer> : (!fir.ref<i64, volatile>) -> (!fir.ref<i64, volatile>, !fir.ref<i64, volatile>)
+! CHECK:           %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_volatile_craypointerEx") fortran_attrs<pointer, cray_pointee>
+! CHECK:           %[[CAST:.*]] = fir.convert %[[CP]]#0 : (!fir.ref<i64, volatile>) -> !fir.ref<!fir.ptr<i64>, volatile>
+! CHECK:           %[[PTR:.*]] = fir.load %[[CAST]] : !fir.ref<!fir.ptr<i64>, volatile>
+! CHECK:           fir.box_set_addr %[[PTR]] to %[[X]]#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

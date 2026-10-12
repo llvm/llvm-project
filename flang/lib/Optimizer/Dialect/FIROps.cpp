@@ -1385,6 +1385,15 @@ llvm::LogicalResult fir::BoxSetAddrOp::verify() {
   return mlir::success();
 }
 
+void fir::BoxSetAddrOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getBoxRefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getBoxRef().getType()}, effects);
+}
+
 //===----------------------------------------------------------------------===//
 // BoxCharLenOp
 //===----------------------------------------------------------------------===//

@@ -571,6 +571,8 @@ struct BoxSetAddrOpConversion : public fir::FIROpConversion<fir::BoxSetAddrOp> {
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, kAddrPosInBox});
     auto store = mlir::LLVM::StoreOp::create(rewriter, loc, adaptor.getAddr(),
                                              addrField);
+    if (fir::isa_volatile_type(op.getBoxRef().getType()))
+      store.setVolatile_(true);
     attachTBAATag(store, boxTyPair.fir, nullptr, addrField);
     rewriter.eraseOp(op);
     return mlir::success();
