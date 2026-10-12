@@ -668,6 +668,27 @@ namespace C {
   static_assert(M4->a == nullptr);
   static_assert(M4->g2[0] == 0);
 }
+
+namespace D {
+  struct A {
+    char a;
+  };
+
+  template <typename T>
+  struct B {
+    constexpr T &bar() { return *static_cast<T *>(this); } // expected-note {{cannot cast object of dynamic type 'C<VirtualCalls::BaseToDerived::D::D>' to type 'VirtualCalls::BaseToDerived::D::D'}} \
+                                                           // ref-note {{cannot cast object of dynamic type 'C<D>' to type 'VirtualCalls::BaseToDerived::D::D'}}
+  };
+
+  template <typename T>
+  struct C : A , B<T> {};
+
+  struct D : B<D> {};
+
+  constexpr auto L = C<D>().bar(); // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{in call to}}
+}
+
 }
 
 

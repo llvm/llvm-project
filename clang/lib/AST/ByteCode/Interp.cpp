@@ -637,33 +637,6 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset) {
-  uint32_t MinOffset = Ptr.block()->getMetadataSize();
-  uint32_t PtrOffset = Ptr.getByteOffset();
-
-  // We subtract Offset from PtrOffset. The result must be at least
-  // MinOffset.
-  if (Offset < PtrOffset && (PtrOffset - Offset) >= MinOffset)
-    return true;
-
-  const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType ExprTy = E->getType();
-  if (ExprTy->isPointerOrReferenceType())
-    ExprTy = ExprTy->getPointeeType();
-
-  QualType TargetQT = ExprTy;
-  QualType MostDerivedQT = Ptr.getDeclPtr().getType();
-
-  if (MostDerivedQT->isPointerOrReferenceType())
-    MostDerivedQT = MostDerivedQT->getPointeeType();
-
-  S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << MostDerivedQT << TargetQT;
-
-  return false;
-}
-
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isConst())
@@ -1852,8 +1825,9 @@ bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK) {
   return getBase(S, OpPC, Ptr.narrow(), Off, NullOK);
 }
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType) {
+// Do ONE step of a BaseToDerived cast.
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType) {
   const Pointer &Ptr = S.Stk.pop<Pointer>().narrow();
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
@@ -1873,21 +1847,31 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
 
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
     return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
 
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+  auto diagFailedCast = [&]() -> bool {
     QualType MostDerivedType = Ptr.getDeclDesc()->getType();
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
+        << MostDerivedType << QualType(FinalType, 0);
     return false;
-  }
+  };
 
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  // We're casting down one level, which isn't possible if the pointer is
+  // already the root.
+  if (Ptr.isRoot())
+    return diagFailedCast();
+
+  auto unwrapPointerType = [](QualType T) -> const Type * {
+    if (T->isPointerOrReferenceType())
+      return T->getPointeeType().getTypePtr();
+    return T.getTypePtr();
+  };
+
+  PtrView BasePtr = Ptr.view().getBase();
+  const Type *BaseTy = unwrapPointerType(BasePtr.getType());
+  if (!ASTContext::hasSameType(BaseTy, TargetType))
+    return diagFailedCast();
+
+  S.Stk.push<Pointer>(BasePtr);
   return true;
 }
 
