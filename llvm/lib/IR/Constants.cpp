@@ -319,49 +319,51 @@ static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
   return std::nullopt;
 }
 
-bool Constant::containsMatchingElement(
-    function_ref<bool(const Constant *)> PredFn) const {
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
   // Simple pruning for large size array. UndefValue is fine as it is filtered
   // out by PredFn already.
-  if (isa<ConstantData>(this))
+  if (isa<ConstantData>(C))
     return false;
 
-  std::optional<unsigned> NumElts = getNumWalkableElements(getType());
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
   if (!NumElts)
     return false;
 
   for (unsigned I = 0; I != *NumElts; ++I) {
-    Constant *Elt = getAggregateElement(I);
-    if (Elt && (PredFn(Elt) || Elt->containsMatchingElement(PredFn)))
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
       return true;
   }
   return false;
 }
 
-bool Constant::containsUndefinedElement(
-    function_ref<bool(const Constant *)> HasFn) const {
-  Type *Ty = getType();
+static bool
+containsUndefinedElement(const Constant *C,
+                         function_ref<bool(const Constant *)> HasFn) {
+  Type *Ty = C->getType();
   if (!Ty->isVectorTy() && !Ty->isAggregateType())
     return false;
 
-  if (HasFn(this))
+  if (HasFn(C))
     return true;
 
-  return containsMatchingElement(HasFn);
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
   return containsUndefinedElement(
-      [&](const auto *C) { return isa<UndefValue>(C); });
+      this, [&](const auto *C) { return isa<UndefValue>(C); });
 }
 
 bool Constant::containsPoisonElement() const {
   return containsUndefinedElement(
-      [&](const auto *C) { return isa<PoisonValue>(C); });
+      this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
 bool Constant::containsUndefElement() const {
-  return containsUndefinedElement([&](const auto *C) {
+  return containsUndefinedElement(this, [&](const auto *C) {
     return isa<UndefValue>(C) && !isa<PoisonValue>(C);
   });
 }
@@ -370,7 +372,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingElement(IsaPred<ConstantExpr>);
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
