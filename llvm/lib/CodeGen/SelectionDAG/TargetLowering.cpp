@@ -5454,16 +5454,14 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               DAG.getConstant(MinVal, dl, N0.getValueType()),
                               ISD::SETEQ);
       }
-      // Rewrite X < C as X <= C-1 (signed) or X <u C as X <=u C-1 (unsigned),
-      // when C is not a legal compare immediate but C-1 is, and the target
-      // opts in via shouldRewriteLTToLE. The gate excludes signed INT_MIN and
-      // unsigned 0, where C-1 would wrap around.
+      // Rewrite X < C as X <= C-1 (signed) or X <u C as X <=u C-1
+      // (unsigned), when C is not a legal compare immediate but C-1 is,
+      // and the target opts in via shouldRewriteLTToLE.
       if (!VT.isVector() && OpVT.isSimple() && shouldRewriteLTToLE(OpVT) &&
           C1.getBitWidth() <= 64 &&
-          (Cond == ISD::SETLT || Cond == ISD::SETULT) &&
           !(Cond == ISD::SETLT && C1.isMinSignedValue()) &&
           !(Cond == ISD::SETULT && C1.isZero())) {
-        bool IsSigned = (Cond == ISD::SETLT);
+        bool IsSigned = Cond == ISD::SETLT;
         // Unsigned constants above INT64_MAX don't fit the int64_t that
         // isLegalICmpImmediate takes, so skip them.
         if (IsSigned || C1.getActiveBits() <= 63) {
@@ -5476,11 +5474,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           if (!isLegalICmpImmediate(ImmOf(C1)) &&
               isLegalICmpImmediate(ImmOf(C)) &&
               isCondCodeLegal(NewCC, OpVT.getSimpleVT())) {
-            return DAG.getSetCC(
-                dl, VT, N0,
-                DAG.getConstant(C, dl, N1.getValueType(),
-                                /*isTarget=*/false, /*isOpaque=*/true),
-                NewCC);
+            return DAG.getSetCC(dl, VT, N0,
+                                DAG.getConstant(C, dl, N1.getValueType(),
+                                                /*isTarget=*/false,
+                                                /*isOpaque=*/true),
+                                NewCC);
           }
         }
       }
