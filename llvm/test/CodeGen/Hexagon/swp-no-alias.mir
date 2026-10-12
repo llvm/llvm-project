@@ -27,7 +27,7 @@
 # CHECK-DAG:      SU(4): Data Latency=0 Reg=%10
 # CHECK-DAG:      SU(2): Data Latency=0 Reg=%10
 # CHECK-DAG:      SU(7): Anti Latency=1
-# CHECK-NEXT: SU(2):   %12:hvxvr = V6_vL32b_ai %10:intregs, 0 :: (load (s1024) from %ir.iptr.09, !tbaa !4)
+# CHECK-NEXT: SU(2):   %12:hvxvr = V6_vL32b_ai %10:intregs, 0 :: (load (s1024) from %ir.iptr.09, !tbaa !10)
 # CHECK-NEXT:   # preds left
 # CHECK-NEXT:   # succs left
 # CHECK-NEXT:   # rdefs left
@@ -38,7 +38,7 @@
 # CHECK-NEXT:     SU(1): Data Latency=0 Reg=%10
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(3): Data Latency=0 Reg=%12
-# CHECK-NEXT: SU(3):   V6_vS32b_ai %8:intregs, 0, %12:hvxvr :: (store (s1024) into %ir.optr.010, !tbaa !4)
+# CHECK-NEXT: SU(3):   V6_vS32b_ai %8:intregs, 0, %12:hvxvr :: (store (s1024) into %ir.optr.010, !tbaa !10)
 # CHECK-NEXT:   # preds left
 # CHECK-NEXT:   # succs left
 # CHECK-NEXT:   # rdefs left
@@ -48,7 +48,7 @@
 # CHECK-NEXT:   Predecessors:
 # CHECK-DAG:      SU(2): Data Latency=0 Reg=%12
 # CHECK-DAG:      SU(0): Data Latency=0 Reg=%8
-# CHECK-NEXT: SU(4):   %13:hvxvr = V6_vL32b_ai %10:intregs, 128 :: (load (s1024) from %ir.cgep, !tbaa !4)
+# CHECK-NEXT: SU(4):   %13:hvxvr = V6_vL32b_ai %10:intregs, 128 :: (load (s1024) from %ir.cgep, !tbaa !10)
 # CHECK-NEXT:   # preds left
 # CHECK-NEXT:   # succs left
 # CHECK-NEXT:   # rdefs left
@@ -59,7 +59,7 @@
 # CHECK-NEXT:     SU(1): Data Latency=0 Reg=%10
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(5): Data Latency=0 Reg=%13
-# CHECK-NEXT: SU(5):   V6_vS32b_ai %8:intregs, 128, %13:hvxvr :: (store (s1024) into %ir.cgep3, !tbaa !4)
+# CHECK-NEXT: SU(5):   V6_vS32b_ai %8:intregs, 128, %13:hvxvr :: (store (s1024) into %ir.cgep3, !tbaa !10)
 
 
 

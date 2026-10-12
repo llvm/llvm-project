@@ -196,6 +196,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_6A";
   case llvm::ARM::ArchKind::ARMV9_7A:
     return "9_7A";
+  case llvm::ARM::ArchKind::ARMV9_8A:
+    return "9_8A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -325,9 +327,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
 
   if (Triple.getOS() == llvm::Triple::Linux ||
       Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName = Opts.EABIVersion == llvm::EABI::GNU
-                           ? "llvm.arm.gnu.eabi.mcount"
-                           : "\01mcount";
+    this->MCountName =
+        Triple.isGNUEnvironment() ? "llvm.arm.gnu.eabi.mcount" : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
 }
@@ -870,6 +871,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1041,6 +1043,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
   case llvm::ARM::ArchKind::ARMV9_7A:
+  case llvm::ARM::ArchKind::ARMV9_8A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

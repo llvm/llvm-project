@@ -204,8 +204,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   if (Triple.getOS() == llvm::Triple::Linux)
     this->MCountName = "\01_mcount";
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName =
-        Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+    this->MCountName = Triple.isGNUEnvironment() ? "\01_mcount" : "mcount";
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -399,6 +398,12 @@ void AArch64TargetInfo::getTargetDefinesARMV97A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Armv9.7-A does not have a v8.* equivalent, but is a superset of v9.6-A.
   getTargetDefinesARMV96A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV98A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.8-A does not have a v8.* equivalent, but is a superset of v9.7-A.
+  getTargetDefinesARMV97A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -767,6 +772,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV96A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_7A)
     getTargetDefinesARMV97A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_8A)
+    getTargetDefinesARMV98A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -1280,6 +1287,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.7a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_7A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_7A;
+    if (Feature == "+v9.8a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_8A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_8A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {

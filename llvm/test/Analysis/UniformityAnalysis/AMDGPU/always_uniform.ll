@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: for function 'readfirstlane':
 define amdgpu_kernel void @readfirstlane() {
@@ -146,10 +146,10 @@ define i32 @s_get_barrier_state(i32 %bar) {
 }
 
 ; CHECK-LABEL: for function 's_get_named_barrier_state':
-; CHECK: DIVERGENT: ptr addrspace(3) %bar
+; CHECK: DIVERGENT: ptr addrspace(15) %bar
 ; CHECK-NOT: DIVERGENT
-define i32 @s_get_named_barrier_state(ptr addrspace(3) %bar) {
-  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %bar)
+define i32 @s_get_named_barrier_state(ptr addrspace(15) %bar) {
+  %result = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %bar)
   ret i32 %result
 }
 

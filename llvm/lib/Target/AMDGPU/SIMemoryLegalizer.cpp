@@ -857,7 +857,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       const auto &Merged =
           MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
       if (!Merged) {
-        reportUnsupported(MI, "Unsupported atomic synchronization scope");
+        reportUnsupported(MI, "unsupported atomic synchronization scope");
         return std::nullopt;
       }
       MergedSSID = *Merged;
@@ -883,7 +883,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   if (Ordering != AtomicOrdering::NotAtomic) {
     auto ScopeOrNone = toSIAtomicScope(SSID, InstrAddrSpace);
     if (!ScopeOrNone) {
-      reportUnsupported(MI, "Unsupported atomic synchronization scope");
+      reportUnsupported(MI, "unsupported atomic synchronization scope");
       return std::nullopt;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
@@ -942,7 +942,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
   auto ScopeOrNone = toSIAtomicScope(SSID, SIAtomicAddrSpace::ATOMIC);
   if (!ScopeOrNone) {
-    reportUnsupported(MI, "Unsupported atomic synchronization scope");
+    reportUnsupported(MI, "unsupported atomic synchronization scope");
     return std::nullopt;
   }
 
@@ -1396,7 +1396,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote VMEM data or
         // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW
         // and CC will never be stale due to the local memory probes.
@@ -1428,7 +1428,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       }
       [[fallthrough]];
     case SIAtomicScope::AGENT:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote date or local
         // MTYPE NC global data. Local MTYPE RW and CC memory will never be
         // stale due to the memory probes.
@@ -1445,7 +1445,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       break;
     case SIAtomicScope::WORKGROUP:
       if (TgSplitEnabled) {
-        if (ST.hasGFX940Insts()) {
+        if (ST.hasBufferInvInst()) {
           // In threadgroup split mode the waves of a work-group can be
           // executing on different CUs. Therefore need to invalidate the L1
           // which is per CU. Otherwise in non-threadgroup split mode all waves

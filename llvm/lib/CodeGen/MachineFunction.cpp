@@ -237,7 +237,7 @@ void MachineFunction::init() {
     Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)
-    Alignment = Align(1ULL << AlignAllFunctions);
+    Alignment = Align::fromLog2(AlignAllFunctions);
 
   JumpTableInfo = nullptr;
 
@@ -745,6 +745,36 @@ bool MachineFunction::needsFrameMoves() const {
   return getTarget().Options.ForceDwarfFrameSection ||
          F.needsUnwindTableEntry() ||
          !F.getParent()->debug_compile_units().empty();
+}
+
+bool MachineFunction::disableFramePointerElim() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+    return true;
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
+bool MachineFunction::framePointerIsReserved() const {
+  FramePointerKind FP = getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+    return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
 }
 
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
@@ -1658,7 +1688,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     if (Constants[i].isMachineConstantPoolEntry())
       Constants[i].Val.MachineCPVal->print(OS);
     else
-      Constants[i].Val.ConstVal->printAsOperand(OS, /*PrintType=*/false);
+      Constants[i].Val.ConstVal->printAsOperand(OS);
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }

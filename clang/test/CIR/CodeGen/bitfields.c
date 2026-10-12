@@ -12,7 +12,7 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, bitfield !u16i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed {data !s8i, data !s8i, data !s8i, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 3>, #cir.bitfield_decl<!u32i, 4>, #cir.bitfield_decl<!u32i, 7>]>, pad !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
@@ -23,7 +23,7 @@ typedef struct {
   int c;
 } D;
 
-// CIR-DAG:  !rec_D = !cir.struct<"D" {bitfield !u16i, data !s32i}>
+// CIR-DAG:  !rec_D = !cir.struct<"D" {bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 5>]>, data !s32i}>
 // LLVM-DAG: %struct.D = type { i16, i32 }
 // OGCG-DAG: %struct.D = type { i16, i32 }
 
@@ -36,7 +36,7 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
-// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !u64i, bitfield !u16i, data !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 27>, #cir.bitfield_decl<!s32i, 17>, #cir.bitfield_decl<!s32i, 2>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s32i, 15>]>, data !u32i}>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
@@ -45,7 +45,7 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !u8i, data !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>, data !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
@@ -67,7 +67,7 @@ typedef struct {
     int l: 14;
 } U;
 
-// CIR-DAG:  !rec_U = !cir.struct<"U" packed {data !s8i, data !s8i, data !s8i, bitfield !u8i, bitfield !u64i}>
+// CIR-DAG:  !rec_U = !cir.struct<"U" packed {data !s8i, data !s8i, data !s8i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 2>, #cir.bitfield_decl<!s32i, 2>, #cir.bitfield_decl<!s32i, 4>]>, bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 25>, #cir.bitfield_decl<!s32i, 3>, #cir.bitfield_decl<!s32i, 4>, #cir.bitfield_decl<!s32i, 3>, #cir.bitfield_decl<!s32i, 8>, #cir.bitfield_decl<!s32i, 14>]>}>
 // LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
@@ -77,7 +77,7 @@ typedef struct{
     int c: 30;
 } Clip;
 
-// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {bitfield !cir.array<!u8i x 3>, data !s8i, bitfield !u32i}>
+// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>, data !s8i, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 30>]>}>
 // LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 // OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 

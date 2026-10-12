@@ -21,6 +21,7 @@ using namespace RTLIB;
 
 #define GET_RUNTIME_LIBCALLS_INFO
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #define GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL
@@ -29,16 +30,14 @@ using namespace RTLIB;
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          ExceptionHandling ExceptionModel,
                                          FloatABI::ABIType FloatABI,
-                                         EABI EABIVersion, StringRef ABIName,
+                                         StringRef ABIName,
                                          VectorLibrary VecLib) {
-  // FIXME: The ExceptionModel parameter is to handle the field in
-  // TargetOptions. This interface fails to distinguish the forced disable
-  // case for targets which support exceptions by default. This should
-  // probably be a module flag and removed from TargetOptions.
-  if (ExceptionModel == ExceptionHandling::None)
+  // Only an unspecified model resolves to the triple default; None is left as
+  // an explicit disable.
+  if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
-  initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
+  initLibcalls(TT, ExceptionModel, FloatABI, ABIName,
                TT.getDefaultLongDoubleFormat());
 
   // TODO: Tablegen should generate these sets
@@ -103,12 +102,10 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
 }
 
 // TODO: Consider the remaining module flags.
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
-                                         ExceptionHandling ExceptionModel,
-                                         EABI EABIVersion, StringRef ABIName,
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                                          VectorLibrary VecLib)
-    : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
-                          EABIVersion, ABIName, VecLib) {}
+    : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
+                          M.getFloatABI(), ABIName, VecLib) {}
 
 bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
@@ -121,10 +118,10 @@ bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
-                                       EABI EABIVersion, StringRef ABIName,
+                                       StringRef ABIName,
                                        LongDoubleFormat LongDoubleFormat) {
-  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, EABIVersion,
-                              ABIName, LongDoubleFormat);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI, ABIName,
+                              LongDoubleFormat);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -156,6 +153,104 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
 /// be kept in sync.
 static IntegerType *getSizeTType(LLVMContext &Ctx, const DataLayout &DL) {
   return DL.getIndexType(Ctx, /*AddressSpace=*/0);
+}
+
+static std::pair<Type *, Attribute> convertToIRTypeAndAttr(FuncArgTypeID ID,
+                                                           LLVMContext &Ctx,
+                                                           const DataLayout &DL,
+                                                           unsigned IntBits) {
+
+  // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
+  switch (ID) {
+  case Void:
+    return {Type::getVoidTy(Ctx), Attribute()};
+  case Bool:
+    return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int16:
+  case UInt16:
+    return {IntegerType::get(Ctx, 16), Attribute()};
+  case Int32:
+  case UInt32:
+    return {IntegerType::get(Ctx, 32), Attribute()};
+  case Int:
+  case UInt:
+  case IntPlus:
+  case UIntPlus:
+  case Long:
+  case ULong:
+  case IntX:
+  case UIntX:
+    return {IntegerType::get(Ctx, IntBits), Attribute()};
+  case Int64:
+  case UInt64:
+  case LLong:
+  case ULLong:
+    return {IntegerType::get(Ctx, 64), Attribute()};
+  case SizeT:
+  case SSizeT:
+    return {getSizeTType(Ctx, DL), Attribute()};
+  case Flt:
+  case Floating:
+    return {Type::getFloatTy(Ctx), Attribute()};
+  case Dbl:
+  case LDbl:
+    return {Type::getDoubleTy(Ctx), Attribute()};
+  case Ptr:
+    return {PointerType::get(Ctx, 0), Attribute()};
+  default:
+    return {};
+  }
+}
+
+std::pair<FunctionType *, AttributeList>
+RuntimeLibcallsInfo::getDefaultFunctionTy(
+    LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+    RTLIB::LibcallImpl LibcallImpl) const {
+  Libcall LC = getLibcallFromImpl(LibcallImpl);
+  const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
+
+  if (ProtoTypes[0] == NoFuncArgType)
+    return {};
+
+  unsigned IntBits = getIntSize(TT);
+  AttributeList Attrs;
+
+  auto [RetTy, RetAttr] =
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits);
+  if (RetAttr.isValid())
+    Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
+
+  Type *LastTy = RetTy, *ArgTy;
+  Attribute LastAttr = RetAttr, ArgAttr;
+  SmallVector<Type *, 4> ArgTys;
+  bool IsVarArg = false;
+  unsigned Idx = 1;
+  for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
+       TyID = ProtoTypes[++Idx]) {
+    if (TyID == Ellip) {
+      // The ellipsis ends the protoype list so it must be followed by
+      // NoFuncArgType.
+      assert(ProtoTypes[Idx + 1] == NoFuncArgType);
+      IsVarArg = true;
+      break;
+    }
+
+    if (TyID == Same) {
+      ArgTy = LastTy;
+      ArgAttr = LastAttr;
+    } else {
+      std::tie(ArgTy, ArgAttr) =
+          convertToIRTypeAndAttr(ProtoTypes[Idx], Ctx, DL, IntBits);
+      LastTy = ArgTy;
+      LastAttr = ArgAttr;
+    }
+
+    ArgTys.push_back(ArgTy);
+    if (ArgAttr.isValid())
+      Attrs = Attrs.addParamAttribute(Ctx, Idx - 1, ArgAttr);
+  }
+
+  return {FunctionType::get(RetTy, ArgTys, IsVarArg), Attrs};
 }
 
 std::pair<FunctionType *, AttributeList>
@@ -277,6 +372,64 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
                               false),
             Attrs};
+  }
+  case RTLIB::impl___aeabi_idivmod:
+  case RTLIB::impl___aeabi_uidivmod:
+  case RTLIB::impl___aeabi_ldivmod:
+  case RTLIB::impl___aeabi_uldivmod:
+  case RTLIB::impl___rt_sdiv:
+  case RTLIB::impl___rt_udiv:
+  case RTLIB::impl___rt_sdiv64:
+  case RTLIB::impl___rt_udiv64: {
+    // The ARM AEABI (__aeabi_*divmod) and Windows (__rt_*div*) divmod functions
+    // return both values modeled as an inreg { iN, iN } struct (quotient,
+    // remainder). The __rt_*div* cases pass the arguments in opposite order,
+    // though this doesn't affect the declaration.
+    bool IsSigned;
+    unsigned Bits;
+    switch (LibcallImpl) {
+    case RTLIB::impl___aeabi_idivmod:
+    case RTLIB::impl___rt_sdiv:
+      IsSigned = true;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_uidivmod:
+    case RTLIB::impl___rt_udiv:
+      IsSigned = false;
+      Bits = 32;
+      break;
+    case RTLIB::impl___aeabi_ldivmod:
+    case RTLIB::impl___rt_sdiv64:
+      IsSigned = true;
+      Bits = 64;
+      break;
+    case RTLIB::impl___aeabi_uldivmod:
+    case RTLIB::impl___rt_udiv64:
+      IsSigned = false;
+      Bits = 64;
+      break;
+    default:
+      llvm_unreachable("unexpected divmod libcall");
+    }
+
+    Type *IntTy = IntegerType::get(Ctx, Bits);
+    StructType *RetTy = StructType::get(IntTy, IntTy);
+    FunctionType *FuncTy = FunctionType::get(RetTy, {IntTy, IntTy}, false);
+
+    AttrBuilder FuncAttrBuilder(Ctx);
+    for (Attribute::AttrKind Attr : CommonFnAttrs)
+      FuncAttrBuilder.addAttribute(Attr);
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
+
+    AttributeList Attrs;
+    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
+
+    Attribute::AttrKind ExtKind = IsSigned ? Attribute::SExt : Attribute::ZExt;
+    Attrs = Attrs.addRetAttribute(Ctx, Attribute::InReg);
+    Attrs = Attrs.addParamAttribute(Ctx, 0, ExtKind);
+    Attrs = Attrs.addParamAttribute(Ctx, 1, ExtKind);
+
+    return {FuncTy, Attrs};
   }
   case RTLIB::impl_sqrtf:
   case RTLIB::impl_sqrt: {
@@ -466,7 +619,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     return {FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false), Attrs};
   }
   default:
-    return {};
+    return getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
   }
 
   return {};

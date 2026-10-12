@@ -655,7 +655,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   // The infrastructure for normal calling convention lowering is essentially
   // useless for kernels. We want to avoid any kind of legalization or argument
   // splitting.
-  if (CC == CallingConv::AMDGPU_KERNEL)
+  if (AMDGPU::isKernel(CC))
     return lowerFormalArgumentsKernel(B, F, VRegs);
 
   const bool IsGraphics = AMDGPU::isGraphics(CC);
@@ -1353,6 +1353,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), /*IsTailCall*/ true,
                                ST.isWave32(), CalleeCC, IsDynamicVGPRChainCall);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (FuncInfo->isWholeWaveFunction())
     addOriginalExecToReturn(MF, MIB);
@@ -1484,7 +1486,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   // If we have -tailcallopt, we need to adjust the stack. We'll do the call
   // sequence start and end here.
   if (!IsSibCall) {
-    MIB->getOperand(CalleeIdx + 1).setImm(FPDiff);
+    MIB->getOperand(CalleeIdx + 2).setImm(FPDiff);
     CallSeqStart.addImm(NumBytes).addImm(0);
     // End the call sequence *before* emitting the call. Normally, we would
     // tidy the frame up after the call. However, here, we've laid out the
@@ -1613,6 +1615,17 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy())
     splitToValueTypes(Info.OrigRet, InArgs, DL, Info.CallConv);
 
+  if (Info.IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
+    StringRef CalleeName = Info.Callee.isGlobal()
+                               ? Info.Callee.getGlobal()->getName()
+                               : "<unknown>";
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "unsupported required tail call to function " + CalleeName));
+    for (Register ResReg : Info.OrigRet.Regs)
+      MIRBuilder.buildUndef(ResReg);
+    return true;
+  }
+
   // If we can lower as a tail call, do that instead.
   bool CanTailCallOpt =
       isEligibleForTailCallOptimization(MIRBuilder, Info, InArgs, OutArgs);
@@ -1643,10 +1656,12 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
-  MIB.addDef(TRI->getReturnAddressReg(MF));
+  MIB.addDef(TRI->getReturnAddressReg(MF), RegState::Dead);
 
   if (!Info.IsConvergent)
     MIB.setMIFlag(MachineInstr::NoConvergent);
+  if (Info.NoMerge)
+    MIB.setMIFlag(MachineInstr::NoMerge);
 
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;

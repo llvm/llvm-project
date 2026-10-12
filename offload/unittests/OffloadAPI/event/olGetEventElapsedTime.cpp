@@ -28,13 +28,13 @@ struct olGetEventElapsedTimeTest : OffloadQueueTest {
     LaunchArgs.NumGroups = {1, 1, 1};
     LaunchArgs.DynSharedMemory = 0;
 
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+    ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
                               LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
   }
 
   void TearDown() override {
     if (Mem)
-      ASSERT_SUCCESS(olMemFree(Mem));
+      ASSERT_SUCCESS(olMemFree(Context, Mem));
     if (Program)
       ASSERT_SUCCESS(olDestroyProgram(Program));
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());

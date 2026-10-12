@@ -23,11 +23,10 @@ ORC_RT_C_EXTERN_C_BEGIN
 typedef void (*orc_rt_Session_CallControllerReturn)(
     orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ResultBytes, void *Ctx);
 
-void orc_rt_Session_callController(orc_rt_SessionRef S,
-                                   orc_rt_ControllerHandlerTag T,
-                                   orc_rt_WrapperFunctionBuffer ArgBytes,
-                                   orc_rt_Session_CallControllerReturn Return,
-                                   void *ReturnCtx);
+ORC_RT_C_EXPORT void orc_rt_Session_callController(
+    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
+    orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx);
 
 ORC_RT_C_EXTERN_C_END
 

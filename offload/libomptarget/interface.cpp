@@ -37,6 +37,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 using namespace llvm::omp::target::debug;
+using namespace llvm::omp::target::helpers;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //
@@ -592,12 +593,10 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
-  assert(PM && "Runtime not initialized");
-  auto DeviceOrErr = PM->getDevice(DeviceId);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
-
-  return DeviceOrErr->printDeviceInfo();
+  MESSAGE("The %s function is deprecated and no longer prints any "
+          "information. Use olGetDeviceInfo instead",
+          __PRETTY_FUNCTION__);
+  return false;
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
@@ -649,7 +648,23 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
   if (!PM)
     return;
 
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized() && Plugin.getNumDevices() > 0)
-      Plugin.getRPCServer().registerCallback(Callback);
+  if (auto Err = iteratePlatforms(
+          [](ol_platform_handle_t Platform, void *Data) {
+            bool Active = false;
+            if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_ACTIVE,
+                                  sizeof(Active), &Active) == OL_SUCCESS &&
+                Active)
+              olPlatformRegisterRPCCallback(
+                  Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+            return true;
+          },
+          reinterpret_cast<void *>(Callback)))
+    REPORT() << "Failed to iterate platforms: " << toString(std::move(Err));
+}
+
+EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
+  void *TargetPtr = omp_get_mapped_ptr(HostPtr, DeviceId);
+  if (!TargetPtr)
+    return const_cast<void *>(HostPtr);
+  return TargetPtr;
 }

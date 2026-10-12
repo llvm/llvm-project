@@ -303,22 +303,25 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       continue; // Ignored.
     }
     uint32_t Dec = static_cast<uint32_t>(DecorationId->getZExtValue());
-    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId)) {
-      ConstantInt *ScopeV =
+    if (Dec == static_cast<uint32_t>(SPIRV::Decoration::UniformId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::AlignmentId) ||
+        Dec == static_cast<uint32_t>(SPIRV::Decoration::MaxByteOffsetId)) {
+      ConstantInt *IdV =
           OpMD->getNumOperands() == 2
               ? mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
               : nullptr;
-      assert(ScopeV && isUInt<32>(ScopeV->getZExtValue()) &&
-             "Expect Scope <id> operand of the UniformId decoration");
+      if (!IdV || !isUInt<32>(IdV->getZExtValue()))
+        report_fatal_error("Expect a single integer <id> operand of the "
+                           "decoration");
       SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
       SPIRVTypeInst SpvTypeInt32 =
           GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
-      Register ScopeReg = GR->buildConstantInt(
-          ScopeV->getZExtValue(), MIRBuilder, SpvTypeInt32, /*EmitIR=*/false);
+      Register IdReg = GR->buildConstantInt(IdV->getZExtValue(), MIRBuilder,
+                                            SpvTypeInt32, /*EmitIR=*/false);
       MIRBuilder.buildInstr(SPIRV::OpDecorateId)
           .addUse(Reg)
           .addImm(Dec)
-          .addUse(ScopeReg);
+          .addUse(IdReg);
       continue;
     }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(Reg).addImm(Dec);
@@ -422,6 +425,10 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC) {
     return SPIRV::MemorySemantics::WorkgroupMemory;
   case SPIRV::StorageClass::CrossWorkgroup:
     return SPIRV::MemorySemantics::CrossWorkgroupMemory;
+  case SPIRV::StorageClass::Generic:
+    return SPIRV::MemorySemantics::MemorySemantics(
+        SPIRV::MemorySemantics::WorkgroupMemory |
+        SPIRV::MemorySemantics::CrossWorkgroupMemory);
   case SPIRV::StorageClass::AtomicCounter:
     return SPIRV::MemorySemantics::AtomicCounterMemory;
   case SPIRV::StorageClass::Image:

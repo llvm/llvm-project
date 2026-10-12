@@ -8,7 +8,7 @@ analyzer's ability to find bugs.
 
 This page gives a practical overview of such annotations. For more technical
 specifics regarding Clang-specific annotations please see the Clang's list of
-[language extensions](https://clang.llvm.org/docs/LanguageExtensions.html).
+[language extensions](../../LanguageExtensions.md).
 Details of "standard" GCC attributes (that Clang also supports) can
 be found in the [GCC manual](https://gcc.gnu.org/onlinedocs/gcc/), with the
 majority of the relevant attributes being in the section on
@@ -18,9 +18,6 @@ Note that attributes that are labeled **Clang-specific** are not
 recognized by GCC. Their use can be conditioned using preprocessor macros
 (examples included on this page).
 
-```{contents}
-:local: true
-```
 
 ## General Purpose Annotations
 
@@ -215,7 +212,7 @@ conventions can cause the analyzer to miss bugs or flag false positives.
 One can educate the analyzer (and others who read your code) about methods or
 functions that deviate from the Cocoa and Core Foundation conventions using the
 attributes described here. However, you should consider using proper naming
-conventions or the [objc_method_family](https://clang.llvm.org/docs/LanguageExtensions.html#the-objc-method-family-attribute)
+conventions or the [objc_method_family](../../AttributeReference.md#objc-method-family)
 attribute, if applicable.
 
 (ns_returns_retained)=
@@ -601,7 +598,7 @@ By default, the following summaries are assumed:
   including the implicit `this` parameter.
 
 These summaries can be overriden with the following
-[attributes](https://clang.llvm.org/docs/AttributeReference.html#os-returns-not-retained):
+{ref}`attributes <os-retained-attr-family>`:
 
 #### Attribute 'os_returns_retained'
 

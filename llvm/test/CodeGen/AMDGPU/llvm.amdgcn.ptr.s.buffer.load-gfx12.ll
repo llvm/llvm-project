@@ -167,8 +167,9 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-SDAG-NEXT:    s_mov_b32 s6, 0x3ff
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s6, v0 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen nv
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -183,9 +184,10 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-GISEL-NEXT:    s_mov_b32 s6, 0x3ff
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s6, v0 bitop3:0x40
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0 nv
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen nv
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0

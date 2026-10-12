@@ -29,9 +29,17 @@ include "mlir/IR/Constraints.td"
 //                          \-> sub
 //                          \-> ...
 //
-// Morphisms between representations can happen in the following 6 ways:
-//  generic <---> category <---> named
-//      \-------------------------/
+// Morphisms between representations can happen in the following ways:
+//  * Specialize: Convert `generic` operations to either:
+//       * `named`, where the interfaces match and there is such op, OR
+//       * `category`, where enough interfaces still match, OR
+//       * `category`, when the `emitCategory` flag is set (regardless of named ops)
+//  * Generalize: Convert `named` or `category` operations to `generic` operations
+//       * Any structured operation can be converted to `generic`
+//  * Categorize: Convert both `named` and `generic` operations to `category` operations:
+//       * `elementwise`, for non-contracting `generic` operations that match the interfaces, OR
+//       * `contract`, for contracting `generic` operations that match the interfaces
+//       * `contract`, for contracting `named` operations that match the interfaces
 //
 // generic subsumes category which subsumes structured named (not softmax,
 // convolutions, etc). The generalization path is guaranteed, the
@@ -77,14 +85,18 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
            "convert category ops e.g. `linalg.elementwise` to equivalent named ops"> ];
 }
 
-def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops">,
-                                   Deprecated<"Use 'linalg-morph-ops' instead."> {
-  let summary = "Convert named ops into generic ops";
+def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
+  let summary = "Convert `named` and `category` ops into `generic` ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
-def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops">,
-                                     Deprecated<"Use 'linalg-morph-ops' instead."> {
-  let summary = "Convert generic ops back to named ops";
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
+  let summary = "Convert `generic` ops into `named` or `category` ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgCategorizeOpsPass : Pass<"linalg-categorize-ops"> {
+  let summary = "Convert `named` and `generic` ops into `category` ops";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 

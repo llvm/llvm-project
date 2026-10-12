@@ -8,8 +8,7 @@ define <vscale x 1 x i8> @intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i32(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8.nxv1i32(
@@ -42,8 +41,7 @@ define <vscale x 2 x i8> @intrinsic_vloxei_v_nxv2i8_nxv2i8_nxv2i32(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv2i8_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vloxei.nxv2i8.nxv2i32(
@@ -178,8 +176,7 @@ define <vscale x 1 x i16> @intrinsic_vloxei_v_nxv1i16_nxv1i16_nxv1i32(ptr %0, <v
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i16_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vloxei.nxv1i16.nxv1i32(
@@ -212,8 +209,7 @@ define <vscale x 2 x i16> @intrinsic_vloxei_v_nxv2i16_nxv2i16_nxv2i32(ptr %0, <v
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv2i16_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vloxei.nxv2i16.nxv2i32(
@@ -652,8 +648,7 @@ define <vscale x 1 x half> @intrinsic_vloxei_v_nxv1f16_nxv1f16_nxv1i32(ptr %0, <
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1f16_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x half> @llvm.riscv.vloxei.nxv1f16.nxv1i32(
@@ -686,8 +681,7 @@ define <vscale x 2 x half> @intrinsic_vloxei_v_nxv2f16_nxv2f16_nxv2i32(ptr %0, <
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv2f16_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vloxei32.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei32.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x half> @llvm.riscv.vloxei.nxv2f16.nxv2i32(
@@ -1126,8 +1120,7 @@ define <vscale x 1 x i8> @intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i16(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv1i8_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vloxei16.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei16.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8.nxv1i16(
@@ -1160,8 +1153,7 @@ define <vscale x 2 x i8> @intrinsic_vloxei_v_nxv2i8_nxv2i8_nxv2i16(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv2i8_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vloxei16.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei16.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.vloxei.nxv2i8.nxv2i16(
@@ -1194,8 +1186,7 @@ define <vscale x 4 x i8> @intrinsic_vloxei_v_nxv4i8_nxv4i8_nxv4i16(ptr %0, <vsca
 ; CHECK-LABEL: intrinsic_vloxei_v_nxv4i8_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vloxei16.v v9, (a0), v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vloxei16.v v8, (a0), v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.vloxei.nxv4i8.nxv4i16(

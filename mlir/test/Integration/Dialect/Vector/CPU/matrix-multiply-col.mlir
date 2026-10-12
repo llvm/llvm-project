@@ -39,9 +39,8 @@ func.func @entry() {
   //           x          =                  |/ | column-major!
   // ( 1, 3 )     (5, 7)     ( 19, 27 )
   //
-  %c = llvm.intr.matrix.multiply %a, %b
-      { lhs_rows = 2: i32, lhs_columns = 2: i32 , rhs_columns = 2: i32 }
-      : (vector<4xf64>, vector<4xf64>) -> vector<4xf64>
+  %c = llvm.intr.matrix.multiply %a, %b,
+      lhs_rows = 2, lhs_columns = 2, rhs_columns = 2 : (vector<4xf64>, vector<4xf64>) -> vector<4xf64>
 
   vector.print %c : vector<4xf64>
   //

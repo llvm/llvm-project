@@ -2,6 +2,7 @@
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK %s
 // CHECK:      "-cc1"
+// CHECK-SAME: "-fno-use-init-array"
 // CHECK-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-pc-cygwin/10/../../../../include/c++/10"
@@ -19,6 +20,7 @@
 // CHECK-SAME: "-m" "i386pe"
 // CHECK-SAME: "{{.*}}{{/|\\\\}}crt0.o"
 // CHECK-SAME: "{{.*}}i686-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
+// CHECK-SAME: "[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}default-manifest.o"
 // CHECK-SAME: "{{.*}}i686-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
@@ -29,7 +31,7 @@
 // CHECK-STATIC-SAME: "-Bstatic"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-SHARED %s
+// RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-SHARED %s --implicit-check-not=default-manifest
 // CHECK-SHARED:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-SHARED-SAME: "--shared"
 // CHECK-SHARED-SAME: "-e" "__cygwin_dll_entry@12"
@@ -66,6 +68,7 @@
 // CHECK-64-SAME: "-m" "i386pep"
 // CHECK-64-SAME: "{{.*}}{{/|\\\\}}crt0.o"
 // CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtbegin.o"
+// CHECK-64-SAME: "[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}default-manifest.o"
 // CHECK-64-SAME: "{{.*}}x86_64-pc-msys{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
@@ -76,7 +79,7 @@
 // CHECK-64-STATIC-SAME: "-Bstatic"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-64-SHARED %s
+// RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-64-SHARED %s --implicit-check-not=default-manifest
 // CHECK-64-SHARED:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-SHARED-SAME: "--shared"
 // CHECK-64-SHARED-SAME: "-e" "_cygwin_dll_entry"
@@ -93,13 +96,13 @@
 // CHECK-64-CROSS-SAME: "{{.*}}x86_64-pc-cygwin{{/|\\\\}}{{[0-9.]*}}{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-64-DLL %s
+// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-64-DLL %s --implicit-check-not=default-manifest
 // CHECK-64-DLL:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-DLL-SAME: "--dll"
 // CHECK-64-DLL-SAME: "-e" "_cygwin_dll_entry"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
-// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-DLL %s
+// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-DLL %s --implicit-check-not=default-manifest
 // CHECK-DLL:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-DLL-SAME: "--dll"
 // CHECK-DLL-SAME: "-e" "__cygwin_dll_entry@12"
@@ -175,3 +178,7 @@
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-64-RTLIB-PER-TARGET %s
 // CHECK-64-RTLIB-PER-TARGET:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-RTLIB-PER-TARGET-SAME: "{{.*}}{{/|\\\\}}lib{{/|\\\\}}x86_64-pc-windows-cygnus{{/|\\\\}}libclang_rt.builtins.a"
+
+// RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cross_cygwin_tree \
+// RUN:   2>&1 | FileCheck --check-prefix=CHECK-MANIFEST-ABSENT %s
+// CHECK-MANIFEST-ABSENT-NOT: default-manifest

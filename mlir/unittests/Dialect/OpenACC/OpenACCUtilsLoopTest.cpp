@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -25,6 +25,16 @@
 
 using namespace mlir;
 using namespace mlir::acc;
+
+template <typename OpTy>
+static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, TypeRange{}, ValueRange{}, properties,
+                      /*discardableAttributes=*/{});
+}
 
 //===----------------------------------------------------------------------===//
 // Test Fixture
@@ -635,7 +645,7 @@ TEST_F(OpenACCUtilsLoopTest,
   // only to own the region, then build entry -> then/else -> exit with
   // acc.yield.
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   Block *entry = b.createBlock(&region, region.begin());
   Block *thenBlock = b.createBlock(&region, region.end());
@@ -700,7 +710,7 @@ TEST_F(OpenACCUtilsLoopTest,
   auto [module, funcOp] = createModuleWithFunc();
 
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   // Block order as in all.mlir: ^bb0 entry, ^bb1 header, ^bb2 exit, ^bb3 body
   Block *entry = b.createBlock(&region, region.begin());
@@ -1036,4 +1046,114 @@ TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
       addiUsesReplacement = (addi.getLhs() == replacements[0]);
   }
   EXPECT_TRUE(addiUsesReplacement);
+}
+
+//===----------------------------------------------------------------------===//
+// calculateTripCount Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountInclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(1), createIndexConstant(10),
+      createIndexConstant(1), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountExclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(0), createIndexConstant(10),
+      createIndexConstant(1), /*inclusiveUpperbound=*/false);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountWithStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(0), createIndexConstant(9),
+      createIndexConstant(2), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 5);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountNegativeStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, createIndexConstant(10), createIndexConstant(1),
+      createIndexConstant(-1), /*inclusiveUpperbound=*/true);
+
+  EXPECT_EQ(getConstantIndex(tripCount), 10);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CalculateTripCountCastsOperandsToIndex) {
+  SmallVector<Type> argTypes(3, b.getI32Type());
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Block *entry = &funcOp.getBody().front();
+
+  Value tripCount = acc::calculateTripCount(
+      b, loc, entry->getArgument(0), entry->getArgument(1),
+      entry->getArgument(2), /*inclusiveUpperbound=*/true);
+
+  EXPECT_TRUE(isa<IndexType>(tripCount.getType()));
+  ASSERT_TRUE(tripCount.getDefiningOp<arith::DivSIOp>());
+}
+
+//===----------------------------------------------------------------------===//
+// normalizeIVUses Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesDenormalizesIV) {
+  SmallVector<Type> argTypes(1, b.getIndexType());
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Value iv = funcOp.getBody().front().getArgument(0);
+
+  auto useOp = arith::AddIOp::create(b, loc, iv, createIndexConstant(7));
+  b.setInsertionPoint(useOp);
+  Value lb = createIndexConstant(3);
+  Value step = createIndexConstant(4);
+
+  acc::normalizeIVUses(b, loc, iv, lb, step);
+
+  // The use must now read `iv * step + lb` instead of the normalized IV.
+  auto denormalized = useOp.getLhs().getDefiningOp<arith::AddIOp>();
+  ASSERT_TRUE(denormalized);
+  EXPECT_EQ(denormalized.getOverflowFlags(), arith::IntegerOverflowFlags::nsw);
+  EXPECT_EQ(denormalized.getRhs(), lb);
+
+  auto scaled = denormalized.getLhs().getDefiningOp<arith::MulIOp>();
+  ASSERT_TRUE(scaled);
+  EXPECT_EQ(scaled.getOverflowFlags(), arith::IntegerOverflowFlags::nsw);
+  EXPECT_EQ(scaled.getRhs(), step);
+
+  // The ops computing the denormalized value keep reading the original IV.
+  EXPECT_EQ(scaled.getLhs(), iv);
+}
+
+TEST_F(OpenACCUtilsLoopTest, NormalizeIVUsesCastsBoundsToIndex) {
+  SmallVector<Type> argTypes{b.getIndexType(), b.getI32Type(), b.getI32Type()};
+  auto [module, funcOp] = createModuleWithFuncArgs(argTypes);
+  Block *entry = &funcOp.getBody().front();
+  Value iv = entry->getArgument(0);
+
+  auto useOp = arith::AddIOp::create(b, loc, iv, createIndexConstant(7));
+  b.setInsertionPoint(useOp);
+
+  acc::normalizeIVUses(b, loc, iv, entry->getArgument(1),
+                       entry->getArgument(2));
+
+  auto denormalized = useOp.getLhs().getDefiningOp<arith::AddIOp>();
+  ASSERT_TRUE(denormalized);
+  EXPECT_TRUE(isa<IndexType>(denormalized.getType()));
+  EXPECT_TRUE(denormalized.getRhs().getDefiningOp<arith::IndexCastOp>());
+
+  auto scaled = denormalized.getLhs().getDefiningOp<arith::MulIOp>();
+  ASSERT_TRUE(scaled);
+  EXPECT_TRUE(scaled.getRhs().getDefiningOp<arith::IndexCastOp>());
 }

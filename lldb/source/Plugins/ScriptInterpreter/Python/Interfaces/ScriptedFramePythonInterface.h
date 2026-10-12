@@ -30,9 +30,15 @@ public:
     return llvm::SmallVector<AbstractMethodRequirement>({{"get_id"}});
   }
 
+  llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const override {
+    return {"get_plan_spec_for_step_type"};
+  }
+
   lldb::user_id_t GetID() override;
 
   lldb::addr_t GetPC() override;
+
+  lldb::addr_t GetCFA() override;
 
   std::optional<SymbolContext> GetSymbolContext() override;
 
@@ -58,6 +64,8 @@ public:
   lldb::ValueObjectSP
   GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
                                       Status &status) override;
+  llvm::Expected<ScriptedMetadata>
+  GetThreadPlanMetadataForStepType(lldb::StepType step_type) override;
 
   static void Initialize();
 

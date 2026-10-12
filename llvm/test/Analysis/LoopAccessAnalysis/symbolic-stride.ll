@@ -521,7 +521,7 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))))
+; CHECK-NEXT:          (Low: ((2 * (sext i32 %j to i64))<nsw> + %B) High: (2 + (2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -914,6 +914,68 @@ loop:
   store i32 %add, ptr %gep.A.next, align 4
   %exitcond = icmp eq i32 %iv.next, %N
   br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @stray_predicates(ptr %a, ptr %b, i64 %c, i64 %d, i64 %n) {
+; CHECK-LABEL: 'stray_predicates'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b.mul = getelementptr i32, ptr %b, i64 %mul
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a.idx.1 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1
+; CHECK-NEXT:          %gep.a.idx.0 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 0
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (8 + %a) High: (8 + (8 * %n) + %a))
+; CHECK-NEXT:            Member: {(12 + %a),+,8}<%loop>
+; CHECK-NEXT:            Member: {(8 + %a),+,8}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %c == 1
+; CHECK-NEXT:      Equal predicate: %d == 1
+; CHECK-NEXT:      {(8 + %a),+,8}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {(12 + %a),+,8}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.b.mul = getelementptr i32, ptr %b, i64 %mul:
+; CHECK-NEXT:        {%b,+,(4 * %d)}<%loop>
+; CHECK-NEXT:        --> {%b,+,4}<%loop>
+; CHECK-NEXT:      [PSE] %gep.a.idx.1 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1:
+; CHECK-NEXT:        {(4 + (8 * %d) + %a),+,(8 * %c)}<%loop>
+; CHECK-NEXT:        --> {(12 + %a),+,8}<%loop>
+; CHECK-NEXT:      [PSE] %gep.a.idx.0 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 0:
+; CHECK-NEXT:        {((8 * %d) + %a),+,(8 * %c)}<%loop>
+; CHECK-NEXT:        --> {(8 + %a),+,8}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i64 %iv, %d
+  %gep.b.mul = getelementptr i32, ptr %b, i64 %mul
+  %ld.b = load i32, ptr %gep.b.mul
+  %mul.iv.s = mul i64 %iv, %c
+  %idx = add i64 %mul.iv.s, %d
+  %gep.a.idx.1 = getelementptr {i32, i32}, ptr %a, i64 %idx, i32 1
+  %ld.a = load i32, ptr %gep.a.idx.1
+  %v = add i32 %ld.a, %ld.b
+  %gep.a.idx.0 = getelementptr {i32, i32}, ptr %a, i64 %idx, i32 0
+  store i32 %v, ptr %gep.a.idx.0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

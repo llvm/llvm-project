@@ -36,7 +36,6 @@
 ; CHECK-NEXT:     localstackalloc
 ; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
 ; CHECK-NEXT:     phi-node-elimination
-; CHECK-NEXT:     two-address-instruction
 ; CHECK-NEXT:     regallocfast
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved

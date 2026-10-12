@@ -102,7 +102,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineModuleInfoWrapperPassPass(Registry);
   initializeMachineOptimizationRemarkEmitterPassPass(Registry);
   initializeMachineOutlinerPass(Registry);
-  initializeMachinePipelinerPass(Registry);
+  initializeMachinePipelinerLegacyPass(Registry);
   initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
   initializeModuloScheduleTestPass(Registry);
   initializeMachinePostDominatorTreeWrapperPassPass(Registry);
@@ -133,6 +133,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRAGreedyLegacyPass(Registry);
   initializeReachingDefInfoWrapperPassPass(Registry);
   initializeRegAllocFastPass(Registry);
+  initializeRegAllocPBQPPass(Registry);
   initializeRegAllocScoringPass(Registry);
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
@@ -141,6 +142,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
   initializeReplaceWithVeclibLegacyPass(Registry);
+  initializeSSAMachineSchedulerLegacyPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeShadowStackGCLoweringPass(Registry);

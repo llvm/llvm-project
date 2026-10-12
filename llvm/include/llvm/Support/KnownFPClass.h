@@ -25,29 +25,39 @@ struct fltSemantics;
 struct KnownBits;
 
 struct KnownFPClass {
+  FPClassTest KnownFPClassesValue = fcAllFlags;
+  std::optional<bool> SignBitValue;
+
   /// Floating-point classes the value could be one of.
-  FPClassTest KnownFPClasses = fcAllFlags;
+  FPClassTest getKnownFPClasses() const { return KnownFPClassesValue; }
+
+  void setKnownFPClasses(FPClassTest Classes) { KnownFPClassesValue = Classes; }
 
   /// std::nullopt if the sign bit is unknown, true if the sign bit is
   /// definitely set or false if the sign bit is definitely unset.
-  std::optional<bool> SignBit;
+  std::optional<bool> getSignBit() const { return SignBitValue; }
+
+  void setSignBit(std::optional<bool> Sign) { SignBitValue = Sign; }
 
   KnownFPClass(FPClassTest Known = fcAllFlags, std::optional<bool> Sign = {})
-      : KnownFPClasses(Known), SignBit(Sign) {}
+      : KnownFPClassesValue(Known), SignBitValue(Sign) {}
   LLVM_ABI KnownFPClass(const APFloat &C);
 
   bool operator==(KnownFPClass Other) const {
-    return KnownFPClasses == Other.KnownFPClasses && SignBit == Other.SignBit;
+    return getKnownFPClasses() == Other.getKnownFPClasses() &&
+           getSignBit() == Other.getSignBit();
   }
 
   /// Return true if it's known this can never be one of the mask entries.
   bool isKnownNever(FPClassTest Mask) const {
-    return (KnownFPClasses & Mask) == fcNone;
+    return (getKnownFPClasses() & Mask) == fcNone;
   }
 
   bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
 
-  bool isUnknown() const { return KnownFPClasses == fcAllFlags && !SignBit; }
+  bool isUnknown() const {
+    return getKnownFPClasses() == fcAllFlags && !getSignBit();
+  }
 
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const { return isKnownNever(fcNan); }
@@ -150,43 +160,55 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
+  /// Return the known classes of \p Src after passing through an input that
+  /// may flush subnormals to zero according to \p Mode.
+  LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
+                                                      DenormalMode Mode);
+
+  /// Return the known classes of \p Src after producing an output that may
+  /// flush subnormals to zero according to \p Mode.
+  LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
+                                                       DenormalMode Mode);
+
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
-    return KnownFPClass(KnownFPClasses | RHS.KnownFPClasses,
-                        SignBit == RHS.SignBit ? SignBit : std::nullopt);
+    return KnownFPClass(getKnownFPClasses() | RHS.getKnownFPClasses(),
+                        getSignBit() == RHS.getSignBit() ? getSignBit()
+                                                         : std::nullopt);
   }
 
   KnownFPClass unionWith(const KnownFPClass &RHS) const {
     std::optional<bool> MergedSignBit;
-    if (SignBit && !RHS.SignBit)
-      MergedSignBit = SignBit;
-    else if (!SignBit && RHS.SignBit)
-      MergedSignBit = RHS.SignBit;
+    if (getSignBit() && !RHS.getSignBit())
+      MergedSignBit = getSignBit();
+    else if (!getSignBit() && RHS.getSignBit())
+      MergedSignBit = RHS.getSignBit();
 
-    return KnownFPClass(KnownFPClasses & RHS.KnownFPClasses, MergedSignBit);
+    return KnownFPClass(getKnownFPClasses() & RHS.getKnownFPClasses(),
+                        MergedSignBit);
   }
 
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
-    KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
+    setKnownFPClasses(getKnownFPClasses() | RHS.getKnownFPClasses());
 
-    if (SignBit != RHS.SignBit)
-      SignBit = std::nullopt;
+    if (getSignBit() != RHS.getSignBit())
+      setSignBit(std::nullopt);
     return *this;
   }
 
   void knownNot(FPClassTest RuleOut) {
-    KnownFPClasses = KnownFPClasses & ~RuleOut;
-    if (isKnownNever(fcNan) && !SignBit) {
+    setKnownFPClasses(getKnownFPClasses() & ~RuleOut);
+    if (isKnownNever(fcNan) && !getSignBit()) {
       if (isKnownNever(fcNegative))
-        SignBit = false;
+        setSignBit(false);
       else if (isKnownNever(fcPositive))
-        SignBit = true;
+        setSignBit(true);
     }
   }
 
   void fneg() {
-    KnownFPClasses = llvm::fneg(KnownFPClasses);
-    if (SignBit)
-      SignBit = !*SignBit;
+    setKnownFPClasses(llvm::fneg(getKnownFPClasses()));
+    if (std::optional<bool> Sign = getSignBit())
+      setSignBit(!*Sign);
   }
 
   static KnownFPClass fneg(const KnownFPClass &Src) {
@@ -196,17 +218,17 @@ struct KnownFPClass {
   }
 
   void fabs() {
-    if (KnownFPClasses & fcNegZero)
-      KnownFPClasses |= fcPosZero;
+    if (getKnownFPClasses() & fcNegZero)
+      setKnownFPClasses(getKnownFPClasses() | fcPosZero);
 
-    if (KnownFPClasses & fcNegInf)
-      KnownFPClasses |= fcPosInf;
+    if (getKnownFPClasses() & fcNegInf)
+      setKnownFPClasses(getKnownFPClasses() | fcPosInf);
 
-    if (KnownFPClasses & fcNegSubnormal)
-      KnownFPClasses |= fcPosSubnormal;
+    if (getKnownFPClasses() & fcNegSubnormal)
+      setKnownFPClasses(getKnownFPClasses() | fcPosSubnormal);
 
-    if (KnownFPClasses & fcNegNormal)
-      KnownFPClasses |= fcPosNormal;
+    if (getKnownFPClasses() & fcNegNormal)
+      setKnownFPClasses(getKnownFPClasses() | fcPosNormal);
 
     signBitMustBeZero();
   }
@@ -318,7 +340,10 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Report known values for exp, exp2 and exp10
+  /// Report known values for exp, exp2 and exp10.
+  /// This function assumes that exp10(-1.0) = +0.1 and exp10(+1.0) = +10.0 are
+  /// both finite normal values, which holds for formats with a corresponding
+  /// LLVM IR type (e.g. does not hold for Float4E2M1FN).
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
 
   /// Report known values for sin
@@ -358,36 +383,38 @@ struct KnownFPClass {
 
   /// Assume the sign bit is zero.
   void signBitMustBeZero() {
-    KnownFPClasses &= (fcPositive | fcNan);
-    SignBit = false;
+    setKnownFPClasses(getKnownFPClasses() & (fcPositive | fcNan));
+    setSignBit(false);
   }
 
   /// Assume the sign bit is one.
   void signBitMustBeOne() {
-    KnownFPClasses &= (fcNegative | fcNan);
-    SignBit = true;
+    setKnownFPClasses(getKnownFPClasses() & (fcNegative | fcNan));
+    setSignBit(true);
   }
 
   void copysign(const KnownFPClass &Sign) {
     // Don't know anything about the sign of the source. Expand the possible set
     // to its opposite sign pair.
-    if (KnownFPClasses & fcZero)
-      KnownFPClasses |= fcZero;
-    if (KnownFPClasses & fcSubnormal)
-      KnownFPClasses |= fcSubnormal;
-    if (KnownFPClasses & fcNormal)
-      KnownFPClasses |= fcNormal;
-    if (KnownFPClasses & fcInf)
-      KnownFPClasses |= fcInf;
+    if (getKnownFPClasses() & fcZero)
+      setKnownFPClasses(getKnownFPClasses() | fcZero);
+    if (getKnownFPClasses() & fcSubnormal)
+      setKnownFPClasses(getKnownFPClasses() | fcSubnormal);
+    if (getKnownFPClasses() & fcNormal)
+      setKnownFPClasses(getKnownFPClasses() | fcNormal);
+    if (getKnownFPClasses() & fcInf)
+      setKnownFPClasses(getKnownFPClasses() | fcInf);
 
     // Sign bit is exactly preserved even for nans.
-    SignBit = Sign.SignBit;
+    setSignBit(Sign.getSignBit());
 
     // Clear sign bits based on the input sign mask.
-    if (Sign.isKnownNever(fcPositive | fcNan) || (SignBit && *SignBit))
-      KnownFPClasses &= (fcNegative | fcNan);
-    if (Sign.isKnownNever(fcNegative | fcNan) || (SignBit && !*SignBit))
-      KnownFPClasses &= (fcPositive | fcNan);
+    if (Sign.isKnownNever(fcPositive | fcNan) ||
+        (getSignBit() && *getSignBit()))
+      setKnownFPClasses(getKnownFPClasses() & (fcNegative | fcNan));
+    if (Sign.isKnownNever(fcNegative | fcNan) ||
+        (getSignBit() && !*getSignBit()))
+      setKnownFPClasses(getKnownFPClasses() & (fcPositive | fcNan));
   }
 
   static KnownFPClass copysign(const KnownFPClass &KnownMag,
@@ -412,13 +439,10 @@ struct KnownFPClass {
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
-  void propagateNonNaN(const KnownFPClass &Src, bool PreserveSign = false) {
+  void propagateNonNaN(const KnownFPClass &Src) {
     propagateNonSNaN(Src);
-    if (Src.isKnownNever(fcNan)) {
+    if (Src.isKnownNever(fcNan))
       knownNot(fcNan);
-      if (PreserveSign)
-        SignBit = Src.SignBit;
-    }
   }
 
   void propagateNonNaN(const KnownFPClass &LHS, const KnownFPClass &RHS) {
@@ -430,14 +454,22 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
+                        DenormalMode Mode) {
+    const bool LHSCannotHavePositiveInput =
+        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
+    const bool RHSCannotHavePositiveInput =
+        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
     if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
-      knownNot(fcPositive);
+    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
+        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
+      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
+      if (!Mode.outputsMayBePositiveZero())
+        knownNot(fcPosZero);
+    }
   }
 
   /// Propagate knowledge from a source value that could be a denormal or
@@ -468,9 +500,9 @@ struct KnownFPClass {
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
-  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
-                                               bool IsTrunc,
-                                               bool IsMultiUnitFPType);
+  LLVM_ABI static KnownFPClass
+  roundToIntegral(const KnownFPClass &Src, bool IsTrunc, bool IsMultiUnitFPType,
+                  DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass
