@@ -552,7 +552,8 @@ static void buildCandidates(std::vector<RematNode> &OutCandidates,
 
     bool IsSafeCandidate = true;
     MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
-    if (!MI || MI->getDesc().NumDefs > 1)
+    if (!MI || MI->getDesc().NumDefs > 1 ||
+        MI->getOpcode() == AMDGPU::S_GETPC_B64_pseudo)
       IsSafeCandidate = false;
 
     if (IsSafeCandidate) {
