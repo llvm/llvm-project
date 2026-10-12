@@ -1,0 +1,68 @@
+name: "Check for approval or skip-precommit-approval label"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - labeled
+      - unlabeled
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+jobs:
+  check_approval:
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: read
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.pull_request.base.ref == 'main')
+    steps:
+      - name: Check for approval or skip-precommit-approval label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HAS_SKIP_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'skip-precommit-approval') }}
+        run: |
+          if [ "$HAS_SKIP_LABEL" = "true" ]; then
+            echo "PR has the skip-precommit-approval label."
+            exit 0
+          fi
+
+          # Take each reviewer's most recent review that affects approval
+          # status (comment-only reviews don't), ignoring the PR author, and
+          # count the reviewers whose most recent such review is an approval.
+          approvers=$(gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
+            | jq -s -r --arg author "$PR_AUTHOR" '
+                add
+                | map(select(.user != null and .user.login != $author))
+                | map(select(.state == "APPROVED" or
+                             .state == "CHANGES_REQUESTED" or
+                             .state == "DISMISSED"))
+                | group_by(.user.login)
+                | map(max_by(.submitted_at))
+                | map(select(.state == "APPROVED") | .user.login)
+                | join(" ")')
+
+          if [ -n "$approvers" ]; then
+            echo "PR is approved by: $approvers"
+            exit 0
+          fi
+
+          echo "::error::This PR has not been approved. Get an approval from a reviewer before merging, or, if this change does not need precommit review (see https://llvm.org/docs/CodeReview.html), add the skip-precommit-approval label - ideally when creating the PR, so that subscribers are not notified."
+          exit 1
