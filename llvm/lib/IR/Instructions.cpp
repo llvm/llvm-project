@@ -1841,9 +1841,12 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     return (Mask[0] == 0 || Mask[0] == PoisonMaskElem) && all_equal(Mask);
 
   // Make sure the mask elements make sense.
-  int64_t V1Size = cast<FixedVectorType>(V1->getType())->getNumElements();
-  auto [MinIt, MaxIt] = std::minmax_element(Mask.begin(), Mask.end());
-  return *MinIt >= PoisonMaskElem && *MaxIt < V1Size * 2;
+  int64_t MaxMaskSz =
+      cast<FixedVectorType>(V1->getType())->getNumElements() * 2LL;
+  for (int Elem : Mask)
+    if (Elem != PoisonMaskElem && Elem >= MaxMaskSz)
+      return false;
+  return true;
 }
 
 bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
