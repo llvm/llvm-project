@@ -7393,11 +7393,20 @@ static void preparePlanForEpilogueVectorLoop(
                 [](const VPUser *U) {
                   if (isa<VPScalarIVStepsRecipe, VPDerivedIVRecipe>(U))
                     return true;
-                  unsigned Opc = cast<VPInstruction>(U)->getOpcode();
-                  return Instruction::isCast(Opc) || Opc == Instruction::Add;
+                  auto *VPI = dyn_cast<VPInstruction>(U);
+                  if (!VPI)
+                    return false;
+                  // Only users linear in the canonical IV (e.g. scaling it by
+                  // a stride) stay correct when offsetting it below; others,
+                  // like header masks, may need an epilogue-relative IV.
+                  return Instruction::isCast(VPI->getOpcode()) ||
+                         is_contained({Instruction::Add, Instruction::Mul,
+                                       Instruction::Shl},
+                                      VPI->getOpcode());
                 }) &&
-         "the canonical IV should only be used by its increment or "
-         "ScalarIVSteps when resetting the start value");
+         "the canonical IV should only be used by its increment, casts, "
+         "stride scaling, ScalarIVSteps or DerivedIV when resetting the start "
+         "value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
   // Replace all users of the canonical IV and its increment with the offset
