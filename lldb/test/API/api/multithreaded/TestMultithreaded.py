@@ -68,6 +68,7 @@ class SBBreakpointCallbackCase(TestBase):
 
     @skipIfRemote
     @expectedFlakeyFreeBSD
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/231113
     @skipIf(oslist=["linux"])  # flakey
     @skipIfHostIncompatibleWithTarget
     def test_sb_api_listener_resume(self):
