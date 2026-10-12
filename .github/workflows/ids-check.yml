@@ -53,8 +53,7 @@ jobs:
 
       - if: runner.os == 'Windows'
         run: |
-          cmd /c '"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64 && set' >>
-  $env:GITHUB_ENV
+          cmd /c '"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64 && set' >> $env:GITHUB_ENV
 
       - name: Configure and build minimal LLVM for use by ids
         shell: bash
