@@ -63,7 +63,7 @@ class GCNMinRegScheduler {
   int getNotReadySuccessors(const SUnit *SU) const;
 
   template <typename Calc>
-  unsigned findMax(unsigned Num, Calc C);
+  size_t findMax(size_t Num, Calc C);
 
   Candidate* pickCandidate();
 
@@ -105,13 +105,13 @@ int GCNMinRegScheduler::getNotReadySuccessors(const SUnit *SU) const {
 }
 
 template <typename Calc>
-unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
+size_t GCNMinRegScheduler::findMax(size_t Num, Calc C) {
   assert(!RQ.empty() && Num <= RQ.size());
 
   using T = decltype(C(*RQ.begin())) ;
 
   T Max = std::numeric_limits<T>::min();
-  unsigned NumMax = 0;
+  size_t NumMax = 0;
   for (auto I = RQ.begin(); Num; --Num) {
     T Cur = C(*I);
     if (Cur >= Max) {
@@ -132,7 +132,7 @@ unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
 
 GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
   do {
-    unsigned Num = static_cast<unsigned>(RQ.size());
+    size_t Num = RQ.size();
     if (Num == 1) break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num
@@ -162,7 +162,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     });
     if (Num == 1) break;
 
-    Num = static_cast<unsigned>(Num ? Num : RQ.size());
+    Num = Num ? Num : RQ.size();
     LLVM_DEBUG(
         dbgs()
         << "\nCan't find best candidate, selecting in program order among "

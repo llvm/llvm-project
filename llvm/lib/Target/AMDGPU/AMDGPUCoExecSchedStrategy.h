@@ -112,7 +112,7 @@ private:
 public:
   HardwareUnitInfo() {}
 
-  unsigned size() { return static_cast<unsigned>(AllSUs.size()); }
+  size_t size() { return AllSUs.size(); }
 
   unsigned getTotalCycles() { return TotalCycles; }
 

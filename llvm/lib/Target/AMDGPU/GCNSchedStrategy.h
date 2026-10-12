@@ -783,7 +783,7 @@ public:
         TargetRegions(static_cast<unsigned>(DAG.Regions.size())),
         RescheduleRegions(static_cast<unsigned>(DAG.Regions.size())),
         Remater(MF, DAG.Regions, *DAG.LIS) {
-    const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
+    const size_t NumRegions = DAG.Regions.size();
     RPTargets.reserve(NumRegions);
   }
 };

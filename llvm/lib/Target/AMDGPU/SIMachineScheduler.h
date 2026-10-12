@@ -340,7 +340,7 @@ private:
 
     bool IsHighLatency;
     int VGPRUsageDiff;
-    unsigned NumSuccessors;
+    size_t NumSuccessors;
     unsigned NumHighLatencySuccessors;
     unsigned LastPosHighLatParentScheduled;
     unsigned Height;

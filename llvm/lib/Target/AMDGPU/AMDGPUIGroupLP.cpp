@@ -1167,19 +1167,18 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize =
-          static_cast<unsigned>(llvm::count_if(SU->Succs, [](const SDep &Succ) {
-            return Succ.getKind() == SDep::Data;
-          }));
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return false;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize = static_cast<unsigned>(
-              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
+          size_t SuccSize = llvm::count_if(
+              Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
-              }));
+              });
           if (SuccSize >= Size)
             return false;
         }
@@ -1208,19 +1207,18 @@ private:
       if (!SyncPipe.size())
         return false;
 
-      unsigned SuccSize =
-          static_cast<unsigned>(llvm::count_if(SU->Succs, [](const SDep &Succ) {
-            return Succ.getKind() == SDep::Data;
-          }));
+      size_t SuccSize = llvm::count_if(SU->Succs, [](const SDep &Succ) {
+        return Succ.getKind() == SDep::Data;
+      });
       if (SuccSize >= Size)
         return true;
 
       if (HasIntermediary) {
         for (auto Succ : SU->Succs) {
-          unsigned SuccSize = static_cast<unsigned>(
-              llvm::count_if(Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
+          size_t SuccSize = llvm::count_if(
+              Succ.getSUnit()->Succs, [](const SDep &SuccSucc) {
                 return SuccSucc.getKind() == SDep::Data;
-              }));
+              });
           if (SuccSize >= Size)
             return true;
         }
@@ -2087,7 +2085,7 @@ private:
       if (!Collection.size())
         return true;
 
-      int NumBits = 0;
+      uint64_t NumBits = 0;
 
       auto TRI = TII->getRegisterInfo();
       auto &MRI = MI->getMF()->getRegInfo();
@@ -2095,7 +2093,7 @@ private:
         auto Op = Elt->getInstr()->getOperand(0);
         auto Size =
             TRI.getRegSizeInBits(*TRI.getRegClassForOperandReg(MRI, Op));
-        NumBits += static_cast<int>(Size);
+        NumBits += Size;
       }
 
       if (NumBits < 128) {
@@ -2801,7 +2799,7 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   MachineInstr &SGB = *RIter->getInstr();
   assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
-  int32_t SGMask = static_cast<int32_t>(SGB.getOperand(0).getImm());
+  int64_t SGMask = SGB.getOperand(0).getImm();
   int32_t Size = static_cast<int32_t>(SGB.getOperand(1).getImm());
   int32_t SyncID = static_cast<int32_t>(SGB.getOperand(2).getImm());
 

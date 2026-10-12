@@ -60,8 +60,7 @@ static void buildCluster(ArrayRef<SUnit *> Exports, ScheduleDAGInstrs *DAG) {
   SUnit *ChainHead = Exports.front();
 
   // Now construct cluster from chain by adding new edges.
-  for (unsigned Idx = 0, End = static_cast<unsigned>(Exports.size() - 1);
-       Idx < End; ++Idx) {
+  for (size_t Idx = 0, End = Exports.size() - 1; Idx < End; ++Idx) {
     SUnit *SUa = Exports[Idx];
     SUnit *SUb = Exports[Idx + 1];
 

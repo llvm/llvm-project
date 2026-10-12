@@ -3143,11 +3143,11 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   MCI.compute(MF);
   MachineBlockFrequencyInfo MBFI(MF, MBPI, MCI);
 
-  const unsigned NumRegions = static_cast<unsigned>(DAG.Regions.size());
+  const size_t NumRegions = DAG.Regions.size();
   MinFreq = MBFI.getEntryFreq().getFrequency();
   MaxFreq = 0;
   Regions.reserve(NumRegions);
-  for (unsigned I = 0; I < NumRegions; ++I) {
+  for (size_t I = 0; I < NumRegions; ++I) {
     MachineBasicBlock *MBB = DAG.Regions[I].first->getParent();
     uint64_t BlockFreq = MBFI.getBlockFreq(MBB).getFrequency();
     Regions.push_back(BlockFreq);
