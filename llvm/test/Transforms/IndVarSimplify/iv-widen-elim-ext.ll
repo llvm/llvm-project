@@ -438,10 +438,10 @@ define i32 @foo6(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LENGTH]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw i64 [[TMP5]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ADD_PTR]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP1]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i64 [[TMP1]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ADD_PTR1]], align 4
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[LENGTH]], [[TMP9]]
