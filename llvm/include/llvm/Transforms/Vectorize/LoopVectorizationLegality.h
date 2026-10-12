@@ -634,13 +634,18 @@ private:
   /// for it.
   bool canUncountableExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
 
-  /// Maps a pointer and access type to its known safe alignment.
-  using SafeAccessesTy = SmallDenseMap<std::pair<Value *, Type *>, Align, 8>;
+  struct SafeAccessInfo {
+    SmallVector<TypeSize, 1> Sizes;
+    Align Alignment = Align(1);
+  };
+
+  /// Maps a pointer to access sizes and alignment known to be safe.
+  using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
   /// \p SafeAccesses records pointers that can be accessed unconditionally,
-  /// together with the access type and alignment justified for each pointer.
+  /// together with the access sizes and alignments justified for each pointer.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized
   /// or dropped if the instruction is a conditional assume intrinsic.

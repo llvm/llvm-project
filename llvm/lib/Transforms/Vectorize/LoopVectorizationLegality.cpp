@@ -1367,8 +1367,14 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      auto It = SafeAccesses.find({LI->getPointerOperand(), LI->getType()});
-      if (It == SafeAccesses.end() || It->second < LI->getAlign())
+      auto It = SafeAccesses.find(LI->getPointerOperand());
+      TypeSize Size = LI->getDataLayout().getTypeStoreSize(LI->getType());
+      if (It == SafeAccesses.end() || It->second.Alignment < LI->getAlign() ||
+          !any_of(
+              It->second.Sizes,
+              [&](TypeSize SafeSize) {
+                return TypeSize::isKnownGE(SafeSize, Size);
+              }))
         MaskedOp.insert(LI);
       continue;
     }
@@ -1399,19 +1405,22 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   assert(TheLoop->getNumBlocks() > 1 && "Single block loops are vectorizable");
 
-  // Record the access type and maximum alignment known to be safe for each
-  // pointer in every executed iteration. Loads with these properties can be
-  // executed unconditionally without introducing a new fault.
+  // Record the access sizes and alignment known to be safe for each pointer
+  // in every executed iteration. A later load can use the size and alignment
+  // established by different accesses to the same pointer.
   SafeAccessesTy SafeAccesses;
   auto RecordSafeAccess = [&SafeAccesses](Instruction &I) {
     Value *Ptr = getLoadStorePointerOperand(&I);
     if (!Ptr)
       return;
+    TypeSize Size = I.getDataLayout().getTypeStoreSize(getLoadStoreType(&I));
     Align Alignment = getLoadStoreAlignment(&I);
-    auto [It, Inserted] =
-        SafeAccesses.try_emplace({Ptr, getLoadStoreType(&I)}, Alignment);
-    if (!Inserted)
-      It->second = std::max(It->second, Alignment);
+    auto &Info = SafeAccesses[Ptr];
+    Info.Alignment = std::max(Info.Alignment, Alignment);
+    if (none_of(Info.Sizes, [&](TypeSize SafeSize) {
+          return TypeSize::isKnownGE(SafeSize, Size);
+        }))
+      Info.Sizes.push_back(Size);
   };
 
   // Collect safe accesses.
