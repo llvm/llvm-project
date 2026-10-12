@@ -245,6 +245,10 @@ static mlir::Value
 loadSharedTypeDescriptor(mlir::gpu::GPUModuleOp gpuMod,
                          mlir::ConversionPatternRewriter &rewriter,
                          mlir::Location loc, llvm::StringRef name) {
+  auto typeDescs =
+      gpuMod->getAttrOfType<mlir::DictionaryAttr>(cudaSharedTypeDescsAttrName);
+  if (!typeDescs)
+    return {};
   if (mlir::Block *block = rewriter.getInsertionBlock()) {
     mlir::Operation *parent = block->getParentOp();
     if (mlir::isa<fir::GlobalOp, mlir::LLVM::GlobalOp>(parent) ||
@@ -252,10 +256,6 @@ loadSharedTypeDescriptor(mlir::gpu::GPUModuleOp gpuMod,
         parent->getParentOfType<mlir::LLVM::GlobalOp>())
       return {};
   }
-  auto typeDescs =
-      gpuMod->getAttrOfType<mlir::DictionaryAttr>(cudaSharedTypeDescsAttrName);
-  if (!typeDescs)
-    return {};
   auto ptrSym = typeDescs.getAs<mlir::FlatSymbolRefAttr>(
       fir::NameUniquer::replaceSpecialSymbols(name.str()));
   if (!ptrSym)
