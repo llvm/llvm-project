@@ -150,8 +150,7 @@ public:
   /// Was equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords))
   /// historically, but is now deleted because this constructor is prone to
   /// ambiguity with the APInt(unsigned, uint64_t, bool) constructor.
-  LLVM_ABI APInt(unsigned numBits, unsigned numWords,
-                 const uint64_t bigVal[]) = delete;
+  APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]) = delete;
 
   /// Construct an APInt from a string representation.
   ///
@@ -1573,7 +1572,7 @@ public:
   std::optional<uint64_t> tryZExtValue() const {
     return (getActiveBits() <= 64) ? std::optional<uint64_t>(getZExtValue())
                                    : std::nullopt;
-  };
+  }
 
   /// Get sign extended value
   ///
@@ -1595,7 +1594,7 @@ public:
   std::optional<int64_t> trySExtValue() const {
     return (getSignificantBits() <= 64) ? std::optional<int64_t>(getSExtValue())
                                         : std::nullopt;
-  };
+  }
 
   /// Get bits required for string value.
   ///

@@ -54,8 +54,7 @@ void CIRGenFunction::emitSYCLKernelCaller(
   // Synthesized entry point: no FunctionDecl, emitted with an empty GlobalDecl.
   curGD = GlobalDecl();
 
-  SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
-                                                 : builder.getUnknownLoc()};
+  SourceLocRAIIObject fnLoc{*this, loc};
 
   mlir::Location fusedLoc = getLoc(bodyRange);
   mlir::Block *entryBB = funcOp.addEntryBlock();
@@ -73,6 +72,28 @@ void CIRGenFunction::emitSYCLKernelCaller(
   }
 
   eraseEmptyAndUnusedBlocks(funcOp);
+}
+
+static void setSYCLKernelAttributes(CIRGenFunction &cgf, cir::FuncOp fn) {
+  mlir::MLIRContext *ctx = &cgf.getMLIRContext();
+  // SYCL 2020 device language restrictions require forward progress and
+  // disallow recursion.
+  fn->setAttr(cir::CIRDialect::getNoRecurseAttrName(),
+              mlir::UnitAttr::get(ctx));
+  if (cgf.checkIfFunctionMustProgress())
+    fn->setAttr(cir::CIRDialect::getMustProgressAttrName(),
+                mlir::UnitAttr::get(ctx));
+}
+
+void CIRGenModule::addSYCLModuleIdAttr(cir::FuncOp fn) {
+  assert(getLangOpts().SYCLIsDevice);
+  // Classic CodeGen uses the LLVM module identifier, which is the main input
+  // file name. CIR stores that as the module's symbol name; fall back to the
+  // main file name so the attribute is never empty, matching classic CodeGen.
+  StringRef moduleId =
+      theModule.getSymName().value_or(codeGenOpts.MainFileName);
+  fn->setAttr(cir::CIRDialect::getSYCLModuleIdAttrName(),
+              mlir::StringAttr::get(&getMLIRContext(), moduleId));
 }
 
 void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
@@ -120,18 +141,20 @@ void CIRGenModule::emitSYCLKernelCaller(const FunctionDecl *kernelEntryPointFn,
   // opFuncCallingConv onto the FuncOp, so set it from the target hook.
   funcOp.setCallingConv(getTargetCIRGenInfo().getDeviceKernelCallingConv());
 
+  CIRGenFunction cgf(*this, builder);
+
   // Route through the shared attribute path so generic function attributes
   // (e.g. convergent) are applied, matching classic CodeGen's
   // SetLLVMFunctionAttributes. There is no FunctionDecl, so pass an empty
   // GlobalDecl.
   setCIRFunctionAttributes(GlobalDecl(), fnInfo, funcOp, /*isThunk=*/false);
 
-  // TODO: attributes applied by classic CodeGen not yet handled in CIR:
-  // SetSYCLKernelAttributes (norecurse, mustprogress), addSYCLModuleIdAttr.
+  setSYCLKernelAttributes(cgf, funcOp);
+  addSYCLModuleIdAttr(funcOp);
+
   assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
 
   // Emit the SYCL kernel caller function.
-  CIRGenFunction cgf(*this, builder);
   llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
   {
     mlir::OpBuilder::InsertionGuard guard(builder);

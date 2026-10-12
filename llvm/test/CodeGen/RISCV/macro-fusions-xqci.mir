@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv32-linux-gnu -x=mir < %s \
-# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler -run-pass=machine-scheduler 2>&1 \
 # RUN:   -mattr=+xqcilia,+xqcili,+xqcilo,+zmmul,+fusion-xqci-movimm-alu \
 # RUN:   -mattr=+fusion-xqci-movimm-mul,+fusion-xqci-movimm-ldst \
 # RUN:   -mattr=+fusion-xqci-movimm-jump \

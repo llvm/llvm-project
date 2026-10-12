@@ -108,7 +108,7 @@ func.func @composable_conditional_combined(%x : i32) {
 // -----
 
 // expected-error @below {{omp.declare_target can only be applied to DeclareTargetInterface ops}}
-%0 = arith.constant { omp.declare_target = #omp.declaretarget<capture_clause = enter> } 2 : i32
+%0 = arith.constant { omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter> } 2 : i32
 
 // -----
 
@@ -118,17 +118,17 @@ func.func private @declare_target_attr_type() attributes { omp.declare_target = 
 // -----
 
 // expected-error @below {{omp.declare_target 'automap' is not valid on functions}}
-func.func private @declare_target_automap() attributes { omp.declare_target = #omp.declaretarget<automap = true>}
+func.func private @declare_target_automap() attributes { omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, automap = true>}
 
 // -----
 
 // expected-error @below {{omp.declare_target 'link' is not valid on functions}}
-func.func private @declare_target_link() attributes { omp.declare_target = #omp.declaretarget<capture_clause = link>}
+func.func private @declare_target_link() attributes { omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>}
 
 // -----
 
 // expected-error @below {{omp.declare_target 'implicit' is only valid on functions}}
-llvm.mlir.global @declare_target_implicit() {omp.declare_target = #omp.declaretarget<implicit = true>} : i32 {
+llvm.mlir.global @declare_target_implicit() {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, implicit = true>} : i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }

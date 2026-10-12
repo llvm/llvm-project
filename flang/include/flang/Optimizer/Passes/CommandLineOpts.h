@@ -61,14 +61,6 @@ extern llvm::cl::opt<bool> useOldAliasTags;
 /// passes with the unified allocation-placement pass.
 extern llvm::cl::opt<bool> enableAllocationPlacement;
 
-/// Constant-size arrays up to this many bytes are considered "small" and placed
-/// on the stack by the allocation-placement pass.
-extern llvm::cl::opt<std::size_t> allocationPlacementSmallArraySize;
-
-/// Per-function budget (in bytes) for small arrays placed on the stack by the
-/// allocation-placement pass.
-extern llvm::cl::opt<std::size_t> allocationPlacementStackLimit;
-
 /// CodeGen Passes
 extern llvm::cl::opt<bool> disableCodeGenRewrite;
 extern llvm::cl::opt<bool> disableTargetRewrite;

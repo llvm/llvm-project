@@ -92,7 +92,7 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "Get start index of block arguments defined by `" # clauseNameSnake # "`.",
     "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
     !if(!initialized(previousClause), [{
-        auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+        auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
       }] # "return iface." # previousClause.startMethod.name # "() + iface."
         # previousClause.numArgsMethod.name # "();",
         "return 0;"
@@ -111,8 +111,8 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "Get block arguments defined by `" # clauseNameSnake # "`.",
     "::llvm::MutableArrayRef<::mlir::BlockArgument>",
     "get" # clauseNameCamel # "BlockArgs", (ins), [{
-      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
-      return $_op->getRegion(0).getArguments().slice(
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
+      return $_raw_op->getRegion(0).getArguments().slice(
     }] # "iface." # startMethod.name # "(), iface." # numArgsMethod.name # "());"
   >;
 }
@@ -159,8 +159,11 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
       InterfaceMethod<
         "Get the total number of clause-defined entry block arguments",
         "unsigned", "numClauseBlockArgs", (ins),
-        "return " # !interleave(
-          !foreach(clause, clauses, "$_op." # clause.numArgsMethod.name # "()"),
+        [{
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
+          return
+        }] # !interleave(
+          !foreach(clause, clauses, "iface." # clause.numArgsMethod.name # "()"),
           " + ") # ";"
       >,
       InterfaceMethod<
@@ -168,7 +171,7 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
         "and entry block arguments.", "void", "getBlockArgsPairs",
         (ins "::llvm::SmallVectorImpl<std::pair<::mlir::Value, ::mlir::BlockArgument>> &" : $pairs),
         [{
-          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_raw_op);
           pairs.reserve(pairs.size() + iface.numClauseBlockArgs());
         }] # !interleave(!foreach(clause, clauses, [{
         }] # "if (iface." # clause.numArgsMethod.name # "() > 0) {" # [{
@@ -205,9 +208,9 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
       // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
       // are expected to contain only the wrapped loop (or another loop wrapper)
       if (LoopWrapperInterface loopWrapper =
-              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+              mlir::dyn_cast<LoopWrapperInterface>($_raw_op))
         return &loopWrapper.getWrappedLoop()->getRegion(0).front();
-      return &$_op.getRegion().front();
+      return &$_raw_op->getRegion(0).front();
       }]>,
   ];
 }
@@ -235,8 +238,9 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
                       "int64_t",
                       "getOperandIndexForMap",
       (ins "::mlir::Value":$map), [{
-         return std::distance($_op.getMapVars().begin(),
-                              llvm::find($_op.getMapVars(), map));
+         auto vars = ::mlir::cast<MapClauseOwningOpInterface>(*$_raw_op)
+                         .getMapVars();
+         return std::distance(vars.begin(), llvm::find(vars, map));
       }]>,
   ];
 }
@@ -399,74 +403,28 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
            "bool":$automap, "bool":$implicit), [{}], [{
         $_op->setDiscardableAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
-                      $_op->getContext(),
-                      mlir::omp::DeclareTargetDeviceTypeAttr::get(
-                          $_op->getContext(), deviceType),
-                      mlir::omp::DeclareTargetCaptureClauseAttr::get(
-                          $_op->getContext(), captureClause),
-                      automap, implicit));
+                      $_op->getContext(), deviceType, captureClause, automap,
+                      implicit));
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
-        Checks if the declare target attribute has been applied and exists on the
-        current operation. Returns true if it exists on it, otherwise returns
-        false.
+        Set the declare target attribute on the current operation.
       }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isDeclareTarget",
-      (ins), [{}], [{
-        return $_op->hasDiscardableAttr("omp.declare_target");
+      /*retTy=*/"void",
+      /*methodName=*/"setDeclareTarget",
+      (ins "mlir::omp::DeclareTargetAttr":$attr), [{}], [{
+        $_op->setDiscardableAttr("omp.declare_target", attr);
       }]>,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
-        Returns the DeclareTargetDeviceType segment of the DeclareTarget attribute if it
-        exists on the current operation. Otherwise it returns null.
+        Returns the declare target attribute if has been applied to the current
+        operation. Otherwise, it returns null.
       }],
-      /*retTy=*/"mlir::omp::DeclareTargetDeviceType",
-      /*methodName=*/"getDeclareTargetDeviceType",
+      /*retTy=*/"mlir::omp::DeclareTargetAttr",
+      /*methodName=*/"getDeclareTarget",
       (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getDeviceType().getValue();
-        return {};
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Returns the DeclareTargetCaptureClause segment of the DeclareTarget attribute if it
-        exists on the current operation. Otherwise it returns null.
-      }],
-      /*retTy=*/"mlir::omp::DeclareTargetCaptureClause",
-      /*methodName=*/"getDeclareTargetCaptureClause",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getCaptureClause().getValue();
-        return {};
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Return true if the DeclareTarget attribute has the AUTOMAP modifier.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"getDeclareTargetAutomap",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar = $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getAutomap();
-         return false;
-      }]>,
-      InterfaceMethod<
-      /*description=*/[{
-        Return true if the DeclareTarget attribute has been implicitly added.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"isImplicitDeclareTarget",
-      (ins), [{}], [{
-        if (mlir::Attribute dTar =
-                $_op->getDiscardableAttr("omp.declare_target"))
-          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            return dAttr.getImplicit();
-         return false;
+        return llvm::cast_if_present<mlir::omp::DeclareTargetAttr>(
+            $_op->getDiscardableAttr("omp.declare_target"));
       }]>
   ];
 }

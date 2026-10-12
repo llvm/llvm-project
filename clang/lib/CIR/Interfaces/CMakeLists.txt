@@ -13,8 +13,19 @@ add_clang_library(MLIRCIRInterfaces
   MLIRCIRTypeInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRCIROpsIncGen
+  MLIRCIRTypeConstraintsIncGen
+  # CIR interface headers include generated core MLIR interfaces without
+  # linking all of their owning libraries.
+  MLIRCallInterfacesIncGen
+  MLIRControlFlowInterfacesIncGen
+  MLIRFunctionInterfacesIncGen
+  MLIRInferTypeOpInterfaceIncGen
+  MLIRLoopLikeInterfaceIncGen
+  MLIRSideEffectInterfacesIncGen
 
   LINK_LIBS
   MLIRIR
+  MLIRPtrMemorySpaceInterfaces
   MLIRSupport
  )

@@ -104,11 +104,8 @@ ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
   ISD::ArgFlagsTy Flags;
   const AttributeList &Attrs = Call.getAttributes();
   addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
-  if (const Function *F = Call.getCalledFunction()) {
-    // "returned" is not an ABI attribute, so we can inherit it from the callee.
-    if (F->hasParamAttribute(ArgIdx, Attribute::Returned))
-      Flags.setReturned();
-  }
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getParamAttrs(ArgIdx));
   return Flags;
 }
 
@@ -116,6 +113,8 @@ ISD::ArgFlagsTy
 CallLowering::getAttributesForReturn(const CallBase &Call) const {
   ISD::ArgFlagsTy Flags;
   addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
+  if (const Function *F = Call.getCalledFunction())
+    addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
   return Flags;
 }
 
@@ -151,6 +150,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
+  Info.NoMerge = CB.hasFnAttr(Attribute::NoMerge);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
@@ -461,7 +461,13 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    LLT OrigITy = OrigTy.changeToInteger();
+    if (OrigTy == OrigITy) {
+      B.buildTrunc(OrigRegs[0], SrcReg);
+    } else {
+      auto Trunc = B.buildTrunc(OrigITy, SrcReg);
+      B.buildBitcast(OrigRegs[0], Trunc);
+    }
     return;
   }
 
@@ -614,7 +620,21 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
-    B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
+    // Convert float to integer if needed
+    LLT SrcITy = SrcTy.changeToInteger();
+    LLT PartITy = PartTy.changeToInteger();
+    if (SrcTy != SrcITy)
+      SrcReg = B.buildBitcast(SrcITy, SrcReg).getReg(0);
+
+    // Emit the sext/zext/anyext
+    Register DstIReg =
+        B.buildInstr(ExtendOp,
+                     PartITy == PartTy ? DstOp(DstRegs[0]) : DstOp(PartITy),
+                     {SrcReg})
+            .getReg(0);
+    // Convert back to the original type if needed
+    if (PartITy != PartTy)
+      B.buildBitcast(DstRegs[0], DstIReg);
     return;
   }
 

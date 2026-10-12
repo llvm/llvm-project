@@ -484,7 +484,7 @@ void FunctionCognitiveComplexityCheck::storeOptions(
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(isDefinition(),
+      functionDecl(isDefinition(), hasBody(stmt()),
                    unless(anyOf(isDefaulted(), isDeleted(), isWeak())))
           .bind("func"),
       this);

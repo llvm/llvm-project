@@ -406,11 +406,11 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
       if (I != FileIDs.begin())
         os << "<hr class=divider>\n";
 
-      os << "<div id=File" << I->getHashValue() << ">\n";
+      os << "<div id=File" << I->getOpaqueValue() << ">\n";
 
       // Left nav arrow
       if (I != FileIDs.begin())
-        os << "<div class=FileNav><a href=\"#File" << (I - 1)->getHashValue()
+        os << "<div class=FileNav><a href=\"#File" << (I - 1)->getOpaqueValue()
            << "\">&#x2190;</a></div>";
 
       os << "<h4 class=FileName>" << SMgr.getFileEntryRefForID(*I)->getName()
@@ -418,7 +418,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
 
       // Right nav arrow
       if (I + 1 != E)
-        os << "<div class=FileNav><a href=\"#File" << (I + 1)->getHashValue()
+        os << "<div class=FileNav><a href=\"#File" << (I + 1)->getOpaqueValue()
            << "\">&#x2192;</a></div>";
 
       os << "</div>\n";
@@ -470,7 +470,7 @@ void HTMLDiagnostics::dumpCoverageData(
     if (I != ExecutedLines.begin())
       os << ", ";
 
-    os << "\"" << I->first.getHashValue() << "\": {";
+    os << "\"" << I->first.getOpaqueValue() << "\": {";
     for (unsigned LineNo : I->second) {
       if (LineNo != *(I->second.begin()))
         os << ", ";

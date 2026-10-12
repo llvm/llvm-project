@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/copysignbf16.h"
 
-LIST_COPYSIGN_TESTS(bfloat16, LIBC_NAMESPACE::copysignbf16)
+LIST_COPYSIGN_TESTS(Copysignbf16, bfloat16, LIBC_NAMESPACE::copysignbf16)

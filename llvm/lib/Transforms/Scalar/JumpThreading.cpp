@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -84,34 +85,12 @@ STATISTIC(NumThreads, "Number of jumps threaded");
 STATISTIC(NumFolds,   "Number of terminators folded");
 STATISTIC(NumDupes,   "Number of branch blocks duplicated to eliminate phi");
 
-static cl::opt<unsigned>
-BBDuplicateThreshold("jump-threading-threshold",
-          cl::desc("Max block size to duplicate for jump threading"),
-          cl::init(6), cl::Hidden);
-
-static cl::opt<unsigned>
-ImplicationSearchThreshold(
-  "jump-threading-implication-search-threshold",
-  cl::desc("The number of predecessors to search for a stronger "
-           "condition to use to thread over a weaker condition"),
-  cl::init(3), cl::Hidden);
-
-static cl::opt<unsigned> PhiDuplicateThreshold(
-    "jump-threading-phi-threshold",
-    cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
-    cl::Hidden);
-
-static cl::opt<bool> ThreadAcrossLoopHeaders(
-    "jump-threading-across-loop-headers",
-    cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
-    cl::init(false), cl::Hidden);
-
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
 
 JumpThreadingPass::JumpThreadingPass(int T) {
-  DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
+  DefaultBBDupThreshold = (T == -1) ? 6 : unsigned(T);
 }
 
 // Update branch probability information according to conditional
@@ -289,6 +268,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 BlockFrequencyInfo *BFI_,
                                 BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
+  Opts = &ScalarOptions::Global;
   F = &F_;
   FAM = FAM_;
   TLI = TLI_;
@@ -304,8 +284,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
   // Reduce the number of instructions duplicated when optimizing strictly for
   // size.
-  if (BBDuplicateThreshold.getNumOccurrences())
-    BBDupThreshold = BBDuplicateThreshold;
+  if (Opts->jump_threading_threshold)
+    BBDupThreshold = *Opts->jump_threading_threshold;
   else if (F->hasMinSize())
     BBDupThreshold = 3;
   else
@@ -320,7 +300,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     if (!DT.isReachableFromEntry(&BB))
       Unreachable.insert(&BB);
 
-  if (!ThreadAcrossLoopHeaders)
+  if (!Opts->jump_threading_across_loop_headers)
     findLoopHeaders(*F);
 
   bool EverChanged = false;
@@ -425,7 +405,8 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
 /// Return the cost of duplicating a piece of this block from first non-phi
 /// and before StopAt instruction to thread across it. Stop scanning the block
 /// when exceeding the threshold. If duplication is impossible, returns ~0U.
-static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
+static unsigned getJumpThreadDuplicationCost(const ScalarOptions &Opts,
+                                             const TargetTransformInfo *TTI,
                                              BasicBlock *BB,
                                              Instruction *StopAt,
                                              unsigned Threshold) {
@@ -441,7 +422,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
       FirstNonPHI = &I;
       break;
     }
-    if (++PhiCount > PhiDuplicateThreshold)
+    if (++PhiCount > Opts.jump_threading_phi_threshold)
       return ~0U;
   }
 
@@ -558,7 +539,7 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
     ConstantPreference Preference, SmallPtrSet<Value *, 4> &RecursionSet,
-    Instruction *CxtI) {
+    Instruction *CtxI) {
   const DataLayout &DL = BB->getDataLayout();
 
   // This method walks up use-def chains recursively.  Because of this, we could
@@ -587,7 +568,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       using namespace PatternMatch;
       // If the value is known by LazyValueInfo to be a constant in a
       // predecessor, use that information to try to thread this block.
-      Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CxtI);
+      Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CtxI);
       // If I is a non-local compare-with-constant instruction, use more-rich
       // 'getPredicateOnEdge' method. This would be able to handle value
       // inequalities better, for example if the compare is "X < 4" and "X < 3"
@@ -596,7 +577,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       Value *Val;
       Constant *Cst;
       if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst))))
-        PredCst = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
+        PredCst = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CtxI);
       if (Constant *KC = getKnownConstant(PredCst, Preference))
         Result.emplace_back(KC, P);
     }
@@ -613,7 +594,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       } else {
         Constant *CI = LVI->getConstantOnEdge(InVal,
                                               PN->getIncomingBlock(i),
-                                              BB, CxtI);
+                                              BB, CtxI);
         if (Constant *KC = getKnownConstant(CI, Preference))
           Result.emplace_back(KC, PN->getIncomingBlock(i));
       }
@@ -627,7 +608,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *Source = CI->getOperand(0);
     PredValueInfoTy Vals;
     computeValueKnownInPredecessorsImpl(Source, BB, Vals, Preference,
-                                        RecursionSet, CxtI);
+                                        RecursionSet, CtxI);
     if (Vals.empty())
       return false;
 
@@ -643,7 +624,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     Value *Source = FI->getOperand(0);
     computeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
-                                        RecursionSet, CxtI);
+                                        RecursionSet, CtxI);
 
     erase_if(Result, [](auto &Pair) {
       return !isGuaranteedNotToBeUndefOrPoison(Pair.first);
@@ -665,9 +646,9 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       PredValueInfoTy LHSVals, RHSVals;
 
       computeValueKnownInPredecessorsImpl(Op0, BB, LHSVals, WantInteger,
-                                          RecursionSet, CxtI);
+                                          RecursionSet, CtxI);
       computeValueKnownInPredecessorsImpl(Op1, BB, RHSVals, WantInteger,
-                                          RecursionSet, CxtI);
+                                          RecursionSet, CtxI);
 
       if (LHSVals.empty() && RHSVals.empty())
         return false;
@@ -703,7 +684,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
         isa<ConstantInt>(I->getOperand(1)) &&
         cast<ConstantInt>(I->getOperand(1))->isOne()) {
       computeValueKnownInPredecessorsImpl(I->getOperand(0), BB, Result,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
       if (Result.empty())
         return false;
 
@@ -721,7 +702,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(BO->getOperand(0), BB, LHSVals,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
 
       // Try to use constant folding to simplify the binary operator.
       for (const auto &LHSVal : LHSVals) {
@@ -777,7 +758,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
             continue;
 
           Res = LVI->getPredicateOnEdge(Pred, LHS, cast<Constant>(RHS), PredBB,
-                                        BB, CxtI ? CxtI : Cmp);
+                                        BB, CtxI ? CtxI : Cmp);
         }
 
         if (Constant *KC = getKnownConstant(Res, WantInteger))
@@ -798,7 +779,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           // If the value is known by LazyValueInfo to be a constant in a
           // predecessor, use that information to try to thread this block.
           Constant *Res = LVI->getPredicateOnEdge(Pred, CmpLHS, CmpConst, P, BB,
-                                                  CxtI ? CxtI : Cmp);
+                                                  CtxI ? CtxI : Cmp);
           if (Constant *KC = getKnownConstant(Res, WantInteger))
             Result.emplace_back(KC, P);
         }
@@ -823,7 +804,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
               // a predecessor, use that information to try to thread this
               // block.
               ConstantRange CR = LVI->getConstantRangeOnEdge(
-                  AddLHS, P, BB, CxtI ? CxtI : cast<Instruction>(CmpLHS));
+                  AddLHS, P, BB, CtxI ? CtxI : cast<Instruction>(CmpLHS));
               // Propagate the range through the addition.
               CR = CR.add(AddConst->getValue());
 
@@ -851,7 +832,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // and evaluate it statically if we can.
       PredValueInfoTy LHSVals;
       computeValueKnownInPredecessorsImpl(I->getOperand(0), BB, LHSVals,
-                                          WantInteger, RecursionSet, CxtI);
+                                          WantInteger, RecursionSet, CtxI);
 
       for (const auto &LHSVal : LHSVals) {
         Constant *V = LHSVal.first;
@@ -873,7 +854,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     PredValueInfoTy Conds;
     if ((TrueVal || FalseVal) &&
         computeValueKnownInPredecessorsImpl(SI->getCondition(), BB, Conds,
-                                            WantInteger, RecursionSet, CxtI)) {
+                                            WantInteger, RecursionSet, CtxI)) {
       for (auto &C : Conds) {
         Constant *Cond = C.first;
 
@@ -900,8 +881,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   }
 
   // If all else fails, see if LVI can figure out a constant value for us.
-  assert(CxtI->getParent() == BB && "CxtI should be in BB");
-  Constant *CI = LVI->getConstant(V, CxtI);
+  assert(CtxI->getParent() == BB && "CtxI should be in BB");
+  Constant *CI = LVI->getConstant(V, CtxI);
   if (Constant *KC = getKnownConstant(CI, Preference)) {
     for (BasicBlock *Pred : predecessors(BB))
       Result.emplace_back(KC, Pred);
@@ -1164,7 +1145,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
 
   auto &DL = BB->getDataLayout();
 
-  while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
+  while (CurrentPred &&
+         Iter++ < Opts->jump_threading_implication_search_threshold) {
     auto *PBI = dyn_cast<CondBrInst>(CurrentPred->getTerminator());
     if (!PBI)
       return false;
@@ -1314,7 +1296,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
                        LocationSize::precise(DL.getTypeStoreSize(AccessTy)),
                        AATags);
     PredAvailable = findAvailablePtrLoadStore(
-        Loc, AccessTy, LoadI->isAtomic(), PredBB, BBIt, DefMaxInstsToScan,
+        Loc, AccessTy, LoadI->getProperties(), PredBB, BBIt, DefMaxInstsToScan,
         &BatchAA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
@@ -1326,7 +1308,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
         PredAvailable = findAvailablePtrLoadStore(
-            Loc, AccessTy, LoadI->isAtomic(), SinglePredBB, BBIt,
+            Loc, AccessTy, LoadI->getProperties(), SinglePredBB, BBIt,
             (DefMaxInstsToScan - NumScanedInst), &BatchAA, &IsLoadCSE,
             &NumScanedInst);
       }
@@ -1571,7 +1553,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
 
 bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
                                                ConstantPreference Preference,
-                                               Instruction *CxtI) {
+                                               Instruction *CtxI) {
   // If threading this would thread across a loop header, don't even try to
   // thread the edge.
   if (LoopHeaders.count(BB))
@@ -1579,7 +1561,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
   PredValueInfoTy PredValues;
   if (!computeValueKnownInPredecessors(Cond, BB, PredValues, Preference,
-                                       CxtI)) {
+                                       CtxI)) {
     // We don't have known values in predecessors.  See if we can thread through
     // BB and its sole predecessor.
     return maybethreadThroughTwoBasicBlocks(BB, Cond);
@@ -2269,9 +2251,9 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
 
   // Compute the cost of duplicating BB and PredBB.
   unsigned BBCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   unsigned PredBBCost = getJumpThreadDuplicationCost(
-      TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
 
   // Give up if costs are too high.  We need to check BBCost and PredBBCost
   // individually before checking their sum because getJumpThreadDuplicationCost
@@ -2390,7 +2372,7 @@ bool JumpThreadingPass::tryThreadEdge(
   }
 
   unsigned JumpThreadCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -2664,7 +2646,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   }
 
   unsigned DuplicationCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (DuplicationCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
                       << "' - Cost is too high: " << DuplicationCost << "\n");
@@ -3181,7 +3163,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
   ValueToValueMapTy UnguardedMapping, GuardedMapping;
   Instruction *AfterGuard = Guard->getNextNode();
   unsigned Cost =
-      getJumpThreadDuplicationCost(TTI, BB, AfterGuard, BBDupThreshold);
+      getJumpThreadDuplicationCost(*Opts, TTI, BB, AfterGuard, BBDupThreshold);
   if (Cost > BBDupThreshold)
     return false;
   // Duplicate all instructions before the guard and the guard itself to the

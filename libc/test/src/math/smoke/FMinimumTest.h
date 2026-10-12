@@ -79,12 +79,12 @@ public:
   }
 };
 
-#define LIST_FMINIMUM_TESTS(T, func)                                           \
-  using LlvmLibcFMinimumTest = FMinimumTest<T>;                                \
-  TEST_F(LlvmLibcFMinimumTest, NaN) { testNaN(&func); }                        \
-  TEST_F(LlvmLibcFMinimumTest, InfArg) { testInfArg(&func); }                  \
-  TEST_F(LlvmLibcFMinimumTest, NegInfArg) { testNegInfArg(&func); }            \
-  TEST_F(LlvmLibcFMinimumTest, BothZero) { testBothZero(&func); }              \
-  TEST_F(LlvmLibcFMinimumTest, Range) { testRange(&func); }
+#define LIST_FMINIMUM_TESTS(Name, T, func)                                     \
+  using LlvmLibc##Name##Test = FMinimumTest<T>;                                \
+  TEST_F(LlvmLibc##Name##Test, NaN) { testNaN(&func); }                        \
+  TEST_F(LlvmLibc##Name##Test, InfArg) { testInfArg(&func); }                  \
+  TEST_F(LlvmLibc##Name##Test, NegInfArg) { testNegInfArg(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, BothZero) { testBothZero(&func); }              \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMTEST_H

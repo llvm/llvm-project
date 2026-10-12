@@ -8,11 +8,6 @@
 
 # Fortran For C Programmers
 
-```{contents}
----
-local:
----
-```
 
 This note is limited to essential information about Fortran so that
 a C or C++ programmer can get started more quickly with the language,

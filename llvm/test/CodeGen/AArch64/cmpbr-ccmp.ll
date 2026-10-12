@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=arm64-apple-ios -mattr -cmpbr -aarch64-stress-ccmp -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CHECK-NO-CMPBR
 
 declare i32 @foo()
+declare i32 @bar(i32)
 
 define i32 @cb_chain_imm(i32 %a, i32 %b) nounwind {
 ; CHECK-CMPBR-LABEL: cb_chain_imm:
@@ -511,6 +512,237 @@ land.lhs.true2:
   %div2 = sdiv i32 %n, %a
   %cmp2 = icmp slt i32 %div2, 19
   br i1 %cmp2, label %if.then, label %if.end
+if.then:
+  %call = tail call i32 @foo() nounwind
+  br label %if.end
+if.end:
+  ret i32 7
+}
+
+define i32 @cbb_chain_reg(i8 signext %a, i8 signext %b, i8 signext %c, i8 signext %d, i32 %x, i32 %y) nounwind {
+; CHECK-CMPBR-LABEL: cbb_chain_reg:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cmp w0, w1
+; CHECK-CMPBR-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-CMPBR-NEXT:    b.lt LBB11_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-CMPBR-NEXT:    sdiv w0, w4, w5
+; CHECK-CMPBR-NEXT:    bl _bar
+; CHECK-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+;
+; CHECK-NO-CMPBR-LABEL: cbb_chain_reg:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
+; CHECK-NO-CMPBR-NEXT:    ccmp w2, w3, #0, gt
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB11_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NO-CMPBR-NEXT:    sdiv w0, w4, w5
+; CHECK-NO-CMPBR-NEXT:    bl _bar
+; CHECK-NO-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  br i1 %cmp, label %land.lhs.true, label %if.end
+land.lhs.true:
+  %div = sdiv i32 %x, %y
+  %cmp1 = icmp slt i8 %c, %d
+  br i1 %cmp1, label %if.then, label %if.end
+if.then:
+  %call = tail call i32 @bar(i32 %div) nounwind
+  br label %if.end
+if.end:
+  ret i32 7
+}
+
+define i32 @cbh_chain_reg(i16 signext %a, i16 signext %b, i16 signext %c, i16 signext %d, i32 %x, i32 %y) nounwind {
+; CHECK-CMPBR-LABEL: cbh_chain_reg:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cmp w0, w1
+; CHECK-CMPBR-NEXT:    ccmp w2, w3, #2, hi
+; CHECK-CMPBR-NEXT:    b.lo LBB12_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-CMPBR-NEXT:    sdiv w0, w4, w5
+; CHECK-CMPBR-NEXT:    bl _bar
+; CHECK-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+;
+; CHECK-NO-CMPBR-LABEL: cbh_chain_reg:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
+; CHECK-NO-CMPBR-NEXT:    ccmp w2, w3, #2, hi
+; CHECK-NO-CMPBR-NEXT:    b.lo LBB12_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NO-CMPBR-NEXT:    sdiv w0, w4, w5
+; CHECK-NO-CMPBR-NEXT:    bl _bar
+; CHECK-NO-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+entry:
+  %cmp = icmp ugt i16 %a, %b
+  br i1 %cmp, label %land.lhs.true, label %if.end
+land.lhs.true:
+  %div = sdiv i32 %x, %y
+  %cmp1 = icmp ult i16 %c, %d
+  br i1 %cmp1, label %if.then, label %if.end
+if.then:
+  %call = tail call i32 @bar(i32 %div) nounwind
+  br label %if.end
+if.end:
+  ret i32 7
+}
+
+define i32 @cbb_head_cb_cmpbb(i8 signext %a, i8 signext %b, i32 %x, i32 %y) nounwind {
+; CHECK-CMPBR-LABEL: cbb_head_cb_cmpbb:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    sdiv w8, w2, w3
+; CHECK-CMPBR-NEXT:    cmp w0, w1
+; CHECK-CMPBR-NEXT:    ccmp w8, #16, #0, gt
+; CHECK-CMPBR-NEXT:    b.le LBB13_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-CMPBR-NEXT:    bl _foo
+; CHECK-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+;
+; CHECK-NO-CMPBR-LABEL: cbb_head_cb_cmpbb:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sdiv w8, w2, w3
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
+; CHECK-NO-CMPBR-NEXT:    ccmp w8, #16, #0, gt
+; CHECK-NO-CMPBR-NEXT:    b.le LBB13_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NO-CMPBR-NEXT:    bl _foo
+; CHECK-NO-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  br i1 %cmp, label %land.lhs.true, label %if.end
+land.lhs.true:
+  %div = sdiv i32 %x, %y
+  %cmp1 = icmp slt i32 %div, 17
+  br i1 %cmp1, label %if.then, label %if.end
+if.then:
+  %call = tail call i32 @foo() nounwind
+  br label %if.end
+if.end:
+  ret i32 7
+}
+
+define i32 @cbb_head_sext(i8 signext %a, i32 %n, i32 %x, i32 %y) nounwind {
+; CHECK-CMPBR-LABEL: cbb_head_sext:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    sdiv w8, w2, w3
+; CHECK-CMPBR-NEXT:    sxtb w9, w1
+; CHECK-CMPBR-NEXT:    cmp w9, w0
+; CHECK-CMPBR-NEXT:    ccmp w8, #16, #0, gt
+; CHECK-CMPBR-NEXT:    b.le LBB14_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-CMPBR-NEXT:    bl _foo
+; CHECK-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+;
+; CHECK-NO-CMPBR-LABEL: cbb_head_sext:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sdiv w8, w2, w3
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w1, sxtb
+; CHECK-NO-CMPBR-NEXT:    ccmp w8, #16, #0, lt
+; CHECK-NO-CMPBR-NEXT:    b.le LBB14_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NO-CMPBR-NEXT:    bl _foo
+; CHECK-NO-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+entry:
+  %t = trunc i32 %n to i8
+  %cmp = icmp sgt i8 %t, %a
+  br i1 %cmp, label %land.lhs.true, label %if.end
+land.lhs.true:
+  %div = sdiv i32 %x, %y
+  %cmp1 = icmp slt i32 %div, 17
+  br i1 %cmp1, label %if.then, label %if.end
+if.then:
+  %call = tail call i32 @foo() nounwind
+  br label %if.end
+if.end:
+  ret i32 7
+}
+
+define i32 @cbh_cmpbb_sext_reject(i16 signext %a, i32 %x, i32 %y) nounwind {
+; CHECK-CMPBR-LABEL: cbh_cmpbb_sext_reject:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cblt w1, #1, LBB15_3
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %land.lhs.true
+; CHECK-CMPBR-NEXT:    sdiv w8, w2, w1
+; CHECK-CMPBR-NEXT:    cbhge w8, w0, LBB15_3
+; CHECK-CMPBR-NEXT:  ; %bb.2: ; %if.then
+; CHECK-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-CMPBR-NEXT:    bl _foo
+; CHECK-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-CMPBR-NEXT:  LBB15_3: ; %if.end
+; CHECK-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-CMPBR-NEXT:    ret
+;
+; CHECK-NO-CMPBR-LABEL: cbh_cmpbb_sext_reject:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmp w1, #1
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB15_3
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %land.lhs.true
+; CHECK-NO-CMPBR-NEXT:    sdiv w8, w2, w1
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w8, sxth
+; CHECK-NO-CMPBR-NEXT:    b.le LBB15_3
+; CHECK-NO-CMPBR-NEXT:  ; %bb.2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NO-CMPBR-NEXT:    bl _foo
+; CHECK-NO-CMPBR-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NO-CMPBR-NEXT:  LBB15_3: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NO-CMPBR-NEXT:    ret
+entry:
+  %cmp = icmp sgt i32 %x, 0
+  br i1 %cmp, label %land.lhs.true, label %if.end
+land.lhs.true:
+  %div = sdiv i32 %y, %x
+  %t = trunc i32 %div to i16
+  %cmp1 = icmp slt i16 %t, %a
+  br i1 %cmp1, label %if.then, label %if.end
 if.then:
   %call = tail call i32 @foo() nounwind
   br label %if.end

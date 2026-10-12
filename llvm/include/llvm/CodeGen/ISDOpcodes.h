@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+class StringRef;
+
 /// ISD namespace - This namespace contains an enum which represents all of the
 /// SelectionDAG node types and value types.
 ///
@@ -287,7 +289,7 @@ enum NodeType {
   /// Carry-setting nodes for multiple precision addition and subtraction.
   /// These nodes take two operands of the same value type, and produce two
   /// results.  The first result is the normal add or sub result, the second
-  /// result is the carry flag result.
+  /// result is the carry flag result as a glue.
   /// FIXME: These nodes are deprecated in favor of UADDO_CARRY and USUBO_CARRY.
   /// They are kept around for now to provide a smooth transition path
   /// toward the use of UADDO_CARRY/USUBO_CARRY and will eventually be removed.
@@ -296,23 +298,24 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction. These
   /// nodes take three operands: The first two are the normal lhs and rhs to
-  /// the add or sub, and the third is the input carry flag.  These nodes
-  /// produce two results; the normal result of the add or sub, and the output
-  /// carry flag.  These nodes both read and write a carry flag to allow them
-  /// to them to be chained together for add and sub of arbitrarily large
-  /// values.
+  /// the add or sub, and the third is the input carry flag as a glue.  These
+  /// nodes produce two results; the normal result of the add or sub, and the
+  /// output carry flag as a glue.  These nodes both read and write a carry flag
+  /// to allow them to them to be chained together for add and sub of
+  /// arbitrarily large values.
   ADDE,
   SUBE,
 
   /// Carry-using nodes for multiple precision addition and subtraction.
   /// These nodes take three operands: The first two are the normal lhs and
-  /// rhs to the add or sub, and the third is a boolean value that is 1 if and
-  /// only if there is an incoming carry/borrow. These nodes produce two
+  /// rhs to the add or sub, and the third is a boolean value that is true if
+  /// and only if there is an incoming carry/borrow. These nodes produce two
   /// results: the normal result of the add or sub, and a boolean value that is
-  /// 1 if and only if there is an outgoing carry/borrow.
+  /// true if and only if there is an outgoing carry/borrow. If the type of the
+  /// boolean is not i1 then the high bits conform to getBooleanContents.
   ///
   /// Care must be taken if these opcodes are lowered to hardware instructions
-  /// that use the inverse logic -- 0 if and only if there is an
+  /// that use the inverse logic -- false if and only if there is an
   /// incoming/outgoing carry/borrow.  In such cases, you must preserve the
   /// semantics of these opcodes by inverting the incoming carry/borrow, feeding
   /// it to the add/sub hardware instruction, and then inverting the outgoing
@@ -635,6 +638,11 @@ enum NodeType {
   /// Interleaved[I] = VEC(I % N)[I / N]
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
+
+  /// VECTOR_REPEAT(FIXED_LENGTH_VECTOR)
+  /// Repeatedly copies the elements of the source fixed-length vector to fill a
+  /// scalable vector with the same minimum element count.
+  VECTOR_REPEAT,
 
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
@@ -1631,6 +1639,10 @@ enum NodeType {
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// Has one mask vector operand. Returns a mask with all ones up to but not
+  /// including the first active element in the input, followed by zeroes.
+  MASK_BEFOREFIRST,
+
   /// VECTOR_MATCH - this corresponds to the llvm.experimental.vector.match
   /// intrinsic.
   /// Operands: Source, Needle, Mask
@@ -1886,6 +1898,9 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+/// Return the name of the given condition code, e.g. "setoeq".
+LLVM_ABI StringRef getCondCodeName(CondCode Operation);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||

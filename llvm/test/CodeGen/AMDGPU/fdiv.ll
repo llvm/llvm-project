@@ -368,7 +368,7 @@ define amdgpu_kernel void @s_fdiv_25ulp_f32(ptr addrspace(1) %out, float %a, flo
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |s3|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |s3|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, s3, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -382,7 +382,7 @@ define amdgpu_kernel void @s_fdiv_25ulp_f32(ptr addrspace(1) %out, float %a, flo
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |s3|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s4, |s3|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0x2f800000, s4
 ; GFX11-NEXT:    v_mul_f32_e32 v1, s3, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -1313,7 +1313,8 @@ define amdgpu_kernel void @s_fdiv_v2f32_fast_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
+; GFX11-NEXT:    v_mul_f32_e32 v1, s1, v0
+; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v2
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -1389,7 +1390,8 @@ define amdgpu_kernel void @s_fdiv_v2f32_arcp_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
+; GFX11-NEXT:    v_mul_f32_e32 v1, s1, v0
+; GFX11-NEXT:    v_mul_f32_e32 v0, s0, v2
 ; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -3022,7 +3024,7 @@ define float @v_fdiv_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -3033,7 +3035,7 @@ define float @v_fdiv_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -3609,7 +3611,7 @@ define float @v_fdiv_f32_daz_25ulp_contractable_user(float %x, float %y, float %
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp_contractable_user:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -3620,7 +3622,7 @@ define float @v_fdiv_f32_daz_25ulp_contractable_user(float %x, float %y, float %
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp_contractable_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -4163,7 +4165,7 @@ define float @v_fdiv_f32_daz_25ulp__nnan_ninf(float %x, float %y, float %z) #0 {
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp__nnan_ninf:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -4174,7 +4176,7 @@ define float @v_fdiv_f32_daz_25ulp__nnan_ninf(float %x, float %y, float %z) #0 {
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp__nnan_ninf:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -4749,7 +4751,7 @@ define float @v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user(float %x, float 
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -4760,7 +4762,7 @@ define float @v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user(float %x, float 
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v3
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -5308,7 +5310,7 @@ define float @v_fdiv_neglhs_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX10-LABEL: v_fdiv_neglhs_f32_daz_25ulp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -5319,7 +5321,7 @@ define float @v_fdiv_neglhs_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX11-LABEL: v_fdiv_neglhs_f32_daz_25ulp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -5867,7 +5869,7 @@ define float @v_fdiv_negrhs_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX10-LABEL: v_fdiv_negrhs_f32_daz_25ulp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e64 v1, -v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -5878,7 +5880,7 @@ define float @v_fdiv_negrhs_f32_daz_25ulp(float %x, float %y) #0 {
 ; GFX11-LABEL: v_fdiv_negrhs_f32_daz_25ulp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e64 v1, -v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -6938,7 +6940,7 @@ define float @v_fdiv_f32_constlhs0_daz_25ulp(float %x) #0 {
 ; GFX10-LABEL: v_fdiv_f32_constlhs0_daz_25ulp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v0|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v0|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_rcp_f32_e32 v0, v0
@@ -6949,7 +6951,7 @@ define float @v_fdiv_f32_constlhs0_daz_25ulp(float %x) #0 {
 ; GFX11-LABEL: v_fdiv_f32_constlhs0_daz_25ulp:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v0|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v0|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
@@ -7491,7 +7493,7 @@ define float @v_fdiv_f32_daz_25ulp_nodenorm_x(float nofpclass(sub) %x, float %y)
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp_nodenorm_x:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -7502,7 +7504,7 @@ define float @v_fdiv_f32_daz_25ulp_nodenorm_x(float nofpclass(sub) %x, float %y)
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp_nodenorm_x:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
@@ -8044,7 +8046,7 @@ define float @v_fdiv_f32_daz_25ulp_nodenorm_y(float %x, float nofpclass(sub) %y)
 ; GFX10-LABEL: v_fdiv_f32_daz_25ulp_nodenorm_y:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_f32_e64 s4, 0x6f800000, |v1|
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s4, |v1|, 0x6f800000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
@@ -8055,7 +8057,7 @@ define float @v_fdiv_f32_daz_25ulp_nodenorm_y(float %x, float nofpclass(sub) %y)
 ; GFX11-LABEL: v_fdiv_f32_daz_25ulp_nodenorm_y:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, 0x6f800000, |v1|
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, |v1|, 0x6f800000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x2f800000, s0
 ; GFX11-NEXT:    v_mul_f32_e32 v1, v1, v2
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1

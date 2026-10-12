@@ -253,7 +253,8 @@ static CWrapperFunctionBuffer errorFnWrapper(const char *ArgData,
 }
 
 struct ErrorFnCI {
-  static constexpr char Name[] = "test_sps_error_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_error_fn");
   using SPSSig = SPSError(bool);
 };
 using ErrorFnProxy = Proxy<Error(bool)>;
@@ -289,7 +290,8 @@ static CWrapperFunctionBuffer expectedFnWrapper(const char *ArgData,
 }
 
 struct ExpectedFnCI {
-  static constexpr char Name[] = "test_sps_expected_fn";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::verbatim("test_sps_expected_fn");
   using SPSSig = SPSExpected<int32_t>(int32_t);
 };
 using ExpectedFnProxy = Proxy<Expected<int32_t>(int32_t)>;

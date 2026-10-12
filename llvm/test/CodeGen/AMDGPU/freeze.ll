@@ -4854,59 +4854,61 @@ define void @freeze_v30i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GFX803-SDAG-LABEL: freeze_v30i32:
 ; GFX8-GFX803-SDAG:       ; %bb.0:
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v28, vcc, 16, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v29, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s4, 0x60
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s4, v0
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, 16, v0
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[16:19], v[0:1]
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, 64, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s4, 0x60
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, s4, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[26:29], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, 64, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s5, 0x70
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v10, vcc, s5, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx2 v[32:33], v[10:11]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v24, vcc, 48, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v25, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, s5, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx2 v[24:25], v[8:9]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[30:33], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, 48, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s6, 0x50
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v12, vcc, s6, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v20, vcc, 32, v0
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[28:31], v[28:29]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, s6, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v16, vcc, 32, v0
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[8:9]
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v17, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[20:23], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s4, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[26:29]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 64, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s6, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v26, vcc, s6, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v27, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[30:33]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s5, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, 32, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, 48, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[12:15]
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, 16, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[2:3], v[16:19]
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[32:33]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v28, vcc, 32, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v29, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v30, vcc, 48, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v31, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[26:27], v[12:15]
+; GFX8-GFX803-SDAG-NEXT:    s_nop 0
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v12, vcc, 16, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v13, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[24:25]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[6:7], v[20:23]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[28:29], v[16:19]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[8:9], v[24:27]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[30:31], v[20:23]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[28:31]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GFX803-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5307,63 +5309,63 @@ define void @freeze_v31i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s4, 0x60
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s4, v0
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v24, vcc, 48, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v25, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, 64, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[10:13], v[4:5]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, 48, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, 64, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s6, 0x70
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v10, vcc, s6, v0
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, s6, v0
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s5, 0x50
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx2 v[32:33], v[10:11]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v12, vcc, s5, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx2 v[8:9], v[8:9]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[14:17], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, s5, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_movk_i32 s7, 0x78
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v14, vcc, s7, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v15, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v20, vcc, 32, v0
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dword v34, v[14:15]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[16:19], v[0:1]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[20:23], v[20:21]
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[24:27], v[24:25]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v18, vcc, s7, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v19, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dword v34, v[18:19]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[18:21], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[22:25], v[0:1]
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, 32, v0
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[26:29], v[6:7]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[30:33], v[4:5]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[28:31], v[0:1]
+; GFX8-GFX803-SDAG-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s4, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(8)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[10:13]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 64, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s5, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v6, vcc, s7, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v10, vcc, s5, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v12, vcc, s7, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v13, vcc, 0, v3, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[14:17]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s6, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v8, vcc, 32, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v9, vcc, 0, v3, vcc
-; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v10, vcc, 48, v2
-; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v11, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v14, vcc, 32, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v15, vcc, 0, v3, vcc
+; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v16, vcc, 48, v2
+; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v17, vcc, 0, v3, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(5)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[2:3], v[16:19]
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[4:5], v[12:15]
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dword v[6:7], v34
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[32:33]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[2:3], v[22:25]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[10:11], v[18:21]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dword v[12:13], v34
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[8:9]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(8)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[8:9], v[20:23]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[14:15], v[26:29]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(8)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[10:11], v[24:27]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[16:17], v[30:33]
 ; GFX8-GFX803-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
 ; GFX8-GFX803-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(8)
-; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[28:31]
+; GFX8-GFX803-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GFX803-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -14621,7 +14623,7 @@ define void @freeze_v4i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
 ; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v4, v0, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v0, v1
+; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v0, 0xff, v1
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX10-GISEL-NEXT:    v_or3_b32 v0, v1, v4, v0
 ; GFX10-GISEL-NEXT:    global_store_dword v[2:3], v0, off
@@ -14648,7 +14650,7 @@ define void @freeze_v4i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v5
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v1
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v5
 ; GFX11-GISEL-NEXT:    v_or3_b32 v0, v0, v4, v1
 ; GFX11-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
@@ -14851,8 +14853,8 @@ define void @freeze_v8i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v4, v4, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v7, v0, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v5, v1, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v6
-; GFX10-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v1, v4
+; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v0, 0xff, v6
+; GFX10-GISEL-NEXT:    v_and_or_b32 v1, v1, 0xff, v4
 ; GFX10-GISEL-NEXT:    v_or3_b32 v0, v0, v8, v7
 ; GFX10-GISEL-NEXT:    v_or3_b32 v1, v1, v9, v5
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
@@ -14889,8 +14891,8 @@ define void @freeze_v8i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 24, v6
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 24, v9
-; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v4
-; GFX11-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v1, v7
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, v0, 0xff, v4
+; GFX11-GISEL-NEXT:    v_and_or_b32 v1, v1, 0xff, v7
 ; GFX11-GISEL-NEXT:    v_or3_b32 v0, v0, v5, v6
 ; GFX11-GISEL-NEXT:    v_or3_b32 v1, v1, v8, v9
 ; GFX11-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -15179,10 +15181,10 @@ define void @freeze_v16i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v17, v6, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v18, v7, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v7, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_and_or_b32 v4, 0xff, v4, v8
-; GFX10-GISEL-NEXT:    v_and_or_b32 v5, 0xff, v5, v9
-; GFX10-GISEL-NEXT:    v_and_or_b32 v6, 0xff, v6, v10
-; GFX10-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v7, v0
+; GFX10-GISEL-NEXT:    v_and_or_b32 v4, v4, 0xff, v8
+; GFX10-GISEL-NEXT:    v_and_or_b32 v5, v5, 0xff, v9
+; GFX10-GISEL-NEXT:    v_and_or_b32 v6, v6, 0xff, v10
+; GFX10-GISEL-NEXT:    v_and_or_b32 v0, v7, 0xff, v0
 ; GFX10-GISEL-NEXT:    v_or3_b32 v4, v4, v12, v13
 ; GFX10-GISEL-NEXT:    v_or3_b32 v5, v5, v14, v15
 ; GFX10-GISEL-NEXT:    v_or3_b32 v6, v6, v16, v17
@@ -15239,10 +15241,10 @@ define void @freeze_v16i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v14, 24, v14
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v17, 24, v17
-; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v4, v0
-; GFX11-GISEL-NEXT:    v_and_or_b32 v5, 0xff, v5, v9
-; GFX11-GISEL-NEXT:    v_and_or_b32 v6, 0xff, v6, v12
-; GFX11-GISEL-NEXT:    v_and_or_b32 v7, 0xff, v7, v15
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, v4, 0xff, v0
+; GFX11-GISEL-NEXT:    v_and_or_b32 v5, v5, 0xff, v9
+; GFX11-GISEL-NEXT:    v_and_or_b32 v6, v6, 0xff, v12
+; GFX11-GISEL-NEXT:    v_and_or_b32 v7, v7, 0xff, v15
 ; GFX11-GISEL-NEXT:    v_or3_b32 v4, v0, v1, v8
 ; GFX11-GISEL-NEXT:    v_or3_b32 v5, v5, v10, v11
 ; GFX11-GISEL-NEXT:    v_or3_b32 v6, v6, v13, v14

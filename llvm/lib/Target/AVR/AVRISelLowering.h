@@ -33,8 +33,8 @@ public:
     return MVT::i8;
   }
 
-  MVT::SimpleValueType getCmpLibcallReturnType() const override {
-    return MVT::i8;
+  IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const override {
+    return Type::getInt8Ty(Ctx);
   }
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -108,6 +108,8 @@ private:
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,

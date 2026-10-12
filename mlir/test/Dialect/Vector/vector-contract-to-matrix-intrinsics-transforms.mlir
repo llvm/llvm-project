@@ -55,7 +55,7 @@
 // CHECK:           %[[RHS:.*]] = llvm.shufflevector %[[TP_10]], %[[TP_9]] [12, 13, 14, 15, 16, 17, 18, 19, 20, 0, 1, 2] : vector<12xf32>
 
 // ===> Matrix multiply
-// CHECK:           %[[MM:.*]] = llvm.intr.matrix.multiply %[[LHS]], %[[RHS]] {lhs_columns = 4 : i32, lhs_rows = 2 : i32, rhs_columns = 3 : i32} : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
+// CHECK:           %[[MM:.*]] = llvm.intr.matrix.multiply %[[LHS]], %[[RHS]], lhs_rows = 2, lhs_columns = 4, rhs_columns = 3 : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
 // CHECK:           %[[RES:.*]] = arith.addf %[[ARG2]], %{{.*}} : vector<2x3xf32>
 // CHECK:           return %[[RES]] : vector<2x3xf32>
 func.func @matmul(%arg0: vector<2x4xf32>,
@@ -74,4 +74,14 @@ func.func @matmul_scalable(%arg0: vector<2x4xf32>,
   %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
     : vector<2x4xf32>, vector<4x[3]xf32> into vector<2x[3]xf32>
   return %0 : vector<2x[3]xf32>
+}
+
+// CHECK-LABEL: func @matmul_scalable_reduction
+// CHECK-NOT: llvm.intr.matrix.multiply
+func.func @matmul_scalable_reduction(%arg0: vector<2x[4]xf32>,
+                                     %arg1: vector<[4]x3xf32>,
+                                     %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
+  %0 = vector.contract #matmat_trait %arg0, %arg1, %arg2
+    : vector<2x[4]xf32>, vector<[4]x3xf32> into vector<2x3xf32>
+  return %0 : vector<2x3xf32>
 }

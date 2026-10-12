@@ -83,7 +83,7 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
         rewriter, loc, LLVM::FMulOp::create(rewriter, loc, real, real, fmf),
         LLVM::FMulOp::create(rewriter, loc, imag, imag, fmf), fmf);
 
-    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm);
+    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm, fmf);
     return success();
   }
 };

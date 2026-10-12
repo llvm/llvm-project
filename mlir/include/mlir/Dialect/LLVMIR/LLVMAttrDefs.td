@@ -1053,7 +1053,8 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
     OptionalParameter<"DIVariableAttr">:$stringLength,
     OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
     OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
-    LLVM_DIEncodingParameter:$encoding
+    LLVM_DIEncodingParameter:$encoding,
+    OptionalParameter<"DITypeAttr">:$charType
   );
   let assemblyFormat = "`<` struct(params) `>`";
 
@@ -1160,8 +1161,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
         %1 = llvm.ptrtoint %ptr1 : !llvm.ptr to i32
         %2 = llvm.add %1, %c1 : i32
         %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr
-        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : i32, !llvm.ptr
-        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : i32, !llvm.ptr
+        llvm.store %c0, %ptr1 <alias_scopes = [#scope1], noalias_scopes = [#scope2]> : i32, !llvm.ptr
+        llvm.store %c4, %ptr2 <alias_scopes = [#scope2], noalias_scopes = [#scope1]> : i32, !llvm.ptr
         llvm.return
     }
     ```

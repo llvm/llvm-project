@@ -157,17 +157,17 @@ struct MemberSetters {
     p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
   }
 
-  void use_after_scope() {
+  void escape_to_field() {
     {
       std::string local;
       view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
       p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
     }
-    (void)view;
+    (void)view;         // Discarding the value is not a use.
     (void)p;
   }
 
-  void use_after_scope_saved_after_reassignment() {
+  void escape_to_field_saved_after_reassignment() {
     {
       std::string local;
       view = local;
@@ -175,6 +175,21 @@ struct MemberSetters {
     }
     (void)view;
     (void)p;
+
+    view = kGlobal;
+    p = kGlobal.data();
+  }
+
+  // Reading the dangling field is reported as a use of it.
+  void use_after_scope() {
+    {
+      std::string local;
+      view = local;     // expected-warning {{local variable 'local' does not live long enough}}
+      p = local.data(); // expected-warning {{local variable 'local' does not live long enough}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 'local' because the implicit object parameter is inferred as lifetimebound}}
+    }                   // expected-note 2 {{local variable 'local' is destroyed here}}
+    use(view);          // expected-note {{later used here}}
+    use(p);             // expected-note {{later used here}}
 
     view = kGlobal;
     p = kGlobal.data();

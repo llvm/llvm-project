@@ -27,6 +27,10 @@ static const char *LevelNames[] = {
 static_assert(std::size(LevelNames) == ORC_RT_LOG_LEVEL_COUNT,
               "LevelNames array is the wrong size");
 
+// --- C API Implementation ---
+
+extern "C" {
+
 const char *orc_rt_log_Category_getName(orc_rt_log_Category Cat) noexcept {
   if (Cat < 0 || Cat >= orc_rt_log_Category_Count)
     return nullptr;
@@ -60,3 +64,5 @@ orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) noexcept {
 
   return -1;
 }
+
+} // extern "C"

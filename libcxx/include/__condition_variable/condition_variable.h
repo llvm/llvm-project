@@ -36,6 +36,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+#  if !_LIBCPP_HAS_THREAD_API_PTHREAD
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  elif (defined(__ANDROID__) && __ANDROID_API__ >= 30) || _LIBCPP_GLIBC_PREREQ(2, 30)
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 1
+#  else
+#    define _LIBCPP_HAS_COND_CLOCKWAIT 0
+#  endif
+
 // enum class cv_status
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
@@ -87,7 +95,12 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
   return nanoseconds(__result);
 }
 
-class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
+template <class _Duration>
+_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
+  return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
+}
+
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
@@ -141,29 +154,7 @@ public:
 
   template <class _Rep, class _Period>
   _LIBCPP_HIDE_FROM_ABI cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
-    using namespace chrono;
-    if (__d <= __d.zero())
-      return cv_status::timeout;
-    using __ns_rep                   = nanoseconds::rep;
-    steady_clock::time_point __c_now = steady_clock::now();
-
-#  if _LIBCPP_HAS_COND_CLOCKWAIT
-    using __clock_tp_ns     = time_point<steady_clock, nanoseconds>;
-    __ns_rep __now_count_ns = std::__safe_nanosecond_cast(__c_now.time_since_epoch()).count();
-#  else
-    using __clock_tp_ns     = time_point<system_clock, nanoseconds>;
-    __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
-#  endif
-
-    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d).count();
-
-    if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
-      __do_timed_wait(__lk, __clock_tp_ns::max());
-    } else {
-      __do_timed_wait(__lk, __clock_tp_ns(nanoseconds(__now_count_ns + __d_ns_count)));
-    }
-
-    return steady_clock::now() - __c_now < __d ? cv_status::no_timeout : cv_status::timeout;
+    return wait_until(__lk, std::__rel_to_abs(__d));
   }
 
   template <class _Rep, class _Period, class _Predicate>
@@ -191,7 +182,7 @@ private:
 template <class _Rep, class _Period, class _Predicate>
 inline bool
 condition_variable::wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred) {
-  return wait_until(__lk, chrono::steady_clock::now() + __d, std::move(__pred));
+  return wait_until(__lk, std::__rel_to_abs(__d), std::move(__pred));
 }
 
 #  if _LIBCPP_HAS_COND_CLOCKWAIT
@@ -221,7 +212,28 @@ inline void condition_variable::__do_timed_wait(
 template <class _Clock>
 inline void condition_variable::__do_timed_wait(unique_lock<mutex>& __lk,
                                                 chrono::time_point<_Clock, chrono::nanoseconds> __tp) _NOEXCEPT {
-  wait_for(__lk, __tp - _Clock::now());
+  using namespace chrono;
+  nanoseconds __d = __tp - _Clock::now();
+  if (__d <= __d.zero())
+    return;
+  using __ns_rep = nanoseconds::rep;
+
+#  if _LIBCPP_HAS_COND_CLOCKWAIT
+  steady_clock::time_point __c_now = steady_clock::now();
+  using __clock_tp_ns              = time_point<steady_clock, nanoseconds>;
+  __ns_rep __now_count_ns          = std::__safe_nanosecond_cast(__c_now.time_since_epoch()).count();
+#  else
+  using __clock_tp_ns     = time_point<system_clock, nanoseconds>;
+  __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
+#  endif
+
+  __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d).count();
+
+  if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
+    __do_timed_wait(__lk, __clock_tp_ns::max());
+  } else {
+    __do_timed_wait(__lk, __clock_tp_ns(nanoseconds(__now_count_ns + __d_ns_count)));
+  }
 }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

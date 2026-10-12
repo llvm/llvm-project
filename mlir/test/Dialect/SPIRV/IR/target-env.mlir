@@ -140,7 +140,8 @@ func.func @sdot_scalar_i32_i32_capabilities(%operand: i32) -> i32 attributes {
     [DotProduct, DotProductInput4x8BitPacked], [SPV_KHR_integer_dot_product]>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.SDot
-  %0 = "test.convert_to_sdot_op"(%operand, %operand) {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> (i32)
+  // CHECK-SAME: test.marker = "keep"
+  %0 = "test.convert_to_sdot_op"(%operand, %operand) {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>, test.marker = "keep"}: (i32, i32) -> (i32)
   return %0: i32
 }
 

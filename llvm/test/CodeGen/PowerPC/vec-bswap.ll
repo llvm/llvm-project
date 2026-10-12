@@ -2,10 +2,10 @@
 ; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names | FileCheck %s
 
 ; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr9 \
-; RUN:   -verify-machineinstrs -vec-extabi | \
+; RUN:   -verify-machineinstrs -target-abi=vec-extabi | \
 ; RUN:   FileCheck %s --check-prefixes=AIX,AIX64
 ; RUN: llc < %s -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr9 \
-; RUN:   -verify-machineinstrs  -vec-extabi | \
+; RUN:   -verify-machineinstrs  -target-abi=vec-extabi | \
 ; RUN:   FileCheck %s --check-prefixes=AIX,AIX32
 
 define dso_local void @test(ptr %Arr, i32 signext %Len) {

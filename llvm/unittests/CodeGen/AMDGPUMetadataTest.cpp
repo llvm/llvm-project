@@ -66,7 +66,7 @@ protected:
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
     M->setTargetTriple(TargetTriple);
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
     legacy::PassManager PM;
     PM.add(new AddMetadataPass(PalMDString));

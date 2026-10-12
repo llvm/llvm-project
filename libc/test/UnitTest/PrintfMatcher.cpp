@@ -9,6 +9,7 @@
 #include "PrintfMatcher.h"
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/core_structs.h"
@@ -20,14 +21,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
+using printf_core::BasicFormatSection;
 using printf_core::FormatFlags;
-using printf_core::FormatSection;
 using printf_core::LengthModifier;
-
-bool FormatSectionMatcher::match(FormatSection actualValue) {
-  actual = actualValue;
-  return expected == actual;
-}
 
 namespace {
 
@@ -45,10 +41,16 @@ namespace {
     tlog << #lm << "\n\tbit width: :" << bw;                                   \
     break
 
-static void display(FormatSection form) {
+template <typename CharT> void display_impl(BasicFormatSection<CharT> form) {
   tlog << "Raw String (len " << form.raw_string.size() << "): \"";
-  for (size_t i = 0; i < form.raw_string.size(); ++i) {
-    tlog << form.raw_string[i];
+  cpp::string raw_string_utf8;
+  if constexpr (cpp::is_same_v<CharT, char>) {
+    raw_string_utf8 = form.raw_string;
+  } else {
+    raw_string_utf8 = try_convert_to_utf8(form.raw_string);
+  }
+  for (size_t i = 0; i < raw_string_utf8.size(); ++i) {
+    tlog << raw_string_utf8[i];
   }
   tlog << "\"";
   if (form.has_conv) {
@@ -80,26 +82,34 @@ static void display(FormatSection form) {
       CASE_LM_BIT_WIDTH(wf, form.bit_width);
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     }
+
+    cpp::string conv_name_utf8;
+    if constexpr (cpp::is_same_v<CharT, char>) {
+      conv_name_utf8 = cpp::string(&form.conv_name, 1);
+    } else {
+      conv_name_utf8 =
+          try_convert_to_utf8(cpp::wstring_view(&form.conv_name, 1));
+    }
     tlog << "\n";
-    tlog << "\tconversion name: " << form.conv_name << "\n";
-    if (form.conv_name == 'p' || form.conv_name == 'n' || form.conv_name == 's')
+    tlog << "\tconversion name: " << conv_name_utf8 << "\n";
+    if (conv_name_utf8 == "p" || conv_name_utf8 == "n" || conv_name_utf8 == "s")
       tlog << "\tpointer value: "
            << int_to_hex<uintptr_t>(
                   reinterpret_cast<uintptr_t>(form.conv_val_ptr))
            << "\n";
-    else if (form.conv_name != '%')
+    else if (conv_name_utf8 != "%")
       tlog << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
   }
 }
+
 } // anonymous namespace
 
-void FormatSectionMatcher::explainError() {
-  tlog << "expected format section: ";
-  display(expected);
-  tlog << '\n';
-  tlog << "actual format section  : ";
-  display(actual);
-  tlog << '\n';
+void display(const BasicFormatSection<char> &format_section) {
+  display_impl(format_section);
+}
+
+void display(const BasicFormatSection<wchar_t> &format_section) {
+  display_impl(format_section);
 }
 
 } // namespace testing

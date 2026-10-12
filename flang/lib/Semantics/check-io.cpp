@@ -22,6 +22,9 @@ namespace Fortran::semantics {
 
 // TODO: C1234, C1235 -- defined I/O constraints
 
+static const Symbol *FindEnumerationTypeComponent(
+    common::DefinedIo, const DerivedTypeSpec &, const Scope &);
+
 class FormatErrorReporter {
 public:
   FormatErrorReporter(SemanticsContext &context,
@@ -332,6 +335,34 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
     auto at{var->GetSource()};
+    if (flags_.test(Flag::StarFmt)) {
+      if (auto type{expr->GetType()}; type &&
+          type->category() == TypeCategory::Derived &&
+          !type->IsUnlimitedPolymorphic()) {
+        const auto &derived{type->GetDerivedTypeSpec()};
+        if (const auto *details{
+                derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+          if (details->isEnumerationType()) {
+            context_.Say(at,
+                "Enumeration type may not appear in list-directed input"_err_en_US);
+            return;
+          }
+        }
+        // A derived type without defined input I/O expands into its
+        // components (12.6.3), so reject one reaching an enumeration
+        // effective item, which may not appear in list-directed input.
+        const Scope &scope{context_.FindScope(at)};
+        if (!HasDefinedIo(common::DefinedIo::ReadFormatted, derived, &scope)) {
+          if (const Symbol *bad{FindEnumerationTypeComponent(
+                  common::DefinedIo::ReadFormatted, derived, scope)}) {
+            context_.Say(at,
+                "List-directed input item has a component '%s' of enumeration type"_err_en_US,
+                bad->name());
+            return;
+          }
+        }
+      }
+    }
     CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
     CheckForBadIoType(*expr,
         flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
@@ -665,6 +696,35 @@ void IoChecker::Enter(const parser::OutputItem &item) {
             "Output item must not be a procedure"_err_en_US); // C1233
       } else {
         auto at{parser::FindSourceLocation(item)};
+        if (flags_.test(Flag::StarFmt)) {
+          if (auto type{expr->GetType()}; type &&
+              type->category() == TypeCategory::Derived &&
+              !type->IsUnlimitedPolymorphic()) {
+            const auto &derived{type->GetDerivedTypeSpec()};
+            if (const auto *details{
+                    derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+              if (details->isEnumerationType()) {
+                context_.Say(at,
+                    "Enumeration type may not appear in list-directed output"_err_en_US);
+                return;
+              }
+            }
+            // A derived type without defined output I/O expands into its
+            // components (12.6.3), so reject one reaching an enumeration
+            // effective item, which may not appear in list-directed output.
+            const Scope &scope{context_.FindScope(at)};
+            if (!HasDefinedIo(
+                    common::DefinedIo::WriteFormatted, derived, &scope)) {
+              if (const Symbol *bad{FindEnumerationTypeComponent(
+                      common::DefinedIo::WriteFormatted, derived, scope)}) {
+                context_.Say(at,
+                    "List-directed output item has a component '%s' of enumeration type"_err_en_US,
+                    bad->name());
+                return;
+              }
+            }
+          }
+        }
         CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
         CheckForBadIoType(*expr,
             flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
@@ -1216,6 +1276,93 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
   return FindInaccessibleComponent(which, derived, scope, visited);
 }
 
+// Finds a direct (effective) component whose type is an enumeration type,
+// expanding a derived-type list item into its components per F2023 12.6.3.  A
+// component that is itself processed by defined I/O is treated as a single
+// value and is not expanded, so its subtree is skipped (based off of
+// FindInaccessibleComponent).
+//
+// The walk is memoized on the *instantiated scope* (derived.scope()), which is
+// the key that distinguishes two parameterized-derived-type instantiations
+// sharing one type symbol -- their defined-I/O shielding is decided per
+// instantiation (HasDefinedIo).  This is a two-color DFS:
+//   - 'onPath' holds the scopes currently on the recursion stack; a repeat
+//     entry is a back edge from a recursive type (e.g. a component that is a
+//     pointer/allocatable to the enclosing type -- unlike
+//     FindInaccessibleComponent, such components are not skipped here) and is
+//     pruned without being cached, since that partial result is only valid
+//     under the ancestor.
+//   - 'cache' holds the result of each fully-walked subtree, giving linear
+//     cost instead of the fanout^depth of an unmemoized path-scoped walk.
+// The type graph may therefore contain cycles.  Pruning a back edge is sound
+// because every reachable scope is entered once and checks its own components
+// on entry, so the target of a back edge has already been inspected: pruning
+// it cannot hide an enumeration component from the result.  This relies on
+// stopping at the first match; revisit it if the walk is ever changed to
+// collect every offending component.
+using EnumComponentPathSet = std::unordered_set<const Scope *>;
+using EnumComponentCache = std::unordered_map<const Scope *, const Symbol *>;
+
+static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope,
+    EnumComponentPathSet &onPath, EnumComponentCache &cache) {
+  const Scope *dtScope{derived.scope()};
+  if (!dtScope) {
+    return nullptr;
+  }
+  if (auto it{cache.find(dtScope)}; it != cache.end()) {
+    return it->second;
+  }
+  if (!onPath.insert(dtScope).second) {
+    return nullptr; // cycle: prune without caching
+  }
+  const Symbol *result{nullptr};
+  for (const auto &pair : *dtScope) {
+    const Symbol &symbol{*pair.second};
+    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+      const DerivedTypeSpec *componentDerived{nullptr};
+      if (const DeclTypeSpec *type{details->type()}) {
+        if (type->category() == DeclTypeSpec::Category::TypeDerived) {
+          componentDerived = &type->derivedTypeSpec();
+        }
+      }
+      if (!componentDerived) {
+        continue;
+      }
+      // The component's type is itself an enumeration type: this is the
+      // enumeration effective item we are looking for.
+      if (const auto *compDetails{
+              componentDerived->typeSymbol().detailsIf<DerivedTypeDetails>()};
+          compDetails && compDetails->isEnumerationType()) {
+        result = &symbol;
+        break;
+      }
+      // The component is processed by defined I/O. It is treated as a single
+      // value and does not expand into its components.
+      if (HasDefinedIo(which, *componentDerived, &scope)) {
+        continue;
+      }
+      // Otherwise the component expands into its own components; recurse to
+      // look for an enumeration effective item nested within it.
+      if (const Symbol *bad{FindEnumerationTypeComponent(
+              which, *componentDerived, scope, onPath, cache)}) {
+        result = bad;
+        break;
+      }
+    }
+  }
+  onPath.erase(dtScope);
+  cache.emplace(dtScope, result);
+  return result;
+}
+
+static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  EnumComponentPathSet onPath;
+  EnumComponentCache cache;
+  return FindEnumerationTypeComponent(which, derived, scope, onPath, cache);
+}
+
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
 parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
     common::DefinedIo which, parser::CharBlock where) const {
@@ -1224,7 +1371,32 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
         where, "I/O list item may not be unlimited polymorphic"_err_en_US);
   } else if (type.category() == TypeCategory::Derived) {
     const auto &derived{type.GetDerivedTypeSpec()};
+    if (const auto *details{
+            derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+      if (details->isEnumerationType()) {
+        if (which == common::DefinedIo::ReadUnformatted ||
+            which == common::DefinedIo::WriteUnformatted) {
+          return &context_.Say(where,
+              "Enumeration type is not supported in unformatted I/O"_err_en_US);
+        }
+        return nullptr; // formatted I/O is allowed
+      }
+    }
     const Scope &scope{context_.FindScope(where)};
+    // Enumeration type is not supported in unformatted I/O.  This is a flang
+    // limitation, not a standard requirement: F2023 12.6.3 restricts
+    // enumeration types only in list-directed and formatted I/O, and treats an
+    // unformatted derived-type item as a single value.  A derived type that is
+    // not processed by defined I/O expands into its components (12.6.3), so
+    // reject one that reaches an enumeration effective item.
+    if ((which == common::DefinedIo::ReadUnformatted ||
+            which == common::DefinedIo::WriteUnformatted) &&
+        !HasDefinedIo(which, derived, &scope)) {
+      if (FindEnumerationTypeComponent(which, derived, scope)) {
+        return &context_.Say(where,
+            "Enumeration type is not supported in unformatted I/O"_err_en_US);
+      }
+    }
     if (const Symbol *
         bad{FindUnsafeIoDirectComponent(which, derived, scope)}) {
       return &context_.SayWithDecl(*bad, where,

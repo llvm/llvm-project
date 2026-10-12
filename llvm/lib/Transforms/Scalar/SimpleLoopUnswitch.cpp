@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -47,7 +48,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -81,68 +81,6 @@ STATISTIC(
     "Number of unswitch candidates that had their cost multiplier skipped");
 STATISTIC(NumInvariantConditionsInjected,
           "Number of invariant conditions injected and unswitched");
-
-namespace llvm {
-static cl::opt<bool> EnableNonTrivialUnswitch(
-    "enable-nontrivial-unswitch", cl::init(false), cl::Hidden,
-    cl::desc("Forcibly enables non-trivial loop unswitching rather than "
-             "following the configuration passed into the pass."));
-
-static cl::opt<int>
-    UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
-                      cl::desc("The cost threshold for unswitching a loop."));
-
-static cl::opt<bool> EnableUnswitchCostMultiplier(
-    "enable-unswitch-cost-multiplier", cl::init(true), cl::Hidden,
-    cl::desc("Enable unswitch cost multiplier that prohibits exponential "
-             "explosion in nontrivial unswitch."));
-static cl::opt<int> UnswitchSiblingsToplevelDiv(
-    "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
-    cl::desc("Toplevel siblings divisor for cost multiplier."));
-static cl::opt<int> UnswitchParentBlocksDiv(
-    "unswitch-parent-blocks-div", cl::init(8), cl::Hidden,
-    cl::desc("Outer loop size divisor for cost multiplier."));
-static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
-    "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
-    cl::desc("Number of unswitch candidates that are ignored when calculating "
-             "cost multiplier."));
-static cl::opt<bool> UnswitchGuards(
-    "simple-loop-unswitch-guards", cl::init(true), cl::Hidden,
-    cl::desc("If enabled, simple loop unswitching will also consider "
-             "llvm.experimental.guard intrinsics as unswitch candidates."));
-static cl::opt<bool> DropNonTrivialImplicitNullChecks(
-    "simple-loop-unswitch-drop-non-trivial-implicit-null-checks",
-    cl::init(false), cl::Hidden,
-    cl::desc("If enabled, drop make.implicit metadata in unswitched implicit "
-             "null checks to save time analyzing if we can keep it."));
-static cl::opt<unsigned>
-    MSSAThreshold("simple-loop-unswitch-memoryssa-threshold",
-                  cl::desc("Max number of memory uses to explore during "
-                           "partial unswitching analysis"),
-                  cl::init(100), cl::Hidden);
-static cl::opt<bool> FreezeLoopUnswitchCond(
-    "freeze-loop-unswitch-cond", cl::init(true), cl::Hidden,
-    cl::desc("If enabled, the freeze instruction will be added to condition "
-             "of loop unswitch to prevent miscompilation."));
-
-static cl::opt<bool> InjectInvariantConditions(
-    "simple-loop-unswitch-inject-invariant-conditions", cl::Hidden,
-    cl::desc("Whether we should inject new invariants and unswitch them to "
-             "eliminate some existing (non-invariant) conditions."),
-    cl::init(true));
-
-static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
-    "simple-loop-unswitch-inject-invariant-condition-hotness-threshold",
-    cl::Hidden,
-    cl::desc("Only try to inject loop invariant conditions and "
-             "unswitch on them to eliminate branches that are "
-             "not-taken 1/<this option> times or less."),
-    cl::init(16));
-
-static cl::opt<bool> EstimateProfile("simple-loop-unswitch-estimate-profile",
-                                     cl::Hidden, cl::init(true));
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
 
 AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
 namespace {
@@ -257,20 +195,38 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
   }
 }
 
-/// Check that all the LCSSA PHI nodes in the loop exit block have trivial
-/// incoming values along this edge.
-static bool areLoopExitPHIsLoopInvariant(const Loop &L,
-                                         const BasicBlock &ExitingBB,
-                                         const BasicBlock &ExitBB) {
+/// Return true if \p V is a PHI node in the header of \p L.
+static bool isLoopHeaderPHI(const Loop &L, const Value *V) {
+  const auto *PN = dyn_cast<PHINode>(V);
+  return PN && PN->getParent() == L.getHeader();
+}
+
+/// Return the value \p V holds on entry to \p L. For a header PHI that is its
+/// incoming value from the preheader; any other value is returned unchanged.
+static Value *getLoopEntryValue(const Loop &L, Value *V) {
+  if (!isLoopHeaderPHI(L, V))
+    return V;
+  return cast<PHINode>(V)->getIncomingValueForBlock(L.getLoopPreheader());
+}
+
+/// Check that all the LCSSA PHI nodes in \p ExitBB have trivial incoming values
+/// along the edge from \p ExitingBB, i.e. values that are still correct if the
+/// loop is not entered.
+///
+/// Only loop invariant values are trivial by default. If \p AllowHeaderPHIs is
+/// set, a PHI in the loop header counts as trivial too.
+static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
+                                   const BasicBlock &ExitBB,
+                                   bool AllowHeaderPHIs = false) {
   for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
       return true;
 
-    // If the incoming value for this edge isn't loop invariant the unswitch
-    // won't be trivial.
-    if (!L.isLoopInvariant(PN->getIncomingValueForBlock(&ExitingBB)))
+    const Value *Incoming = PN->getIncomingValueForBlock(&ExitingBB);
+    if (!L.isLoopInvariant(Incoming) &&
+        !(AllowHeaderPHIs && isLoopHeaderPHI(L, Incoming)))
       return false;
   }
   llvm_unreachable("Basic blocks should never be empty!");
@@ -287,13 +243,13 @@ static bool areLoopExitPHIsLoopInvariant(const Loop &L,
 /// Direction is false, the \p Invariants form a conjunction and the branch
 /// exits on the "false" case.
 static void buildPartialUnswitchConditionalBranch(
-    BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
-    BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
+    const ScalarOptions &Opts, BasicBlock &BB, ArrayRef<Value *> Invariants,
+    bool Direction, BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc,
     const Instruction *I, AssumptionCache *AC, const DominatorTree &DT,
     const CondBrInst &ComputeProfFrom) {
 
   SmallVector<uint32_t> BranchWeights;
-  bool HasBranchWeights = EstimateProfile && !ProfcheckDisableMetadataFixes &&
+  bool HasBranchWeights = Opts.simple_loop_unswitch_estimate_profile &&
                           extractBranchWeights(ComputeProfFrom, BranchWeights);
   // If Direction is true, that means we had a disjunction and that the "true"
   // case exits. The probability of the disjunction of the subset of terms is at
@@ -317,7 +273,8 @@ static void buildPartialUnswitchConditionalBranch(
 
   SmallVector<Value *> FrozenInvariants;
   for (Value *Inv : Invariants) {
-    if (InsertFreeze && !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+    if (Opts.freeze_loop_unswitch_cond &&
+        !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
       Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
     FrozenInvariants.push_back(Inv);
   }
@@ -380,8 +337,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   // The expectation is that ToDuplicate[0] is the condition used by the
   // OriginalBranch, case in which we can clone the profile metadata from there.
   auto *ProfData =
-      !ProfcheckDisableMetadataFixes &&
-              ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
+      ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
           ? OriginalBranch.getMetadata(LLVMContext::MD_prof)
           : nullptr;
   auto *BR =
@@ -398,7 +354,8 @@ static void buildPartialInvariantUnswitchConditionalBranch(
 /// PHI nodes in that block such that what were LCSSA PHI nodes become trivial
 /// PHI nodes from the old preheader that now contains the unswitched
 /// terminator.
-static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
+static void rewritePHINodesForUnswitchedExitBlock(const Loop &L,
+                                                  BasicBlock &UnswitchedBB,
                                                   BasicBlock &OldExitingBB,
                                                   BasicBlock &OldPH) {
   for (PHINode &PN : UnswitchedBB.phis()) {
@@ -409,6 +366,7 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
       assert(PN.getIncomingBlock(i) == &OldExitingBB &&
              "Found incoming block different from unique predecessor!");
       PN.setIncomingBlock(i, &OldPH);
+      PN.setIncomingValue(i, getLoopEntryValue(L, PN.getIncomingValue(i)));
     }
   }
 }
@@ -420,11 +378,9 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
 /// LCSSA PHI nodes in it to remove the unswitched edge and introduces PHI
 /// nodes into the unswitched basic block to select between the value in the
 /// old preheader and the loop exit.
-static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
-                                                      BasicBlock &UnswitchedBB,
-                                                      BasicBlock &OldExitingBB,
-                                                      BasicBlock &OldPH,
-                                                      bool FullUnswitch) {
+static void rewritePHINodesForExitAndUnswitchedBlocks(
+    const Loop &L, BasicBlock &ExitBB, BasicBlock &UnswitchedBB,
+    BasicBlock &OldExitingBB, BasicBlock &OldPH, bool FullUnswitch) {
   assert(&ExitBB != &UnswitchedBB &&
          "Must have different loop exit and unswitched blocks!");
   BasicBlock::iterator InsertPt = UnswitchedBB.begin();
@@ -451,7 +407,7 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
         // No more edge from the old exiting block to the exit block.
         PN.removeIncomingValue(i);
 
-      NewPN->addIncoming(Incoming, &OldPH);
+      NewPN->addIncoming(getLoopEntryValue(L, Incoming), &OldPH);
     }
 
     // Now replace the old PHI with the new one and wire the old one in as an
@@ -561,7 +517,8 @@ static Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
 ///
 /// If `SE` is not null, it will be updated based on the potential loop SCEVs
 /// invalidated by this.
-static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
+static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
+                                  CondBrInst &BI, DominatorTree &DT,
                                   LoopInfo &LI, ScalarEvolution *SE,
                                   MemorySSAUpdater *MSSAU) {
   LLVM_DEBUG(dbgs() << "  Trying to unswitch branch: " << BI << "\n");
@@ -600,7 +557,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // Redirecting the latch edge to the exit block will cause us to skip latch
   // instructions. This can only be done if the latch instructions don't have
   // side effects and don't have any convergent instructions.
-  if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+  if (LatchIdx && areLoopExitPHIsTrivial(L, *LoopLatch, *ULExit) &&
       !llvm::any_of(*LoopLatch, [](Instruction &I) {
         if (const auto *CB = dyn_cast<CallBase>(&I))
           if (CB->isConvergent())
@@ -649,8 +606,12 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
-  if (!ModifiedBranch &&
-      !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+
+  // If the exit incomings aren't loop-invariant, the unswitch is still trivial
+  // when branch dominates the latch and every non-invariant incoming is a
+  // header PHI.
+  if (!ModifiedBranch && !areLoopExitPHIsTrivial(L, *ParentBB, *LoopExitBB,
+                                                 /*AllowHeaderPHIs=*/true)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
@@ -753,8 +714,8 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
              "Must have an `and` of `i1`s or `select i1 X, Y, false`s for the"
              " condition!");
     buildPartialUnswitchConditionalBranch(
-        *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        FreezeLoopUnswitchCond, OldPH->getTerminatorOrNull(), nullptr, DT, BI);
+        Opts, *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
+        OldPH->getTerminatorOrNull(), nullptr, DT, BI);
   }
 
   // Update the dominator tree with the added edge.
@@ -787,9 +748,9 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   // Rewrite the relevant PHI nodes.
   if (UnswitchedBB == LoopExitBB)
-    rewritePHINodesForUnswitchedExitBlock(*UnswitchedBB, *ParentBB, *OldPH);
+    rewritePHINodesForUnswitchedExitBlock(L, *UnswitchedBB, *ParentBB, *OldPH);
   else
-    rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
+    rewritePHINodesForExitAndUnswitchedBlocks(L, *LoopExitBB, *UnswitchedBB,
                                               *ParentBB, *OldPH, FullUnswitch);
 
   // The constant we can replace all of our invariants with inside the loop
@@ -866,7 +827,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (L.contains(&BBToCheck))
       return false;
     // BBToCheck is not trivial to unswitch if its phis aren't loop invariant.
-    if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, BBToCheck))
+    if (!areLoopExitPHIsTrivial(L, *ParentBB, BBToCheck))
       return false;
     // We do not unswitch a block that only has an unreachable statement, as
     // it's possible this is a previously unswitched block. Only unswitch if
@@ -988,11 +949,12 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   if (DefaultExitBB) {
     if (pred_empty(DefaultExitBB)) {
       UnswitchedExitBBs.insert(DefaultExitBB);
-      rewritePHINodesForUnswitchedExitBlock(*DefaultExitBB, *ParentBB, *OldPH);
+      rewritePHINodesForUnswitchedExitBlock(L, *DefaultExitBB, *ParentBB,
+                                            *OldPH);
     } else {
       auto *SplitBB =
           SplitBlock(DefaultExitBB, DefaultExitBB->begin(), &DT, &LI, MSSAU);
-      rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
+      rewritePHINodesForExitAndUnswitchedBlocks(L, *DefaultExitBB, *SplitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
       DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
@@ -1009,7 +971,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (pred_empty(ExitBB)) {
       // Only rewrite once.
       if (UnswitchedExitBBs.insert(ExitBB).second)
-        rewritePHINodesForUnswitchedExitBlock(*ExitBB, *ParentBB, *OldPH);
+        rewritePHINodesForUnswitchedExitBlock(L, *ExitBB, *ParentBB, *OldPH);
       continue;
     }
 
@@ -1019,7 +981,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (!SplitExitBB) {
       // If this is the first time we see this, do the split and remember it.
       SplitExitBB = SplitBlock(ExitBB, ExitBB->begin(), &DT, &LI, MSSAU);
-      rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
+      rewritePHINodesForExitAndUnswitchedBlocks(L, *ExitBB, *SplitExitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
     }
@@ -1148,8 +1110,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
 ///
 /// If `SE` is not null, it will be updated based on the potential loop SCEVs
 /// invalidated by this.
-static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
-                                         LoopInfo &LI, ScalarEvolution *SE,
+static bool unswitchAllTrivialConditions(const ScalarOptions &Opts, Loop &L,
+                                         DominatorTree &DT, LoopInfo &LI,
+                                         ScalarEvolution *SE,
                                          MemorySSAUpdater *MSSAU) {
   bool Changed = false;
 
@@ -1224,7 +1187,7 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
 
     // Found a trivial condition candidate: non-foldable conditional branch. If
     // we fail to unswitch this, we can't do anything else that is trivial.
-    if (!unswitchTrivialBranch(L, *BI, DT, LI, SE, MSSAU))
+    if (!unswitchTrivialBranch(Opts, L, *BI, DT, LI, SE, MSSAU))
       return Changed;
 
     // Mark that we managed to unswitch something.
@@ -1979,10 +1942,11 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
 }
 
 static void unswitchNontrivialInvariants(
-    Loop &L, Instruction &TI, ArrayRef<Value *> Invariants,
-    IVConditionInfo &PartialIVInfo, DominatorTree &DT, LoopInfo &LI,
-    AssumptionCache &AC, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-    LPMUpdater &LoopUpdater, bool InsertFreeze, bool InjectedCondition) {
+    const ScalarOptions &Opts, Loop &L, Instruction &TI,
+    ArrayRef<Value *> Invariants, IVConditionInfo &PartialIVInfo,
+    DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC, ScalarEvolution *SE,
+    MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater, bool InsertFreeze,
+    bool InjectedCondition) {
   auto *ParentBB = TI.getParent();
   CondBrInst *BI = dyn_cast<CondBrInst>(&TI);
   SwitchInst *SI = BI ? nullptr : cast<SwitchInst>(&TI);
@@ -2131,7 +2095,7 @@ static void unswitchNontrivialInvariants(
   // Drop metadata if we may break its semantics by moving this instr into the
   // split block.
   if (TI.getMetadata(LLVMContext::MD_make_implicit)) {
-    if (DropNonTrivialImplicitNullChecks)
+    if (Opts.simple_loop_unswitch_drop_non_trivial_implicit_null_checks)
       // Do not spend time trying to understand if we can keep it, just drop it
       // to save compile time.
       TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
@@ -2271,9 +2235,9 @@ static void unswitchNontrivialInvariants(
       buildPartialInvariantUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU, *BI);
     else {
-      buildPartialUnswitchConditionalBranch(
-          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
-          FreezeLoopUnswitchCond, BI, &AC, DT, *BI);
+      buildPartialUnswitchConditionalBranch(Opts, *SplitBB, Invariants,
+                                            Direction, *ClonedPH, *LoopPH, BI,
+                                            &AC, DT, *BI);
     }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
@@ -2566,7 +2530,8 @@ static CondBrInst *turnSelectIntoBranch(SelectInst *SI, DominatorTree &DT,
 ///
 /// It also makes all relevant DT and LI updates, so that all structures are in
 /// valid state after this transform.
-static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
+static CondBrInst *turnGuardIntoBranch(const ScalarOptions &Opts,
+                                       IntrinsicInst *GI, Loop &L,
                                        DominatorTree &DT, LoopInfo &LI,
                                        MemorySSAUpdater *MSSAU) {
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
@@ -2580,7 +2545,7 @@ static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   // however, that the deopt path is unlikely.
   Instruction *DeoptBlockTerm = SplitBlockAndInsertIfThen(
       GI->getArgOperand(0), GI, true,
-      !ProfcheckDisableMetadataFixes && EstimateProfile
+      Opts.simple_loop_unswitch_estimate_profile
           ? MDBuilder(GI->getContext()).createUnlikelyBranchWeights()
           : nullptr,
       &DTU, &LI);
@@ -2626,9 +2591,9 @@ static CondBrInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 /// unswitch candidates, making adequate predictions instead of wild guesses.
 /// That requires knowing not just the number of "remaining" candidates but
 /// also costs of unswitching for each of these candidates.
-static int CalculateUnswitchCostMultiplier(
-    const Instruction &TI, const Loop &L, const LoopInfo &LI,
-    const DominatorTree &DT,
+static int calculateUnswitchCostMultiplier(
+    const ScalarOptions &Opts, const Instruction &TI, const Loop &L,
+    const LoopInfo &LI, const DominatorTree &DT,
     ArrayRef<NonTrivialUnswitchCandidate> UnswitchCandidates) {
 
   // Guards and other exiting conditions do not contribute to exponential
@@ -2657,8 +2622,8 @@ static int CalculateUnswitchCostMultiplier(
   auto *ParentL = L.getParentLoop();
   int ParentLoopSizeMultiplier = 1;
   if (ParentL)
-    ParentLoopSizeMultiplier =
-        std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
+    ParentLoopSizeMultiplier = std::max<int>(
+        ParentL->getNumBlocks() / Opts.unswitch_parent_blocks_div, 1);
 
   int SiblingsCount =
       (ParentL ? ParentL->getSubLoops().size() : llvm::size(LI));
@@ -2692,24 +2657,24 @@ static int CalculateUnswitchCostMultiplier(
   // with this control is to allow a small number of unswitches to happen
   // and rely more on siblings multiplier (see below) when the number
   // of candidates is small.
-  unsigned ClonesPower =
-      std::max(UnswitchedClones - (int)UnswitchNumInitialUnscaledCandidates, 0);
+  unsigned ClonesPower = std::max(
+      UnswitchedClones - Opts.unswitch_num_initial_unscaled_candidates, 0);
 
   // Allowing top-level loops to spread a bit more than nested ones.
   int SiblingsMultiplier =
       std::max((ParentL ? SiblingsCount
-                        : SiblingsCount / (int)UnswitchSiblingsToplevelDiv),
+                        : SiblingsCount / Opts.unswitch_siblings_toplevel_div),
                1);
   // Compute the cost multiplier in a way that won't overflow by saturating
   // at an upper bound.
   int CostMultiplier;
-  if (ClonesPower > Log2_32(UnswitchThreshold) ||
-      SiblingsMultiplier > UnswitchThreshold ||
-      ParentLoopSizeMultiplier > UnswitchThreshold)
-    CostMultiplier = UnswitchThreshold;
+  if (ClonesPower > Log2_32(Opts.unswitch_threshold) ||
+      SiblingsMultiplier > Opts.unswitch_threshold ||
+      ParentLoopSizeMultiplier > Opts.unswitch_threshold)
+    CostMultiplier = Opts.unswitch_threshold;
   else
     CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
-                              (int)UnswitchThreshold);
+                              Opts.unswitch_threshold);
 
   LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
                     << " (siblings " << SiblingsMultiplier << " * parent size "
@@ -2720,6 +2685,7 @@ static int CalculateUnswitchCostMultiplier(
 }
 
 static bool collectUnswitchCandidates(
+    const ScalarOptions &Opts,
     SmallVectorImpl<NonTrivialUnswitchCandidate> &UnswitchCandidates,
     IVConditionInfo &PartialIVInfo, Instruction *&PartialIVCondBranch,
     const Loop &L, const LoopInfo &LI, AAResults &AA,
@@ -2745,7 +2711,7 @@ static bool collectUnswitchCandidates(
 
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
-  if (UnswitchGuards) {
+  if (Opts.simple_loop_unswitch_guards) {
     auto *GuardDecl = Intrinsic::getDeclarationIfExists(
         L.getHeader()->getParent()->getParent(), Intrinsic::experimental_guard);
     if (GuardDecl && !GuardDecl->use_empty())
@@ -2787,21 +2753,28 @@ static bool collectUnswitchCandidates(
     AddUnswitchCandidatesForInst(BI, BI->getCondition());
   }
 
-  if (MSSAU && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
+  BasicBlock *Header = L.getHeader();
+  // Need to make sure the load instruction to be hoisted is always executed.
+  bool HeaderCondGuaranteedToExecute =
+      isGuaranteedToTransferExecutionToSuccessor(
+          Header->begin(), Header->getTerminator()->getIterator());
+  if (MSSAU && HeaderCondGuaranteedToExecute &&
+      !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
-         return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
-       })) {
+        return TerminatorAndInvariants.TI == L.getHeader()->getTerminator();
+      })) {
     MemorySSA *MSSA = MSSAU->getMemorySSA();
-    if (auto Info = hasPartialIVCondition(L, MSSAThreshold, *MSSA, AA)) {
+    if (auto Info = hasPartialIVCondition(
+            L, Opts.simple_loop_unswitch_memoryssa_threshold, *MSSA, AA)) {
       LLVM_DEBUG(
           dbgs() << "simple-loop-unswitch: Found partially invariant condition "
                  << *Info->InstToDuplicate[0] << "\n");
       PartialIVInfo = *Info;
-      PartialIVCondBranch = L.getHeader()->getTerminator();
+      PartialIVCondBranch = Header->getTerminator();
       TinyPtrVector<Value *> ValsToDuplicate;
       llvm::append_range(ValsToDuplicate, Info->InstToDuplicate);
       UnswitchCandidates.push_back(
-          {L.getHeader()->getTerminator(), std::move(ValsToDuplicate)});
+          {Header->getTerminator(), std::move(ValsToDuplicate)});
     }
   }
   return !UnswitchCandidates.empty();
@@ -2864,12 +2837,14 @@ static bool shouldTryInjectInvariantCondition(
 /// TakenSucc via injection of invariant conditions. The branch should be not
 /// enough and not previously unswitched, the information about this comes from
 /// the metadata.
-bool shouldTryInjectBasingOnMetadata(const CondBrInst *BI,
+bool shouldTryInjectBasingOnMetadata(const ScalarOptions &Opts,
+                                     const CondBrInst *BI,
                                      const BasicBlock *TakenSucc) {
   SmallVector<uint32_t> Weights;
   if (!extractBranchWeights(*BI, Weights))
     return false;
-  unsigned T = InjectInvariantConditionHotnesThreshold;
+  unsigned T =
+      Opts.simple_loop_unswitch_inject_invariant_condition_hotness_threshold;
   BranchProbability LikelyTaken(T - 1, T);
 
   assert(Weights.size() == 2 && "Unexpected profile data!");
@@ -2950,10 +2925,9 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   setExplicitlyUnknownBranchWeightsIfProfiled(*InvariantBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(CheckBlock);
-  Builder.CreateCondBr(
-      TI->getCondition(), TI->getSuccessor(0), TI->getSuccessor(1),
-      !ProfcheckDisableMetadataFixes ? TI->getMetadata(LLVMContext::MD_prof)
-                                     : nullptr);
+  Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
+                       TI->getSuccessor(1),
+                       TI->getMetadata(LLVMContext::MD_prof));
   TI->eraseFromParent();
 
   // Fixup phis.
@@ -3045,11 +3019,12 @@ static bool insertCandidatesWithPendingInjections(
 /// C2" automatically implies "x <u C2", so we can get rid of one of
 /// loop-variant checks in unswitched loop version.
 static bool collectUnswitchCandidatesWithInjections(
+    const ScalarOptions &Opts,
     SmallVectorImpl<NonTrivialUnswitchCandidate> &UnswitchCandidates,
     IVConditionInfo &PartialIVInfo, Instruction *&PartialIVCondBranch, Loop &L,
     const DominatorTree &DT, const LoopInfo &LI, AAResults &AA,
     const MemorySSAUpdater *MSSAU) {
-  if (!InjectInvariantConditions)
+  if (!Opts.simple_loop_unswitch_inject_invariant_conditions)
     return false;
 
   if (!DT.isReachableFromEntry(L.getHeader()))
@@ -3082,7 +3057,7 @@ static bool collectUnswitchCandidatesWithInjections(
                                                L);
     if (!shouldTryInjectInvariantCondition(Pred, LHS, RHS, IfTrue, IfFalse, L))
       continue;
-    if (!shouldTryInjectBasingOnMetadata(cast<CondBrInst>(Term), IfTrue))
+    if (!shouldTryInjectBasingOnMetadata(Opts, cast<CondBrInst>(Term), IfTrue))
       continue;
     // Strip ZEXT for unsigned predicate.
     // TODO: once signed predicates are supported, also strip SEXT.
@@ -3134,6 +3109,7 @@ static bool isSafeForNoNTrivialUnswitching(const DominatorTree &DT, Loop &L,
 }
 
 static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
+    const ScalarOptions &Opts,
     ArrayRef<NonTrivialUnswitchCandidate> UnswitchCandidates, const Loop &L,
     const DominatorTree &DT, const LoopInfo &LI, AssumptionCache &AC,
     const TargetTransformInfo &TTI, const IVConditionInfo &PartialIVInfo) {
@@ -3260,11 +3236,11 @@ static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
     InstructionCost CandidateCost = ComputeUnswitchedCost(TI, FullUnswitch);
     // Calculate cost multiplier which is a tool to limit potentially
     // exponential behavior of loop-unswitch.
-    if (EnableUnswitchCostMultiplier) {
-      int CostMultiplier =
-          CalculateUnswitchCostMultiplier(TI, L, LI, DT, UnswitchCandidates);
+    if (Opts.enable_unswitch_cost_multiplier) {
+      int CostMultiplier = calculateUnswitchCostMultiplier(Opts, TI, L, LI, DT,
+                                                           UnswitchCandidates);
       assert(
-          (CostMultiplier > 0 && CostMultiplier <= UnswitchThreshold) &&
+          (CostMultiplier > 0 && CostMultiplier <= Opts.unswitch_threshold) &&
           "cost multiplier needs to be in the range of 1..UnswitchThreshold");
       CandidateCost *= CostMultiplier;
       LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
@@ -3290,10 +3266,11 @@ static NonTrivialUnswitchCandidate findBestNonTrivialUnswitchCandidate(
 // not execute and could cause UB, it would always cause UB if it is hoisted outside
 // of the loop. Insert a freeze to prevent this case.
 // 3. The branch condition may be poison or undef
-static bool shouldInsertFreeze(Loop &L, Instruction &TI, DominatorTree &DT,
+static bool shouldInsertFreeze(const ScalarOptions &Opts, Loop &L,
+                               Instruction &TI, DominatorTree &DT,
                                AssumptionCache &AC) {
   assert(isa<CondBrInst>(TI) || isa<SwitchInst>(TI));
-  if (!FreezeLoopUnswitchCond)
+  if (!Opts.freeze_loop_unswitch_cond)
     return false;
 
   ICFLoopSafetyInfo SafetyInfo(&L);
@@ -3309,7 +3286,8 @@ static bool shouldInsertFreeze(Loop &L, Instruction &TI, DominatorTree &DT,
       Cond, &AC, L.getLoopPreheader()->getTerminator(), &DT);
 }
 
-static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
+static bool unswitchBestCondition(const ScalarOptions &Opts, Loop &L,
+                                  DominatorTree &DT, LoopInfo &LI,
                                   AssumptionCache &AC, AAResults &AA,
                                   TargetTransformInfo &TTI, ScalarEvolution *SE,
                                   MemorySSAUpdater *MSSAU,
@@ -3319,12 +3297,12 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SmallVector<NonTrivialUnswitchCandidate, 4> UnswitchCandidates;
   IVConditionInfo PartialIVInfo;
   Instruction *PartialIVCondBranch = nullptr;
-  collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+  collectUnswitchCandidates(Opts, UnswitchCandidates, PartialIVInfo,
                             PartialIVCondBranch, L, LI, AA, MSSAU);
   if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.injection.disable"))
-    collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
-                                            PartialIVCondBranch, L, DT, LI, AA,
-                                            MSSAU);
+    collectUnswitchCandidatesWithInjections(Opts, UnswitchCandidates,
+                                            PartialIVInfo, PartialIVCondBranch,
+                                            L, DT, LI, AA, MSSAU);
   // If we didn't find any candidates, we're done.
   if (UnswitchCandidates.empty())
     return false;
@@ -3334,12 +3312,12 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
              << " non-trivial loop invariant conditions for unswitching.\n");
 
   NonTrivialUnswitchCandidate Best = findBestNonTrivialUnswitchCandidate(
-      UnswitchCandidates, L, DT, LI, AC, TTI, PartialIVInfo);
+      Opts, UnswitchCandidates, L, DT, LI, AC, TTI, PartialIVInfo);
 
   assert(Best.TI && "Failed to find loop unswitch candidate");
   assert(Best.Cost && "Failed to compute cost");
 
-  if (*Best.Cost >= UnswitchThreshold) {
+  if (*Best.Cost >= Opts.unswitch_threshold) {
     LLVM_DEBUG(dbgs() << "Cannot unswitch, lowest cost found: " << *Best.Cost
                       << "\n");
     return false;
@@ -3368,16 +3346,16 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   } else {
     // If the best candidate is a guard, turn it into a branch.
     if (isGuard(Best.TI))
-      Best.TI =
-          turnGuardIntoBranch(cast<IntrinsicInst>(Best.TI), L, DT, LI, MSSAU);
-    InsertFreeze = shouldInsertFreeze(L, *Best.TI, DT, AC);
+      Best.TI = turnGuardIntoBranch(Opts, cast<IntrinsicInst>(Best.TI), L, DT,
+                                    LI, MSSAU);
+    InsertFreeze = shouldInsertFreeze(Opts, L, *Best.TI, DT, AC);
   }
 
   LLVM_DEBUG(dbgs() << "  Unswitching non-trivial (cost = " << Best.Cost
                     << ") terminator: " << *Best.TI << "\n");
-  unswitchNontrivialInvariants(L, *Best.TI, Best.Invariants, PartialIVInfo, DT,
-                               LI, AC, SE, MSSAU, LoopUpdater, InsertFreeze,
-                               InjectedCondition);
+  unswitchNontrivialInvariants(Opts, L, *Best.TI, Best.Invariants,
+                               PartialIVInfo, DT, LI, AC, SE, MSSAU,
+                               LoopUpdater, InsertFreeze, InjectedCondition);
   return true;
 }
 
@@ -3407,6 +3385,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
                          MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 
@@ -3415,7 +3394,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return false;
 
   // Try trivial unswitch first before loop over other basic blocks in the loop.
-  if (Trivial && unswitchAllTrivialConditions(L, DT, LI, SE, MSSAU)) {
+  if (Trivial && unswitchAllTrivialConditions(Opts, L, DT, LI, SE, MSSAU)) {
     // If we unswitched successfully we will want to clean up the loop before
     // processing it further so just mark it as unswitched and return.
     postUnswitch(L, LoopUpdater, L.getName(),
@@ -3437,8 +3416,8 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // transform, we should allow unswitching for non-trivial uniform
   // branches even on targets that have divergence.
   // https://bugs.llvm.org/show_bug.cgi?id=48819
-  bool ContinueWithNonTrivial =
-      EnableNonTrivialUnswitch || (NonTrivial && !TTI.hasBranchDivergence(F));
+  bool ContinueWithNonTrivial = Opts.enable_nontrivial_unswitch ||
+                                (NonTrivial && !TTI.hasBranchDivergence(F));
   if (!ContinueWithNonTrivial)
     return false;
 
@@ -3458,7 +3437,8 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
 
   // Try to unswitch the best invariant condition. We prefer this full unswitch to
   // a partial unswitch when possible below the threshold.
-  if (unswitchBestCondition(L, DT, LI, AC, AA, TTI, SE, MSSAU, LoopUpdater))
+  if (unswitchBestCondition(Opts, L, DT, LI, AC, AA, TTI, SE, MSSAU,
+                            LoopUpdater))
     return true;
 
   // No other opportunities to unswitch.

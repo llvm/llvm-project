@@ -78,8 +78,10 @@ static void collectRewrite(Value value, llvm::SetVector<Value> &rewrites) {
 static std::optional<omp::DeclareTargetDeviceType>
 getDeclareTargetDevice(Operation &op) {
   auto declareTargetOp = dyn_cast<omp::DeclareTargetInterface>(op);
-  if (declareTargetOp && declareTargetOp.isDeclareTarget())
-    return declareTargetOp.getDeclareTargetDeviceType();
+  omp::DeclareTargetAttr declareTargetAttr =
+      declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+  if (declareTargetAttr)
+    return declareTargetAttr.getDeviceType();
   return std::nullopt;
 }
 
@@ -215,6 +217,8 @@ private:
       targetOp.setDependIteratedKindsAttr(nullptr);
       targetOp.getDeviceMutable().clear();
       targetOp.getDynGroupprivateSizeMutable().clear();
+      targetOp.setDynGroupprivateAccessGroupAttr(nullptr);
+      targetOp.setDynGroupprivateFallbackAttr(nullptr);
       targetOp.getIfExprMutable().clear();
       targetOp.getInReductionVarsMutable().clear();
       targetOp.setInReductionByrefAttr(nullptr);

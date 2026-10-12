@@ -196,7 +196,8 @@ def AddressSpaceDocs : Documentation {
 This attribute is mainly intended to be used by target headers
 provided by the toolchain. End users should prefer the documented, named
 address space annotations for their platform, such as the
-[OpenCL address spaces], `__global__`, `__local__`, or something else.
+[OpenCL address spaces](#opencl-address-spaces), `__global__`, `__local__`,
+or something else.
 :::
 
 The `address_space` attribute functions as a type qualifier that allows the
@@ -218,8 +219,8 @@ types) and what values are valid depends on the target and language mode.
 The meaning of each value is defined by the target; multiple address spaces are
 used in environments such as OpenCL, CUDA, HIP, and other GPU programming
 models to distinguish global, local, constant, and private memory. See for
-example the address spaces defined in the [NVPTX Usage Guide][nvptx usage guide] and the
-[AMDGPU Usage Guide][amdgpu usage guide].
+example the address spaces defined in the [NVPTX User Guide][nvptx user guide] and the
+[AMDGPU User Guide][amdgpu user guide].
 
 Address spaces may partially overlap or be entirely distinct. The compiler may
 reject attempts to convert between distinct, incompatible address spaces.
@@ -229,9 +230,9 @@ may truncate.
 For more information, refer to [ISO TR18037][iso tr18037], which covers embedded C language
 extensions. Section 5 covers named address spaces.
 
-[amdgpu usage guide]: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+[amdgpu user guide]: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
 [iso tr18037]: https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
-[nvptx usage guide]: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+[nvptx user guide]: https://llvm.org/docs/NVPTXUsage.html#address-spaces
   }];
 }
 
@@ -272,7 +273,7 @@ def ThreadDocs : Documentation {
   let Content = [{
 The `__declspec(thread)` attribute declares a variable with thread local
 storage. It is available under the `-fms-extensions` flag for MSVC
-compatibility. See the documentation for [\_\_declspec(thread)][__declspec(thread)] on MSDN.
+compatibility. See the documentation for [`__declspec(thread)`][__declspec(thread)] on MSDN.
 
 In Clang, `__declspec(thread)` is generally equivalent in functionality to the
 GNU `__thread` keyword. The variable must not have a destructor and must have
@@ -795,7 +796,7 @@ There are a few items worthy of note:
    copyability and kernel parameter requirements.
 
 Within `single_task()`, the call to `kernel_entry_point()` is effectively
-replaced with a synthesized call to a ''sycl_kernel_launch\`\` template that
+replaced with a synthesized call to a `sycl_kernel_launch` template that
 looks approximately as follows.
 
 ```c++
@@ -840,6 +841,98 @@ restrictions described in section 5.4, "Language restrictions for device
 functions" in the SYCL 2020 specification. If the function is a non-static
 member function, `this` shall not be used in a potentially evaluated
 expression.
+  }];
+}
+
+def SYCLAddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "SYCL Address Spaces";
+  let Content = [{
+:::{Note}
+These attributes are intended for use in the implementation of SYCL run-time
+libraries and should not be used in any other context.
+Programmers writing code intended to conform to the SYCL specification should
+use the address space facilities specified in the following sections of the
+SYCL 2020 specification.
+
+* [4.7.2, "Buffers"][SYCL-2020-4.7.2]
+* [4.7.6, "Accessors"][SYCL-2020-4.7.6]
+* [4.7.7, "Address space classes"][SYCL-2020-4.7.7]
+* [F.7, "sycl_khr_static_addrspace_cast"][SYCL-2020-F.7]
+* [F.8, "sycl_khr_dynamic_addrspace_cast"][SYCL-2020-F.8]
+:::
+
+The SYCL address space attributes listed below correspond to the five address
+spaces described by
+[SYCL 2020 section 3.8.2, "SYCL device memory model"][SYCL-2020-3.8.2] and
+[SYCL 2020 section 4.7.7, "Address space classes"][SYCL-2020-4.7.7].
+
+::: {list-table} SYCL address space attributes
+:header-rows: 1
+
+* - Address space attribute
+  - SYCL address space
+  - Description
+* - `[[clang::sycl_global]]`
+  - global
+  - A memory region accessible by all work-items executing on a device.
+* - `[[clang::sycl_local]]`
+  - local
+  - A memory region accessible by all work-items of a single work-group.
+* - `[[clang::sycl_private]]`
+  - private
+  - A memory region that is private to a single work-item.
+* - `[[clang::sycl_generic]]`
+  - generic
+  - A virtual memory region from which the global, local, and private memory
+    regions may all be accessed.
+* - `[[clang::sycl_constant]]`
+  - constant
+  - (*deprecated*) A memory region that holds constant data for an executing
+    kernel.
+:::
+
+The SYCL address space attributes are type attributes that may be applied to
+non-function non-reference types to specify an address space qualified type.
+
+A type with a SYCL address space qualifier is a distinct type from the
+otherwise unattributed type. For example, `int *` and `int [[clang::sycl_global]]*`
+designate distinct pointer types which participate in overload resolution and
+template specialization.
+
+The top-level type of a variable declaration cannot have a SYCL address space
+qualifier. For example:
+
+```c++
+int [[clang::sycl_global]] gv;   // error: the top-level type has an address space qualifier.
+int [[clang::sycl_global]] *pgi; // ok; the address space qualifier is on the pointee type.
+```
+
+Conversions between SYCL address space attributed types are permitted as
+follows.
+
+- Types attributed with the global, local, or private address space attributes
+  are implicitly convertible to matching types with the generic address space
+  attribute.
+
+The mapping of SYCL address spaces to physical address spaces is target
+dependent.
+
+For OpenCL device targets, the SYCL address space attributes are aligned with
+the [OpenCL address space attributes](#opencl-address-spaces) such that, e.g.,
+`int [[clang::sycl_global]]*` and `int [[clang::opencl_global]]*` specify
+distinct types both of which map to the same underlying address space.
+Corresponding SYCL and OpenCL address space attributed types are implicitly
+convertible; other conversions are permitted as described above; e.g.,
+`int [[clang::sycl_global]]*` is implicitly convertible to
+`int [[clang::opencl_generic]]*`.
+
+[SYCL-2020-3.8.2]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_sycl_device_memory_model
+[SYCL-2020-4.7.2]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:buffers
+[SYCL-2020-4.7.6]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#subsec:accessors
+[SYCL-2020-4.7.7]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#_address_space_classes
+[SYCL-2020-F.7]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-static-addrspace-cast
+[SYCL-2020-F.8]: https://registry.khronos.org/SYCL/specs/sycl-2020/html/sycl-2020.html#sec:khr-dynamic-addrspace-cast
   }];
 }
 
@@ -1168,7 +1261,7 @@ def CodeSegDocs : Documentation {
 The `__declspec(code_seg)` attribute enables the placement of code into separate
 named segments that can be paged or locked in memory individually. This attribute
 is used to control the placement of instantiated templates and compiler-generated
-code. See the documentation for [\_\_declspec(code_seg)][__declspec(code_seg)] on MSDN.
+code. See the documentation for [`__declspec(code_seg)`][__declspec(code_seg)] on MSDN.
 
 [__declspec(code_seg)]: http://msdn.microsoft.com/en-us/library/dn636922.aspx
   }];
@@ -1230,7 +1323,9 @@ available in C.
 
 ```c++
 int isdigit(int c);
-int isdigit(int c) __attribute__((enable_if(c <= -1 || c > 255, "chosen when 'c' is out of range"))) __attribute__((unavailable("'c' must have the value of an unsigned char or EOF")));
+int isdigit(int c)
+  __attribute__((enable_if(c <= -1 || c > 255, "chosen when 'c' is out of range")))
+  __attribute__((unavailable("'c' must have the value of an unsigned char or EOF")));
 
 void foo(char c) {
   isdigit(c);
@@ -1446,7 +1541,7 @@ Query for this feature with `__has_attribute(diagnose_if)`.
 def NoSpecializationsDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-``[[clang::no_specializations]]`` can be applied to function, class, or variable
+`[[clang::no_specializations]]` can be applied to function, class, or variable
 templates for which neither an explicit specialization nor a partial specialization should be declared by users. This is primarily
 used to diagnose user specializations of standard library type traits.
   }];
@@ -1823,6 +1918,8 @@ have the same respective semantics when applied to CoreFoundation objects.
 These attributes affect code generation when interacting with ARC code, and
 they are used by the Clang Static Analyzer.
 
+(os-retained-attr-family)=
+
 Finally, in C++ interacting with XNU kernel (objects inheriting from OSObject),
 the same attribute family is present:
 `__attribute__((os_returns_not_retained))`,
@@ -1884,7 +1981,7 @@ optimizations. This is required for the implementation of functions with
 certain special requirements, like the OpenCL "barrier" function, that might
 need to be run concurrently by all the threads that are executing in lockstep
 on the hardware. For example this attribute applied on the function
-"nodupfunc" in the code below avoids that:
+`nodupfunc` in the code below avoids that:
 
 ```c
 void nodupfunc() __attribute__((noduplicate));
@@ -1913,7 +2010,7 @@ if (a > n) {
 }
 ```
 
-where the call to "nodupfunc" is duplicated and sunk into the two branches
+where the call to `nodupfunc` is duplicated and sunk into the two branches
 of the condition.
   }];
 }
@@ -2474,7 +2571,7 @@ The fact that Clang is capable of recognizing declarations that were defined
 externally can be used to provide better tooling support for mixed-language
 projects or projects that rely on auto-generated code. For instance, an IDE that
 uses Clang and that supports mixed-language projects can use this attribute to
-provide a correct 'jump-to-definition' feature. For a concrete example,
+provide a correct "jump-to-definition" feature. For a concrete example,
 consider a protocol that's defined in a Swift file:
 
 ```swift
@@ -2496,7 +2593,7 @@ __attribute__((external_source_symbol(language="Swift",defined_in="module")))
 @end
 ```
 
-Consequently, when 'jump-to-definition' is performed at a location that
+Consequently, when "jump-to-definition" is performed at a location that
 references `SwiftProtocol`, the IDE can jump to the original definition in
 the Swift source file rather than jumping to the Objective-C declaration in the
 auto-generated header file.
@@ -2544,7 +2641,7 @@ def ConstInitDocs : Documentation {
   let Heading = "require_constant_initialization, constinit (C++20)";
   let Content = [{
 This attribute specifies that the variable to which it is attached is intended
-to have a [constant initializer](http://en.cppreference.com/w/cpp/language/constant_initialization)
+to have a [*constant initializer*](http://en.cppreference.com/w/cpp/language/constant_initialization)
 according to the rules of [basic.start.static]. The variable is required to
 have static or thread storage duration. If the initialization of the variable
 is not a constant initializer an error will be produced. This attribute may
@@ -2553,7 +2650,7 @@ onwards.
 
 Note that in C++03 strict constant expression checking is not done. Instead
 the attribute reports if Clang can emit the variable as a constant, even if it's
-not technically a 'constant initializer'. This behavior is non-portable.
+not technically a *constant initializer*. This behavior is non-portable.
 
 Static storage duration variables with constant initializers avoid hard-to-find
 bugs caused by the indeterminate order of dynamic initialization. They can also
@@ -3220,13 +3317,11 @@ attribute value. Any other combination of different values is not allowed.
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
 
-Refer to:
-<https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html>
-<https://riscv.org/specifications/privileged-isa/>
-The RISC-V Instruction Set Manual Volume II: Privileged Architecture
-Version 1.10.
-<https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>
-<https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf>
+References:
+- [GCC RISC-V Attributes](https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html)
+- [The RISC-V Instruction Set Manual Volume II: Privileged Architecture Version 1.10](https://docs.riscv.org/reference/isa/v1.10/_attachments/riscv-privileged.pdf)
+- [Xqci extension v0.13](https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0)
+- [SiFive Interrupt Cookbook Version 1.2](https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf)
   }];
 }
 
@@ -3314,7 +3409,7 @@ code for the given CPU without changing the available instructions.
 For AArch64, `arch="Arch"` will set the architecture, similar to the -march
 command line options. `cpu="CPU"` can be used to select a specific cpu,
 as per the `-mcpu` option, similarly for `tune=`. The attribute also allows the
-"branch-protection=\<args>" option, where the permissible arguments and their
+`branch-protection=<args>` option, where the permissible arguments and their
 effect on code generation are the same as for the command-line option
 `-mbranch-protection`.
 
@@ -3354,7 +3449,7 @@ For AArch64 target clang supports function multiversioning by
 function it instructs compiler to emit multiple function versions based on
 `target_version` attribute strings, which resolved at runtime depend on their
 priority and target features availability. One of the versions is always
-( implicitly or explicitly ) the `default` (fallback). Attribute strings can
+(implicitly or explicitly) the `default` (fallback). Attribute strings can
 contain dependent features names joined by the "+" sign.
 
 For targets that support the GNU indirect function (IFUNC) feature, dispatch
@@ -3419,8 +3514,12 @@ For backward compatibility with earlier Clang releases, a function alias with an
 `.ifunc` suffix is also emitted. The `.ifunc` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
 
-For PowerPC targets, `target_clones` is supported on AIX only. Only CPU
-(specified as `cpu=CPU`) and `default` options are allowed. IFUNC is supported
+For PowerPC targets, `target_clones` is supported on AIX only. The attribute
+contains comma-separated strings of one of:
+(a) `default`, (b) `cpu=CPU`, (c) `FEATURE` or `no-FEATURE`.
+The minimum CPU supported is `pwr7` (long spelling such as `power7` is accepted).
+The list of target features is a subset of what's allowed on `target`, limited
+to what is detectable at runtime using `__builtin_cpu_supports`. IFUNC is supported
 on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
 An FMV function that is only declared in a translation unit is treated as a
 non-FMV. The resolver and the function clones are given internal linkage.
@@ -3533,43 +3632,43 @@ create machine code that meets the request.
 def LaunchBoundsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``__launch_bounds__`` attribute (also spelled ``launch_bounds``) originates
+The `__launch_bounds__` attribute (also spelled `launch_bounds`) originates
 in CUDA. It informs the compiler of the launch configuration a kernel will be
 dispatched with, allowing it to optimize the kernel accordingly. It takes the
-form ``__launch_bounds__(<max-threads-per-block>[,
-<min-blocks-per-multiprocessor>[, <max-blocks-per-cluster>]])``. All arguments
+form `__launch_bounds__(<max-threads-per-block>[,
+<min-blocks-per-multiprocessor>[, <max-blocks-per-cluster>]])`. All arguments
 are constant expressions.
 
-The attribute only takes effect on ``__global__`` (kernel) functions; like
+The attribute only takes effect on `__global__` (kernel) functions; like
 NVCC, Clang ignores it on any other function.
 
-``<max-threads-per-block>`` specifies the maximum number of threads per block
-the kernel will be launched with. ``<min-blocks-per-multiprocessor>`` specifies
+`<max-threads-per-block>` specifies the maximum number of threads per block
+the kernel will be launched with. `<min-blocks-per-multiprocessor>` specifies
 the desired minimum number of blocks resident per multiprocessor, and
-``<max-blocks-per-cluster>`` the maximum number of blocks per cluster.
+`<max-blocks-per-cluster>` the maximum number of blocks per cluster.
 
-For the NVPTX target, ``<max-threads-per-block>`` and
-``<min-blocks-per-multiprocessor>`` map to the ``.maxntid`` and ``.minnctapersm``
-PTX directives, respectively, and ``<max-blocks-per-cluster>`` (which requires
-``sm_90`` or newer) maps to ``.maxclusterrank``.
+For the NVPTX target, `<max-threads-per-block>` and
+`<min-blocks-per-multiprocessor>` map to the `.maxntid` and `.minnctapersm`
+PTX directives, respectively, and `<max-blocks-per-cluster>` (which requires
+`sm_90` or newer) maps to `.maxclusterrank`.
 
 For the AMDGPU target, the attribute is translated into the equivalent AMDGPU
 kernel attributes:
 
-  - ``<max-threads-per-block>`` sets the maximum
-    ``amdgpu_flat_work_group_size`` (as ``1, <max-threads-per-block>``).
-  - ``<min-blocks-per-multiprocessor>`` sets the minimum
-    ``amdgpu_waves_per_eu``. Note that HIP reinterprets this CUDA argument as a
+  - `<max-threads-per-block>` sets the maximum
+    `amdgpu_flat_work_group_size` (as `1, <max-threads-per-block>`).
+  - `<min-blocks-per-multiprocessor>` sets the minimum
+    `amdgpu_waves_per_eu`. Note that HIP reinterprets this CUDA argument as a
     minimum number of waves per execution unit, so its meaning differs from the
     NVPTX interpretation.
-  - ``<max-blocks-per-cluster>`` is currently ignored.
+  - `<max-blocks-per-cluster>` is currently ignored.
 
-An explicit ``amdgpu_flat_work_group_size`` or ``amdgpu_waves_per_eu`` attribute
-takes precedence over the value derived from ``__launch_bounds__``.
+An explicit `amdgpu_flat_work_group_size` or `amdgpu_waves_per_eu` attribute
+takes precedence over the value derived from `__launch_bounds__`.
 
 When the same kernel is declared multiple times, the launch bounds from the most
 recent declaration that specifies them are used; a definition without
-``__launch_bounds__`` inherits the bounds from an earlier declaration.
+`__launch_bounds__` inherits the bounds from an earlier declaration.
   }];
 }
 
@@ -3762,7 +3861,7 @@ On 32-bit x86 targets, this attribute changes the calling convention of a
 function to clear parameters off of the stack on return. This convention does
 not support variadic calls or unprototyped functions in C, and has no effect on
 x86_64 targets. This calling convention is used widely by the Windows API and
-COM applications. See the documentation for [\_\_stdcall][__stdcall] on MSDN.
+COM applications. See the documentation for [`__stdcall`][__stdcall] on MSDN.
 
 [__stdcall]: http://msdn.microsoft.com/en-us/library/zxk0tw93.aspx
   }];
@@ -3777,7 +3876,7 @@ the stack on return. This convention does not support variadic calls or
 unprototyped functions in C, and has no effect on x86_64 targets. This calling
 convention is supported primarily for compatibility with existing code. Users
 seeking register parameters should use the `regparm` attribute, which does
-not require callee-cleanup. See the documentation for [\_\_fastcall][__fastcall] on MSDN.
+not require callee-cleanup. See the documentation for [`__fastcall`][__fastcall] on MSDN.
 
 [__fastcall]: http://msdn.microsoft.com/en-us/library/6xa169sk.aspx
   }];
@@ -3787,7 +3886,7 @@ def RegCallDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
 On x86 targets, this attribute changes the calling convention to
-[\_\_regcall][__regcall] convention. This convention aims to pass as many arguments
+[`__regcall`][__regcall] convention. This convention aims to pass as many arguments
 as possible in registers. It also tries to utilize registers for the
 return value whenever it is possible.
 
@@ -3802,7 +3901,7 @@ On 32-bit x86 targets, this attribute changes the calling convention of a
 function to use ECX for the first parameter (typically the implicit `this`
 parameter of C++ methods) and clear parameters off of the stack on return. This
 convention does not support variadic calls or unprototyped functions in C, and
-has no effect on x86_64 targets. See the documentation for [\_\_thiscall][__thiscall] on
+has no effect on x86_64 targets. See the documentation for [`__thiscall`][__thiscall] on
 MSDN.
 
 [__thiscall]: http://msdn.microsoft.com/en-us/library/ek8tkfbw.aspx
@@ -3829,7 +3928,7 @@ passed in sequential SSE registers if enough are available. If AVX is enabled,
 cannot be passed in registers for any reason is passed by reference, which
 allows the caller to align the parameter memory.
 
-See the documentation for [\_\_vectorcall][__vectorcall] on MSDN for more details.
+See the documentation for [`__vectorcall`][__vectorcall] on MSDN for more details.
 
 [__vectorcall]: http://msdn.microsoft.com/en-us/library/dn375768.aspx
   }];
@@ -4408,7 +4507,7 @@ void bar(void) {
 ```
 
 When using the format attribute on a variadic function, the first data parameter
-\_must\_ be the index of the ellipsis in the parameter list. Clang will generate
+must be the index of the ellipsis in the parameter list. Clang will generate
 a diagnostic otherwise, as it wouldn't be possible to forward that argument list
 to `printf`-family functions. For instance, this is an error:
 
@@ -4541,7 +4640,7 @@ a negative example, `%ld` is incompatible with `%d`.
 Do note the following un-obvious cases:
 
 - Passing `NULL` as the format string does not trigger format diagnostics.
-- When the format string is not NULL, it cannot \_miss\_ specifiers, even in
+- When the format string is not NULL, it cannot miss specifiers, even in
   trailing positions. For instance, `%d` is not accepted when the required
   format is `%d %d %d`.
 - While checks for the `format` attribute tolerate sone size mismatches
@@ -4737,7 +4836,7 @@ function by writing the attribute after the function type:
 
 ```c++
 struct string {
-  // The returned pointer should not outlive ``*this``.
+  // The returned pointer should not outlive '*this'.
   const char *data() const [[clang::lifetimebound]];
 };
 ```
@@ -4924,7 +5023,7 @@ Attribute `trivial_abi` has no effect in the following cases:
   purposes of calls, which includes:
 
   - classes that are non-trivial for the purposes of calls
-  - \_\_weak-qualified types in Objective-C++
+  - `__weak`-qualified types in Objective-C++
   - arrays of any of the above
   }];
 }
@@ -5107,7 +5206,7 @@ is the number of cycles between two iterations of an unoptimized loop in the
 newly created schedule. A new, optimized loop is created such that a single iteration
 of the loop executes in the same number of cycles as the initiation interval.
 
-For further details see \<<https://llvm.org/pubs/2005-06-17-LattnerMSThesis-book.pdf>>.
+For further details see <https://llvm.org/pubs/2005-06-17-LattnerMSThesis-book.pdf>.
 
 `#pragma clang loop pipeline and #pragma loop pipeline_initiation_interval`
 could be used as hints for the software pipelining optimization. The pragma is
@@ -5144,7 +5243,7 @@ for (...) {
 def OpenCLUnrollHintDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
-The opencl_unroll_hint attribute qualifier can be used to specify that a loop
+The `opencl_unroll_hint` attribute qualifier can be used to specify that a loop
 (for, while and do loops) can be unrolled. This attribute qualifier can be
 used to specify full unrolling or partial unrolling by a specified amount.
 This is a compiler hint and the compiler may ignore this directive. See
@@ -5161,8 +5260,8 @@ the kernel must be compiled and executed with the specified subgroup size. When
 this attribute is present, get_max_sub_group_size() is guaranteed to return the
 specified integer value. This is important for the correctness of many subgroup
 algorithms, and in some cases may be used by the compiler to generate more optimal
-code. See `cl_intel_required_subgroup_size
-<https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_required_subgroup_size.txt>`
+code. See
+[`cl_intel_required_subgroup_size`](https://www.khronos.org/registry/OpenCL/extensions/intel/cl_intel_required_subgroup_size.html)
 for details.
   }];
 }
@@ -5174,7 +5273,7 @@ def OpenCLAccessDocs : Documentation {
 The access qualifiers must be used with image object arguments or pipe arguments
 to declare if they are being read or written by a kernel or function.
 
-The read_only/\_\_read_only, write_only/\_\_write_only and read_write/\_\_read_write
+The `read_only`, `__read_only`, `write_only`, `__write_only`, `read_write`, and `__read_write`
 names are reserved for use as access qualifiers and shall not be used otherwise.
 
 ```c
@@ -5188,7 +5287,7 @@ foo (read_only image2d_t imageA,
 In the above example imageA is a read-only 2D image object, and imageB is a
 write-only 2D image object.
 
-The read_write (or \_\_read_write) qualifier can not be used with pipe.
+The `read_write` (or `__read_write`) qualifier cannot be used with pipe arguments.
 
 More details can be found in the OpenCL C language Spec v2.0, Section 6.6.
     }];
@@ -5198,8 +5297,8 @@ def DocOpenCLAddressSpaces : DocumentationCategory<"OpenCL Address Spaces"> {
   let Content = [{
 The address space qualifier may be used to specify the region of memory that is
 used to allocate the object. OpenCL supports the following address spaces:
-\_\_generic(generic), \_\_global(global), \_\_local(local), \_\_private(private),
-\_\_constant(constant).
+`__generic` (or `generic`), `__global` (or `global`), `__local` (or `local`),
+`__private` (or `private`), and `__constant` (or `constant`).
 
 ```c
 __constant int c = ...;
@@ -5212,7 +5311,8 @@ __generic int* foo(global int* g) {
 }
 ```
 
-More details can be found in the OpenCL C language Spec v2.0, Section 6.5.
+More details can be found in the OpenCL C language Specification version 3,
+Section 6.7, "Address Space Qualifiers".
   }];
 }
 
@@ -5224,7 +5324,7 @@ The generic address space attribute is only available with OpenCL v2.0 and later
 It can be used with pointer types. Variables in global and local scope and
 function parameters in non-kernel functions can have the generic address space
 type attribute. It is intended to be a placeholder for any other address space
-except for '\_\_constant' in OpenCL code which can be used with multiple address
+except for `__constant` in OpenCL code which can be used with multiple address
 spaces.
   }];
 }
@@ -5572,6 +5672,11 @@ members, one of which is a pointer to the start of the allocated memory and
 the other one is either an integer type containing the size of the actually
 allocated memory or a pointer to the end of the allocated region. Note, static
 data members do not impact whether a type is span-like or not.
+
+In combination with the `alloc_size` attribute, if the begin pointer is
+non-null, the size of the returned span-like object has to be greater or equal
+to the number of bytes guaranteed to be dereferenceable by `alloc_size`. It also
+guarantees that the number of dereferenceable bytes is at least size.
   }];
 }
 
@@ -5976,8 +6081,8 @@ callback function, an external function call, use of `longjmp`, or other means.
 Therefore, they cannot use or modify any data that does not escape the caller function's
 compilation unit.
 
-For more information see
-`gcc documentation <https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html>`
+For more information see the
+[GCC common attributes documentation](https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html)
 }];
 }
 
@@ -6223,7 +6328,7 @@ This attribute can be used on static and non-static member functions of class
 templates, static data members of class templates and member classes of class
 templates.
 
-**Interaction with \_\_declspec(dllexport/dllimport)**
+**Interaction with `__declspec(dllexport)` and `__declspec(dllimport)`**
 
 For a DLL platform (i.e., Windows), this attribute also means "this member will
 never be exported or imported". Despite its name, this semantics applies to
@@ -6325,8 +6430,8 @@ Using the incorrect handler type will crash the system.
 
 Interrupt and exception handlers cannot be called by other functions and must have return type `void`.
 
-Interrupt and exception handlers should only call functions with the 'no_caller_saved_registers'
-attribute, or should be compiled with the '-mgeneral-regs-only' flag to avoid saving unused
+Interrupt and exception handlers should only call functions with the `no_caller_saved_registers`
+attribute, or should be compiled with the `-mgeneral-regs-only` flag to avoid saving unused
 non-GPR registers.
     }];
 }
@@ -6341,15 +6446,15 @@ from the function.
 The compiler saves and restores any modified registers that were not used for
 passing or returning arguments to the function.
 
-The user can call functions specified with the 'no_caller_saved_registers'
+The user can call functions specified with the `no_caller_saved_registers`
 attribute from an interrupt handler without saving and restoring all
 call-clobbered registers.
 
-Functions specified with the 'no_caller_saved_registers' attribute should only
-call other functions with the 'no_caller_saved_registers' attribute, or should be
-compiled with the '-mgeneral-regs-only' flag to avoid saving unused non-GPR registers.
+Functions specified with the `no_caller_saved_registers` attribute should only
+call other functions with the `no_caller_saved_registers` attribute, or should be
+compiled with the `-mgeneral-regs-only` flag to avoid saving unused non-GPR registers.
 
-Note that 'no_caller_saved_registers' attribute is not a calling convention.
+Note that `no_caller_saved_registers` attribute is not a calling convention.
 In fact, it only overrides the decision of which registers should be saved by
 the caller, but not how the parameters are passed from the caller to the callee.
 
@@ -6362,8 +6467,8 @@ void f (int arg1, int arg2) {
 }
 ```
 
-In this case parameters 'arg1' and 'arg2' will be passed in registers.
-In this case, on 32-bit x86 targets, the function 'f' will use ECX and EDX as
+In this case parameters `arg1` and `arg2` will be passed in registers.
+In this case, on 32-bit x86 targets, the function `f` will use ECX and EDX as
 register parameters. However, it will not assume any scratch registers and
 should save and restore any modified registers except for ECX and EDX.
   }];
@@ -6912,13 +7017,11 @@ rarely executed, whereas `preserve_most` function calls are intended to be
 on the hot path and definitely executed a lot. Furthermore `preserve_most`
 doesn't prevent the inliner from inlining the function call.
 
-This calling convention will be used by a future version of the Objective-C
-runtime and should therefore still be considered experimental at this time.
-Although this convention was created to optimize certain runtime calls to
-the Objective-C runtime, it is not limited to this runtime and might be used
-by other runtimes in the future too. The current implementation only
-supports X86-64 and AArch64, but the intention is to support more architectures
-in the future.
+This convention was created to optimize certain runtime calls to the
+Objective-C runtime, but it is not limited to that runtime; it is also used by
+other runtimes and libraries, such as the Swift runtime and the Linux kernel.
+The current implementation only supports X86-64 and AArch64, but the intention
+is to support more architectures in the future.
   }];
 }
 
@@ -7269,9 +7372,8 @@ def SelectAnyDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 This attribute appertains to a global symbol, causing it to have a weak
-definition (
-[linkonce](https://llvm.org/docs/LangRef.html#linkage-types)
-), allowing the linker to select any definition.
+definition ([linkonce](https://llvm.org/docs/LangRef.html#linkage-types)),
+allowing the linker to select any definition.
 
 For more information see
 [gcc documentation](https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html)
@@ -7488,7 +7590,7 @@ def AlwaysDestroyDocs : Documentation {
   let Content = [{
 The `always_destroy` attribute specifies that a variable with static or thread
 storage duration should have its exit-time destructor run. This attribute is the
-default unless clang was invoked with -fno-c++-static-destructors.
+default unless clang was invoked with `-fno-c++-static-destructors`.
 
 If a variable is explicitly declared with this attribute, Clang will silence
 otherwise applicable `-Wexit-time-destructors` warnings.
@@ -7501,7 +7603,7 @@ def NoDestroyDocs : Documentation {
 The `no_destroy` attribute specifies that a variable with static or thread
 storage duration shouldn't have its exit-time destructor run. Annotating every
 static and thread duration variable with this attribute is equivalent to
-invoking clang with -fno-c++-static-destructors.
+invoking clang with `-fno-c++-static-destructors`.
 
 If a variable is declared with this attribute, clang doesn't access check or
 generate the type's destructor. If you have a type that you only want to be
@@ -7584,14 +7686,14 @@ the callback callee, the following positions declare describe its arguments.
 The callback callee is required to be callable with the number, and order, of
 the specified arguments. The index `0`, or the identifier `this`, is used to
 represent an implicit "this" pointer in class methods. If there is no implicit
-"this" pointer it shall not be referenced. The index '-1', or the name "\_\_",
+"this" pointer it shall not be referenced. The index `-1`, or the name `__`,
 represents an unknown callback callee argument. This can be a value which is
 not present in the declared parameter list, or one that is, but is potentially
 inspected, captured, or modified. Parameter names and indices can be mixed in
 the callback attribute.
 
 The `callback` attribute, which is directly translated to `callback`
-metadata \<<http://llvm.org/docs/LangRef.html#callback-metadata>>, make the
+metadata (<http://llvm.org/docs/LangRef.html#callback-metadata>), make the
 connection between the call to the annotated function and the callback callee.
 This can enable interprocedural optimizations which were otherwise impossible.
 If a function parameter is mentioned in the `callback` attribute, through its
@@ -7745,11 +7847,11 @@ precedence over the command line flag in the case where
 
 Warning: This attribute may not prevent Speculative Load Hardening from being
 enabled for a function which inlines a function that has the
-'speculative_load_hardening' attribute. This is intended to provide a
+`speculative_load_hardening` attribute. This is intended to provide a
 maximally conservative model where the code that is marked with the
-'speculative_load_hardening' attribute will always (even when inlined)
+`speculative_load_hardening` attribute will always (even when inlined)
 be hardened. A user of this attribute may want to mark functions called by
-a function they do not want to be hardened with the 'noinline' attribute.
+a function they do not want to be hardened with the `noinline` attribute.
 
 For example:
 
@@ -7861,7 +7963,8 @@ can compromise the security of CFG, the programmer must be very careful using
 the directive. Typically, this usage is limited to very small functions that
 only call one function.
 
-`Control Flow Guard documentation <https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>`
+Control Flow Guard documentation is available here:
+<https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>
 }];
 }
 
@@ -7971,7 +8074,7 @@ The argument `T` is optional and is ignored.
 This attribute may be used by analysis tools and has no effect on code
 generation. A `void` argument means that the class can own any type.
 
-See [Pointer] for an example.
+See [Pointer](#pointer) for an example.
 }];
 }
 
@@ -8222,6 +8325,7 @@ zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]])
 
 def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "unsafe_buffer_usage";
   let Content = [{
 The attribute `[[clang::unsafe_buffer_usage]]` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
@@ -8301,7 +8405,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
 - Attribute attached to fields: The attribute should only be attached to
   struct fields, if the fields can not be updated to a safe type with bounds
-  check, such as std::span. In other words, the buffers prone to unsafe accesses
+  check, such as `std::span`. In other words, the buffers prone to unsafe accesses
   should always be updated to use safe containers/views and attaching the attribute
   must be last resort when such an update is infeasible.
 
@@ -8320,8 +8424,46 @@ alternatives, though the attribute can be used even when the fix can't be automa
   };
   ```
 
-  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning
-  that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
+  Here, every read/write to the fields `ptr1`, `ptr2`, `buf` and `sz` will trigger a warning
+  that the field has been explicitly marked as unsafe due to unsafe-buffer operations.
+
+- Attribute attached to container constructors and factory functions: The
+  spellings `[[clang::unsafe_buffer_usage_in_container]]` and
+  `[[clang::unsafe_buffer_usage("container")]]` are equivalent and can be
+  placed on two-parameter constructors and factory functions of container or
+  view types (such as custom span types taking a `(pointer, size)` or
+  `(begin, end)` pair) to opt them in to `-Wunsafe-buffer-usage-in-container`.
+
+  Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
+  every call, this form suppresses the warning when the argument pair is
+  provably safe -- for example, when constructing from `c.data(), c.size()` or
+  `c.begin(), c.end()` on the same container object `c`, a constant-sized array
+  with a matching bound, `&var, 1`, or a `0` size:
+
+  ```c++
+  template <typename T>
+  class CustomSpan {
+  public:
+    [[clang::unsafe_buffer_usage_in_container]]
+    CustomSpan(T *ptr, size_t size);
+
+    template <typename It>
+    [[clang::unsafe_buffer_usage("container")]]
+    CustomSpan(It first, It last);
+  };
+
+  template <typename T>
+  [[clang::unsafe_buffer_usage("container")]]
+  CustomSpan<T> MakeCustomSpan(T *ptr, size_t size);
+
+  void example(int *p, size_t n, MyVector<int> &v) {
+    CustomSpan<int> s1(p, n);                     // warning: decoupled pointer and size
+    auto s2 = MakeCustomSpan(p, n);               // warning: decoupled pointer and size
+    CustomSpan<int> s3(v.data(), v.size());       // no warning
+    CustomSpan<int> s4(v.begin(), v.end());       // no warning
+    auto s5 = MakeCustomSpan(v.data(), v.size()); // no warning
+  }
+  ```
 
   }];
 }
@@ -8709,9 +8851,11 @@ int example(void) {
 
 This attribute does not guarantee that inline substitution actually occurs.
 
-\<ins>Note: applying this attribute to a coroutine at the `-O0` optimization level
+:::{Note}
+Note: applying this attribute to a coroutine at the `-O0` optimization level
 has no effect; other optimization levels may only partially inline and result in a
-diagnostic.\</ins>
+diagnostic.
+:::
 
 See also [the Microsoft Docs on Inline Functions][the microsoft docs on inline functions], [the GCC Common Function
 Attribute docs][the gcc common function attribute docs], and [the GCC Inline docs][the gcc inline docs].
@@ -8845,14 +8989,14 @@ More information is available here:
 def WaveSizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The `WaveSize` attribute specify a wave size on a shader entry point in order
+The `WaveSize` attribute specifies a wave size on a shader entry point in order
 to indicate either that a shader depends on or strongly prefers a specific wave
 size.
 There're 2 versions of the attribute: `WaveSize` and `RangedWaveSize`.
 The syntax for `WaveSize` is:
 
 ```text
-``[WaveSize(<numLanes>)]``
+[WaveSize(<numLanes>)]
 ```
 
 The allowed wave sizes that an HLSL shader may specify are the powers of 2
@@ -8862,7 +9006,7 @@ In other words, the set: [4, 8, 16, 32, 64, 128].
 The syntax for `RangedWaveSize` is:
 
 ```text
-``[WaveSize(<minWaveSize>, <maxWaveSize>, [prefWaveSize])]``
+[WaveSize(<minWaveSize>, <maxWaveSize>, [prefWaveSize])]
 ```
 
 Where minWaveSize is the minimum wave size supported by the shader representing
@@ -8889,7 +9033,7 @@ variable will be replaced with an `OpSpecConstant` with the given id.
 The syntax is:
 
 ```text
-``[[vk::constant_id(<Id>)]] const T Name = <Init>``
+[[vk::constant_id(<Id>)]] const T Name = <Init>
 ```
 }];
 }
@@ -8924,7 +9068,7 @@ identify the shader type for the entry function.
 The syntax is:
 
 ```text
-``[shader(string-literal)]``
+[shader(string-literal)]
 ```
 
 where the string literal is one of: "pixel", "vertex", "geometry", "hull",
@@ -8943,7 +9087,7 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The `[loop]` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)].
+be disabled and is not compatible with `[unroll(x)]`.
 
 Specifying the parameter, `[loop]`, directs the
 unroller to not unroll the loop.
@@ -8982,7 +9126,7 @@ Loop unrolling optimization hints can be specified with `[unroll(x)]`
 . The attribute is placed immediately before a for, while,
 or do-while.
 Specifying the parameter, `[unroll(_value_)]`, directs the
-unroller to unroll the loop `_value_` times. Note: [unroll(x)] is not compatible with [loop].
+unroller to unroll the loop `_value_` times. Note: `[unroll(x)]` is not compatible with `[loop]`.
 
 ```hlsl
 [unroll(4)]
@@ -9036,23 +9180,24 @@ def HLSLControlFlowHintDocs : Documentation {
   let Heading = "branch, flatten";
   let Content = [{
 
-The ``branch`` and ``flatten`` attributes can be applied to *if* and *switch*
+The `branch` and `flatten` attributes can be applied to *if* and *switch*
 statements in the HLSL language mode to provide hints for how the backend
 should execute them.
 
-- ``branch`` means that control flow is preferred. The condition should be
+- `branch` means that control flow is preferred. The condition should be
   evaluated first and we should only execute the block guarded by it.
 
-- ``flatten`` means that control flow should be avoided. All blocks should be
+- `flatten` means that control flow should be avoided. All blocks should be
   executed and variables that are modified should be conditionally assigned.
 
 These control flow hints are preserved through the compilation and emitted in a
 backend-specific way.
 
-For details, see the Direct3D documentation for `if Statement`_ and `switch Statement`_.
+For details, see the Direct3D documentation for [if Statement][if Statement]
+and [switch Statement][switch Statement].
 
-.. _`if Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if
-.. _`switch Statement`: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switchhttps://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switch
+[if Statement]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if
+[switch Statement]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-switch
   }];
 }
 
@@ -9152,114 +9297,98 @@ The full documentation is available here: <https://learn.microsoft.com/en-us/win
 def HLSLResourceClassDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::resource_class`` attribute specifies the resource class of the HLSL
-resource represented by a member variable of type ``__hlsl_resource_t``,
+The `hlsl::resource_class` attribute specifies the resource class of the HLSL
+resource represented by a member variable of type `__hlsl_resource_t`,
 declaring it to be an SRV, UAV, CBuffer, or Sampler resource.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLResourceDimensionDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::dimension`` attribute specifies the dimensions of the HLSL resource
-represented by a member variable of type ``__hlsl_resource_t``, declaring the
+The `hlsl::dimension` attribute specifies the dimensions of the HLSL resource
+represented by a member variable of type `__hlsl_resource_t`, declaring the
 resource to have Unknown, 1D, 2D, 3D, or Cube dimension.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLContainedTypeDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::contained_type`` attribute specifies the type of the HLSL resource
-represented by a member variable of type ``__hlsl_resource_t``.
+The `hlsl::contained_type` attribute specifies the type of the HLSL resource
+represented by a member variable of type `__hlsl_resource_t`.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLRawBufferDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::raw_buffer`` attribute specifies that the HLSL resource represented
-by a member variable of type ``__hlsl_resource_t`` has raw buffer semantics.
+The `hlsl::raw_buffer` attribute specifies that the HLSL resource represented
+by a member variable of type `__hlsl_resource_t` has raw buffer semantics.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLIsArrayDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
-by a member variable of type ``__hlsl_resource_t`` has array dimensions.
+The `hlsl::is_array` attribute specifies that the HLSL resource represented
+by a member variable of type `__hlsl_resource_t` has array dimensions.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLIsMultiSampledDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
-by a member variable of type ``__hlsl_resource_t`` is multisampled.
+The `hlsl::is_array` attribute specifies that the HLSL resource represented
+by a member variable of type `__hlsl_resource_t` is multisampled.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLIsROVDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::is_rov`` attribute specifies that the HLSL resource represented by
-a member variable of type ``__hlsl_resource_t`` is a rasterizer ordered view.
+The `hlsl::is_rov` attribute specifies that the HLSL resource represented by
+a member variable of type `__hlsl_resource_t` is a rasterizer ordered view.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
 def HLSLIsCounterDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``hlsl::is_counter`` attribute specifies that the HLSL resource represented
-by a member variable of type ``__hlsl_resource_t`` is a counter buffer.
+The `hlsl::is_counter` attribute specifies that the HLSL resource represented
+by a member variable of type `__hlsl_resource_t` is a counter buffer.
 
 This attribute is only valid for resource handles, and is an implementation
-detail of clang's HLSL implementation. For more information see `HLSL Resource
-Types`_
-
-.. _`HLSL Resource Types`: https://clang.llvm.org/docs/HLSL/ResourceTypes.html>
+detail of clang's HLSL implementation. For more information see
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9277,6 +9406,31 @@ groupshared GSData data[5*5*1];
 ```
 
 The full documentation is available here: <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax#group-shared>
+  }];
+}
+
+def HLSLInterpolationModifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Interpolation Modifiers";
+  let Content = [{
+The HLSL keywords `nointerpolation`, `linear`, `centroid`,
+`noperspective`, `sample`, and `center` control interpolation of pixel
+shader inputs and vertex shader outputs.
+
+When applied to an aggregate type, the modifier propagates recursively to every
+scalar or vector of the type. A modifier on an inner field overrides one
+inherited from an enclosing declaration.
+
+`nointerpolation` cannot be combined with another interpolation modifier.
+For pixel shader inputs and vertex shader outputs, it cannot be used on
+`SV_Position`. Integer, boolean, and 64-bit floating-point components only
+support `nointerpolation`.
+
+Unqualified pixel shader inputs and vertex shader outputs default to `linear`
+for floating-point components of at most 32 bits and `nointerpolation` otherwise.
+`SV_Position` uses the corresponding `noperspective` mode. Vertex shader inputs,
+pixel shader outputs, and signatures in other shader stages have no
+interpolation mode; their interpolation modifiers are ignored.
   }];
 }
 
@@ -9501,7 +9655,8 @@ line flag:
 The values `thunk` and `thunk-inline` from GCC are not supported.
 
 The symbol used for `thunk-extern` is target specific:
-\* X86: `__x86_return_thunk`
+
+- X86: `__x86_return_thunk`
 
 As such, this function attribute is currently only supported on X86 targets.
   }];
@@ -9518,8 +9673,8 @@ This attribute is attached to a structure, class or union declaration.
   emits a warning at the source location where the type was used.
 
   Examples:
-  \* `struct __attribute__((enforce_read_only_placement)) Foo;`
-  \* `struct __attribute__((enforce_read_only_placement)) Bar { ... };`
+  - `struct __attribute__((enforce_read_only_placement)) Foo;`
+  - `struct __attribute__((enforce_read_only_placement)) Bar { ... };`
 
   Both `Foo` and `Bar` types have the `enforce_read_only_placement` attribute.
 
@@ -9534,7 +9689,7 @@ This attribute is attached to a structure, class or union declaration.
   a placement. It emits a warning if something in the code can be proven to prevent
   an instance from being placed in the read-only data segment.
 
-  Note 2: Currently, clang only checks if all global declarations of a given type 'T'
+  Note 2: Currently, clang only checks if all global declarations of a given type `T`
   are `const`-qualified. The following conditions would also prevent the data to be
   put into read only segment, but the corresponding warnings are not yet implemented.
 
@@ -9582,7 +9737,7 @@ variables. Allowed on function parameters, function returns, and struct
 fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
-This attribute maps to the 'Location' SPIR-V decoration.
+This attribute maps to the `Location` SPIR-V decoration.
   }];
 }
 
@@ -9811,7 +9966,7 @@ a **coroutine return type (CRT)**.
 
 A function `R func(P1, .., PN)` has a coroutine return type (CRT) `R` if `R`
 is marked by `[[clang::coro_return_type]]` and `R` has a promise type associated to it
-(i.e., std::coroutine_traits\<R, P1, .., PN>::promise_type is a valid promise type).
+(i.e., `std::coroutine_traits<R, P1, .., PN>::promise_type` is a valid promise type).
 
 If the return type of a function is a `CRT` then the function must be a coroutine.
 Otherwise the program is invalid. It is allowed for a non-coroutine to return a `CRT`
@@ -10598,8 +10753,8 @@ sentinel value (a null pointer constant) as the last argument to the function
 call. The attribute accepts two optional arguments: the first argument is the
 position of the expected sentinel value, starting from the last parameter. The
 second argument describes whether the last fixed parameter is treated as a
-valid sentinel value when set to '1'.
-All arguments described above default to '0' when elided.
+valid sentinel value when set to `1`.
+All arguments described above default to `0` when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 ```c

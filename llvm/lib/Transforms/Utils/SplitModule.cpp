@@ -125,8 +125,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    if (!GV.hasName())
-      GV.setName("__llvmsplit_unnamed");
+    GV.nameUnnamed();
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.
@@ -203,18 +202,6 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   }
 }
 
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
-}
-
 // Returns whether GV should be in partition (0-based) I of N.
 static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
   if (const GlobalObject *Root = getGVPartitioningRoot(GV))
@@ -242,13 +229,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(&F);
+      F.externalize();
     for (GlobalVariable &GV : M.globals())
-      externalize(&GV);
+      GV.externalize();
     for (GlobalAlias &GA : M.aliases())
-      externalize(&GA);
+      GA.externalize();
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(&GIF);
+      GIF.externalize();
   }
 
   // This performs splitting without a need for externalization, which might not

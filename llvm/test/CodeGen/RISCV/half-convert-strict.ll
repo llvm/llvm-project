@@ -399,11 +399,8 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) strictfp {
 define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_l_h:
 ; CHECK32-IZFH:       # %bb.0:
-; CHECK32-IZFH-NEXT:    addi sp, sp, -16
-; CHECK32-IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZFH-NEXT:    call __fixhfdi
-; CHECK32-IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZFH-NEXT:    addi sp, sp, 16
+; CHECK32-IZFH-NEXT:    fcvt.w.h a0, fa0, rtz
+; CHECK32-IZFH-NEXT:    srai a1, a0, 31
 ; CHECK32-IZFH-NEXT:    ret
 ;
 ; CHECK64-IZFH-LABEL: fcvt_l_h:
@@ -413,11 +410,8 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZHINX-LABEL: fcvt_l_h:
 ; CHECK32-IZHINX:       # %bb.0:
-; CHECK32-IZHINX-NEXT:    addi sp, sp, -16
-; CHECK32-IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZHINX-NEXT:    call __fixhfdi
-; CHECK32-IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZHINX-NEXT:    addi sp, sp, 16
+; CHECK32-IZHINX-NEXT:    fcvt.w.h a0, a0, rtz
+; CHECK32-IZHINX-NEXT:    srai a1, a0, 31
 ; CHECK32-IZHINX-NEXT:    ret
 ;
 ; CHECK64-IZHINX-LABEL: fcvt_l_h:
@@ -427,11 +421,9 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_l_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
-; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -16
-; CHECK32-IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZFHMIN-NEXT:    call __fixhfdi
-; CHECK32-IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZFHMIN-NEXT:    addi sp, sp, 16
+; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECK32-IZFHMIN-NEXT:    fcvt.w.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    srai a1, a0, 31
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_l_h:
@@ -442,11 +434,9 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZHINXMIN-LABEL: fcvt_l_h:
 ; CHECK32-IZHINXMIN:       # %bb.0:
-; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, -16
-; CHECK32-IZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZHINXMIN-NEXT:    call __fixhfdi
-; CHECK32-IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, 16
+; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK32-IZHINXMIN-NEXT:    fcvt.w.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    srai a1, a0, 31
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_l_h:
@@ -475,11 +465,8 @@ define i64 @fcvt_l_h(half %a) nounwind strictfp {
 define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ; CHECK32-IZFH-LABEL: fcvt_lu_h:
 ; CHECK32-IZFH:       # %bb.0:
-; CHECK32-IZFH-NEXT:    addi sp, sp, -16
-; CHECK32-IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZFH-NEXT:    call __fixunshfdi
-; CHECK32-IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZFH-NEXT:    addi sp, sp, 16
+; CHECK32-IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; CHECK32-IZFH-NEXT:    li a1, 0
 ; CHECK32-IZFH-NEXT:    ret
 ;
 ; CHECK64-IZFH-LABEL: fcvt_lu_h:
@@ -489,11 +476,8 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZHINX-LABEL: fcvt_lu_h:
 ; CHECK32-IZHINX:       # %bb.0:
-; CHECK32-IZHINX-NEXT:    addi sp, sp, -16
-; CHECK32-IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZHINX-NEXT:    call __fixunshfdi
-; CHECK32-IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZHINX-NEXT:    addi sp, sp, 16
+; CHECK32-IZHINX-NEXT:    fcvt.wu.h a0, a0, rtz
+; CHECK32-IZHINX-NEXT:    li a1, 0
 ; CHECK32-IZHINX-NEXT:    ret
 ;
 ; CHECK64-IZHINX-LABEL: fcvt_lu_h:
@@ -503,11 +487,9 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_lu_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
-; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -16
-; CHECK32-IZFHMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZFHMIN-NEXT:    call __fixunshfdi
-; CHECK32-IZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZFHMIN-NEXT:    addi sp, sp, 16
+; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECK32-IZFHMIN-NEXT:    fcvt.wu.s a0, fa5, rtz
+; CHECK32-IZFHMIN-NEXT:    li a1, 0
 ; CHECK32-IZFHMIN-NEXT:    ret
 ;
 ; CHECK64-IZFHMIN-LABEL: fcvt_lu_h:
@@ -518,11 +500,9 @@ define i64 @fcvt_lu_h(half %a) nounwind strictfp {
 ;
 ; CHECK32-IZHINXMIN-LABEL: fcvt_lu_h:
 ; CHECK32-IZHINXMIN:       # %bb.0:
-; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, -16
-; CHECK32-IZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32-IZHINXMIN-NEXT:    call __fixunshfdi
-; CHECK32-IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32-IZHINXMIN-NEXT:    addi sp, sp, 16
+; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK32-IZHINXMIN-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECK32-IZHINXMIN-NEXT:    li a1, 0
 ; CHECK32-IZHINXMIN-NEXT:    ret
 ;
 ; CHECK64-IZHINXMIN-LABEL: fcvt_lu_h:

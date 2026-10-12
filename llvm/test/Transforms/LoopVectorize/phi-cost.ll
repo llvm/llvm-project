@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; DEBUG-LABEL: phi_two_incoming_values
-; DEBUG:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; DEBUG:       Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>, vp<{{.+}}>
 ; DEBUG:       Cost of 1 for VF 2: BLEND ir<%tmp5> = ir<%tmp1> ir<%tmp4>/ir<%tmp3>
 ;
 define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
@@ -84,7 +84,7 @@ for.end:
 }
 
 ; DEBUG-LABEL: phi_three_incoming_values
-; DEBUG:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; DEBUG:       Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>, vp<{{.+}}>
 ; DEBUG:       Cost of 2 for VF 2: BLEND ir<%tmp8> = ir<%tmp7> ir<3>/vp<{{.*}}> ir<9>/vp<{{.*}}>
 ;
 define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
@@ -184,19 +184,16 @@ define i32 @red_phi_0(i32 %start, ptr %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[START]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[VEC_PHI]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[VEC_PHI]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[START]]
 ;
 entry:
   br label %loop

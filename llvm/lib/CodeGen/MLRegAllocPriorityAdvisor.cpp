@@ -33,6 +33,9 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <cmath>
+#include <limits>
+
 #if defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
@@ -51,6 +54,11 @@ static cl::opt<std::string> InteractiveChannelBaseName(
         "<regalloc-priority-interactive-channel-base>.out"));
 
 using CompiledModelType = NoopSavedModelImpl;
+
+static bool hasReleaseModePriorityModel() {
+  return isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
+         !InteractiveChannelBaseName.empty();
+}
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
@@ -242,13 +250,16 @@ public:
 
   void logRewardIfNeeded(const MachineFunction &MF,
                          llvm::function_ref<float()> GetReward) override {
-    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
+    if (!Log)
+      return;
+    std::string Ctx = getContextName(MF);
+    if (!Log->hasAnyObservationForContext(Ctx))
       return;
     // The function pass manager would run all the function passes for a
     // function, so we assume the last context belongs to this function. If
     // this invariant ever changes, we can implement at that time switching
     // contexts. At this point, it'd be an error
-    if (Log->currentContext() != MF.getName()) {
+    if (Log->currentContext() != Ctx) {
       MF.getFunction().getContext().emitError(
           "The training log context shouldn't have had changed.");
     }
@@ -261,8 +272,9 @@ public:
              SlotIndexes &SI) override {
     if (!Runner)
       return nullptr;
-    if (Log) {
-      Log->switchContext(MF.getName());
+    if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
+      LastFunctionNumber = MF.getFunctionNumber();
+      Log->switchContext(getContextName(MF));
     }
     return std::make_unique<DevelopmentModePriorityAdvisor>(
         MF, RA, &SI, Runner.get(), Log.get());
@@ -270,6 +282,11 @@ public:
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
+  std::optional<unsigned> LastFunctionNumber;
+
+  static std::string getContextName(const MachineFunction &MF) {
+    return getLoggerContextName(MF.getName(), MF.getFunctionNumber());
+  }
 };
 
 class DevelopmentModePriorityAdvisorAnalysisLegacy final
@@ -309,8 +326,7 @@ private:
 
 RegAllocPriorityAdvisorAnalysisLegacy *
 llvm::createReleaseModePriorityAdvisorAnalysis() {
-  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
-                 !InteractiveChannelBaseName.empty()
+  return hasReleaseModePriorityModel()
              ? new ReleaseModePriorityAdvisorAnalysisLegacy()
              : nullptr;
 }
@@ -325,6 +341,17 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
   Runner->switchContext(MF.getName());
 }
 
+// Converting a NaN or an out-of-range float advice to unsigned is undefined.
+// Saturate instead. A NaN is a model error, so also assert on it.
+static unsigned convertAdviceToPriority(double Advice) {
+  assert(!std::isnan(Advice) && "model produced a NaN priority");
+  if (!(Advice > 0.0))
+    return 0;
+  if (Advice >= static_cast<double>(std::numeric_limits<unsigned>::max()))
+    return std::numeric_limits<unsigned>::max();
+  return static_cast<unsigned>(Advice);
+}
+
 float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
   const unsigned Size = LI.getSize();
   LiveRangeStage Stage = RA.getExtraInfo().getStage(LI);
@@ -337,7 +364,7 @@ float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
 }
 
 unsigned MLPriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  return static_cast<unsigned>(getPriorityImpl(LI));
+  return convertAdviceToPriority(getPriorityImpl(LI));
 }
 
 #ifdef LLVM_HAVE_TFLITE
@@ -348,10 +375,10 @@ llvm::createDevelopmentModePriorityAdvisorAnalysis() {
 
 unsigned
 DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  double Prio = 0;
+  unsigned Prio = 0;
 
   if (isa<ModelUnderTrainingRunner>(getRunner())) {
-    Prio = MLPriorityAdvisor::getPriorityImpl(LI);
+    Prio = convertAdviceToPriority(MLPriorityAdvisor::getPriorityImpl(LI));
   } else {
     Prio = getDefaultAdvisor().getPriority(LI);
   }
@@ -385,7 +412,7 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   Log->logTensorValue(CurrentFeature, reinterpret_cast<const char *>(&Ret));
   Log->endObservation();
 
-  return static_cast<unsigned>(Prio);
+  return Prio;
 }
 
 RegAllocPriorityAdvisorProvider *
@@ -397,5 +424,7 @@ llvm::createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
 
 RegAllocPriorityAdvisorProvider *
 llvm::createReleaseModePriorityAdvisorProvider() {
-  return new ReleaseModePriorityAdvisorProvider();
+  return hasReleaseModePriorityModel()
+             ? new ReleaseModePriorityAdvisorProvider()
+             : nullptr;
 }

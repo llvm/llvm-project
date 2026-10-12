@@ -1,6 +1,6 @@
 ; Test targets without xnack on/off mode support ignore module flags
-; Targets with only FEATURE_XNACK (but not FEATURE_XNACK_ON_OFF_MODES)
-; have xnack always on and ignore module flag settings.
+; Targets that support xnack but not xnack on/off modes have xnack always on
+; and ignore module flag settings.
 ; The target ID should not contain the xnack specifier.
 
 ; RUN: split-file %s %t
@@ -15,6 +15,11 @@
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/on.ll | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/off.ll | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %t/absent.ll | FileCheck --check-prefix=CHECK %s
+
+; The ELF XNACK mode bits must be zero even though XNACK is always enabled.
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdhsa-code-object-version=5 -filetype=obj < %t/absent.ll | llvm-readobj --file-headers - | FileCheck --check-prefix=ELF %s
+
+; ELF: Flags [ (0x449)
 
 ; Module flags are ignored - target ID has no xnack specifier
 ; CHECK: .amdgcn_target "amdgpu12.5{{[0-1]?}}-amd-amdhsa-unknown-gfx{{12-5-generic|1250|1251}}"

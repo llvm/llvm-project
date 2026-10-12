@@ -190,3 +190,34 @@ define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
   %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %shuf
 }
+
+define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
+; CHECK-LABEL: sitofp_v5i32_v5f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.d.w $xr1, $xr1
+; CHECK-NEXT:    xvffint.d.l $xr1, $xr1
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    xvstelm.d $xr1, $a0, 32, 0
+; CHECK-NEXT:    ret
+  %v = sitofp <5 x i32> %a to <5 x double>
+  ret <5 x double> %v
+}
+
+define <7 x double> @sitofp_v7i32_v7f64(<7 x i32> %a) {
+; CHECK-LABEL: sitofp_v7i32_v7f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
+; CHECK-NEXT:    vext2xv.d.w $xr1, $xr1
+; CHECK-NEXT:    xvffint.d.l $xr1, $xr1
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    xvstelm.d $xr1, $a0, 48, 2
+; CHECK-NEXT:    vst $vr1, $a0, 32
+; CHECK-NEXT:    ret
+  %v = sitofp <7 x i32> %a to <7 x double>
+  ret <7 x double> %v
+}

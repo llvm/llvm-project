@@ -15,7 +15,9 @@ entry:
   ret i32 %add
 }
 
-!0 = !{!"any pointer", !1}
+!0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"int", !1}
+!3 = !{!5, !5, i64 0}
+!4 = !{!"any pointer", !1}
+!5 = !{!"int", !1}

@@ -438,8 +438,8 @@ if.end:
 !0 = !{ !"an example type tree" }
 !1 = !{ !"int", !0 }
 !2 = !{ !"float", !0 }
-!3 = !{ !"const float", !2, i64 0 }
-!4 = !{ !"special float", !2, i64 1 }
+!3 = !{!15, !15, i64 0, i64 0}
+!4 = !{!16, !16, i64 0, i64 1}
 
 
 ; The call should be commoned.
@@ -2183,3 +2183,5 @@ declare void @use.ptr(ptr)
 !12 = !{i32 1}
 !13 = !{null}
 !14 = !DISubroutineType(types: !13)
+!15 = !{!"const float", !2}
+!16 = !{!"special float", !2}

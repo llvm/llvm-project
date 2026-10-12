@@ -90,7 +90,6 @@ static cl::opt<bool> EnablePeelingForIV(
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
 // Check whether we are capable of peeling this loop.
@@ -1004,7 +1003,7 @@ static void cloneLoopBlocks(
     // InsertTop, using the incoming value from the preheader for the original
     // preheader (when skipping the main loop) and the incoming value from the
     // latch for the latch (when continuing from the main loop).
-    IRBuilder<> B(InsertTop, InsertTop->getFirstNonPHIIt());
+    IRBuilder<> B(InsertTop->getFirstNonPHIIt());
     for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
       PHINode *NewPHI = cast<PHINode>(VMap[&*I]);
       PHINode *PN = B.CreatePHI(NewPHI->getType(), 2);
@@ -1231,8 +1230,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
       SmallVector<uint32_t> Weights;
       auto *OrigLatchBr = Latch->getTerminator();
-      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
-                              extractBranchWeights(*OrigLatchBr, Weights);
+      auto HasBranchWeights = extractBranchWeights(*OrigLatchBr, Weights);
       if (HasBranchWeights) {
         // The probability that the new guard skips the loop to execute just one
         // iteration is the original loop's probability of exiting at the latch

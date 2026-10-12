@@ -1050,10 +1050,14 @@ LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
 SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
                              Operation *symbolTableOp)
     : symbolTable(symbolTable) {
-  // Walk each of the symbol tables looking for discardable callgraph nodes.
+  // Collect symbol users and visibility within each symbol table.
   SmallVector<Operation *> symbols;
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
+      if (auto symbol = dyn_cast<SymbolOpInterface>(nestedOp)) {
+        if (allUsesVisible && !symbol.isPrivate())
+          symbolsWithAllUsesVisible.insert(&nestedOp);
+      }
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
       assert(symbolUses && "expected uses to be valid");
 
@@ -1066,10 +1070,16 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
       }
     }
   };
-  // We just set `allSymUsesVisible` to false here because it isn't necessary
-  // for building the user map.
-  SymbolTable::walkSymbolTables(symbolTableOp, /*allSymUsesVisible=*/false,
-                                walkFn);
+  // A root with no containing block has no symbol users in enclosing IR.
+  SymbolTable::walkSymbolTables(
+      symbolTableOp, /*allSymUsesVisible=*/!symbolTableOp->getBlock(), walkFn);
+}
+
+bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
+  // Private symbols can only have users within their table.
+  if (cast<SymbolOpInterface>(symbol).isPrivate())
+    return true;
+  return symbolsWithAllUsesVisible.contains(symbol);
 }
 
 void SymbolUserMap::replaceAllUsesWith(Operation *symbol,

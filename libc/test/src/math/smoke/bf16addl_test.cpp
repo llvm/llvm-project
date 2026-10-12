@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/bf16addl.h"
 
-LIST_ADD_TESTS(bfloat16, long double, LIBC_NAMESPACE::bf16addl)
+LIST_ADD_TESTS(Bf16addl, bfloat16, long double, LIBC_NAMESPACE::bf16addl)

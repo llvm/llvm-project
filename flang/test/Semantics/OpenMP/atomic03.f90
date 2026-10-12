@@ -1,5 +1,3 @@
-! REQUIRES: openmp_runtime
-
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
@@ -7,7 +5,6 @@
 ! Intrinsic procedure name is one of MAX, MIN, IAND, IOR, or IEOR.
 
 program OmpAtomic
-   use omp_lib
    real x
    integer :: y, z, a, b, c, d
    x = 5.73

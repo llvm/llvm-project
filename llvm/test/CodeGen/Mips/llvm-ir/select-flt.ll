@@ -37,11 +37,15 @@ define float @tst_select_i1_float(i1 signext %s, float %x, float %y) {
 ; M2-NEXT:    bnez $1, $BB0_2
 ; M2-NEXT:    nop
 ; M2-NEXT:  # %bb.1: # %entry
-; M2-NEXT:    jr $ra
 ; M2-NEXT:    mtc1 $6, $f0
-; M2-NEXT:  $BB0_2:
+; M2-NEXT:    nop
 ; M2-NEXT:    jr $ra
+; M2-NEXT:    nop
+; M2-NEXT:  $BB0_2:
 ; M2-NEXT:    mtc1 $5, $f0
+; M2-NEXT:    nop
+; M2-NEXT:    jr $ra
+; M2-NEXT:    nop
 ;
 ; CMOV32R1-LABEL: tst_select_i1_float:
 ; CMOV32R1:       # %bb.0: # %entry

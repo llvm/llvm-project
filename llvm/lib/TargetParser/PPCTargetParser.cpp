@@ -152,5 +152,14 @@ bool isValidFeatureName(StringRef Name) {
   const BasicSubtargetFeatureKV *F = llvm::lower_bound(A, Name);
   return F != A.end() && StringRef(F->Key) == Name;
 }
+
+bool canDisableFeatureOnAIX(StringRef Name) {
+  return llvm::StringSwitch<bool>(Name)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, CAN_DISABLE, ___)              \
+  .Case(FEATURE_NAME, CAN_DISABLE)
+#include "llvm/TargetParser/PPCTargetParser.def"
+      .Default(false);
+}
+
 } // namespace PPC
 } // namespace llvm

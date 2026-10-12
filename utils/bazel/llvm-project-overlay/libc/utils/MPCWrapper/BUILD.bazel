@@ -7,7 +7,14 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
 
 licenses(["notice"])
 
@@ -15,8 +22,11 @@ cc_library(
     name = "mpc_impl",
     hdrs = ["mpc_inc.h"],
     target_compatible_with = select({
-        "//conditions:default": [],
         "//libc:mpc_disable": ["@platforms//:incompatible"],
+        # In full build mode, the MPFR library should be built
+        # using our own facilities, which is currently not possible.
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
     }),
     deps = select(
         {
@@ -39,8 +49,9 @@ libc_test_library(
         },
     ),
     target_compatible_with = select({
-        "//conditions:default": [],
         "//libc:mpc_disable": ["@platforms//:incompatible"],
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
     }),
     deps = [
         ":mpc_impl",

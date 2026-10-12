@@ -262,6 +262,12 @@ add_subdirectory(lib)
 add_subdirectory(lib/CAPI)
 
 if (MLIR_INCLUDE_TESTS)
+  add_subdirectory(test/lib)
+elseif("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  add_subdirectory(test/lib EXCLUDE_FROM_ALL)
+endif()
+
+if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
   set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")

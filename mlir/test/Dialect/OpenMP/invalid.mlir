@@ -3002,8 +3002,16 @@ func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
 
 // -----
 
-func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+func.func @omp_map_var_ptr_ptr_missing_type(%arg : memref<?xi32>) {
+  // expected-error @below {{expected attribute value}}
   %map1 = omp.map.info var_ptr(%arg : memref<?xi32>, tensor<?xi32>) map_clauses(to) capture(ByRef) var_ptr_ptr(%arg : memref<?xi32>, ) name("") -> memref<?xi32>
+  return
+}
+
+// -----
+
+func.func @omp_target_map_must_specify_both_var_ptr_ptr_args(%arg : memref<?xi32>) {
+  %map1 = "omp.map.info"(%arg, %arg) <{map_capture_type = #omp.variable_capture_kind<ByRef>, map_type = #omp.clause_map_flags<to>, operandSegmentSizes = array<i32: 1, 1, 0, 0>, var_ptr_type = tensor<?xi32>}> : (memref<?xi32>, memref<?xi32>) -> memref<?xi32>
 
   // expected-error @below {{if varPtrPtr or varPtrPtrType is specified, then both must be present}}
   omp.target_update map_entries(%map1 : memref<?xi32>)
@@ -3523,6 +3531,79 @@ func.func @omp_parallel_allocate_type_mismatch(
   // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
   omp.parallel allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
       private(@allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected an allocate private index for each allocate variable}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_map_range(%allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{allocate private index is out of range}}
+  omp.scope allocate(%allocator : i64 -> %var : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_map_duplicate(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate private index refers to a private variable more than once}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr,
+                     %allocator : i64 -> %y : !llvm.ptr) allocate_private_indices([0, 0])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_allocate_private : i32
+
+func.func @omp_scope_allocate_type_mismatch(
+    %allocator : i64, %allocate_var : i64, %private_var : !llvm.ptr) {
+  // expected-error @below {{type mismatch between allocate variable and private variable at index 0}}
+  omp.scope allocate(%allocator : i64 -> %allocate_var : i64) allocate_private_indices([0])
+      private(@scope_allocate_private %private_var -> %private : !llvm.ptr) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+omp.private {type = private} @scope_x_private : i32
+omp.private {type = private} @scope_y_private : i32
+
+func.func @omp_scope_allocate_wrong_private_slot(
+    %allocator : i64, %x : !llvm.ptr, %y : !llvm.ptr) {
+  // expected-error @below {{allocate variable does not match private variable at index 1}}
+  omp.scope allocate(%allocator : i64 -> %x : !llvm.ptr) allocate_private_indices([1])
+      private(@scope_x_private %x -> %x_private,
+              @scope_y_private %y -> %y_private : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   return

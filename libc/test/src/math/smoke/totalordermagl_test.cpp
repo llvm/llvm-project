@@ -10,4 +10,5 @@
 
 #include "src/math/totalordermagl.h"
 
-LIST_TOTALORDERMAG_TESTS(long double, LIBC_NAMESPACE::totalordermagl)
+LIST_TOTALORDERMAG_TESTS(Totalordermagl, long double,
+                         LIBC_NAMESPACE::totalordermagl)

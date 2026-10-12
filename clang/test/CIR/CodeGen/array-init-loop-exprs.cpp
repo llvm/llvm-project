@@ -49,7 +49,7 @@ struct HasMultiDimArray {
 // CIR-LABEL: cir.func {{.*}}@_ZN16HasMultiDimArrayC1ERKS_(
 // CIR:    cir.call @_ZN16HasMultiDimArrayC2ERKS_(
 
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN18HasNonTrivialArrayC2ERKS_({{.*}}) func_info<#cir.cxx_ctor<!rec_HasNonTrivialArray, copy>> 
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN18HasNonTrivialArrayC2ERKS_({{.*}}) func_info<#cir.cxx_ctor<!rec_HasNonTrivialArray, copy>> 
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasNonTrivialArray>>
 // CIR: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasNonTrivialArray>>
 // CIR: %[[ITR_ALLOCA:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_NonTrivial>>

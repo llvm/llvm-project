@@ -8,11 +8,6 @@
 
 # A Fortran feature history cheat sheet
 
-```{contents}
----
-local:
----
-```
 
 ## Original IBM 704 FORTRAN
 

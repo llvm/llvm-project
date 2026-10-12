@@ -569,7 +569,7 @@ X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB,
     if (Subtarget.isTargetFuchsia())
       return SegmentOffset(IRB, 0x10, AddressSpace);
 
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    Module *M = IRB.getModule();
     // Specially, some users may customize the base reg and offset.
     int Offset = M->getStackProtectorGuardOffset();
     // If we don't set -stack-protector-guard-offset value:
@@ -2294,7 +2294,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "parameter");
     SmallVector<size_t, 4> PreallocatedOffsets;
     for (size_t i = 0; i < CLI.OutVals.size(); ++i) {
-      if (CLI.CB->hasABIParamAttr(i, Attribute::Preallocated)) {
+      if (CLI.CB->paramHasAttr(i, Attribute::Preallocated)) {
         PreallocatedOffsets.push_back(ArgLocs[i].getLocMemOffset());
       }
     }

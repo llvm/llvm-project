@@ -18,8 +18,6 @@
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 
-#include <set>
-
 // OpenACC Directives and Clauses
 namespace Fortran::parser {
 
@@ -178,54 +176,97 @@ TYPE_PARSER(sourced(construct<AccStandaloneDirective>(
 // same way the canonicalization of the DO loops would have built it.
 struct AccNonBlockDoConstruct {
   using resultType = DoConstruct;
+  using LabelDoStatement = Statement<common::Indirection<LabelDoStmt>>;
 
   std::optional<DoConstruct> Parse(ParseState &state) const {
-    auto doStmt{CapturedLabelDoStmt::Parse(state)};
-    if (!doStmt) {
-      return std::nullopt;
+    if (auto doStmt{CapturedLabelDoStmt::Parse(state)}) {
+      if (auto loop{ParseLoop(state, std::move(*doStmt))}) {
+        return std::move(loop->construct);
+      }
     }
+    return std::nullopt;
+  }
 
-    // Parse execution part constructs until every label DO statement that has
-    // been seen is terminated by a statement carrying its label.  Loops that
-    // share the same label are all terminated by the same statement.
-    std::set<Label> labels{std::get<Label>(doStmt->statement.value().t)};
+private:
+  struct Loop {
+    DoConstruct construct;
+    Label label; // of the statement that terminated the loop
+  };
+
+  static LabelDoStatement *GetLabelDoStatement(ExecutionPartConstruct &epc) {
+    if (auto *executable{std::get_if<ExecutableConstruct>(&epc.u)}) {
+      return std::get_if<LabelDoStatement>(&executable->u);
+    }
+    return nullptr;
+  }
+
+  // Parse execution part constructs until the statement carrying the label of
+  // the DO statement has been seen, then build the DO construct.  Nested label
+  // DO statements are turned into DO constructs here as well; loops that share
+  // a label are all terminated by the same statement, which closes the
+  // innermost loop and, with it, all of the loops that enclose it.
+  std::optional<Loop> ParseLoop(
+      ParseState &state, LabelDoStatement &&doStmt) const {
+    const Label label{std::get<Label>(doStmt.statement.value().t)};
     Block body;
-    while (!labels.empty()) {
+    bool terminated{false};
+    while (!terminated) {
       auto epc{executionPartConstruct.Parse(state)};
       if (!epc) {
         return std::nullopt;
       }
-      if (std::optional<Label> label{GetStatementLabel(*epc)}) {
-        labels.erase(*label);
-      } else if (auto *acc{Unwrap<OpenACCConstruct>(*epc)}) {
-        if (std::optional<Label> label{GetFinalLabel(*acc)}) {
-          labels.erase(*label);
+      if (auto *nestedDoStmt{GetLabelDoStatement(*epc)}) {
+        auto nested{ParseLoop(state, std::move(*nestedDoStmt))};
+        if (!nested) {
+          return std::nullopt;
+        }
+        terminated = nested->label == label;
+        body.emplace_back(ExecutableConstruct{
+            common::Indirection<DoConstruct>{std::move(nested->construct)}});
+        continue;
+      }
+      std::optional<Label> epcLabel{GetStatementLabel(*epc)};
+      if (!epcLabel) {
+        if (auto *acc{Unwrap<OpenACCConstruct>(*epc)}) {
+          epcLabel = GetFinalLabel(*acc);
         }
       }
-      if (auto *labelDo{Unwrap<LabelDoStmt>(*epc)}) {
-        labels.insert(std::get<Label>(labelDo->t));
-      }
+      terminated = epcLabel && *epcLabel == label;
       body.emplace_back(std::move(*epc));
     }
 
-    // The terminating statement of the outermost loop may be an END DO
-    // statement; the DO construct built below has its own synthetic one, so
-    // turn it into a CONTINUE statement to keep its label.
-    if (Unwrap<EndDoStmt>(body.back())) {
-      std::get<ExecutableConstruct>(body.back().u).u =
-          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    // The terminating statement may be an END DO statement; the DO construct
+    // built below has its own synthetic one, so turn it into a CONTINUE
+    // statement to keep its label and source.  Only an unnamed labeled DO
+    // statement is parsed here (a named one is parsed as a DO construct), so
+    // a construct name on the END DO statement is not allowed (C1135);
+    // diagnose it before it is lost.
+    if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
+      if (auto *endDoStmt{
+              std::get_if<Statement<common::Indirection<EndDoStmt>>>(
+                  &last->u)}) {
+        if (const auto &name{endDoStmt->statement.value().v}) {
+          state.Say(name->source, "Unexpected DO construct name '%s'"_err_en_US,
+              name->source);
+        }
+        Statement<ActionStmt> continueStmt{
+            std::optional<Label>{endDoStmt->label}, ContinueStmt{}};
+        continueStmt.source = endDoStmt->source;
+        last->u = std::move(continueStmt);
+      }
     }
 
-    Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt->label),
+    Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt.label),
         NonLabelDoStmt{
             std::make_tuple(std::optional<Name>{}, std::optional<Label>{},
                 std::move(std::get<std::optional<LoopControl>>(
-                    doStmt->statement.value().t)))}};
-    nonLabelDoStmt.source = doStmt->source;
-    return DoConstruct{
+                    doStmt.statement.value().t)))}};
+    nonLabelDoStmt.source = doStmt.source;
+    DoConstruct doConstruct{
         std::make_tuple(std::move(nonLabelDoStmt), std::move(body),
             Statement<EndDoStmt>{
                 std::optional<Label>{}, EndDoStmt{std::optional<Name>{}}})};
+    return Loop{std::move(doConstruct), label};
   }
 };
 

@@ -415,6 +415,17 @@ llvm.func @fold_gep(%x : !llvm.ptr) -> !llvm.ptr {
 
 // -----
 
+// CHECK-LABEL: fold_gep_inrange
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]
+// CHECK-NEXT: %[[GEP:.*]] = llvm.getelementptr inrange <i64, -4, 4> %[[ARG]][0]
+// CHECK-NEXT: llvm.return %[[GEP]]
+llvm.func @fold_gep_inrange(%x : !llvm.ptr) -> !llvm.ptr {
+  %0 = llvm.getelementptr inrange <i64, -4, 4> %x[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: fold_gep_neg
 // CHECK-SAME: %[[ARG:[[:alnum:]]+]]
 // CHECK-NEXT: %[[RES:.*]] = llvm.getelementptr inbounds %[[ARG]][0, 1]
@@ -505,10 +516,10 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %0 = llvm.load volatile %x : !llvm.ptr -> i8
   // Same with monotonic atomics and any stricter modes.
   // CHECK: llvm.load %{{.*}} atomic monotonic
-  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  %2 = llvm.load %x atomic monotonic <alignment = 1> : !llvm.ptr -> i8
   // But not unordered!
   // CHECK-NOT: llvm.load %{{.*}} atomic unordered
-  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  %3 = llvm.load %x  atomic unordered <alignment = 1> : !llvm.ptr -> i8
   llvm.return
 }
 

@@ -56,6 +56,43 @@ def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
 
+
+// Return type or argument type of library calls.
+class FuncArgType {
+  string Name = NAME;
+}
+
+// Recognized types of library call arguments and return types.
+def NoneType : FuncArgType; // dummy
+def Void : FuncArgType;
+def Bool : FuncArgType;     // 8 bits on all targets
+def Int16 : FuncArgType;
+def Int32 : FuncArgType;
+def Int : FuncArgType;
+def IntPlus : FuncArgType;  // Int or bigger.
+def Long : FuncArgType;     // Either 32 or 64 bits.
+def IntX : FuncArgType;     // Any integer type.
+def Int64 : FuncArgType;
+def LLong : FuncArgType;    // 64 bits on all targets.
+def UInt16 : FuncArgType;
+def UInt32 : FuncArgType;
+def UInt : FuncArgType;
+def UIntPlus : FuncArgType;
+def ULong : FuncArgType;
+def UIntX : FuncArgType;
+def UInt64 : FuncArgType;
+def ULLong : FuncArgType;
+def SizeT : FuncArgType;    // size_t.
+def SSizeT : FuncArgType;   // POSIX ssize_t.
+def Flt : FuncArgType;      // IEEE float.
+def Dbl : FuncArgType;      // IEEE double.
+def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
+def Floating : FuncArgType; // Any floating type.
+def Ptr : FuncArgType;      // Any pointer type.
+def Struct : FuncArgType;   // Any struct type.
+def Ellip : FuncArgType;    // The ellipsis (...).
+def Same : FuncArgType;     // Same argument type as the previous one.
+
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
 /// all of the runtime library calls the backend can emit. The various
@@ -65,10 +102,13 @@ def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_
 /// When adding PPCF128 functions here, note that their names generally need
 /// to be overridden for Darwin with the xxx$LDBL128 form.  See
 /// PPCISelLowering.cpp.
-class RuntimeLibcall {
+class RuntimeLibcall<FuncArgType RetType = NoneType,
+                     list<FuncArgType> ArgTypes = []> {
   string Name = NAME;
+  FuncArgType ReturnType = RetType;
+  list<FuncArgType> ArgumentTypes = ArgTypes;
 
-  // TODO: Record type signature and attributes
+  // TODO: Record attributes
 }
 
 // Concrete implementation of a libcall, which may have a different
@@ -77,7 +117,6 @@ class RuntimeLibcall {
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
-  bit IsDefault = false;
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
@@ -113,8 +152,8 @@ class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
   LibcallCallingConv CallingConv = CC;
 }
 
-// A named runtime library whose Impls are made available as a unit. Impls use
-// the same dag vocabulary as SystemRuntimeLibrary.
+// A named runtime library whose Impls are made available as a unit. Impls is a
+// set of RuntimeLibcallImpls, optionally grouped with LibcallImpls.
 class LibcallLibrary<string name, dag impls,
                      RuntimeLibcallAvailability pred = AlwaysAvailable> {
   string LibraryName = name;
@@ -123,11 +162,28 @@ class LibcallLibrary<string name, dag impls,
   // Availability guard for the library. Libraries sharing a LibraryName merge
   // into one function, each variant under its own Pred.
   RuntimeLibcallAvailability Pred = pred;
+
+  // When set, emit this library as its own setup function instead of merging it
+  // with others sharing its LibraryName, so a consumer gets exactly these members
+  // rather than the merged core. For a target providing a strict subset or a
+  // name-decorated variant of a library. LibraryName stays the
+  // isLibraryAvailable() key.
+  bit Isolated = false;
 }
 
-/// Define a complete top level set of runtime libcalls for a target.
+// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
+// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
+// keep its own versions of a few entries. A bare LibcallLibrary member is
+// equivalent to LibraryRef<Lib>.
+class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
+  LibcallLibrary Library = lib;
+  list<RuntimeLibcallImpl> Exclude = exclude;
+}
+
+/// Define a complete top level set of runtime libcalls for a target. Every
+/// member of funcList must be a LibcallLibrary or LibraryRef.
 class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
-  /// Set the default calling convention assumed for RuntimeLibcallImpl members.
+  /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;

@@ -11,12 +11,11 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-LABEL: mfma_16x16_interleave:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
-; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; CHECK-NEXT:    v_and_b32_e32 v14, 0x3ff, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v2
-; CHECK-NEXT:    v_mul_hi_i32_i24_e32 v15, -12, v2
-; CHECK-NEXT:    v_mul_i32_i24_e32 v14, -12, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v14
+; CHECK-NEXT:    v_mul_hi_i32_i24_e32 v15, -12, v14
+; CHECK-NEXT:    v_mul_i32_i24_e32 v14, -12, v14
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_lshl_add_u64 v[16:17], s[0:1], 0, v[0:1]
 ; CHECK-NEXT:    global_load_dwordx4 v[2:5], v0, s[0:1]
@@ -25,6 +24,7 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-NEXT:    v_lshl_add_u64 v[18:19], v[16:17], 0, v[14:15]
 ; CHECK-NEXT:    global_load_dwordx2 v[30:31], v[18:19], off offset:16
 ; CHECK-NEXT:    global_load_dwordx4 v[14:17], v[18:19], off
+; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[18:21], v[2:5], v[6:9], v[2:5]

@@ -23,6 +23,8 @@ namespace {
 
 class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
 public:
+  static constexpr const char *RTTIName = "::CustomError";
+
   CustomError(int Info) : Info(Info) {}
   std::string toString() const noexcept override {
     return "CustomError (" + std::to_string(Info) + ")";
@@ -35,6 +37,8 @@ protected:
 
 class CustomSubError : public ErrorExtends<CustomSubError, CustomError> {
 public:
+  static constexpr const char *RTTIName = "::CustomSubError";
+
   CustomSubError(int Info, std::string ExtraInfo)
       : ErrorExtends<CustomSubError, CustomError>(Info),
         ExtraInfo(std::move(ExtraInfo)) {}
@@ -479,6 +483,28 @@ TEST(ErrorTest, ExpectedExpected) {
     EXPECT_EQ(toString(EI.takeError()), "foo");
   }
 }
+
+// Test that Expected<T>'s move operations are noexcept iff T's move
+// constructor is.
+namespace {
+struct ThrowingMove {
+  ThrowingMove(ThrowingMove &&) noexcept(false);
+  ThrowingMove &operator=(ThrowingMove &&) noexcept(false);
+};
+} // namespace
+
+static_assert(std::is_nothrow_move_constructible_v<Expected<int>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<int>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<int &>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<int &>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<Error>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<Error>>);
+static_assert(std::is_nothrow_move_constructible_v<Expected<Expected<int>>>);
+static_assert(std::is_nothrow_move_assignable_v<Expected<Expected<int>>>);
+static_assert(!std::is_nothrow_move_constructible_v<Expected<ThrowingMove>>);
+static_assert(!std::is_nothrow_move_assignable_v<Expected<ThrowingMove>>);
+static_assert(
+    !std::is_nothrow_move_constructible_v<Expected<Expected<ThrowingMove>>>);
 
 // Test that the ExitOnError utility works as expected.
 TEST(ErrorTest, CantFailSuccess) {

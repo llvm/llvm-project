@@ -4115,13 +4115,13 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8() #0 {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v29, 8, v19
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v30, 16, v19
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v31, 24, v19
-; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v1, v35
-; GFX11-NEXT:    v_mov_b32_e32 v8, v2
+; GFX11-NEXT:    v_mov_b32_e32 v4, v1
+; GFX11-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v35
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v20, v17
-; GFX11-NEXT:    v_mov_b32_e32 v24, v18
+; GFX11-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v3, v37
 ; GFX11-NEXT:    v_mov_b32_e32 v28, v19
-; GFX11-NEXT:    v_dual_mov_b32 v2, v36 :: v_dual_mov_b32 v3, v37
+; GFX11-NEXT:    v_mov_b32_e32 v2, v36
 ; GFX11-NEXT:    v_dual_mov_b32 v17, v32 :: v_dual_mov_b32 v18, v33
 ; GFX11-NEXT:    v_mov_b32_e32 v19, v34
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -4511,7 +4511,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i8_ret() #0 {
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 0xff
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s30, v42, 0
 ; GFX11-TRUE16-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
@@ -5859,13 +5859,13 @@ define amdgpu_gfx void @test_call_external_void_func_v32i8_ret() #0 {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v29, 8, v19
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v30, 16, v19
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v31, 24, v19
-; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v1, v35
-; GFX11-NEXT:    v_mov_b32_e32 v8, v2
+; GFX11-NEXT:    v_mov_b32_e32 v4, v1
+; GFX11-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v35
 ; GFX11-NEXT:    v_mov_b32_e32 v12, v3
 ; GFX11-NEXT:    v_mov_b32_e32 v20, v17
-; GFX11-NEXT:    v_mov_b32_e32 v24, v18
+; GFX11-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v3, v37
 ; GFX11-NEXT:    v_mov_b32_e32 v28, v19
-; GFX11-NEXT:    v_dual_mov_b32 v2, v36 :: v_dual_mov_b32 v3, v37
+; GFX11-NEXT:    v_mov_b32_e32 v2, v36
 ; GFX11-NEXT:    v_dual_mov_b32 v17, v32 :: v_dual_mov_b32 v18, v33
 ; GFX11-NEXT:    v_mov_b32_e32 v19, v34
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]

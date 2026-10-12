@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17orlater -std=c++17 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-gnu -verify=expected,cxx14 -std=c++14 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++26 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17orlater -std=c++26 %s
 
 template<typename T, typename U = int> struct A; // expected-note {{template is declared here}} \
                                                  // expected-note{{explicitly specialized}}
@@ -259,8 +259,9 @@ namespace VarTemplateNoMember {
   template<> template<typename U> constexpr int S<long>::foo;
   // In C++14, these are definitions, not declarations, so they get a
   // redefinition error.
-  // cxx14-error@+2{{redefinition of 'foo'}}
+  // cxx14-error@+3{{redefinition of 'foo'}}
   // cxx14-note@-4{{previous definition is here}}
+  // cxx17orlater-error@+1 {{must be initialized by a constant expression}}
   template<> template<typename U> constexpr int S<long>::foo;
   // cxx14-error@+2{{redefinition of 'foo'}}
   // cxx14-note@-2{{previous definition is here}}
@@ -272,4 +273,23 @@ namespace VarTemplateNoMember {
   // cxx14-note@-2{{previous definition is here}}
   template<> template<typename U> constexpr int S<long>::foo;
 } // namespace VarTemplateNoMember
+#endif
+
+#if __cplusplus >= 201703L
+namespace ConstexprVarTemplateRedeclared {
+template<typename> struct A;
+struct SS {};
+template<>
+struct A<void> {
+  template<int> static inline SS value = {};
+};
+
+template<> inline constexpr SS A<void>::value<101> = {};
+template<> inline constexpr SS A<void>::value<101>;
+
+const SS& f()
+{
+  return A<void>::value<101>;
+}
+}
 #endif

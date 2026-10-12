@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/IR/Builders.h"
@@ -27,7 +27,7 @@ namespace {
 /// Converts `shape.num_elements` to `shape.reduce`.
 struct NumElementsOpConverter : public OpRewritePattern<NumElementsOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(NumElementsOp op,
                                 PatternRewriter &rewriter) const final;

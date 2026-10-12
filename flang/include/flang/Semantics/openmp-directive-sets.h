@@ -21,15 +21,15 @@ namespace llvm::omp {
 //   compound construct.
 // - all<Directive>Set: All standalone or compound uses of the directive.
 
-static const llvm::omp::DirectiveSet topDistributeSet{
+static const llvm::omp::Directives topDistributeSet{
     Directive::OMPD_distribute,
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_distribute_simd,
 };
 
-static const llvm::omp::DirectiveSet allDistributeSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allDistributeSet{
+    llvm::omp::Directives{
         Directive::OMPD_target_teams_distribute,
         Directive::OMPD_target_teams_distribute_parallel_do,
         Directive::OMPD_target_teams_distribute_parallel_do_simd,
@@ -41,13 +41,13 @@ static const llvm::omp::DirectiveSet allDistributeSet{
     } | topDistributeSet,
 };
 
-static const llvm::omp::DirectiveSet topDoSet{
+static const llvm::omp::Directives topDoSet{
     Directive::OMPD_do,
     Directive::OMPD_do_simd,
 };
 
-static const llvm::omp::DirectiveSet allDoSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allDoSet{
+    llvm::omp::Directives{
         Directive::OMPD_distribute_parallel_do,
         Directive::OMPD_distribute_parallel_do_simd,
         Directive::OMPD_parallel_do,
@@ -61,12 +61,12 @@ static const llvm::omp::DirectiveSet allDoSet{
     } | topDoSet,
 };
 
-static const llvm::omp::DirectiveSet topLoopSet{
+static const llvm::omp::Directives topLoopSet{
     Directive::OMPD_loop,
 };
 
-static const llvm::omp::DirectiveSet allLoopSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allLoopSet{
+    llvm::omp::Directives{
         Directive::OMPD_parallel_loop,
         Directive::OMPD_target_parallel_loop,
         Directive::OMPD_target_teams_loop,
@@ -74,7 +74,7 @@ static const llvm::omp::DirectiveSet allLoopSet{
     } | topLoopSet,
 };
 
-static const llvm::omp::DirectiveSet topParallelSet{
+static const llvm::omp::Directives topParallelSet{
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_do,
     Directive::OMPD_parallel_do_simd,
@@ -89,8 +89,8 @@ static const llvm::omp::DirectiveSet topParallelSet{
     Directive::OMPD_parallel_workshare,
 };
 
-static const llvm::omp::DirectiveSet allParallelSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allParallelSet{
+    llvm::omp::Directives{
         Directive::OMPD_distribute_parallel_do,
         Directive::OMPD_distribute_parallel_do_simd,
         Directive::OMPD_target_parallel,
@@ -104,12 +104,12 @@ static const llvm::omp::DirectiveSet allParallelSet{
     } | topParallelSet,
 };
 
-static const llvm::omp::DirectiveSet topSimdSet{
+static const llvm::omp::Directives topSimdSet{
     Directive::OMPD_simd,
 };
 
-static const llvm::omp::DirectiveSet allSimdSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allSimdSet{
+    llvm::omp::Directives{
         Directive::OMPD_distribute_parallel_do_simd,
         Directive::OMPD_distribute_simd,
         Directive::OMPD_do_simd,
@@ -128,7 +128,7 @@ static const llvm::omp::DirectiveSet allSimdSet{
     } | topSimdSet,
 };
 
-static const llvm::omp::DirectiveSet topTargetSet{
+static const llvm::omp::Directives topTargetSet{
     Directive::OMPD_target,
     Directive::OMPD_target_parallel,
     Directive::OMPD_target_parallel_do,
@@ -144,15 +144,15 @@ static const llvm::omp::DirectiveSet topTargetSet{
     Directive::OMPD_target_teams_workdistribute,
 };
 
-static const llvm::omp::DirectiveSet allTargetSet{topTargetSet};
+static const llvm::omp::Directives allTargetSet{topTargetSet};
 
-static const llvm::omp::DirectiveSet topTaskloopSet{
+static const llvm::omp::Directives topTaskloopSet{
     Directive::OMPD_taskloop,
     Directive::OMPD_taskloop_simd,
 };
 
-static const llvm::omp::DirectiveSet allTaskloopSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allTaskloopSet{
+    llvm::omp::Directives{
         Directive::OMPD_masked_taskloop,
         Directive::OMPD_masked_taskloop_simd,
         Directive::OMPD_master_taskloop,
@@ -164,7 +164,7 @@ static const llvm::omp::DirectiveSet allTaskloopSet{
     } | topTaskloopSet,
 };
 
-static const llvm::omp::DirectiveSet topTeamsSet{
+static const llvm::omp::Directives topTeamsSet{
     Directive::OMPD_teams,
     Directive::OMPD_teams_distribute,
     Directive::OMPD_teams_distribute_parallel_do,
@@ -174,13 +174,13 @@ static const llvm::omp::DirectiveSet topTeamsSet{
     Directive::OMPD_teams_workdistribute,
 };
 
-static const llvm::omp::DirectiveSet bottomTeamsSet{
+static const llvm::omp::Directives bottomTeamsSet{
     Directive::OMPD_target_teams,
     Directive::OMPD_teams,
 };
 
-static const llvm::omp::DirectiveSet allTeamsSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives allTeamsSet{
+    llvm::omp::Directives{
         Directive::OMPD_target_teams,
         Directive::OMPD_target_teams_distribute,
         Directive::OMPD_target_teams_distribute_parallel_do,
@@ -196,17 +196,17 @@ static const llvm::omp::DirectiveSet allTeamsSet{
 //===----------------------------------------------------------------------===//
 
 // Composite constructs
-static const llvm::omp::DirectiveSet allDistributeParallelDoSet{
+static const llvm::omp::Directives allDistributeParallelDoSet{
     allDistributeSet & allParallelSet & allDoSet};
-static const llvm::omp::DirectiveSet allDistributeParallelDoSimdSet{
+static const llvm::omp::Directives allDistributeParallelDoSimdSet{
     allDistributeSet & allParallelSet & allDoSet & allSimdSet};
-static const llvm::omp::DirectiveSet allDistributeSimdSet{
+static const llvm::omp::Directives allDistributeSimdSet{
     allDistributeSet & allSimdSet};
-static const llvm::omp::DirectiveSet allDoSimdSet{allDoSet & allSimdSet};
-static const llvm::omp::DirectiveSet allTaskloopSimdSet{
+static const llvm::omp::Directives allDoSimdSet{allDoSet & allSimdSet};
+static const llvm::omp::Directives allTaskloopSimdSet{
     allTaskloopSet & allSimdSet};
 
-static const llvm::omp::DirectiveSet compositeConstructSet{
+static const llvm::omp::Directives compositeConstructSet{
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_distribute_simd,
@@ -214,7 +214,7 @@ static const llvm::omp::DirectiveSet compositeConstructSet{
     Directive::OMPD_taskloop_simd,
 };
 
-static const llvm::omp::DirectiveSet blockConstructSet{
+static const llvm::omp::Directives blockConstructSet{
     Directive::OMPD_masked,
     Directive::OMPD_master,
     Directive::OMPD_ordered_blockassoc,
@@ -237,7 +237,7 @@ static const llvm::omp::DirectiveSet blockConstructSet{
     Directive::OMPD_workdistribute,
 };
 
-static const llvm::omp::DirectiveSet loopConstructSet{
+static const llvm::omp::Directives loopConstructSet{
     Directive::OMPD_distribute,
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_distribute_parallel_do_simd,
@@ -280,28 +280,28 @@ static const llvm::omp::DirectiveSet loopConstructSet{
     Directive::OMPD_interchange,
 };
 
-static const llvm::omp::DirectiveSet loopTransformationSet{
+static const llvm::omp::Directives loopTransformationSet{
     Directive::OMPD_tile,
     Directive::OMPD_unroll,
     Directive::OMPD_fuse,
     Directive::OMPD_interchange,
 };
 
-static const llvm::omp::DirectiveSet nonPartialVarSet{
+static const llvm::omp::Directives nonPartialVarSet{
     Directive::OMPD_allocate,
     Directive::OMPD_allocators,
     Directive::OMPD_threadprivate,
     Directive::OMPD_declare_target,
 };
 
-static const llvm::omp::DirectiveSet taskGeneratingSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives taskGeneratingSet{
+    llvm::omp::Directives{
         Directive::OMPD_task,
     } | allTaskloopSet,
 };
 
-static const llvm::omp::DirectiveSet workShareSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives workShareSet{
+    llvm::omp::Directives{
         Directive::OMPD_workshare,
         Directive::OMPD_parallel_workshare,
         Directive::OMPD_parallel_sections,
@@ -315,15 +315,14 @@ static const llvm::omp::DirectiveSet workShareSet{
 // Directive sets for parent directives that do allow/not allow a construct
 //===----------------------------------------------------------------------===//
 
-static const llvm::omp::DirectiveSet scanParentAllowedSet{
-    allDoSet | allSimdSet};
+static const llvm::omp::Directives scanParentAllowedSet{allDoSet | allSimdSet};
 
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
 //===----------------------------------------------------------------------===//
 
-static const llvm::omp::DirectiveSet nestedBarrierErrSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives nestedBarrierErrSet{
+    llvm::omp::Directives{
         Directive::OMPD_atomic,
         Directive::OMPD_critical,
         Directive::OMPD_master,
@@ -332,7 +331,7 @@ static const llvm::omp::DirectiveSet nestedBarrierErrSet{
         workShareSet,
 };
 
-static const llvm::omp::DirectiveSet nestedCancelDoAllowedSet{
+static const llvm::omp::Directives nestedCancelDoAllowedSet{
     Directive::OMPD_distribute_parallel_do,
     Directive::OMPD_do,
     Directive::OMPD_parallel_do,
@@ -341,35 +340,35 @@ static const llvm::omp::DirectiveSet nestedCancelDoAllowedSet{
     Directive::OMPD_teams_distribute_parallel_do,
 };
 
-static const llvm::omp::DirectiveSet nestedCancelParallelAllowedSet{
+static const llvm::omp::Directives nestedCancelParallelAllowedSet{
     Directive::OMPD_parallel,
     Directive::OMPD_target_parallel,
 };
 
-static const llvm::omp::DirectiveSet nestedCancelSectionsAllowedSet{
+static const llvm::omp::Directives nestedCancelSectionsAllowedSet{
     Directive::OMPD_parallel_sections,
     Directive::OMPD_sections,
 };
 
-static const llvm::omp::DirectiveSet nestedCancelTaskgroupAllowedSet{
+static const llvm::omp::Directives nestedCancelTaskgroupAllowedSet{
     Directive::OMPD_task,
     Directive::OMPD_taskloop,
 };
 
-static const llvm::omp::DirectiveSet nestedMasterErrSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives nestedMasterErrSet{
+    llvm::omp::Directives{
         Directive::OMPD_atomic,
     } | taskGeneratingSet |
         workShareSet,
 };
 
-static const llvm::omp::DirectiveSet nestedOrderedDoAllowedSet{
+static const llvm::omp::Directives nestedOrderedDoAllowedSet{
     Directive::OMPD_do,
     Directive::OMPD_parallel_do,
     Directive::OMPD_target_parallel_do,
 };
 
-static const llvm::omp::DirectiveSet nestedOrderedErrSet{
+static const llvm::omp::Directives nestedOrderedErrSet{
     Directive::OMPD_atomic,
     Directive::OMPD_critical,
     Directive::OMPD_ordered_blockassoc,
@@ -377,20 +376,20 @@ static const llvm::omp::DirectiveSet nestedOrderedErrSet{
     Directive::OMPD_taskloop,
 };
 
-static const llvm::omp::DirectiveSet nestedOrderedParallelErrSet{
+static const llvm::omp::Directives nestedOrderedParallelErrSet{
     Directive::OMPD_parallel,
     Directive::OMPD_parallel_sections,
     Directive::OMPD_parallel_workshare,
     Directive::OMPD_target_parallel,
 };
 
-static const llvm::omp::DirectiveSet nestedReduceWorkshareAllowedSet{
+static const llvm::omp::Directives nestedReduceWorkshareAllowedSet{
     Directive::OMPD_do,
     Directive::OMPD_do_simd,
     Directive::OMPD_sections,
 };
 
-static const llvm::omp::DirectiveSet nestedTeamsAllowedSet{
+static const llvm::omp::Directives nestedTeamsAllowedSet{
     Directive::OMPD_workdistribute,
     Directive::OMPD_distribute,
     Directive::OMPD_distribute_parallel_do,
@@ -408,8 +407,8 @@ static const llvm::omp::DirectiveSet nestedTeamsAllowedSet{
     Directive::OMPD_parallel_workshare,
 };
 
-static const llvm::omp::DirectiveSet nestedWorkshareErrSet{
-    llvm::omp::DirectiveSet{
+static const llvm::omp::Directives nestedWorkshareErrSet{
+    llvm::omp::Directives{
         Directive::OMPD_atomic,
         Directive::OMPD_critical,
         Directive::OMPD_master,
@@ -424,7 +423,7 @@ static const llvm::omp::DirectiveSet nestedWorkshareErrSet{
 //===----------------------------------------------------------------------===//
 
 // Simple standalone directives than can be erased by -fopenmp-simd.
-static const llvm::omp::DirectiveSet simpleStandaloneNonSimdOnlySet{
+static const llvm::omp::Directives simpleStandaloneNonSimdOnlySet{
     Directive::OMPD_taskyield,
     Directive::OMPD_barrier,
     Directive::OMPD_ordered_standalone,

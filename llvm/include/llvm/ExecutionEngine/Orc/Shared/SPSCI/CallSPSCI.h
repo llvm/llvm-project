@@ -21,6 +21,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 #include <cstdint>
 
@@ -29,7 +30,8 @@ namespace llvm::orc::rt::sps_ci {
 /// Runs a main-like function (int(int argc, char *argv[])) in the executor.
 /// Takes the function's address and an argument vector.
 struct CallMain {
-  static constexpr char Name[] = "orc_rt_ci_sps_call_main";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_call_main");
   using SPSSig = int64_t(shared::SPSExecutorAddr,
                          shared::SPSSequence<shared::SPSString>);
 };
@@ -37,21 +39,24 @@ struct CallMain {
 /// Runs a void() function in the executor, given its address.
 /// WARNING: This operation is experimental and may be removed.
 struct CallVoidVoid {
-  static constexpr char Name[] = "orc_rt_ci_sps_call_void_void";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_call_void_void");
   using SPSSig = void(shared::SPSExecutorAddr);
 };
 
 /// Runs an int32_t() function in the executor, given its address.
 /// WARNING: This operation is experimental and may be removed.
 struct CallInt32Void {
-  static constexpr char Name[] = "orc_rt_ci_sps_call_int32_void";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_call_int32_void");
   using SPSSig = int32_t(shared::SPSExecutorAddr);
 };
 
 /// Runs an int32_t(int32_t) function in the executor, given its address.
 /// WARNING: This operation is experimental and may be removed.
 struct CallInt32Int32 {
-  static constexpr char Name[] = "orc_rt_ci_sps_call_int32_int32";
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_call_int32_int32");
   using SPSSig = int32_t(shared::SPSExecutorAddr, int32_t);
 };
 

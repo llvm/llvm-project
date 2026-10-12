@@ -37,7 +37,7 @@ void printElseRegion(OpAsmPrinter &opPrinter, Operation *op,
                      Region &elseRegion) {
   if (elseRegion.empty())
     return;
-  opPrinter.printKeywordOrString("else ");
+  opPrinter << "else ";
   opPrinter.printRegion(elseRegion);
 }
 } // namespace
@@ -493,3 +493,21 @@ LogicalResult ReinterpretOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void ReturnOp::build(OpBuilder &odsBuilder, OperationState &odsState) {}
+
+LogicalResult ReturnOp::verify() {
+  auto funcOp = (*this)->getParentOfType<FuncOp>();
+  if (!funcOp)
+    return success();
+  ArrayRef<Type> resultTypes = funcOp.getFunctionType().getResults();
+  if (getOperands().size() != resultTypes.size())
+    return emitOpError("has ") << getOperands().size()
+                               << " operands, but enclosing function returns "
+                               << resultTypes.size();
+  for (auto [idx, resultType, operandType] :
+       llvm::enumerate(resultTypes, getOperands().getTypes()))
+    if (resultType != operandType)
+      return emitOpError("type of return operand #")
+             << idx << " (" << operandType
+             << ") doesn't match function result type (" << resultType << ")";
+  return success();
+}

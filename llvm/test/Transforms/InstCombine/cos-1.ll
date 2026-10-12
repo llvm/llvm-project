@@ -108,6 +108,16 @@ define float @cosf_unary_negated_arg_FMF(float %x) {
   ret float %r
 }
 
+define float @cosf_unary_negated_arg_positivezero(float %x) denormal_fpenv(positivezero|positivezero) {
+; ANY-LABEL: @cosf_unary_negated_arg_positivezero(
+; ANY-NEXT:    [[R:%.*]] = call float @cosf(float [[X:%.*]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @cosf(float %neg)
+  ret float %r
+}
+
 ; cos(fabs(x)) -> cos(x)
 
 define double @cos_unary_fabs_arg(double %x) {
@@ -250,6 +260,118 @@ define float @sinf_unary_negated_arg_FMF(float %x) {
   %neg = fneg ninf float %x
   %r = call afn nnan float @sinf(float %neg)
   ret float %r
+}
+
+; sin(-x) -> -sin(x) is invalid if denormals may be flushed to +0.0.
+
+define float @sinf_unary_negated_arg_dapz(float %x) denormal_fpenv(ieee|positivezero) {
+; ANY-LABEL: @sinf_unary_negated_arg_dapz(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call float @sinf(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_ftpz(float %x) denormal_fpenv(positivezero|ieee) {
+; ANY-LABEL: @sinf_unary_negated_arg_ftpz(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call float @sinf(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_dynamic(float %x) denormal_fpenv(dynamic|dynamic) {
+; ANY-LABEL: @sinf_unary_negated_arg_dynamic(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call float @sinf(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_dapz_memory_none(float %x) denormal_fpenv(ieee|positivezero) {
+; ANY-LABEL: @sinf_unary_negated_arg_dapz_memory_none(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call float @llvm.sin.f32(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg) memory(none)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_dapz_nsz(float %x) denormal_fpenv(ieee|positivezero) {
+; ANY-LABEL: @sinf_unary_negated_arg_dapz_nsz(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call nsz float @sinf(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call nsz float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_ftpz_nsz(float %x) denormal_fpenv(positivezero|ieee) {
+; ANY-LABEL: @sinf_unary_negated_arg_ftpz_nsz(
+; ANY-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
+; ANY-NEXT:    [[R:%.*]] = call nsz float @sinf(float [[NEG]])
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call nsz float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_ftz_daz(float %x) denormal_fpenv(preservesign|preservesign) {
+; ANY-LABEL: @sinf_unary_negated_arg_ftz_daz(
+; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_daz(float %x) denormal_fpenv(ieee|preservesign) {
+; ANY-LABEL: @sinf_unary_negated_arg_daz(
+; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define float @sinf_unary_negated_arg_f32_ieee(float %x) denormal_fpenv(positivezero, float: ieee) {
+; ANY-LABEL: @sinf_unary_negated_arg_f32_ieee(
+; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
+; ANY-NEXT:    ret float [[R]]
+;
+  %neg = fneg float %x
+  %r = call float @sinf(float %neg)
+  ret float %r
+}
+
+define double @sin_unary_negated_arg_f32_positivezero(double %x) denormal_fpenv(float: positivezero) {
+; ANY-LABEL: @sin_unary_negated_arg_f32_positivezero(
+; ANY-NEXT:    [[TMP1:%.*]] = call double @sin(double [[X:%.*]])
+; ANY-NEXT:    [[R:%.*]] = fneg double [[TMP1]]
+; ANY-NEXT:    ret double [[R]]
+;
+  %neg = fneg double %x
+  %r = call double @sin(double %neg)
+  ret double %r
 }
 
 declare void @use(double)

@@ -12,9 +12,8 @@
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running pass: ConstraintEliminationPass on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running analysis: LoopAnalysis on ssub_no_overflow_due_to_or_conds
-; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on ssub_no_overflow_due_to_or_conds
-; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on ssub_no_overflow_due_to_or_conds
+; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Invalidating analysis: DemandedBitsAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running pass: RequireAnalysisPass
 ; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on ssub_no_overflow_due_to_or_conds
@@ -26,9 +25,8 @@
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on uge_zext
 ; CHECK-NEXT: Running pass: ConstraintEliminationPass on uge_zext
 ; CHECK-NEXT: Running analysis: LoopAnalysis on uge_zext
-; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on uge_zext
-; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on uge_zext
 ; CHECK-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on uge_zext
+; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on uge_zext
 ; CHECK-NEXT: Invalidating analysis: DemandedBitsAnalysis on uge_zext
 ; CHECK-NEXT: Running pass: RequireAnalysisPass
 ; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on uge_zext
@@ -40,9 +38,8 @@
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test_mul_const_nuw_unsigned_14
 ; CHECK-NEXT: Running pass: ConstraintEliminationPass on test_mul_const_nuw_unsigned_14
 ; CHECK-NEXT: Running analysis: LoopAnalysis on test_mul_const_nuw_unsigned_14
-; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on test_mul_const_nuw_unsigned_14
-; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on test_mul_const_nuw_unsigned_14
 ; CHECK-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on test_mul_const_nuw_unsigned_14
+; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on test_mul_const_nuw_unsigned_14
 
 declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8)
 

@@ -19,6 +19,22 @@ add_integration_test(
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_integration_test(
+    secure_getenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      secure_getenv_test.cpp
+    DEPENDS
+      libc.hdr.sys_auxv_macros
+      libc.src.__support.CPP.scope
+      libc.src.__support.OSUtil.linux.auxv
+      libc.src.stdlib.secure_getenv
+    ENV
+      FRANCE=Paris
+      GERMANY=Berlin
+  )
+
+  add_integration_test(
     setenv_test
     SUITE
       stdlib-integration-tests
@@ -56,6 +72,21 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.stdlib.setenv
       libc.src.stdlib.unsetenv
       libc.src.string.memory_utils.inline_memcpy
+      libc.src.unistd.environ
+  )
+
+  add_integration_test(
+    clearenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      clearenv_test.cpp
+    DEPENDS
+      libc.src.stdlib.clearenv
+      libc.src.stdlib.getenv
+      libc.src.stdlib.putenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.unsetenv
       libc.src.unistd.environ
   )
 

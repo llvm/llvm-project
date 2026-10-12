@@ -2,26 +2,8 @@
 // RUN: %clang_cc1 -triple riscv64-unknown-linux-gnu -disable-O0-optnone -emit-llvm %s -o - \
 // RUN:   | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK-RV64
 
-// CHECK-RV64-LABEL: define dso_local signext i32 @test_cpu_is_veyron_v1(
-// CHECK-RV64-SAME: ) #[[ATTR0:[0-9]+]] {
-// CHECK-RV64-NEXT:  [[ENTRY:.*:]]
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr @__riscv_cpu_model, align 4
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1567
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_cpu_model, i64 8), align 8
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], -9223372036854710272
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = and i1 [[TMP1]], [[TMP3]]
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = load i64, ptr getelementptr inbounds nuw (i8, ptr @__riscv_cpu_model, i64 16), align 8
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 273
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = and i1 [[TMP4]], [[TMP6]]
-// CHECK-RV64-NEXT:    [[CONV:%.*]] = zext i1 [[TMP7]] to i32
-// CHECK-RV64-NEXT:    ret i32 [[CONV]]
-//
-int test_cpu_is_veyron_v1() {
-  return __builtin_cpu_is("veyron-v1");
-}
-
 // CHECK-RV64-LABEL: define dso_local signext i32 @test_cpu_is_spacemit_x60(
-// CHECK-RV64-SAME: ) #[[ATTR0]] {
+// CHECK-RV64-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-RV64-NEXT:  [[ENTRY:.*:]]
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr @__riscv_cpu_model, align 4
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 1808

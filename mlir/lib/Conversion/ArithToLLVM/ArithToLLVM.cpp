@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -139,6 +140,10 @@ using MaxNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
+using MaximumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaximumNumFOp, LLVM::MaximumNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
@@ -149,6 +154,10 @@ using MinimumFOpLowering =
                                /*FailOnUnsupportedFP=*/true>;
 using MinNumFOpLowering =
     VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
+using MinimumNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinimumNumFOp, LLVM::MinimumNumOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
 using MinSIOpLowering =
@@ -559,9 +568,10 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
 
   // Handle the scalar and 1D vector cases.
   if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    Type newSumType = typeConverter->convertType(sumResultType);
     Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
-        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
+        LLVM::LLVMStructType::getLiteral(ctx, {newSumType, newOverflowType});
     Value addOverflow = LLVM::UAddWithOverflowOp::create(
         rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
@@ -799,11 +809,13 @@ struct ArithToLLVMConversionPass
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
 
-    LowerToLLVMOptions options(&getContext());
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(&getContext(),
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(&getContext(), options);
+    LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
@@ -884,10 +896,12 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     IndexCastOpUILowering,
     MaximumFOpLowering,
     MaxNumFOpLowering,
+    MaximumNumFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,
     MinimumFOpLowering,
     MinNumFOpLowering,
+    MinimumNumFOpLowering,
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,

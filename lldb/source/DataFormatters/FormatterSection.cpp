@@ -35,7 +35,7 @@ static bool skipPadding(llvm::DataExtractor &section,
 
 static void ForEachFormatterInModule(
     Module &module, SectionType section_type,
-    std::function<void(llvm::DataExtractor, llvm::StringRef)> fn) {
+    std::function<void(llvm::DataExtractor, llvm::StringRef, uint32_t)> fn) {
   auto *sections = module.GetSectionList();
   if (!sections)
     return;
@@ -56,6 +56,9 @@ static void ForEachFormatterInModule(
   //   * The type identifier, either a type name, or a regex
   //   * The size of the entry
   //   * The entry
+  //
+  // The version also determines the calling convention of the entry's
+  // bytecode methods (see BytecodeSyntheticChildren).
   //
   // Integers are encoded using ULEB.
   //
@@ -80,7 +83,7 @@ static void ForEachFormatterInModule(
                record_size, module.GetFileSpec());
       break;
     }
-    if (version == 1) {
+    if (version == 1 || version == 2) {
       llvm::DataExtractor record(
           section.getData().drop_front(cursor.tell()).take_front(record_size),
           le);
@@ -90,7 +93,7 @@ static void ForEachFormatterInModule(
       llvm::Error error = cursor.takeError();
       if (!error)
         fn(llvm::DataExtractor(record.getData().drop_front(cursor.tell()), le),
-           type_name);
+           type_name, version);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
                        "{0}");
@@ -110,7 +113,8 @@ static void ForEachFormatterInModule(
 void LoadTypeSummariesForModule(ModuleSP module_sp) {
   ForEachFormatterInModule(
       *module_sp, eSectionTypeLLDBTypeSummaries,
-      [&](llvm::DataExtractor extractor, llvm::StringRef type_name) {
+      [&](llvm::DataExtractor extractor, llvm::StringRef type_name,
+          uint32_t version) {
         TypeCategoryImplSP category;
         DataVisualization::Categories::GetCategory(ConstString("default"),
                                                    category);
@@ -151,9 +155,11 @@ void LoadTypeSummariesForModule(ModuleSP module_sp) {
 
 static BytecodeSyntheticChildren::SyntheticBytecodeImplementation
 CreateSyntheticImpl(
-    llvm::MutableArrayRef<std::unique_ptr<llvm::MemoryBuffer>> methods) {
+    llvm::MutableArrayRef<std::unique_ptr<llvm::MemoryBuffer>> methods,
+    uint32_t version) {
   using Signatures = FormatterBytecode::Signatures;
   BytecodeSyntheticChildren::SyntheticBytecodeImplementation impl;
+  impl.version = version;
   impl.init = std::move(methods[Signatures::sig_init]);
   impl.update = std::move(methods[Signatures::sig_update]);
   impl.num_children = std::move(methods[Signatures::sig_get_num_children]);
@@ -166,7 +172,8 @@ CreateSyntheticImpl(
 void LoadFormattersForModule(ModuleSP module_sp) {
   ForEachFormatterInModule(
       *module_sp, eSectionTypeLLDBFormatters,
-      [&](llvm::DataExtractor extractor, llvm::StringRef type_name) {
+      [&](llvm::DataExtractor extractor, llvm::StringRef type_name,
+          uint32_t version) {
         // * Flags (ULEB128)
         // * Function signature (1 byte)
         // * Length of the program (ULEB128)
@@ -211,14 +218,15 @@ void LoadFormattersForModule(ModuleSP module_sp) {
 
         if (summary_func_up) {
           auto summary_sp = std::make_shared<BytecodeSummaryFormat>(
-              TypeSummaryImpl::Flags(flags), std::move(summary_func_up));
+              TypeSummaryImpl::Flags(flags), std::move(summary_func_up),
+              version);
           category->AddTypeSummary(type_name, match_type, summary_sp);
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                    "Loaded embedded type summary for '{0}' from {1}.",
                    type_name, module_sp->GetFileSpec());
         } else if (has_synthetic_method) {
           BytecodeSyntheticChildren::SyntheticBytecodeImplementation impl =
-              CreateSyntheticImpl(synthetic_methods);
+              CreateSyntheticImpl(synthetic_methods, version);
           auto synthetic_children_sp =
               std::make_shared<BytecodeSyntheticChildren>(std::move(impl));
           category->AddTypeSynthetic(type_name, match_type,

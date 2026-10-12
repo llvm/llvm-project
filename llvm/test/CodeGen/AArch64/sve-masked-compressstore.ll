@@ -102,6 +102,30 @@ define void @test_compressstore_nxv2i8(ptr %p, <vscale x 2 x i8> %vec, <vscale x
   ret void
 }
 
+define void @test_compressstore_nxv2bf16(ptr %p, <vscale x 2 x bfloat> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.d
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.nxv2bf16(<vscale x 2 x bfloat> %vec, ptr align 2 %p, <vscale x 2 x i1> %mask)
+  ret void
+}
+
+define void @test_compressstore_nxv2f16(ptr %p, <vscale x 2 x half> %vec, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.d
+; CHECK-NEXT:    compact z0.d, p0, z0.d
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.nxv2f16(<vscale x 2 x half> %vec, ptr align 2 %p, <vscale x 2 x i1> %mask)
+  ret void
+}
+
 define void @test_compressstore_nxv4i16(ptr %p, <vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_compressstore_nxv4i16:
 ; CHECK:       // %bb.0:
@@ -111,6 +135,30 @@ define void @test_compressstore_nxv4i16(ptr %p, <vscale x 4 x i16> %vec, <vscale
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   tail call void @llvm.masked.compressstore.nxv4i16(<vscale x 4 x i16> %vec, ptr align 2 %p, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @test_compressstore_nxv4bf16(ptr %p, <vscale x 4 x bfloat> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.nxv4bf16(<vscale x 4 x bfloat> %vec, ptr align 2 %p, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @test_compressstore_nxv4f16(ptr %p, <vscale x 4 x half> %vec, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: test_compressstore_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  tail call void @llvm.masked.compressstore.nxv4f16(<vscale x 4 x half> %vec, ptr align 2 %p, <vscale x 4 x i1> %mask)
   ret void
 }
 
@@ -334,9 +382,9 @@ define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-BASE-NEXT:    zip1 v3.8b, v2.8b, v0.8b
-; CHECK-BASE-NEXT:    adrp x8, .LCPI11_0
+; CHECK-BASE-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-BASE-NEXT:    zip2 v2.8b, v2.8b, v0.8b
-; CHECK-BASE-NEXT:    ldr d5, [x8, :lo12:.LCPI11_0]
+; CHECK-BASE-NEXT:    ldr d5, [x8, :lo12:.LCPI15_0]
 ; CHECK-BASE-NEXT:    ptrue p0.s
 ; CHECK-BASE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-BASE-NEXT:    ptrue p1.s, vl4
@@ -389,8 +437,8 @@ define void @test_compressstore_v8i32(ptr %p, <8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-SME2p2-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-SME2p2-NEXT:    zip1 v3.8b, v2.8b, v0.8b
 ; CHECK-SME2p2-NEXT:    zip2 v2.8b, v2.8b, v0.8b
-; CHECK-SME2p2-NEXT:    adrp x8, .LCPI11_0
-; CHECK-SME2p2-NEXT:    ldr d5, [x8, :lo12:.LCPI11_0]
+; CHECK-SME2p2-NEXT:    adrp x8, .LCPI15_0
+; CHECK-SME2p2-NEXT:    ldr d5, [x8, :lo12:.LCPI15_0]
 ; CHECK-SME2p2-NEXT:    ptrue p0.s, vl4
 ; CHECK-SME2p2-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-SME2p2-NEXT:    shl v4.4h, v3.4h, #15

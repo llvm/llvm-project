@@ -22,6 +22,26 @@ void kernel(int *out) {
   out[i++] = gridDim.y; // CHECK: call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
   out[i++] = gridDim.z; // CHECK: call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
 
+  // CHECK: [[TID:%.*]] = call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  // CHECK: [[TID_CMP:%.*]] = icmp ult i32 [[TID]], 1024
+  // CHECK: call void @llvm.assume(i1 [[TID_CMP]])
+  __builtin_assume(threadIdx.x < 1024);
+
+  // CHECK: [[CTAID:%.*]] = call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+  // CHECK: [[CTAID_CMP:%.*]] = icmp ult i32 [[CTAID]], 1024
+  // CHECK: call void @llvm.assume(i1 [[CTAID_CMP]])
+  __builtin_assume(blockIdx.x < 1024);
+
+  // CHECK: [[NTID:%.*]] = call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+  // CHECK: [[NTID_CMP:%.*]] = icmp ult i32 [[NTID]], 1024
+  // CHECK: call void @llvm.assume(i1 [[NTID_CMP]])
+  __builtin_assume(blockDim.x < 1024);
+
+  // CHECK: [[NCTAID:%.*]] = call noundef{{.*}} i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
+  // CHECK: [[NCTAID_CMP:%.*]] = icmp ult i32 [[NCTAID]], 1024
+  // CHECK: call void @llvm.assume(i1 [[NCTAID_CMP]])
+  __builtin_assume(gridDim.x < 1024);
+
   out[i++] = warpSize; // CHECK: store i32 32,
 
   // CHECK: ret void

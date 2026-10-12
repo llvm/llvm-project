@@ -76,15 +76,9 @@ InterpFrame::~InterpFrame() {
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     S.deallocate(argBlock(I));
 
-  // When destroying the InterpFrame, call the Dtor for all block
+  // When destroying the InterpFrame, call the Dtor for all blocks
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  destroyScopes();
-}
-
-void InterpFrame::destroyScopes() {
-  if (!Func || Func->getFrameSize() == 0)
-    return;
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
       S.deallocate(localBlock(Local.Offset));
@@ -283,6 +277,11 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
+    return Caller->getSource(getRetOpPC());
+
+  // If we have a frame for an invalid function, check the caller.
+  // This happens for the fake function frame we create in TrivialCopy.
+  if (Func && !Func->isValid())
     return Caller->getSource(getRetOpPC());
 
   // Similarly, if the resulting source location is invalid anyway,

@@ -8,4 +8,4 @@ set(LLVM_TARGET_DEFINITIONS CUFOps.td)
 mlir_tablegen(CUFOps.h.inc -gen-op-decls)
 mlir_tablegen(CUFOps.cpp.inc -gen-op-defs)
 
-add_public_tablegen_target(CUFOpsIncGen)
+add_flang_tablegen_target(CUFOpsIncGen)

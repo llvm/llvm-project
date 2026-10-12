@@ -17,7 +17,7 @@ func.func @_QQmain() {
   %c0_i32 = arith.constant 0 : i32
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
-  %1 = fir.declare %0 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %1 = fir.declare %0 uniq_name("_QFEa") : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c0_i32 to %1 : !fir.ref<i32>
   omp.parallel {
     omp.wsloop {

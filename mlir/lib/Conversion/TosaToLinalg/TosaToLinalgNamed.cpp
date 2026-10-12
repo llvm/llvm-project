@@ -135,7 +135,9 @@ static mlir::Value linalgBroadcastAndMaybeExt(PatternRewriter &rewriter,
                if (resType != biasVal.getType()) {
                  biasVal =
                      resultTy.getElementType().isFloat()
-                         ? arith::ExtFOp::create(builder, loc, resType, biasVal)
+                         ? arith::ExtFOp::create(
+                               builder, loc, TypeRange{resType},
+                               ValueRange{biasVal}, arith::ExtFOp::Properties{})
                                .getResult()
                          : arith::ExtSIOp::create(builder, loc, resType,
                                                   biasVal)
@@ -679,7 +681,10 @@ public:
 
 class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  MaxPool2dConverter(const TypeConverter &typeConverter, MLIRContext *context,
+                     bool allowNonFinites)
+      : OpConversionPattern(typeConverter, context),
+        allowNonFinites(allowNonFinites) {}
 
   // Compute the dynamic output sizes of the maxpool operation.
   static SmallVector<Value>
@@ -740,16 +745,24 @@ public:
     if (!resultTy)
       return rewriter.notifyMatchFailure(op, "failed to convert type");
     Type resultETy = inputTy.getElementType();
+    NanPropagationMode nanMode = op.getNanMode();
 
     SmallVector<Value> dynamicDims =
         computeDynamicOutputSizes(op, adaptor, rewriter);
 
     // Determine what the initial value needs to be for the max pool op.
     TypedAttr initialAttr;
-    if (resultETy.isF32() || resultETy.isBF16() || resultETy.isF16())
-      initialAttr = rewriter.getFloatAttr(
-          resultETy, APFloat::getLargest(
-                         cast<FloatType>(resultETy).getFloatSemantics(), true));
+    if (resultETy.isF32() || resultETy.isBF16() || resultETy.isF16()) {
+      const llvm::fltSemantics &semantics =
+          cast<FloatType>(resultETy).getFloatSemantics();
+      if (llvm::APFloat::semanticsHasNaN(semantics))
+        initialAttr = rewriter.getFloatAttr(
+            resultETy,
+            nanMode == NanPropagationMode::IGNORE
+                ? APFloat::getNaN(semantics)
+                : getFloatMinMaxIdentity(semantics,
+                                         /*negative=*/true, allowNonFinites));
+    }
 
     else if (isUnsigned)
       initialAttr = rewriter.getIntegerAttr(
@@ -769,6 +782,9 @@ public:
     llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
 
+    // The initial value doubles as the padding value. This is safe for every
+    // seed above because the verifier rejects a pad as wide as the kernel on
+    // any side, so no window consists purely of padding.
     Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
     Value initialValue = arith::ConstantOp::create(rewriter, loc, initialAttr);
@@ -803,7 +819,6 @@ public:
         ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
         dilationAttr);
 
-    NanPropagationMode nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
@@ -815,8 +830,9 @@ public:
     //
     // In the case of "IGNORE" we need to insert a compare and select. Since
     // we've already produced a named op we will just take its body and modify
-    // it to include the appropriate checks. If the current value is NaN the
-    // old value of pool will be taken otherwise we use the result.
+    // it to include the appropriate checks. A NaN accumulator represents a
+    // window with no finite values yet. The first finite input replaces it;
+    // input NaNs are ignored. An all-NaN window therefore remains NaN.
     if (nanMode == NanPropagationMode::IGNORE) {
       auto genericOp = linalg::GenericOp::create(
           rewriter, loc, resultOp.getType(0), resultOp.getInputs(),
@@ -829,18 +845,27 @@ public:
             auto &oldMaxOp = *resultOp.getBlock()->begin();
             map.map(oldArgs, blockArgs);
             auto *newOp = opBuilder.clone(oldMaxOp, map);
-            Value isNaN =
+            Value inputIsNaN =
                 arith::CmpFOp::create(opBuilder, loc, arith::CmpFPredicate::UNO,
                                       blockArgs.front(), blockArgs.front());
-            auto selectOp = arith::SelectOp::create(
-                opBuilder, loc, isNaN, blockArgs.back(), newOp->getResult(0));
-            linalg::YieldOp::create(opBuilder, loc, selectOp.getResult());
+            Value accumulatorIsNaN =
+                arith::CmpFOp::create(opBuilder, loc, arith::CmpFPredicate::UNO,
+                                      blockArgs.back(), blockArgs.back());
+            Value finiteMaximum =
+                arith::SelectOp::create(opBuilder, loc, accumulatorIsNaN,
+                                        blockArgs.front(), newOp->getResult(0));
+            Value result = arith::SelectOp::create(
+                opBuilder, loc, inputIsNaN, blockArgs.back(), finiteMaximum);
+            linalg::YieldOp::create(opBuilder, loc, result);
           });
       rewriter.replaceOp(resultOp, genericOp);
     }
 
     return success();
   }
+
+private:
+  bool allowNonFinites;
 };
 
 class AvgPool2dConverter : public OpRewritePattern<tosa::AvgPool2dOp> {
@@ -1138,6 +1163,6 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
 
   patterns->add<
       MaxPool2dConverter
-    >(converter, patterns->getContext());
+    >(converter, patterns->getContext(), options.allowNonFinites);
   // clang-format on
 }

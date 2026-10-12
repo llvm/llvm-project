@@ -1,0 +1,19 @@
+## Registry<T> is only ever used through the getRegistryLinkListInstance<R>()
+## accessor that LLVM_DEFINE_REGISTRY defines once, so the accessor (a ??$
+## specialization) and the explicitly instantiated Registry<T> members that only
+## a plugin references must both be exported, or a plugin cannot link against a
+## static tool built with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS.
+##
+## Symbols are printed in input order, so the checks are ordered.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj %S/Inputs/lib-msvc.s -o %t/lib.obj
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj %S/Inputs/user-msvc.s -o %t/user.obj
+# RUN: %extract_symbols --mangling=microsoft %t/lib.obj %t/user.obj \
+# RUN:   | FileCheck %s --implicit-check-not=Registry
+
+## The accessor specialization and add_node are defined once and referenced
+## only through the accessor, so both are exported. begin() is defined in both
+## objects (the user TU instantiated the inline member itself), so it is not.
+# CHECK:      ??$getRegistryLinkListInstance@V?$Registry@VPluginASTAction@clang@@$$V@llvm@@@detail@llvm@@YAAEAU?$RegistryLinkListStorage@V?$Registry@VPluginASTAction@clang@@$$V@llvm@@@01@XZ
+# CHECK-NEXT: ?add_node@?$Registry@VPluginASTAction@clang@@$$V@llvm@@SAXPEAVnode@12@@Z

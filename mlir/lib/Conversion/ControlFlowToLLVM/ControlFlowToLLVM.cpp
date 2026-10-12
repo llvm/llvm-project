@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -161,8 +162,10 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
     if (failed(convertedBlock))
       return failure();
     DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto loopAnnotation = op->getAttrOfType<LLVM::LoopAnnotationAttr>(
+        LLVM::getLoopAnnotationAttrName());
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, flattenedAdaptor, *convertedBlock);
+        op, flattenedAdaptor, loopAnnotation, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
     setConvertedAttrs(newOp, attrs);
@@ -197,10 +200,12 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
     if (failed(convertedFalseBlock))
       return failure();
     DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto loopAnnotation = op->getAttrOfType<LLVM::LoopAnnotationAttr>(
+        LLVM::getLoopAnnotationAttrName());
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
         op, llvm::getSingleElement(adaptor.getCondition()),
         flattenedAdaptorTrue, flattenedAdaptorFalse, op.getBranchWeightsAttr(),
-        *convertedTrueBlock, *convertedFalseBlock);
+        loopAnnotation, *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
     setConvertedAttrs(newOp, attrs);
@@ -285,11 +290,13 @@ struct ConvertControlFlowToLLVM
              ctx->getLoadedDialect<cf::ControlFlowDialect>();
     });
 
-    LowerToLLVMOptions options(ctx);
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(ctx,
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(ctx, options);
+    LLVMTypeConverter converter(ctx, options, &dataLayoutAnalysis);
     RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
     mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);

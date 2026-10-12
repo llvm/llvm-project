@@ -10,12 +10,10 @@ define dso_local i32 @test_beqi(i32 %a) nounwind {
 ; RV32I-LABEL: test_beqi:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    li a1, 7
-; RV32I-NEXT:    bne a0, a1, .LBB0_2
-; RV32I-NEXT:  # %bb.1: # %if.end
-; RV32I-NEXT:    li a0, 7
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB0_2: # %if.then
+; RV32I-NEXT:    beq a0, a1, .LBB0_2
+; RV32I-NEXT:  # %bb.1: # %if.then
 ; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:  .LBB0_2: # %if.end
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBI-LABEL: test_beqi:
@@ -54,12 +52,10 @@ define dso_local i32 @test_e_beqi(i32 %a) nounwind {
 ; RV32I-LABEL: test_e_beqi:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    li a1, 40
-; RV32I-NEXT:    bne a0, a1, .LBB1_2
-; RV32I-NEXT:  # %bb.1: # %if.end
-; RV32I-NEXT:    li a0, 40
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB1_2: # %if.then
+; RV32I-NEXT:    beq a0, a1, .LBB1_2
+; RV32I-NEXT:  # %bb.1: # %if.then
 ; RV32I-NEXT:    li a0, 1
+; RV32I-NEXT:  .LBB1_2: # %if.end
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCIBI-LABEL: test_e_beqi:

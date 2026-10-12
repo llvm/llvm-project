@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRXeGPUTransformOps
   MLIRXeGPUTransformOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
   MLIRXeGPUDialect
   MLIRXeGPUTransforms
   MLIRIR

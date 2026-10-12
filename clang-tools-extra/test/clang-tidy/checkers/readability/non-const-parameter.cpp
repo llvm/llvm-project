@@ -524,3 +524,38 @@ struct QualifiedMemberOverload {
   }
   void withConstQualifier(const int *qualifiedMemberPtr) {}
 };
+
+bool atomicCompareExchangeN(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+bool atomicCompareExchange(int *obj, int *expected, int *desired) {
+  return __atomic_compare_exchange(obj, expected, desired, false,
+                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+bool atomicCompareExchangeOffset(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected + 1, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+void atomicLoadOut(int *obj, int *dest) {
+  __atomic_load(obj, dest, __ATOMIC_SEQ_CST);
+}
+
+void atomicExchangeOut(int *obj, int *val, int *old) {
+  __atomic_exchange(obj, val, old, __ATOMIC_SEQ_CST);
+}
+
+// CHECK-MESSAGES: :[[@LINE+1]]:66: warning: pointer parameter 'unrelated' can be pointer to const
+int atomicCompareExchangeUnrelated(int *obj, int *expected, int *unrelated) {
+  // CHECK-FIXES: int atomicCompareExchangeUnrelated(int *obj, int *expected, const int *unrelated) {
+  return __atomic_compare_exchange_n(obj, expected, 0, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) +
+         *unrelated;
+}
+
+int atomicLoad(int *p) {
+  return __atomic_load_n(p, __ATOMIC_SEQ_CST);
+}

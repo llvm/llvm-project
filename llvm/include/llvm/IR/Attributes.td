@@ -46,6 +46,8 @@ def IntersectMin : AttrProperty;
 /// When intersecting rely on some specially defined code.
 def IntersectCustom : AttrProperty;
 
+
+
 /// Attribute base class.
 class Attr<string S, AttrProperty I, list<AttrProperty> P> {
   // String representation of this attribute in the IR.
@@ -478,6 +480,7 @@ def : CompatRule<"checkDenormMode">;
 def : CompatRule<"checkStrictFP">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
+def : CompatRuleStrAttr<"isEqual", "sign-return-address-harden">;
 def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;
 
 class MergeRule<string F> {

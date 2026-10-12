@@ -89,7 +89,7 @@ TEST_F(AArch64IRTranslatorTest, IRTranslateBfloat16) {
   auto TM = createTargetMachine();
   if (!TM)
     GTEST_SKIP();
-  M->setDataLayout(TM->createDataLayout());
+  M->setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   TM->setGlobalISel(true);
   TM->setGlobalISelAbort(GlobalISelAbortMode::DisableWithDiag);

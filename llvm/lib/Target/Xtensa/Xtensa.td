@@ -54,6 +54,7 @@ def XtensaInstrInfo : InstrInfo;
 
 def XtensaAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def XtensaInstPrinter : AsmWriter {

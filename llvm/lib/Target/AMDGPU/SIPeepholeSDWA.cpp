@@ -223,10 +223,6 @@ char SIPeepholeSDWALegacy::ID = 0;
 
 char &llvm::SIPeepholeSDWALegacyID = SIPeepholeSDWALegacy::ID;
 
-FunctionPass *llvm::createSIPeepholeSDWALegacyPass() {
-  return new SIPeepholeSDWALegacy();
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static raw_ostream& operator<<(raw_ostream &OS, SdwaSel Sel) {
   switch(Sel) {

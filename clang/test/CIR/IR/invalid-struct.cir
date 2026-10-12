@@ -117,3 +117,17 @@ module  {
     cir.return
   }
 }
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!rec_S = !cir.struct<"S" {data !u8i, data !u32i}>
+
+module  {
+  cir.func @struct_get_member_address_space_mismatch(%arg0: !cir.ptr<!rec_S, target_address_space(1)>) {
+    // expected-error @below {{address space mismatch}}
+    %0 = cir.get_member %arg0[1] {name = "b"} : !cir.ptr<!rec_S, target_address_space(1)> -> !cir.ptr<!u32i>
+    cir.return
+  }
+}

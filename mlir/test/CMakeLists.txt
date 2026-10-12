@@ -1,7 +1,6 @@
 include(MLIRCheckHardwareFeatures)
 
 add_subdirectory(CAPI)
-add_subdirectory(lib)
 
 if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
@@ -127,6 +126,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-remarks-test
   mlir-capi-rewrite-test
   mlir-capi-smt-test
   mlir-capi-sparse-tensor-test

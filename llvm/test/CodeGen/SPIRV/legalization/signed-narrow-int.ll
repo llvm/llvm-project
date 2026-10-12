@@ -6,14 +6,15 @@
 
 ; SPIR-V (without sub-byte int extensions) widens sub-pow2 scalars to the next
 ; legal width by relabeling the LLT only, without inserting any sign-extension.
-; Sign-sensitive ops (icmp slt/sle/sgt/sge, ashr, sdiv, srem) on such operands
-; would then read the sign bit at the wrong position. The pre-legalizer must
-; emit a sign-extend-in-register before the widening so the wide-width signed
-; op observes the correct sign bit.
+; Sign-sensitive ops (icmp slt/sle/sgt/sge, ashr, sdiv, srem, sitofp) on such
+; operands would then read the sign bit at the wrong position. The pre-legalizer
+; must emit a sign-extend-in-register before the widening so the wide-width
+; signed op observes the correct sign bit.
 
 ; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#K4:]] = OpConstant %[[#I8]] 4
+; CHECK-DAG: %[[#K15:]] = OpConstant %[[#I8]] 15
 ; CHECK-DAG: %[[#K8:]] = OpConstant %[[#I32]] 8
 
 ; ----------------------------------------------------------------------------
@@ -123,9 +124,48 @@ define spir_kernel void @ashr_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
 ; CHECK: %[[#SXA4:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLA4]] %[[#K4]]
 ; CHECK: %[[#SHLB4:]] = OpShiftLeftLogical %[[#I8]] %[[#Y4]] %[[#K4]]
 ; CHECK: %[[#SXB4:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLB4]] %[[#K4]]
-; CHECK: OpSDiv %[[#I8]] %[[#SXA4]] %[[#SXB4]]
+; CHECK: %[[#R4:]] = OpSDiv %[[#I8]] %[[#SXA4]] %[[#SXB4]]
+; CHECK: OpBitwiseAnd %[[#I8]] %[[#R4]] %[[#K15]]
 define spir_kernel void @sdiv_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
   %r = sdiv i4 %x, %y
+  %z = sext i4 %r to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; smin i4: signed minimum.
+; CHECK: OpFunction
+; CHECK: %[[#X_SMIN:]] = OpFunctionParameter
+; CHECK: %[[#Y_SMIN:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHLA_SMIN:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SMIN]] %[[#K4]]
+; CHECK: %[[#SXA_SMIN:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLA_SMIN]] %[[#K4]]
+; CHECK: %[[#SHLB_SMIN:]] = OpShiftLeftLogical %[[#I8]] %[[#Y_SMIN]] %[[#K4]]
+; CHECK: %[[#SXB_SMIN:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLB_SMIN]] %[[#K4]]
+; CHECK: %[[#R_SMIN:]] = OpExtInst %[[#I8]] {{%[0-9]+}} s_min %[[#SXA_SMIN]] %[[#SXB_SMIN]]
+; CHECK: OpBitwiseAnd %[[#I8]] %[[#R_SMIN]] %[[#K15]]
+define spir_kernel void @smin_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
+  %r = call i4 @llvm.smin.i4(i4 %x, i4 %y)
+  %z = sext i4 %r to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; smax i4: signed maximum.
+; CHECK: OpFunction
+; CHECK: %[[#X_SMAX:]] = OpFunctionParameter
+; CHECK: %[[#Y_SMAX:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHLA_SMAX:]] = OpShiftLeftLogical %[[#I8]] %[[#X_SMAX]] %[[#K4]]
+; CHECK: %[[#SXA_SMAX:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLA_SMAX]] %[[#K4]]
+; CHECK: %[[#SHLB_SMAX:]] = OpShiftLeftLogical %[[#I8]] %[[#Y_SMAX]] %[[#K4]]
+; CHECK: %[[#SXB_SMAX:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLB_SMAX]] %[[#K4]]
+; CHECK: %[[#R_SMAX:]] = OpExtInst %[[#I8]] {{%[0-9]+}} s_max %[[#SXA_SMAX]] %[[#SXB_SMAX]]
+; CHECK: OpBitwiseAnd %[[#I8]] %[[#R_SMAX]] %[[#K15]]
+define spir_kernel void @smax_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
+  %r = call i4 @llvm.smax.i4(i4 %x, i4 %y)
   %z = sext i4 %r to i32
   store i32 %z, ptr addrspace(1) %out
   ret void
@@ -271,6 +311,31 @@ define spir_kernel void @sdiv_i24_from_globals() {
 }
 
 ; ----------------------------------------------------------------------------
+; sitofp has a single value operand, so the def must not be mistaken for one.
+; CHECK: OpFunction
+; CHECK: %[[#XF:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHLF:]] = OpShiftLeftLogical %[[#I8]] %[[#XF]] %[[#K4]]
+; CHECK: %[[#SXF:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLF]] %[[#K4]]
+; CHECK: OpConvertSToF {{%[0-9]+}} %[[#SXF]]
+define spir_kernel void @sitofp_i4(i4 %x, ptr addrspace(1) %out) {
+  %r = sitofp i4 %x to float
+  store float %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Negative test: uitofp must NOT emit sign-extension shifts.
+; CHECK: OpFunction
+; CHECK-NOT: OpShiftRightArithmetic
+; CHECK: OpConvertUToF
+define spir_kernel void @uitofp_i4(i4 %x, ptr addrspace(1) %out) {
+  %r = uitofp i4 %x to float
+  store float %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
 ; Negative test: unsigned compare must NOT emit sign-extension shifts.
 ; CHECK: OpFunction
 ; CHECK: %[[#X7:]] = OpFunctionParameter
@@ -291,6 +356,18 @@ define spir_kernel void @icmp_ult_i4_one(i4 %x, ptr addrspace(1) %out) {
 ; CHECK: OpShiftRightLogical
 define spir_kernel void @lshr_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
   %r = lshr i4 %x, %y
+  %z = zext i4 %r to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Negative test: unsigned minimum must NOT emit sign-extension shifts.
+; CHECK: OpFunction
+; CHECK-NOT: OpShiftRightArithmetic
+; CHECK: OpExtInst %[[#I8]] {{%[0-9]+}} u_min
+define spir_kernel void @umin_i4(i4 %x, i4 %y, ptr addrspace(1) %out) {
+  %r = call i4 @llvm.umin.i4(i4 %x, i4 %y)
   %z = zext i4 %r to i32
   store i32 %z, ptr addrspace(1) %out
   ret void

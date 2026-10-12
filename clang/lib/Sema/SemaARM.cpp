@@ -17,6 +17,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/AArch64MemoryHints.h"
 
 namespace clang {
 
@@ -319,6 +320,126 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, *MaxLimit);
   }
 
+  return false;
+}
+
+bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
+                                            CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 4))
+    return true;
+
+  // Arg 0 should be the pointer type. The pointee type must be a
+  // scalar integral or floating-point type of 8, 16, 32 or 64 bits.
+  ASTContext &Context = getASTContext();
+  auto PtrArgRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+  if (PtrArgRes.isInvalid())
+    return true;
+  auto *PtrArg = PtrArgRes.get();
+  auto *PtrTy = PtrArg->getType()->getAs<PointerType>();
+  if (!PtrTy)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_builtin_must_be_pointer)
+           << PtrArg->getType() << 0 << PtrArg->getSourceRange();
+  TheCall->setArg(0, PtrArg);
+
+  QualType PtrQT = Context.getCanonicalType(PtrTy->getPointeeType());
+  if (PtrQT.isConstQualified())
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_op_needs_non_const_pointer)
+           << PtrQT << PtrArg->getSourceRange();
+
+  PtrQT = PtrQT.getUnqualifiedType();
+  if (!PtrQT->isIntegralType(Context) && !PtrQT->isFloatingType() &&
+      !PtrQT->isMFloat8Type())
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_op_needs_atomic_int_or_fp)
+           << 0 << PtrQT << PtrArg->getSourceRange();
+
+  if (PtrQT->isBitIntType())
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_builtin_bit_int_prohibit)
+           << PtrQT << PtrArg->getSourceRange();
+
+  unsigned TySize = Context.getTypeSize(PtrQT);
+  if (TySize != 8 && TySize != 16 && TySize != 32 && TySize != 64)
+    return Diag(TheCall->getBeginLoc(), diag::err_atomic_op_hint_data_size)
+           << PtrArg->getSourceRange();
+
+  // Arg 1 is the data to be stored. The type must match the pointee
+  // type found above.
+  auto DataArgRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
+  if (DataArgRes.isInvalid())
+    return true;
+  auto *DataArg = DataArgRes.get();
+  QualType DataQT =
+      Context.getCanonicalType(DataArg->getType()).getUnqualifiedType();
+  TheCall->setArg(1, DataArg);
+
+  if (PtrQT != DataQT)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_typecheck_call_different_arg_types)
+           << PtrQT << DataQT;
+
+  // Arg 2 is the memory order, which must be relaxed, release or seq_cst
+  auto MemOrdArg =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
+  if (MemOrdArg.isInvalid())
+    return true;
+  auto *MemOrd = MemOrdArg.get();
+  if (SemaRef.convertArgumentToType(MemOrd, Context.IntTy))
+    return true;
+  TheCall->setArg(2, MemOrd);
+
+  if (!MemOrd->isValueDependent()) {
+    std::optional<llvm::APSInt> MemOrdAP =
+        MemOrd->getIntegerConstantExpr(Context);
+    if (!MemOrdAP)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_atomic_hint_has_invalid_memory_order)
+             << MemOrd->getType() << MemOrd->getSourceRange();
+
+    unsigned Ordering = MemOrdAP->getZExtValue();
+    if (!llvm::isValidAtomicOrderingCABI(Ordering))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_atomic_hint_has_invalid_memory_order)
+             << *MemOrdAP << MemOrd->getSourceRange();
+
+    auto AtomicOrdering = static_cast<llvm::AtomicOrderingCABI>(Ordering);
+    if (AtomicOrdering != llvm::AtomicOrderingCABI::relaxed &&
+        AtomicOrdering != llvm::AtomicOrderingCABI::release &&
+        AtomicOrdering != llvm::AtomicOrderingCABI::seq_cst)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_atomic_hint_has_invalid_memory_order)
+             << *MemOrdAP << MemOrd->getSourceRange();
+  }
+
+  // Arg 3 is the hint type. Only values represented by AArch64MemoryHint
+  // are valid.
+  auto HintArg =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3));
+  if (HintArg.isInvalid())
+    return true;
+  auto Hint = HintArg.get();
+  if (SemaRef.convertArgumentToType(Hint, Context.IntTy))
+    return true;
+  TheCall->setArg(3, Hint);
+
+  if (!Hint->isValueDependent()) {
+    std::optional<llvm::APSInt> HintAP = Hint->getIntegerConstantExpr(Context);
+    if (!HintAP)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_atomic_hint_has_invalid_hint_type)
+             << Hint->getType() << Hint->getSourceRange();
+
+    if (llvm::toAArch64MemoryHint(HintAP->getZExtValue()) ==
+        llvm::AArch64MemoryHint::NONE) {
+      Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
+          << *HintAP << Hint->getSourceRange();
+      return false;
+    }
+  }
   return false;
 }
 
@@ -666,15 +787,19 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
         checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
       return true;
 
-    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
+    if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_za_builtin_no_za_state)
+           diag::err_attribute_arm_za_builtin_no_za_state)
           << TheCall->getSourceRange();
+      return true;
+    }
 
-    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD))
+    if ((getSMEState(BuiltinID) & ArmZT0Mask) && !hasArmZT0State(FD)) {
       Diag(TheCall->getBeginLoc(),
-           diag::warn_attribute_arm_zt0_builtin_no_zt0_state)
+           diag::err_attribute_arm_zt0_builtin_no_zt0_state)
           << TheCall->getSourceRange();
+      return true;
+    }
   }
 
   // Range check SME intrinsics that take immediate values.
@@ -1035,6 +1160,26 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
   return false;
 }
 
+static bool checkFPMScaleIfConstant(Sema &S, CallExpr *Call, unsigned ArgNum,
+                                    int64_t Low, int64_t High) {
+  Expr *Arg = Call->getArg(ArgNum);
+
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  std::optional<llvm::APSInt> Value = Arg->getIntegerConstantExpr(S.Context);
+
+  // Runtime value: accept it.
+  if (!Value)
+    return false;
+
+  if (*Value < Low || *Value > High)
+    return S.Diag(Call->getBeginLoc(), diag::warn_argument_invalid_range)
+           << toString(*Value, 10) << Low << High << Arg->getSourceRange();
+
+  return false;
+}
+
 bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
@@ -1068,7 +1213,6 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
     return true;
   if (CheckCDEBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
-
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
   // FIXME: VFP Intrinsics should error if VFP not present.
@@ -1170,12 +1314,17 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_wsrp)
     return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
 
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+    return BuiltinARMAtomicStoreHintCall(BuiltinID, TheCall);
+
   // Only check the valid encoding range. Any constant in this range would be
   // converted to a register of the form S2_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
+  // Bit 14 is o0, i.e. op0 - 2, so op0 == 2 registers have it clear and encode
+  // below 0x4000.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
       BuiltinID == AArch64::BI_WriteStatusReg)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0x7fff);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
@@ -1220,6 +1369,15 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
 
   if (CheckSMEBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_nscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, -128, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale2)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 63);
 
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.

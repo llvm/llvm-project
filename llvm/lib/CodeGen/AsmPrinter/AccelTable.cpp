@@ -187,7 +187,6 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
     uint32_t ForeignTypeUnitCount = 0;
     uint32_t BucketCount = 0;
     uint32_t NameCount = 0;
-    uint32_t AbbrevTableSize = 0;
     uint32_t AugmentationStringSize = sizeof(AugmentationString);
     char AugmentationString[8] = {'L', 'L', 'V', 'M', '0', '7', '0', '0'};
 

@@ -17,12 +17,12 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; SDAG-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
+; SDAG-NEXT:    v_and_b32_e32 v1, 0x1ff80, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 2.0
 ; SDAG-NEXT:    ; iglp_opt mask(0x00000000)
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_add_u32_e32 v1, s0, v0
-; SDAG-NEXT:    v_add_u32_e32 v2, 0x6000, v1
+; SDAG-NEXT:    v_add_u32_e32 v0, s0, v1
+; SDAG-NEXT:    v_add_u32_e32 v2, 0x6000, v0
 ; SDAG-NEXT:    ds_read_b128 a[28:31], v2 offset:57456
 ; SDAG-NEXT:    ds_read_b128 a[24:27], v2 offset:57440
 ; SDAG-NEXT:    ds_read_b128 a[20:23], v2 offset:57424
@@ -32,97 +32,97 @@ define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in,
 ; SDAG-NEXT:    ds_read_b128 a[8:11], v2 offset:57376
 ; SDAG-NEXT:    ds_read_b128 a[12:15], v2 offset:57392
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 1.0
-; SDAG-NEXT:    v_add_u32_e32 v0, s1, v0
+; SDAG-NEXT:    v_add_u32_e32 v1, s1, v1
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v2, v3, a[0:31]
-; SDAG-NEXT:    ds_read_b128 a[60:63], v1 offset:112
-; SDAG-NEXT:    ds_read_b128 a[56:59], v1 offset:96
-; SDAG-NEXT:    ds_read_b128 a[52:55], v1 offset:80
-; SDAG-NEXT:    ds_read_b128 a[48:51], v1 offset:64
-; SDAG-NEXT:    ds_read_b128 a[32:35], v1
-; SDAG-NEXT:    ds_read_b128 a[36:39], v1 offset:16
-; SDAG-NEXT:    ds_read_b128 a[40:43], v1 offset:32
-; SDAG-NEXT:    ds_read_b128 a[44:47], v1 offset:48
+; SDAG-NEXT:    ds_read_b128 a[60:63], v0 offset:112
+; SDAG-NEXT:    ds_read_b128 a[56:59], v0 offset:96
+; SDAG-NEXT:    ds_read_b128 a[52:55], v0 offset:80
+; SDAG-NEXT:    ds_read_b128 a[48:51], v0 offset:64
+; SDAG-NEXT:    ds_read_b128 a[32:35], v0
+; SDAG-NEXT:    ds_read_b128 a[36:39], v0 offset:16
+; SDAG-NEXT:    ds_read_b128 a[40:43], v0 offset:32
+; SDAG-NEXT:    ds_read_b128 a[44:47], v0 offset:48
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
 ; SDAG-NEXT:    s_nop 15
 ; SDAG-NEXT:    s_nop 2
-; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:112
-; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:96
-; SDAG-NEXT:    ds_write_b128 v0, a[52:55] offset:80
-; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:64
-; SDAG-NEXT:    ds_write_b128 v0, a[44:47] offset:48
-; SDAG-NEXT:    ds_write_b128 v0, a[40:43] offset:32
-; SDAG-NEXT:    ds_write_b128 v0, a[36:39] offset:16
-; SDAG-NEXT:    ds_write_b128 v0, a[32:35]
-; SDAG-NEXT:    ds_read_b128 a[60:63], v1 offset:8304
-; SDAG-NEXT:    ds_read_b128 a[56:59], v1 offset:8288
-; SDAG-NEXT:    ds_read_b128 a[52:55], v1 offset:8272
-; SDAG-NEXT:    ds_read_b128 a[48:51], v1 offset:8256
-; SDAG-NEXT:    ds_read_b128 a[44:47], v1 offset:8240
-; SDAG-NEXT:    ds_read_b128 a[40:43], v1 offset:8224
-; SDAG-NEXT:    ds_read_b128 a[36:39], v1 offset:8208
-; SDAG-NEXT:    ds_read_b128 a[32:35], v1 offset:8192
+; SDAG-NEXT:    ds_write_b128 v1, a[60:63] offset:112
+; SDAG-NEXT:    ds_write_b128 v1, a[56:59] offset:96
+; SDAG-NEXT:    ds_write_b128 v1, a[52:55] offset:80
+; SDAG-NEXT:    ds_write_b128 v1, a[48:51] offset:64
+; SDAG-NEXT:    ds_write_b128 v1, a[44:47] offset:48
+; SDAG-NEXT:    ds_write_b128 v1, a[40:43] offset:32
+; SDAG-NEXT:    ds_write_b128 v1, a[36:39] offset:16
+; SDAG-NEXT:    ds_write_b128 v1, a[32:35]
+; SDAG-NEXT:    ds_read_b128 a[60:63], v0 offset:8304
+; SDAG-NEXT:    ds_read_b128 a[56:59], v0 offset:8288
+; SDAG-NEXT:    ds_read_b128 a[52:55], v0 offset:8272
+; SDAG-NEXT:    ds_read_b128 a[48:51], v0 offset:8256
+; SDAG-NEXT:    ds_read_b128 a[44:47], v0 offset:8240
+; SDAG-NEXT:    ds_read_b128 a[40:43], v0 offset:8224
+; SDAG-NEXT:    ds_read_b128 a[36:39], v0 offset:8208
+; SDAG-NEXT:    ds_read_b128 a[32:35], v0 offset:8192
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
-; SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; SDAG-NEXT:    ds_write_b128 v0, a[24:27] offset:32864
-; SDAG-NEXT:    ds_write_b128 v0, a[28:31] offset:32880
-; SDAG-NEXT:    ds_write_b128 v0, a[16:19] offset:32832
-; SDAG-NEXT:    ds_write_b128 v0, a[20:23] offset:32848
-; SDAG-NEXT:    ds_write_b128 v0, a[8:11] offset:32800
-; SDAG-NEXT:    ds_write_b128 v0, a[12:15] offset:32816
-; SDAG-NEXT:    ds_write_b128 v0, a[0:3] offset:32768
-; SDAG-NEXT:    ds_write_b128 v0, a[4:7] offset:32784
+; SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; SDAG-NEXT:    ds_write_b128 v1, a[24:27] offset:32864
+; SDAG-NEXT:    ds_write_b128 v1, a[28:31] offset:32880
+; SDAG-NEXT:    ds_write_b128 v1, a[16:19] offset:32832
+; SDAG-NEXT:    ds_write_b128 v1, a[20:23] offset:32848
+; SDAG-NEXT:    ds_write_b128 v1, a[8:11] offset:32800
+; SDAG-NEXT:    ds_write_b128 v1, a[12:15] offset:32816
+; SDAG-NEXT:    ds_write_b128 v1, a[0:3] offset:32768
+; SDAG-NEXT:    ds_write_b128 v1, a[4:7] offset:32784
 ; SDAG-NEXT:    s_nop 9
-; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:8288
-; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:8304
-; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:8256
-; SDAG-NEXT:    ds_write_b128 v0, a[52:55] offset:8272
-; SDAG-NEXT:    ds_write_b128 v0, a[40:43] offset:8224
-; SDAG-NEXT:    ds_write_b128 v0, a[44:47] offset:8240
-; SDAG-NEXT:    ds_write_b128 v0, a[32:35] offset:8192
-; SDAG-NEXT:    ds_write_b128 v0, a[36:39] offset:8208
-; SDAG-NEXT:    ds_read_b128 a[60:63], v1 offset:24688
-; SDAG-NEXT:    ds_read_b128 a[56:59], v1 offset:24672
-; SDAG-NEXT:    ds_read_b128 a[52:55], v1 offset:24656
-; SDAG-NEXT:    ds_read_b128 a[48:51], v1 offset:24640
-; SDAG-NEXT:    ds_read_b128 a[44:47], v1 offset:24624
-; SDAG-NEXT:    ds_read_b128 a[40:43], v1 offset:24608
-; SDAG-NEXT:    ds_read_b128 a[36:39], v1 offset:24592
-; SDAG-NEXT:    ds_read_b128 a[32:35], v1 offset:24576
+; SDAG-NEXT:    ds_write_b128 v1, a[56:59] offset:8288
+; SDAG-NEXT:    ds_write_b128 v1, a[60:63] offset:8304
+; SDAG-NEXT:    ds_write_b128 v1, a[48:51] offset:8256
+; SDAG-NEXT:    ds_write_b128 v1, a[52:55] offset:8272
+; SDAG-NEXT:    ds_write_b128 v1, a[40:43] offset:8224
+; SDAG-NEXT:    ds_write_b128 v1, a[44:47] offset:8240
+; SDAG-NEXT:    ds_write_b128 v1, a[32:35] offset:8192
+; SDAG-NEXT:    ds_write_b128 v1, a[36:39] offset:8208
+; SDAG-NEXT:    ds_read_b128 a[60:63], v0 offset:24688
+; SDAG-NEXT:    ds_read_b128 a[56:59], v0 offset:24672
+; SDAG-NEXT:    ds_read_b128 a[52:55], v0 offset:24656
+; SDAG-NEXT:    ds_read_b128 a[48:51], v0 offset:24640
+; SDAG-NEXT:    ds_read_b128 a[44:47], v0 offset:24624
+; SDAG-NEXT:    ds_read_b128 a[40:43], v0 offset:24608
+; SDAG-NEXT:    ds_read_b128 a[36:39], v0 offset:24592
+; SDAG-NEXT:    ds_read_b128 a[32:35], v0 offset:24576
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
 ; SDAG-NEXT:    s_nop 15
 ; SDAG-NEXT:    s_nop 2
-; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:16480
-; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:16496
-; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:16448
-; SDAG-NEXT:    ds_write_b128 v0, a[52:55] offset:16464
-; SDAG-NEXT:    ds_write_b128 v0, a[40:43] offset:16416
-; SDAG-NEXT:    ds_write_b128 v0, a[44:47] offset:16432
-; SDAG-NEXT:    ds_write_b128 v0, a[32:35] offset:16384
-; SDAG-NEXT:    ds_write_b128 v0, a[36:39] offset:16400
-; SDAG-NEXT:    ds_read_b128 a[60:63], v1 offset:49264
-; SDAG-NEXT:    ds_read_b128 a[56:59], v1 offset:49248
-; SDAG-NEXT:    ds_read_b128 a[52:55], v1 offset:49232
-; SDAG-NEXT:    ds_read_b128 a[48:51], v1 offset:49216
-; SDAG-NEXT:    ds_read_b128 a[44:47], v1 offset:49200
-; SDAG-NEXT:    ds_read_b128 a[40:43], v1 offset:49184
-; SDAG-NEXT:    ds_read_b128 a[36:39], v1 offset:49168
-; SDAG-NEXT:    ds_read_b128 a[32:35], v1 offset:49152
+; SDAG-NEXT:    ds_write_b128 v1, a[56:59] offset:16480
+; SDAG-NEXT:    ds_write_b128 v1, a[60:63] offset:16496
+; SDAG-NEXT:    ds_write_b128 v1, a[48:51] offset:16448
+; SDAG-NEXT:    ds_write_b128 v1, a[52:55] offset:16464
+; SDAG-NEXT:    ds_write_b128 v1, a[40:43] offset:16416
+; SDAG-NEXT:    ds_write_b128 v1, a[44:47] offset:16432
+; SDAG-NEXT:    ds_write_b128 v1, a[32:35] offset:16384
+; SDAG-NEXT:    ds_write_b128 v1, a[36:39] offset:16400
+; SDAG-NEXT:    ds_read_b128 a[60:63], v0 offset:49264
+; SDAG-NEXT:    ds_read_b128 a[56:59], v0 offset:49248
+; SDAG-NEXT:    ds_read_b128 a[52:55], v0 offset:49232
+; SDAG-NEXT:    ds_read_b128 a[48:51], v0 offset:49216
+; SDAG-NEXT:    ds_read_b128 a[44:47], v0 offset:49200
+; SDAG-NEXT:    ds_read_b128 a[40:43], v0 offset:49184
+; SDAG-NEXT:    ds_read_b128 a[36:39], v0 offset:49168
+; SDAG-NEXT:    ds_read_b128 a[32:35], v0 offset:49152
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v2, v3, a[32:63]
 ; SDAG-NEXT:    s_nop 15
 ; SDAG-NEXT:    s_nop 2
-; SDAG-NEXT:    ds_write_b128 v0, a[56:59] offset:24672
-; SDAG-NEXT:    ds_write_b128 v0, a[60:63] offset:24688
-; SDAG-NEXT:    ds_write_b128 v0, a[48:51] offset:24640
-; SDAG-NEXT:    ds_write_b128 v0, a[52:55] offset:24656
-; SDAG-NEXT:    ds_write_b128 v0, a[40:43] offset:24608
-; SDAG-NEXT:    ds_write_b128 v0, a[44:47] offset:24624
-; SDAG-NEXT:    ds_write_b128 v0, a[32:35] offset:24576
-; SDAG-NEXT:    ds_write_b128 v0, a[36:39] offset:24592
+; SDAG-NEXT:    ds_write_b128 v1, a[56:59] offset:24672
+; SDAG-NEXT:    ds_write_b128 v1, a[60:63] offset:24688
+; SDAG-NEXT:    ds_write_b128 v1, a[48:51] offset:24640
+; SDAG-NEXT:    ds_write_b128 v1, a[52:55] offset:24656
+; SDAG-NEXT:    ds_write_b128 v1, a[40:43] offset:24608
+; SDAG-NEXT:    ds_write_b128 v1, a[44:47] offset:24624
+; SDAG-NEXT:    ds_write_b128 v1, a[32:35] offset:24576
+; SDAG-NEXT:    ds_write_b128 v1, a[36:39] offset:24592
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_iglp_opt_mfma_gemm:

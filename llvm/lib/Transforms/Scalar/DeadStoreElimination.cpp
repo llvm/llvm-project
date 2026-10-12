@@ -28,10 +28,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -74,7 +76,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -111,74 +112,6 @@ STATISTIC(NumDomMemDefChecks,
 
 DEBUG_COUNTER(MemorySSACounter, "dse-memoryssa",
               "Controls which MemoryDefs are eliminated.");
-
-static cl::opt<bool>
-EnablePartialOverwriteTracking("enable-dse-partial-overwrite-tracking",
-  cl::init(true), cl::Hidden,
-  cl::desc("Enable partial-overwrite tracking in DSE"));
-
-static cl::opt<bool>
-EnablePartialStoreMerging("enable-dse-partial-store-merging",
-  cl::init(true), cl::Hidden,
-  cl::desc("Enable partial store merging in DSE"));
-
-static cl::opt<unsigned>
-    MemorySSAScanLimit("dse-memoryssa-scanlimit", cl::init(150), cl::Hidden,
-                       cl::desc("The number of memory instructions to scan for "
-                                "dead store elimination (default = 150)"));
-static cl::opt<unsigned> MemorySSAUpwardsStepLimit(
-    "dse-memoryssa-walklimit", cl::init(90), cl::Hidden,
-    cl::desc("The maximum number of steps while walking upwards to find "
-             "MemoryDefs that may be killed (default = 90)"));
-
-static cl::opt<unsigned> MemorySSAPartialStoreLimit(
-    "dse-memoryssa-partial-store-limit", cl::init(5), cl::Hidden,
-    cl::desc("The maximum number candidates that only partially overwrite the "
-             "killing MemoryDef to consider"
-             " (default = 5)"));
-
-static cl::opt<unsigned> MemorySSADefsPerBlockLimit(
-    "dse-memoryssa-defs-per-block-limit", cl::init(5000), cl::Hidden,
-    cl::desc("The number of MemoryDefs we consider as candidates to eliminated "
-             "other stores per basic block (default = 5000)"));
-
-static cl::opt<unsigned> MemorySSASameBBStepCost(
-    "dse-memoryssa-samebb-cost", cl::init(1), cl::Hidden,
-    cl::desc(
-        "The cost of a step in the same basic block as the killing MemoryDef"
-        "(default = 1)"));
-
-static cl::opt<unsigned>
-    MemorySSAOtherBBStepCost("dse-memoryssa-otherbb-cost", cl::init(5),
-                             cl::Hidden,
-                             cl::desc("The cost of a step in a different basic "
-                                      "block than the killing MemoryDef"
-                                      "(default = 5)"));
-
-static cl::opt<unsigned> MemorySSAPathCheckLimit(
-    "dse-memoryssa-path-check-limit", cl::init(50), cl::Hidden,
-    cl::desc("The maximum number of blocks to check when trying to prove that "
-             "all paths to an exit go through a killing block (default = 50)"));
-
-// This flags allows or disallows DSE to optimize MemorySSA during its
-// traversal. Note that DSE optimizing MemorySSA may impact other passes
-// downstream of the DSE invocation and can lead to issues not being
-// reproducible in isolation (i.e. when MemorySSA is built from scratch). In
-// those cases, the flag can be used to check if DSE's MemorySSA optimizations
-// impact follow-up passes.
-static cl::opt<bool>
-    OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
-                      cl::desc("Allow DSE to optimize memory accesses."));
-
-// TODO: remove this flag.
-static cl::opt<bool> EnableInitializesImprovement(
-    "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
-    cl::desc("Enable the initializes attr improvement in DSE"));
-
-static cl::opt<unsigned> MaxDepthRecursion(
-    "dse-max-dom-cond-depth", cl::init(1024), cl::Hidden,
-    cl::desc("Max dominator tree recursion depth for eliminating redundant "
-             "stores via dominating conditions"));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -307,7 +240,8 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
 /// NOTE: This function must only be called if both \p KillingLoc and \p
 /// DeadLoc belong to the same underlying object with valid \p KillingOff and
 /// \p DeadOff.
-static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
+static OverwriteResult isPartialOverwrite(const ScalarOptions &Opts,
+                                          const MemoryLocation &KillingLoc,
                                           const MemoryLocation &DeadLoc,
                                           int64_t KillingOff, int64_t DeadOff,
                                           Instruction *DeadI,
@@ -319,7 +253,7 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
   // dead store.
   // Note: The correctness of this logic depends on the fact that this function
   // is not even called providing DepWrite when there are any intervening reads.
-  if (EnablePartialOverwriteTracking &&
+  if (Opts.enable_dse_partial_overwrite_tracking &&
       KillingOff < int64_t(DeadOff + DeadSize) &&
       int64_t(KillingOff + KillingSize) >= DeadOff) {
 
@@ -376,7 +310,7 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
 
   // Check for a dead store which writes to all the memory locations that
   // the killing store writes to.
-  if (EnablePartialStoreMerging && KillingOff >= DeadOff &&
+  if (Opts.enable_dse_partial_store_merging && KillingOff >= DeadOff &&
       int64_t(DeadOff + DeadSize) > KillingOff &&
       uint64_t(KillingOff - DeadOff) + KillingSize <= DeadSize) {
     LLVM_DEBUG(dbgs() << "DSE: Partial overwrite a dead load [" << DeadOff
@@ -396,7 +330,7 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
   // In this case we may want to trim the size of dead store to avoid
   // generating stores to addresses which will definitely be overwritten killing
   // store.
-  if (!EnablePartialOverwriteTracking &&
+  if (!Opts.enable_dse_partial_overwrite_tracking &&
       (KillingOff > DeadOff && KillingOff < int64_t(DeadOff + DeadSize) &&
        int64_t(KillingOff + KillingSize) >= int64_t(DeadOff + DeadSize)))
     return OW_End;
@@ -410,7 +344,7 @@ static OverwriteResult isPartialOverwrite(const MemoryLocation &KillingLoc,
   // In this case we may want to move the destination address and trim the size
   // of dead store to avoid generating stores to addresses which will definitely
   // be overwritten killing store.
-  if (!EnablePartialOverwriteTracking &&
+  if (!Opts.enable_dse_partial_overwrite_tracking &&
       (KillingOff <= DeadOff && int64_t(KillingOff + KillingSize) > DeadOff)) {
     assert(int64_t(KillingOff + KillingSize) < int64_t(DeadOff + DeadSize) &&
            "Expect to be handled as OW_Complete");
@@ -960,6 +894,7 @@ getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 namespace {
 
 struct DSEState {
+  const ScalarOptions &Opts;
   Function &F;
   AliasAnalysis &AA;
   EarliestEscapeAnalysis EA;
@@ -1013,9 +948,9 @@ struct DSEState {
   SmallVector<Instruction *> ToRemove;
 
   // Class contains self-reference, make sure it's not copied/moved.
-  DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
-           PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
-           const CycleInfo &CI);
+  DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
+           MemorySSA &MSSA, DominatorTree &DT, PostDominatorTree &PDT,
+           const TargetLibraryInfo &TLI, const CycleInfo &CI);
   DSEState(const DSEState &) = delete;
   DSEState &operator=(const DSEState &) = delete;
 
@@ -1190,11 +1125,11 @@ static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                               /*ReturnCaptures=*/false));
 }
 
-DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
-                   DominatorTree &DT, PostDominatorTree &PDT,
+DSEState::DSEState(const ScalarOptions &Opts, Function &F, AliasAnalysis &AA,
+                   MemorySSA &MSSA, DominatorTree &DT, PostDominatorTree &PDT,
                    const TargetLibraryInfo &TLI, const CycleInfo &CI)
-    : F(F), AA(AA), EA(DT, nullptr, &CI), BatchAA(AA, &EA), MSSA(MSSA), DT(DT),
-      PDT(PDT), TLI(TLI), DL(F.getDataLayout()), CI(CI) {
+    : Opts(Opts), F(F), AA(AA), EA(DT, nullptr, &CI), BatchAA(AA, &EA),
+      MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI), DL(F.getDataLayout()), CI(CI) {
   // Collect blocks with throwing instructions not modeled in MemorySSA and
   // alloc-like objects.
   unsigned PO = 0;
@@ -1206,9 +1141,10 @@ DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
         ThrowingBlocks.insert(I.getParent());
 
       auto *MD = dyn_cast_or_null<MemoryDef>(MA);
-      if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
+      if (MD && MemDefs.size() < Opts.dse_memoryssa_defs_per_block_limit &&
           (getLocForWrite(&I) || isMemTerminatorInst(&I) ||
-           (EnableInitializesImprovement && hasInitializesAttr(&I))))
+           (Opts.enable_dse_initializes_attr_improvement &&
+            hasInitializesAttr(&I))))
         MemDefs.push_back(MD);
     }
   }
@@ -1522,7 +1458,7 @@ bool DSEState::isWriteAtEndOfFunction(MemoryDef *Def,
 
   pushMemUses(Def, WorkList, Visited);
   for (unsigned I = 0; I < WorkList.size(); I++) {
-    if (WorkList.size() >= MemorySSAScanLimit) {
+    if (WorkList.size() >= Opts.dse_memoryssa_scanlimit) {
       LLVM_DEBUG(dbgs() << "  ... hit exploration limit.\n");
       return false;
     }
@@ -1663,7 +1599,7 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
   // the moment we only support instructions with a single write location, so
   // it should be sufficient to disable optimizations for instructions that
   // also read from memory.
-  bool CanOptimize = OptimizeMemorySSA &&
+  bool CanOptimize = Opts.dse_optimize_memoryssa &&
                      KillingDef->getDefiningAccess() == StartAccess &&
                      !KillingI->mayReadFromMemory();
 
@@ -1690,8 +1626,8 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
     // Cost of a step. Accesses in the same block are more likely to be valid
     // candidates for elimination, hence consider them cheaper.
     unsigned StepCost = KillingDef->getBlock() == Current->getBlock()
-                            ? MemorySSASameBBStepCost
-                            : MemorySSAOtherBBStepCost;
+                            ? Opts.dse_memoryssa_samebb_cost
+                            : Opts.dse_memoryssa_otherbb_cost;
     if (WalkerStepLimit <= StepCost) {
       LLVM_DEBUG(dbgs() << "   ...  hit walker step limit\n");
       return std::nullopt;
@@ -2011,7 +1947,7 @@ std::optional<MemoryAccess *> DSEState::getDomMemoryDef(
 
       WorkList.insert_range(predecessors(Current));
 
-      if (WorkList.size() >= MemorySSAPathCheckLimit)
+      if (WorkList.size() >= Opts.dse_memoryssa_path_check_limit)
         return std::nullopt;
     }
     NumCFGSuccess++;
@@ -2204,18 +2140,15 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
   };
 
   auto VisitNode = [&](DomTreeNode *Node, unsigned Depth, auto &Self) -> void {
-    if (Depth > MaxDepthRecursion)
+    if (Depth > Opts.dse_max_dom_cond_depth)
       return;
 
     BasicBlock *BB = Node->getBlock();
     // Check for redundant stores against active known conditions.
     if (auto *Accesses = MSSA.getBlockDefs(BB)) {
-      for (auto &Access : make_early_inc_range(*Accesses)) {
-        auto *Def = dyn_cast<MemoryDef>(&Access);
-        if (!Def)
-          continue;
-
-        auto *SI = dyn_cast<StoreInst>(Def->getMemoryInst());
+      for (MemoryDef &Def :
+           make_early_inc_range(make_isa_range<MemoryDef>(*Accesses))) {
+        auto *SI = dyn_cast<StoreInst>(Def.getMemoryInst());
         if (!SI || !SI->isUnordered())
           continue;
 
@@ -2229,7 +2162,7 @@ bool DSEState::eliminateRedundantStoresViaDominatingConditions() {
         // load and the potential redundant store.
         MemoryAccess *LoadAccess = MSSA.getMemoryAccess(LI);
         MemoryAccess *ClobberingAccess =
-            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(&Def, BatchAA);
         if (MSSA.dominates(ClobberingAccess, LoadAccess)) {
           LLVM_DEBUG(dbgs()
                      << "Removing No-Op Store:\n  DEAD: " << *SI << '\n');
@@ -2613,9 +2546,9 @@ std::pair<bool, bool>
 DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
   bool Changed = false;
   bool DeletedKillingLoc = false;
-  unsigned ScanLimit = MemorySSAScanLimit;
-  unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
-  unsigned PartialLimit = MemorySSAPartialStoreLimit;
+  unsigned ScanLimit = Opts.dse_memoryssa_scanlimit;
+  unsigned WalkerStepLimit = Opts.dse_memoryssa_walklimit;
+  unsigned PartialLimit = Opts.dse_memoryssa_partial_store_limit;
   // Worklist of MemoryAccesses that may be killed by
   // "KillingLocWrapper.MemDef".
   SmallSetVector<MemoryAccess *, 8> ToCheck;
@@ -2698,11 +2631,12 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
                       KillingOffset, DeadOffset);
       if (OR == OW_MaybePartial) {
         auto &IOL = IOLs[DeadLocWrapper.DefInst->getParent()];
-        OR = isPartialOverwrite(KillingLocWrapper.MemLoc, DeadLocWrapper.MemLoc,
-                                KillingOffset, DeadOffset,
-                                DeadLocWrapper.DefInst, IOL);
+        OR = isPartialOverwrite(Opts, KillingLocWrapper.MemLoc,
+                                DeadLocWrapper.MemLoc, KillingOffset,
+                                DeadOffset, DeadLocWrapper.DefInst, IOL);
       }
-      if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
+      if (Opts.enable_dse_partial_store_merging &&
+          OR == OW_PartialEarlierWithFullLater) {
         auto *DeadSI = dyn_cast<StoreInst>(DeadLocWrapper.DefInst);
         auto *KillingSI = dyn_cast<StoreInst>(KillingLocWrapper.DefInst);
         // We are re-using tryToMergePartialOverlappingStores, which requires
@@ -2789,8 +2723,9 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                                 DominatorTree &DT, PostDominatorTree &PDT,
                                 const TargetLibraryInfo &TLI,
                                 const CycleInfo &CI) {
+  const ScalarOptions &Opts = ScalarOptions::Global;
   bool MadeChange = false;
-  DSEState State(F, AA, MSSA, DT, PDT, TLI, CI);
+  DSEState State(Opts, F, AA, MSSA, DT, PDT, TLI, CI);
   // For each store:
   for (unsigned I = 0; I < State.MemDefs.size(); I++) {
     MemoryDef *KillingDef = State.MemDefs[I];
@@ -2798,12 +2733,13 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       continue;
 
     MemoryDefWrapper KillingDefWrapper(
-        KillingDef, State.getLocForInst(KillingDef->getMemoryInst(),
-                                        EnableInitializesImprovement));
+        KillingDef,
+        State.getLocForInst(KillingDef->getMemoryInst(),
+                            Opts.enable_dse_initializes_attr_improvement));
     MadeChange |= State.eliminateDeadDefs(KillingDefWrapper);
   }
 
-  if (EnablePartialOverwriteTracking)
+  if (Opts.enable_dse_partial_overwrite_tracking)
     for (auto &KV : State.IOLs)
       MadeChange |= State.removePartiallyOverlappedStores(KV.second);
 

@@ -12,31 +12,28 @@
 
 #include "orc-rt/bedrock/ExecutorProcessInfo.h"
 #include "orc-rt/support/bit.h"
+
+#include "ErrorMatchers.h"
 #include "gtest/gtest.h"
 
-#include <unistd.h>
-
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 TEST(ExecutorProcessInfoTest, DetectSucceeds) {
-  auto EPI = ExecutorProcessInfo::Detect();
-  EXPECT_TRUE(!!EPI);
+  EXPECT_THAT_EXPECTED(ExecutorProcessInfo::Detect(), Succeeded());
 }
 
 TEST(ExecutorProcessInfoTest, DetectPageSizeIsPowerOfTwo) {
-  auto EPI = cantFail(ExecutorProcessInfo::Detect());
-  EXPECT_GT(EPI.pageSize(), 0U);
-  EXPECT_TRUE(has_single_bit(EPI.pageSize()));
+  auto EPI = ExecutorProcessInfo::Detect();
+  ASSERT_THAT_EXPECTED(EPI, Succeeded());
+  EXPECT_GT(EPI->pageSize(), 0U);
+  EXPECT_TRUE(has_single_bit(EPI->pageSize()));
 }
 
 TEST(ExecutorProcessInfoTest, DetectPageSizeAtLeast4096) {
-  auto EPI = cantFail(ExecutorProcessInfo::Detect());
-  EXPECT_GE(EPI.pageSize(), 4096U);
-}
-
-TEST(ExecutorProcessInfoTest, DetectPageSizeMatchesSysconf) {
-  auto EPI = cantFail(ExecutorProcessInfo::Detect());
-  EXPECT_EQ(EPI.pageSize(), static_cast<size_t>(sysconf(_SC_PAGESIZE)));
+  auto EPI = ExecutorProcessInfo::Detect();
+  ASSERT_THAT_EXPECTED(EPI, Succeeded());
+  EXPECT_GE(EPI->pageSize(), 4096U);
 }
 
 TEST(ExecutorProcessInfoTest, ConstructWithExplicitValues) {

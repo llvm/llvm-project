@@ -60,7 +60,9 @@ struct OpenACCPointerLikeModel
   mlir::MemRefType getAsMemRefType(mlir::Type pointer,
                                    mlir::ModuleOp module) const;
 
-  bool isDeviceData(mlir::Type pointer, mlir::Value var) const;
+  bool isDeviceAccessible(mlir::Type pointer, mlir::Value var) const;
+
+  bool isInDeviceMemory(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -119,7 +121,9 @@ struct OpenACCMappableModel
                         mlir::acc::ReductionOperator op,
                         mlir::Attribute fastmathFlags) const;
 
-  bool isDeviceData(mlir::Type type, mlir::Value var) const;
+  bool isDeviceAccessible(mlir::Type type, mlir::Value var) const;
+
+  bool isInDeviceMemory(mlir::Type type, mlir::Value var) const;
 };
 
 struct OpenACCReducibleLogicalModel

@@ -183,7 +183,7 @@ void ForEachOp::print(OpAsmPrinter &p) {
   BlockArgument arg = getLoopVariable();
   p << ' ' << arg << " : " << arg.getType() << " in " << getValues() << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " -> ";
   p.printSuccessor(getSuccessor());
 }

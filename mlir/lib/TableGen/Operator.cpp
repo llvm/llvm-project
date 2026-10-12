@@ -274,6 +274,35 @@ const Trait *Operator::getTrait(StringRef trait) const {
   return nullptr;
 }
 
+bool Operator::hasNonEmptyProperties() const {
+  if (!properties.empty())
+    return true;
+  if (getTrait("::mlir::OpTrait::AttrSizedOperandSegments") ||
+      getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    return true;
+  return llvm::any_of(attributes, [](const NamedAttribute &attr) {
+    return !attr.attr.isDerivedAttr();
+  });
+}
+
+SmallVector<StringRef> Operator::getInherentAttrNames() const {
+  SmallVector<StringRef> names;
+  for (const NamedAttribute &attr : attributes)
+    if (!attr.attr.isDerivedAttr())
+      names.push_back(attr.name);
+  for (const NamedProperty &property : properties)
+    names.push_back(property.name);
+  if (getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+    names.push_back(operandSegmentAttrName);
+    names.push_back(legacyOperandSegmentAttrName);
+  }
+  if (getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+    names.push_back(resultSegmentAttrName);
+    names.push_back(legacyResultSegmentAttrName);
+  }
+  return names;
+}
+
 auto Operator::region_begin() const -> const_region_iterator {
   return regions.begin();
 }

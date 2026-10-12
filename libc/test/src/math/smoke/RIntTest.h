@@ -44,8 +44,8 @@ public:
   }
 };
 
-#define LIST_RINT_TESTS(F, func)                                               \
-  using LlvmLibcRIntTest = RIntTestTemplate<F>;                                \
-  TEST_F(LlvmLibcRIntTest, specialNumbers) { testSpecialNumbers(&func); }
+#define LIST_RINT_TESTS(Name, F, func)                                         \
+  using LlvmLibc##Name##Test = RIntTestTemplate<F>;                            \
+  TEST_F(LlvmLibc##Name##Test, specialNumbers) { testSpecialNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_RINTTEST_H
