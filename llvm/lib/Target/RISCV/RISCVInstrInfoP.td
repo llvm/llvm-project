@@ -2461,8 +2461,6 @@ let Predicates = [HasStdExtP] in {
             (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_ppairo (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2))),
             (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_ppairoe_h GPR:$rs1, GPR:$rs2)),
-            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
 
   // 16-bit multiply high accumulate patterns
   def : Pat<(XLenVecI16VT (riscv_mhacc_h_b0 (XLenVecI16VT GPR:$rd),
