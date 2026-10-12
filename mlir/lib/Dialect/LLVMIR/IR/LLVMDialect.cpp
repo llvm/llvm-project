@@ -928,12 +928,13 @@ LogicalResult LoadOp::verify() {
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
                    bool isNonTemporal, bool isInvariant, bool isInvariantGroup,
-                   AtomicOrdering ordering, StringRef syncscope) {
+                   bool isNoundef, AtomicOrdering ordering,
+                   StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr,
+        /*dereferenceable=*/nullptr, isNoundef,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
