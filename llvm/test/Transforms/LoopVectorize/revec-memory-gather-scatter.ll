@@ -4,9 +4,9 @@
 ; RUN:     -force-target-supports-gather-scatter-ops \
 ; RUN:     < %s | FileCheck %s
 
-define void @strided_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
+define void @strided_v4(ptr noalias %dst, ptr noalias %src) vscale_range(1, 16) {
 ; CHECK-LABEL: define void @strided_v4(
-; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -17,7 +17,7 @@ define void @strided_v4(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[SRC_GEP]], align 16
 ; CHECK-NEXT:    store <4 x i32> [[V]], ptr [[DST_GEP]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -33,7 +33,7 @@ loop:
   %v = load <4 x i32>, ptr %src.gep, align 16
   store <4 x i32> %v, ptr %dst.gep, align 16
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:

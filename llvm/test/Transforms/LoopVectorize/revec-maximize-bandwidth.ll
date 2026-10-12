@@ -20,7 +20,7 @@
 ; MAXBW: LV: Found feasible scalable VF = vscale x 2
 
 define void @max_bandwidth(ptr noalias %dst4, ptr noalias %src4,
-                           ptr noalias %dst2, ptr noalias %src2, i64 %n) {
+                           ptr noalias %dst2, ptr noalias %src2) vscale_range(1, 16) {
 entry:
   br label %loop
 
@@ -37,7 +37,7 @@ loop:
   %add2 = add <2 x i8> %v2, splat (i8 1)
   store <2 x i8> %add2, ptr %dst2.gep, align 2
   %iv.next = add nuw i64 %iv, 1
-  %done = icmp eq i64 %iv.next, %n
+  %done = icmp eq i64 %iv.next, 1024
   br i1 %done, label %exit, label %loop
 
 exit:
