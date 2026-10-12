@@ -9,21 +9,29 @@
 # RUN:   > %t.show
 # RUN: FileCheck %s --check-prefix=FILTERED-SHOW < %t.show
 # RUN: not grep -E '23\| +[1-9]' %t.show
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%S/Inputs --respect-coverage-exclusion-markers \
+# RUN:   --format=html %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=FILTERED-HTML
 
-# DEFAULT-SHOW: 1|      1|#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LLVM_COVERAGE_EXCLUDE_LINE
+# FILTERED-HTML: <a name='L4' href='#L4'><pre>4</pre></a></td><td class='skipped-line'></td>
+# FILTERED-HTML: <a name='L10' href='#L10'><pre>10</pre></a></td><td class='skipped-line'></td>
+# FILTERED-HTML: <a name='L11' href='#L11'><pre>11</pre></a></td><td class='covered-line'><pre>1</pre></td>
+
+# DEFAULT-SHOW: 1|      1|#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
 # DEFAULT-SHOW: 4|      1|  return x ? 1 : 0; // LCOV_EXCL_LINE
 # DEFAULT-SHOW: 7|      1|int partially_excluded_block(int x) {
 # DEFAULT-SHOW: 9|      1|  if (x)
 # DEFAULT-SHOW: 10|      0|    return 1;
 # DEFAULT-SHOW: 11|      1|  return 0; // LCOV_EXCL_STOP
-# FILTERED-SHOW: 1|       |#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LLVM_COVERAGE_EXCLUDE_LINE
+# FILTERED-SHOW: 1|       |#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
 # FILTERED-SHOW: 3|      1|int excluded_line(int x) {
 # FILTERED-SHOW-NEXT: 4|       |  return x ? 1 : 0; // LCOV_EXCL_LINE
-# FILTERED-SHOW: 8|       |  // LLVM_COVERAGE_EXCLUDE_START
+# FILTERED-SHOW: 8|       |  // LCOV_EXCL_START
 # FILTERED-SHOW-NEXT: 9|       |  if (x)
 # FILTERED-SHOW-NEXT: 10|       |    return 1;
 # FILTERED-SHOW-NEXT: 11|      1|  return 0; // LCOV_EXCL_STOP
-# FILTERED-SHOW: 14|       |static int excluded_function(int x) { return x; } // LLVM_COVERAGE_EXCLUDE_LINE
+# FILTERED-SHOW: 14|       |static int excluded_function(int x) { return x; } // LCOV_EXCL_LINE
 # FILTERED-SHOW: 17|      1|  if (x)
 # FILTERED-SHOW: 23|       |  return x ? 1 : 0; // LCOV_EXCL_LINE
 
@@ -111,6 +119,23 @@
 # LCOV-NEXT: LH:16
 
 # RUN: split-file %s %t.sources
+# RUN: mkdir -p %t.sources/ignored-llvm
+# RUN: sed 's/LCOV_EXCL_/LLVM_COVERAGE_EXCLUDE_/g' %S/Inputs/lcov-exclusion-markers.cpp \
+# RUN:   > %t.sources/ignored-llvm/lcov-exclusion-markers.cpp
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/ignored-llvm --respect-coverage-exclusion-markers \
+# RUN:   %t.sources/ignored-llvm/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=IGNORED-LLVM
+# RUN: llvm-cov report %t.o -instr-profile=%t.profdata \
+# RUN:   -path-equivalence=/tmp,%t.sources/ignored-llvm --respect-coverage-exclusion-markers \
+# RUN:   --show-branch-summary %t.sources/ignored-llvm/lcov-exclusion-markers.cpp \
+# RUN:   | FileCheck %s --check-prefix=DEFAULT-REPORT
+
+# IGNORED-LLVM: 1|      1|#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LLVM_COVERAGE_EXCLUDE_LINE
+# IGNORED-LLVM: 9|      1|  if (x)
+# IGNORED-LLVM-NEXT: 10|      0|    return 1;
+# IGNORED-LLVM: 14|      1|static int excluded_function(int x) { return x; } // LLVM_COVERAGE_EXCLUDE_LINE
+
 # RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=/tmp,%t.sources/unmatched \
 # RUN:   --respect-coverage-exclusion-markers \
@@ -121,16 +146,14 @@
 # RUN:   --respect-coverage-exclusion-markers \
 # RUN:   %t.sources/orphan/lcov-exclusion-markers.cpp 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=ORPHAN
-# RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=/tmp,%t.sources/unmatched-llvm \
 # RUN:   --respect-coverage-exclusion-markers \
-# RUN:   %t.sources/unmatched-llvm/lcov-exclusion-markers.cpp 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=UNMATCHED-LLVM
-# RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
+# RUN:   %t.sources/unmatched-llvm/lcov-exclusion-markers.cpp > /dev/null
+# RUN: llvm-cov show %t.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=/tmp,%t.sources/orphan-llvm \
 # RUN:   --respect-coverage-exclusion-markers \
-# RUN:   %t.sources/orphan-llvm/lcov-exclusion-markers.cpp 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=ORPHAN-LLVM
+# RUN:   %t.sources/orphan-llvm/lcov-exclusion-markers.cpp > /dev/null
 # RUN: not llvm-cov show %t.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=/tmp,%t.sources/overlap \
 # RUN:   --respect-coverage-exclusion-markers \
@@ -223,10 +246,8 @@
 
 # UNMATCHED: LCOV_EXCL_START at line 1 has no matching LCOV_EXCL_STOP
 # ORPHAN: LCOV_EXCL_STOP at line 1 has no matching LCOV_EXCL_START
-# UNMATCHED-LLVM: LLVM_COVERAGE_EXCLUDE_START at line 1 has no matching LLVM_COVERAGE_EXCLUDE_STOP
-# ORPHAN-LLVM: LLVM_COVERAGE_EXCLUDE_STOP at line 1 has no matching LLVM_COVERAGE_EXCLUDE_START
-# OVERLAP: overlapping LLVM_COVERAGE_EXCLUDE_START at line 2; previous block started at line 1
-# STOP-LINE: 11|       |  return 0; // LLVM_COVERAGE_EXCLUDE_STOP LCOV_EXCL_LINE
+# OVERLAP: overlapping LCOV_EXCL_START at line 2; previous block started at line 1
+# STOP-LINE: 11|       |  return 0; // LCOV_EXCL_STOP LCOV_EXCL_LINE
 # MISSING: error: {{.*}}lcov-exclusion-markers.cpp: {{[Nn]o}} such file or directory
 # MISSING-REFERENCE: error: {{.*}}prevent_false_instantiations.h: {{[Nn]o}} such file or directory
 
@@ -256,7 +277,7 @@
 // LLVM_COVERAGE_EXCLUDE_STOP
 #--- overlap/lcov-exclusion-markers.cpp
 // LCOV_EXCL_START
-// LLVM_COVERAGE_EXCLUDE_START
+// LCOV_EXCL_START
 // LCOV_EXCL_STOP
 #--- stop-line/lcov-exclusion-markers.cpp
 #define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
@@ -269,7 +290,7 @@ int partially_excluded_block(int x) {
   // LCOV_EXCL_START
   if (x)
     return 1;
-  return 0; // LLVM_COVERAGE_EXCLUDE_STOP LCOV_EXCL_LINE
+  return 0; // LCOV_EXCL_STOP LCOV_EXCL_LINE
 }
 
 static int excluded_function(int x) { return x; } // LCOV_EXCL_LINE

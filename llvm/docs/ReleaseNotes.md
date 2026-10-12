@@ -282,9 +282,10 @@ Makes programs 10x faster by doing Special New Thing.
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
 * llvm-cov now supports an opt-in `-respect-coverage-exclusion-markers` option
-  for excluding coverage associated with `LLVM_COVERAGE_EXCLUDE_LINE` and
-  `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP` source markers.
-  The corresponding `LCOV_EXCL_*` markers are also recognized.
+  for excluding coverage associated with `LCOV_EXCL_LINE` and
+  `LCOV_EXCL_START`/`LCOV_EXCL_STOP` source markers. The markers apply to all
+  llvm-cov report formats, including text and HTML views, summaries, and JSON
+  and LCOV exports.
 
 ### Changes to LLDB
 

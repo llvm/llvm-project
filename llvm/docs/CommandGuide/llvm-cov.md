@@ -290,10 +290,11 @@ Only include source code files with file paths that match the given regular expr
 :::
 
 :::{option} -respect-coverage-exclusion-markers
-Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
-ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
-or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
-start-marker line is excluded; the stop-marker line is not. Unmatched or
+Exclude lines containing `LCOV_EXCL_LINE` and ranges delimited by
+`LCOV_EXCL_START`/`LCOV_EXCL_STOP`. These markers apply to all llvm-cov report
+formats, including text and HTML views, summaries, and JSON and LCOV exports.
+No external LCOV tool is required.
+The start-marker line is excluded; the stop-marker line is not. Unmatched or
 overlapping range markers are errors.
 Unlike LCOV, a function record is excluded only when all of its code regions
 in the reported file are excluded.
@@ -462,10 +463,11 @@ Skip source code files with file paths that match the given regular expression.
 :::
 
 :::{option} -respect-coverage-exclusion-markers
-Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
-ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
-or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
-start-marker line is excluded; the stop-marker line is not. Unmatched or
+Exclude lines containing `LCOV_EXCL_LINE` and ranges delimited by
+`LCOV_EXCL_START`/`LCOV_EXCL_STOP`. These markers apply to all llvm-cov report
+formats, including text and HTML views, summaries, and JSON and LCOV exports.
+No external LCOV tool is required.
+The start-marker line is excluded; the stop-marker line is not. Unmatched or
 overlapping range markers are errors.
 Unlike LCOV, a function record is excluded only when all of its code regions
 in the reported file are excluded.
@@ -555,10 +557,11 @@ Skip source code files with file paths that match the given regular expression.
 :::
 
 :::{option} -respect-coverage-exclusion-markers
-Exclude lines containing `LLVM_COVERAGE_EXCLUDE_LINE` or `LCOV_EXCL_LINE`, and
-ranges delimited by `LLVM_COVERAGE_EXCLUDE_START`/`LLVM_COVERAGE_EXCLUDE_STOP`
-or `LCOV_EXCL_START`/`LCOV_EXCL_STOP`. The two spellings may be mixed. The
-start-marker line is excluded; the stop-marker line is not. Unmatched or
+Exclude lines containing `LCOV_EXCL_LINE` and ranges delimited by
+`LCOV_EXCL_START`/`LCOV_EXCL_STOP`. These markers apply to all llvm-cov report
+formats, including text and HTML views, summaries, and JSON and LCOV exports.
+No external LCOV tool is required.
+The start-marker line is excluded; the stop-marker line is not. Unmatched or
 overlapping range markers are errors.
 Unlike LCOV, a function record is excluded only when all of its code regions
 in the reported file are excluded.

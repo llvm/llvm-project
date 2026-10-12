@@ -887,8 +887,8 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
   cl::opt<bool> RespectCoverageExclusionMarkers(
       "respect-coverage-exclusion-markers", cl::Optional,
-      cl::desc("Exclude coverage for LLVM_COVERAGE_EXCLUDE_* and "
-               "LCOV_EXCL_* source markers"));
+      cl::desc(
+          "Exclude coverage for LCOV_EXCL_* source markers in all reports"));
 
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");

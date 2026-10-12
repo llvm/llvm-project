@@ -21,12 +21,9 @@ using namespace coverage;
 
 namespace {
 
-constexpr StringLiteral LLVMExcludeLineMarker = "LLVM_COVERAGE_EXCLUDE_LINE";
-constexpr StringLiteral LLVMExcludeStartMarker = "LLVM_COVERAGE_EXCLUDE_START";
-constexpr StringLiteral LLVMExcludeStopMarker = "LLVM_COVERAGE_EXCLUDE_STOP";
-constexpr StringLiteral LcovExcludeLineMarker = "LCOV_EXCL_LINE";
-constexpr StringLiteral LcovExcludeStartMarker = "LCOV_EXCL_START";
-constexpr StringLiteral LcovExcludeStopMarker = "LCOV_EXCL_STOP";
+constexpr StringLiteral ExcludeLineMarker = "LCOV_EXCL_LINE";
+constexpr StringLiteral ExcludeStartMarker = "LCOV_EXCL_START";
+constexpr StringLiteral ExcludeStopMarker = "LCOV_EXCL_STOP";
 
 bool isMarkerBoundary(char C) {
   return !std::isalnum(static_cast<unsigned char>(C)) && C != '_';
@@ -43,15 +40,6 @@ bool containsMarker(StringRef Line, StringRef Marker) {
     Pos = End;
   }
   return false;
-}
-
-StringRef findMarker(StringRef Line, StringRef LLVMMarker,
-                     StringRef LcovMarker) {
-  if (containsMarker(Line, LLVMMarker))
-    return LLVMMarker;
-  if (containsMarker(Line, LcovMarker))
-    return LcovMarker;
-  return {};
 }
 
 const CoverageExclusions::LineRange *
@@ -83,52 +71,41 @@ Expected<std::vector<CoverageExclusions::LineRange>>
 parseLineRanges(StringRef Source) {
   std::vector<CoverageExclusions::LineRange> Ranges;
   std::optional<unsigned> BlockStart;
-  StringRef BlockStartMarker;
   SmallVector<StringRef, 0> Lines;
   Source.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/true);
 
   for (unsigned I = 0; I < Lines.size(); ++I) {
     unsigned Line = I + 1;
     StringRef Text = Lines[I].rtrim("\r");
-    StringRef StartMarker =
-        findMarker(Text, LLVMExcludeStartMarker, LcovExcludeStartMarker);
-    if (!StartMarker.empty()) {
+    if (containsMarker(Text, ExcludeStartMarker)) {
       if (BlockStart)
         return createStringError(
             inconvertibleErrorCode(),
-            formatv("overlapping {0} at line {1}; previous block started at "
-                    "line {2}",
-                    StartMarker, Line, *BlockStart));
+            formatv("overlapping LCOV_EXCL_START at line {0}; previous block "
+                    "started at line {1}",
+                    Line, *BlockStart));
       BlockStart = Line;
-      BlockStartMarker = StartMarker;
       continue;
     }
-    StringRef StopMarker =
-        findMarker(Text, LLVMExcludeStopMarker, LcovExcludeStopMarker);
-    if (!StopMarker.empty()) {
+    if (containsMarker(Text, ExcludeStopMarker)) {
       if (!BlockStart)
         return createStringError(inconvertibleErrorCode(),
-                                 formatv("{0} at line {1} has no matching {2}",
-                                         StopMarker, Line,
-                                         StopMarker == LcovExcludeStopMarker
-                                             ? LcovExcludeStartMarker
-                                             : LLVMExcludeStartMarker));
+                                 formatv("LCOV_EXCL_STOP at line {0} has no "
+                                         "matching LCOV_EXCL_START",
+                                         Line));
       if (*BlockStart < Line)
         Ranges.emplace_back(*BlockStart, Line - 1);
       BlockStart.reset();
-      BlockStartMarker = {};
     }
-    if (!findMarker(Text, LLVMExcludeLineMarker, LcovExcludeLineMarker).empty())
+    if (containsMarker(Text, ExcludeLineMarker))
       Ranges.emplace_back(Line, Line);
   }
 
   if (BlockStart)
-    return createStringError(inconvertibleErrorCode(),
-                             formatv("{0} at line {1} has no matching {2}",
-                                     BlockStartMarker, *BlockStart,
-                                     BlockStartMarker == LcovExcludeStartMarker
-                                         ? LcovExcludeStopMarker
-                                         : LLVMExcludeStopMarker));
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("LCOV_EXCL_START at line {0} has no matching LCOV_EXCL_STOP",
+                *BlockStart));
 
   return mergeLineRanges(std::move(Ranges));
 }
