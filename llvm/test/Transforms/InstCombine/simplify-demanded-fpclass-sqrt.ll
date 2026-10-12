@@ -397,7 +397,8 @@ define nofpclass(nan ninf pzero sub norm) float @nzero_result_demands_nsub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf pzero sub norm) float @nzero_result_demands_nsub_source__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ONLY_NSUB:%.*]] = call nofpclass(nan inf zero psub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.nsub = call nofpclass(nan inf norm psub zero) float @func()
@@ -410,7 +411,8 @@ define nofpclass(nan ninf pzero sub norm) float @nzero_result_demands_nsub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf pzero sub norm) float @nzero_result_demands_nsub_source__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ONLY_NSUB:%.*]] = call nofpclass(nan inf zero psub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.nsub = call nofpclass(nan inf norm psub zero) float @func()
@@ -425,7 +427,8 @@ define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_nsub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_nsub_source__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[ONLY_NSUB:%.*]] = call nofpclass(nan inf zero psub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.nsub = call nofpclass(nan inf norm psub zero) float @func()
@@ -438,7 +441,8 @@ define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_nsub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_nsub_source__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ONLY_NSUB:%.*]] = call nofpclass(nan inf zero psub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_NSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.nsub = call nofpclass(nan inf norm psub zero) float @func()
@@ -467,7 +471,8 @@ define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_source__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ONLY_PSUB:%.*]] = call nofpclass(nan inf zero nsub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.psub = call nofpclass(nan inf norm nsub zero) float @func()
@@ -480,7 +485,8 @@ define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_source__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ONLY_PSUB:%.*]] = call nofpclass(nan inf zero nsub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.psub = call nofpclass(nan inf norm nsub zero) float @func()
@@ -493,7 +499,8 @@ define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_sourc
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @pzero_result_demands_psub_source__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ONLY_PSUB:%.*]] = call nofpclass(nan inf zero nsub norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_PSUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.psub = call nofpclass(nan inf norm nsub zero) float @func()
@@ -522,7 +529,8 @@ define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_
 ; CHECK-LABEL: define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ONLY_SUB:%.*]] = call nofpclass(nan inf zero norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.sub = call nofpclass(nan inf norm zero) float @func()
@@ -535,7 +543,8 @@ define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_
 ; CHECK-LABEL: define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[ONLY_SUB:%.*]] = call nofpclass(nan inf zero norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.sub = call nofpclass(nan inf norm zero) float @func()
@@ -548,7 +557,8 @@ define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_
 ; CHECK-LABEL: define nofpclass(nan ninf sub norm) float @zero_result_demands_sub_source__mode_dynamic_dynamic(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ONLY_SUB:%.*]] = call nofpclass(nan inf zero norm) float @func()
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[NOT_NAN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_SUB]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.sub = call nofpclass(nan inf norm zero) float @func()
@@ -578,7 +588,8 @@ define nofpclass(nan ninf sub norm) float @zero_result_does_not_demand_sub_sourc
 define nofpclass(nan inf pzero sub nnorm) float @nzero_pnorm_demanded_nsub_source__mode_ftz_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %negsub, float nofpclass(nan inf zero sub nnorm) %posnorm) #0 {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub nnorm) float @nzero_pnorm_demanded_nsub_source__mode_ftz_daz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUB:%.*]], float nofpclass(nan inf zero sub nnorm) [[POSNORM:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[POSNORM]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUB]], float [[POSNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select = select i1 %cond, float %negsub, float %posnorm
@@ -601,7 +612,8 @@ define nofpclass(snan inf pzero sub nnorm) float @nzero_pnorm_demanded_nsub_sour
 define nofpclass(nan inf nzero sub nnorm) float @pzero_pnorm_demanded_nsub_source__mode_ftpz_dapz(i1 %cond, float nofpclass(nan inf zero psub norm) %negsub, float nofpclass(nan inf zero sub nnorm) %posnorm) #2 {
 ; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) float @pzero_pnorm_demanded_nsub_source__mode_ftpz_dapz(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[NEGSUB:%.*]], float nofpclass(nan inf zero sub nnorm) [[POSNORM:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[POSNORM]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NEGSUB]], float [[POSNORM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %select = select i1 %cond, float %negsub, float %posnorm
@@ -651,7 +663,7 @@ define nofpclass(nan inf pzero sub nnorm) float @nzero_pnorm_demanded_nsub_sourc
 define nofpclass(nan ninf pzero sub norm) float @only_nsub_source__nzero_demanded__mode_ftz_daz(float nofpclass(nan inf zero psub norm) %only.nsub) #0 {
 ; CHECK-LABEL: define nofpclass(nan ninf pzero sub norm) float @only_nsub_source__nzero_demanded__mode_ftz_daz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ONLY_NSUB:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %result = call float @llvm.sqrt.f32(float %only.nsub)
   ret float %result
@@ -660,7 +672,7 @@ define nofpclass(nan ninf pzero sub norm) float @only_nsub_source__nzero_demande
 define nofpclass(nan ninf nzero sub norm) float @only_nsub_source__pzero_demanded__mode_ftpz_dapz(float nofpclass(nan inf zero psub norm) %only.nsub) #2 {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) float @only_nsub_source__pzero_demanded__mode_ftpz_dapz(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ONLY_NSUB:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %result = call float @llvm.sqrt.f32(float %only.nsub)
   ret float %result
