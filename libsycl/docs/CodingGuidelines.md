@@ -60,7 +60,7 @@ of the SYCL 2020 specification. These guidelines require each vendor extension
 to be named with a vendor string. For example, the extension's APIs are
 declared in the `sycl::ext::<vendor>` namespace, its feature-test macro is
 `SYCL_EXT_<VENDOR>_<NAME>`, and any enumerators or members it adds to core SYCL
-classes (for example aspects) are prefixed with `ext_<vendor>_`.
+classes (for example, aspects) are prefixed with `ext_<vendor>_`.
 
 The vendor string tells users who defines the behavior of the feature.
 
@@ -79,18 +79,17 @@ implementation.
 
 ##### Extensions Adopted From Another Vendor
 
-When `libsycl` implements an extension defined by another vendor with the intent
-to match it, the extension keeps its original name. For example, the
-`sycl_ext_oneapi_<name>` extension from the Intel DPC++ compiler is implemented
-as `sycl::ext::oneapi::<name>` with the feature-test macro
-`SYCL_EXT_ONEAPI_<NAME>`. The original vendor's specification defines the
-feature:
+When `libsycl` implements an extension defined by another vendor, the extension
+keeps its original name. For example, the `sycl_ext_oneapi_<name>` extension
+from the Intel DPC++ compiler is implemented as `sycl::ext::oneapi::<name>`
+with the feature-test macro `SYCL_EXT_ONEAPI_<NAME>`. The original vendor's
+specification defines the feature:
 
 - Any behavioral difference from that specification is a `libsycl` bug.
 - The implementation refers to the specification and to the revision of it that
   is implemented.
-- The feature-test macro is defined, with the value of the implemented revision,
-  only once that revision is fully implemented.
+- The feature-test macro is defined with the value of the implemented revision
+  only after that revision is fully implemented.
 - Differences that the specification does not make observable, such as
   implementation details, unspecified behavior, or diagnostic wording, are not
   deviations.
