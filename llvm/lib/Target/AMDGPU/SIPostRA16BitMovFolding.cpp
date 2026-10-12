@@ -118,6 +118,10 @@ void SIPostRA16BitMovFolding::getMovB16Info(
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.l/s2  => v_lshlrev_b32 v0,16,v2/s2
 //   v_mov_b16 v0.l, 0        v_mov_b16 v0.h, v2.h     => v_and_b32  v0,0xffff0000,v2
 //   v_mov_b16 v0.l, v.x/s    v_mov_b16 v0.h, v.y/s    => v_perm_b32_e64 v0, v.x/s, v.y/s, mask
+//   v_mov_b16 v0.l, imm0     v_mov_b16 v0.h, imm1     => v_mov_b32 v0, (imm1<<16)|imm0
+//
+// A second mov reading the half the first wrote is rewritten to read the first
+// mov's source before matching.
 // clang-format on
 bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
                                                     MachineInstr &Hi,
@@ -157,8 +161,21 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   MCRegister SecondSrc16 = IsHiFirst ? LoSrc16 : HiSrc16;
   MCRegister SecondDst16 = IsHiFirst ? LoDst : HiDst;
 
-  if (SecondSrc16 && TRI->regsOverlap(SecondSrc16, FirstDst16))
-    return false;
+  // The merged instruction reads both sources before writing Dst32, so the
+  // second mov cannot read the half the first wrote. Forward the first mov's
+  // source into it instead.
+  if (SecondSrc16 && TRI->regsOverlap(SecondSrc16, FirstDst16)) {
+    // Overlap is always exact here; only that is forwardable.
+    if (SecondSrc16 != FirstDst16)
+      return false;
+    if (IsHiFirst) {
+      getMovB16Info(FirstMI, TRI, LoSrc16, LoSrcIsVGPR, LoSrc32, LoSrcIsHi,
+                    LoSrcIsImm, LoImm);
+    } else {
+      getMovB16Info(FirstMI, TRI, HiSrc16, HiSrcIsVGPR, HiSrc32, HiSrcIsHi,
+                    HiSrcIsImm, HiImm);
+    }
+  }
 
   for (MachineInstr &Scan :
        drop_begin(make_range(FirstMI.getIterator(), SecondMI.getIterator()))) {
@@ -216,6 +233,18 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
        (LoSrcIsVGPR && AMDGPU::VGPR_32_Lo128RegClass.contains(LoSrc32))) &&
       (HiSrcIsImm ||
        (HiSrcIsVGPR && AMDGPU::VGPR_32_Lo128RegClass.contains(HiSrc32)));
+
+  // Pattern: v_mov_b16 v0.l, imm0 + v_mov_b16 v0.h, imm1
+  //   => v_mov_b32 v0, (imm1 << 16) | imm0
+  if (LoSrcIsImm && HiSrcIsImm) {
+    BuildMI(MBB, Selected, DL,
+            TII->get(Usevop2 ? AMDGPU::V_MOV_B32_e32 : AMDGPU::V_MOV_B32_e64),
+            Dst32)
+        .addImm(((HiImm & 0xffff) << 16) | (LoImm & 0xffff));
+    Lo.eraseFromParent();
+    Hi.eraseFromParent();
+    return true;
+  }
 
   // Pattern: v_mov_b16 v0.h, 0  +  v_mov_b16 v0.l, v2.l/s2
   //   => v_and_b32 v0, 0x0000ffff, v2/s2

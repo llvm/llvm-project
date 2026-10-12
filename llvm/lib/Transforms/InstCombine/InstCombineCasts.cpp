@@ -2292,6 +2292,18 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     unsigned SrcWidth = std::max(LHSWidth, RHSWidth);
     unsigned DstWidth = Ty->getFPMantissaWidth();
 
+    // The operands must be convertible to the destination type without loss.
+    // This is more than comparing the significand widths: the source type may
+    // have a larger exponent range (e.g. bfloat has fewer significand bits than
+    // half, but a much wider range).
+    auto IsLosslesslyConvertibleToDst = [&](Type *SrcTy) {
+      return APFloat::isLosslesslyConvertibleTo(
+          SrcTy->getScalarType()->getFltSemantics(),
+          Ty->getScalarType()->getFltSemantics(), /*IgnoreNaNs=*/true);
+    };
+    bool OperandsFitDst = IsLosslesslyConvertibleToDst(LHSMinType) &&
+                          IsLosslesslyConvertibleToDst(RHSMinType);
+
     // Narrowing recomputes the binop in a smaller type, which can overflow to
     // inf where the wide op was finite. Therefore we can only keep ninf if
     // both the binop and the fptrunc have that flag.
@@ -2320,7 +2332,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         // SrcFormat.  It's possible (likely even!) that this analysis
         // could be tightened for those cases, but they are rare (the main
         // case of interest here is (float)((double)float + float)).
-        if (OpWidth >= 2*DstWidth+1 && DstWidth >= SrcWidth) {
+        if (OpWidth >= 2 * DstWidth + 1 && OperandsFitDst) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
           Instruction *RI = BinaryOperator::Create(BO->getOpcode(), LHS, RHS);
@@ -2334,7 +2346,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         // that such a value can be exactly represented, then no double
         // rounding can possibly occur; we can safely perform the operation
         // in the destination format if it can represent both sources.
-        if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
+        if (OpWidth >= LHSWidth + RHSWidth && OperandsFitDst) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
           return BinaryOperator::CreateFMulFMF(LHS, RHS, NarrowFMF);
@@ -2347,7 +2359,7 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
         // the diophantine rational approximation bound, but the well-known
         // condition used here is a good conservative first pass.
         // TODO: Tighten bound via rigorous analysis of the unbalanced case.
-        if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
+        if (OpWidth >= 2 * DstWidth && OperandsFitDst) {
           Value *LHS = Builder.CreateFPTrunc(BO->getOperand(0), Ty);
           Value *RHS = Builder.CreateFPTrunc(BO->getOperand(1), Ty);
           return BinaryOperator::CreateFDivFMF(LHS, RHS, NarrowFMF);

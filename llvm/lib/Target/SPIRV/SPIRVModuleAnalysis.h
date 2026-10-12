@@ -130,6 +130,8 @@ using InstrList = SmallVector<const MachineInstr *>;
 using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
+using FPFastMathDefaultInfoMapTy =
+    DenseMap<const Function *, FPFastMathDefaultInfoVector>;
 
 // The struct contains results of the module analysis and methods
 // to access them.
@@ -159,13 +161,14 @@ struct ModuleAnalysisInfo {
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<std::pair<const MachineFunction *, int>, MCRegister> BBNumToRegMap;
+  // Basic block IDs and names to emit as OpName.
+  SmallVector<std::pair<MCRegister, StringRef>> MBBNames;
   // The table maps function pointers to their default FP fast math info. It can
   // be assumed that the SmallVector is sorted by the bit width of the type. The
   // first element is the smallest bit width, and the last element is the
   // largest bit width, therefore, we will have {half, float, double} in
   // the order of their bit widths.
-  DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
-      FPFastMathDefaultInfoMap;
+  FPFastMathDefaultInfoMapTy FPFastMathDefaultInfoMap;
 
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");
