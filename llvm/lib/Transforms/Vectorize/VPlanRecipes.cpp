@@ -1846,13 +1846,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::WideVectorLoad:
-    return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
-    // Before replicating by VF, Build(Struct)Vector uses all lanes of the
-    // operand, after replicating its operands only the first lane is used.
-    // Before replicating, it will have only a single operand.
-    return getNumOperands() > 1;
+    return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
@@ -2236,16 +2232,8 @@ void VPIRMetadata::clearExecutionFrequency() {
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
-  SmallVector<std::pair<unsigned, MDNode *>> MetadataIntersection;
-  for (const auto &[KindA, MDA] : Metadata) {
-    for (const auto &[KindB, MDB] : Other.Metadata) {
-      if (KindA == KindB && MDA == MDB) {
-        MetadataIntersection.emplace_back(KindA, MDA);
-        break;
-      }
-    }
-  }
-  Metadata = std::move(MetadataIntersection);
+  erase_if(Metadata,
+           [&](const auto &MD) { return !is_contained(Other.Metadata, MD); });
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

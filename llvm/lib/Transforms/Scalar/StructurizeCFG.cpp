@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -39,7 +40,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
@@ -60,17 +60,6 @@ using namespace llvm::PatternMatch;
 const char FlowBlockName[] = "Flow";
 
 namespace {
-
-static cl::opt<bool> ForceSkipUniformRegions(
-  "structurizecfg-skip-uniform-regions",
-  cl::Hidden,
-  cl::desc("Force whether the StructurizeCFG pass skips uniform regions"),
-  cl::init(false));
-
-static cl::opt<bool>
-    RelaxedUniformRegions("structurizecfg-relaxed-uniform-regions", cl::Hidden,
-                          cl::desc("Allow relaxed uniform region checks"),
-                          cl::init(true));
 
 // Definition of the complex types used in this pass.
 
@@ -379,8 +368,9 @@ public:
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
       : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
-    if (ForceSkipUniformRegions.getNumOccurrences())
-      SkipUniformRegions = ForceSkipUniformRegions.getValue();
+    SkipUniformRegions =
+        valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
+                SkipUniformRegions);
     initializeStructurizeCFGLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1326,7 +1316,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
 
         if (!Br->getMetadata(UniformMDKindID)) {
           // Early exit if we cannot have relaxed uniform regions.
-          if (!RelaxedUniformRegions)
+          if (!ScalarOptions::Global.structurizecfg_relaxed_uniform_regions)
             return false;
 
           SubRegionsAreUniform = false;
@@ -1450,8 +1440,9 @@ static void addRegionIntoQueue(Region &R, std::vector<Region *> &Regions) {
 
 StructurizeCFGPass::StructurizeCFGPass(bool SkipUniformRegions_)
     : SkipUniformRegions(SkipUniformRegions_) {
-  if (ForceSkipUniformRegions.getNumOccurrences())
-    SkipUniformRegions = ForceSkipUniformRegions.getValue();
+  SkipUniformRegions =
+      valueOr(ScalarOptions::Global.structurizecfg_skip_uniform_regions,
+              SkipUniformRegions);
 }
 
 void StructurizeCFGPass::printPipeline(

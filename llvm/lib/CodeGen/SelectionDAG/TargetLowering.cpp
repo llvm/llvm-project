@@ -180,6 +180,17 @@ static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
     Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
 }
 
+TargetLoweringBase::ArgListEntry::ArgListEntry(SDValue Node, Type *Ty,
+                                               Attribute::AttrKind Attr)
+    : ArgListEntry(nullptr, Node, Ty) {
+  if (Attr == Attribute::SExt)
+    IsSExt = true;
+  else if (Attr == Attribute::ZExt)
+    IsZExt = true;
+  else if (Attr != Attribute::None)
+    llvm_unreachable("Unexpected attribute left unhandled.");
+}
+
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
   setArgListEntryAttributes(*this, *Call, ArgIdx);
@@ -521,7 +532,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 #undef FP_CMP_LIBCALL
 
   // Use the target specific return value for comparison lib calls.
-  EVT RetVT = getCmpLibcallReturnType();
+  EVT RetVT = EVT::getEVT(getCmpLibcallReturnType(*DAG.getContext()));
   SDValue Ops[2] = {NewLHS, NewRHS};
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { OldLHS.getValueType(),
@@ -11479,18 +11490,6 @@ SDValue TargetLowering::expandLoopDependenceMask(SDNode *N,
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT, LaneOffset, MaskN);
 }
 
-SDValue TargetLowering::expandMaskBeforeFirst(SDNode *N,
-                                              SelectionDAG &DAG) const {
-  // Expand to (get_active_lane_mask 0, (cttz_elts x))
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  EVT VecIdxVT = getVectorIdxTy(DAG.getDataLayout());
-  SDValue CttzElts =
-      DAG.getNode(ISD::CTTZ_ELTS, DL, VecIdxVT, N->getOperand(0));
-  return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, VT,
-                     DAG.getConstant(0, DL, VecIdxVT), CttzElts);
-}
-
 SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
                                   bool IsNegative) const {
   SDLoc dl(N);
@@ -12853,6 +12852,21 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
+    return;
+  }
+
+  // The libcall takes and returns WideVT values as packed VT halves. This only
+  // works if VT is legal and WideVT isn't. Otherwise, emit a wide multiply and
+  // let it legalise normally, possibly into a wider libcall.
+  if (isTypeLegal(WideVT) || !isTypeLegal(VT)) {
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT,
+                              DAG.getExtOrTrunc(Signed, LHS, dl, WideVT),
+                              DAG.getExtOrTrunc(Signed, RHS, dl, WideVT));
+    SDValue Shift =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits(), WideVT, dl);
+    Lo = DAG.getNode(ISD::TRUNCATE, dl, VT, Mul);
+    Hi = DAG.getNode(ISD::TRUNCATE, dl, VT,
+                     DAG.getNode(ISD::SRL, dl, WideVT, Mul, Shift));
     return;
   }
 

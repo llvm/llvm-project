@@ -17,10 +17,10 @@
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
-#include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #endif
 #include "MLRegAllocEvictAdvisor.h"
+#include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/Utils/MLGOUtils.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -54,8 +54,6 @@ using CompiledModelType = RegAllocEvictModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
-constexpr bool HaveMLIRLoweringRegAlloc = true;
 #include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/CodeGen/RegAllocEvictModels.h"
 
@@ -90,16 +88,6 @@ createMLGORegAllocModelRunner(LLVMContext &Ctx,
   }
   llvm_unreachable("Unknown MLGO model type!");
 }
-#else
-constexpr bool HaveMLIRLoweringRegAlloc = false;
-enum class MLGORegAllocModelChoice { Default };
-static const MLGORegAllocModelChoice SelectedMLGORegAllocModel =
-    MLGORegAllocModelChoice::Default;
-static inline std::unique_ptr<MLModelRunner>
-createMLGORegAllocModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
-  return nullptr;
-}
-#endif
 
 static cl::opt<std::string> InteractiveChannelBaseName(
     "regalloc-evict-interactive-channel-base", cl::Hidden,
@@ -406,6 +394,9 @@ public:
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Release, Ctx) {
     const std::vector<int64_t> PerLiveRangeShape{1, NumAllocatableRegs + 1};
     InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+    Runner = createReleaseModeModelRunner<CompiledModelType>(
+        Ctx, InputFeatures, DecisionName, InteractiveChannelBaseName,
+        DecisionSpec, createMLGORegAllocModelRunner);
   }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorProvider *R) {
@@ -415,14 +406,6 @@ public:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    if (!Initialized) {
-      Initialized = true;
-      Runner = createReleaseModeModelRunner<CompiledModelType,
-                                            HaveMLIRLoweringRegAlloc>(
-          MF.getFunction().getContext(), InputFeatures, DecisionName,
-          InteractiveChannelBaseName, DecisionSpec,
-          createMLGORegAllocModelRunner);
-    }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     if (!Runner)
@@ -434,7 +417,6 @@ public:
 private:
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
-  bool Initialized = false;
 };
 
 class ReleaseModeEvictionAdvisorAnalysisLegacy final
@@ -725,7 +707,9 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // threshold, prevent the range from being evicted. We still let the
       // range through if it is urgent as we are required to produce an
       // eviction if the candidate is not spillable.
-      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
+      // The cap should not apply when the default advisor decides.
+      if (!isa<NoInferenceModelRunner>(Runner) &&
+          getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
       // Only evict older cascades or live ranges without a cascade.
