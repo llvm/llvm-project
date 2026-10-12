@@ -365,6 +365,8 @@ public:
 
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
+    LLVM_ABI ArgListEntry(SDValue Node, Type *Ty, Attribute::AttrKind Attr);
+
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
@@ -615,25 +617,25 @@ public:
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateSqrtEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateSqrtEnabled(EVT VT, const Function &F) const;
 
   /// Return a ReciprocalEstimate enum value for a division of the given type
   /// based on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getRecipEstimateDivEnabled(EVT VT, MachineFunction &MF) const;
+  int getRecipEstimateDivEnabled(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a square root of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getSqrtRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getSqrtRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Return the refinement step count for a division of the given type based
   /// on the function's attributes. If the operation is not overridden by
   /// the function's attributes, "Unspecified" is returned and target defaults
   /// are expected to be used for instruction selection.
-  int getDivRefinementSteps(EVT VT, MachineFunction &MF) const;
+  int getDivRefinementSteps(EVT VT, const Function &MF) const;
 
   /// Returns true if target has indicated at least one type should be bypassed.
   bool isSlowDivBypassed() const { return !BypassSlowDivWidths.empty(); }
@@ -1014,11 +1016,11 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
-  /// Return the ValueType for comparison libcalls. Comparison libcalls include
-  /// floating point comparison calls, and Ordered/Unordered check calls on
-  /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  /// Return the integer type returned by comparison libcalls. Comparison
+  /// libcalls include floating point comparison calls, and Ordered/Unordered
+  /// check calls on floating point numbers.
+  virtual IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const {
+    return Type::getInt32Ty(Ctx);
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
@@ -3785,12 +3787,6 @@ public:
 
   RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return RuntimeLibcallInfo.getSupportedLibcallImpl(FuncName);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall
   /// implementation.
   CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
@@ -4786,6 +4782,13 @@ public:
     return true;
   }
 
+  /// fold (A + vscale(C1)) + vscale(C2) -> A + vscale(C1+C2)
+  /// If (A + vscale(C1)) is used multiple times, the fold results in a
+  /// redundant addition instruction on the RISC-V architecture, whereas it
+  /// does not have this effect on other architectures (e.g. AArch64).
+  /// By default, it returns true.
+  virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
+
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
   /// necessary to preserve semantics. This transformation may not be desirable
@@ -4843,6 +4846,11 @@ public:
   virtual bool isTypeDesirableForOp(unsigned /*Opc*/, EVT VT) const {
     // By default, assume all legal types are desirable.
     return isTypeLegal(VT);
+  }
+
+  /// Overload that takes the specific node being optimized.
+  virtual bool isTypeDesirableForOp(SDNode *N, EVT VT) const {
+    return isTypeDesirableForOp(N->getOpcode(), VT);
   }
 
   /// Return true if it is profitable for dag combiner to transform a floating

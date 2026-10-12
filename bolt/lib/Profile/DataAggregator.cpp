@@ -90,11 +90,11 @@ static cl::opt<bool> ImputeTraceFallthrough(
     cl::desc("impute missing fall-throughs for branch-only traces"),
     cl::cat(AggregatorCategory));
 
-static cl::opt<bool>
-IgnoreBuildID("ignore-build-id",
-  cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
-  cl::init(false),
-  cl::cat(AggregatorCategory));
+cl::opt<bool> IgnoreBuildID(
+    "ignore-build-id",
+    cl::desc(
+        "continue even if build-ids in input binary and perf.data mismatch"),
+    cl::init(false), cl::cat(AggregatorCategory));
 
 static cl::opt<bool> IgnoreInterruptLBR(
     "ignore-interrupt-lbr",
@@ -2222,7 +2222,7 @@ std::optional<DataAggregator::ForkInfo> DataAggregator::parseForkEvent() {
   return FI;
 }
 
-ErrorOr<std::pair<StringRef, DataAggregator::MMapInfo>>
+ErrorOr<std::tuple<StringRef, StringRef, DataAggregator::MMapInfo>>
 DataAggregator::parseMMapEvent() {
   while (checkAndConsumeFS()) {
   }
@@ -2240,7 +2240,7 @@ DataAggregator::parseMMapEvent() {
   size_t Pos = Line.find("PERF_RECORD_MMAP2");
   if (Pos == StringRef::npos) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
 
   // Line:
@@ -2254,12 +2254,13 @@ DataAggregator::parseMMapEvent() {
   Line = Line.drop_front(Pos);
 
   // Line:
-  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
+  //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) @ <hexoffset>
+  //   \<<buildid>\>]: .* <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
   if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
-    return std::make_pair(StringRef(), ParsedInfo);
+    return std::make_tuple(StringRef(), StringRef(), ParsedInfo);
   }
   FileName = sys::path::filename(FileName);
 
@@ -2292,9 +2293,11 @@ DataAggregator::parseMMapEvent() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  const StringRef BuildId = Line.split('<').second.split('>').first;
+
   consumeRestOfLine();
 
-  return std::make_pair(FileName, ParsedInfo);
+  return std::make_tuple(FileName, BuildId, ParsedInfo);
 }
 
 std::error_code DataAggregator::parseMMapEvents() {
@@ -2303,26 +2306,30 @@ std::error_code DataAggregator::parseMMapEvents() {
                      TimerGroupDesc, opts::TimeAggregator);
 
   std::multimap<StringRef, MMapInfo> GlobalMMapInfo;
+  std::multimap<StringRef, MMapInfo *> BuildIdMMapInfo;
   while (hasData()) {
-    ErrorOr<std::pair<StringRef, MMapInfo>> FileMMapInfoRes = parseMMapEvent();
+    ErrorOr<std::tuple<StringRef, StringRef, MMapInfo>> FileMMapInfoRes =
+        parseMMapEvent();
     if (std::error_code EC = FileMMapInfoRes.getError())
       return EC;
 
-    std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
-    if (FileMMapInfo.second.PID == -1)
+    auto [File, BuildId, MMapInfo] = FileMMapInfoRes.get();
+    if (MMapInfo.PID == -1)
       continue;
-    if (FileMMapInfo.first == "(deleted)")
+    if (File == "(deleted)")
       continue;
 
-    GlobalMMapInfo.insert(FileMMapInfo);
+    auto It = GlobalMMapInfo.emplace(File, MMapInfo);
+    if (!BuildId.empty())
+      BuildIdMMapInfo.emplace(BuildId, &It->second);
   }
 
   LLVM_DEBUG({
     dbgs() << "FileName -> mmap info:\n"
-           << "  Filename : PID [MMapAddr, Size, Offset]\n";
-    for (const auto &[Name, MMap] : GlobalMMapInfo)
-      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", Name, MMap.PID,
-                        MMap.MMapAddress, MMap.Size, MMap.Offset);
+           << "  FileName : PID [MMapAddr, Size, Offset]\n";
+    for (const auto &[FileName, MMap] : GlobalMMapInfo)
+      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", FileName,
+                        MMap.PID, MMap.MMapAddress, MMap.Size, MMap.Offset);
   });
 
   StringRef NameToUse = llvm::sys::path::filename(BC->getFilename());
@@ -2332,8 +2339,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     NameToUse = BuildIDBinaryName;
   }
 
-  auto Range = GlobalMMapInfo.equal_range(NameToUse);
-  for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
+  auto matchMMapInfo = [&](MMapInfo &MMapInfo) {
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
       bool MatchFound = llvm::any_of(
@@ -2350,7 +2356,7 @@ std::error_code DataAggregator::parseMMapEvents() {
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
                << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
-        continue;
+        return;
       }
     }
 
@@ -2364,7 +2370,7 @@ std::error_code DataAggregator::parseMMapEvents() {
                << Twine::utohexstr(MMapInfo.MMapAddress)
                << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
                << ". Ignoring profile data for this mapping\n";
-        continue;
+        return;
       }
       MMapInfo.BaseAddress = *BaseAddress;
     }
@@ -2381,6 +2387,17 @@ std::error_code DataAggregator::parseMMapEvents() {
     const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
     if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
+  };
+
+  std::optional<StringRef> BuildId = BC->getFileBuildID();
+  if (!opts::IgnoreBuildID && BuildId && BuildIdMMapInfo.count(*BuildId) > 0) {
+    auto Range = BuildIdMMapInfo.equal_range(*BuildId);
+    for (MMapInfo *MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(*MMapInfo);
+  } else {
+    auto Range = GlobalMMapInfo.equal_range(NameToUse);
+    for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range)))
+      matchMMapInfo(MMapInfo);
   }
 
   if (BinaryMMapInfo.empty()) {

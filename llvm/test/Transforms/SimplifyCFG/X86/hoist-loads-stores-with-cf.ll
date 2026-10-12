@@ -417,7 +417,7 @@ define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
 ; LOADONLY-NEXT:    br label [[IF_FALSE]]
 ; LOADONLY:       if.false:
 ; LOADONLY-NEXT:    [[RET:%.*]] = phi i16 [ 2, [[BB0:%.*]] ], [ 3, [[IF_TRUE]] ]
-; LOADONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META11:![0-9]+]])
+; LOADONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META13:![0-9]+]])
 ; LOADONLY-NEXT:    ret i16 [[RET]]
 ;
 ; NONEONLY-LABEL: @debug_metadata_diassign(
@@ -428,7 +428,7 @@ define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
 ; NONEONLY-NEXT:    br label [[IF_FALSE]]
 ; NONEONLY:       if.false:
 ; NONEONLY-NEXT:    [[RET:%.*]] = phi i16 [ 2, [[BB0:%.*]] ], [ 3, [[IF_TRUE]] ]
-; NONEONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META11:![0-9]+]])
+; NONEONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META13:![0-9]+]])
 ; NONEONLY-NEXT:    ret i16 [[RET]]
 ;
 bb0:
@@ -881,7 +881,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; LOADONLY-LABEL: @not_likely_to_execute(
 ; LOADONLY-NEXT:  entry:
 ; LOADONLY-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; LOADONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF12:![0-9]+]]
+; LOADONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF14:![0-9]+]]
 ; LOADONLY:       if.end:
 ; LOADONLY-NEXT:    ret void
 ; LOADONLY:       if.then:
@@ -892,7 +892,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; NONEONLY-LABEL: @not_likely_to_execute(
 ; NONEONLY-NEXT:  entry:
 ; NONEONLY-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; NONEONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF12:![0-9]+]]
+; NONEONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF14:![0-9]+]]
 ; NONEONLY:       if.end:
 ; NONEONLY-NEXT:    ret void
 ; NONEONLY:       if.then:
@@ -1226,6 +1226,152 @@ if.then1:                                         ; preds = %entry
 
 if.end:                                           ; preds = %if.then1, %entry
   ret void
+}
+
+;; !range only transfers after widening over the constant PassThru.
+define i32 @range_metadata_constant_passthru(i1 %cond, ptr %p) {
+; LOADSTORE-LABEL: @range_metadata_constant_passthru(
+; LOADSTORE-NEXT:  entry:
+; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call range(i32 0, 1001) <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> splat (i32 1000))
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; LOADSTORE-NEXT:    ret i32 [[TMP2]]
+;
+; STOREONLY-LABEL: @range_metadata_constant_passthru(
+; STOREONLY-NEXT:  entry:
+; STOREONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; STOREONLY:       if.true:
+; STOREONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG8:![0-9]+]]
+; STOREONLY-NEXT:    br label [[IF_END]]
+; STOREONLY:       if.end:
+; STOREONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 1000, [[ENTRY:%.*]] ]
+; STOREONLY-NEXT:    ret i32 [[RES]]
+;
+; LOADONLY-LABEL: @range_metadata_constant_passthru(
+; LOADONLY-NEXT:  entry:
+; LOADONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADONLY-NEXT:    [[TMP1:%.*]] = call range(i32 0, 1001) <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> splat (i32 1000))
+; LOADONLY-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; LOADONLY-NEXT:    ret i32 [[TMP2]]
+;
+; NONEONLY-LABEL: @range_metadata_constant_passthru(
+; NONEONLY-NEXT:  entry:
+; NONEONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; NONEONLY:       if.true:
+; NONEONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG15:![0-9]+]]
+; NONEONLY-NEXT:    br label [[IF_END]]
+; NONEONLY:       if.end:
+; NONEONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ 1000, [[ENTRY:%.*]] ]
+; NONEONLY-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.end
+
+if.true:
+  %v = load i32, ptr %p, align 4, !range !{i32 0, i32 10}
+  br label %if.end
+
+if.end:
+  %res = phi i32 [ %v, %if.true ], [ 1000, %entry ]
+  ret i32 %res
+}
+
+;; A non-constant PassThru can hold anything: the range must be dropped.
+define i32 @range_metadata_nonconstant_passthru(i1 %cond, ptr %p, i32 %other) {
+; LOADSTORE-LABEL: @range_metadata_nonconstant_passthru(
+; LOADSTORE-NEXT:  entry:
+; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = bitcast i32 [[OTHER:%.*]] to <1 x i32>
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> [[TMP1]])
+; LOADSTORE-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
+; LOADSTORE-NEXT:    ret i32 [[TMP3]]
+;
+; STOREONLY-LABEL: @range_metadata_nonconstant_passthru(
+; STOREONLY-NEXT:  entry:
+; STOREONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; STOREONLY:       if.true:
+; STOREONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG8]]
+; STOREONLY-NEXT:    br label [[IF_END]]
+; STOREONLY:       if.end:
+; STOREONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ [[OTHER:%.*]], [[ENTRY:%.*]] ]
+; STOREONLY-NEXT:    ret i32 [[RES]]
+;
+; LOADONLY-LABEL: @range_metadata_nonconstant_passthru(
+; LOADONLY-NEXT:  entry:
+; LOADONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADONLY-NEXT:    [[TMP1:%.*]] = bitcast i32 [[OTHER:%.*]] to <1 x i32>
+; LOADONLY-NEXT:    [[TMP2:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> [[TMP1]])
+; LOADONLY-NEXT:    [[TMP3:%.*]] = bitcast <1 x i32> [[TMP2]] to i32
+; LOADONLY-NEXT:    ret i32 [[TMP3]]
+;
+; NONEONLY-LABEL: @range_metadata_nonconstant_passthru(
+; NONEONLY-NEXT:  entry:
+; NONEONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; NONEONLY:       if.true:
+; NONEONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG15]]
+; NONEONLY-NEXT:    br label [[IF_END]]
+; NONEONLY:       if.end:
+; NONEONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ [[OTHER:%.*]], [[ENTRY:%.*]] ]
+; NONEONLY-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.end
+
+if.true:
+  %v = load i32, ptr %p, align 4, !range !{i32 0, i32 10}
+  br label %if.end
+
+if.end:
+  %res = phi i32 [ %v, %if.true ], [ %other, %entry ]
+  ret i32 %res
+}
+
+;; A poison PassThru is covered by any range, so the range transfers as is.
+define i32 @range_metadata_poison_passthru(i1 %cond, ptr %p) {
+; LOADSTORE-LABEL: @range_metadata_poison_passthru(
+; LOADSTORE-NEXT:  entry:
+; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADSTORE-NEXT:    [[TMP1:%.*]] = call range(i32 0, 10) <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
+; LOADSTORE-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; LOADSTORE-NEXT:    ret i32 [[TMP2]]
+;
+; STOREONLY-LABEL: @range_metadata_poison_passthru(
+; STOREONLY-NEXT:  entry:
+; STOREONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; STOREONLY:       if.true:
+; STOREONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG8]]
+; STOREONLY-NEXT:    br label [[IF_END]]
+; STOREONLY:       if.end:
+; STOREONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ poison, [[ENTRY:%.*]] ]
+; STOREONLY-NEXT:    ret i32 [[RES]]
+;
+; LOADONLY-LABEL: @range_metadata_poison_passthru(
+; LOADONLY-NEXT:  entry:
+; LOADONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
+; LOADONLY-NEXT:    [[TMP1:%.*]] = call range(i32 0, 10) <1 x i32> @llvm.masked.load.v1i32.p0(ptr align 4 [[P:%.*]], <1 x i1> [[TMP0]], <1 x i32> poison)
+; LOADONLY-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; LOADONLY-NEXT:    ret i32 [[TMP2]]
+;
+; NONEONLY-LABEL: @range_metadata_poison_passthru(
+; NONEONLY-NEXT:  entry:
+; NONEONLY-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_END:%.*]]
+; NONEONLY:       if.true:
+; NONEONLY-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG15]]
+; NONEONLY-NEXT:    br label [[IF_END]]
+; NONEONLY:       if.end:
+; NONEONLY-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[IF_TRUE]] ], [ poison, [[ENTRY:%.*]] ]
+; NONEONLY-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br i1 %cond, label %if.true, label %if.end
+
+if.true:
+  %v = load i32, ptr %p, align 4, !range !{i32 0, i32 10}
+  br label %if.end
+
+if.end:
+  %res = phi i32 [ %v, %if.true ], [ poison, %entry ]
+  ret i32 %res
 }
 
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable

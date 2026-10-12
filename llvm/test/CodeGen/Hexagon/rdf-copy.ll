@@ -15,7 +15,7 @@
 ;         r0 = memw(r0 + #0)
 ;     }
 ;
-; CHECK-LABEL: LBB0_1
+; CHECK-LABEL: %while.cond
 ; CHECK: [[DST:r[0-9]+]] = [[SRC:r[0-9]+]]
 ; CHECK-DAG: memw([[SRC]]
 ; CHECK-NOT: memw([[DST]]

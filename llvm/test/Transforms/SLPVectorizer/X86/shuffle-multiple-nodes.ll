@@ -8,7 +8,7 @@ define i32 @main(<16 x i32> %bc47.i, <16 x i32> %bc) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i32> [[BC]], <16 x i32> [[BC47_I]], <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 5, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0>, <8 x i32> <i32 poison, i32 0, i32 poison, i32 5, i32 13, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> <i32 1, i32 undef, i32 0, i32 undef, i32 undef, i32 0, i32 0, i32 0>, <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 12, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> <i32 1, i32 poison, i32 0, i32 poison, i32 poison, i32 0, i32 0, i32 0>, <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 12, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub <8 x i32> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i32> [[TMP4]], zeroinitializer

@@ -604,7 +604,7 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
   // those addends for global variables, but they need a relocation, which a
   // location list cannot carry, so a local pointing at such a global has to
   // keep being described by whatever register holds the computed address.
-  if (TM.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
+  if (M.getTargetTriple().isWasm() && TM.getRelocationModel() == Reloc::PIC_)
     return false;
   if (TM.getRelocationModel() == Reloc::RWPI ||
       TM.getRelocationModel() == Reloc::ROPI_RWPI) {

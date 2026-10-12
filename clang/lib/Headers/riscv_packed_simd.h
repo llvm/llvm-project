@@ -422,6 +422,12 @@ __packed_unary_builtin(rev_32, uint32_t, __builtin_bitreverse32)
 __packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
 #endif
 
+/* Scalar Averaging Addition and Subtraction */
+__packed_binary_builtin(aadd_i32, int32_t, __builtin_riscv_aadd_i32)
+__packed_binary_builtin(aaddu_u32, uint32_t, __builtin_riscv_aaddu_u32)
+__packed_binary_builtin(asub_i32, int32_t, __builtin_riscv_asub_i32)
+__packed_binary_builtin(asubu_u32, uint32_t, __builtin_riscv_asubu_u32)
+
 /* Scalar Saturating Addition and Subtraction */
 __packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
 __packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
@@ -800,6 +806,20 @@ __packed_binary_builtin_mixed(pwsla_s_i16x4, int16x4_t, int8x4_t, unsigned,
                               __builtin_riscv_pwsla_s_i16x4)
 __packed_binary_builtin_mixed(pwsla_s_i32x2, int32x2_t, int16x2_t, unsigned,
                               __builtin_riscv_pwsla_s_i32x2)
+
+/* Packed Narrowing Shift */
+__packed_binary_builtin_mixed(pnsrl_s_u8x4, uint8x4_t, uint16x4_t, unsigned,
+                              __builtin_riscv_pnsrl_s_u8x4)
+__packed_binary_builtin_mixed(pnsrl_s_u16x2, uint16x2_t, uint32x2_t, unsigned,
+                              __builtin_riscv_pnsrl_s_u16x2)
+__packed_binary_builtin_mixed(pnsra_s_i8x4, int8x4_t, int16x4_t, unsigned,
+                              __builtin_riscv_pnsra_s_i8x4)
+__packed_binary_builtin_mixed(pnsra_s_i16x2, int16x2_t, int32x2_t, unsigned,
+                              __builtin_riscv_pnsra_s_i16x2)
+__packed_binary_builtin_mixed(pnsrar_s_i8x4, int8x4_t, int16x4_t, unsigned,
+                              __builtin_riscv_pnsrar_s_i8x4)
+__packed_binary_builtin_mixed(pnsrar_s_i16x2, int16x2_t, int32x2_t, unsigned,
+                              __builtin_riscv_pnsrar_s_i16x2)
 
 /* Packed Widening Addition and Subtraction */
 __packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)

@@ -923,16 +923,6 @@ def vector_insert : SDNode<"ISD::INSERT_VECTOR_ELT",
 def concat_vectors : SDNode<"ISD::CONCAT_VECTORS",
     SDTypeProfile<1, 2, [SDTCisSubVecOfVec<1, 0>, SDTCisSameAs<1, 2>]>,[]>;
 
-// This operator does not do subvector type checking.  The ARM
-// backend, at least, needs it.
-def vector_extract_subvec : SDNode<"ISD::EXTRACT_SUBVECTOR",
-    SDTypeProfile<1, 2, [SDTCisInt<2>, SDTCisVec<1>, SDTCisVec<0>]>,
-    []>;
-def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
-    SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVec<2>, SDTCisInt<3>]>,
-    []>;
-
-// This operator does subvector type checking.
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
 
@@ -949,6 +939,11 @@ def get_active_lane_mask
           "ISD::GET_ACTIVE_LANE_MASK",
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
+
+def mask_beforefirst
+    : SDNode<"ISD::MASK_BEFOREFIRST",
+             SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0, 1>]>,
+             []>;
 
 def vector_match
     : SDNode<"ISD::VECTOR_MATCH",

@@ -564,6 +564,7 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
 
   Flags |= ELF::SHF_COMPRESSED;
   OriginalFlags |= ELF::SHF_COMPRESSED;
+  OriginalType = ELF::SHT_PROGBITS;
   size_t ChdrSize = Is64Bits ? sizeof(object::Elf_Chdr_Impl<object::ELF64LE>)
                              : sizeof(object::Elf_Chdr_Impl<object::ELF32LE>);
   Size = ChdrSize + CompressedData.size();
@@ -2215,10 +2216,6 @@ Error Object::removeSections(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
         if (ToRemove(*Sec))
           return false;
-        // TODO: A compressed relocation section may be recognized as
-        // RelocationSectionBase. We don't want such a section to be removed.
-        if (isa<CompressedSection>(Sec))
-          return true;
         if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get())) {
           if (auto ToRelSec = RelSec->getSection())
             return !ToRemove(*ToRelSec);

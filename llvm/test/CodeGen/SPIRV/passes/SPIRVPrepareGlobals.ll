@@ -12,6 +12,7 @@
 ; CHECK-DAG: @alias_external = alias i32, ptr @aliasee
 ; CHECK-DAG: @weak_alias = weak alias i32, ptr @weak_aliasee
 ; CHECK-DAG: @alias_of_interposable = alias i32, ptr @interposable_aliasee
+; CHECK-DAG: @alias_of_noipa = alias void (), ptr @noipa_aliasee
 
 @aliasee = global i32 42
 @alias_private = private alias i32, ptr @aliasee
@@ -22,6 +23,8 @@
 
 @interposable_aliasee = weak global i32 99
 @alias_of_interposable = alias i32, ptr @interposable_aliasee
+
+@alias_of_noipa = alias void (), ptr @noipa_aliasee
 
 ; Private alias is discardable: use is RAUW'd to the aliasee.
 define ptr @use_private_alias() {
@@ -50,4 +53,16 @@ define ptr @use_alias_of_interposable() {
 ; CHECK-LABEL: define ptr @use_alias_of_interposable()
 ; CHECK-NEXT:    ret ptr @alias_of_interposable
   ret ptr @alias_of_interposable
+}
+
+; noipa doesn't make a function interposable at link time, so an alias of a
+; noipa function is still folded.
+define void @noipa_aliasee() noipa {
+  ret void
+}
+
+define ptr @use_alias_of_noipa() {
+; CHECK-LABEL: define ptr @use_alias_of_noipa()
+; CHECK-NEXT:    ret ptr @noipa_aliasee
+  ret ptr @alias_of_noipa
 }

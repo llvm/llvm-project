@@ -18,9 +18,8 @@
 #include "llvm-c/Deprecated.h"
 #include "llvm-c/ErrorHandling.h"
 #include "llvm-c/ExternC.h"
-#include "llvm-c/Visibility.h"
-
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -31,6 +30,8 @@ LLVM_C_EXTERN_C_BEGIN
  *
  * @{
  */
+
+typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
 
 /**
  * @defgroup LLVMCTransforms Transforms
@@ -2777,22 +2778,46 @@ LLVM_C_ABI LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                                         LLVMValueRef RHSConstant);
 LLVM_C_ABI LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant,
                                      LLVMValueRef RHSConstant);
-LLVM_C_ABI LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
-                                      LLVMValueRef *ConstantIndices,
-                                      unsigned NumIndices);
-LLVM_C_ABI LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty,
-                                              LLVMValueRef ConstantVal,
-                                              LLVMValueRef *ConstantIndices,
-                                              unsigned NumIndices);
+
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                               LLVMValueRef *ConstantIndices,
+                               unsigned NumIndices),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                       LLVMValueRef *ConstantIndices,
+                                       unsigned NumIndices),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstGEPWithNoWrapFlags(
+        LLVMTypeRef Ty, LLVMValueRef ConstantVal, LLVMValueRef *ConstantIndices,
+        unsigned NumIndices, LLVMGEPNoWrapFlags NoWrapFlags),
+    "Use LLVMConstPtrAdd() or LLVMConstPtrAddFromIndices() instead");
+
 /**
- * Creates a constant GetElementPtr expression. Similar to LLVMConstGEP2, but
- * allows specifying the no-wrap flags.
+ * Creates a constant ptradd expression (getelementptr i8).
+ *
+ * @see llvm::ConstantExpr::getPtrAdd()
+ */
+LLVM_C_ABI LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
+                                        LLVMValueRef ConstantOffset,
+                                        LLVMGEPNoWrapFlags NoWrapFlags);
+
+/**
+ * Creates a constant ptradd expression (getelementptr i8) by converting the
+ * provided GEP indices for the provided source element type into a constant
+ * offset using the provided data layout.
+ *
+ * May return null if the indices are not representable as a constant ptradd.
  *
  * @see llvm::ConstantExpr::getGetElementPtr()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstGEPWithNoWrapFlags(
-    LLVMTypeRef Ty, LLVMValueRef ConstantVal, LLVMValueRef *ConstantIndices,
-    unsigned NumIndices, LLVMGEPNoWrapFlags NoWrapFlags);
+LLVM_C_ABI LLVMValueRef LLVMConstPtrAddFromIndices(
+    LLVMTargetDataRef DataLayout, LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+    LLVMValueRef *ConstantIndices, unsigned NumIndices,
+    LLVMGEPNoWrapFlags NoWrapFlags);
+
 LLVM_C_ABI LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal,
                                        LLVMTypeRef ToType);
 LLVM_C_ABI LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal,
@@ -5375,8 +5400,6 @@ LLVM_C_ABI LLVMBool LLVMIsMultithreaded(void);
  */
 
 enum LLVMByteOrdering { LLVMBigEndian, LLVMLittleEndian };
-
-typedef struct LLVMOpaqueTargetData *LLVMTargetDataRef;
 
 /**
  * Obtain the data layout for a module.

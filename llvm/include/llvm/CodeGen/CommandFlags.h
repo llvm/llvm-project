@@ -117,8 +117,6 @@ LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
 
-LLVM_ABI bool getEnableMachineFunctionSplitter();
-
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
 LLVM_ABI bool getEnableDebugEntryValues();
