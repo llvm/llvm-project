@@ -74,3 +74,4 @@
 //CHECK-SARIF-NEXT:     }
 //CHECK-SARIF-NEXT:   ],
 //CHECK-SARIF-NEXT:   "version": "{{.*}}"
+

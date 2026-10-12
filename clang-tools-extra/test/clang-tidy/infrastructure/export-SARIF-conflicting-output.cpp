@@ -6,3 +6,4 @@
 // CHECK-FILE: Error: --sarif-export and --export-fixes cannot write to the same output '{{.*}}.out'.
 
 struct A { A(int) {} };
+
