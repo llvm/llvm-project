@@ -4798,6 +4798,10 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         Diag(Loc, diag::note_sme_use_preserves_za);
       }
     }
+
+    // Check for conflicting RISC-V architecture state attributes between the
+    // caller and callee.
+    RISCV().checkConflictingStateAttributes(CallerFD, FD, ExtInfo, Loc);
   }
 
   if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {
