@@ -172,8 +172,7 @@ static int start_thread(void *arg) {
                   cpp::nullopt, /*is_shared=*/false);
   if (clear_tid->load(cpp::MemoryOrder::ACQUIRE) ==
       static_cast<FutexWordType>(ClearTidState::ABORT)) {
-    syscall_impl<long>(SYS_exit, 0);
-    __builtin_unreachable();
+    linux_syscalls::exit(0);
   }
 
   if (attrib->style == ThreadStyle::POSIX) {
