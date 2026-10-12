@@ -32,8 +32,8 @@
 
 !CHECK-LABEL: func private @_copy_ref_i32(
 !CHECK-SAME:                  %[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>) attributes {llvm.linkage = #llvm.linkage<internal>} {
-!CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_copy_ref_i32_dst"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK-NEXT:    %[[SRC:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_copy_ref_i32_src"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-NEXT:    %[[DST:.*]]:2 = hlfir.declare %[[ARG0]] uniq_name("_copy_ref_i32_dst") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK-NEXT:    %[[SRC:.*]]:2 = hlfir.declare %[[ARG1]] uniq_name("_copy_ref_i32_src") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK-NEXT:    %[[SRC_VAL:.*]] = fir.load %[[SRC]]#0 : !fir.ref<i32>
 !CHECK-NEXT:    hlfir.assign %[[SRC_VAL]] to %[[DST]]#0 : i32, !fir.ref<i32>
 !CHECK-NEXT:    return
@@ -41,9 +41,9 @@
 
 !CHECK-LABEL: func @_QPtest_tp
 !CHECK:         omp.parallel
-!CHECK:           %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_tpEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_tpEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[K:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_tpEk"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:           %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_tpEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[J:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_tpEj") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[K:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_tpEk") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:           omp.single copyprivate(%[[I]]#0 -> @_copy_ref_i32 : !fir.ref<i32>, %[[J]]#0 -> @_copy_ref_i32 : !fir.ref<i32>, %[[K]]#0 -> @_copy_ref_f32 : !fir.ref<f32>)
 subroutine test_tp()
   integer, save :: i, j
@@ -61,18 +61,18 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_scalar
 !CHECK:         omp.parallel
-!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEi1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEi2"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEi3"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEr1"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:           %[[R2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEr2"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEc1"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-!CHECK:           %[[C2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEc2"} : (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
-!CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEl1"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-!CHECK:           %[[L2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEl2"} : (!fir.ref<!fir.logical<8>>) -> (!fir.ref<!fir.logical<8>>, !fir.ref<!fir.logical<8>>)
-!CHECK:           %[[S1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEs1"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
-!CHECK:           %[[S2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEs2"} : (!fir.ref<!fir.char<1,8>>, index) -> (!fir.ref<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>)
-!CHECK:           %[[S3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_scalarEs3"} : (!fir.ref<!fir.char<2,8>>, index) -> (!fir.ref<!fir.char<2,8>>, !fir.ref<!fir.char<2,8>>)
+!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEi1") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEi2") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEi3") : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEr1") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:           %[[R2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEr2") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEc1") : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+!CHECK:           %[[C2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEc2") : (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
+!CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEl1") : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!CHECK:           %[[L2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEl2") : (!fir.ref<!fir.logical<8>>) -> (!fir.ref<!fir.logical<8>>, !fir.ref<!fir.logical<8>>)
+!CHECK:           %[[S1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEs1") : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+!CHECK:           %[[S2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEs2") : (!fir.ref<!fir.char<1,8>>, index) -> (!fir.ref<!fir.char<1,8>>, !fir.ref<!fir.char<1,8>>)
+!CHECK:           %[[S3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_scalarEs3") : (!fir.ref<!fir.char<2,8>>, index) -> (!fir.ref<!fir.char<2,8>>, !fir.ref<!fir.char<2,8>>)
 !CHECK:           omp.single copyprivate(%[[I1]]#0 -> @_copy_ref_i32 : !fir.ref<i32>, %[[I2]]#0 -> @_copy_ref_i64 : !fir.ref<i64>, %[[I3]]#0 -> @_copy_ref_i64 : !fir.ref<i64>, %[[R1]]#0 -> @_copy_ref_f32 : !fir.ref<f32>, %[[R2]]#0 -> @_copy_ref_f64 : !fir.ref<f64>, %[[C1]]#0 -> @_copy_ref_z32 : !fir.ref<complex<f32>>, %[[C2]]#0 -> @_copy_ref_z64 : !fir.ref<complex<f64>>, %[[L1]]#0 -> @_copy_ref_l32 : !fir.ref<!fir.logical<4>>, %[[L2]]#0 -> @_copy_ref_l64 : !fir.ref<!fir.logical<8>>, %[[S1]]#0 -> @_copy_ref_c8x3 : !fir.ref<!fir.char<1,3>>, %[[S2]]#0 -> @_copy_ref_c8x8 : !fir.ref<!fir.char<1,8>>, %[[S3]]#0 -> @_copy_ref_c16x8 : !fir.ref<!fir.char<2,8>>)
 subroutine test_scalar()
   integer(4) :: i1
@@ -95,15 +95,15 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_array
 !CHECK:         omp.parallel
-!CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEa"}
-!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEi1"}
-!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEi2"}
-!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEi3"}
-!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEr1"}
-!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEc1"}
-!CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEl1"}
-!CHECK:           %[[S1:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs1"}
-!CHECK:           %[[S2:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs2"}
+!CHECK:           %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEa")
+!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEi1")
+!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEi2")
+!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEi3")
+!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEr1")
+!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEc1")
+!CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_arrayEl1")
+!CHECK:           %[[S1:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_arrayEs1")
+!CHECK:           %[[S2:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFtest_arrayEs2")
 !CHECK:           omp.single copyprivate(%[[A]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[I1]]#0 -> @_copy_ref_10xi32 : {{.*}}, %[[I2]]#0 -> @_copy_ref_3x4xi32 : {{.*}}, %[[I3]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[R1]]#0 -> @_copy_ref_10xf32 : {{.*}}, %[[C1]]#0 -> @_copy_ref_3x4xz32 : {{.*}}, %[[L1]]#0 -> @_copy_ref_10xl32 : {{.*}}, %[[S1]]#0 -> @_copy_ref_box_3xc8x8 : {{.*}}, %[[S2]]#0 -> @_copy_ref_box_3xc16x5 : {{.*}})
 subroutine test_array(a, n)
   integer :: a(:), n
@@ -122,7 +122,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_dt
 !CHECK:         omp.parallel
-!CHECK:           %[[T:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_dtEt"} : (!fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>) -> (!fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>, !fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>)
+!CHECK:           %[[T:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_dtEt") : (!fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>) -> (!fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>, !fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>)
 !CHECK:           omp.single copyprivate(%[[T]]#0 -> @_copy_ref_rec__QFtest_dtTdt : !fir.ref<!fir.type<_QFtest_dtTdt{i:i32,r:f32}>>)
 subroutine test_dt()
   type dt
@@ -139,12 +139,12 @@ end subroutine
 
 !CHECK-LABEL: func @_QPtest_attr
 !CHECK:         omp.parallel
-!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_attrEi1"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_attrEi2"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_attrEi3"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_attrEr1"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_attrEc1"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>)
-!CHECK:           %[[C2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_attrEc2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>)
+!CHECK:           %[[I1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEi1") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!CHECK:           %[[I2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEi2") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!CHECK:           %[[I3:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEi3") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+!CHECK:           %[[R1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEr1") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+!CHECK:           %[[C1:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEc1") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>)
+!CHECK:           %[[C2:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtest_attrEc2") fortran_attrs<pointer> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>)
 !CHECK:           omp.single copyprivate(%[[I1]]#0 -> @_copy_ref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, %[[I2:.*]]#0 -> @_copy_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>, %[[I3]]#0 -> @_copy_ref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[R1]]#0 -> @_copy_ref_box_ptr_Uxf32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>,  %[[C1]]#0 -> @_copy_ref_box_heap_Uxc8x5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,5>>>>>, %[[C2]]#0 -> @_copy_ref_box_ptr_Uxc8x9 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,9>>>>>)
 subroutine test_attr()
   integer, allocatable :: i1(:)

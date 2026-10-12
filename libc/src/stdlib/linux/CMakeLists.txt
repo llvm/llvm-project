@@ -38,6 +38,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  secure_getenv
+  SRCS
+    secure_getenv.cpp
+  HDRS
+    ../secure_getenv.h
+  DEPENDS
+    libc.hdr.sys_auxv_macros
+    libc.src.__support.OSUtil.linux.auxv
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
   setenv
   SRCS
     setenv.cpp
@@ -78,6 +92,18 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    libc.src.stdlib.environ_internal
+)
+
+add_entrypoint_object(
+  clearenv
+  SRCS
+    clearenv.cpp
+  HDRS
+    ../clearenv.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.stdlib.environ_internal
 )
 
@@ -186,4 +212,3 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
-

@@ -1,0 +1,60 @@
+# Test that DW_AT_LLVM_address_space values are printed with their symbolic
+# names. The names are target-dependent, so they are resolved through the
+# triple of the object being dumped. Values with no name for the target are
+# printed as plain integers.
+
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+# CHECK:      DW_TAG_pointer_type
+# CHECK-NEXT:   DW_AT_LLVM_address_space (0x00000000 "DW_ASPACE_LLVM_none")
+# CHECK:      DW_TAG_pointer_type
+# CHECK-NEXT:   DW_AT_LLVM_address_space (0x00000001 "DW_ASPACE_LLVM_AMDGPU_generic")
+# CHECK:      DW_TAG_pointer_type
+# CHECK-NEXT:   DW_AT_LLVM_address_space (0x00000003 "DW_ASPACE_LLVM_AMDGPU_local")
+# CHECK:      DW_TAG_pointer_type
+# CHECK-NEXT:   DW_AT_LLVM_address_space (0x00000004)
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  OSABI:      ELFOSABI_AMDGPU_HSA
+  ABIVersion: 0x02
+  Type:       ET_REL
+  Machine:    EM_AMDGPU
+  Flags:      [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     0x00000001
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+        - Code:     0x00000002
+          Tag:      DW_TAG_pointer_type
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_LLVM_address_space
+              Form:      DW_FORM_data4
+  debug_info:
+    - Version:   5
+      UnitType:  DW_UT_compile
+      AbbrOffset: 0
+      AddrSize:  8
+      Entries:
+        - AbbrCode: 0x00000001
+          Values:   []
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000000
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000001
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000003
+        - AbbrCode: 0x00000002
+          Values:
+            - Value: 0x0000000000000004
+        - AbbrCode: 0x00000000
+          Values:   []
+...

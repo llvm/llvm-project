@@ -191,7 +191,7 @@ private:
   bool parseDirectiveCPU(SMLoc L);
   bool parseDirectiveInst(SMLoc L);
 
-  bool parseDirectiveTLSDescCall(SMLoc L);
+  bool parseDirectiveTLSDescCall(SMLoc L, bool IsAuth);
 
   bool parseDirectiveLOH(StringRef LOH, SMLoc L);
   bool parseDirectiveLtorg(SMLoc L);
@@ -296,7 +296,6 @@ private:
   ParseStatus tryParseSVEVecLenSpecifier(OperandVector &Operands);
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
-  template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -1930,6 +1929,12 @@ public:
     // to be only the page-offset portion. Otherwise, just add the expr
     // as-is.
     addExpr(Inst, getImm());
+  }
+
+  template <int Adj> void addAdjImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    int64_t Imm = cast<MCConstantExpr>(getImm())->getValue();
+    Inst.addOperand(MCOperand::createImm(Imm + Adj));
   }
 
   template <int Shift>
@@ -3757,6 +3762,8 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"pauth-lr"}, {AArch64::FeaturePAuthLR}},
     {{"ssve-fexpa"}, {AArch64::FeatureSSVE_FEXPA}},
     {{"wfxt"}, {AArch64::FeatureWFxT}},
+    {{"cflt"}, {AArch64::FeatureCFLT}},
+    {{"lsc64b"}, {AArch64::FeatureLSC64B}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -3797,6 +3804,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.6a";
   else if (FBS[AArch64::HasV9_7aOps])
     Str += "ARMv9.7a";
+  else if (FBS[AArch64::HasV9_8aOps])
+    Str += "ARMv9.8a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -4923,6 +4932,7 @@ bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
                 .Case("ph", "ph")
                 .Case("r", "r")
                 .Case("sm", "sm")
+                .Case("stshstrm", "stshstrm")
                 .Case("strm", "strm")
                 .Case("za", "za")
                 .Default(Keyword);
@@ -5036,7 +5046,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // operand as an identifier.
     if (Mnemonic == "brb" || Mnemonic == "smstart" || Mnemonic == "smstop" ||
         Mnemonic == "gcsb" || Mnemonic == "bti" || Mnemonic == "stshh" ||
-        Mnemonic == "psb" || Mnemonic == "tsb" || Mnemonic == "shuh")
+        Mnemonic == "psb" || Mnemonic == "tsb" || Mnemonic == "shuh" ||
+        Mnemonic == "srls")
       return parseKeywordOperand(Operands);
 
     // This was not a register so parse other operands that start with an
@@ -5307,8 +5318,9 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   Operands.push_back(AArch64Operand::CreateToken(Head, NameLoc, getContext()));
   Mnemonic = Head;
 
-  // Handle condition codes for a branch mnemonic
-  if ((Head == "b" || Head == "bc") && Next != StringRef::npos) {
+  // Handle condition codes for a branch or fault mnemonic.
+  if ((Head == "b" || Head == "bc" || Head == "flt") &&
+      Next != StringRef::npos) {
     Start = Next;
     Next = Name.find('.', Start + 1);
     Head = Name.slice(Start + 1, Next);
@@ -6089,6 +6101,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [0, 127].");
   case Match_InvalidImm0_255:
     return Error(Loc, "immediate must be an integer in range [0, 255].");
+  case Match_InvalidImm0_511:
+    return Error(Loc, "immediate must be an integer in range [0, 511].");
   case Match_InvalidImm0_65535:
     return Error(Loc, "immediate must be an integer in range [0, 65535].");
   case Match_InvalidHinteUImm16:
@@ -6104,8 +6118,16 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidImm1_512:
+    return Error(Loc, "immediate must be an integer in range [1, 512].");
   case Match_InvalidImmM1_62:
     return Error(Loc, "immediate must be an integer in range [-1, 62].");
+  case Match_InvalidImmM1_510:
+    return Error(Loc, "immediate must be an integer in range [-1, 510].");
+  case Match_InvalidImmM255_256:
+    return Error(Loc, "immediate must be an integer in range [-255, 256].");
+  case Match_InvalidImmM257_254:
+    return Error(Loc, "immediate must be an integer in range [-257, 254].");
   case Match_InvalidMemoryIndexedRange2UImm0:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -6877,13 +6899,18 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm0_63:
   case Match_InvalidImm0_127:
   case Match_InvalidImm0_255:
+  case Match_InvalidImm0_511:
   case Match_InvalidImm0_65535:
   case Match_InvalidHinteUImm16:
   case Match_InvalidImm1_8:
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidImm1_512:
   case Match_InvalidImmM1_62:
+  case Match_InvalidImmM1_510:
+  case Match_InvalidImmM255_256:
+  case Match_InvalidImmM257_254:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
   case Match_InvalidMemoryIndexedRange2UImm2:
@@ -7048,6 +7075,11 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
       return Error(IDLoc, "too few operands for instruction", SMRange(IDLoc, (*Operands.back()).getEndLoc()));
+    // CFLT has both register and immediate forms. The matcher may select an
+    // immediate-form failure for an invalid register operand.
+    if (Tok.starts_with("cflt") &&
+        static_cast<AArch64Operand &>(*Operands[ErrorInfo]).isScalarReg())
+      MatchResult = Match_InvalidOperand;
     // Any time we get here, there's nothing fancy to do. Just get the
     // operand SMLoc and display the diagnostic.
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
@@ -7074,7 +7106,9 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   else if (IDVal == ".cpu")
     parseDirectiveCPU(Loc);
   else if (IDVal == ".tlsdesccall")
-    parseDirectiveTLSDescCall(Loc);
+    parseDirectiveTLSDescCall(Loc, /*IsAuth=*/false);
+  else if (IDVal == ".tlsauthdesccall")
+    parseDirectiveTLSDescCall(Loc, /*IsAuth=*/true);
   else if (IDVal == ".ltorg" || IDVal == ".pool")
     parseDirectiveLtorg(Loc);
   else if (IDVal == ".unreq")
@@ -7399,8 +7433,9 @@ bool AArch64AsmParser::parseDirectiveInst(SMLoc Loc) {
 }
 
 // parseDirectiveTLSDescCall:
-//   ::= .tlsdesccall symbol
-bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
+//   ::= .tlsdesccall symbol (if IsAuth is false)
+//   ::= .tlsauthdesccall symbol (if IsAuth is true)
+bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L, bool IsAuth) {
   StringRef Name;
   if (check(getParser().parseIdentifier(Name), L, "expected symbol") ||
       parseToken(AsmToken::EndOfStatement))
@@ -7408,10 +7443,12 @@ bool AArch64AsmParser::parseDirectiveTLSDescCall(SMLoc L) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
-  Expr = MCSpecifierExpr::create(Expr, AArch64::S_TLSDESC, getContext());
+  Expr = MCSpecifierExpr::create(
+      Expr, IsAuth ? AArch64::S_TLSDESC_AUTH : AArch64::S_TLSDESC,
+      getContext());
 
   MCInst Inst;
-  Inst.setOpcode(AArch64::TLSDESCCALL);
+  Inst.setOpcode(IsAuth ? AArch64::TLSAUTHDESCCALL : AArch64::TLSDESCCALL);
   Inst.addOperand(MCOperand::createExpr(Expr));
 
   getParser().getStreamer().emitInstruction(Inst, getSTI());
@@ -8642,40 +8679,19 @@ ParseStatus AArch64AsmParser::tryParseSVEDataVector(OperandVector &Operands) {
 }
 
 ParseStatus AArch64AsmParser::tryParseSVEPattern(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-
   SMLoc SS = getLoc();
   const AsmToken &TokE = getTok();
-  bool IsHash = TokE.is(AsmToken::Hash);
 
-  if (!IsHash && TokE.isNot(AsmToken::Identifier))
+  if (TokE.isNot(AsmToken::Identifier))
     return ParseStatus::NoMatch;
 
-  int64_t Pattern;
-  if (IsHash) {
-    Lex(); // Eat hash
+  auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
+  if (!Pat)
+    return ParseStatus::NoMatch;
 
-    // Parse the immediate operand.
-    const MCExpr *ImmVal;
-    SS = getLoc();
-    if (Parser.parseExpression(ImmVal))
-      return ParseStatus::Failure;
-
-    auto *MCE = dyn_cast<MCConstantExpr>(ImmVal);
-    if (!MCE)
-      return TokError("invalid operand for instruction");
-
-    Pattern = MCE->getValue();
-  } else {
-    // Parse the pattern
-    auto Pat = AArch64SVEPredPattern::lookupSVEPREDPATByName(TokE.getString());
-    if (!Pat)
-      return ParseStatus::NoMatch;
-
-    Lex();
-    Pattern = Pat->Encoding;
-    assert(Pattern >= 0 && Pattern < 32);
-  }
+  Lex();
+  int64_t Pattern = Pat->Encoding;
+  assert(Pattern >= 0 && Pattern < 32);
 
   Operands.push_back(
       AArch64Operand::CreateImm(MCConstantExpr::create(Pattern, getContext()),
@@ -8757,39 +8773,5 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
-  return ParseStatus::Success;
-}
-
-template <int Adj>
-ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
-  SMLoc S = getLoc();
-
-  parseOptionalToken(AsmToken::Hash);
-  bool IsNegative = parseOptionalToken(AsmToken::Minus);
-
-  if (getTok().isNot(AsmToken::Integer))
-    return ParseStatus::NoMatch;
-
-  const MCExpr *Ex;
-  if (getParser().parseExpression(Ex))
-    return ParseStatus::NoMatch;
-
-  int64_t Imm = dyn_cast<MCConstantExpr>(Ex)->getValue();
-  if (IsNegative)
-    Imm = -Imm;
-
-  // We want an adjusted immediate in the range [0, 63]. If we don't have one,
-  // return a value, which is certain to trigger a error message about invalid
-  // immediate range instead of a non-descriptive invalid operand error.
-  static_assert(Adj == 1 || Adj == -1, "Unsafe immediate adjustment");
-  if (Imm == INT64_MIN || Imm == INT64_MAX || Imm + Adj < 0 || Imm + Adj > 63)
-    Imm = -2;
-  else
-    Imm += Adj;
-
-  SMLoc E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
-  Operands.push_back(AArch64Operand::CreateImm(
-      MCConstantExpr::create(Imm, getContext()), S, E, getContext()));
-
   return ParseStatus::Success;
 }

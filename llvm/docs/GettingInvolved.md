@@ -169,7 +169,7 @@ what to add to your calendar invite.
      - Monthly
      -
      - [Minutes/docs](https://docs.google.com/document/d/1JecbplF09l3swTjze-UVeLh4L48svJxGVy4mz_e9Rhs/edit?usp=gmail#heading=h.ts9cmcjbir1j)
-   * - [LLVM security group](https://llvm.org/docs/Security.html)
+   * - [LLVM security group](Security.md)
      - Monthly, every 3rd Tuesday
      - [ics](https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com)
@@ -219,7 +219,7 @@ what to add to your calendar invite.
      - 3rd Tuesday of the month
      - [ics](https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements)
      - [Meeting details/agenda:](https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit)
-   * - [LLVM Qualification Working Group](https://llvm.org/docs/QualGroup.html)
+   * - [LLVM Qualification Working Group](QualGroup.md)
      - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)
      - [ics](https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo)
@@ -350,12 +350,6 @@ The {doc}`CodeOfConduct` applies to all office hours.
       [gcal](https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com)
     - [GoogleMeet](https://meet.google.com/xok-iqne-gmi)
     - English, Norwegian (not fluently)
-  * - Johannes Doerfert (he/him)
-    - OpenMP, LLVM-IR, interprocedural optimizations, Attributor, workshops, research, ...
-    - Every week, Wednesdays 9:30am (Pacific Time), for 1 hour.
-      [ics](https://drive.google.com/file/d/1E_QkRvirmdJzlXf2EKBUX-v8Xj7-eW3v/view?usp=sharing)
-    - [MS Teams](https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTMxNzU4MWYtYzViNS00OTM2LWJmNWQtMjg5ZWFhNGVjNzgw%40thread.v2/0?context=%7b%22Tid%22%3a%22a722dec9-ae4e-4ae3-9d75-fd66e2680a63%22%2c%22Oid%22%3a%22885bda30-ce8e-46db-aa7e-15de0474831a%22%7d)
-    - English, German
   * - Tobias Grosser
     - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
@@ -592,7 +586,7 @@ This event is a meetup for all developers of LLDB. Meeting agendas are posted
 on Discourse before the event.
 
 Attendees must adhere to the LLVM Code of Conduct
-(https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
+([Code of Conduct](CodeOfConduct.md)). For any Code of Conduct reports,
 please contact the organizers and also email conduct@llvm.org.
 
 Agenda/Meeting Minutes: Link to minutes

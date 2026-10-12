@@ -19,6 +19,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
@@ -2889,9 +2890,19 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
-    // TODO: Mark intrinsic functions that are SIMPLE per F2023
-    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
+    if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */) {
       attrs.set(characteristics::Procedure::Attr::Pure);
+      // F2023 16.1: standard intrinsic functions are SIMPLE. Extensions that
+      // are not SIMPLE: they have side effects, or their result varies with
+      // external state. See docs/Extensions.md.
+      static const llvm::StringSet<> notSimpleExtensionFunctions{"chdir",
+          "dsecnds", "etime", "fseek", "ftell", "getcwd", "getgid", "getpid",
+          "getuid", "hostnm", "irand", "malloc", "putenv", "rand", "rename",
+          "rtc", "secnds", "second", "system", "time", "timef", "unlink"};
+      if (!notSimpleExtensionFunctions.contains(name)) {
+        attrs.set(characteristics::Procedure::Attr::Simple);
+      }
+    }
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};
     characteristics::FunctionResult funcResult{std::move(typeAndShape)};
     characteristics::Procedure chars{
@@ -2928,6 +2939,7 @@ public:
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
   bool IsDualIntrinsic(const std::string &) const;
+  bool IsGenericIntrinsic(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
@@ -3006,6 +3018,18 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
 bool IntrinsicProcTable::Implementation::IsIntrinsic(
     const std::string &name) const {
   return IsIntrinsicFunction(name) || IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::Implementation::IsGenericIntrinsic(
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
+  // Intrinsic subroutines have no specific names, so a reference to one is
+  // always a reference to a generic procedure.
+  // Unlike IsIntrinsicFunction() and IsIntrinsicSubroutine(), the names that
+  // Probe() special-cases ahead of these tables are deliberately omitted here:
+  // each of them has a single interface, so nothing about such a reference can
+  // depend on which arguments it is given.
+  return genericFuncs_.find(name) != genericFuncs_.end() ||
+      subroutines_.find(name) != subroutines_.end();
 }
 bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
@@ -3187,6 +3211,8 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           attrs.set(isAllocatableMold
                   ? characteristics::Procedure::Attr::NullAllocatable
                   : characteristics::Procedure::Attr::NullPointer);
+          attrs.set(characteristics::Procedure::Attr::Pure);
+          attrs.set(characteristics::Procedure::Attr::Simple);
           characteristics::Procedure chars{
               std::move(*fResult), std::move(args), attrs};
           return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
@@ -3202,6 +3228,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
   attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Simple);
   arguments.clear();
   return SpecificCall{
       SpecificIntrinsic{"null"s,
@@ -4411,7 +4438,9 @@ IntrinsicProcTable::Implementation::IsSpecificIntrinsicFunction(
           std::string{specific.dummy[j].keyword}, std::move(dummy));
     }
     characteristics::Procedure::Attrs attrs;
-    attrs.set(characteristics::Procedure::Attr::Pure)
+    // F2023 16.1: specific intrinsic functions are SIMPLE
+    attrs.set(characteristics::Procedure::Attr::Simple)
+        .set(characteristics::Procedure::Attr::Pure)
         .set(characteristics::Procedure::Attr::Elemental);
     characteristics::Procedure chars{
         std::move(fResult), std::move(args), attrs};
@@ -4465,6 +4494,9 @@ bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
 bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
   return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
+bool IntrinsicProcTable::IsGenericIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsGenericIntrinsic(name);
+}
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(
     const std::string &name) const {
@@ -4479,6 +4511,22 @@ std::string IntrinsicProcTable::GetGenericIntrinsicName(
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
     FoldingContext &context) const {
+  // Actual arguments may retain designators of named constants for the
+  // benefit of storage association in nonintrinsic calls (see
+  // ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray).  Intrinsic
+  // matching, argument checking, and the special handlers inspect constant
+  // values structurally, so probe with a folded copy of such arguments.
+  // On success the SpecificCall carries the folded arguments; on failure
+  // the caller's original arguments are left untouched for subsequent
+  // nonintrinsic resolution.  (Note a pre-existing quirk, unchanged here:
+  // Match() moves arguments while rearranging them and can still fail late,
+  // so a failed match can leave a probe's working vector partially moved
+  // from; using a copy confines that to the copy.)
+  if (AnyNamedConstantActualArguments(arguments)) {
+    ActualArguments folded{arguments};
+    FoldNamedConstantActualArguments(context, folded);
+    return DEREF(impl_.get()).Probe(call, folded, context);
+  }
   return DEREF(impl_.get()).Probe(call, arguments, context);
 }
 

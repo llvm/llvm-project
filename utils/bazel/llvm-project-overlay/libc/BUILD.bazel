@@ -5,6 +5,7 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
@@ -280,21 +281,27 @@ STATIC_HEADERS = glob(
     ],
 ) + ["include/__llvm-libc-common.h"]
 
-genrule(
+[
+    copy_file(
+        name = "copy_staging/" + f,
+        src = f,
+        out = "staging/" + f,
+    )
+    for f in STATIC_HEADERS
+]
+
+filegroup(
     name = "copy_llvm_libc_static_headers",
-    srcs = STATIC_HEADERS,
-    outs = ["staging/" + f for f in STATIC_HEADERS],
-    cmd = """srcs=($(SRCS))\n outs=($(OUTS))\n for i in "$${!srcs[@]}"; do cp "$${srcs[$$i]}" "$${outs[$$i]}"; done""",
+    srcs = ["staging/" + f for f in STATIC_HEADERS],
 )
 
-genrule(
+copy_file(
     name = "copy_modular_format_header",
-    srcs = select({
-        ":modular_format_enable": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
-        "//conditions:default": ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h"],
+    src = select({
+        ":modular_format_enable": "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
+        "//conditions:default": "include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF-disable.h",
     }),
-    outs = ["staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"],
-    cmd = "cp $< $@",
+    out = "staging/include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h",
 )
 
 STATIC_AND_CONDITIONAL_HEADERS = STATIC_HEADERS + ["include/llvm-libc-macros/_LIBC_MODULAR_FORMAT_PRINTF.h"]
@@ -344,6 +351,7 @@ libc_support_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":hdr_stdint_proxy",
@@ -437,8 +445,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_common_threads_macros",
+    hdrs = ["include/llvm-libc-macros/common-threads-macros.h"],
+)
+
+libc_support_library(
+    name = "llvm_libc_macros_threads_macros",
+    hdrs = ["include/llvm-libc-macros/threads-macros.h"],
+    deps = [":llvm_libc_macros_common_threads_macros"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_limits_macros",
     hdrs = ["include/llvm-libc-macros/limits-macros.h"],
+    deps = [":llvm_libc_macros_common_threads_macros"],
 )
 
 libc_support_library(
@@ -570,6 +590,11 @@ libc_support_library(
     deps = [
         ":llvm_libc_types_size_t",
     ],
+)
+
+libc_support_library(
+    name = "llvm_libc_types_struct___pthread_cleanup_frame",
+    hdrs = ["include/llvm-libc-types/struct___pthread_cleanup_frame.h"],
 )
 
 libc_support_library(
@@ -758,6 +783,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_poll_overlay",
+    hdrs = ["hdr/poll_overlay.h"],
+    target_compatible_with = select({
+        ":full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
+    name = "hdr_sys_socket_overlay",
+    hdrs = ["hdr/sys_socket_overlay.h"],
+    target_compatible_with = select({
+        ":full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+libc_support_library(
     name = "hdr_netinet_in_macros",
     hdrs = ["hdr/netinet_in_macros.h"],
 )
@@ -824,9 +867,12 @@ libc_support_library(
 libc_support_library(
     name = "hdr_sys_socket_macros",
     hdrs = ["hdr/sys_socket_macros.h"],
-    deps = [
-        ":llvm_libc_macros_sys_socket_macros",
-    ],
+    deps = select({
+        ":full_build": [
+            ":llvm_libc_macros_sys_socket_macros",
+        ],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1032,9 +1078,7 @@ libc_support_library(
 libc_support_library(
     name = "hdr_elf_proxy",
     hdrs = ["hdr/elf_proxy.h"],
-    deps = [
-        ":include_llvm-libc-proxy_elf_proxy_h",
-    ],
+    textual_hdrs = [":include_llvm-libc-proxy_elf_proxy_h"],
 )
 
 libc_support_library(
@@ -1100,10 +1144,7 @@ libc_support_library(
     name = "types_atexithandler_t",
     hdrs = ["hdr/types/atexithandler_t.h"],
     # Only compatible with full build mode. atexit is not available in overlay mode.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
 )
 
 libc_support_library(
@@ -1213,7 +1254,7 @@ libc_support_library(
     hdrs = ["hdr/types/nfds_t.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_nfds_t"],
-        "//conditions:default": [],
+        "//conditions:default": [":hdr_poll_overlay"],
     }),
 )
 
@@ -1222,7 +1263,7 @@ libc_support_library(
     hdrs = ["hdr/types/struct_pollfd.h"],
     deps = select({
         ":full_build": [":llvm_libc_types_struct_pollfd"],
-        "//conditions:default": [],
+        "//conditions:default": [":hdr_poll_overlay"],
     }),
 )
 
@@ -1368,11 +1409,19 @@ libc_support_library(
 libc_support_library(
     name = "types_sa_family_t",
     hdrs = ["hdr/types/sa_family_t.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_socklen_t",
     hdrs = ["hdr/types/socklen_t.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1393,6 +1442,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sockaddr",
     hdrs = ["hdr/types/struct_sockaddr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1408,6 +1461,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_sockaddr_storage",
     hdrs = ["hdr/types/struct_sockaddr_storage.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1418,6 +1475,10 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_linger",
     hdrs = ["hdr/types/struct_linger.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
@@ -1428,17 +1489,39 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_mmsghdr",
     hdrs = ["hdr/types/struct_mmsghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_msghdr",
     hdrs = ["hdr/types/struct_msghdr.h"],
+    deps = select({
+        ":full_build": [],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
 )
 
 libc_support_library(
     name = "types_struct_cmsghdr",
     hdrs = ["hdr/types/struct_cmsghdr.h"],
-    deps = [":llvm_libc_types_struct_cmsghdr"],
+    deps = select({
+        ":full_build": [":llvm_libc_types_struct_cmsghdr"],
+        "//conditions:default": [":hdr_sys_socket_overlay"],
+    }),
+)
+
+libc_support_library(
+    name = "types_struct___pthread_cleanup_frame",
+    hdrs = ["hdr/types/struct___pthread_cleanup_frame.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [":llvm_libc_types_struct___pthread_cleanup_frame"],
 )
 
 libc_support_library(
@@ -2081,6 +2164,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_ctype_utils",
         ":__support_macros_config",
+        ":__support_wctype_utils",
         ":hdr_stdint_proxy",
     ],
 )
@@ -2222,6 +2306,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_file_file_io_result",
+    hdrs = ["src/__support/File/file_io_result.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_file_file",
     srcs = [
         "include/llvm-libc-types/off_t.h",
@@ -2236,6 +2328,7 @@ libc_support_library(
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
+        ":__support_file_file_io_result",
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -2279,7 +2372,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
-        ":__support_osutil_linux_syscall_wrappers_dup2",
+        ":__support_osutil_linux_syscall_wrappers_dup3",
         ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
@@ -3662,6 +3755,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_clone",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/clone.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    textual_hdrs = [
+        "src/__support/OSUtil/linux/syscall_wrappers/aarch64/clone.h",
+        "src/__support/OSUtil/linux/syscall_wrappers/riscv/clone.h",
+        "src/__support/OSUtil/linux/syscall_wrappers/x86_64/clone.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_libc_assert",
+        ":__support_macros_config",
+        ":__support_macros_properties_architectures",
+        ":hdr_stdint_proxy",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_close",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/close.h"],
     target_compatible_with = select({
@@ -4205,6 +4321,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_cleanup_stack",
+    hdrs = ["src/__support/threads/cleanup_stack.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":types_struct___pthread_cleanup_frame",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_linux_futex_word_type",
     hdrs = ["src/__support/threads/linux/futex_word.h"],
     target_compatible_with = select({
@@ -4221,14 +4352,21 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_attributes",
     hdrs = ["src/__support/threads/thread_attributes.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_cleanup_stack",
         ":hdr_stdint_proxy",
         ":types_size_t",
+        ":types_struct___pthread_cleanup_frame",
     ],
 )
 
@@ -4372,6 +4510,11 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_tcb",
     hdrs = ["src/__support/threads/tcb.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     textual_hdrs = select({
         "@platforms//os:linux": [
             "src/__support/threads/linux/tcb.h",
@@ -4395,6 +4538,11 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_headers",
     hdrs = ["src/__support/threads/thread.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_atomic",
         ":__support_cpp_optional",
@@ -4414,6 +4562,11 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread",
     srcs = ["src/__support/threads/thread.cpp"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_mutex",
@@ -4421,8 +4574,11 @@ libc_support_library(
         ":__support_fixedvector",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_threads_cleanup_stack",
         ":__support_threads_mutex",
         ":__support_threads_thread_headers",
+        ":hdr_limits_macros",
+        ":types_struct___pthread_cleanup_frame",
     ] + select({
         "@platforms//os:linux": [":__support_threads_linux_thread"],
         "//conditions:default": [],
@@ -4432,7 +4588,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
-    copt_sets = ["threading"],
+    full_build_only = True,
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -4450,6 +4606,7 @@ libc_support_library(
         ":__support_libc_errno",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_clone",
         ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",
@@ -4466,6 +4623,7 @@ libc_support_library(
         ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_linux_futex_word_type",
+        ":__support_threads_linux_tls",
         ":__support_threads_mutex",
         ":__support_threads_thread_attributes",
         ":__support_threads_thread_headers",
@@ -4476,6 +4634,39 @@ libc_support_library(
         ":hdr_signal_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_mman_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_threads_linux_tls",
+    srcs = selects.with_or({
+        PLATFORM_CPU_X86_64: ["src/__support/threads/linux/x86_64/tls.cpp"],
+        PLATFORM_CPU_ARM64: ["src/__support/threads/linux/aarch64/tls.cpp"],
+        PLATFORM_CPU_RISCV64: ["src/__support/threads/linux/riscv/tls.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = [
+        "-ffreestanding",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fno-stack-protector",
+        "-O3",
+    ],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_getrandom",
+        ":__support_osutil_linux_syscall_wrappers_mmap",
+        ":__support_osutil_linux_syscall_wrappers_munmap",
+        ":__support_osutil_syscall",
+        ":__support_threads_tcb",
+        ":config_app_h",
+        ":hdr_sys_mman_macros",
+        ":string_memory_utils",
     ],
 )
 
@@ -4852,6 +5043,24 @@ libc_function(
         ":hdr_errno_macros",
         ":hdr_sys_socket_macros",
         ":types_socklen_t",
+        ":types_struct_in6_addr",
+        ":types_struct_in_addr",
+    ],
+)
+
+libc_function(
+    name = "inet_pton",
+    srcs = ["src/arpa/inet/inet_pton.cpp"],
+    hdrs = ["src/arpa/inet/inet_pton.h"],
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":__support_net_address",
+        ":hdr_errno_macros",
+        ":hdr_stdint_proxy",
+        ":hdr_sys_socket_macros",
         ":types_struct_in6_addr",
         ":types_struct_in_addr",
     ],
@@ -6217,6 +6426,7 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_integer_literals",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -8222,8 +8432,13 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_cosf",
-    hdrs = ["src/__support/math/cosf.h"],
+    hdrs = [
+        "src/__support/math/cosf.h",
+        "src/__support/math/cosf_double_eval.h",
+        "src/__support/math/cosf_float_eval.h",
+    ],
     deps = [
+        ":__support_common",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -8443,6 +8658,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_common_constants",
@@ -8506,6 +8722,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
         ":__support_macros_config",
         ":__support_macros_optimization",
     ],
@@ -9957,6 +10174,7 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
@@ -10143,29 +10361,81 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_powf",
-    hdrs = [
-        "src/__support/math/powf.h",
-        "src/__support/math/powf_small_tables.h",
-    ],
+    name = "__support_math_powf_utils",
+    hdrs = ["src/__support/math/powf_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_cpp_algorithm",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_rounding_mode",
+        ":__support_fputil_sqrt",
+        ":__support_fputil_triple_double",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_exp10f",
+        ":__support_math_exp2f",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf_double_eval",
+    hdrs = ["src/__support/math/powf_double_eval.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_optional",
+        ":__support_fputil_double_double",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_common_constants",
+        ":__support_math_exp_constants",
+        ":__support_math_powf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf_float_eval",
+    hdrs = ["src/__support/math/powf_float_eval.h"],
+    deps = [
+        ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_double_double",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_sqrt",
-        ":__support_fputil_triple_double",
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_math_common_constants",
-        ":__support_math_exp10f",
-        ":__support_math_exp2f",
-        ":__support_math_exp_constants",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_exp2f_float_utils",
+        ":__support_math_powf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_powf",
+    hdrs = ["src/__support/math/powf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_powf_double_eval",
+        ":__support_math_powf_float_eval",
     ],
 )
 
@@ -10742,8 +11012,13 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_sinf",
-    hdrs = ["src/__support/math/sinf.h"],
+    hdrs = [
+        "src/__support/math/sinf.h",
+        "src/__support/math/sinf_double_eval.h",
+        "src/__support/math/sinf_float_eval.h",
+    ],
     deps = [
+        ":__support_common",
         ":__support_fputil_basic_operations",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fma",
@@ -11402,10 +11677,12 @@ libc_support_library(
         ":__support_cpp_span",
         ":__support_cpp_string_view",
         ":__support_ctype_utils",
+        ":__support_fixedvector",
         ":__support_libc_assert",
         ":__support_macros_config",
         ":__support_str_to_integer",
         ":hdr_inet_address_macros",
+        ":hdr_stdint_proxy",
         ":string_memory_utils",
         ":types_in_addr_t",
         ":types_struct_in6_addr",
@@ -15215,10 +15492,7 @@ libc_support_library(
     name = "stdlib_exit_handler",
     hdrs = ["src/stdlib/exit_handler.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_blockstore",
         ":__support_common",
@@ -15235,10 +15509,7 @@ libc_function(
     srcs = ["src/stdlib/_Exit.cpp"],
     hdrs = ["src/stdlib/_Exit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_config",
@@ -15251,10 +15522,7 @@ libc_function(
     srcs = ["src/stdlib/atexit.cpp"],
     hdrs = ["src/stdlib/atexit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_attributes",
@@ -15269,10 +15537,7 @@ libc_function(
     srcs = ["src/stdlib/exit.cpp"],
     hdrs = ["src/stdlib/exit.h"],
     # Full-build only, as overlay mode must use the host libc's cleanup.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_common",
         ":__support_macros_config",
@@ -15429,9 +15694,10 @@ libc_support_library(
 libc_support_library(
     name = "stdlib_linux_abort_utils",
     hdrs = ["src/stdlib/linux/abort_utils.h"],
+    full_build_only = True,
     # Full-build only, as overlay mode must use the host libc's cleanup.
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -15450,10 +15716,7 @@ libc_function(
     srcs = ["src/stdlib/abort.cpp"],
     hdrs = ["src/stdlib/abort.h"],
     # Full-build only, as overlay mode must use the host libc's abort.
-    target_compatible_with = select({
-        ":full_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
+    full_build_only = True,
     deps = [
         ":__support_macros_config",
         ":stdlib_abort_utils",
@@ -15614,13 +15877,16 @@ libc_support_library(
     name = "str_from_util",
     hdrs = ["src/stdlib/str_from_util.h"],
     deps = [
-        ":__support_common",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
+        ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_printf_core_printf_converter",
         ":__support_printf_core_printf_core_structs",
+        ":__support_printf_core_printf_error_mapper",
         ":__support_printf_core_printf_writer",
         ":__support_str_to_integer",
+        ":types_size_t",
     ],
 )
 
@@ -15629,12 +15895,21 @@ libc_function(
     srcs = ["src/stdlib/strfromf.cpp"],
     hdrs = ["src/stdlib/strfromf.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
+    ],
+)
+
+libc_function(
+    name = "strfromf128",
+    srcs = ["src/stdlib/strfromf128.cpp"],
+    hdrs = ["src/stdlib/strfromf128.h"],
+    deps = [
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+        ":str_from_util",
+        ":types_size_t",
     ],
 )
 
@@ -15643,12 +15918,9 @@ libc_function(
     srcs = ["src/stdlib/strfromd.cpp"],
     hdrs = ["src/stdlib/strfromd.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
     ],
 )
 
@@ -15657,12 +15929,9 @@ libc_function(
     srcs = ["src/stdlib/strfroml.cpp"],
     hdrs = ["src/stdlib/strfroml.h"],
     deps = [
-        ":__support_common",
-        ":__support_cpp_limits",
         ":__support_macros_config",
-        ":__support_printf_core_printf_core_structs",
-        ":__support_printf_core_printf_error_mapper",
         ":str_from_util",
+        ":types_size_t",
     ],
 )
 
@@ -16679,6 +16948,11 @@ libc_function(
     name = "fork",
     srcs = ["src/unistd/linux/fork.cpp"],
     hdrs = ["src/unistd/fork.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_libc_errno",
@@ -16726,10 +17000,11 @@ libc_support_library(
 libc_support_library(
     name = "__signal_utils",
     hdrs = ["src/signal/linux/signal_utils.h"],
+    full_build_only = True,
     # Only compatible with full build mode on Linux. Overlay mode has header
     # conflicts with system headers (e.g. sa_handler macro in glibc).
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -17127,8 +17402,9 @@ libc_function(
     name = "sysconf",
     srcs = ["src/unistd/linux/sysconf.cpp"],
     hdrs = ["src/unistd/sysconf.h"],
+    full_build_only = True,
     target_compatible_with = select({
-        ":full_build_linux": [],
+        "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -17140,6 +17416,7 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_sysinfo",
         ":__support_osutil_linux_sysinfo",
         ":errno",
+        ":hdr_limits_macros",
         ":hdr_sys_auxv_macros",
         ":hdr_sys_resource_macros",
         ":hdr_unistd_macros",
@@ -18077,6 +18354,25 @@ libc_function(
         ":__support_osutil_linux_syscall_wrappers_getrandom",
         ":types_size_t",
         ":types_ssize_t",
+    ],
+)
+
+############################## sys/prctl targets ##############################
+
+libc_function(
+    name = "prctl",
+    srcs = ["src/sys/prctl/linux/prctl.cpp"],
+    hdrs = ["src/sys/prctl/prctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":errno",
     ],
 )
 

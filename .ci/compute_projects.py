@@ -7,6 +7,7 @@ Does some things, spits out a list of projects.
 """
 
 from collections.abc import Set
+import json
 import pathlib
 import platform
 import sys
@@ -26,6 +27,7 @@ PROJECT_DEPENDENCIES = {
     "cross-project-tests": {"clang", "lldb", "lld"},
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
+    "orc-rt": {"llvm"},
     "flang": {"llvm", "clang"},
     "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
@@ -55,6 +57,7 @@ PROJECT_CHECK_TARGETS = {
     "libclc": "check-libclc",
     "mlir": "check-mlir",
     "openmp": "openmp",  # Run only build in pre-merge
+    "orc-rt": "check-orc-rt",
     "polly": "check-polly",
     "lit": "check-lit",
     "offload": "offload",  # Run only build in pre-merge
@@ -70,6 +73,7 @@ RUNTIMES = {
     "libclc",
     "openmp",
     "offload",
+    "orc-rt",
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -125,6 +129,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
     "openmp": {"openmp"},
+    "orc-rt": {"orc-rt"},
     "offload": {"offload", "openmp"},
     ".ci": {
         runtime_name
@@ -143,6 +148,7 @@ CROSS_COMPILATION_RUNTIMES = {
 }
 
 EXCLUDE_WINDOWS = {
+    "CIR",  # The Windows premerge build does not enable CLANG_ENABLE_CIR.
     "cross-project-tests",  # TODO(issues/132797): Tests are failing.
     "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
@@ -388,5 +394,4 @@ if __name__ == "__main__":
         current_platform = sys.argv[1]
     changed_files = [line.strip() for line in sys.stdin.readlines()]
     env_variables = get_env_variables(changed_files, current_platform)
-    for env_variable in env_variables:
-        print(f"{env_variable}='{env_variables[env_variable]}'")
+    print(json.dumps(env_variables))

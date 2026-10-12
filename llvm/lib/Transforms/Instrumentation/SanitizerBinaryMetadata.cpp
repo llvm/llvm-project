@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/SanitizerBinaryMetadata.h"
+#include "InstrumentationOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -35,7 +36,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -84,29 +84,6 @@ const MetadataInfo MetadataInfo::Atomics{
 // we need to use a set with stable iteration order, such as SetVector.
 using MetadataInfoSet = SetVector<const MetadataInfo *>;
 
-//===--- Command-line options ---------------------------------------------===//
-
-cl::opt<bool> ClWeakCallbacks(
-    "sanitizer-metadata-weak-callbacks",
-    cl::desc("Declare callbacks extern weak, and only call if non-null."),
-    cl::Hidden, cl::init(true));
-cl::opt<bool>
-    ClNoSanitize("sanitizer-metadata-nosanitize-attr",
-                 cl::desc("Mark some metadata features uncovered in functions "
-                          "with associated no_sanitize attributes."),
-                 cl::Hidden, cl::init(true));
-
-cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
-                            cl::desc("Emit PCs for covered functions."),
-                            cl::Hidden, cl::init(false));
-cl::opt<bool> ClEmitAtomics("sanitizer-metadata-atomics",
-                            cl::desc("Emit PCs for atomic operations."),
-                            cl::Hidden, cl::init(false));
-cl::opt<bool> ClEmitUAR("sanitizer-metadata-uar",
-                        cl::desc("Emit PCs for start of functions that are "
-                                 "subject for use-after-return checking"),
-                        cl::Hidden, cl::init(false));
-
 //===--- Statistics -------------------------------------------------------===//
 
 STATISTIC(NumMetadataCovered, "Metadata attached to covered functions");
@@ -117,20 +94,23 @@ STATISTIC(NumMetadataUAR, "Metadata attached to UAR functions");
 
 // Apply opt overrides.
 SanitizerBinaryMetadataOptions &&
-transformOptionsFromCl(SanitizerBinaryMetadataOptions &&Opts) {
-  Opts.Covered |= ClEmitCovered;
-  Opts.Atomics |= ClEmitAtomics;
-  Opts.UAR |= ClEmitUAR;
+transformOptionsFromCl(const InstrumentationOptions &CLOpts,
+                       SanitizerBinaryMetadataOptions &&Opts) {
+  Opts.Covered |= CLOpts.sanitizer_metadata_covered;
+  Opts.Atomics |= CLOpts.sanitizer_metadata_atomics;
+  Opts.UAR |= CLOpts.sanitizer_metadata_uar;
   return std::move(Opts);
 }
 
 class SanitizerBinaryMetadata {
 public:
-  SanitizerBinaryMetadata(Module &M, SanitizerBinaryMetadataOptions Opts,
+  SanitizerBinaryMetadata(const InstrumentationOptions &CLOpts, Module &M,
+                          SanitizerBinaryMetadataOptions Opts,
                           std::unique_ptr<SpecialCaseList> Ignorelist)
-      : Mod(M), Options(transformOptionsFromCl(std::move(Opts))),
+      : CLOpts(CLOpts), Mod(M),
+        Options(transformOptionsFromCl(CLOpts, std::move(Opts))),
         Ignorelist(std::move(Ignorelist)), TargetTriple(M.getTargetTriple()),
-        VersionStr(utostr(getVersion())), IRB(M.getContext()) {
+        VersionStr(utostr(getVersion())), IRB(M) {
     // FIXME: Make it work with other formats.
     assert(TargetTriple.isOSBinFormatELF() && "ELF only");
     assert(!TargetTriple.isGPU() && "Device targets are not supported");
@@ -174,6 +154,7 @@ private:
   // Returns true if the access to the address should be considered "atomic".
   bool pretendAtomicAccess(const Value *Addr);
 
+  const InstrumentationOptions &CLOpts;
   Module &Mod;
   const SanitizerBinaryMetadataOptions Options;
   std::unique_ptr<SpecialCaseList> Ignorelist;
@@ -223,13 +204,15 @@ bool SanitizerBinaryMetadata::run() {
         createSanitizerCtorAndInitFunctions(
             Mod, StructorPrefix + ".module_ctor",
             (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
-            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
+            /*VersionCheckName=*/StringRef(),
+            /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks)
             .first;
     Function *Dtor =
         createSanitizerCtorAndInitFunctions(
             Mod, StructorPrefix + ".module_dtor",
             (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
-            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
+            /*VersionCheckName=*/StringRef(),
+            /*Weak=*/CLOpts.sanitizer_metadata_weak_callbacks)
             .first;
     Constant *CtorComdatKey = nullptr;
     Constant *DtorComdatKey = nullptr;
@@ -281,7 +264,8 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
         RequiresCovered |= runOn(I, MIS, MDB, FeatureMask);
   }
 
-  if (ClNoSanitize && F.hasFnAttribute("no_sanitize_thread"))
+  if (CLOpts.sanitizer_metadata_nosanitize_attr &&
+      F.hasFnAttribute("no_sanitize_thread"))
     FeatureMask &= ~kSanitizerBinaryMetadataAtomics;
   if (F.isVarArg())
     FeatureMask &= ~kSanitizerBinaryMetadataUAR;
@@ -497,7 +481,8 @@ SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
       return PreservedAnalyses::all();
   }
 
-  SanitizerBinaryMetadata Pass(M, Options, std::move(Ignorelist));
+  SanitizerBinaryMetadata Pass(InstrumentationOptions::Global, M, Options,
+                               std::move(Ignorelist));
   if (Pass.run())
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

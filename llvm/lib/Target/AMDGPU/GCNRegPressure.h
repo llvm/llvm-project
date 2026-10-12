@@ -86,8 +86,6 @@ struct GCNRegPressure {
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
-  /// \returns the AVGPR32 pressure
-  unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
@@ -129,12 +127,6 @@ struct GCNRegPressure {
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
-
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
-                       unsigned DynamicVGPRBlockSize) const {
-    return getOccupancy(ST, DynamicVGPRBlockSize) >
-           O.getOccupancy(ST, DynamicVGPRBlockSize);
-  }
 
   /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
   /// less. Since GCNRegpressure contains different types of pressures, and due
@@ -254,11 +246,6 @@ public:
   /// beneficial towards achieving the RP target.
   bool isSaveBeneficial(const GCNRegPressure &SaveRP) const;
 
-  /// Saves virtual register \p Reg with lanemask \p Mask.
-  void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
-    RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
-  }
-
   /// Returns the benefit towards achieving the RP target that saving \p SaveRP
   /// represents, in total number of registers saved across all classes.
   unsigned getNumRegsBenefit(const GCNRegPressure &SaveRP) const;
@@ -323,13 +310,13 @@ public:
   using LiveRegSet = DenseMap<unsigned, LaneBitmask>;
 
 protected:
-  const LiveIntervals &LIS;
+  LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
   /// instruction.
@@ -353,6 +340,10 @@ public:
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
+  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+
+  void resetMaxPressure() { MaxPressure = CurPressure; }
+
   GCNRegPressure getPressure() const { return CurPressure; }
 
   decltype(LiveRegs) moveLiveRegs() {
@@ -370,7 +361,7 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
@@ -386,10 +377,6 @@ public:
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.
   bool isValid() const;
-
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
-
-  void resetMaxPressure() { MaxPressure = CurPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
     GCNRegPressure RP = MaxPressure;
@@ -407,8 +394,13 @@ class GCNDownwardRPTracker : public GCNRPTracker {
 
   MachineBasicBlock::const_iterator MBBEnd;
 
+  /// Drop the lanes of \p Reg that are no longer live at \p SI, decreasing
+  /// CurPressure accordingly. \p Reg must be a virtual register that is
+  /// currently tracked as live.
+  void retireVirtReg(Register Reg, SlotIndex SI);
+
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
@@ -588,6 +580,18 @@ LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
                                  GCNRegPressure::RegKind Kind,
                                  LiveIntervals &LIS,
                                  const MachineLoopInfo *MLI);
+
+/// Estimate VGPR pressure using greedy, non-splitting register allocation
+/// simulation, accounting for live interval interference.
+/// \param RegionBegin Start iterator of the region
+/// \param RegionEnd End iterator of the region
+/// \param LiveIns Live-in registers for the region
+/// \returns estimated VGPR pressure
+unsigned estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI);
 
 } // end namespace llvm
 

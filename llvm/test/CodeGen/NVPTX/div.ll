@@ -5,18 +5,16 @@
 define float @div_full(float %a, float %b) {
 ; CHECK-LABEL: div_full(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [div_full_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [div_full_param_1];
 ; CHECK-NEXT:    div.full.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    mov.b32 %r4, 0f40400000;
-; CHECK-NEXT:    div.full.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    div.full.ftz.f32 %r6, %r5, %r2;
-; CHECK-NEXT:    mov.b32 %r7, 0f40800000;
-; CHECK-NEXT:    div.full.ftz.f32 %r8, %r6, %r7;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    div.full.f32 %r4, %r3, 0f40400000;
+; CHECK-NEXT:    div.full.ftz.f32 %r5, %r4, %r2;
+; CHECK-NEXT:    div.full.ftz.f32 %r6, %r5, 0f40800000;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
 ; CHECK-NEXT:    ret;
   %1 = call float @llvm.nvvm.div.full(float %a, float %b)
   %2 = call float @llvm.nvvm.div.full(float %1, float 3.0)

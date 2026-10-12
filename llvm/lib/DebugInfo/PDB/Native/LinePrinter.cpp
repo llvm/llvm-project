@@ -231,7 +231,8 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
     assert(FoundRun.ByteLen >= RunOffset);
     uint64_t Len = FoundRun.ByteLen - RunOffset;
     Len = std::min(Len, Reader.bytesRemaining());
-    uint64_t Base = FoundRun.Block * File.getBlockSize() + RunOffset;
+    uint64_t Base =
+        static_cast<uint64_t>(FoundRun.Block) * File.getBlockSize() + RunOffset;
     ArrayRef<uint8_t> Data;
     consumeError(Reader.readBytes(Data, Len));
     OS << format_bytes_with_ascii(Data, Base, 32, 4,

@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LINUX_LLISTXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LINUX_LLISTXATTR_H
+#ifndef LLVM_LIBC_SRC_SYS_XATTR_LLISTXATTR_H
+#define LLVM_LIBC_SRC_SYS_XATTR_LLISTXATTR_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
@@ -24,4 +24,4 @@ ssize_t llistxattr(const char *path, char *list, size_t size);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LINUX_LLISTXATTR_H
+#endif // LLVM_LIBC_SRC_SYS_XATTR_LLISTXATTR_H

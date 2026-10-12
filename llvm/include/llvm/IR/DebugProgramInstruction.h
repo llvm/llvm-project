@@ -263,7 +263,7 @@ public:
 
   void setLabel(DILabel *NewLabel) { Label = NewLabel; }
   DILabel *getLabel() const { return Label.get(); }
-  MDNode *getRawLabel() const { return Label.getAsMDNode(); };
+  MDNode *getRawLabel() const { return Label.getAsMDNode(); }
 
   /// Support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const DbgRecord *E) {
@@ -397,7 +397,7 @@ public:
                                  ? cast<ValueAsMetadata *>(I)
                                  : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
-    };
+    }
     Value *operator*() {
       ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
                                  ? cast<ValueAsMetadata *>(I)
@@ -465,7 +465,7 @@ public:
   LLVM_ABI bool isKillLocation() const;
 
   void setVariable(DILocalVariable *NewVar) { Variable = NewVar; }
-  DILocalVariable *getVariable() const { return Variable.get(); };
+  DILocalVariable *getVariable() const { return Variable.get(); }
   MDNode *getRawVariable() const { return Variable.getAsMDNode(); }
 
   void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }

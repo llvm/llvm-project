@@ -8,11 +8,6 @@
 
 # Getting Started
 
-```{contents}
----
-local:
----
-```
 
 ## Building flang
 There are two ways to build flang. The first method is to build it at the same
@@ -466,7 +461,7 @@ It will generate html in
     <build-dir>/tools/flang/docs/doxygen/html # for flang docs
 ```
 ### Generate Sphinx-based Documentation
-[Flang documentation](https://flang.llvm.org/docs/) should preferably be written in `markdown(.md)` syntax (they can be in `reStructuredText(.rst)` format as well but markdown is recommended in first place), it
+[Flang documentation](index.md) should preferably be written in `markdown(.md)` syntax (they can be in `reStructuredText(.rst)` format as well but markdown is recommended in first place), it
 is mostly meant to be processed by the Sphinx documentation generation
 system to create HTML pages which would be hosted on the webpage of flang and
 updated periodically.

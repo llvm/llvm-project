@@ -18,6 +18,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/TypeName.h"
 
+#include <type_traits>
+
 namespace mlir {
 namespace detail {
 //===----------------------------------------------------------------------===//
@@ -140,18 +142,6 @@ private:
 // InterfaceMap
 //===----------------------------------------------------------------------===//
 
-/// Template utility that computes the number of elements within `T` that
-/// satisfy the given predicate.
-template <template <class> class Pred, size_t N, typename... Ts>
-struct count_if_t_impl : public std::integral_constant<size_t, N> {};
-template <template <class> class Pred, size_t N, typename T, typename... Us>
-struct count_if_t_impl<Pred, N, T, Us...>
-    : public std::integral_constant<
-          size_t,
-          count_if_t_impl<Pred, N + (Pred<T>::value ? 1 : 0), Us...>::value> {};
-template <template <class> class Pred, typename... Ts>
-using count_if_t = count_if_t_impl<Pred, 0, Ts...>;
-
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
@@ -160,8 +150,6 @@ class InterfaceMap {
   using has_get_interface_id = decltype(T::getInterfaceID());
   template <typename T>
   using detect_get_interface_id = llvm::is_detected<has_get_interface_id, T>;
-  template <typename... Types>
-  using num_interface_types_t = count_if_t<detect_get_interface_id, Types...>;
 
   /// Trait to check if T provides a 'initializeInterfaceConcept' method.
   template <typename T, typename... Args>
@@ -170,6 +158,16 @@ class InterfaceMap {
           std::declval<InterfaceMap &>()));
   template <typename T>
   using detect_initialize_method = llvm::is_detected<has_initialize_method, T>;
+
+  // Only exact generated models with trivial copy construction can be copied
+  // from a constant prototype. Derived models may carry additional state or
+  // use a custom constructor to configure callbacks.
+  template <typename T, typename = void>
+  struct IsConstexprGeneratedModel : std::false_type {};
+  template <typename T>
+  struct IsConstexprGeneratedModel<T, std::void_t<typename T::GeneratedModel>>
+      : std::bool_constant<std::is_same_v<T, typename T::GeneratedModel> &&
+                           std::is_trivially_copy_constructible_v<T>> {};
 
 public:
   InterfaceMap() = default;
@@ -191,7 +189,8 @@ public:
   /// do not represent interfaces are not added to the interface map.
   template <typename... Types>
   static InterfaceMap get() {
-    constexpr size_t numInterfaces = num_interface_types_t<Types...>::value;
+    constexpr size_t numInterfaces =
+        (size_t{0} + ... + detect_get_interface_id<Types>::value);
     if constexpr (numInterfaces == 0) {
       return InterfaceMap();
     } else {
@@ -218,22 +217,17 @@ public:
   }
 
 private:
-  /// Insert the given interface types into the map (recursive expansion to
-  /// guarantee sequential, left-to-right evaluation across all compilers).
-  template <typename T>
+  /// Insert the given interface types in source order. A comma fold is
+  /// sequenced left to right in C++17.
+  template <typename... Types>
   void insertPotentialInterfaces() {
-    insertPotentialInterface<T>();
-  }
-  template <typename T, typename T2, typename... Rest>
-  void insertPotentialInterfaces() {
-    insertPotentialInterface<T>();
-    insertPotentialInterfaces<T2, Rest...>();
+    (insertPotentialInterface<Types>(), ...);
   }
 
   /// Insert the given interface type into the map, ignoring it if it doesn't
   /// actually represent an interface.
   template <typename T>
-  inline void insertPotentialInterface() {
+  void insertPotentialInterface() {
     if constexpr (detect_get_interface_id<T>::value)
       insertModel<typename T::ModelT>();
   }
@@ -246,9 +240,19 @@ private:
     // static_assert(std::is_trivially_destructible_v<InterfaceModel>,
     //               "interface models must be trivially destructible");
 
-    // Build the interface model, optionally initializing if necessary.
-    InterfaceModel *model =
-        new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    // Generated models contain a fixed table of callbacks. Copy a constant
+    // prototype so the callbacks need not be set up for each model.
+    InterfaceModel *model;
+    if constexpr (IsConstexprGeneratedModel<InterfaceModel>::value) {
+      static constexpr InterfaceModel prototype;
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel(prototype);
+    } else {
+      // Construct fallback, external, and custom models normally; they may
+      // need more than a copy of the generated callback table.
+      model = new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    }
+    // Run model-specific initialization after either path, including links to
+    // registered base interfaces.
     if constexpr (detect_initialize_method<InterfaceModel>::value)
       model->initializeInterfaceConcept(*this);
 

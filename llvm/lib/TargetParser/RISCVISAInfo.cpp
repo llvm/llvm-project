@@ -769,14 +769,15 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmt = Exts.count("xqccmt") != 0;
 
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqccmt"}, {"xqciac"}, {"xqcicm"},
+      {"zcmt"},   {"zcmp"},   {"xqccmi"}, {"xqccmp"},
+      {"xqccmt"}, {"xqciac"}, {"xqcicm"},
   };
   static constexpr StringLiteral RV32Only[] = {
-      {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"}, {"xqciio"},
-      {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},  {"xqcilsm"},
-      {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
+      {"zcf"},     {"zclsd"},   {"zilsd"},   {"xwchc"},    {"xqccmi"},
+      {"xqci"},    {"xqcia"},   {"xqciac"},  {"xqcibi"},   {"xqcibm"},
+      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"},  {"xqciint"},
+      {"xqciio"},  {"xqcilb"},  {"xqcili"},  {"xqcilia"},  {"xqcilo"},
+      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}, {"xqcisync"},
   };
 
   if (HasI && HasE)

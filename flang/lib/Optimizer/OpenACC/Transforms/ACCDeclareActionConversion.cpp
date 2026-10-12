@@ -63,6 +63,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -114,6 +115,23 @@ static bool isSupportedDeclareActionRuntime(llvm::StringRef funcName) {
       .Default(false);
 }
 
+/// Returns whether \p op is the recipe that \p declareAction names, which a
+/// recipe states about itself by naming itself in the slot of the action it
+/// carries out.
+static bool namesItself(Operation *op, acc::DeclareActionAttr declareAction) {
+  auto symbol = dyn_cast<SymbolOpInterface>(op);
+  if (!symbol)
+    return false;
+
+  StringAttr name = symbol.getNameAttr();
+  for (SymbolRefAttr action :
+       {declareAction.getPreAlloc(), declareAction.getPostAlloc(),
+        declareAction.getPreDealloc(), declareAction.getPostDealloc()})
+    if (action && action.getLeafReference() == name)
+      return true;
+  return false;
+}
+
 class ACCDeclareActionConversion
     : public fir::acc::impl::ACCDeclareActionConversionBase<
           ACCDeclareActionConversion> {
@@ -130,6 +148,12 @@ public:
       auto declareAction = op->getAttrOfType<acc::DeclareActionAttr>(
           acc::getDeclareActionAttrName());
       if (!declareAction)
+        return;
+
+      // A recipe names itself in the slot of the action it carries out, which
+      // states what the recipe does rather than asking for a call of it. Only
+      // the operations that allocate or deallocate the object do that.
+      if (namesItself(op, declareAction))
         return;
 
       LLVM_DEBUG(llvm::dbgs() << "Found " << acc::getDeclareActionAttrName()
@@ -152,10 +176,18 @@ public:
           if (!funcDef)
             continue;
 
+          // The recipe names itself in the slot of the action it performs, so
+          // that the action can be told from the attribute alone.
           if (auto funcOp = dyn_cast<func::FuncOp>(funcDef))
             if (!funcOp->hasAttr(mlir::acc::getDeclareActionAttrName()))
-              funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
-                              mlir::UnitAttr::get(funcOp.getContext()));
+              funcOp->setAttr(
+                  mlir::acc::getDeclareActionAttrName(),
+                  mlir::acc::DeclareActionAttr::get(
+                      funcOp.getContext(),
+                      action == preAlloc ? action : mlir::SymbolRefAttr{},
+                      action == postAlloc ? action : mlir::SymbolRefAttr{},
+                      action == preDealloc ? action : mlir::SymbolRefAttr{},
+                      action == postDealloc ? action : mlir::SymbolRefAttr{}));
 
           if (action == declareAction.getPreAlloc() ||
               action == declareAction.getPreDealloc())

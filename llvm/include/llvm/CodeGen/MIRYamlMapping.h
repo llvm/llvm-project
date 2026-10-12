@@ -203,6 +203,7 @@ struct VirtualRegisterDefinition {
   StringValue Class;
   StringValue PreferredRegister;
   std::vector<FlowStringValue> RegisterFlags;
+  std::vector<FlowStringValue> AntiHints;
   // VirtRegMap state.
   // SplitFrom: id-form virtual register only (e.g. '%0'); physregs and named
   //            vregs are rejected by the parser.
@@ -231,6 +232,10 @@ template <> struct MappingTraits<VirtualRegisterDefinition> {
     // so a plain mapOptional with an empty default would still emit the keys
     // and change every existing test's output.
     // Skip the call on output when empty to keep them off entirely.
+    if (!YamlIO.outputting() || !Reg.AntiHints.empty()) {
+      YamlIO.mapOptional("anti-hints", Reg.AntiHints,
+                         std::vector<FlowStringValue>());
+    }
     if (!YamlIO.outputting() || !Reg.SplitFrom.Value.empty())
       YamlIO.mapOptional("split-from", Reg.SplitFrom, StringValue());
     if (!YamlIO.outputting() || !Reg.AssignedPhys.Value.empty())

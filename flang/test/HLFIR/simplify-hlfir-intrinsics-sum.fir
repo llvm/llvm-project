@@ -141,7 +141,7 @@ func.func @sum_expr_unknown_extent1(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.expr<
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_2:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_3:.*]] = hlfir.get_extent %[[VAL_2]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_3:.*]] = hlfir.get_extent %[[VAL_2]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index):
@@ -166,7 +166,7 @@ func.func @sum_expr_unknown_extent2(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.expr<
 // CHECK:           %[[VAL_8:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_2:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_3:.*]] = hlfir.get_extent %[[VAL_2]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_3:.*]] = hlfir.get_extent %[[VAL_2]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index):
@@ -193,7 +193,7 @@ func.func @sum_scalar_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.ref<!fir.log
 // CHECK:             %[[VAL_10:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.logical<1>>
 // CHECK:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
@@ -228,7 +228,7 @@ func.func @sum_scalar_boxed_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.box<!f
 // CHECK:           %[[VAL_11:.*]] = arith.constant true
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_7:.*]] = fir.is_present %[[VAL_1]] : (!fir.box<!fir.logical<1>>) -> i1
 // CHECK:           %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (!fir.logical<1>) {
@@ -272,7 +272,7 @@ func.func @sum_array_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.box<!fir.arra
 // CHECK:           %[[VAL_10:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_7:.*]] = fir.is_present %[[VAL_1]] : (!fir.box<!fir.array<?x3x!fir.logical<1>>>) -> i1
 // CHECK:           %[[VAL_8:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
@@ -320,7 +320,7 @@ func.func @sum_array_expr_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !hlfir.expr<?
 // CHECK:           %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_7:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // CHECK:           ^bb0(%[[VAL_8:.*]]: index):
@@ -344,7 +344,7 @@ func.func @sum_array_expr_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !hlfir.expr<?
 // unordered floating point reduction
 func.func @sum_unordered_reduction(%arg0: !hlfir.expr<2x3xf32>) -> !hlfir.expr<3xf32> {
   %cst = arith.constant 1 : i32
-  %res = hlfir.sum %arg0 dim %cst {fastmath = #arith.fastmath<reassoc>} : (!hlfir.expr<2x3xf32>, i32) -> !hlfir.expr<3xf32>
+  %res = hlfir.sum %arg0 dim %cst fastmath(reassoc) : (!hlfir.expr<2x3xf32>, i32) -> !hlfir.expr<3xf32>
   return %res : !hlfir.expr<3xf32>
 }
 // CHECK-LABEL:   func.func @sum_unordered_reduction(

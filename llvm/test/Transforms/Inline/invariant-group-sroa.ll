@@ -4,7 +4,6 @@
 ; CHECK: SROACostSavings: 10
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 declare void @b()
 
@@ -19,6 +18,5 @@ define i32 @g(ptr %a) {
   %i1 = load i32, ptr %a_inv_i8
   %i2 = load i32, ptr %a_inv_i8
   %i3 = add i32 %i1, %i2
-  %t = call ptr @llvm.strip.invariant.group.p0(ptr %a_inv_i8)
   ret i32 %i3
 }

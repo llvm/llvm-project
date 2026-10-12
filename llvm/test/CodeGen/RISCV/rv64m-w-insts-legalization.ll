@@ -4,15 +4,19 @@
 define signext i32 @mulw(i32 signext %s, i32 signext %n, i32 signext %k) nounwind {
 ; CHECK-LABEL: mulw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    bge a0, a1, .LBB0_2
-; CHECK-NEXT:  .LBB0_1: # %for.body
+; CHECK-NEXT:    bge a0, a1, .LBB0_4
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mulw a2, a0, a2
-; CHECK-NEXT:    addiw a0, a0, 1
-; CHECK-NEXT:    blt a0, a1, .LBB0_1
-; CHECK-NEXT:  .LBB0_2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mulw a0, a2, a0
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    blt a2, a1, .LBB0_2
+; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %cmp6 = icmp slt i32 %s, %n

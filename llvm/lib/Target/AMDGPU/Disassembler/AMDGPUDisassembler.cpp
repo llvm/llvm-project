@@ -101,6 +101,9 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
 
   // Add xnack and sramecc from ELF flags (v4 format)
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    // Hardwired-on features are not selectable target-ID modifiers.
+    bool SramEccHardwiredOn = TargetID.isSramEccSupported() &&
+                              !STI.hasFeature(AMDGPU::FeatureSRAMECCOnOffModes);
     unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
     switch (SrameccSetting) {
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
@@ -110,11 +113,13 @@ void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::Off);
-      OS << ":sramecc-";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc-";
       break;
     case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
       TargetID.setSramEccSetting(AMDGPU::TargetIDSetting::On);
-      OS << ":sramecc+";
+      if (!SramEccHardwiredOn)
+        OS << ":sramecc+";
       break;
     }
 

@@ -87,7 +87,7 @@ public:
 
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      ExceptionHandling ExceptionModel = ExceptionHandling::Default,
       FloatABI::ABIType FloatABI = FloatABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
@@ -177,6 +177,19 @@ public:
     return RTLIB::Unsupported;
   }
 
+  /// Get size of a C-level int or unsigned int, in bits.
+  // FIXME Could move into Triple class.
+  unsigned getIntSize(const Triple &TT) const {
+    return TT.isArch16Bit() ? 16 : 32;
+  }
+
+  /// Get the C-type function signature of the Libcall if provided,
+  /// and convert it to IR FunctionType and Attributes.
+  /// If the C-type function signature is not provided, return nullptr.
+  LLVM_ABI std::pair<FunctionType *, AttributeList>
+  getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                       RTLIB::LibcallImpl LibcallImpl) const;
+
   /// \returns the function type and attributes for the \p LibcallImpl,
   /// depending on the target \p TT. If the function has incomplete type
   /// information, return nullptr for the function type.
@@ -210,6 +223,10 @@ private:
   LLVM_ABI static const StringTable RuntimeLibcallImplNameTable;
   LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
   LLVM_ABI static const uint8_t RuntimeLibcallNameSizeTable[];
+
+  /// Function signature of runtime lib calls
+  LLVM_ABI static const FuncArgTypeID SignatureTable[];
+  LLVM_ABI static const uint16_t SignatureOffset[];
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];

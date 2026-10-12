@@ -69,6 +69,41 @@ TEST_F(LlvmLibcStrToDTest, SimpleTest) {
   run_test("0x123", 5, uint64_t(0x4072300000000000));
 }
 
+TEST_F(LlvmLibcStrToDTest, ClingerFastPathDirectedRoundingNegativeExp) {
+  using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+  // "295.851801554362" parses as mantissa = 295851801554362 (< 2^53) and
+  // exp10 = -12, exercising clinger_fast_path with exp10 < 0 across all
+  // hardware rounding modes.
+  {
+    ForceRoundingMode r(RoundingMode::Nearest);
+    if (r.success) {
+      run_test("295.851801554362", 16, uint64_t(0x40727da0faaaaaab));
+      run_test("-295.851801554362", 17, uint64_t(0xc0727da0faaaaaab));
+    }
+  }
+  {
+    ForceRoundingMode r(RoundingMode::Upward);
+    if (r.success) {
+      run_test("295.851801554362", 16, uint64_t(0x40727da0faaaaaac));
+      run_test("-295.851801554362", 17, uint64_t(0xc0727da0faaaaaab));
+    }
+  }
+  {
+    ForceRoundingMode r(RoundingMode::Downward);
+    if (r.success) {
+      run_test("295.851801554362", 16, uint64_t(0x40727da0faaaaaab));
+      run_test("-295.851801554362", 17, uint64_t(0xc0727da0faaaaaac));
+    }
+  }
+  {
+    ForceRoundingMode r(RoundingMode::TowardZero);
+    if (r.success) {
+      run_test("295.851801554362", 16, uint64_t(0x40727da0faaaaaab));
+      run_test("-295.851801554362", 17, uint64_t(0xc0727da0faaaaaab));
+    }
+  }
+}
+
 // These are tests that have caused problems in the past.
 TEST_F(LlvmLibcStrToDTest, SpecificFailures) {
   run_test("3E70000000000000", 16, uint64_t(0x7FF0000000000000), ERANGE);

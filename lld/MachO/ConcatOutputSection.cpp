@@ -15,6 +15,7 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Parallel.h"
 #include <deque>
 
 using namespace llvm;
@@ -188,6 +189,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
         /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
   }
   thunkInfo.sym->used = true;
+  thunkInfo.sym->branchExtensionThunk = true;
   target->populateThunk(thunkInfo.isec, funcSym, r.addend);
   updateBranchTargetToThunk(r, thunkInfo.sym);
   finalizeOne(thunkInfo.isec);
@@ -362,25 +364,20 @@ void TextOutputSection::finalize() {
 }
 
 void ConcatOutputSection::writeTo(uint8_t *buf) const {
-  for (ConcatInputSection *isec : inputs)
+  parallelForEach(inputs, [buf](ConcatInputSection *isec) {
     isec->writeTo(buf + isec->outSecOff);
+  });
 }
 
 void TextOutputSection::writeTo(uint8_t *buf) const {
-  // Merge input sections from thunk & ordinary vectors
-  size_t i = 0, ie = inputs.size();
-  size_t t = 0, te = thunks.size();
-  while (i < ie || t < te) {
-    while (i < ie && (t == te || inputs[i]->empty() ||
-                      inputs[i]->outSecOff < thunks[t]->outSecOff)) {
-      inputs[i]->writeTo(buf + inputs[i]->outSecOff);
-      ++i;
-    }
-    while (t < te && (i == ie || thunks[t]->outSecOff < inputs[i]->outSecOff)) {
-      thunks[t]->writeTo(buf + thunks[t]->outSecOff);
-      ++t;
-    }
-  }
+  // Inputs and thunks all write to their own range of the output buffer, so
+  // there is no need to interleave the two sorted vectors here.
+  parallelForEach(inputs, [buf](ConcatInputSection *isec) {
+    isec->writeTo(buf + isec->outSecOff);
+  });
+  parallelForEach(thunks, [buf](ConcatInputSection *thunk) {
+    thunk->writeTo(buf + thunk->outSecOff);
+  });
 }
 
 void ConcatOutputSection::finalizeFlags(InputSection *input) {

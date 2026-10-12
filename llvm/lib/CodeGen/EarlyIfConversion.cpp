@@ -980,20 +980,23 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
 
   // If From and To are in the same block, just check (From, To).
   if (FromBB == ToBB) {
-    for (const MachineInstr &MI :
-         make_range(std::next(From->getIterator()), To->getIterator()))
+    for (const MachineInstr &MI : instructionsWithoutDebug(
+             std::next(From->getIterator()), To->getIterator(),
+             /*SkipPseudoOp=*/false))
       if (IsCallOrHitSearchLimit(MI))
         return true;
     return false;
   }
 
   // Check (From, end of From's block] and [start of To's block, To).
-  for (const MachineInstr &MI :
-       make_range(std::next(From->getIterator()), FromBB->instr_end()))
+  for (const MachineInstr &MI : instructionsWithoutDebug(
+           std::next(From->getIterator()), FromBB->instr_end(),
+           /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
   for (const MachineInstr &MI :
-       make_range(ToBB->instr_begin(), To->getIterator()))
+       instructionsWithoutDebug(ToBB->instr_begin(), To->getIterator(),
+                                /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
 
@@ -1029,10 +1032,15 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
       if (HitSearchLimit(CacheIt->second))
         return true;
     } else {
-      for (const MachineInstr &MI : *BB)
+      unsigned NumBlockInstrs = 0;
+      for (const MachineInstr &MI :
+           instructionsWithoutDebug(BB->instr_begin(), BB->instr_end(),
+                                    /*SkipPseudoOp=*/false)) {
+        ++NumBlockInstrs;
         if (IsCallOrHitSearchLimit(MI))
           return true;
-      NoCallBlocksCache[BB] = BB->size();
+      }
+      NoCallBlocksCache[BB] = NumBlockInstrs;
     }
 
     for (const MachineBasicBlock *Pred : BB->predecessors())

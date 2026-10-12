@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "file_io_result.h"
 #include "file_mode.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
@@ -29,18 +30,6 @@
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-struct FileIOResult {
-  size_t value;
-  int error;
-
-  constexpr FileIOResult(size_t val) : value(val), error(0) {}
-  constexpr FileIOResult(size_t val, int error) : value(val), error(error) {}
-
-  constexpr bool has_error() { return error != 0; }
-
-  constexpr operator size_t() { return value; }
-};
 
 // This a generic base class to encapsulate a platform independent file data
 // structure. Platform specific specializations should create a subclass as

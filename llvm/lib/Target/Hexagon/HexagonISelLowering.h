@@ -107,9 +107,6 @@ public:
   SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
@@ -121,7 +118,6 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
   LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,

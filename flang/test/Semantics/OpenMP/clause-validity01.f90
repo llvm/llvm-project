@@ -217,7 +217,8 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
@@ -226,7 +227,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: LINEAR clause is not allowed when ORDERED clause with an argument is present
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
   !ERROR: The list item 'a' specified without the REF 'linear-modifier' must be of INTEGER type
   !$omp do ordered(1-1) linear(a)
@@ -420,7 +421,7 @@ use omp_lib
 !                         simd-clause
 
   !$omp parallel
-  !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
+  !ERROR: ORDERED clause with an argument is not allowed on a compound directive with SIMD as a constituent
   !ERROR: NOGROUP clause is not allowed on DO SIMD directive
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
@@ -508,7 +509,7 @@ use omp_lib
   !$omp taskwait depend(mutexinoutset: x)
   !ERROR: 'task-dependence-type' modifier is required
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
-  !WARNING: 'dependence-type' modifier is no longer supported in OpenMP v5.2 on DEPEND clause
+  !WARNING: 'dependence-type' modifier is no longer supported on DEPEND clause in OpenMP v5.2
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)

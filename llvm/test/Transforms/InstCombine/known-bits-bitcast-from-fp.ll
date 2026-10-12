@@ -104,9 +104,7 @@ define i80 @test_zero_only_non_ieee(x86_fp80 nofpclass(nan sub norm inf) %x) {
 
 define i32 @test_inf_nan_only(float nofpclass(sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_nan_only(
-; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 2130706432
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 2130706432
@@ -115,9 +113,7 @@ define i32 @test_inf_nan_only(float nofpclass(sub norm zero) %x) {
 
 define i32 @test_sub_zero_only(float nofpclass(nan norm inf) %x) {
 ; CHECK-LABEL: @test_sub_zero_only(
-; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 0
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 2130706432
@@ -170,9 +166,7 @@ define i1 @test_simplify_icmp(i32 %x) {
 
 define i32 @test_snan_quiet_bit1(float nofpclass(sub norm inf qnan) %x) {
 ; CHECK-LABEL: @test_snan_quiet_bit1(
-; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[BITS]], 4194304
-; CHECK-NEXT:    ret i32 [[MASKED]]
+; CHECK-NEXT:    ret i32 0
 ;
   %bits = bitcast float %x to i32
   %masked = and i32 %bits, 4194304
@@ -210,6 +204,186 @@ define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
   %bits = bitcast float %x to i32
   %masked = and i32 %bits, 2097152
   ret i32 %masked
+}
+
+define i16 @test_f16_quiet_bit_clear(half nofpclass(qnan norm sub) %x) {
+; CHECK-LABEL: @test_f16_quiet_bit_clear(
+; CHECK-NEXT:    ret i16 0
+;
+  %bits = bitcast half %x to i16
+  %masked = and i16 %bits, u0x0200
+  ret i16 %masked
+}
+
+define i16 @test_f16_quiet_bit_set(half nofpclass(snan inf zero norm sub) %x) {
+; CHECK-LABEL: @test_f16_quiet_bit_set(
+; CHECK-NEXT:    ret i16 512
+;
+  %bits = bitcast half %x to i16
+  %masked = and i16 %bits, u0x0200
+  ret i16 %masked
+}
+
+define i16 @test_f16_all_zeros_exponent(half nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: @test_f16_all_zeros_exponent(
+; CHECK-NEXT:    ret i16 0
+;
+  %bits = bitcast half %x to i16
+  %masked = and i16 %bits, u0x7C00
+  ret i16 %masked
+}
+
+define i16 @test_f16_all_ones_exponent(half nofpclass(zero norm sub) %x) {
+; CHECK-LABEL: @test_f16_all_ones_exponent(
+; CHECK-NEXT:    ret i16 31744
+;
+  %bits = bitcast half %x to i16
+  %masked = and i16 %bits, u0x7C00
+  ret i16 %masked
+}
+
+define i16 @test_bf16_quiet_bit_clear(bfloat nofpclass(qnan norm sub) %x) {
+; CHECK-LABEL: @test_bf16_quiet_bit_clear(
+; CHECK-NEXT:    ret i16 0
+;
+  %bits = bitcast bfloat %x to i16
+  %masked = and i16 %bits, u0x0040
+  ret i16 %masked
+}
+
+define i16 @test_bf16_quiet_bit_set(bfloat nofpclass(snan inf zero norm sub) %x) {
+; CHECK-LABEL: @test_bf16_quiet_bit_set(
+; CHECK-NEXT:    ret i16 64
+;
+  %bits = bitcast bfloat %x to i16
+  %masked = and i16 %bits, u0x0040
+  ret i16 %masked
+}
+
+define i16 @test_bf16_all_zeros_exponent(bfloat nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: @test_bf16_all_zeros_exponent(
+; CHECK-NEXT:    ret i16 0
+;
+  %bits = bitcast bfloat %x to i16
+  %masked = and i16 %bits, u0x7F80
+  ret i16 %masked
+}
+
+define i16 @test_bf16_all_ones_exponent(bfloat nofpclass(zero norm sub) %x) {
+; CHECK-LABEL: @test_bf16_all_ones_exponent(
+; CHECK-NEXT:    ret i16 32640
+;
+  %bits = bitcast bfloat %x to i16
+  %masked = and i16 %bits, u0x7F80
+  ret i16 %masked
+}
+
+define i32 @test_f32_quiet_bit_clear(float nofpclass(qnan norm sub) %x) {
+; CHECK-LABEL: @test_f32_quiet_bit_clear(
+; CHECK-NEXT:    ret i32 0
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, u0x00400000
+  ret i32 %masked
+}
+
+define i32 @test_f32_quiet_bit_set(float nofpclass(snan inf zero norm sub) %x) {
+; CHECK-LABEL: @test_f32_quiet_bit_set(
+; CHECK-NEXT:    ret i32 4194304
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, u0x00400000
+  ret i32 %masked
+}
+
+define i32 @test_f32_all_zeros_exponent(float nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: @test_f32_all_zeros_exponent(
+; CHECK-NEXT:    ret i32 0
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, u0x7F800000
+  ret i32 %masked
+}
+
+define i32 @test_f32_all_ones_exponent(float nofpclass(zero norm sub) %x) {
+; CHECK-LABEL: @test_f32_all_ones_exponent(
+; CHECK-NEXT:    ret i32 2139095040
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, u0x7F800000
+  ret i32 %masked
+}
+
+define i64 @test_f64_quiet_bit_clear(double nofpclass(qnan norm sub) %x) {
+; CHECK-LABEL: @test_f64_quiet_bit_clear(
+; CHECK-NEXT:    ret i64 0
+;
+  %bits = bitcast double %x to i64
+  %masked = and i64 %bits, u0x0008000000000000
+  ret i64 %masked
+}
+
+define i64 @test_f64_quiet_bit_set(double nofpclass(snan inf zero norm sub) %x) {
+; CHECK-LABEL: @test_f64_quiet_bit_set(
+; CHECK-NEXT:    ret i64 2251799813685248
+;
+  %bits = bitcast double %x to i64
+  %masked = and i64 %bits, u0x0008000000000000
+  ret i64 %masked
+}
+
+define i64 @test_f64_all_zeros_exponent(double nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: @test_f64_all_zeros_exponent(
+; CHECK-NEXT:    ret i64 0
+;
+  %bits = bitcast double %x to i64
+  %masked = and i64 %bits, u0x7FF0000000000000
+  ret i64 %masked
+}
+
+define i64 @test_f64_all_ones_exponent(double nofpclass(zero norm sub) %x) {
+; CHECK-LABEL: @test_f64_all_ones_exponent(
+; CHECK-NEXT:    ret i64 9218868437227405312
+;
+  %bits = bitcast double %x to i64
+  %masked = and i64 %bits, u0x7FF0000000000000
+  ret i64 %masked
+}
+
+define i128 @test_f128_quiet_bit_clear(fp128 nofpclass(qnan norm sub) %x) {
+; CHECK-LABEL: @test_f128_quiet_bit_clear(
+; CHECK-NEXT:    ret i128 0
+;
+  %bits = bitcast fp128 %x to i128
+  %masked = and i128 %bits, u0x00008000000000000000000000000000
+  ret i128 %masked
+}
+
+define i128 @test_f128_quiet_bit_set(fp128 nofpclass(snan inf zero norm sub) %x) {
+; CHECK-LABEL: @test_f128_quiet_bit_set(
+; CHECK-NEXT:    ret i128 2596148429267413814265248164610048
+;
+  %bits = bitcast fp128 %x to i128
+  %masked = and i128 %bits, u0x00008000000000000000000000000000
+  ret i128 %masked
+}
+
+define i128 @test_f128_all_zeros_exponent(fp128 nofpclass(nan inf norm) %x) {
+; CHECK-LABEL: @test_f128_all_zeros_exponent(
+; CHECK-NEXT:    ret i128 0
+;
+  %bits = bitcast fp128 %x to i128
+  %masked = and i128 %bits, u0x7FFF0000000000000000000000000000
+  ret i128 %masked
+}
+
+define i128 @test_f128_all_ones_exponent(fp128 nofpclass(zero norm sub) %x) {
+; CHECK-LABEL: @test_f128_all_ones_exponent(
+; CHECK-NEXT:    ret i128 170135991163610696904058773219554885632
+;
+  %bits = bitcast fp128 %x to i128
+  %masked = and i128 %bits, u0x7FFF0000000000000000000000000000
+  ret i128 %masked
 }
 
 define i16 @test_simplify_mask(i32 %ui, float %x) {
@@ -261,25 +435,70 @@ if.else:
   ret i1 false
 }
 
-define i32 @test_snan_only(float nofpclass(qnan sub norm zero inf) %x) {
+define i32 @test_snan_only(float nofpclass(qnan inf zero norm sub) %x) {
 ; CHECK-LABEL: @test_snan_only(
-; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 2139095040
 ;
   %y = bitcast float %x to i32
-  %and = and i32 %y, 4194304
+  %and = and i32 %y, u0x7FC00000
   ret i32 %and
 }
 
-define i32 @test_qnan_only(float nofpclass(snan sub norm zero inf) %x) {
+define i32 @test_qnan_only(float nofpclass(snan inf zero norm sub) %x) {
 ; CHECK-LABEL: @test_qnan_only(
+; CHECK-NEXT:    ret i32 2143289344
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, u0x7FC00000
+  ret i32 %and
+}
+
+define i32 @test_nan_only_include_quiet_bit(float nofpclass(inf zero norm sub) %x) {
+; CHECK-LABEL: @test_nan_only_include_quiet_bit(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2143289344
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, u0x7FC00000
+  ret i32 %and
+}
+
+define i32 @test_nan_only_exclude_quiet_bit(float nofpclass(inf zero norm sub) %x) {
+; CHECK-LABEL: @test_nan_only_exclude_quiet_bit(
+; CHECK-NEXT:    ret i32 2139095040
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, u0x7F800000
+  ret i32 %and
+}
+
+define i32 @test_normal_only(float nofpclass(nan inf zero sub) %x) {
+; CHECK-LABEL: @test_normal_only(
 ; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
-  %and = and i32 %y, 4194304
+  %and = and i32 %y, u0x00400000
+  ret i32 %and
+}
+
+define i32 @test_pos_normal_only(float nofpclass(nan inf zero nnorm sub) %x) {
+; CHECK-LABEL: @test_pos_normal_only(
+; CHECK-NEXT:    ret i32 0
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, u0x80000000
+  ret i32 %and
+}
+
+define i32 @test_neg_normal_only(float nofpclass(nan inf zero pnorm sub) %x) {
+; CHECK-LABEL: @test_neg_normal_only(
+; CHECK-NEXT:    ret i32 -2147483648
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, u0x80000000
   ret i32 %and
 }
 

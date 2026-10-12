@@ -617,9 +617,6 @@ std::error_code
 SampleProfileWriterExtBinaryBase::writeMD5ProfileSymbolListSection() {
   if (!ProfSymList || ProfSymList->size() == 0)
     return sampleprof_error::success;
-  assert(!ProfSymList->isMD5() &&
-         "Writing MD5 ProfileSymbolListSection from existing MD5 "
-         "table not yet implemented");
 
   auto &OS = *OutputStream;
   std::vector<uint64_t> Keys = ProfSymList->collectGUIDs();

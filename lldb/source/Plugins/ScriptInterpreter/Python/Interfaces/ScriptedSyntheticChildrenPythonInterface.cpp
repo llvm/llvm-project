@@ -57,10 +57,15 @@ ScriptedSyntheticChildrenPythonInterface::CreatePluginObject(
 
 llvm::Expected<uint32_t>
 ScriptedSyntheticChildrenPythonInterface::CalculateNumChildren(uint32_t max) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("num_children", error, max);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  // This interface requires no abstract methods, so a provider that doesn't
+  // implement `num_children` simply has no children rather than being broken.
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("num_children", max);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
     return 0;
   // Cap at max in case the provider ignores the argument (e.g. defines
   // `num_children(self)`) and returns an unbounded count.
@@ -69,18 +74,22 @@ ScriptedSyntheticChildrenPythonInterface::CalculateNumChildren(uint32_t max) {
 
 lldb::ValueObjectSP
 ScriptedSyntheticChildrenPythonInterface::GetChildAtIndex(uint32_t idx) {
-  Status error;
-  return Dispatch<lldb::ValueObjectSP>("get_child_at_index", error, idx);
+  return LogAndDefault(Dispatch<lldb::ValueObjectSP>("get_child_at_index", idx),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 llvm::Expected<uint32_t>
 ScriptedSyntheticChildrenPythonInterface::GetIndexOfChildWithName(
     ConstString name) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("get_child_index", error, name.GetCString());
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  // A provider without `get_child_index` has no child of that name, which is
+  // a friendlier answer than "the method is missing".
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("get_child_index", name.GetCString());
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
     return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   // `CreateStructuredObject` only produces a `SignedInteger` for values that
@@ -93,37 +102,35 @@ ScriptedSyntheticChildrenPythonInterface::GetIndexOfChildWithName(
 }
 
 lldb::ChildCacheState ScriptedSyntheticChildrenPythonInterface::Update() {
-  Status error;
   // update() is optional; a missing method means "always refetch".
-  StructuredData::ObjectSP obj = Dispatch("update", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("update"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return lldb::eRefetch;
   return obj->GetBooleanValue() ? lldb::eReuse : lldb::eRefetch;
 }
 
 bool ScriptedSyntheticChildrenPythonInterface::MightHaveChildren() {
-  Status error;
   // has_children() is optional and defaults to True when missing.
-  StructuredData::ObjectSP obj = Dispatch("has_children", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("has_children"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return true;
   return obj->GetBooleanValue();
 }
 
 lldb::ValueObjectSP
 ScriptedSyntheticChildrenPythonInterface::GetSyntheticValue() {
-  Status error;
-  return Dispatch<lldb::ValueObjectSP>("get_value", error);
+  return LogAndDefault(Dispatch<lldb::ValueObjectSP>("get_value"),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 ConstString ScriptedSyntheticChildrenPythonInterface::GetSyntheticTypeName() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_type_name", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_type_name"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
+
   return ConstString(obj->GetStringValue());
 }
 

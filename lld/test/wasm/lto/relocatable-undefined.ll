@@ -19,6 +19,7 @@ entry:
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     Version:         2
+; CHECK-NEXT:     TargetArch:      wasm32
 ; CHECK-NEXT:     SymbolTable:     
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION

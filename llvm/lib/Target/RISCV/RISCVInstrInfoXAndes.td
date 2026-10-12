@@ -106,7 +106,7 @@ class NDSRVInstBB<bit cs, string opcodestr>
     : RVInst<(outs),
              (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
-      Sched<[WriteJmp, ReadIALU]> {
+      Sched<[WriteJmp, ReadJmp]> {
   bits<10> imm10;
   bits<5> rs1;
   bits<6> cimm;
@@ -130,7 +130,7 @@ class NDSRVInstBB<bit cs, string opcodestr>
 class NDSRVInstBC<bits<3> funct3, string opcodestr>
     : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatNDS_BRANCH_10>,
-      Sched<[WriteJmp, ReadIALU]> {
+      Sched<[WriteJmp, ReadJmp]> {
   bits<10> imm10;
   bits<5> rs1;
   bits<7> cimm;
@@ -736,10 +736,14 @@ let Predicates = [HasVendorXAndesVBFHCvt],
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXAndesVSIntH] in {
+
+  let append Predicates = [HasVInstructionsAnyF] in {
   def NDS_VFWCVT_F_N  : NDSRVInstVSINTCvt<0b00100, "nds.vfwcvt.f.n.v">;
   def NDS_VFWCVT_F_NU : NDSRVInstVSINTCvt<0b00101, "nds.vfwcvt.f.nu.v">;
   def NDS_VFWCVT_F_B  : NDSRVInstVSINTCvt<0b00110, "nds.vfwcvt.f.b.v">;
   def NDS_VFWCVT_F_BU : NDSRVInstVSINTCvt<0b00111, "nds.vfwcvt.f.bu.v">;
+  } // append Predicates = [HasVInstructionsAnyF]
+
   def NDS_VLE4_V : NDSRVInstVSINTLN<0b00000, "nds.vle4.v">;
 } // Predicates = [HasVendorXAndesVSIntH]
 

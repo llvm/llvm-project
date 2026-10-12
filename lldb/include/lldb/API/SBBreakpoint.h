@@ -77,6 +77,10 @@ public:
 
   const char *GetCondition();
 
+  void SetConditionMode(lldb::BreakpointConditionMode mode);
+
+  lldb::BreakpointConditionMode GetConditionMode();
+
   void SetAutoContinue(bool auto_continue);
 
   bool GetAutoContinue();

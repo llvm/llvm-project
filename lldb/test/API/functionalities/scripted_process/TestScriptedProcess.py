@@ -101,15 +101,15 @@ class ScriptedProcesTestCase(TestBase):
             log = f.read()
 
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            "abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            "abstract method MissingMethodsScriptedProcess.is_alive not implemented",
             log,
         )
         self.assertIn(
-            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            "abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
             log,
         )
 
@@ -351,10 +351,15 @@ class ScriptedProcesTestCase(TestBase):
         self.assertSuccess(error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertEqual(
-            process.GetAddressMask(lldb.eAddressMaskTypeCode),
-            0xFFFFFFFC00000000,
-        )
+        # The script only reports "lowmem", so the high memory masks have to
+        # fall back to it.
+        for mask_type in [lldb.eAddressMaskTypeCode, lldb.eAddressMaskTypeData]:
+            for mask_range in [lldb.eAddressMaskRangeLow, lldb.eAddressMaskRangeHigh]:
+                self.assertEqual(
+                    process.GetAddressMask(mask_type, mask_range),
+                    0xFFFFFFFC00000000,
+                    f"mask type {mask_type}, range {mask_range}",
+                )
         self.assertEqual(
             process.FixAddress(addressable_bits_scripted_process.TAGGED_PC),
             addressable_bits_scripted_process.FIXED_PC,

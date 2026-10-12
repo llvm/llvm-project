@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // REQUIRES: any-device
+// https://github.com/llvm/llvm-project/issues/225092
+// UNSUPPORTED: true
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 

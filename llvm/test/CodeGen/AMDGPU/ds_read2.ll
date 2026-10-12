@@ -1360,6 +1360,7 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; CI-NEXT:    s_mov_b32 s39, 0xf000
 ; CI-NEXT:    s_mov_b32 s38, -1
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_read_b32 v0, v40 offset:4
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, v41, v0

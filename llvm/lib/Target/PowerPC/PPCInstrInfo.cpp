@@ -2891,11 +2891,10 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
 bool PPCInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
-    const TargetRegisterInfo *TRI) const {
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width) const {
   const MachineOperand *BaseOp;
   OffsetIsScalable = false;
-  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI))
+  if (!getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width))
     return false;
   BaseOps.push_back(BaseOp);
   return true;
@@ -2985,8 +2984,8 @@ bool PPCInstrInfo::shouldClusterMemOps(
   LocationSize Width1 = LocationSize::precise(0),
                Width2 = LocationSize::precise(0);
   const MachineOperand *Base1 = nullptr, *Base2 = nullptr;
-  if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1, &RI) ||
-      !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2, &RI) ||
+  if (!getMemOperandWithOffsetWidth(FirstLdSt, Base1, Offset1, Width1) ||
+      !getMemOperandWithOffsetWidth(SecondLdSt, Base2, Offset2, Width2) ||
       Width1 != Width2)
     return false;
 
@@ -5356,8 +5355,7 @@ const unsigned MAX_BINOP_DEPTH = 1;
 // than once. This is done to prevent exponential recursion.
 void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
-                                                  unsigned BinOpDepth,
-                                                  LiveVariables *LV) const {
+                                                  unsigned BinOpDepth) const {
   if (!Reg.isVirtual())
     return;
 
@@ -5383,7 +5381,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
       assert(MI->getOperand(I).isReg() && "Operand must be register");
       promoteInstr32To64ForElimEXTSW(MI->getOperand(I).getReg(), MRI,
-                                     BinOpDepth + 1, LV);
+                                     BinOpDepth + 1);
     }
 
     break;
@@ -5399,7 +5397,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
       // If this is a copy from another register, we recursively promote the
       // source.
-      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth);
       return;
     }
 
@@ -5409,7 +5407,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     if (SrcReg != PPC::X3)
       // If this is a copy from another register, we recursively promote the
       // source.
-      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth);
     return;
   }
   case PPC::ORI:
@@ -5420,8 +5418,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   case PPC::XORI8:
   case PPC::ORIS8:
   case PPC::XORIS8:
-    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI, BinOpDepth,
-                                   LV);
+    promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI, BinOpDepth);
     break;
   case PPC::AND:
   case PPC::AND8:
@@ -5429,9 +5426,9 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
       break;
 
     promoteInstr32To64ForElimEXTSW(MI->getOperand(1).getReg(), MRI,
-                                   BinOpDepth + 1, LV);
+                                   BinOpDepth + 1);
     promoteInstr32To64ForElimEXTSW(MI->getOperand(2).getReg(), MRI,
-                                   BinOpDepth + 1, LV);
+                                   BinOpDepth + 1);
     break;
   }
 
@@ -5487,7 +5484,6 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
   // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
   // respectively.
-  SmallVector<Register> PromoteRegs(MI->getNumOperands());
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
     MachineOperand &Operand = MI->getOperand(i);
     if (!Operand.isReg())
@@ -5500,6 +5496,18 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
     const TargetRegisterClass *NewUsedRegRC =
         RI.getRegClass(MCID.operands()[i].RegClass);
     const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
+
+    // An operand that reads the sub_32 subregister of a 64-bit register already
+    // holds the value in a full 64-bit register, so it can be used directly by
+    // the promoted instruction.
+    if (Operand.getSubReg() == PPC::sub_32) {
+      assert(NewUsedRegRC->hasSubClassEq(OrgRC) &&
+             "sub_32 source register class is incompatible with the promoted "
+             "operand register class");
+      Operand.setSubReg(PPC::NoSubRegister);
+      continue;
+    }
+
     if (NewUsedRegRC != OrgRC && (OrgRC == &PPC::GPRCRegClass ||
                                   OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
       // Promote the used 32-bit register to 64-bit register.
@@ -5510,42 +5518,21 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
           .addReg(TmpReg)
           .addReg(OperandReg)
           .addImm(PPC::sub_32);
-      PromoteRegs[i] = DstTmpReg;
+      Operand.setReg(DstTmpReg);
+      Operand.setIsKill();
     }
   }
 
   Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
-
-  BuildMI(*MBB, MI, DL, get(NewOpcode), NewDefinedReg);
-  MachineBasicBlock::instr_iterator Iter(MI);
-  --Iter;
-  MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
-  for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (PromoteRegs[i])
-      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
-    else
-      Iter->addOperand(MI->getOperand(i));
-  }
-
-  for (unsigned i = 1; i < Iter->getNumOperands(); i++) {
-    MachineOperand &Operand = Iter->getOperand(i);
-    if (!Operand.isReg())
-      continue;
-    Register OperandReg = Operand.getReg();
-    if (!OperandReg.isVirtual())
-      continue;
-    LV->recomputeForSingleDefVirtReg(OperandReg);
-  }
-
-  MI->eraseFromParent();
+  MI->setDesc(MCID);
+  MI->getOperand(0).setReg(NewDefinedReg);
 
   // A defined register may be used by other instructions that are 32-bit.
   // After the defined register is promoted to 64-bit for the promoted
   // instruction, we need to demote the 64-bit defined register back to a
   // 32-bit register
-  BuildMI(*MBB, ++Iter, DL, get(PPC::COPY), SrcReg)
+  BuildMI(*MBB, std::next(MI->getIterator()), DL, get(PPC::COPY), SrcReg)
       .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
-  LV->recomputeForSingleDefVirtReg(NewDefinedReg);
 }
 
 // The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
@@ -5835,9 +5822,10 @@ MachineInstr *PPCInstrInfo::findLoopInstr(
 
 // Return true if get the base operand, byte offset of an instruction and the
 // memory width. Width is the size of memory that is being loaded/stored.
-bool PPCInstrInfo::getMemOperandWithOffsetWidth(
-    const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
-    LocationSize &Width, const TargetRegisterInfo *TRI) const {
+bool PPCInstrInfo::getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
+                                                const MachineOperand *&BaseReg,
+                                                int64_t &Offset,
+                                                LocationSize &Width) const {
   if (!LdSt.mayLoadOrStore() || LdSt.getNumExplicitOperands() != 3)
     return false;
 
@@ -5873,8 +5861,8 @@ bool PPCInstrInfo::areMemAccessesTriviallyDisjoint(
   int64_t OffsetA = 0, OffsetB = 0;
   LocationSize WidthA = LocationSize::precise(0),
                WidthB = LocationSize::precise(0);
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, &RI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, &RI)) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);

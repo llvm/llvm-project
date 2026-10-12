@@ -45,3 +45,27 @@ namespace GH40328 {
   template <bool &v> int *f(A<bool &, v>);
   int *p = f(A<bool &, b>());
 } // namespace GH40328
+
+#if __cplusplus >= 201703L
+// Partial specializations of templates whose constant template parameter is
+// declared as `auto &&`.
+namespace auto_ref_primary {
+  int i;
+  long l;
+
+  template <auto &&> struct A { static const int k = 0; };
+  template <int &v> struct A<v> { static const int k = 1; };
+  static_assert(A<i>::k == 1, "");
+  static_assert(A<l>::k == 0, "");
+
+  template <auto &&, class> struct B { static const int k = 0; };
+  template <auto &v> struct B<v, int> { static const int k = 1; };
+  static_assert(B<i, int>::k == 1, "");
+  static_assert(B<i, long>::k == 0, "");
+
+  template <auto &&> const int V = 0;
+  template <int &v> const int V<v> = 1;
+  static_assert(V<i> == 1, "");
+  static_assert(V<l> == 0, "");
+} // namespace auto_ref_primary
+#endif

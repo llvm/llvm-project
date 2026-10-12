@@ -36,6 +36,7 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
+struct PassesOptions;
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
@@ -105,6 +106,11 @@ public:
   bool DevirtualizeSpeculatively;
 };
 
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
+};
+
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -112,6 +118,7 @@ public:
 /// of the built-in passes, and those may reference these members during
 /// construction.
 class PassBuilder {
+  const PassesOptions &Opts;
   TargetMachine *TM;
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
@@ -414,6 +421,11 @@ public:
 
   /// Print pass names.
   LLVM_ABI void printPassNames(raw_ostream &OS);
+
+  /// The format -print-pipeline-passes requests, or std::nullopt if it is not
+  /// given.
+  LLVM_ABI std::optional<PrintPipelinePassesFormat>
+  getPrintPipelinePasses() const;
 
   /// Register a callback for a default optimizer pipeline extension
   /// point
@@ -1027,23 +1039,6 @@ public:
     return Result();
   }
 };
-
-enum class PrintPipelinePassesFormat {
-  Text,
-  Tree,
-};
-
-struct PrintPipelinePassesFormatParser
-    : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
-  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
-  LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-                      std::optional<PrintPipelinePassesFormat> &Val);
-};
-
-/// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
-                        PrintPipelinePassesFormatParser>
-    PrintPipelinePasses;
 
 LLVM_ABI void printFormattedPipelinePasses(
     raw_ostream &OS, StringRef Pipeline,

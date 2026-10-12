@@ -1052,7 +1052,7 @@ def int_stacksave     : DefaultAttrsIntrinsic<[llvm_anyptr_ty]>,
 def int_stackrestore  : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty]>,
                         ClangBuiltin<"__builtin_stack_restore">;
 
-def int_get_dynamic_area_offset : DefaultAttrsIntrinsic<[llvm_anyint_ty]>;
+def int_get_dynamic_area_offset : DefaultAttrsIntrinsic<[llvm_any_scalar_int_ty]>;
 
 def int_thread_pointer : DefaultAttrsIntrinsic<
                              [llvm_anyptr_ty], [], [IntrNoMem]>,
@@ -1167,7 +1167,7 @@ def int_structured_alloca : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [],
 // inverting the handling.
 
 def int_memcpy  : DefaultAttrsIntrinsic<[],
-                            [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                            [llvm_anyptr_ty, llvm_anyptr_ty, llvm_any_scalar_int_ty,
                              llvm_i1_ty],
                             [IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
@@ -1180,7 +1180,7 @@ def int_memcpy  : DefaultAttrsIntrinsic<[],
 // external function.
 def int_memcpy_inline
     : DefaultAttrsIntrinsic<[],
-      [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty],
+      [llvm_anyptr_ty, llvm_anyptr_ty, llvm_any_scalar_int_ty, llvm_i1_ty],
       [IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
@@ -1188,14 +1188,14 @@ def int_memcpy_inline
        ImmArg<ArgIndex<3>>]>;
 
 def int_memmove : DefaultAttrsIntrinsic<[],
-                            [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
+                            [llvm_anyptr_ty, llvm_anyptr_ty, llvm_any_scalar_int_ty,
                              llvm_i1_ty],
                             [IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
                              ImmArg<ArgIndex<3>>]>;
 def int_memset  : DefaultAttrsIntrinsic<[],
-                            [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
+                            [llvm_anyptr_ty, llvm_i8_ty, llvm_any_scalar_int_ty,
                              llvm_i1_ty],
                             [IntrWriteMem, IntrArgMemOnly,
                              NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
@@ -1206,7 +1206,7 @@ def int_memset  : DefaultAttrsIntrinsic<[],
 // external function.
 def int_memset_inline
     : DefaultAttrsIntrinsic<[],
-      [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i1_ty],
+      [llvm_anyptr_ty, llvm_i8_ty, llvm_any_scalar_int_ty, llvm_i1_ty],
       [IntrWriteMem, IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
@@ -1216,7 +1216,7 @@ def int_experimental_memset_pattern
     : DefaultAttrsIntrinsic<[],
       [llvm_anyptr_ty, // Destination.
        llvm_any_ty,    // Pattern value.
-       llvm_anyint_ty, // Count (number of times to fill value).
+       llvm_any_scalar_int_ty, // Count (number of times to fill value).
        llvm_i1_ty],    // IsVolatile.
       [IntrWriteMem, IntrArgMemOnly,
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
@@ -1357,7 +1357,7 @@ def int_maximumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
 >;
 
 // Internal interface for object size checking
-def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+def int_objectsize : DefaultAttrsIntrinsic<[llvm_any_scalar_int_ty],
                                [llvm_anyptr_ty, llvm_i1_ty,
                                 llvm_i1_ty, llvm_i1_ty],
                                [IntrNoMem, IntrSpeculatable,
@@ -1918,11 +1918,6 @@ def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                     [IntrInaccessibleMemOnly,
                                      IntrSpeculatable]>;
 
-
-def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
-                                          [LLVMMatchType<0>],
-                                          [IntrSpeculatable, IntrNoMem]>;
-
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
@@ -2036,7 +2031,7 @@ def int_coro_suspend_retcon : Intrinsic<[llvm_any_ty], [llvm_vararg_ty], []>;
 def int_coro_prepare_retcon : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                         [IntrNoMem]>;
 def int_coro_alloca_alloc : Intrinsic<[llvm_token_ty],
-                                      [llvm_anyint_ty, llvm_i32_ty], []>;
+                                      [llvm_any_scalar_int_ty, llvm_i32_ty], []>;
 def int_coro_alloca_get : Intrinsic<[llvm_ptr_ty], [llvm_token_ty], []>;
 def int_coro_alloca_free : Intrinsic<[], [llvm_token_ty], []>;
 
@@ -2173,7 +2168,7 @@ def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                 [NonNull<RetIndex>, NonNull<ArgIndex<0>>,
                                  IntrNoMem, IntrSpeculatable]>;
 
-def int_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+def int_stepvector : DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
                                             [], [IntrNoMem]>;
 
 def int_reloc_none : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
@@ -2221,7 +2216,7 @@ def int_vp_scatter: DefaultAttrsIntrinsic<[],
 def int_experimental_vp_strided_store : DefaultAttrsIntrinsic<[],
                              [ llvm_anyvector_ty,
                                llvm_anyptr_ty,
-                               llvm_anyint_ty, // Stride in bytes
+                               llvm_any_scalar_int_ty, // Stride in bytes
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<1>>, IntrWriteMem,
@@ -2229,7 +2224,7 @@ def int_experimental_vp_strided_store : DefaultAttrsIntrinsic<[],
 
 def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                              [ llvm_anyptr_ty,
-                               llvm_anyint_ty, // Stride in bytes
+                               llvm_any_scalar_int_ty, // Stride in bytes
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrReadMem,
@@ -2237,34 +2232,34 @@ def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty
 
 // Experimental histogram
 def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
-                       [ llvm_anyvector_ty, // Vector of pointers
-                         llvm_anyint_ty,    // Increment
+                       [ llvm_any_vector_ptr_ty, // Vector of pointers
+                         llvm_any_scalar_int_ty,    // Increment
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                        [ IntrArgMemOnly ]>;
 
 def int_experimental_vector_histogram_uadd_sat : DefaultAttrsIntrinsic<[],
-                       [ llvm_anyvector_ty, // Vector of pointers
-                         llvm_anyint_ty,    // Increment
+                       [ llvm_any_vector_ptr_ty, // Vector of pointers
+                         llvm_any_scalar_int_ty,    // Increment
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                        [ IntrArgMemOnly ]>;
 
 def int_experimental_vector_histogram_umin : DefaultAttrsIntrinsic<[],
-                       [ llvm_anyvector_ty, // Vector of pointers
-                         llvm_anyint_ty,    // Update value
+                       [ llvm_any_vector_ptr_ty, // Vector of pointers
+                         llvm_any_scalar_int_ty,    // Update value
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                        [ IntrArgMemOnly ]>;
 
 def int_experimental_vector_histogram_umax : DefaultAttrsIntrinsic<[],
-                       [ llvm_anyvector_ty, // Vector of pointers
-                         llvm_anyint_ty,    // Update value
+                       [ llvm_any_vector_ptr_ty, // Vector of pointers
+                         llvm_any_scalar_int_ty,    // Update value
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                        [ IntrArgMemOnly ]>;
 
 // Experimental match
 def int_experimental_vector_match : DefaultAttrsIntrinsic<
                        [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
-                       [ llvm_anyvector_ty,
-                         llvm_anyvector_ty,
+                       [ llvm_any_vector_int_ty,
+                         llvm_any_vector_int_ty,
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],  // Mask
                        [ IntrNoMem, IntrSpeculatable ]>;
 
@@ -2285,106 +2280,106 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   // Reductions
   def int_vp_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_add  : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_int_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                              [ LLVMVectorElementType<0>,
-                               llvm_anyvector_ty,
+                               llvm_any_vector_float_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
   def int_vp_reduce_fmaximum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                  [ LLVMVectorElementType<0>,
-                                   llvm_anyvector_ty,
+                                   llvm_any_vector_float_ty,
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                    llvm_i32_ty]>;
   def int_vp_reduce_fminimum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                  [ LLVMVectorElementType<0>,
-                                   llvm_anyvector_ty,
+                                   llvm_any_vector_float_ty,
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                    llvm_i32_ty]>;
 }
 
 // Integer VP division and remainder: not speculatable.
-def int_vp_sdiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+def int_vp_sdiv : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
                             [ LLVMMatchType<0>,
                               LLVMMatchType<0>,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty], [IntrNoMem]>;
-def int_vp_udiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+def int_vp_udiv : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
                             [ LLVMMatchType<0>,
                               LLVMMatchType<0>,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty], [IntrNoMem]>;
-def int_vp_srem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+def int_vp_srem : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
                             [ LLVMMatchType<0>,
                               LLVMMatchType<0>,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty], [IntrNoMem]>;
-def int_vp_urem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+def int_vp_urem : DefaultAttrsIntrinsic<[ llvm_any_vector_int_ty ],
                             [ LLVMMatchType<0>,
                               LLVMMatchType<0>,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty], [IntrNoMem]>;
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in
-  def int_vp_cttz_elts : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                  [ llvm_anyvector_ty,
+  def int_vp_cttz_elts : DefaultAttrsIntrinsic<[ llvm_any_scalar_int_ty ],
+                                  [ llvm_any_vector_int_ty,
                                     llvm_i1_ty,
                                     LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
                                     llvm_i32_ty]>;
@@ -2404,15 +2399,20 @@ def int_get_active_lane_mask:
             [llvm_any_scalar_int_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_mask_beforefirst:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMMatchType<0>],
+                        [IntrNoMem, IntrSpeculatable]>;
+
 def int_experimental_get_vector_length:
   DefaultAttrsIntrinsic<[llvm_i32_ty],
-                        [llvm_anyint_ty, llvm_i32_ty, llvm_i1_ty],
+                        [llvm_any_scalar_int_ty, llvm_i32_ty, llvm_i1_ty],
                         [IntrNoMem, IntrSpeculatable,
                          ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_experimental_cttz_elts:
-  DefaultAttrsIntrinsic<[llvm_anyint_ty],
-            [llvm_anyvector_ty, llvm_i1_ty],
+  DefaultAttrsIntrinsic<[llvm_any_scalar_int_ty],
+            [llvm_any_vector_int_ty, llvm_i1_ty],
             [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 def int_experimental_vp_splice:
@@ -2548,7 +2548,7 @@ def int_public_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],
 def int_icall_branch_funnel : DefaultAttrsIntrinsic<[], [llvm_vararg_ty], []>;
 
 def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty],
-                                 [llvm_ptr_ty, llvm_anyint_ty],
+                                 [llvm_ptr_ty, llvm_any_scalar_int_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
 def int_asan_check_memaccess :
@@ -2607,21 +2607,21 @@ def int_xray_typedevent : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty, llvm_i64_ty],
 // @llvm.memcpy.element.unordered.atomic.*(dest, src, length, elementsize)
 def int_memcpy_element_unordered_atomic
     : DefaultAttrsIntrinsic<
-          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
+          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_any_scalar_int_ty, llvm_i32_ty],
           [IntrArgMemOnly, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
            WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memmove.element.unordered.atomic.*(dest, src, length, elementsize)
 def int_memmove_element_unordered_atomic
     : DefaultAttrsIntrinsic<
-          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
+          [], [llvm_anyptr_ty, llvm_anyptr_ty, llvm_any_scalar_int_ty, llvm_i32_ty],
           [IntrArgMemOnly, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
            WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
 def int_memset_element_unordered_atomic
     : DefaultAttrsIntrinsic<
-          [], [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
+          [], [llvm_anyptr_ty, llvm_i8_ty, llvm_any_scalar_int_ty, llvm_i32_ty],
           [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
            WriteOnly<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
 
@@ -2689,7 +2689,7 @@ def int_matrix_multiply
 
 def int_matrix_column_major_load
   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-              [llvm_ptr_ty, llvm_anyint_ty, llvm_i1_ty,
+              [llvm_ptr_ty, llvm_any_scalar_int_ty, llvm_i1_ty,
                llvm_i32_ty, llvm_i32_ty],
               [IntrArgMemOnly, IntrReadMem,
                NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
@@ -2698,7 +2698,7 @@ def int_matrix_column_major_load
 def int_matrix_column_major_store
   : DefaultAttrsIntrinsic<[],
               [llvm_anyvector_ty, llvm_ptr_ty,
-               llvm_anyint_ty, llvm_i1_ty, llvm_i32_ty, llvm_i32_ty],
+               llvm_any_scalar_int_ty, llvm_i1_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrArgMemOnly, IntrWriteMem,
                WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
                ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
@@ -2791,7 +2791,7 @@ def int_vector_splice_right
                             [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
-def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+def int_vscale : DefaultAttrsIntrinsic<[llvm_any_scalar_int_ty],
                                        [],
                                        [IntrNoMem,
                                         IntrSpeculatable]>;
@@ -2816,16 +2816,22 @@ foreach n = 2...8 in {
                               [IntrNoMem, IntrSpeculatable]>;
 }
 
+// vector_repeat( SrcVector )
+// Repeat a fixed-length vector to fill its "vscale x" equivalent.
+def int_vector_repeat : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
+
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 
 def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
-                                                          [llvm_anyvector_ty,
-                                                           llvm_anyvector_ty],
+                                                          [llvm_any_vector_int_ty,
+                                                           llvm_any_vector_int_ty],
                                                           [IntrNoMem,
                                                            IntrSpeculatable]>;
 
 def int_vector_partial_reduce_fadd : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
-                                       [llvm_anyfloat_ty, llvm_anyfloat_ty],
+                                       [llvm_any_vector_float_ty, llvm_any_vector_float_ty],
                                        [IntrNoMem]>;
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
@@ -2909,7 +2915,7 @@ def int_ptrauth_sign_generic :
 
 // Return the token ID for the given !alloc_token metadata.
 def int_alloc_token_id :
-  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
+  DefaultAttrsIntrinsic<[llvm_any_scalar_int_ty], [llvm_metadata_ty],
                         [IntrNoMem, NoUndef<RetIndex>]>;
 
 //===----------------------------------------------------------------------===//

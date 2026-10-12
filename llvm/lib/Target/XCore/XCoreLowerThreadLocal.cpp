@@ -31,9 +31,9 @@
 using namespace llvm;
 
 static cl::opt<unsigned> MaxThreads(
-  "xcore-max-threads", cl::Optional,
-  cl::desc("Maximum number of threads (for emulation thread-local storage)"),
-  cl::Hidden, cl::value_desc("number"), cl::init(8));
+    "xcore-max-threads",
+    cl::desc("Maximum number of threads (for emulation thread-local storage)"),
+    cl::Hidden, cl::value_desc("number"), cl::init(8));
 
 namespace {
   /// Lowers thread local variables on the XCore. Each thread local variable is

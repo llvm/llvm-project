@@ -1397,7 +1397,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
 }
 
 //===----------------------------------------------------------------------===//
-// isDeviceValue Tests
+// isDeviceAccessibleValue Tests
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -1440,7 +1440,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefGlobalAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU global address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
@@ -1456,7 +1456,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU workgroup address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
@@ -1472,7 +1472,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU private address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
@@ -1484,7 +1484,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return false since memref has no GPU address space
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
@@ -1494,7 +1494,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
   Value val = constOp->getResult();
 
   // Should return false since i32 is not a MappableType or PointerLikeType
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithGPUAddressSpace) {
@@ -1525,7 +1525,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithGPUAddressSpace) {
   Value val = getGlobalOp->getResult();
 
   // Should return true since the global has GPU address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
@@ -1552,7 +1552,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
   Value val = getGlobalOp->getResult();
 
   // Should return false since the global has no GPU address space
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
@@ -1562,7 +1562,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
   Value val = memrefViewFromBlockArgWithDeclare(
       b, loc, &context, DataClause::acc_deviceptr, module.get(),
       "test_memref_view_declare_devptr");
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
@@ -1572,7 +1572,88 @@ TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
   Value val = memrefViewFromBlockArgWithDeclare(
       b, loc, &context, DataClause::acc_copyin, module.get(),
       "test_memref_view_declare_copyin");
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
+}
+
+//===----------------------------------------------------------------------===//
+// isInDeviceMemoryValue Tests
+//===----------------------------------------------------------------------===//
+
+// For types that only establish device accessibility (such as a memref in a
+// GPU address space) and do not override isInDeviceMemory, the default mirrors
+// isDeviceAccessible: purely device-side storage stays in device memory.
+TEST_F(OpenACCUtilsTest, isInDeviceMemoryMemrefGlobalAddressSpace) {
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Global);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // Device-side memref is both accessible and in device memory.
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
+  EXPECT_TRUE(isInDeviceMemoryValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isInDeviceMemoryMemrefNoAddressSpace) {
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // A host memref is neither accessible nor in device memory.
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
+  EXPECT_FALSE(isInDeviceMemoryValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isInDeviceMemoryAccDeclareDeviceptr) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+  Value val = memrefViewFromBlockArgWithDeclare(
+      b, loc, &context, DataClause::acc_deviceptr, module.get(),
+      "test_memref_view_declare_devptr_in_device_memory");
+  // `deviceptr`-declared storage is already in device memory.
+  EXPECT_TRUE(isInDeviceMemoryValue(val));
+}
+
+namespace {
+// Test-only pointer-like model for storage that is device-accessible but not
+// physically in device memory. This mirrors how a type backed by host-shared,
+// on-demand-migrating storage behaves: the current device can reach it, so it
+// is accessible, but because it is physically shared with the host it may
+// migrate and therefore may not be in device memory - it must still be
+// mapped/attached rather than treated as deviceptr.
+struct AccessibleNotInDeviceMemoryModel
+    : public PointerLikeType::ExternalModel<AccessibleNotInDeviceMemoryModel,
+                                            VectorType> {
+  Type getElementType(Type pointer) const {
+    return cast<VectorType>(pointer).getElementType();
+  }
+  bool isDeviceAccessible(Type pointer, Value var) const { return true; }
+  bool isInDeviceMemory(Type pointer, Value var) const { return false; }
+};
+} // namespace
+
+// The essential accessibility-vs-residence split: a value can be device
+// accessible yet not in device memory, in which case it must be mapped rather
+// than classified as deviceptr. No built-in MLIR type diverges here (their
+// isInDeviceMemory defaults to isDeviceAccessible), so use a test-only model.
+TEST_F(OpenACCUtilsTest, isInDeviceMemoryAccessibleButNotInDeviceMemory) {
+  VectorType::attachInterface<AccessibleNotInDeviceMemoryModel>(context);
+
+  auto vecTy = VectorType::get({4}, b.getI32Type());
+  auto zeroAttr = cast<TypedAttr>(b.getZeroAttr(vecTy));
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, zeroAttr);
+  Value val = constOp->getResult();
+
+  // Accessible from the device, but physically host-shared: must be mapped.
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
+  EXPECT_FALSE(isInDeviceMemoryValue(val));
 }
 
 //===----------------------------------------------------------------------===//

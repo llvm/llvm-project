@@ -1105,6 +1105,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
+      STI.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
       AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
@@ -1958,16 +1959,6 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
-}
-
-void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
-
-  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

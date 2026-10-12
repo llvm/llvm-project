@@ -246,9 +246,6 @@ public:
 class UseFact : public Fact {
   const Expr *UseExpr;
   const OriginList *OList;
-  // True if this use is a write operation (e.g., left-hand side of assignment).
-  // Write operations are exempted from use-after-free checks.
-  bool IsWritten = false;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
@@ -257,10 +254,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
-  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
-  void markAsWritten() { IsWritten = true; }
-  bool isWritten() const { return IsWritten; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;

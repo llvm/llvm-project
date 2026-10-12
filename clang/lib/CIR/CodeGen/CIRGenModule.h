@@ -339,6 +339,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -366,8 +370,6 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param attrs [out] - On return, the attribute list to use.
   /// \param callingConv [out] - On return, the calling convention to use.
-  /// \param sideEffect [out] - On return, the side effect type of the
-  /// attributes.
   /// \param attrOnCallSite - Whether or not the attributes are on a call site.
   /// \param isThunk - Whether the function is a thunk.
   void constructAttributeList(
@@ -375,7 +377,7 @@ public:
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
-      cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
+      bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
   /// function attributes to add to a function based on language opts, codegen
   /// opts, and some small properties.
@@ -721,6 +723,10 @@ public:
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
+
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
 
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.

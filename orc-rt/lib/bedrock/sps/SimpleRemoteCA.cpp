@@ -12,6 +12,8 @@
 
 #include "orc-rt/bedrock/sps/SimpleRemoteCA.h"
 
+#include "orc-rt-internal/support/Endian.h"
+
 #include "orc-rt/support/Compiler.h"
 #include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/iterator_range.h"
@@ -24,6 +26,13 @@
 namespace orc_rt {
 
 namespace {
+
+// Header field offsets. Wire values, shared with LLVM's FDMsgHeader: do not
+// reorder.
+constexpr size_t MsgSizeOffset = 0;
+constexpr size_t OpCOffset = 8;
+constexpr size_t SeqNoOffset = 16;
+constexpr size_t TagAddrOffset = 24;
 
 /// Converts a call message's tag to the wrapper function it names.
 ///
@@ -41,6 +50,26 @@ Expected<orc_rt_WrapperFunction> tagToWrapperFunction(uint64_t Tag) {
 }
 
 } // namespace
+
+void SimpleRemoteCA::MsgHeader::encode(char *Buf, Opcode Op, uint64_t SeqNo,
+                                       uint64_t Tag, size_t PayloadSize) {
+  endian_write<uint64_t>(Buf + MsgSizeOffset, Size + PayloadSize,
+                         endian::little);
+  endian_write<uint64_t>(Buf + OpCOffset, static_cast<uint64_t>(Op),
+                         endian::little);
+  endian_write<uint64_t>(Buf + SeqNoOffset, SeqNo, endian::little);
+  endian_write<uint64_t>(Buf + TagAddrOffset, Tag, endian::little);
+}
+
+SimpleRemoteCA::MsgHeader::Fields
+SimpleRemoteCA::MsgHeader::decode(const char *Buf) {
+  Fields F;
+  F.MsgSize = endian_read<uint64_t>(Buf + MsgSizeOffset, endian::little);
+  F.OpC = endian_read<uint64_t>(Buf + OpCOffset, endian::little);
+  F.SeqNo = endian_read<uint64_t>(Buf + SeqNoOffset, endian::little);
+  F.Tag = endian_read<uint64_t>(Buf + TagAddrOffset, endian::little);
+  return F;
+}
 
 const char *SimpleRemoteCA::getOpcodeName(Opcode Op) noexcept {
   switch (Op) {

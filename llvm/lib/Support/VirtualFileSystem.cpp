@@ -54,10 +54,9 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
-using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
+using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_type;
-using llvm::sys::fs::kInvalidFile;
 using llvm::sys::fs::perms;
 using llvm::sys::fs::UniqueID;
 
@@ -199,7 +198,7 @@ class RealFile : public File {
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
         RealName(NewRealPathName.str()) {
-    assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
+    assert(FD.isValid() && "Invalid or inactive file descriptor");
   }
 
 public:
@@ -222,7 +221,7 @@ RealFile::~RealFile() { close(); }
 ErrorOr<Status> RealFile::status() {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  assert(FD != kInvalidFile && "cannot stat closed file");
+  assert(FD.isValid() && "cannot stat closed file");
   if (!S.isStatusKnown()) {
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
@@ -241,7 +240,7 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
-  assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  assert(FD.isValid() && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
@@ -250,7 +249,7 @@ std::error_code RealFile::close() {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   std::error_code EC = sys::fs::closeFile(FD);
-  FD = kInvalidFile;
+  FD = file_t::Invalid;
   return EC;
 }
 
@@ -295,6 +294,11 @@ public:
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
+  void
+  getDirectoryContentRealSources(const Twine &Dir,
+                                 SmallVectorImpl<std::string> &Out) override {
+    Out.push_back(Dir.str());
+  }
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
 
@@ -542,6 +546,13 @@ std::error_code OverlayFileSystem::getRealPath(const Twine &Path,
     if (FS->exists(Path))
       return FS->getRealPath(Path, Output);
   return errc::no_such_file_or_directory;
+}
+
+void OverlayFileSystem::getDirectoryContentRealSources(
+    const Twine &Dir, SmallVectorImpl<std::string> &Out) {
+  // All layers contribute.
+  for (iterator I = overlays_begin(), E = overlays_end(); I != E; ++I)
+    (*I)->getDirectoryContentRealSources(Dir, Out);
 }
 
 void OverlayFileSystem::visitChildFileSystems(VisitCallbackTy Callback) {
@@ -2699,6 +2710,46 @@ RedirectingFileSystem::getRealPath(const Twine &OriginalPath,
     return {};
   }
   return llvm::errc::invalid_argument;
+}
+
+void RedirectingFileSystem::getDirectoryContentRealSources(
+    const Twine &Dir, SmallVectorImpl<std::string> &Out) {
+  SmallString<256> Path;
+  Dir.toVector(Path);
+
+  if (makeAbsolute(Path))
+    return;
+
+  // Fallthrough and Fallback both consult ExternalFS, differing only in order.
+  const bool ConsultsExternalFS = Redirection != RedirectKind::RedirectOnly;
+
+  ErrorOr<RedirectingFileSystem::LookupResult> Result = lookupPath(Path);
+  if (!Result) {
+    // dir_begin() delegates entirely to ExternalFS.
+    if (ConsultsExternalFS)
+      ExternalFS->getDirectoryContentRealSources(Path, Out);
+    return;
+  }
+
+  switch (Result->E->getKind()) {
+  case EK_File:
+    return;
+  case EK_Directory:
+    // The names come from the overlay, which has no location in ExternalFS.
+    break;
+  case EK_DirectoryRemap: {
+    // Make the target absolute as status() does, so a relative
+    // 'external-contents' is not passed down raw.
+    SmallString<256> RemappedPath(*Result->getExternalRedirect());
+    if (!makeAbsolute(RemappedPath))
+      ExternalFS->getDirectoryContentRealSources(RemappedPath, Out);
+    break;
+  }
+  }
+
+  // dir_begin() also iterates the original path in ExternalFS.
+  if (ConsultsExternalFS)
+    ExternalFS->getDirectoryContentRealSources(Path, Out);
 }
 
 std::unique_ptr<FileSystem>

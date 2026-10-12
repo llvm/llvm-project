@@ -1384,6 +1384,11 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   acc.delete accPtr(%create : memref<10xf32>) dataClause(acc_create)
   acc.delete accPtr(%createimplicit : memref<10x20xf32>) dataClause(acc_create) implicit(true)
 
+  %createsynthetic = acc.create varPtr(%c : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) synthetic -> memref<10x20xf32>
+  acc.parallel dataOperands(%createsynthetic : memref<10x20xf32>) {
+  }
+  acc.delete accPtr(%createsynthetic : memref<10x20xf32>) dataClause(acc_create) implicit(true) synthetic
+
   %copyoutzero = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
   acc.parallel dataOperands(%copyoutzero: memref<10xf32>) {
   }
@@ -1453,6 +1458,10 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.delete accPtr([[CREATE]] : memref<10xf32>) dataClause(acc_create)
 // CHECK-NEXT: acc.delete accPtr([[CREATEIMP]] : memref<10x20xf32>) dataClause(acc_create) implicit(true)
+// CHECK: [[CREATESYN:%.*]] = acc.create varPtr([[ARGC]] : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) synthetic -> memref<10x20xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[CREATESYN]] : memref<10x20xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.delete accPtr([[CREATESYN]] : memref<10x20xf32>) dataClause(acc_create) implicit(true) synthetic
 // CHECK: [[COPYOUTZ:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYOUTZ]] : memref<10xf32>) {
 // CHECK-NEXT: }

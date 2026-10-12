@@ -19,6 +19,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -56,6 +57,10 @@ static cl::opt<std::string> OutputFilename("o",
 
 static cl::opt<bool> Force("f", cl::desc("Enable binary output on terminals"),
                            cl::cat(ExtractCat));
+
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the verifier"),
+                              cl::cat(ExtractCat), cl::Hidden);
 
 static cl::opt<bool> DeleteFn("delete",
                               cl::desc("Delete specified Globals from Module"),
@@ -142,6 +147,12 @@ int main(int argc, char **argv) {
 
   if (!M) {
     Err.print(argv[0], errs());
+    return 1;
+  }
+
+  if (!NoVerify && verifyModule(*M, &errs())) {
+    errs() << argv[0] << ": " << InputFilename
+           << ": error: input module is broken!\n";
     return 1;
   }
 

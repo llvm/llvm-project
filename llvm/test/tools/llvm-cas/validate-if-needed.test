@@ -1,0 +1,7 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t/cas --make-blob --data %S/Inputs/oneline
+
+RUN: llvm-cas --cas %t/cas --validate-if-needed --force | FileCheck %s
+CHECK: validated successfully

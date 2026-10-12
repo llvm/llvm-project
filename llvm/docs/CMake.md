@@ -607,6 +607,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     enabling link-time optimization. Possible values are `Off`, `On`, `Thin`
     and `Full`. Defaults to OFF.
 
+**LLVM_ENABLE_LZMA**:STRING
+
+:   Used to decide if LLVM tools should support decompression of xz streams
+    with liblzma. Allowed values are `OFF`, `ON` (default, enable if liblzma is
+    found), and `FORCE_ON` (error if liblzma is not found).
+
 **LLVM_ENABLE_MODULES**:BOOL
 
 :   Compile with [Clang Header
