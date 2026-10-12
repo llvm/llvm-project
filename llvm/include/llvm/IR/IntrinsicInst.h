@@ -324,16 +324,6 @@ public:
 
   LLVM_ABI void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
                                           bool AllowEmpty = false);
-  LLVM_ABI void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
-  /// Adding a new location operand will always result in this intrinsic using
-  /// an ArgList, and must always be accompanied by a new expression that uses
-  /// the new operand.
-  LLVM_ABI void addVariableLocationOps(ArrayRef<Value *> NewValues,
-                                       DIExpression *NewExpr);
-
-  void setVariable(DILocalVariable *NewVar) {
-    setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
-  }
 
   void setExpression(DIExpression *NewExpr) {
     setArgOperand(2, MetadataAsValue::get(NewExpr->getContext(), NewExpr));
@@ -345,31 +335,12 @@ public:
 
   bool hasArgList() const { return getWrappedLocation().hasArgList(); }
 
-  /// Does this describe the address of a local variable. True for dbg.declare,
-  /// but not dbg.value, which describes its value, or dbg.assign, which
-  /// describes a combination of the variable's value and address.
-  bool isAddressOfVariable() const {
-    return getIntrinsicID() == Intrinsic::dbg_declare;
-  }
-
   /// Determine if this describes the value of a local variable. It is true for
   /// dbg.value, but false for dbg.declare, which describes its address, and
   /// false for dbg.assign, which describes a combination of the variable's
   /// value and address.
   bool isValueOfVariable() const {
     return getIntrinsicID() == Intrinsic::dbg_value;
-  }
-
-  void setKillLocation() {
-    // TODO: When/if we remove duplicate values from DIArgLists, we don't need
-    // this set anymore.
-    SmallPtrSet<Value *, 4> RemovedValues;
-    for (Value *OldValue : location_ops()) {
-      if (!RemovedValues.insert(OldValue).second)
-        continue;
-      Value *Poison = PoisonValue::get(OldValue->getType());
-      replaceVariableLocationOp(OldValue, Poison);
-    }
   }
 
   bool isKillLocation() const {
@@ -398,13 +369,6 @@ public:
 
   Metadata *getRawExpression() const {
     return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
-  }
-
-  /// Use of this should generally be avoided; instead,
-  /// replaceVariableLocationOp and addVariableLocationOps should be used where
-  /// possible to avoid creating invalid state.
-  void setRawLocation(Metadata *Location) {
-    return setArgOperand(0, MetadataAsValue::get(getContext(), Location));
   }
 
   /// Get the size (in bits) of the variable, or fragment of the variable that
@@ -522,19 +486,8 @@ public:
   DIExpression *getAddressExpression() const {
     return cast<DIExpression>(getRawAddressExpression());
   }
-  void setAddressExpression(DIExpression *NewExpr) {
-    setArgOperand(OpAddressExpr,
-                  MetadataAsValue::get(NewExpr->getContext(), NewExpr));
-  }
   LLVM_ABI void setAssignId(DIAssignID *New);
   LLVM_ABI void setAddress(Value *V);
-  /// Kill the address component.
-  LLVM_ABI void setKillAddress();
-  /// Check whether this kills the address component. This doesn't take into
-  /// account the position of the intrinsic, therefore a returned value of false
-  /// does not guarentee the address is a valid location for the variable at the
-  /// intrinsic's position in IR.
-  LLVM_ABI bool isKillAddress() const;
   LLVM_ABI void setValue(Value *V);
   /// \name Casting methods
   /// @{
@@ -551,9 +504,6 @@ public:
 class DbgLabelInst : public DbgInfoIntrinsic {
 public:
   DILabel *getLabel() const { return cast<DILabel>(getRawLabel()); }
-  void setLabel(DILabel *NewLabel) {
-    setArgOperand(0, MetadataAsValue::get(getContext(), NewLabel));
-  }
 
   Metadata *getRawLabel() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();

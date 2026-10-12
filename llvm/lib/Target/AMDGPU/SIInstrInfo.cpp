@@ -2957,16 +2957,16 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
   const MachineOperand &MO0 = MI.getOperand(OpIdx0);
   const MachineOperand &MO1 = MI.getOperand(OpIdx1);
 
-  // Swap doesn't breach constant bus or literal limits
-  // It may move literal to position other than src0, this is not allowed
-  // pre-gfx10 However, most test cases need literals in Src0 for VOP
-  // FIXME: After gfx9, literal can be in place other than Src0
+  // Swap doesn't breach constant bus or literal limits, but it may move a
+  // constant out of src0. Allow that for immediates where the destination
+  // operand can hold them, e.g. VOP3 sources on targets with VOP3 literal
+  // support. Other non-register operands stay in src0.
   if (isVALU(MI, /*AllowLDSDMA=*/false)) {
     if ((int)OpIdx0 == Src0Idx && !MO0.isReg() &&
-        !isInlineConstant(MO0, OpInfo1))
+        (!MO0.isImm() || !isImmOperandLegal(MI, OpIdx1, MO0)))
       return false;
     if ((int)OpIdx1 == Src0Idx && !MO1.isReg() &&
-        !isInlineConstant(MO1, OpInfo0))
+        (!MO1.isImm() || !isImmOperandLegal(MI, OpIdx0, MO1)))
       return false;
   }
 
@@ -6723,17 +6723,6 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   return true;
 }
 
-bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
-                                     const MCOperandInfo &OpInfo,
-                                     const MachineOperand &MO) const {
-  if (MO.isReg())
-    return isLegalRegOperand(MRI, OpInfo, MO);
-
-  // Handle non-register types that are treated like immediates.
-  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
-  return true;
-}
-
 bool SIInstrInfo::isLegalSingleSGPRReadInstOperand(
     const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
     const MachineOperand *MO) const {
@@ -7148,7 +7137,9 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   }
 
   // Special case: V_FMAC_F32 and V_FMAC_F16 have src2 tied to vdst.
-  if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
+  if ((Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64 ||
+       Opc == AMDGPU::V_FMAC_F16_fake16_e64 ||
+       Opc == AMDGPU::V_FMAC_F16_t16_e64) &&
       !RI.isVGPR(MRI, MI.getOperand(VOP3Idx[2]).getReg()))
     legalizeOpWithMove(MI, VOP3Idx[2]);
 
@@ -10441,20 +10432,6 @@ SIInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
   return InstSizeVerifyMode::ExactSize;
 }
 
-bool SIInstrInfo::mayAccessFlatAddressSpace(const MachineInstr &MI) const {
-  if (!isFLAT(MI))
-    return false;
-
-  if (MI.memoperands_empty())
-    return true;
-
-  for (const MachineMemOperand *MMO : MI.memoperands()) {
-    if (MMO->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS)
-      return true;
-  }
-  return false;
-}
-
 ArrayRef<std::pair<int, const char *>>
 SIInstrInfo::getSerializableTargetIndices() const {
   static const std::pair<int, const char *> TargetIndices[] = {
@@ -11573,8 +11550,8 @@ bool SIInstrInfo::invertSCCUse(MachineInstr *SCCDef) const {
   // Scan instructions for SCC uses that need to be inverted until SCC is dead.
   constexpr unsigned ScanLimit = 12;
   unsigned Count = 0;
-  for (MachineInstr &MI :
-       make_range(std::next(MachineBasicBlock::iterator(SCCDef)), MBB->end())) {
+  for (MachineInstr &MI : instructionsWithoutDebug(
+           std::next(MachineBasicBlock::iterator(SCCDef)), MBB->end())) {
     if (++Count > ScanLimit)
       return false;
     if (MI.readsRegister(AMDGPU::SCC, &RI)) {

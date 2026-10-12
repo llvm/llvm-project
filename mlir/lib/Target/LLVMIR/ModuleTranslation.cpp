@@ -1017,7 +1017,7 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   }
   for (unsigned overloadedOperandIdx : overloadedOperands)
     overloadedTypes.push_back(args[overloadedOperandIdx]->getType());
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Module *module = builder.getModule();
   llvm::Function *llvmIntr = llvm::Intrinsic::getOrInsertDeclaration(
       module, intrinsic, overloadedTypes);
 

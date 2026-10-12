@@ -443,7 +443,7 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
   B.CreateMemCpy(CpyDst, Align(1), Src, Align(1),
-                 TLI->getAsSizeT(Len + 1, *B.GetInsertBlock()->getModule()));
+                 TLI->getAsSizeT(Len + 1, *B.getModule()));
   return Dst;
 }
 
@@ -1319,7 +1319,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
                                    "memrchr.cmp");
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr,
                                            B.getInt64(Pos), "memrchr.ptr_plus");
-      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1338,10 +1339,13 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
   Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  if (auto *AndSI = dyn_cast<SelectInst>(And))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*AndSI, DEBUG_TYPE);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
       B.CreateInBoundsGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
-  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  return B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                          "memrchr.sel");
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
@@ -3381,7 +3385,14 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   V = B.CreateIntCast(V, RetType, false);
 
   Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
-  return B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  Value *S = B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
+  if (ProfcheckDisableMetadataFixes)
+    return S;
+  if (auto *SI = dyn_cast<SelectInst>(S))
+    setBranchWeights(
+        *SI, {MDBuilder::kLikelyBranchWeight, MDBuilder::kUnlikelyBranchWeight},
+        /*IsExpected=*/false);
+  return S;
 }
 
 Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilderBase &B) {
