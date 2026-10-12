@@ -5,7 +5,7 @@ define void @bounded_variable_guard(i8 range(i8 1, 0) %n, i8 range(i8 1, 13) %bo
 ; CHECK-LABEL: 'bounded_variable_guard'
 ; CHECK-NEXT:  Determining loop execution counts for: @bounded_variable_guard
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -2
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 10
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -49,7 +49,7 @@ define void @bounded_variable_signed(i8 range(i8 -127, 0) %n, i8 range(i8 -64, -
 ; CHECK-LABEL: 'bounded_variable_signed'
 ; CHECK-NEXT:  Determining loop execution counts for: @bounded_variable_signed
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (127 + %n)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 126
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 75
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (127 + %n)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
