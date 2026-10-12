@@ -266,9 +266,10 @@ subroutine runtime_block(flag)
   !$omp metadirective when(construct={target}: taskyield)
 end subroutine
 
-! An ignored compiler directive does not separate the BLOCK from its
+! A compiler directive that emits no code does not separate the BLOCK from its
 ! replacement.
 ! CHECK-LABEL: func.func @_QPstandalone_block_ignored_directive(
+! CHECK-NOT: llvm.always_inline
 ! CHECK: omp.target
 ! CHECK: omp.taskyield
 ! CHECK: omp.terminator
@@ -281,6 +282,29 @@ subroutine standalone_block_ignored_directive(a)
   !dir$ ignored(1)
   !dir$ loop count(10)
   !dir$ assume_aligned a:64
+  !dir$ inlinealways different
+  !dir$ forceinline
+  !dir$ unroll 4
+  block
+    !$omp metadirective when(construct={target}: taskyield) otherwise(taskwait)
+  end block
+end subroutine
+
+! A matching INLINEALWAYS moves with the BLOCK and still takes effect.
+! CHECK-LABEL: func.func @_QPstandalone_block_inlinealways(
+! CHECK-SAME: llvm.always_inline
+! CHECK: fir.if
+! CHECK: omp.target
+! CHECK: omp.taskyield
+! CHECK: omp.terminator
+! CHECK: } else {
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.taskwait
+! CHECK: return
+subroutine standalone_block_inlinealways(flag)
+  logical :: flag
+  !$omp metadirective when(user={condition(flag)}: target) otherwise(nothing)
+  !dir$ inlinealways standalone_block_inlinealways
   block
     !$omp metadirective when(construct={target}: taskyield) otherwise(taskwait)
   end block

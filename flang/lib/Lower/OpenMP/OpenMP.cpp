@@ -7156,11 +7156,11 @@ private:
 };
 } // namespace
 
-static bool isSupportedMetadirectiveLoopCompilerDirective(
-    const parser::CompilerDirective &directive) {
-  // Only directives known not to emit executable operations may be processed
-  // before runtime selection. New variants remain unsupported until classified.
-  using SupportedDirectives = std::tuple<
+static bool
+isNonExecutableCompilerDirective(const parser::CompilerDirective &directive) {
+  // Directives known not to emit executable operations. New variants remain
+  // unsupported until classified.
+  using NonExecutableDirectives = std::tuple<
       std::list<parser::CompilerDirective::IgnoreTKR>,
       parser::CompilerDirective::LoopCount,
       std::list<parser::CompilerDirective::AssumeAligned>,
@@ -7180,7 +7180,7 @@ static bool isSupportedMetadirectiveLoopCompilerDirective(
   return common::visit(
       [](const auto &value) {
         using T = std::decay_t<decltype(value)>;
-        return common::HasMember<T, SupportedDirectives>;
+        return common::HasMember<T, NonExecutableDirectives>;
       },
       directive.u);
 }
@@ -7189,14 +7189,13 @@ static bool
 isIgnorableMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
   const auto *directive = eval.getIf<parser::CompilerDirective>();
   return eval.isEndStmt() ||
-         (directive &&
-          isSupportedMetadirectiveLoopCompilerDirective(*directive));
+         (directive && isNonExecutableCompilerDirective(*directive));
 }
 
 static bool
 isUnsupportedMetadirectiveLoopAssociationEval(lower::pft::Evaluation &eval) {
   if (const auto *directive = eval.getIf<parser::CompilerDirective>())
-    return !isSupportedMetadirectiveLoopCompilerDirective(*directive);
+    return !isNonExecutableCompilerDirective(*directive);
   return eval.isOtherStmt() ||
          (eval.isDirective() && !eval.isExecutableDirective());
 }
@@ -7249,26 +7248,13 @@ static lower::pft::Evaluation *spliceAssociatedEval(
 
   auto firstAssociatedIt = std::next(metaIt);
   auto associatedIt = firstAssociatedIt;
-  // Directives that semantics reports as ignored.
-  auto isIgnoredDirective = [](lower::pft::Evaluation &e) {
+  auto isNonExecutableDirective = [](lower::pft::Evaluation &e) {
     const auto *directive = e.getIf<parser::CompilerDirective>();
-    if (!directive)
-      return false;
-    using IgnoredDirectives =
-        std::tuple<parser::CompilerDirective::Unrecognized,
-                   std::list<parser::CompilerDirective::NameValue>,
-                   parser::CompilerDirective::LoopCount,
-                   std::list<parser::CompilerDirective::AssumeAligned>>;
-    return common::visit(
-        [](const auto &value) {
-          return common::HasMember<std::decay_t<decltype(value)>,
-                                   IgnoredDirectives>;
-        },
-        directive->u);
+    return directive && isNonExecutableCompilerDirective(*directive);
   };
   while (associatedIt != parentList->end() &&
          (isLoop ? isIgnorableMetadirectiveLoopAssociationEval(*associatedIt)
-                 : isIgnoredDirective(*associatedIt)))
+                 : isNonExecutableDirective(*associatedIt)))
     ++associatedIt;
 
   if (associatedIt == parentList->end())
@@ -7630,7 +7616,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
       else if (const auto *directive =
                    unsupportedInterveningEval
                        ->getIf<parser::CompilerDirective>()) {
-        assert(!isSupportedMetadirectiveLoopCompilerDirective(*directive) &&
+        assert(!isNonExecutableCompilerDirective(*directive) &&
                "unexpected compiler directive");
         evalName = std::holds_alternative<parser::CompilerDirective::Prefetch>(
                        directive->u)
