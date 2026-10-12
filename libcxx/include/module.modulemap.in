@@ -2417,6 +2417,11 @@ module std {
         export std_core.utility_core.empty
       }
       module statpart {
+        module basis {
+          header "__pstl/backends/statpart/basis.h"
+        }
+      }
+      module statpart_old {
         header "__pstl/backends/statpart.h"
       }
       module std_thread {
