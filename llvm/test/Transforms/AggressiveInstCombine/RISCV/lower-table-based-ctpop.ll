@@ -13,8 +13,7 @@ define i8 @ctpop(i8 %x) {
 ;
 ; ZBB-LABEL: define i8 @ctpop(
 ; ZBB-SAME: i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; ZBB-NEXT:    [[GEP:%.*]] = getelementptr inbounds [256 x i8], ptr @ctpop.i8.table, i32 0, i8 [[X]]
-; ZBB-NEXT:    [[TMP1:%.*]] = load i8, ptr [[GEP]], align 1
+; ZBB-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]])
 ; ZBB-NEXT:    ret i8 [[TMP1]]
 ;
   %gep = getelementptr inbounds [256 x i8], ptr @ctpop.i8.table, i32 0, i8 %x
@@ -33,8 +32,8 @@ define i8 @ctpop_zext(i8 %x) {
 ; ZBB-LABEL: define i8 @ctpop_zext(
 ; ZBB-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
 ; ZBB-NEXT:    [[IDXPROM:%.*]] = zext i8 [[X]] to i64
-; ZBB-NEXT:    [[GEP:%.*]] = getelementptr inbounds [256 x i8], ptr @ctpop.i8.table, i32 0, i64 [[IDXPROM]]
-; ZBB-NEXT:    [[TMP2:%.*]] = load i8, ptr [[GEP]], align 1
+; ZBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[IDXPROM]])
+; ZBB-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
 ; ZBB-NEXT:    ret i8 [[TMP2]]
 ;
   %idxprom = zext i8 %x to i64
@@ -72,8 +71,8 @@ define i32 @wider_elt_ty(i8 %x) {
 ;
 ; ZBB-LABEL: define i32 @wider_elt_ty(
 ; ZBB-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
-; ZBB-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr @ctpop.i32.table, i32 0, i8 [[X]]
-; ZBB-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP]], align 4
+; ZBB-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]])
+; ZBB-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; ZBB-NEXT:    ret i32 [[TMP2]]
 ;
   %gep = getelementptr inbounds [16 x i32], ptr @ctpop.i32.table, i32 0, i8 %x
