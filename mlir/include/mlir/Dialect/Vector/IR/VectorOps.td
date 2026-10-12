@@ -230,7 +230,12 @@ def Vector_ContractionOp :
     void getIterationIndexMap(
       std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap);
 
+    // Returns (lhs dim, rhs dim) pairs for the contracting dimensions:
+    // "reduction" iterators that index both lhs and rhs, and not the result.
     std::vector<std::pair<int64_t, int64_t>> getContractingDimMap();
+
+    // Returns (lhs dim, rhs dim) pairs for the batch dimensions: "parallel"
+    // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
 
     static CombiningKind getDefaultKind() {
