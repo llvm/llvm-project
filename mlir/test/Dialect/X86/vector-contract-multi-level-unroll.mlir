@@ -893,6 +893,155 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
 
+// A side-effecting op between the initial read and the loop may modify the
+// source, so the initial value is spilled to a stack buffer.
+func.func @amx_bf16_flat_side_effect_before_loop(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+                                                 %m: index, %n: index, %k_start: index, %k_end: index, %val: f32) {
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x96xf32>
+  memref.store %val, %C[%m, %n] : memref<?x?xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<64x96xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x96xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
+    scf.yield %d : vector<64x96xf32>
+  }
+  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<64x96xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_side_effect_before_loop(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index, %[[VAL:.+]]: f32)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C96:.+]] = arith.constant 96 : index
+// CHECK:         %[[ACC_INIT:.+]] = vector.transfer_read %[[C]][%[[M]], %[[N]]], {{.*}} : memref<?x?xf32>, vector<64x96xf32>
+// CHECK:         memref.store %[[VAL]], %[[C]][%[[M]], %[[N]]]
+// CHECK:         %[[BUF:.+]] = memref.alloca() : memref<64x96xf32>
+// CHECK:         vector.transfer_write %[[ACC_INIT]], %[[BUF]][%[[C0]], %[[C0]]]
+// CHECK:         %[[ACC_OUT:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [64, 96] [1, 1]
+// CHECK-NOT:     memref.alloca
+// CHECK:         scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:           scf.for %[[IV_N:.+]] = %[[C0]] to %[[C96]] step %[[C32]] {
+// CHECK:             %[[IN_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:     vector.transfer_read %[[IN_VIEW]]{{.*}} vector<16x16xf32>
+// CHECK:             %[[RES:.+]]:4 = scf.for
+// CHECK:             %[[OUT_VIEW:.+]] = memref.subview %[[ACC_OUT]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:     vector.transfer_write %[[RES]]#{{[0-3]}}, %[[OUT_VIEW]]
+// CHECK:           }
+// CHECK:         }
+// CHECK-NOT:     vector.transfer_read
+// CHECK-NOT:     vector.transfer_write
+// CHECK:         return
+
+// NANO-LABEL: func.func @amx_bf16_flat_side_effect_before_loop(
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// A side-effecting op between the loop and the final write means the result
+// goes through a stack buffer and the original write remains.
+func.func @amx_bf16_flat_side_effect_after_loop(%A: memref<?x?xbf16>, %B: memref<?x?xbf16>, %C: memref<?x?xf32>,
+                                                %m: index, %n: index, %k_start: index, %k_end: index, %val: f32) {
+  %c32 = arith.constant 32 : index
+  %c0_0 = arith.constant 0.0 : bf16
+  %c0_0_f32 = arith.constant 0.0 : f32
+  %c = vector.transfer_read %C[%m, %n], %c0_0_f32 {in_bounds = [true, true]} : memref<?x?xf32>, vector<64x96xf32>
+  %res = scf.for %k = %k_start to %k_end step %c32 iter_args(%acc = %c) -> (vector<64x96xf32>) {
+    %a = vector.transfer_read %A[%m, %k], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<64x32xbf16>
+    %b = vector.transfer_read %B[%k, %n], %c0_0 {in_bounds = [true, true]} : memref<?x?xbf16>, vector<32x96xbf16>
+    %d = vector.contract {
+      indexing_maps = [#map, #map1, #map2],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %a, %b, %acc : vector<64x32xbf16>, vector<32x96xbf16> into vector<64x96xf32>
+    scf.yield %d : vector<64x96xf32>
+  }
+  memref.store %val, %C[%m, %n] : memref<?x?xf32>
+  vector.transfer_write %res, %C[%m, %n] {in_bounds = [true, true]} : vector<64x96xf32>, memref<?x?xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @amx_bf16_flat_side_effect_after_loop(
+// CHECK-SAME:    %[[A:.+]]: memref<?x?xbf16>, %[[B:.+]]: memref<?x?xbf16>, %[[C:.+]]: memref<?x?xf32>,
+// CHECK-SAME:    %[[M:.+]]: index, %[[N:.+]]: index, %[[K_START:.+]]: index, %[[K_END:.+]]: index, %[[VAL:.+]]: f32)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C32:.+]] = arith.constant 32 : index
+// CHECK-DAG:     %[[C64:.+]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C96:.+]] = arith.constant 96 : index
+// CHECK-DAG:     %[[ACC_IN:.+]] = memref.subview %[[C]][%[[M]], %[[N]]] [64, 96] [1, 1]
+// CHECK-DAG:     %[[BUF:.+]] = memref.alloca() : memref<64x96xf32>
+// CHECK-NOT:     vector.transfer_write
+// CHECK:         scf.for %[[IV_M:.+]] = %[[C0]] to %[[C64]] step %[[C32]] {
+// CHECK:           scf.for %[[IV_N:.+]] = %[[C0]] to %[[C96]] step %[[C32]] {
+// CHECK:             %[[IN_VIEW:.+]] = memref.subview %[[ACC_IN]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:     vector.transfer_read %[[IN_VIEW]]{{.*}} vector<16x16xf32>
+// CHECK:             %[[RES:.+]]:4 = scf.for
+// CHECK:             %[[OUT_VIEW:.+]] = memref.subview %[[BUF]][%[[IV_M]], %[[IV_N]]] [32, 32] [1, 1]
+// CHECK-COUNT-4:     vector.transfer_write %[[RES]]#{{[0-3]}}, %[[OUT_VIEW]]
+// CHECK:           }
+// CHECK:         }
+// CHECK:         %[[ACC_RES:.+]] = vector.transfer_read %[[BUF]][%[[C0]], %[[C0]]], {{.*}} vector<64x96xf32>
+// CHECK:         memref.store %[[VAL]], %[[C]][%[[M]], %[[N]]]
+// CHECK:         vector.transfer_write %[[ACC_RES]], %[[C]][%[[M]], %[[N]]] {{.*}} : vector<64x96xf32>, memref<?x?xf32>
+
+// NANO-LABEL: func.func @amx_bf16_flat_side_effect_after_loop(
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+    } : !transform.any_op
+    transform.yield
+  }
+
+  transform.named_sequence @__transform_nano(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_multi_level_unroll target = "amx-bf16"
+      transform.apply_patterns.x86.vector_contract_to_amx_dot_product
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
 // M = 48 is an odd multiple of 16, so a 1x2 tile register layout is used.
 // Online packing of the flat RHS needs the pair of contracts along N, which
 // this layout still provides.

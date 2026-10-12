@@ -106,6 +106,20 @@ static bool isSimpleTransferOp(VectorTransferOpInterface op) {
          !op.hasOutOfBoundsDim();
 }
 
+// Return true if start and end are in the same block and there are no ops with
+// memory effects between them.
+static bool noMemoryEffectsBetween(Operation *start, Operation *end) {
+  if (start->getBlock() != end->getBlock() || !start->isBeforeInBlock(end))
+    return false;
+
+  for (Operation *op = start->getNextNode(); op && op != end;
+       op = op->getNextNode()) {
+    if (!isMemoryEffectFree(op))
+      return false;
+  }
+  return true;
+}
+
 // Create a rank-reducing subview of a memref that matches the target vector
 // type, e.g. with targetType = vector<64x32xbf16>:
 //
@@ -523,7 +537,8 @@ static void makeAccInitializationBackedByMemory(MLUCandidate &candidate,
 
   if (auto accRead =
           candidate.accInitVal.getDefiningOp<vector::TransferReadOp>();
-      accRead && isSimpleTransferOp(accRead)) {
+      accRead && isSimpleTransferOp(accRead) &&
+      noMemoryEffectsBetween(accRead, candidate.accLoop)) {
     candidate.accMemIn =
         makeRankReducingSubview(rewriter, loc, accRead.getBase(),
                                 accRead.getIndices(), accRead.getVectorType());
@@ -563,7 +578,7 @@ static void makeAccResultBackedByMemory(MLUCandidate &candidate,
 
   Block *accLoopBlock = candidate.accLoop->getBlock();
   if (accWrite && isSimpleTransferOp(accWrite) &&
-      accWrite->getBlock() == accLoopBlock) {
+      noMemoryEffectsBetween(candidate.accLoop, accWrite)) {
 
     Value accWriteBase = accWrite.getBase();
     ValueRange accWriteIndices = accWrite.getIndices();
