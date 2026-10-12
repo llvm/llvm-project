@@ -63,10 +63,11 @@ static mlir::Value emitAMDGPUInvariantLoad(CIRGenFunction &cgf,
 static mlir::Value emitAMDGPUGridSize(CIRGenFunction &cgf, mlir::Location loc,
                                       unsigned index) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
+  const unsigned xOffset = 12;
   mlir::Value dispatchPtr = emitAMDGPUDispatchPtr(cgf, loc);
   // Indexing the HSA kernel_dispatch_packet struct.
   return emitAMDGPUInvariantLoad(
-      cgf, loc, dispatchPtr, builder.getUInt64(12 + index * 4, loc),
+      cgf, loc, dispatchPtr, builder.getUInt64(xOffset + index * 4, loc),
       builder.getUInt32Ty(), CharUnits::fromQuantity(4));
 }
 
