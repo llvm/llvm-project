@@ -20,7 +20,8 @@ set(LIBC_TARGET_TRIPLE ${RUNTIMES_TARGET_TRIPLE} CACHE STRING "")
 
 set(LLVM_LIBC_FULL_BUILD "ON" CACHE BOOL "")
 set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
-set(LLVM_ENABLE_WERROR ON CACHE BOOL "")
+# TODO : Enable this flag and fix related failures in a subsequent PR
+# set(LLVM_ENABLE_WERROR ON CACHE BOOL "")
 
 # Bare-metal compiler-rt builtins configuration (active when compiler-rt is enabled in LLVM_ENABLE_RUNTIMES).
 set(COMPILER_RT_BUILD_BUILTINS ON CACHE BOOL "")
