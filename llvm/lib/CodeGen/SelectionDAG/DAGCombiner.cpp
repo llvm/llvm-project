@@ -517,6 +517,7 @@ namespace {
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
     SDValue visitFP_TO_UINT(SDNode *N);
+    SDValue visitFP_TO_INT_SAT(SDNode *N);
     SDValue visitXROUND(SDNode *N);
     SDValue visitFP_ROUND(SDNode *N);
     SDValue visitFP_EXTEND(SDNode *N);
@@ -2075,6 +2076,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::UINT_TO_FP:         return visitUINT_TO_FP(N);
   case ISD::FP_TO_SINT:         return visitFP_TO_SINT(N);
   case ISD::FP_TO_UINT:         return visitFP_TO_UINT(N);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:     return visitFP_TO_INT_SAT(N);
   case ISD::LROUND:
   case ISD::LLROUND:
   case ISD::LRINT:
@@ -20841,6 +20844,12 @@ SDValue DAGCombiner::visitFP_TO_SINT(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_TO_SINT, DL, VT, {N0}))
     return C;
 
+  // fold (fp_to_sint (ftrunc x)) -> (fp_to_sint x)
+  // Folding with a second user spills the source when ftrunc is a libcall.
+  if (N0.getOpcode() == ISD::FTRUNC &&
+      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, N0.getOperand(0));
+
   return FoldIntToFPToInt(N, DL, DAG);
 }
 
@@ -20857,7 +20866,27 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::FP_TO_UINT, DL, VT, {N0}))
     return C;
 
+  // fold (fp_to_uint (ftrunc x)) -> (fp_to_uint x)
+  // Folding with a second user spills the source when ftrunc is a libcall.
+  if (N0.getOpcode() == ISD::FTRUNC &&
+      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+    return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0));
+
   return FoldIntToFPToInt(N, DL, DAG);
+}
+
+SDValue DAGCombiner::visitFP_TO_INT_SAT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+
+  // fold (fp_to_sint_sat (ftrunc x)) -> (fp_to_sint_sat x)
+  // fold (fp_to_uint_sat (ftrunc x)) -> (fp_to_uint_sat x)
+  // Folding with a second user spills the source when ftrunc is a libcall.
+  if (N0.getOpcode() == ISD::FTRUNC &&
+      (N0.hasOneUse() || TLI.isOperationLegal(ISD::FTRUNC, N0.getValueType())))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                       N0.getOperand(0), N->getOperand(1));
+
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitXROUND(SDNode *N) {

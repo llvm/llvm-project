@@ -543,15 +543,6 @@ define i32 @testzuwbf(bfloat %a) {
 ; CHECK-CVT-LABEL: testzuwbf:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-NEXT:    frintz s0, s0
-; CHECK-CVT-NEXT:    fmov w9, s0
-; CHECK-CVT-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-NEXT:    add w8, w9, w8
-; CHECK-CVT-NEXT:    add w8, w10, w8
-; CHECK-CVT-NEXT:    lsr w8, w8, #16
-; CHECK-CVT-NEXT:    fmov s0, w8
 ; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-NEXT:    fcvtzu w0, s0
 ; CHECK-CVT-NEXT:    ret
@@ -559,15 +550,6 @@ define i32 @testzuwbf(bfloat %a) {
 ; CHECK-FP16-LABEL: testzuwbf:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-FP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-FP16-NEXT:    frintz s0, s0
-; CHECK-FP16-NEXT:    fmov w9, s0
-; CHECK-FP16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-FP16-NEXT:    add w8, w9, w8
-; CHECK-FP16-NEXT:    add w8, w10, w8
-; CHECK-FP16-NEXT:    lsr w8, w8, #16
-; CHECK-FP16-NEXT:    fmov s0, w8
 ; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-FP16-NEXT:    fcvtzu w0, s0
 ; CHECK-FP16-NEXT:    ret
@@ -619,15 +601,6 @@ define i64 @testzuxbf(bfloat %a) {
 ; CHECK-CVT-LABEL: testzuxbf:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-CVT-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-NEXT:    frintz s0, s0
-; CHECK-CVT-NEXT:    fmov w9, s0
-; CHECK-CVT-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-NEXT:    add w8, w9, w8
-; CHECK-CVT-NEXT:    add w8, w10, w8
-; CHECK-CVT-NEXT:    lsr w8, w8, #16
-; CHECK-CVT-NEXT:    fmov s0, w8
 ; CHECK-CVT-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-NEXT:    fcvtzu x0, s0
 ; CHECK-CVT-NEXT:    ret
@@ -635,15 +608,6 @@ define i64 @testzuxbf(bfloat %a) {
 ; CHECK-FP16-LABEL: testzuxbf:
 ; CHECK-FP16:       // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-FP16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-FP16-NEXT:    frintz s0, s0
-; CHECK-FP16-NEXT:    fmov w9, s0
-; CHECK-FP16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-FP16-NEXT:    add w8, w9, w8
-; CHECK-FP16-NEXT:    add w8, w10, w8
-; CHECK-FP16-NEXT:    lsr w8, w8, #16
-; CHECK-FP16-NEXT:    fmov s0, w8
 ; CHECK-FP16-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-FP16-NEXT:    fcvtzu x0, s0
 ; CHECK-FP16-NEXT:    ret
@@ -695,9 +659,6 @@ define i32 @testzuwh(half %a) {
 ; CHECK-CVT-LABEL: testzuwh:
 ; CHECK-CVT:       // %bb.0: // %entry
 ; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    frintz s0, s0
-; CHECK-CVT-NEXT:    fcvt h0, s0
-; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvtzu w0, s0
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -728,9 +689,6 @@ entry:
 define i64 @testzuxh(half %a) {
 ; CHECK-CVT-LABEL: testzuxh:
 ; CHECK-CVT:       // %bb.0: // %entry
-; CHECK-CVT-NEXT:    fcvt s0, h0
-; CHECK-CVT-NEXT:    frintz s0, s0
-; CHECK-CVT-NEXT:    fcvt h0, s0
 ; CHECK-CVT-NEXT:    fcvt s0, h0
 ; CHECK-CVT-NEXT:    fcvtzu x0, s0
 ; CHECK-CVT-NEXT:    ret
