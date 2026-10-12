@@ -213,3 +213,31 @@ void matrix_subscript_expr_non_const_indices() {
 
 // LLVM: %[[ELEM:.*]] = extractelement <9 x float> %[[TMP_MATRIX]], i64 %[[FLAT_IDX]]
 // LLVM: store float %[[ELEM]], ptr %[[B_ADDR]], align 4
+
+typedef float matrix2x3 __attribute__((matrix_type(2, 3)));
+
+void store_element(matrix2x3 &m, unsigned r, unsigned c, float v) {
+  m[r][c] = v;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z13store_element
+// CIR: %[[M:.*]] = cir.load %{{.*}} : !cir.ptr<!cir.ptr<!cir.matrix<2 x 3 x !cir.float>>>, !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+// CIR: %[[MAT:.*]] = cir.load align(4) %[[M]] : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>, !cir.matrix<2 x 3 x !cir.float>
+// CIR: %[[NEW:.*]] = cir.matrix.insert %{{.*}}, %[[MAT]][%{{.*}} : !u32i] [%{{.*}} : !u32i] : !cir.matrix<2 x 3 x !cir.float>
+// CIR: cir.store align(4) %[[NEW]], %[[M]]
+
+// LLVM-LABEL: define {{.*}} @_Z13store_element
+// LLVM: %[[MUL:.*]] = mul i64 %{{.*}}, 2
+// LLVM: %[[IDX:.*]] = add i64 %[[MUL]], %{{.*}}
+// LLVM: %[[NEW:.*]] = insertelement <6 x float> %{{.*}}, float %{{.*}}, i64 %[[IDX]]
+// LLVM: store <6 x float> %[[NEW]], ptr
+
+void copy_element(matrix2x3 &a, matrix2x3 &b) { b[1][0] = a[0][1]; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z12copy_element
+// CIR: cir.matrix.extract
+// CIR: cir.matrix.insert
+
+// LLVM-LABEL: define {{.*}} @_Z12copy_element
+// LLVM: extractelement <6 x float>
+// LLVM: insertelement <6 x float>

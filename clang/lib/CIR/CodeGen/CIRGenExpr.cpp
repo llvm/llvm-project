@@ -24,6 +24,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -418,7 +419,19 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       return emitStoreThroughExtVectorComponentLValue(src, dst);
 
     if (dst.isMatrixElt()) {
-      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixElt");
+      // Read/modify/write the matrix, inserting the new element.
+      const mlir::Location loc = dst.getPointer().getLoc();
+
+      // In Opt-level >1, we emit an assume here.
+      assert(!MissingFeatures::matrixTypeIndexAssumption());
+
+      const mlir::Value matrix =
+          builder.createLoad(loc, dst.getMatrixAddress());
+      const mlir::Value newMatrix = builder.createMatrixInsert(
+          loc, src.getValue(), matrix, dst.getMatrixRowIdx(),
+          dst.getMatrixColumnIdx());
+      builder.createStore(loc, newMatrix, dst.getMatrixAddress(),
+                          dst.isVolatileQualified());
       return;
     }
 
@@ -817,6 +830,16 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
 
   if (lv.isExtVectorElt())
     return emitLoadOfExtVectorElementLValue(lv);
+
+  if (lv.isMatrixElt()) {
+    // In Opt-level >1, we emit an assume here.
+    assert(!MissingFeatures::matrixTypeIndexAssumption());
+    const mlir::Location mlirLoc = getLoc(loc);
+    const mlir::Value matrix =
+        builder.createLoad(mlirLoc, lv.getMatrixAddress(), lv.isVolatile());
+    return RValue::get(builder.createMatrixExtract(
+        mlirLoc, matrix, lv.getMatrixRowIdx(), lv.getMatrixColumnIdx()));
+  }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
@@ -1550,6 +1573,21 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   }
 
   return lv;
+}
+
+LValue CIRGenFunction::emitMatrixSubscriptExpr(const MatrixSubscriptExpr *e) {
+  assert(!e->isIncomplete() &&
+         "incomplete matrix subscript expressions should be rejected in Sema");
+  LValue base = emitLValue(e->getBase());
+  mlir::Value rowIdx = emitScalarExpr(e->getRowIdx());
+  mlir::Value colIdx = emitScalarExpr(e->getColumnIdx());
+
+  if (isMatrixRowMajor(getLangOpts(), e->getBase()->getType()))
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMatrixSubscriptExpr: row-major matrix");
+
+  return LValue::makeMatrixElt(base.getAddress(), rowIdx, colIdx,
+                               e->getBase()->getType(), base.getBaseInfo());
 }
 
 LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
