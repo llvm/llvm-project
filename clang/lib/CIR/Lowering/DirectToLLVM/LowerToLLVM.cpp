@@ -2474,8 +2474,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
       op.getIsVolatile(), /*isNonTemporal=*/op.getIsNontemporal(),
-      /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false, ordering,
-      llvmSyncScope.value_or(std::string()));
+      /*isInvariant=*/op.getInvariant(), /*isInvariantGroup=*/false,
+      /*isNoundef=*/false, ordering, llvmSyncScope.value_or(std::string()));
   if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
     newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
 
