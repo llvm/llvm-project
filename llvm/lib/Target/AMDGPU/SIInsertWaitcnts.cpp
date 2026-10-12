@@ -1448,7 +1448,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
                                                      AMDGPU::InstCounterType T,
                                                      MCPhysReg Reg) const {
   const TargetRegisterClass *RC = Context->TRI.getPhysRegBaseClass(Reg);
-  unsigned Size = static_cast<unsigned>(Context->TRI.getRegSizeInBits(*RC));
+  uint64_t Size = Context->TRI.getRegSizeInBits(*RC);
 
   if (Size != 16 || !Context->ST.hasD16Writes32BitVgpr())
     return Reg;
@@ -2836,8 +2836,8 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   // zero/identity mark: mergeScore still applies MyShift, so the mark is
   // re-expressed in the new frame instead of being left with a stale
   // (pre-merge) score.
-  const unsigned OtherSize = static_cast<unsigned>(OtherMarks.size());
-  const unsigned OurSize = static_cast<unsigned>(AsyncMarks.size());
+  const size_t OtherSize = OtherMarks.size();
+  const size_t OurSize = AsyncMarks.size();
   // After the both-empty early-return above, max(AsyncMarks, OtherMarks) >= 1,
   // and the erase/pad steps normalize AsyncMarks to exactly MaxSize. Hence
   // OurSize == MaxSize >= 1 (as long as MaxAsyncMarks != 0), so the
@@ -2846,7 +2846,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   assert(OurSize >= 1 &&
          "AsyncMarks padded to MaxSize >= 1 (needs MaxAsyncMarks != 0)");
 
-  for (auto Idx : seq_inclusive<unsigned>(1, OurSize)) {
+  for (auto Idx : seq_inclusive<size_t>(1, OurSize)) {
     const CounterValueArray &OtherMark =
         Idx <= OtherSize ? OtherMarks[OtherSize - Idx] : ZeroMark;
     for (auto T : inst_counter_types(Context->MaxCounter))
@@ -2970,10 +2970,8 @@ static bool isWaitInstr(MachineInstr &Inst) {
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
                                          bool ExpertMode) const {
-  const unsigned EncodedReg =
-      static_cast<unsigned>(AMDGPU::Hwreg::HwregEncoding::encode(
-          AMDGPU::Hwreg::ID_SCHED_MODE, AMDGPU::Hwreg::HwregOffset::Default,
-          2));
+  const uint64_t EncodedReg = AMDGPU::Hwreg::HwregEncoding::encode(
+      AMDGPU::Hwreg::ID_SCHED_MODE, AMDGPU::Hwreg::HwregOffset::Default, 2);
   BuildMI(MBB, I, DebugLoc(), TII.get(AMDGPU::S_SETREG_IMM32_B32))
       .addImm(ExpertMode ? 2 : 0)
       .addImm(EncodedReg);
@@ -3750,8 +3748,8 @@ bool SIInsertWaitcnts::run() {
       // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
       // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
       // insertion logic, which assumes multi-group mode by default.
-      unsigned RegEncoding = static_cast<unsigned>(
-          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1));
+      uint64_t RegEncoding =
+          AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
       BuildMI(EntryBB, InsertPt, DebugLoc(),
               TII.get(AMDGPU::S_SETREG_IMM32_B32))
           .addImm(1)

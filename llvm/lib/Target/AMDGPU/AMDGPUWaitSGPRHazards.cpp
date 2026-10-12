@@ -310,8 +310,8 @@ public:
           return;
         }
 
-        uint8_t SGPRCount = static_cast<uint8_t>(
-            AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32);
+        unsigned SGPRCount =
+            AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
 
         if (IsUse) {
           // SALU reading SGPR clears VALU hazards
@@ -324,7 +324,7 @@ public:
             }
           }
           // Compute required waits
-          for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+          for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
             Wait |= State.SALUHazards[RegN + RegIdx] ? WA_SALU : 0;
             Wait |= IsVALU && State.VALUHazards[RegN + RegIdx] ? WA_VALU : 0;
           }
@@ -341,7 +341,7 @@ public:
           if (isVCC(Reg)) {
             State.VCCHazard = IsSALU ? HazardState::SALU : HazardState::VALU;
           } else {
-            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+            for (unsigned RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
               if (IsSALU)
                 State.SALUHazards.set(RegN + RegIdx);
               else

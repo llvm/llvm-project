@@ -882,7 +882,7 @@ hasHazard(StateT InitialState,
           MachineBasicBlock::const_reverse_instr_iterator InitialI) {
   struct StateMapKey {
     SmallVectorImpl<StateT> *States;
-    unsigned Idx;
+    size_t Idx;
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
       return LHS.States == RHS.States && LHS.Idx == RHS.Idx;
     }
@@ -902,14 +902,14 @@ hasHazard(StateT InitialState,
     }
   };
 
-  SmallDenseMap<StateMapKey, unsigned, 8, StateMapKeyTraits> StateMap;
+  SmallDenseMap<StateMapKey, size_t, 8, StateMapKeyTraits> StateMap;
   SmallVector<StateT, 8> States;
 
   MachineBasicBlock::const_reverse_instr_iterator I = InitialI;
   const MachineBasicBlock *MBB = InitialMBB;
   StateT State = InitialState;
 
-  SmallSetVector<std::pair<const MachineBasicBlock *, unsigned>, 16> Worklist;
+  SmallSetVector<std::pair<const MachineBasicBlock *, size_t>, 16> Worklist;
   unsigned WorkIdx = 0;
   for (;;) {
     bool Expired = false;
@@ -933,7 +933,7 @@ hasHazard(StateT InitialState,
     }
 
     if (!Expired) {
-      unsigned StateIdx = static_cast<unsigned>(States.size());
+      size_t StateIdx = States.size();
       StateMapKey Key = {&States, StateIdx};
       auto Insertion = StateMap.insert_as(std::pair(Key, StateIdx), State);
       if (Insertion.second) {
@@ -948,7 +948,7 @@ hasHazard(StateT InitialState,
     if (WorkIdx == Worklist.size())
       break;
 
-    unsigned StateIdx;
+    size_t StateIdx;
     std::tie(MBB, StateIdx) = Worklist[WorkIdx++];
     State = States[StateIdx];
     I = MBB->instr_rbegin();

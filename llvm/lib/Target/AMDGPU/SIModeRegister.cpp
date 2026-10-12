@@ -210,8 +210,7 @@ getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
     return std::nullopt;
   }
   using namespace AMDGPU::Hwreg;
-  unsigned Dst = static_cast<unsigned>(
-      TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm());
+  int64_t Dst = TII->getNamedOperand(MI, AMDGPU::OpName::simm16)->getImm();
   auto [Id, Offset, Width] = HwregEncoding::decode(Dst);
   if (Id != ID_MODE)
     return std::nullopt;
