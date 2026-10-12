@@ -150,6 +150,9 @@ void LiveRegMatrix::unassign(const LiveInterval &VirtReg,
 
   ++NumUnassigned;
   LLVM_DEBUG(dbgs() << '\n');
+  if (UnassignListener)
+    UnassignListener(UnassignListenerCtx, VirtReg, PhysReg.asMCReg(),
+                     ClearAllReferencingSegments);
 }
 
 bool LiveRegMatrix::isPhysRegUsed(MCRegister PhysReg) const {

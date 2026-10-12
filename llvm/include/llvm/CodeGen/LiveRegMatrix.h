@@ -40,12 +40,22 @@ class VirtRegMap;
 class LiveRegMatrix {
   friend class LiveRegMatrixWrapperLegacy;
   friend class LiveRegMatrixAnalysis;
+
+public:
+  using UnassignListenerFn = void (*)(void *Ctx, const LiveInterval &LI,
+                                      MCRegister PhysReg,
+                                      bool ClearAllReferencingSegments);
+
+private:
   const TargetRegisterInfo *TRI = nullptr;
   LiveIntervals *LIS = nullptr;
   VirtRegMap *VRM = nullptr;
 
   // UserTag changes whenever virtual registers have been modified.
   unsigned UserTag = 0;
+
+  UnassignListenerFn UnassignListener = nullptr;
+  void *UnassignListenerCtx = nullptr;
 
   // The matrix is represented as a LiveIntervalUnion per register unit.
   std::unique_ptr<LiveIntervalUnion::Allocator> LIUAlloc;
@@ -92,6 +102,21 @@ public:
   /// live ranges. Interference checks may return stale information unless
   /// caches are invalidated.
   void invalidateVirtRegs() { ++UserTag; }
+
+  /// Called at the end of every unassign. \p Ctx is the pointer passed to
+  /// setUnassignListener. Only one listener is active.
+  void setUnassignListener(UnassignListenerFn Fn, void *Ctx) {
+    UnassignListener = Fn;
+    UnassignListenerCtx = Ctx;
+  }
+
+  /// Clear the listener if it was registered with \p Ctx.
+  void clearUnassignListener(void *Ctx) {
+    if (UnassignListenerCtx == Ctx) {
+      UnassignListener = nullptr;
+      UnassignListenerCtx = nullptr;
+    }
+  }
 
   enum InterferenceKind {
     /// No interference, go ahead and assign.

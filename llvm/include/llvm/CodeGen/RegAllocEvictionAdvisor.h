@@ -21,6 +21,7 @@
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 
 namespace llvm {
 class AllocationOrder;
@@ -97,12 +98,16 @@ struct EvictionCost {
 
 /// Interface to the eviction advisor, which is responsible for making a
 /// decision as to which live ranges should be evicted (if any).
+namespace reassign {
+class Cache;
+} // namespace reassign
+
 class RAGreedy;
 class RegAllocEvictionAdvisor {
 public:
   RegAllocEvictionAdvisor(const RegAllocEvictionAdvisor &) = delete;
   RegAllocEvictionAdvisor(RegAllocEvictionAdvisor &&) = delete;
-  virtual ~RegAllocEvictionAdvisor() = default;
+  LLVM_ABI virtual ~RegAllocEvictionAdvisor();
 
   /// Find a physical register that can be freed by evicting the FixedRegisters,
   /// or return NoRegister. The eviction decision is assumed to be correct (i.e.
@@ -159,6 +164,17 @@ protected:
   /// Run or not the local reassignment heuristic. This information is
   /// obtained from the TargetSubtargetInfo.
   const bool EnableLocalReassign;
+
+private:
+  mutable std::unique_ptr<reassign::Cache> FailedCache;
+
+  void rememberFailedReassign(const LiveInterval &VirtReg, bool HintOnly) const;
+  void forgetFailedReassign(const LiveInterval &VirtReg) const;
+  void noteUnassign(const LiveInterval &Unassigned, MCRegister PhysReg,
+                    bool ClearAllReferencingSegments) const;
+  static void unassignListener(void *Ctx, const LiveInterval &Unassigned,
+                               MCRegister PhysReg,
+                               bool ClearAllReferencingSegments);
 };
 
 /// Common provider for legacy and new pass managers.
