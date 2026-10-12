@@ -28,12 +28,10 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UriParser.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatAdapters.h"
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
-#include <mutex>
 #include <optional>
 
 using namespace lldb;
