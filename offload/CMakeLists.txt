@@ -20,8 +20,8 @@ option(BUILD_LIBOMPTARGET "Build the OpenMP offloading runtime library libomptar
 option(BUILD_LIBACCTARGET "Build the OpenACC offloading runtime library libacctarget." ON)
 # offload is not supported on Windows.
 if(MSVC)
-  set(BUILD_LIBOMPTARGET OFF)
-  set(BUILD_LIBACCTARGET OFF)
+  set(BUILD_LIBOMPTARGET OFF CACHE BOOL "" FORCE)
+  set(BUILD_LIBACCTARGET OFF CACHE BOOL "" FORCE)
   message(STATUS "libomptarget and libacctarget are not supported on Windows, skipping.")
 endif()
 
