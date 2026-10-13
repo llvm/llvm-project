@@ -216,6 +216,13 @@ class LLVM_MemOpPatterns {
   code setVolatileCode = [{
     inst->setVolatile($volatile_);
   }];
+  code setIgnoreDenormalModeCode = [{
+    if ($ignore_denormal_mode) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                        metadata);
+    }
+  }];
   code setSyncScopeCode = [{
     if ($syncscope.has_value()) {
       llvm::LLVMContext &llvmContext = builder.getContext();
@@ -385,8 +392,17 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+      OperationName($_qualCppClassName::getOperationName(),
+                    $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder,
-      $_location, resultTypes, mlirOperands, mlirAttrs);
+      $_location, resultTypes, mlirOperands, properties, {});
     }];
   string baseMlirBuilderArgAndResultAttrs = [{
     moduleImport.convertArgAndResultAttrs(

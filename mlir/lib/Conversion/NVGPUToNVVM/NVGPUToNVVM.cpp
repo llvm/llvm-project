@@ -864,7 +864,7 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
     return success();
   }
 };
@@ -1249,7 +1249,7 @@ struct NVGPUWarpgroupMmaOpLowering
       } else if (inputElemType.isF16() || inputElemType.isBF16()) {
         wgmmaK = 16;
       } else if (isa<Float8E4M3FNType, Float8E5M2Type>(inputElemType) ||
-                 inputElemType.isInteger(16)) {
+                 inputElemType.isInteger(8)) {
         wgmmaK = 32;
       } else if (inputElemType.isInteger(1)) {
         wgmmaK = 256;

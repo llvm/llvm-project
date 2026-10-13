@@ -475,6 +475,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         for (const auto &L : ASTListeners)
           L->sawDiagnostic(D, Diag);
       });
+  ASTDiags.setDiagFinalizer([&ASTListeners](clangd::Diag &Diag) {
+    for (const auto &L : ASTListeners)
+      L->finalizeDiagnostic(Diag);
+  });
 
   // Adjust header search options to load the built module files recorded
   // in RequiredModules.
@@ -540,6 +544,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   }
 
   auto Action = std::make_unique<ClangdFrontendAction>();
+  for (const auto &L : ASTListeners)
+    L->beforeBeginSourceFile(*Clang);
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
   if (!Action->BeginSourceFile(*Clang, MainInput)) {
     elog("BeginSourceFile() failed when building AST for {0}",
@@ -703,6 +709,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     }
   }
 
+  // ReplayPreamble must capture callbacks installed by feature modules.
+  for (const auto &L : ASTListeners)
+    L->beforePPCallbacks(*Clang);
+
   IncludeStructure Includes;
   include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
@@ -772,6 +782,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     trace::Span Tracer("ClangTidyMatch");
     CTFinder.matchAST(Clang->getASTContext());
   }
+  for (const auto &L : ASTListeners)
+    L->afterExecute(*Clang);
 
   // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
   // However Action->EndSourceFile() would destroy the ASTContext!

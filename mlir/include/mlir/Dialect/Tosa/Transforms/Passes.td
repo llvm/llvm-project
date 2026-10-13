@@ -199,6 +199,24 @@ def TosaDowngrade1p1To1p0Pass
   }];
 }
 
+def TosaGatherScatterHardeningPass
+    : Pass<"tosa-gather-scatter-hardening", "func::FuncOp"> {
+  let summary = "Clamp TOSA gather and scatter indices to valid bounds";
+  let description = [{
+    Bounds the indices used by each gather and scatter with TOSA minimum and
+    maximum operations so that all accesses are in bounds. This improves
+    security in the context of untrusted TOSA graph by preventing memory access
+    outside values (gather) and values_out (scatter) tensor.
+
+    Each operation is rewritten independently; a subsequent CSE pass is
+    required to share bounding ops between gather/scatter with the same input
+    and bounds. Other users continue to use the original indices.
+
+    Currently the pass only supports static index dimensions and fails
+    otherwise.
+  }];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{

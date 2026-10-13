@@ -254,11 +254,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
 
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the initializer when we come to parse it.
-  Token Eof;
-  Eof.startToken();
-  Eof.setKind(tok::eof);
-  Eof.setLocation(Tok.getLocation());
-  Eof.setEofData(VarD);
+  Token Eof = Token::createEof(Tok.getLocation(), VarD);
   Toks.push_back(Eof);
 }
 
@@ -402,11 +398,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       // Mark the end of the default argument so that we know when to stop when
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
-      Token DefArgEnd;
-      DefArgEnd.startToken();
-      DefArgEnd.setKind(tok::eof);
-      DefArgEnd.setLocation(LastDefaultArgToken.getEndLoc());
-      DefArgEnd.setEofData(Param);
+      Token DefArgEnd =
+          Token::createEof(LastDefaultArgToken.getEndLoc(), Param);
       Toks->push_back(DefArgEnd);
 
       // Parse the default argument from its saved token stream.
@@ -482,11 +475,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
     // Add the 'stop' token.
     Token LastExceptionSpecToken = Toks->back();
-    Token ExceptionSpecEnd;
-    ExceptionSpecEnd.startToken();
-    ExceptionSpecEnd.setKind(tok::eof);
-    ExceptionSpecEnd.setLocation(LastExceptionSpecToken.getEndLoc());
-    ExceptionSpecEnd.setEofData(LM.Method);
+    Token ExceptionSpecEnd =
+        Token::createEof(LastExceptionSpecToken.getEndLoc(), LM.Method);
     Toks->push_back(ExceptionSpecEnd);
 
     // Parse the default argument from its saved token stream.
@@ -580,11 +570,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   assert(!LM.Toks.empty() && "Empty body!");
   Token LastBodyToken = LM.Toks.back();
-  Token BodyEnd;
-  BodyEnd.startToken();
-  BodyEnd.setKind(tok::eof);
-  BodyEnd.setLocation(LastBodyToken.getEndLoc());
-  BodyEnd.setEofData(LM.D);
+  Token BodyEnd = Token::createEof(LastBodyToken.getEndLoc(), LM.D);
   LM.Toks.push_back(BodyEnd);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
@@ -718,22 +704,6 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
 void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                  bool OnDefinition,
                                  ParsedAttributes *OutAttrs) {
-  // Create a fake EOF so that attribute parsing won't go off the end of the
-  // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
-  LPA.Toks.push_back(AttrEnd);
-
-  // Append the current token at the end of the new token stream so that it
-  // doesn't get lost.
-  LPA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LPA.Toks, true, /*IsReinject=*/true);
-  // Consume the previously pushed token.
-  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
-
   ParsedAttributes Attrs(AttrFactory);
 
   if (LPA.Decls.size() > 0) {
@@ -760,20 +730,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
       Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
 
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
+    ParsedAttributes Parsed = ParseLexedAttributeTokens(LPA);
+    Attrs.takeAllAppendingFrom(Parsed);
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
-  } else if (OutAttrs) {
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
   } else {
-    Diag(Tok, diag::warn_attribute_no_decl) << LPA.AttrName.getName();
+    Diag(LPA.AttrNameLoc, diag::warn_attribute_no_decl)
+        << LPA.AttrName.getName();
   }
 
   if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
@@ -782,14 +746,6 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
 
   for (auto *D : LPA.Decls)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  // Due to a parsing error, we either went over the cached tokens or
-  // there are still cached tokens left, so we skip the leftover tokens.
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
-    ConsumeAnyToken();
 
   if (OutAttrs)
     OutAttrs->takeAllAppendingFrom(Attrs);

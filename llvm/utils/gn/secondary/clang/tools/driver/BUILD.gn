@@ -3,6 +3,16 @@ import("//llvm/utils/gn/build/symlink_or_copy.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
+declare_args() {
+  # Additional source files to compile into the clang binary.
+  # This is for adding statically linked out-of-tree clang plugins.
+  # Use absolute paths ("/path/to/Plugin.cpp").
+  clang_static_plugin_sources = []
+
+  # Include directories for clang_static_plugin_sources.
+  clang_static_plugin_include_dirs = []
+}
+
 symlinks = [
   # target_name, symlink_target pairs: GN doesn't support '+' in rule names.
   [
@@ -99,5 +109,9 @@ driver_executable("clang") {
     "cc1gen_reproducer_main.cpp",
     "driver.cpp",
   ]
+  if (clang_static_plugin_sources != []) {
+    sources += clang_static_plugin_sources
+    include_dirs = clang_static_plugin_include_dirs
+  }
   needs_posix_utility_signal_handling = true
 }

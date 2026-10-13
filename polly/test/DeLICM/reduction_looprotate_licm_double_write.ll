@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -polly-delicm-overapproximate-writes=true -polly-delicm-compute-known=true -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<flatten;delicm>' -plugin-arg=Polly,-polly-delicm-overapproximate-writes=true -plugin-arg=Polly,-polly-delicm-compute-known=true -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; Make sure delicm works even in case two stores that store the same value.
 ;

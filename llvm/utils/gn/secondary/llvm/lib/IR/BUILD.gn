@@ -97,5 +97,6 @@ static_library("IR") {
     "VectorTypeUtils.cpp",
     "Verifier.cpp",
     "VerifierAMDGPU.cpp",
+    "VerifierNVVM.cpp",
   ]
 }

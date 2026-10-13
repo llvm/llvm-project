@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 
+#include <optional>
 #include <vector>
 
 #include "Plugins/UnwindAssembly/InstEmulation/UnwindAssemblyInstEmulation.h"
@@ -21,7 +22,16 @@
 
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
+#include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/Symbol.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;
@@ -43,13 +53,21 @@ void TestArm64InstEmulation::SetUpTestCase() {
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
+  FileSystem::Initialize();
+  HostInfo::Initialize();
   DisassemblerLLVMC::Initialize();
   EmulateInstructionARM64::Initialize();
+  ObjectFileELF::Initialize();
+  SymbolFileSymtab::Initialize();
 }
 
 void TestArm64InstEmulation::TearDownTestCase() {
-  DisassemblerLLVMC::Terminate();
+  SymbolFileSymtab::Terminate();
+  ObjectFileELF::Terminate();
   EmulateInstructionARM64::Terminate();
+  DisassemblerLLVMC::Terminate();
+  HostInfo::Terminate();
+  FileSystem::Terminate();
 }
 
 TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
@@ -1084,5 +1102,182 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
     EXPECT_TRUE(row->GetRegisterInfo(gpr_x22_arm64, loc));
     EXPECT_TRUE(loc.IsAtCFAPlusOffset());
     EXPECT_EQ(loc.GetOffset(), -32);
+  }
+}
+
+namespace {
+/// `caller` occupies the first kCallerSize bytes of .text and
+/// OUTLINED_FUNCTION_TEST follows immediately after it.
+constexpr size_t kCallerSize = 16;
+
+/// An ELF module holding a `caller` function at 0x1000 immediately followed by
+/// an OUTLINED_FUNCTION_TEST helper.
+struct OutlinedFunctionFixture {
+  std::optional<TestFile> file;
+  ModuleSP module_sp;
+  Address caller_addr;
+};
+
+/// \param text the contents of .text: the kCallerSize bytes of `caller`,
+/// followed by the body of OUTLINED_FUNCTION_TEST.
+std::optional<OutlinedFunctionFixture>
+MakeOutlinedFunctionFixture(llvm::ArrayRef<uint8_t> text) {
+  OutlinedFunctionFixture fixture;
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(
+      llvm::formatv(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         {0}
+Symbols:
+  - Name:            caller
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1000
+    Size:            {1}
+  - Name:            OUTLINED_FUNCTION_TEST
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1010
+    Size:            {2}
+...
+)",
+                    llvm::toHex(text), kCallerSize, text.size() - kCallerSize)
+          .str());
+  if (!file)
+    return std::nullopt;
+  fixture.file = std::move(*file);
+
+  fixture.module_sp = std::make_shared<Module>(fixture.file->moduleSpec());
+  if (!fixture.module_sp)
+    return std::nullopt;
+
+  if (!fixture.module_sp->ResolveFileAddress(0x1000, fixture.caller_addr))
+    return std::nullopt;
+
+  return fixture;
+}
+} // namespace
+
+// Test that the assembly-scan unwind plan generator can follow outlined
+// functions.
+TEST_F(TestArm64InstEmulation, TestOutlinedPrologueIsFollowed) {
+  // clang-format off
+  uint8_t text[] = {
+      // 0x1000 <caller>
+      0xfd, 0x7b, 0xbf, 0xa9, // 0xa9bf7bfd : stp x29, x30, [sp, #-0x10]!
+      0x03, 0x00, 0x00, 0x94, // 0x94000003 : bl  OUTLINED_FUNCTION_TEST
+      0x1f, 0x20, 0x03, 0xd5, // 0xd503201f : nop
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+
+      // 0x1010 <OUTLINED_FUNCTION_TEST>
+      0xf4, 0x4f, 0xbe, 0xa9, // 0xa9be4ff4 : stp x20, x19, [sp, #-0x20]!
+      0xf6, 0x57, 0x01, 0xa9, // 0xa90157f6 : stp x22, x21, [sp, #0x10]
+      0xfd, 0x83, 0x00, 0x91, // 0x910083fd : add x29, sp, #0x20
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+  };
+  // clang-format on
+
+  auto fixture = MakeOutlinedFunctionFixture(text);
+  ASSERT_TRUE(fixture.has_value());
+
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(
+              fixture->module_sp->GetArchitecture())));
+  ASSERT_NE(nullptr, engine);
+
+  AddressRange sample_range(fixture->caller_addr, kCallerSize);
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, text, kCallerSize, unwind_plan));
+
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+
+  // Before the call only the caller's own inline save is known.
+  const UnwindPlan::Row *row = unwind_plan.GetRowForFunctionOffset(4);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(4, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_EQ(16, row->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row->GetRegisterInfo(gpr_x19_arm64, regloc));
+
+  // After the call, everything in the outlined function should be in the plan.
+  row = unwind_plan.GetRowForFunctionOffset(8);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(8, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_fp_arm64);
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_EQ(16, row->GetCFAValue().GetOffset());
+
+  for (auto [reg, offset] :
+       {std::pair(gpr_x19_arm64, -40), std::pair(gpr_x20_arm64, -48),
+        std::pair(gpr_x21_arm64, -24), std::pair(gpr_x22_arm64, -32),
+        std::pair(gpr_fp_arm64, -16), std::pair(gpr_lr_arm64, -8)}) {
+    SCOPED_TRACE(reg);
+    EXPECT_TRUE(row->GetRegisterInfo(reg, regloc));
+    EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+    EXPECT_EQ(offset, regloc.GetOffset());
+  }
+}
+
+// Test that an outlined function with control flow is not used when creating
+// the unwind plan.
+TEST_F(TestArm64InstEmulation, TestBranchingOutlinedFunctionIsNotFollowed) {
+  // clang-format off
+  uint8_t text[] = {
+      // 0x1000 <caller>
+      0xfd, 0x7b, 0xbf, 0xa9, // 0xa9bf7bfd : stp x29, x30, [sp, #-0x10]!
+      0x03, 0x00, 0x00, 0x94, // 0x94000003 : bl  OUTLINED_FUNCTION_TEST
+      0x1f, 0x20, 0x03, 0xd5, // 0xd503201f : nop
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+
+      // 0x1010 <OUTLINED_FUNCTION_TEST>
+      0xf4, 0x4f, 0xbe, 0xa9, // 0xa9be4ff4 : stp x20, x19, [sp, #-0x20]!
+      0x40, 0x00, 0x00, 0xb4, // 0xb4000040 : cbz x0, #8 <- the branch
+      0xf6, 0x57, 0x01, 0xa9, // 0xa90157f6 : stp x22, x21, [sp, #0x10]
+      0xfd, 0x83, 0x00, 0x91, // 0x910083fd : add x29, sp, #0x20
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+  };
+  // clang-format on
+
+  auto fixture = MakeOutlinedFunctionFixture(text);
+  ASSERT_TRUE(fixture.has_value());
+
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(
+              fixture->module_sp->GetArchitecture())));
+  ASSERT_NE(nullptr, engine);
+
+  AddressRange sample_range(fixture->caller_addr, kCallerSize);
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, text, kCallerSize, unwind_plan));
+
+  // The call adds no row of its own: the state after it is still the one
+  // established at offset 4 by the caller's own save.
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  const UnwindPlan::Row *row = unwind_plan.GetRowForFunctionOffset(8);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(4, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_EQ(16, row->GetCFAValue().GetOffset());
+  for (uint32_t reg :
+       {gpr_x19_arm64, gpr_x20_arm64, gpr_x21_arm64, gpr_x22_arm64}) {
+    SCOPED_TRACE(reg);
+    EXPECT_FALSE(row->GetRegisterInfo(reg, regloc));
   }
 }

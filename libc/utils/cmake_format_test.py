@@ -503,5 +503,103 @@ endfunction()
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
 
 
+class TestFileWriting(unittest.TestCase):
+    """Regression tests for the bytes that land on disk, not the formatted string."""
+
+    def test_inplace_write_keeps_lf_endings(self):
+        """In-place formatting writes exactly the bytes format_cmake_content produced.
+
+        A text-mode write substitutes the platform line separator, which
+        rewrites every line of an LF file as CRLF on Windows.
+        """
+        import contextlib
+        import io
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+        expected = cmake_format.format_cmake_content(code).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write(code)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(cmake_format.process_file(path, inplace=True))
+
+            with open(path, "rb") as f:
+                self.assertEqual(f.read(), expected)
+
+    def test_stdout_write_keeps_lf_endings(self):
+        """Formatting through stdin/stdout does not rewrite the line endings either."""
+        import subprocess
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+        expected = cmake_format.format_cmake_content(code).encode("utf-8")
+
+        proc = subprocess.run(
+            [sys.executable, os.path.join(SCRIPT_DIR, "cmake_format.py")],
+            input=code.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        self.assertEqual(proc.stdout, expected)
+
+    def test_dry_run_diff_outputs_pure_diff(self):
+        """--dry-run --diff exits 1 and outputs only the unified diff."""
+        import subprocess
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(code)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertTrue(proc.stdout.startswith("--- a/"))
+            self.assertNotIn("Formatting needed:", proc.stdout)
+            self.assertNotIn("file(s) need formatting.", proc.stdout)
+
+    def test_parse_error_exits_nonzero(self):
+        """A file with a CMake syntax error causes the CLI to exit with code 1."""
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write('set(FOO "unterminated)\n')
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(proc.stdout, "")
+            self.assertIn("Error parsing file", proc.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

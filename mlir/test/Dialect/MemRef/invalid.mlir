@@ -1220,3 +1220,34 @@ func.func @distinct_objects_0_operands() {
   "memref.distinct_objects"() : () -> ()
   return
 }
+
+// -----
+
+func.func @collapse_shape_empty_reassociation_group(
+    %arg0: memref<2x3xf32, strided<[6, 1], offset: 0>>) {
+  // expected-error@+1 {{'memref.collapse_shape' op reassociation indices must not be empty}}
+  %0 = memref.collapse_shape %arg0 [[], [0, 1]]
+      : memref<2x3xf32, strided<[6, 1], offset: 0>>
+        into memref<1x6xf32, strided<[6, 1], offset: 0>>
+  return
+}
+
+// -----
+
+func.func @collapse_shape_empty_reassociation_group_identity(
+    %arg0: memref<2x3xf32>) {
+  // expected-error@+1 {{'memref.collapse_shape' op reassociation indices must not be empty}}
+  %0 = memref.collapse_shape %arg0 [[], [0, 1]]
+      : memref<2x3xf32> into memref<1x6xf32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_empty_reassociation_group(
+    %arg0: memref<1x6xf32>) {
+  // expected-error@+1 {{'memref.expand_shape' op reassociation indices must not be empty}}
+  %0 = memref.expand_shape %arg0 [[], [0, 1]] output_shape [2, 3]
+      : memref<1x6xf32> into memref<2x3xf32>
+  return
+}

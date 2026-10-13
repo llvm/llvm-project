@@ -23,6 +23,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVector.h"
 
 //===----------------------------------------------------------------------===//
@@ -287,16 +288,20 @@ bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
   // Operations that have !fir.ref operands cannot be moved
   // out of cuf.kernel, because this may break implicit data mapping
   // passes that may run after LICM.
-  return !llvm::any_of(candidate->getOperands(),
-                       [&](mlir::Value candidateOperand) {
-                         return fir::isa_ref_type(candidateOperand.getType());
-                       }) &&
-         // Same is true for symbol operands (this has to be revisited,
-         // because this may indicate an issue in ordering between
-         // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
-         !llvm::any_of(candidate->getAttrs(), [&](mlir::NamedAttribute attr) {
-           return mlir::isa_and_present<mlir::SymbolRefAttr>(attr.getValue());
-         });
+  if (llvm::any_of(candidate->getOperands(), [&](mlir::Value operand) {
+        return fir::isa_ref_type(operand.getType());
+      }))
+    return false;
+
+  // Same is true for symbol operands (this has to be revisited,
+  // because this may indicate an issue in ordering between
+  // CUFDeviceGlobal and OffloadLiveInValueCanonicalization passes).
+  bool hasSymbolRefAttr = false;
+  candidate->getName().walkInherentAttrs(
+      candidate, [&](llvm::StringRef, mlir::Attribute &attr) {
+        hasSymbolRefAttr |= mlir::isa_and_present<mlir::SymbolRefAttr>(attr);
+      });
+  return !hasSymbolRefAttr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -315,31 +320,39 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
   if (getKernelName() == getKernelModuleName())
     return emitOpError("expect a module and a kernel name");
 
-  auto mod = getOperation()->getParentOfType<mlir::ModuleOp>();
-  if (!mod)
+  if (!getOperation()->getParentOfType<mlir::ModuleOp>())
     return emitOpError("expect to be in a module");
 
-  mlir::SymbolTable symTab(mod);
-  auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
-  if (!gpuMod) {
-    // If already a gpu.binary then stop the check here.
-    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+  return mlir::success();
+}
+
+mlir::LogicalResult cuf::RegisterKernelOp::verifySymbolUses(
+    mlir::SymbolTableCollection &symbolTables) {
+  auto module = getOperation()->getParentOfType<mlir::ModuleOp>();
+  auto gpuModule = symbolTables.lookupSymbolIn<mlir::gpu::GPUModuleOp>(
+      module, getKernelModuleName());
+  if (!gpuModule) {
+    if (symbolTables.lookupSymbolIn<mlir::gpu::BinaryOp>(module,
+                                                         getKernelModuleName()))
       return mlir::success();
     return emitOpError("gpu module not found");
   }
 
-  mlir::SymbolTable gpuSymTab(gpuMod);
-  if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
-    if (!func.isKernel())
+  if (auto function = symbolTables.lookupSymbolIn<mlir::gpu::GPUFuncOp>(
+          gpuModule, getKernelName())) {
+    if (!function.isKernel())
       return emitOpError("only kernel gpu.func can be registered");
     return mlir::success();
-  } else if (auto func =
-                 gpuSymTab.lookup<mlir::LLVM::LLVMFuncOp>(getKernelName())) {
-    if (!func->getAttrOfType<mlir::UnitAttr>(
+  }
+
+  if (auto function = symbolTables.lookupSymbolIn<mlir::LLVM::LLVMFuncOp>(
+          gpuModule, getKernelName())) {
+    if (!function->getAttrOfType<mlir::UnitAttr>(
             mlir::gpu::GPUDialect::getKernelFuncAttrName()))
       return emitOpError("only gpu.kernel llvm.func can be registered");
     return mlir::success();
   }
+
   return emitOpError("device function not found");
 }
 

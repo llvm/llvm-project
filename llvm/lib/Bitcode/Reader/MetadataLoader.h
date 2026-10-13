@@ -26,6 +26,7 @@ class BitstreamCursor;
 class DISubprogram;
 class Function;
 class Instruction;
+class MDNode;
 class Metadata;
 class Module;
 class Type;
@@ -93,6 +94,10 @@ public:
 
   /// Perform bitcode upgrades on llvm.dbg.* calls.
   void upgradeDebugIntrinsics(Function &F);
+
+  /// Mark any domains in \p ScopeList that don't have a disjointness
+  /// flag as non-disjoint. Returns the original list if there are no changes.
+  MDNode *upgradeAliasScopeList(MDNode *ScopeList);
 };
 }
 

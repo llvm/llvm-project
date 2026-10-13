@@ -20,7 +20,7 @@ func.func @implied_do(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bindc_name = "a"})
   %c4 = arith.constant 4 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c4 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFloopEa"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFloopEa") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
   fir.do_loop %arg1 = %c1 to %c4 step %c1 unordered {
     %3 = fir.array_coor %2(%1) %arg1 : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     fir.store %c1_i32 to %3 : !fir.ref<i32>
@@ -50,7 +50,7 @@ func.func @implied_do_in_acc_serial(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bind
   %c4 = arith.constant 4 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c4 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFloopEa"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFloopEa") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
   acc.serial {
     fir.do_loop %arg1 = %c1 to %c4 step %c1 unordered {
       %3 = fir.array_coor %2(%1) %arg1 : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
@@ -81,9 +81,9 @@ func.func @_QPprintimplied(%arg0: !fir.ref<!fir.array<4xi32>> {fir.bindc_name = 
   %c4 = arith.constant 4 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c4 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFprintimpliedEa"} : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFprintimpliedEa") : (!fir.ref<!fir.array<4xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<4xi32>>
   %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFprintimpliedEi"}
-  %4 = fir.declare %3 {uniq_name = "_QFprintimpliedEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.declare %3 uniq_name("_QFprintimpliedEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   %5 = fir.do_loop %arg1 = %c1 to %c4 step %c1 -> index {
     %13 = fir.convert %arg1 : (index) -> i32
     fir.store %13 to %4 : !fir.ref<i32>
@@ -113,8 +113,8 @@ func.func @mv_(%arg0: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "a", llvm.no
   %c3 = arith.constant 3 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFmvEa"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
-  %3 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFmvEr"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFmvEa") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
+  %3 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFmvEr") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   %4:2 = fir.do_loop %arg2 = %c1 to %c3 step %c1 unordered iter_args(%arg3 = %c-2147483648_i32, %arg4 = %true) -> (i32, i1) {
     %5 = fir.array_coor %2(%1) %arg2 : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     %6 = fir.load %5 : !fir.ref<i32>
