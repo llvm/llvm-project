@@ -32,8 +32,7 @@ namespace {
 // AffineExprConstantFolder evaluates an affine expression using constant
 // operands passed in 'operandConsts'. Returns an IntegerAttr attribute
 // representing the constant value of the affine expression evaluated on
-// constant 'operandConsts', or nullptr if it can't be folded (e.g., because the
-// result would overflow int64_t).
+// constant 'operandConsts', or nullptr if it can't be folded.
 class AffineExprConstantFolder {
 public:
   AffineExprConstantFolder(unsigned numDims, ArrayRef<Attribute> operandConsts)
