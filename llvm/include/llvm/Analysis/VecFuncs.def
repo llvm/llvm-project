@@ -1252,6 +1252,9 @@ TLI_DEFINE_VECFUNC("tgammaf", "_ZGVsMxv_tgammaf", SCALABLE(4), MASKED, "_ZGVsMxv
 
 #elif defined(TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV)
 
+// The RVV modf, sincos and sincospi entry points return both results in one
+// larger vector, so they cannot use the scalar functions' output-pointer ABI.
+
 TLI_DEFINE_VECFUNC("acos", "Sleef_acosdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.acos.f64", "Sleef_acosdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("acosf", "Sleef_acosfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
@@ -1335,8 +1338,8 @@ TLI_DEFINE_VECFUNC("llvm.fma.f32", "Sleef_fmafx_rvvm2", SCALABLE(4), NOMASK, "_Z
 TLI_DEFINE_VECFUNC("fmax", "Sleef_fmaxdx_rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxvv")
 TLI_DEFINE_VECFUNC("fmaxf", "Sleef_fmaxfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
 
-TLI_DEFINE_VECFUNC("fmin", "Sleef_fmindx_u10rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxvv")
-TLI_DEFINE_VECFUNC("fminf", "Sleef_fminfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
+TLI_DEFINE_VECFUNC("fmin", "Sleef_fmindx_rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxvv")
+TLI_DEFINE_VECFUNC("fminf", "Sleef_fminfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
 
 TLI_DEFINE_VECFUNC("fmod", "Sleef_fmoddx_rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxvv")
 TLI_DEFINE_VECFUNC("fmodf", "Sleef_fmodfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
@@ -1371,9 +1374,6 @@ TLI_DEFINE_VECFUNC("llvm.log2.f64", "Sleef_log2dx_u10rvvm2", SCALABLE(2), NOMASK
 TLI_DEFINE_VECFUNC("log2f", "Sleef_log2fx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.log2.f32", "Sleef_log2fx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 
-TLI_DEFINE_VECFUNC("modf", "Sleef_modfdx_rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxvl8")
-TLI_DEFINE_VECFUNC("modff", "Sleef_modffx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvl4")
-
 TLI_DEFINE_VECFUNC("nextafter", "Sleef_nextafterdx_rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxvv")
 TLI_DEFINE_VECFUNC("nextafterf", "Sleef_nextafterfx_rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvv")
 
@@ -1386,12 +1386,6 @@ TLI_DEFINE_VECFUNC("sin", "Sleef_sindx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv
 TLI_DEFINE_VECFUNC("llvm.sin.f64", "Sleef_sindx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("sinf", "Sleef_sinfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.sin.f32", "Sleef_sinfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxv")
-
-TLI_DEFINE_VECFUNC("sincos", "Sleef_sincosdx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxvl8l8")
-TLI_DEFINE_VECFUNC("sincosf", "Sleef_sincosfx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvl4l4")
-
-TLI_DEFINE_VECFUNC("sincospi", "Sleef_sincospidx_u10rvvm2", SCALABLE(2), NOMASK, "_ZGVrNxvl8l8")
-TLI_DEFINE_VECFUNC("sincospif", "Sleef_sincospifx_u10rvvm2", SCALABLE(4), NOMASK, "_ZGVrNxvl4l4")
 
 TLI_DEFINE_VECFUNC("sinh", "Sleef_sinhdx_u10rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxv")
 TLI_DEFINE_VECFUNC("llvm.sinh.f64", "Sleef_sinhdx_u10rvvm2",  SCALABLE(2), NOMASK, "_ZGVrNxv")
