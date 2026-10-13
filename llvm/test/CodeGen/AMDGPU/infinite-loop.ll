@@ -152,8 +152,9 @@ define amdgpu_kernel void @infinite_loop_ret_callbr(ptr addrspace(1) %out) {
 ; SI-NEXT:    ; %return
 ; SI-NEXT:    ; Label of block must be emitted
 ; SI-NEXT:    s_endpgm
-; IR-LABEL: @infinite_loop_ret_callbr(
-; IR-NEXT:  entry:
+; IR-LABEL: define amdgpu_kernel void @infinite_loop_ret_callbr(
+; IR-SAME: ptr addrspace(1) [[OUT:%.*]]) {
+; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP]], 1
 ; IR-NEXT:    [[COND32:%.*]] = zext i1 [[COND]] to i32
@@ -291,8 +292,9 @@ define amdgpu_kernel void @infinite_loops_callbr(ptr addrspace(1) %out) {
 ; SI-NEXT:    ; Label of block must be emitted
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_branch .LBB5_2
-; IR-LABEL: @infinite_loops_callbr(
-; IR-NEXT:  entry:
+; IR-LABEL: define amdgpu_kernel void @infinite_loops_callbr(
+; IR-SAME: ptr addrspace(1) [[OUT:%.*]]) {
+; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    callbr void asm "", "r,!i"(i32 poison)
 ; IR-NEXT:            to label %[[LOOP1:.*]] [label %[[LOOP2:.*]]]
 ; IR:       [[LOOP1]]:
@@ -442,8 +444,9 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; SI-NEXT:    ; Label of block must be emitted
 ; SI-NEXT:  .LBB7_9: ; %DummyReturnBlock
 ; SI-NEXT:    s_endpgm
-; IR-LABEL: @infinite_loop_nest_ret_callbr(
-; IR-NEXT:  entry:
+; IR-LABEL: define amdgpu_kernel void @infinite_loop_nest_ret_callbr(
+; IR-SAME: ptr addrspace(1) [[OUT:%.*]]) {
+; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; IR-NEXT:    [[COND1:%.*]] = icmp ne i32 [[TMP]], 1
 ; IR-NEXT:    [[COND1_32:%.*]] = zext i1 [[COND1]] to i32
