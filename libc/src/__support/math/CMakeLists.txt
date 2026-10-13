@@ -3127,11 +3127,25 @@ add_header_library(
 )
 
 add_header_library(
+  expf_float_utils
+  HDRS
+    expf_float_utils.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   expf_float_eval
   HDRS
     expf_float_eval.h
   DEPENDS
     .exp2f_float_utils
+    .expf_float_utils
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
